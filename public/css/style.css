@@ -561,6 +561,33 @@ html, body {
   touch-action: none;
 }
 
+#prepared-runes {
+  min-height: 15px;
+  margin-top: 4px;
+  text-align: center;
+  color: #bdb6ca;
+  font-size: 9px;
+  letter-spacing: 1px;
+  text-shadow: 0 0 7px rgba(145, 109, 255, .42);
+}
+
+#prepared-runes b {
+  display: inline-block;
+  min-width: 12px;
+  font-size: 13px;
+  vertical-align: -1px;
+}
+
+.card-overlay em {
+  font-size: 6px;
+  font-style: normal;
+  letter-spacing: .8px;
+  opacity: .8;
+}
+
+.shock-action { border-color: #b388ff; color: #eadfff; box-shadow: 0 0 11px rgba(179, 136, 255, .35); }
+.shield-action { border-color: #8ea8ff; color: #e5eaff; box-shadow: 0 0 11px rgba(112, 143, 255, .34); }
+
 .cast-action { border-color: #00c8ff; color: #bdefff; }
 
 .action-wrap:hover {

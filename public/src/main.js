@@ -66,6 +66,8 @@ export class GameWorld {
       strokes: [],
       currentStroke: [],
       lastPointTime: 0,
+      lastStrokeTime: 0,
+      autoLockArmed: false,
       lastRecognitionCheck: 0,
       // A rune gesture owns exactly one touch. This prevents the movement
       // thumb from becoming the rune stroke when the player uses two thumbs.
@@ -143,7 +145,13 @@ export class GameWorld {
       // Cast Spell (E)
       if (e.code === 'KeyE') this.castPreparedSpell();
 
-      // Clear Runes (Q)
+      // Immediate crowd-control spell. It intentionally lives beside rune
+      // casting so the player always has a fast escape tool in a brawl.
+      if (e.code === 'KeyR') this.castAuraShock();
+      if (e.code === 'KeyF') this.castArcaneShield();
+
+      // Clear selected spell components (Q). It does not delete or cycle
+      // cards from the rune hand.
       if (e.code === 'KeyQ') {
         this.player.clearPreparedRunes();
         audio.playRuneFail();
@@ -303,12 +311,15 @@ export class GameWorld {
     this.input.move.z = magnitude > 1 ? z / magnitude : z;
   }
 
-  startRuneDrawing() {
+  startRuneDrawing(expectedCardId = null) {
     if (!this.isMatchRunning() || this.drawing.active || !this.player.isAlive) return;
     this.drawing.active = true;
+    this.drawing.expectedCardId = expectedCardId;
     this.drawing.strokes = [];
     this.drawing.currentStroke = [];
     this.drawing.lastRecognitionCheck = 0;
+    this.drawing.lastStrokeTime = 0;
+    this.drawing.autoLockArmed = false;
     this.drawing.touchId = null;
     this.drawing.inputMode = null;
     this.targetTimeScale = 0.22;
@@ -320,6 +331,7 @@ export class GameWorld {
   addRunePoint(canvasX, canvasY) {
     const now = performance.now();
     this.drawing.currentStroke.push({ x: canvasX, y: canvasY, t: now });
+    this.drawing.autoLockArmed = false;
 
     combat.spawnElementalParticles(canvasX, canvasY, 'fulgur', 1);
 
@@ -329,14 +341,8 @@ export class GameWorld {
       audio.playRuneChime(freq);
     }
 
-    // A clean gesture should return the player to the brawl immediately. The
-    // short throttle, minimum point count, and confidence guard avoid closing
-    // the menu on a stray first stroke.
-    if (this.drawing.currentStroke.length >= 8 && now - this.drawing.lastRecognitionCheck > 80) {
-      this.drawing.lastRecognitionCheck = now;
-      const liveResult = recognizer.recognize([...this.drawing.strokes, [...this.drawing.currentStroke]]);
-      if (liveResult?.rune && liveResult.confidence >= 0.78) this.finishRuneDrawing(liveResult);
-    }
+    // Deliberately no live recognition: simple gestures (especially VENTUS)
+    // must not lock in while the player is still drawing a combination.
   }
 
   enterFullscreen() {
@@ -355,14 +361,35 @@ export class GameWorld {
     if (!this.drawing.active || this.drawing.currentStroke.length === 0) return false;
     this.drawing.strokes.push([...this.drawing.currentStroke]);
     this.drawing.currentStroke = [];
+    this.drawing.lastStrokeTime = performance.now();
+    this.drawing.autoLockArmed = true;
+    return true;
+  }
+
+  confirmRuneDrawing(autoLock = false) {
+    if (!this.drawing.active) return false;
+    this.completeRuneStroke();
     const result = recognizer.recognize(this.drawing.strokes);
-    // Releasing a line is not a failure or a timeout. The player can keep
-    // drawing until a real rune is recognized, then returns instantly.
-    if (result?.rune && result.confidence >= 0.70) {
-      this.finishRuneDrawing(result);
-      return true;
+    if (!result?.rune || result.confidence < 0.70) {
+      if (autoLock) this.drawing.autoLockArmed = false;
+      audio.playRuneFail();
+      ui.showRecognitionBadge(null, 0);
+      this.showAnnouncement('RUNE NOT RECOGNIZED — DRAW AGAIN');
+      return false;
     }
-    return false;
+    // Recognition is intentionally constrained to the three cards actually
+    // visible in the hand. A valid global rune shape cannot consume a rune
+    // that the player has not drawn into their hand.
+    const availableCard = this.player.getRuneCard(this.drawing.expectedCardId, result.rune.id);
+    if (!availableCard || availableCard.id !== result.rune.id) {
+      if (autoLock) this.drawing.autoLockArmed = false;
+      audio.playRuneFail();
+      ui.showRecognitionBadge(null, 0);
+      this.showAnnouncement('RUNE NOT IN HAND — DRAW ONE OF THE THREE');
+      return false;
+    }
+    this.finishRuneDrawing(result);
+    return true;
   }
 
   cancelRuneDrawing() {
@@ -372,6 +399,8 @@ export class GameWorld {
     this.drawing.currentStroke = [];
     this.drawing.touchId = null;
     this.drawing.inputMode = null;
+    this.drawing.expectedCardId = null;
+    this.drawing.autoLockArmed = false;
     this.targetTimeScale = this.timeScale = 1;
     this.runeCtx.clearRect(0, 0, this.logicalWidth, this.logicalHeight);
     ui.setDrawingMode(false);
@@ -385,6 +414,7 @@ export class GameWorld {
       this.drawing.currentStroke = [];
     }
 
+    const expectedCardId = this.drawing.expectedCardId;
     this.drawing.active = false;
     this.drawing.touchId = null;
     this.drawing.inputMode = null;
@@ -401,14 +431,14 @@ export class GameWorld {
     const result = recognizedResult ?? recognizer.recognize(this.drawing.strokes);
 
     if (result && result.rune) {
-      const added = this.player.addPreparedRune(result.rune);
+      const added = this.player.playRuneCard(result.rune.id, expectedCardId);
       if (added) {
         audio.playRuneSuccess();
         ui.showRecognitionBadge(result.rune, result.confidence);
         combat.spawnShockwave(this.player.x, this.player.y - 30, 70, result.rune.color);
         combat.spawnElementalParticles(this.player.x, this.player.y - 30, result.rune.id, 20);
       } else {
-        ui.showAnnouncement('RUNE DECK FULL — CAST OR DISCARD!');
+        ui.showAnnouncement(this.player.preparedRunes.length >= 3 ? 'SPELL SLOTS FULL — CAST OR CLEAR!' : 'DRAW A RUNE FROM YOUR HAND');
       }
     } else {
       audio.playRuneFail();
@@ -416,6 +446,7 @@ export class GameWorld {
     }
 
     this.runeCtx.clearRect(0, 0, this.logicalWidth, this.logicalHeight);
+    this.drawing.expectedCardId = null;
   }
 
   castPreparedSpell() {
@@ -426,14 +457,45 @@ export class GameWorld {
       return false;
     }
 
-    const resolved = spells.resolveSpell(this.player.preparedRunes);
+    const selectedRunes = [...this.player.preparedRunes];
+    const resolved = spells.resolveSpell(selectedRunes);
     if (resolved) {
       spells.cast(this.player, resolved, this);
       this.showAnnouncement(`CAST: ${resolved.name}!`);
-      this.player.clearPreparedRunes();
+      // Drawing already recycled each physical card to the deck back and
+      // refilled the hand. Casting consumes only the prepared components.
+      this.player.consumePreparedRunes();
       return true;
     }
     return false;
+  }
+
+  castAuraShock() {
+    const caster = this.player;
+    if (!this.isMatchRunning() || !caster.isAlive || caster.auraShockCooldown > 0) return false;
+    const manaCost = 20;
+    if (caster.mp < manaCost) {
+      this.showAnnouncement('NOT ENOUGH MANA FOR AURA SHOCK');
+      audio.playRuneFail();
+      return false;
+    }
+    caster.mp -= manaCost;
+    caster.auraShockCooldown = 3.5;
+    spells.castAuraShock(caster, this);
+    this.showAnnouncement('AURA SHOCK');
+    return true;
+  }
+
+  castArcaneShield() {
+    const caster = this.player;
+    if (!this.isMatchRunning() || !caster.isAlive || caster.arcaneShieldCooldown > 0) return false;
+    const manaCost = 30;
+    if (caster.mp < manaCost) { this.showAnnouncement('NOT ENOUGH MANA FOR ARCANE SHIELD'); audio.playRuneFail(); return false; }
+    caster.mp -= manaCost;
+    caster.arcaneShieldCooldown = 8;
+    spells.castArcaneShield(caster);
+    this.showAnnouncement('ARCANE SHIELD');
+    return true;
   }
 
   getHostileTargets(myTeam, includeProtectedCastle = false) {
@@ -550,11 +612,11 @@ export class GameWorld {
   }
 
   prepareDefaultRunes() {
-    const ids = ['fulgur', 'terra', 'ignis'];
-    for (const id of ids) {
-      const rune = recognizer.runes.find((candidate) => candidate.id === id);
-      if (rune) this.player.addPreparedRune(rune);
-    }
+    // Ordered prototype deck. Exactly three rune cards form the hand; each
+    // correctly drawn card cycles itself to the deck back and is replaced.
+    const ids = ['fulgur', 'terra', 'ignis', 'ventus', 'aqua', 'ignis'];
+    const deck = ids.map((id) => recognizer.runes.find((candidate) => candidate.id === id)).filter(Boolean);
+    this.player.configureRuneDeck(deck);
   }
 
   resetMatch() {
@@ -655,10 +717,15 @@ export class GameWorld {
     this.timeScale += (this.targetTimeScale - this.timeScale) * Math.min(1, dt * 10);
     const scaledDt = dt * this.timeScale;
 
-    // 1. Rune drawing deliberately has no countdown. It remains active until
-    // a rune is recognized, the player cancels it, or their life state ends.
+    // 1. Rune drawing remains open for deliberate input. Once a stroke has
+    // stopped for two seconds it locks in automatically; the circle still
+    // provides an immediate manual lock-in.
     if (this.drawing.active) {
       ui.setDrawingMode(true);
+      if (this.drawing.autoLockArmed && this.drawing.currentStroke.length === 0
+        && performance.now() - this.drawing.lastStrokeTime >= 2000) {
+        this.confirmRuneDrawing(true);
+      }
     }
 
     // 2. Match Timer — only active play contributes to the final result.
@@ -689,43 +756,7 @@ export class GameWorld {
           if (m.isDead) this.minions.splice(i, 1);
         }
 
-        for (let i = this.projectiles.length - 1; i >= 0; i--) {
-          const p = this.projectiles[i];
-          p.life -= scaledDt;
-
-        if (p.type === 'bolt') {
-          p.x += p.vx * scaledDt;
-          p.z += (p.targetZ - p.z) * Math.min(1, scaledDt * 6);
-          const targets = this.getHostileTargets(p.team);
-          for (const t of targets) {
-            if (Math.abs(t.x - p.x) < 22 && Math.abs((t.z ?? p.z) - p.z) < 0.15 && Math.abs((t.worldHeight ?? 0) - p.height) < 90) {
-              t.takeDamage(p.damage, p.facing * 80, 40, 0.15);
-              p.life = 0;
-              break;
-            }
-          }
-        } else if (p.type === 'towerOrb') {
-          if (p.target && p.target.hp > 0) {
-            const dx = p.target.x - p.x;
-            const dz = p.target.z - p.z;
-            const targetHeight = p.target.worldHeight ?? 0;
-            const dist = Math.hypot(dx, dz * 150, targetHeight - p.height);
-            if (dist < 18) {
-              p.target.takeDamage(p.damage, Math.sign(dx) * 160, 80, 0.2);
-              combat.spawnShockwave(p.x, groundYForDepth(p.z) - p.height, 30, p.team === 'blue' ? '#00e5ff' : '#ff1744');
-              p.life = 0;
-            } else {
-              p.x += (dx / dist) * p.speed * scaledDt;
-              p.z += (dz * 150 / dist) * (p.speed / 150) * scaledDt;
-              p.height += (targetHeight - p.height) / dist * p.speed * scaledDt;
-            }
-          } else {
-            p.life = 0;
-          }
-        }
-
-          if (p.life <= 0) this.projectiles.splice(i, 1);
-        }
+        this.updateProjectiles(scaledDt);
 
         spells.update(scaledDt, this);
       }
@@ -747,6 +778,49 @@ export class GameWorld {
     this.render();
 
     requestAnimationFrame((t) => this.loop(t));
+  }
+
+  // Kept as a named runtime step so simulated integration tests use the
+  // identical projectile collision path as the live game loop.
+  updateProjectiles(dt) {
+    for (let i = this.projectiles.length - 1; i >= 0; i--) {
+      const p = this.projectiles[i];
+      p.life -= dt;
+
+      if (p.type === 'bolt') {
+        p.x += p.vx * dt;
+        p.z += (p.targetZ - p.z) * Math.min(1, dt * 6);
+        const targets = this.getHostileTargets(p.team);
+        for (const t of targets) {
+          const heightReach = t.hitHeightTolerance ?? 90;
+          if (Math.abs(t.x - p.x) < 22 && Math.abs((t.z ?? p.z) - p.z) < 0.15 && Math.abs((t.worldHeight ?? 0) - p.height) < heightReach) {
+            t.takeDamage(p.damage, p.facing * 80, 40, 0.15);
+            p.life = 0;
+            break;
+          }
+        }
+      } else if (p.type === 'towerOrb') {
+        if (p.target && p.target.hp > 0) {
+          const dx = p.target.x - p.x;
+          const dz = p.target.z - p.z;
+          const targetHeight = p.target.worldHeight ?? 0;
+          const dist = Math.hypot(dx, dz * 150, targetHeight - p.height);
+          if (dist < 18) {
+            p.target.takeDamage(p.damage, Math.sign(dx) * 160, 80, 0.2);
+            combat.spawnShockwave(p.x, groundYForDepth(p.z) - p.height, 30, p.team === 'blue' ? '#00e5ff' : '#ff1744');
+            p.life = 0;
+          } else {
+            p.x += (dx / dist) * p.speed * dt;
+            p.z += (dz * 150 / dist) * (p.speed / 150) * dt;
+            p.height += (targetHeight - p.height) / dist * p.speed * dt;
+          }
+        } else {
+          p.life = 0;
+        }
+      }
+
+      if (p.life <= 0) this.projectiles.splice(i, 1);
+    }
   }
 
   render() {

@@ -128,26 +128,27 @@
         <div id="bottom-center-deck">
           <div id="rune-cards-row">
             <!-- Card 1 (Slot 0) -->
-            <div class="card-slot active-card" id="card-0" data-slot="0" title="Rune 1 (Lightning FULGUR)">
-              <img src="assets/ui/card_lightning.png" class="card-img" alt="Card 1">
+            <button class="card-slot active-card" id="card-0" data-slot="0" type="button" title="Draw this rune">
               <div class="card-overlay" id="card-overlay-0"></div>
-            </div>
+            </button>
             <!-- Card 2 (Slot 1) -->
-            <div class="card-slot active-card" id="card-1" data-slot="1" title="Rune 2 (Earth TERRA)">
-              <img src="assets/ui/card_shield.png" class="card-img" alt="Card 2">
+            <button class="card-slot active-card" id="card-1" data-slot="1" type="button" title="Draw this rune">
               <div class="card-overlay" id="card-overlay-1"></div>
-            </div>
+            </button>
             <!-- Card 3 (Slot 2) -->
-            <div class="card-slot active-card" id="card-2" data-slot="2" title="Rune 3 (Fire IGNIS)">
-              <img src="assets/ui/card_fire.png" class="card-img" alt="Card 3">
+            <button class="card-slot active-card" id="card-2" data-slot="2" type="button" title="Draw this rune">
               <div class="card-overlay" id="card-overlay-2"></div>
-            </div>
+            </button>
 
             <!-- Grimoire Button -->
-            <div id="grimoire-btn" class="grimoire-wrap" title="Arcane Grimoire & Combo Guide (Key H)">
-              <img src="assets/ui/grimoire_icon.png" class="grimoire-img" alt="Grimoire">
-            </div>
+            <button id="grimoire-btn" class="grimoire-wrap" type="button" title="Cast prepared spell or open combo guide">
+              <span class="grimoire-glyph">✦</span><small>GRIMOIRE</small>
+            </button>
           </div>
+
+          <!-- Drawn components are intentionally separate from the three
+               physical rune cards above. They form the next spell. -->
+          <div id="prepared-runes" aria-label="Prepared spell components"></div>
 
           <!-- Bottom Mana Bar Frame -->
           <div id="bottom-mana-container">
@@ -159,7 +160,7 @@
           </div>
 
           <!-- Active Spell Name Preview -->
-          <div id="active-spell-preview">FIRESTORM VORTEX READY [PRESS E TO CAST]</div>
+          <div id="active-spell-preview">RUNE HAND: DRAW A CARD</div>
         </div>
 
         <!-- Right: Action Buttons & Arcane Rune Circle -->
@@ -171,6 +172,8 @@
 
           <button id="action-jump-btn" class="touch-action" title="Jump (Space)">JUMP</button>
           <button id="action-dash-btn" class="touch-action" title="Dash (Shift)">DASH</button>
+          <button id="action-shock-btn" class="touch-action shock-action" title="Aura Shock (R)">SHOCK</button>
+          <button id="action-shield-btn" class="touch-action shield-action" title="Arcane Shield (F)">SHIELD</button>
           <button id="action-cast-btn" class="touch-action cast-action" title="Cast prepared runes (E)">CAST</button>
 
           <!-- Arcane Rune Weaving Circle -->
@@ -223,7 +226,7 @@
 
       <!-- Drawing Feedback Overlay -->
       <div id="drawing-hud" class="hidden">
-        <div id="drawing-prompt">ARCANE FOCUS ACTIVE — DRAW RUNE SHAPE · TAP CIRCLE AGAIN TO CANCEL</div>
+        <div id="drawing-prompt">ARCANE FOCUS ACTIVE — DRAW RUNE SHAPE · TAP CIRCLE AGAIN TO LOCK IN · ESC CANCELS</div>
         <div id="recognition-result"></div>
       </div>
     </div>

@@ -44,6 +44,7 @@ export class UIManager {
       document.getElementById('card-overlay-2')
     ];
     this.activeSpellPreview = document.getElementById('active-spell-preview');
+    this.preparedRunesEl = document.getElementById('prepared-runes');
     this.manaBarFill = document.getElementById('mana-bar-fill');
     this.manaBarText = document.getElementById('mana-bar-text');
 
@@ -55,6 +56,8 @@ export class UIManager {
     this.attackBtn = document.getElementById('action-attack-btn');
     this.jumpBtn = document.getElementById('action-jump-btn');
     this.dashBtn = document.getElementById('action-dash-btn');
+    this.shockBtn = document.getElementById('action-shock-btn');
+    this.shieldBtn = document.getElementById('action-shield-btn');
     this.castBtn = document.getElementById('action-cast-btn');
     this.fullscreenBtn = document.getElementById('fullscreen-btn');
 
@@ -72,7 +75,11 @@ export class UIManager {
     this.hubBtn.addEventListener('click', () => window.gameWorld?.returnToHub());
     this.grimoireBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      this.toggleGrimoire();
+      const game = window.gameWorld;
+      // The Grimoire is the deliberate combo trigger. With prepared runes it
+      // casts the resolved combination; with no components it opens the guide.
+      if (game?.player?.preparedRunes?.length) game.castPreparedSpell();
+      else this.toggleGrimoire();
     });
 
     this.closeGrimoireBtn.addEventListener('click', (e) => {
@@ -80,15 +87,14 @@ export class UIManager {
       this.toggleGrimoire(false);
     });
 
-    // The circle opens persistent Arcane Focus. The thumb can be released
-    // before drawing; the mode closes only after rune recognition (or a
-    // second circle press / Escape cancels it).
+    // First press opens Arcane Focus; the second explicitly locks in the
+    // finished gesture. Nothing auto-confirms while drawing.
     const toggleRuneDrawing = (e) => {
       e.preventDefault();
       e.stopPropagation();
       const game = window.gameWorld;
       if (!game) return;
-      if (game.drawing.active) game.cancelRuneDrawing();
+      if (game.drawing.active) game.confirmRuneDrawing();
       else game.startRuneDrawing();
     };
     this.arcaneCircle.addEventListener('pointerdown', toggleRuneDrawing);
@@ -112,6 +118,16 @@ export class UIManager {
       e.preventDefault();
       e.stopPropagation();
       if (window.gameWorld?.player?.isAlive) window.gameWorld.input.justPressedKeys.ShiftLeft = true;
+    });
+    this.shockBtn.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      window.gameWorld?.castAuraShock();
+    });
+    this.shieldBtn.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      window.gameWorld?.castArcaneShield();
     });
     this.castBtn.addEventListener('pointerdown', (e) => {
       e.preventDefault();
@@ -137,13 +153,9 @@ export class UIManager {
     this.cards.forEach((card) => {
       card.addEventListener('click', (e) => {
         e.stopPropagation();
-        if (window.gameWorld) {
-          if (window.gameWorld.player.preparedRunes.length > 0) {
-            window.gameWorld.castPreparedSpell();
-          } else {
-            window.gameWorld.startRuneDrawing();
-          }
-        }
+        const index = this.cards.indexOf(card);
+        const runeCard = window.gameWorld?.player?.runeHand?.[index];
+        if (runeCard) window.gameWorld.startRuneDrawing(runeCard.cardId);
       });
     });
   }
@@ -266,14 +278,14 @@ export class UIManager {
     for (let i = 0; i < 3; i++) {
       const cardEl = this.cards[i];
       const overlay = this.cardOverlays[i];
-      const rune = player.preparedRunes[i];
+      const rune = player.runeHand[i];
       if (rune) {
         cardEl.style.opacity = '1.0';
         cardEl.style.transform = 'translateY(-4px)';
         cardEl.style.filter = `drop-shadow(0 0 10px ${rune.color})`;
         overlay.style.color = rune.color;
         overlay.style.borderColor = rune.color;
-        overlay.innerHTML = `<span>${rune.glyph}</span><small>${rune.name}</small>`;
+        overlay.innerHTML = `<span>${rune.glyph}</span><small>${rune.name}</small><em>DRAW</em>`;
       } else {
         cardEl.style.opacity = '0.55';
         cardEl.style.transform = 'none';
@@ -284,13 +296,22 @@ export class UIManager {
       }
     }
 
+    // Prepared components are not cards in the hand. This makes the deck
+    // cycle legible: hand card -> drawn component -> spell -> cleared.
+    if (this.preparedRunesEl) {
+      this.preparedRunesEl.innerHTML = player.preparedRunes.length
+        ? `PREPARED: ${player.preparedRunes.map((rune) => `<b style="color:${rune.color}">${rune.glyph}</b>`).join(' + ')}`
+        : 'PREPARED: —';
+    }
+
     // Active Spell Preview
     const resolved = spells.resolveSpell(player.preparedRunes);
     if (resolved) {
       this.activeSpellPreview.textContent = `READY: ${resolved.name} [PRESS E TO CAST]`;
       this.activeSpellPreview.style.color = resolved.color;
     } else {
-      this.activeSpellPreview.textContent = 'HOLD RIGHT-CLICK OR TAP CIRCLE TO DRAW RUNES';
+      const hand = player.runeHand.map((rune) => rune.name).join(' · ');
+      this.activeSpellPreview.textContent = hand ? `RUNE HAND: ${hand} — DRAW ONE` : 'RUNE DECK EMPTY';
       this.activeSpellPreview.style.color = '#ffd54f';
     }
   }

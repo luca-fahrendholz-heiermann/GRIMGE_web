@@ -3,6 +3,10 @@ import { audio } from './audio.js';
 import { combat } from './combat.js';
 import { groundDistance, groundYForDepth } from './world.js';
 
+function withinHeight(target, sourceHeight, fallback = 110) {
+  return Math.abs((target.worldHeight ?? 0) - sourceHeight) < (target.hitHeightTolerance ?? fallback);
+}
+
 export class SpellSystem {
   constructor() {
     this.activeSpells = [];
@@ -203,6 +207,42 @@ export class SpellSystem {
     }
   }
 
+  castAuraShock(caster, gameWorld) {
+    const radius = 112;
+    const damage = 22;
+    audio.playSpell('aura_shock');
+    combat.shakeCamera(7, 0.18);
+    combat.spawnShockwave(caster.x, caster.y - 28, radius, '#b388ff');
+    combat.spawnElementalParticles(caster.x, caster.y - 28, 'fulgur', 24);
+
+    let hitAny = false;
+    for (const target of gameWorld.getHostileTargets(caster.team)) {
+      if (target.isObjective || target.isDead || target.lifeState === 'Dead') continue;
+      const dx = target.x - caster.x;
+      const dz = (target.z - caster.z) * 150;
+      const distance = Math.hypot(dx, dz);
+      if (distance > radius || !withinHeight(target, caster.worldHeight, 88)) continue;
+      const safeDistance = Math.max(1, distance);
+      const push = 340 * (1 - distance / radius * 0.35);
+      target.takeDamage(damage, (dx / safeDistance) * push, 90, 0.18);
+      // `vz` is independent ground-plane depth momentum; Aura Shock is a
+      // true radial 2.5D push rather than a horizontal-only hit.
+      target.vz += (dz / safeDistance) * (push / 150);
+      combat.spawnHitSparks(target.x, target.y - 24, Math.sign(dx) || caster.facing, '#d1c4ff', 10);
+      hitAny = true;
+    }
+    if (hitAny) combat.triggerHitstop(3);
+    return hitAny;
+  }
+
+  castArcaneShield(caster) {
+    caster.arcaneShield = 90;
+    caster.arcaneShieldTimer = 5;
+    audio.playSpell('arcane_shield');
+    combat.spawnShockwave(caster.x, caster.y - 32, 52, '#b388ff');
+    combat.spawnElementalParticles(caster.x, caster.y - 30, 'fulgur', 18);
+  }
+
   update(dt, gameWorld) {
     for (let i = this.activeSpells.length - 1; i >= 0; i--) {
       const spell = this.activeSpells[i];
@@ -251,7 +291,7 @@ class FireballSpell {
     const targets = gameWorld.getHostileTargets(this.team);
     for (const t of targets) {
       const dist = groundDistance(this, t);
-      if (dist < this.radius + (t.radius || 20) && Math.abs((t.worldHeight ?? 0) - this.height) < 110) {
+      if (dist < this.radius + (t.radius || t.hitRadiusX || 20) && withinHeight(t, this.height)) {
         this.detonate(gameWorld);
         break;
       }
@@ -272,7 +312,11 @@ class FireballSpell {
     const targets = gameWorld.getHostileTargets(this.team);
     for (const t of targets) {
       const dist = groundDistance(this, t);
-      if (dist < 80 && Math.abs((t.worldHeight ?? 0) - this.height) < 120) {
+      // Structures are wider than fighters. A Fireball that legitimately
+      // collides with the edge of a Tower must damage that Tower rather than
+      // exploding just outside an unrelated smaller AoE radius.
+      const impactRadius = 80 + (t.isObjective ? (t.hitRadiusX ?? 0) * 0.5 : 0);
+      if (dist < impactRadius && withinHeight(t, this.height, 120)) {
         t.takeDamage(this.damage, this.facing * 380, 220, 0.4);
       }
     }

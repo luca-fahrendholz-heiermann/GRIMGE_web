@@ -82,7 +82,9 @@ game.canvas.listeners.touchstart({ changedTouches: [incompleteRuneTouch] });
 windowListeners.touchend({ changedTouches: [incompleteRuneTouch] });
 assert(game.drawing.active && game.drawing.inputMode === null, 'Releasing an unrecognized mobile stroke keeps Arcane Focus open');
 arcaneCircle.listeners.pointerdown(runePointer);
-assert(!game.drawing.active && game.timeScale === 1, 'A second mobile circle press cancels persistent drawing mode immediately');
+assert(game.drawing.active, 'A second mobile circle press explicitly attempts rune lock-in without auto-closing a failed gesture');
+game.cancelRuneDrawing();
+assert(!game.drawing.active && game.timeScale === 1, 'Escape/cancel path cleanly exits persistent drawing mode');
 
 game.player.elevation = 0; game.player.vElevation = 0; game.player.grounded = true; game.player.state = 'idle'; game.player.canAttack = true; game.player.invulnerableTimer = 0;
 game.enemyChampion.x = game.player.x + 40; game.enemyChampion.z = game.player.z;
@@ -99,12 +101,14 @@ let recoveredAttacks = 0;
 for (let i = 0; i < 20; i++) { game.player.state = 'idle'; game.player.stateTimer = 0; game.player.canAttack = true; if (game.player.executeAttack(game.input)) recoveredAttacks++; game.player.update(0.5, game.input, game.battlefield); }
 assert(recoveredAttacks === 20 && game.player.canAttack, 'Repeated melee actions always recover to an attack-ready state');
 
+const ignisCard = game.player.runeHand.find((rune) => rune.id === 'ignis');
+const initialHand = game.player.runeHand.map((rune) => rune.id).join(',');
+game.startRuneDrawing(ignisCard.cardId);
+game.finishRuneDrawing({ rune: recognizer.runes.find((rune) => rune.id === 'ignis'), confidence: 0.99 });
+assert(!game.drawing.active && game.timeScale === 1 && game.player.preparedRunes.map((rune) => rune.id).join(',') === 'ignis' && game.player.runeHand.map((rune) => rune.id).join(',') === 'fulgur,terra,ventus' && game.player.runeDeck.map((rune) => rune.id).join(',') === 'aqua,ignis,ignis', 'Drawing a hand card slots its rune, returns the card to the deck back, and draws a replacement');
 const spellCount = spells.activeSpells.length;
 game.castPreparedSpell();
-assert(spells.activeSpells.length > spellCount && game.player.preparedRunes.length === 0, 'Prepared runes cast and clear while alive');
-game.startRuneDrawing();
-game.finishRuneDrawing({ rune: recognizer.runes.find((rune) => rune.id === 'ignis'), confidence: 0.99 });
-assert(!game.drawing.active && game.timeScale === 1 && game.player.preparedRunes.length === 1, 'Recognized rune exits drawing immediately at full combat speed');
+assert(spells.activeSpells.length > spellCount && game.player.preparedRunes.length === 0 && game.player.runeHand.map((rune) => rune.id).join(',') === 'fulgur,terra,ventus' && initialHand === 'fulgur,terra,ignis', 'Casting consumes slotted spell components without cycling untouched hand cards');
 game.player.clearPreparedRunes();
 
 game.player.invulnerableTimer = 0;
@@ -148,6 +152,24 @@ for (const ids of spellSets) {
 }
 assert(true, 'All core spells update against the 2.5D actor model without exceptions');
 
+// Aura Shock is a real runtime ability: mana/cooldown gated radial damage and
+// 2.5D push, with no effect on protected structures.
+spells.activeSpells = [];
+game.player.x = 470; game.player.z = 0.52; game.player.elevation = 0; game.player.lifeState = 'Alive'; game.player.mp = game.player.maxMp; game.player.auraShockCooldown = 0; game.battlefield.placeOnSurface(game.player);
+game.enemyChampion.isDead = false; game.enemyChampion.hp = game.enemyChampion.maxHp; game.enemyChampion.x = 505; game.enemyChampion.z = 0.62; game.enemyChampion.elevation = 0; game.battlefield.placeOnSurface(game.enemyChampion);
+const auraHp = game.enemyChampion.hp;
+const auraMana = game.player.mp;
+assert(game.castAuraShock() && game.enemyChampion.hp < auraHp && game.player.mp === auraMana - 20 && game.enemyChampion.vz > 0, 'Aura Shock applies radial 2.5D control through the player ability path');
+const auraCooldownHp = game.enemyChampion.hp;
+assert(!game.castAuraShock() && game.enemyChampion.hp === auraCooldownHp, 'Aura Shock respects its cooldown instead of spamming crowd control');
+game.player.mp = game.player.maxMp; game.player.arcaneShieldCooldown = 0; game.player.invulnerableTimer = 0;
+const shieldHp = game.player.hp;
+assert(game.castArcaneShield() && game.player.arcaneShield === 90 && game.player.mp === game.player.maxMp - 30, 'Arcane Shield casts through the player ability path with mana cost');
+game.player.takeDamage(40, 0, 0, 0.1);
+assert(game.player.hp === shieldHp && game.player.arcaneShield === 50, 'Arcane Shield absorbs incoming damage before player health');
+game.player.takeDamage(60, 0, 0, 0.1);
+assert(game.player.hp === shieldHp - 10 && game.player.arcaneShield === 0 && !game.castArcaneShield(), 'Shield breaks cleanly and its cooldown prevents immediate recast');
+
 // Objective progression is authoritative: tower -> Castle -> final Wizard.
 game.enemyChampion.isDead = false; game.enemyChampion.hp = game.enemyChampion.maxHp;
 game.enemyChampion.takeDamage(999, 0, 0, 0.1);
@@ -158,6 +180,7 @@ assert(game.enemyChampion.isAlive && game.enemyChampion.x === game.battlefield.g
 const redTower = game.battlefield.redTower;
 const redCastle = game.battlefield.redCastle;
 const laneMinion = game.minions.find((minion) => minion.team === 'blue' && minion.type === 'melee');
+const frontLaneMinion = game.minions.find((minion) => minion.team === 'blue' && minion.laneIndex === 2);
 const protectedHp = redCastle.hp;
 redCastle.takeDamage(100);
 assert(redCastle.hp === protectedHp && !redCastle.isVulnerable, 'Castle rejects damage before its lane tower falls');
@@ -175,33 +198,66 @@ redTower.shootTimer = 0; redTower.update(2, game);
 assert(redTower.currentTarget === null && game.projectiles.length === 0, 'Tower remains idle when only hostile structures are available');
 game.player.lifeState = 'Alive'; game.player.hp = game.player.maxHp;
 
+// This helper uses the same mouse-input -> Player.update -> melee hitbox
+// path as actual play. It never invokes an objective's takeDamage directly.
+function playerMeleeObjective(target, maximumStrikes = 1) {
+  let strikes = 0;
+  while (!target.isDead && !target.isDestroyed && strikes < maximumStrikes) {
+    game.player.x = target.x - Math.min(44, (target.hitRadiusX ?? 50) - 5);
+    game.player.z = target.z;
+    game.player.elevation = 0; game.player.vElevation = 0; game.player.grounded = true;
+    game.player.state = 'idle'; game.player.stateTimer = 0; game.player.canAttack = true; game.player.facing = 1;
+    game.player.vx = game.player.vz = 0;
+    game.battlefield.placeOnSurface(game.player);
+    game.input.justPressedMouse[0] = true;
+    game.player.update(1 / 60, game.input, game.battlefield, game);
+    game.input.justPressedMouse = {};
+    strikes++;
+  }
+  return strikes;
+}
+
 laneMinion.isDead = false;
-game.minions = [laneMinion];
+game.minions = [laneMinion, frontLaneMinion];
 game.enemyChampion.isDead = true;
-game.player.x = redTower.x - 24; game.player.z = redTower.z; game.player.elevation = 0; game.player.grounded = true; game.player.state = 'idle'; game.player.canAttack = true; game.player.facing = 1; game.battlefield.placeOnSurface(game.player);
 const playerTowerHp = redTower.hp;
-game.player.executeAttack(game.input);
-assert(redTower.hp < playerTowerHp, 'Valid player melee damages the lane tower objective');
+playerMeleeObjective(redTower);
+assert(redTower.hp < playerTowerHp, 'Real player input -> update -> melee hitbox damages the lane tower objective');
+game.player.x = redTower.x - 180; game.player.z = redTower.z; game.player.facing = 1; game.player.elevation = 0; game.battlefield.placeOnSurface(game.player);
+game.player.preparedRunes = [recognizer.runes.find((rune) => rune.id === 'ignis')];
+const spellTowerHp = redTower.hp;
+game.castPreparedSpell();
+for (let i = 0; i < 28; i++) spells.update(1 / 60, game);
+assert(redTower.hp < spellTowerHp, 'Prepared Fireball cast follows the runtime spell path and damages Tower');
 laneMinion.x = redTower.x - 24; laneMinion.z = redTower.z; laneMinion.attackTimer = 0;
 const towerHp = redTower.hp;
 laneMinion.update(0.1, game, game.battlefield);
 assert(redTower.hp < towerHp, 'Minion can attack the enemy lane tower');
 
-redTower.takeDamage(redTower.maxHp);
-assert(redTower.isDead && redCastle.isVulnerable && game.matchPhase === 'CastlePhase', 'Tower destruction unlocks Castle damage');
+// A front-lane minion begins at its real lane depth and must steer into the
+// Tower's attack band rather than being teleported next to the objective.
+frontLaneMinion.x = 132; frontLaneMinion.z = 0.84; frontLaneMinion.preferredZ = 0.84; frontLaneMinion.attackTimer = 0; frontLaneMinion.isDead = false;
+const beforeNaturalTowerPush = redTower.hp;
+for (let i = 0; i < 120; i++) { frontLaneMinion.update(0.1, game, game.battlefield); game.updateProjectiles(0.1); }
+assert(frontLaneMinion.z < 0.55 && redTower.hp < beforeNaturalTowerPush, 'Front-lane minion naturally steers to and damages the rear Tower');
+
+playerMeleeObjective(redTower, 30);
+assert(redTower.isDead && redCastle.isVulnerable && game.matchPhase === 'CastlePhase', 'Repeated real player melee destroys Tower and unlocks Castle');
 game.projectiles = []; redTower.shootTimer = 0; redTower.update(1, game);
 assert(game.projectiles.length === 0, 'Destroyed Tower stops applying defensive pressure');
-laneMinion.x = redCastle.x - 24; laneMinion.z = redCastle.z; laneMinion.attackTimer = 0;
+// With the Tower gone, the same real minion AI continues toward the Castle.
+frontLaneMinion.attackTimer = 0;
 const castleHp = redCastle.hp;
-laneMinion.update(0.1, game, game.battlefield);
-assert(redCastle.hp < castleHp, 'Minion advances to and damages the unlocked Castle');
+for (let i = 0; i < 130; i++) { frontLaneMinion.update(0.1, game, game.battlefield); game.updateProjectiles(0.1); }
+assert(redCastle.hp < castleHp, 'AI-controlled minion naturally progresses from Tower to vulnerable Castle');
 
-redCastle.takeDamage(redCastle.maxHp);
-assert(redCastle.isDestroyed && !game.canRespawn('red') && game.matchPhase === 'FinalWizardPhase', 'Castle destruction permanently disables that Wizard respawn');
+playerMeleeObjective(redCastle, 60);
+assert(redCastle.isDestroyed && !game.canRespawn('red') && game.matchPhase === 'FinalWizardPhase', 'Repeated real player melee destroys Castle and disables respawn');
 game.enemyChampion.isDead = false; game.enemyChampion.hp = game.enemyChampion.maxHp;
-game.enemyChampion.takeDamage(999, 0, 0, 0.1);
+game.enemyChampion.x = redCastle.x; game.enemyChampion.z = redCastle.z; game.enemyChampion.elevation = 0; game.battlefield.placeOnSurface(game.enemyChampion);
+playerMeleeObjective(game.enemyChampion, 12);
 game.enemyChampion.update(0.5, game, game.battlefield);
-assert(game.matchState === 'Ending' && game.winnerTeam === 'blue' && game.enemyChampion.isDead, 'Final Wizard death enters the controlled Victory ending');
+assert(game.matchState === 'Ending' && game.winnerTeam === 'blue' && game.enemyChampion.isDead, 'Real player melee kills final Wizard and enters the controlled Victory ending');
 const endingMatchTime = game.matchTime;
 for (let i = 1; i <= 12; i++) game.loop(game.lastFrameTime + 100);
 assert(game.matchState === 'Results' && game.matchTime === endingMatchTime, 'Ending advances to Results while the final match time remains frozen');

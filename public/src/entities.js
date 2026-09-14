@@ -25,6 +25,17 @@ function normalizeMove(move) {
   return magnitude > 1 ? { x: move.x / magnitude, z: move.z / magnitude } : move;
 }
 
+function objectiveApproachZ(minion, objective) {
+  // A lane remains a preference, not a rail. When marching on a structure,
+  // guide each lane into the structure's reachable depth band so front-lane
+  // fighters do not stall forever outside a rear-wall Tower's hit volume.
+  // Ranged bolts keep a narrow depth hit tolerance, so objective approach is
+  // intentionally tighter than the large melee contact band. This lets every
+  // lane join a siege without ranged minions firing harmlessly past a Tower.
+  const reach = Math.max(0.12, Math.min(0.16, (objective.hitRadiusZ ?? 0.25) - 0.06));
+  return Math.max(objective.z - reach, Math.min(objective.z + reach, minion.preferredZ));
+}
+
 export class Player extends GroundEntity {
   constructor(x, z) {
     super(x, z);
@@ -52,7 +63,19 @@ export class Player extends GroundEntity {
     this.comboStep = 0;
     this.comboResetTimer = 0;
     this.canAttack = true;
+    // Rune cards (the three cards in the hand) deliberately stay separate
+    // from prepared spell components. Drawing a card consumes that *card*,
+    // sends it to the back of the deck and immediately replaces it. The
+    // resulting rune is then placed in one of the three spell-component
+    // slots. They must never be the same array.
+    this.runeHand = [];
     this.preparedRunes = [];
+    this.runeDeck = [];
+    this.nextRuneCardId = 1;
+    this.auraShockCooldown = 0;
+    this.arcaneShield = 0;
+    this.arcaneShieldTimer = 0;
+    this.arcaneShieldCooldown = 0;
     this.ghosts = [];
     this.lifeState = 'Alive';
     this.respawnTimer = 0;
@@ -93,6 +116,10 @@ export class Player extends GroundEntity {
 
     this.mp = Math.min(this.maxMp, this.mp + dt * 14);
     this.sp = Math.min(this.maxSp, this.sp + dt * 25);
+    this.auraShockCooldown = Math.max(0, this.auraShockCooldown - dt);
+    this.arcaneShieldTimer = Math.max(0, this.arcaneShieldTimer - dt);
+    this.arcaneShieldCooldown = Math.max(0, this.arcaneShieldCooldown - dt);
+    if (this.arcaneShieldTimer <= 0) this.arcaneShield = 0;
     this.freezeTimer = Math.max(0, this.freezeTimer - dt);
     this.slowTimer = Math.max(0, this.slowTimer - dt);
     if (this.slowTimer <= 0) this.slowFactor = 1;
@@ -202,7 +229,7 @@ export class Player extends GroundEntity {
       const inFront = (target.x - this.x) * this.facing >= -10 && Math.abs(target.x - this.x) <= (target.hitRadiusX ?? 78);
       const closeDepth = Math.abs((target.z ?? this.z) - this.z) <= (target.hitRadiusZ ?? 0.22);
       const heightDifference = Math.abs((target.worldHeight ?? target.elevation ?? 0) - this.worldHeight);
-      const verticalReach = target.isObjective ? 120 : 70;
+      const verticalReach = target.hitHeightTolerance ?? (target.isObjective ? 120 : 70);
       if (inFront && closeDepth && heightDifference <= verticalReach) {
         target.takeDamage(dmg, kx, lift, stunDuration, isFinisher);
         combat.spawnHitSparks(target.x, target.y - 25, this.facing, isFinisher ? '#ffea00' : '#fff', isFinisher ? 16 : 8);
@@ -218,6 +245,14 @@ export class Player extends GroundEntity {
 
   takeDamage(amount, kx = 0, lift = 0, stun = 0.3, isCrit = false) {
     if (!this.isAlive || this.invulnerableTimer > 0) return;
+    if (this.arcaneShield > 0) {
+      const absorbed = Math.min(amount, this.arcaneShield);
+      this.arcaneShield -= absorbed;
+      amount -= absorbed;
+      combat.spawnElementalParticles(this.x, this.y - 35, 'fulgur', 6);
+      if (this.arcaneShield <= 0) { this.arcaneShield = 0; this.arcaneShieldTimer = 0; combat.spawnShockwave(this.x, this.y - 30, 44, '#b388ff'); }
+      if (amount <= 0) return;
+    }
     this.hp = Math.max(0, this.hp - amount);
     this.hitFlash = 0.15; this.vx = kx; this.vElevation = lift;
     this.state = 'hurt'; this.stateTimer = stun; this.canAttack = false;
@@ -242,7 +277,7 @@ export class Player extends GroundEntity {
     this.hp = this.maxHp; this.mp = this.maxMp; this.sp = this.maxSp;
     this.state = 'idle'; this.stateTimer = 0; this.comboStep = 0; this.comboResetTimer = 0;
     this.canAttack = true; this.freezeTimer = 0; this.slowTimer = 0; this.slowFactor = 1;
-    this.invulnerableTimer = 1.25; this.jumpsLeft = 2; this.ghosts = [];
+    this.invulnerableTimer = 1.25; this.auraShockCooldown = 0; this.arcaneShield = 0; this.arcaneShieldTimer = 0; this.arcaneShieldCooldown = 0; this.jumpsLeft = 2; this.ghosts = [];
     this.lifeState = 'Alive'; this.respawnTimer = 0; this.grounded = true;
     battlefield?.resolveEntityCollision(this);
     combat.spawnShockwave(this.x, this.y - 25, 55, '#80d8ff');
@@ -250,13 +285,68 @@ export class Player extends GroundEntity {
 
   freeze(duration) { if (this.isAlive) this.freezeTimer = duration; }
   slow(duration, factor) { if (this.isAlive) { this.slowTimer = duration; this.slowFactor = factor; } }
-  addPreparedRune(rune) { if (!this.isAlive || this.preparedRunes.length >= 3) return false; this.preparedRunes.push(rune); return true; }
+  makeRuneCard(rune) { return { ...rune, cardId: this.nextRuneCardId++ }; }
+  configureRuneDeck(runes) {
+    this.nextRuneCardId = 1;
+    this.runeDeck = runes.map((rune) => this.makeRuneCard(rune));
+    this.runeHand = [];
+    this.preparedRunes = [];
+    this.drawRunesToHand();
+  }
+  drawRunesToHand() {
+    while (this.runeHand.length < 3 && this.runeDeck.length) this.runeHand.push(this.runeDeck.shift());
+  }
+  getRuneCard(cardId = null, runeId = null) {
+    if (cardId != null) return this.runeHand.find((card) => card.cardId === cardId) ?? null;
+    return this.runeHand.find((card) => card.id === runeId) ?? null;
+  }
+  playRuneCard(runeId, expectedCardId = null) {
+    if (!this.isAlive || this.preparedRunes.length >= 3) return null;
+    const card = this.getRuneCard(expectedCardId, runeId);
+    // A selected card must be drawn as that exact rune; free drawing may
+    // only recognise one of the current three hand cards.
+    if (!card || card.id !== runeId) return null;
+    this.runeHand = this.runeHand.filter((handCard) => handCard.cardId !== card.cardId);
+    this.preparedRunes.push(card);
+    this.runeDeck.push(card);
+    this.drawRunesToHand();
+    return card;
+  }
+  consumePreparedRunes() { const used = [...this.preparedRunes]; this.preparedRunes = []; return used; }
+  addPreparedRune(rune) { return this.playRuneCard(rune.id); }
   clearPreparedRunes() { this.preparedRunes = []; }
   updateGhosts(dt) { this.ghosts = this.ghosts.filter(g => (g.alpha -= dt * 3.5) > 0); }
 
   render(ctx) {
+    // Prepared spell components trail behind the Wizard in world space. They
+    // are a gameplay indicator, not a DOM overlay or a baked reference image.
+    if (this.isAlive && this.preparedRunes.length) {
+      ctx.save();
+      const baseX = this.x - this.facing * 30;
+      for (let i = 0; i < this.preparedRunes.length; i++) {
+        const rune = this.preparedRunes[i];
+        const phase = this.animTime * 2.8 + i * 1.7;
+        const px = baseX - this.facing * (i * 18) + Math.cos(phase) * 3;
+        const py = this.y - 42 - i * 12 + Math.sin(phase) * 4;
+        ctx.globalAlpha = .9;
+        ctx.fillStyle = `${rune.color}33`;
+        ctx.strokeStyle = rune.color;
+        ctx.lineWidth = 1.5;
+        ctx.shadowColor = rune.color;
+        ctx.shadowBlur = 12;
+        ctx.beginPath(); ctx.arc(px, py, 10, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = '#fff'; ctx.font = '12px Cinzel'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(rune.glyph, px, py + .5);
+      }
+      ctx.restore();
+    }
     for (const g of this.ghosts) sprites.renderEntity(ctx, this.heroKey, g.x, g.y, { facing: g.facing, state: g.state, animTime: g.animTime, alpha: g.alpha, hitFlash: 1 });
     sprites.renderEntity(ctx, this.heroKey, this.x, this.y, { facing: this.facing, state: this.state, animTime: this.animTime, hitFlash: this.hitFlash > 0 ? 1 : 0, alpha: this.lifeState === 'Dead' ? 0 : 1 });
+    if (this.arcaneShield > 0 && this.isAlive) {
+      ctx.save(); ctx.strokeStyle = 'rgba(194, 164, 255, .9)'; ctx.fillStyle = 'rgba(137, 98, 255, .12)'; ctx.lineWidth = 2;
+      ctx.shadowColor = '#b388ff'; ctx.shadowBlur = 14; ctx.beginPath(); ctx.ellipse(this.x, this.y - 37, 32, 45, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.restore();
+    }
     if (this.freezeTimer > 0 && this.isAlive) {
       ctx.save(); ctx.fillStyle = 'rgba(0,229,255,.45)'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
       ctx.fillRect(this.x - 24, this.y - 75, 48, 75); ctx.strokeRect(this.x - 24, this.y - 75, 48, 75); ctx.restore();
@@ -283,7 +373,7 @@ export class Minion extends GroundEntity {
     else {
       // Structures are attacked from each lane; combat units may pull a minion
       // slightly off its lane only when already nearby.
-      const targetZ = target && !target.isObjective ? target.z : this.preferredZ;
+      const targetZ = target?.isObjective ? objectiveApproachZ(this, target) : target ? target.z : this.preferredZ;
       const desired = target ? normalizeMove({ x: target.x - this.x, z: (targetZ - this.z) * 150 }) : { x: this.facing, z: (this.preferredZ - this.z) * 150 };
       this.facing = desired.x ? Math.sign(desired.x) : this.facing; this.vx = desired.x * this.speed * this.slowFactor; this.vz = desired.z * (this.speed / 150) * this.slowFactor; this.state = 'run';
     }
@@ -315,18 +405,22 @@ export class Minion extends GroundEntity {
 }
 
 export class Tower extends GroundEntity {
-  constructor(x, z, team, onDestroyed = null) { super(x, z); this.team = team; this.isObjective = true; this.maxHp = this.hp = 800; this.range = 280; this.hitRadiusX = 62; this.hitRadiusZ = 0.42; this.shootCooldown = 1.8; this.shootTimer = 0; this.isDead = false; this.corePulse = 0; this.hitFlash = 0; this.topHeight = 125; this.currentTarget = null; this.onDestroyed = onDestroyed; }
+  constructor(x, z, team, onDestroyed = null) { super(x, z); this.team = team; this.isObjective = true; this.maxHp = this.hp = 800; this.range = 280; this.hitRadiusX = 68; this.hitRadiusZ = 0.46; this.shootCooldown = 1.8; this.shootTimer = 0; this.isDead = false; this.corePulse = 0; this.hitFlash = 0; this.topHeight = 125; this.currentTarget = null; this.onDestroyed = onDestroyed; }
   get crystalY() { return this.y - this.topHeight; }
   update(dt, gameWorld) { if (this.isDead) { this.currentTarget = null; return; } this.corePulse += dt * 3; this.hitFlash = Math.max(0, this.hitFlash - dt); this.shootTimer -= dt; let target = null; let distance = this.range; for (const candidate of gameWorld.getHostileMobileTargets(this.team)) { const d = groundDistance(this, candidate); if (d < distance) { target = candidate; distance = d; } } this.currentTarget = target; if (target && this.shootTimer <= 0) { this.shootTimer = this.shootCooldown; audio.playTowerShot(); combat.spawnShockwave(this.x, this.crystalY, 20, this.team === 'blue' ? '#00e5ff' : '#ff1744'); gameWorld.spawnTowerOrb(this.x, this.z, target, this.team, 42, this.worldHeight + this.topHeight); } }
   takeDamage(amount) { if (this.isDead) return; this.hp = Math.max(0, this.hp - amount); this.hitFlash = .15; combat.spawnDamageText(this.x, this.crystalY - 15, amount, { isCrit: true, color: this.team === 'blue' ? '#4fc3f7' : '#e57373' }); if (!this.hp) { this.isDead = true; audio.playImpact(true); combat.shakeCamera(15, .8); combat.spawnShockwave(this.x, this.crystalY, 80, '#ff9100'); combat.spawnHitSparks(this.x, this.crystalY, 1, '#ffcc80', 24); this.onDestroyed?.(this); } }
-  render(ctx) { const y = this.crystalY + Math.sin(this.corePulse) * 5; const color = this.team === 'blue' ? '#00e5ff' : '#ff1744'; ctx.save(); ctx.fillStyle = this.team === 'blue' ? 'rgba(0,229,255,.35)' : 'rgba(255,23,68,.35)'; ctx.beginPath(); ctx.arc(this.x, y, 20, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = this.hitFlash ? '#fff' : color; ctx.shadowColor = color; ctx.shadowBlur = 12; ctx.beginPath(); ctx.moveTo(this.x, y - 15); ctx.lineTo(this.x + 9, y); ctx.lineTo(this.x, y + 15); ctx.lineTo(this.x - 9, y); ctx.closePath(); ctx.fill(); ctx.restore(); }
+  render(ctx) { const y = this.crystalY + Math.sin(this.corePulse) * 5; const color = this.team === 'blue' ? '#00e5ff' : '#ff1744'; ctx.save(); ctx.fillStyle = this.team === 'blue' ? 'rgba(0,229,255,.35)' : 'rgba(255,23,68,.35)'; ctx.beginPath(); ctx.arc(this.x, y, 20, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = this.hitFlash ? '#fff' : color; ctx.shadowColor = color; ctx.shadowBlur = 12; ctx.beginPath(); ctx.moveTo(this.x, y - 15); ctx.lineTo(this.x + 9, y); ctx.lineTo(this.x, y + 15); ctx.lineTo(this.x - 9, y); ctx.closePath(); ctx.fill(); if (!this.isDead && this.hp < this.maxHp) { ctx.shadowBlur = 0; ctx.fillStyle = 'rgba(0,0,0,.78)'; ctx.fillRect(this.x - 30, y - 31, 60, 5); ctx.fillStyle = color; ctx.fillRect(this.x - 30, y - 31, 60 * this.hp / this.maxHp, 5); } ctx.restore(); }
   renderRange(ctx) { ctx.save(); ctx.setLineDash([6,6]); ctx.strokeStyle = this.team === 'blue' ? 'rgba(33,190,255,.55)' : 'rgba(255,82,82,.55)'; ctx.beginPath(); ctx.arc(this.x, this.y, this.range, 0, Math.PI * 2); ctx.stroke(); ctx.restore(); }
 }
 
 export class Castle extends GroundEntity {
   constructor(x, z, team, onDestroyed = null, onProtectedHit = null) {
     super(x, z); this.team = team; this.isObjective = true; this.maxHp = this.hp = 1800;
-    this.isVulnerable = false; this.isDestroyed = false; this.hitRadiusX = 82; this.hitRadiusZ = 0.5;
+    this.isVulnerable = false; this.isDestroyed = false; this.hitRadiusX = 88; this.hitRadiusZ = 0.56;
+    // The gate/objective sits below the upper battlement. Attacks from the
+    // playable battlement therefore need to reach the structure below rather
+    // than being rejected as an impossible vertical hit.
+    this.hitHeightTolerance = 210;
     this.hitFlash = 0; this.corePulse = 0; this.onDestroyed = onDestroyed; this.onProtectedHit = onProtectedHit; this.protectedFeedbackTimer = 0;
   }
   takeDamage(amount) {
@@ -341,7 +435,7 @@ export class Castle extends GroundEntity {
     const color = this.team === 'blue' ? '#29b6f6' : '#ef5350'; const y = this.y - 58;
     ctx.save(); ctx.globalAlpha = this.isDestroyed ? .2 : 1; ctx.strokeStyle = this.isVulnerable ? color : '#b0bec5'; ctx.lineWidth = 3; ctx.setLineDash(this.isVulnerable ? [] : [6, 5]);
     ctx.beginPath(); ctx.ellipse(this.x, y, this.hitRadiusX, 18, 0, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
-    ctx.fillStyle = this.hitFlash ? '#fff' : color; ctx.shadowColor = color; ctx.shadowBlur = this.isVulnerable ? 15 : 5; ctx.beginPath(); ctx.arc(this.x, y, 10 + Math.sin(this.corePulse) * 2, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+    ctx.fillStyle = this.hitFlash ? '#fff' : color; ctx.shadowColor = color; ctx.shadowBlur = this.isVulnerable ? 15 : 5; ctx.beginPath(); ctx.arc(this.x, y, 10 + Math.sin(this.corePulse) * 2, 0, Math.PI * 2); ctx.fill(); if (this.isVulnerable && !this.isDestroyed && this.hp < this.maxHp) { ctx.shadowBlur = 0; ctx.fillStyle = 'rgba(0,0,0,.78)'; ctx.fillRect(this.x - 38, y - 27, 76, 5); ctx.fillStyle = color; ctx.fillRect(this.x - 38, y - 27, 76 * this.hp / this.maxHp, 5); } ctx.restore();
   }
 }
 
