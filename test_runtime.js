@@ -26,6 +26,12 @@ game.startMatch();
 await Promise.resolve();
 assert(game.running && typeof nextFrame === 'function', 'Game loop initializes and schedules a frame');
 assert(game.canvas.width === 2048 && game.canvas.height === 1152, 'DPR-aware backing canvas preserves logical 1024x576 gameplay coordinates');
+const fullViewportRect = game.canvas.getBoundingClientRect;
+game.canvas.getBoundingClientRect = () => ({ left: 0, top: 0, width: 512, height: 288 });
+game.syncHudScale();
+assert(game.uiLayer.style['--hud-scale'] === '0.5', 'HUD scales as one 1024×576 composition with a resized Canvas');
+game.canvas.getBoundingClientRect = fullViewportRect;
+game.syncHudScale();
 assert(game.minions.length === 6 && game.battlefield.waveNumber === 1, 'Initial lane wave spawns coherently');
 assert(game.battlefield.bgLoaded, 'Clean arena background load path completes');
 assert(game.player.x === game.battlefield.getSpawn('blue').x && game.player.z === game.battlefield.getSpawn('blue').z, 'Player starts at the blue Castle spawn');
@@ -124,6 +130,18 @@ game.drawing.autoLockArmed = true;
 game.loop(game.lastFrameTime + 16);
 assert(!game.drawing.active && game.player.preparedRunes.length === 1 && game.player.preparedRunes[0].id === 'ventus', 'A paused rune stroke automatically locks in after two seconds');
 game.player.clearPreparedRunes();
+const slotIgnis = recognizer.runes.find((rune) => rune.id === 'ignis');
+const slotAqua = recognizer.runes.find((rune) => rune.id === 'aqua');
+game.slotRuneSpell(slotIgnis); game.slotRuneSpell(slotAqua);
+assert(game.player.slottedSpells.length === 2 && game.player.selectedSpellIndex === 1 && game.swapSlottedSpell() && game.player.selectedSpellIndex === 0, 'Slotted spells retain an explicit selected slot and SWAP rotates it');
+const selectedSpellCount = spells.activeSpells.length;
+assert(game.castPreparedSpell() && game.player.slottedSpells.length === 1 && spells.activeSpells.length === selectedSpellCount + 1, 'CAST fires only the selected slotted spell and leaves other slots intact');
+game.player.clearPreparedRunes();
+game.slotRuneSpell(slotIgnis); game.slotRuneSpell(slotAqua);
+assert(game.castGrimoireSpells() && game.player.slottedSpells.length === 0, 'Grimoire releases one random non-combo slot then clears all remaining slots');
+game.player.clearPreparedRunes();
+game.slotRuneSpell(slotIgnis); game.slotRuneSpell(recognizer.runes.find((rune) => rune.id === 'ventus'));
+assert(game.player.slottedSpells.length === 1 && game.player.slottedSpells[0].isCombo && game.castGrimoireSpells() && game.player.slottedSpells.length === 0, 'Consecutive compatible runes merge into a combo slot and Grimoire releases combo slots');
 
 game.player.invulnerableTimer = 0;
 game.player.takeDamage(999, 0, 0, 0.1);
@@ -158,7 +176,7 @@ spells.cast(game.player, spells.resolveSpell([ignis]), game);
 spells.update(0.05, game);
 assert(game.enemyChampion.hp < crossLaneHp, 'Ground projectile hits an enemy on the same depth lane');
 
-const spellSets = [['ventus'], ['fulgur'], ['terra'], ['aqua'], ['ignis', 'ventus'], ['ignis', 'fulgur'], ['fulgur', 'ventus'], ['ignis', 'terra'], ['aqua', 'ventus']];
+const spellSets = [['ventus'], ['fulgur'], ['terra'], ['aqua'], ['ignis', 'ventus'], ['ignis', 'fulgur'], ['fulgur', 'ventus'], ['ignis', 'terra'], ['aqua', 'ventus'], ['aqua', 'fulgur']];
 for (const ids of spellSets) {
   spells.activeSpells = [];
   spells.cast(game.player, spells.resolveSpell(ids.map((id) => recognizer.runes.find((rune) => rune.id === id))), game);
@@ -166,16 +184,19 @@ for (const ids of spellSets) {
 }
 assert(true, 'All core spells update against the 2.5D actor model without exceptions');
 
-// Aura Shock is a real runtime ability: mana/cooldown gated radial damage and
-// 2.5D push, with no effect on protected structures.
+// Aura Shock is a rune combination: Aqua + Fulgur, mana/cooldown gated radial
+// damage and 2.5D push, with no separate action button or shortcut.
 spells.activeSpells = [];
 game.player.x = 470; game.player.z = 0.52; game.player.elevation = 0; game.player.lifeState = 'Alive'; game.player.mp = game.player.maxMp; game.player.auraShockCooldown = 0; game.battlefield.placeOnSurface(game.player);
 game.enemyChampion.isDead = false; game.enemyChampion.hp = game.enemyChampion.maxHp; game.enemyChampion.x = 505; game.enemyChampion.z = 0.62; game.enemyChampion.elevation = 0; game.battlefield.placeOnSurface(game.enemyChampion);
 const auraHp = game.enemyChampion.hp;
 const auraMana = game.player.mp;
-assert(game.castAuraShock() && game.enemyChampion.hp < auraHp && game.player.mp === auraMana - 20 && game.enemyChampion.vz > 0, 'Aura Shock applies radial 2.5D control through the player ability path');
+const auraRunes = ['aqua', 'fulgur'].map((id) => recognizer.runes.find((rune) => rune.id === id));
+game.player.preparedRunes = auraRunes;
+assert(game.castPreparedSpell() && game.enemyChampion.hp < auraHp && game.player.mp === auraMana - 20 && game.enemyChampion.vz > 0, 'Aura Shock applies radial 2.5D control through the rune-combination cast path');
 const auraCooldownHp = game.enemyChampion.hp;
-assert(!game.castAuraShock() && game.enemyChampion.hp === auraCooldownHp, 'Aura Shock respects its cooldown instead of spamming crowd control');
+game.player.preparedRunes = auraRunes;
+assert(!game.castPreparedSpell() && game.enemyChampion.hp === auraCooldownHp, 'Aura Shock respects its cooldown instead of spamming crowd control');
 game.player.mp = game.player.maxMp; game.player.arcaneShieldCooldown = 0; game.player.invulnerableTimer = 0;
 const shieldHp = game.player.hp;
 assert(game.castArcaneShield() && game.player.arcaneShield === 90 && game.player.mp === game.player.maxMp - 30, 'Arcane Shield casts through the player ability path with mana cost');

@@ -95,6 +95,9 @@ export class SpellSystem {
           desc: 'Freezing gale freezing minions and drastically slowing enemy lane push.'
         };
       }
+      if (key === 'aqua+fulgur') {
+        return { id: 'aura_shock', name: 'AURA SHOCK', tier: 2, manaCost: 20, cooldown: 3.5, color: '#b388ff', desc: 'Frost-lightning pulse blasting surrounding enemies away.' };
+      }
     }
 
     // 3. Single Rune Base Spells
@@ -184,6 +187,11 @@ export class SpellSystem {
 
       case 'blizzard_surge': {
         this.activeSpells.push(new BlizzardSurgeSpell(startX, startZ, facing, caster.team));
+        break;
+      }
+
+      case 'aura_shock': {
+        this.castAuraShock(caster, gameWorld);
         break;
       }
 

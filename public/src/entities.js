@@ -70,6 +70,8 @@ export class Player extends GroundEntity {
     // slots. They must never be the same array.
     this.runeHand = [];
     this.preparedRunes = [];
+    this.slottedSpells = [];
+    this.selectedSpellIndex = 0;
     this.runeDeck = [];
     this.nextRuneCardId = 1;
     this.auraShockCooldown = 0;
@@ -291,6 +293,8 @@ export class Player extends GroundEntity {
     this.runeDeck = runes.map((rune) => this.makeRuneCard(rune));
     this.runeHand = [];
     this.preparedRunes = [];
+    this.slottedSpells = [];
+    this.selectedSpellIndex = 0;
     this.drawRunesToHand();
   }
   drawRunesToHand() {
@@ -314,30 +318,32 @@ export class Player extends GroundEntity {
   }
   consumePreparedRunes() { const used = [...this.preparedRunes]; this.preparedRunes = []; return used; }
   addPreparedRune(rune) { return this.playRuneCard(rune.id); }
-  clearPreparedRunes() { this.preparedRunes = []; }
+  clearPreparedRunes() { this.preparedRunes = []; this.slottedSpells = []; this.selectedSpellIndex = 0; }
   updateGhosts(dt) { this.ghosts = this.ghosts.filter(g => (g.alpha -= dt * 3.5) > 0); }
 
   render(ctx) {
     // Prepared spell components trail behind the Wizard in world space. They
     // are a gameplay indicator, not a DOM overlay or a baked reference image.
-    if (this.isAlive && this.preparedRunes.length) {
+    if (this.isAlive && this.slottedSpells.length) {
       ctx.save();
       const baseX = this.x - this.facing * 30;
-      for (let i = 0; i < this.preparedRunes.length; i++) {
-        const rune = this.preparedRunes[i];
+      for (let i = 0; i < this.slottedSpells.length; i++) {
+        const slot = this.slottedSpells[i];
+        const rune = slot.definition;
         const phase = this.animTime * 2.8 + i * 1.7;
-        const px = baseX - this.facing * (i * 18) + Math.cos(phase) * 3;
-        const py = this.y - 42 - i * 12 + Math.sin(phase) * 4;
-        ctx.globalAlpha = .9;
+        const selected = i === this.selectedSpellIndex;
+        const px = selected ? this.x + this.facing * 42 : baseX - this.facing * (i * 18) + Math.cos(phase) * 3;
+        const py = selected ? this.y - 58 + Math.sin(phase) * 4 : this.y - 42 - i * 12 + Math.sin(phase) * 4;
+        ctx.globalAlpha = selected ? 1 : .68;
         ctx.fillStyle = `${rune.color}33`;
         ctx.strokeStyle = rune.color;
-        ctx.lineWidth = 1.5;
+        ctx.lineWidth = selected ? 2.5 : 1.5;
         ctx.shadowColor = rune.color;
         ctx.shadowBlur = 12;
-        ctx.beginPath(); ctx.arc(px, py, 10, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.arc(px, py, selected ? 14 : 10, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
         ctx.shadowBlur = 0;
         ctx.fillStyle = '#fff'; ctx.font = '12px Cinzel'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText(rune.glyph, px, py + .5);
+        ctx.fillText(slot.isCombo ? '✦' : slot.runes[0].glyph, px, py + .5);
       }
       ctx.restore();
     }

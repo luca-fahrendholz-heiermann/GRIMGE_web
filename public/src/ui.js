@@ -56,9 +56,9 @@ export class UIManager {
     this.attackBtn = document.getElementById('action-attack-btn');
     this.jumpBtn = document.getElementById('action-jump-btn');
     this.dashBtn = document.getElementById('action-dash-btn');
-    this.shockBtn = document.getElementById('action-shock-btn');
     this.shieldBtn = document.getElementById('action-shield-btn');
     this.castBtn = document.getElementById('action-cast-btn');
+    this.swapBtn = document.getElementById('action-swap-btn');
     this.fullscreenBtn = document.getElementById('fullscreen-btn');
 
     this.drawingHud = document.getElementById('drawing-hud');
@@ -76,11 +76,7 @@ export class UIManager {
     this.grimoireBtn.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      const game = window.gameWorld;
-      // The Grimoire is the deliberate combo trigger. With prepared runes it
-      // casts the resolved combination; with no components it opens the guide.
-      if (game?.player?.preparedRunes?.length) game.castPreparedSpell();
-      else this.toggleGrimoire();
+      window.gameWorld?.castGrimoireSpells();
     });
 
     this.closeGrimoireBtn.addEventListener('click', (e) => {
@@ -110,6 +106,10 @@ export class UIManager {
       }
     });
 
+    this.playerPortraitImg.addEventListener('pointerdown', (e) => {
+      e.preventDefault(); e.stopPropagation(); this.toggleGrimoire();
+    });
+
     this.jumpBtn.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -120,11 +120,6 @@ export class UIManager {
       e.stopPropagation();
       if (window.gameWorld?.player?.isAlive) window.gameWorld.input.justPressedKeys.ShiftLeft = true;
     });
-    this.shockBtn.addEventListener('pointerdown', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      window.gameWorld?.castAuraShock();
-    });
     this.shieldBtn.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -134,6 +129,9 @@ export class UIManager {
       e.preventDefault();
       e.stopPropagation();
       window.gameWorld?.castPreparedSpell();
+    });
+    this.swapBtn.addEventListener('pointerdown', (e) => {
+      e.preventDefault(); e.stopPropagation(); window.gameWorld?.swapSlottedSpell();
     });
     this.fullscreenBtn?.addEventListener('pointerdown', (e) => {
       e.preventDefault();
@@ -303,16 +301,16 @@ export class UIManager {
     // Prepared components are not cards in the hand. This makes the deck
     // cycle legible: hand card -> drawn component -> spell -> cleared.
     if (this.preparedRunesEl) {
-      this.preparedRunesEl.innerHTML = player.preparedRunes.length
-        ? `PREPARED: ${player.preparedRunes.map((rune) => `<b style="color:${rune.color}">${rune.glyph}</b>`).join(' + ')}`
-        : 'PREPARED: —';
+      this.preparedRunesEl.innerHTML = player.slottedSpells.length
+        ? `SLOTTED: ${player.slottedSpells.map((slot, index) => `<b style="color:${slot.definition.color};opacity:${index === player.selectedSpellIndex ? 1 : .45}">${slot.isCombo ? '✦' : slot.runes[0].glyph}</b>`).join(' ')}`
+        : 'SLOTTED: —';
     }
 
     // Active Spell Preview
-    const resolved = spells.resolveSpell(player.preparedRunes);
-    if (resolved) {
-      this.activeSpellPreview.textContent = `READY: ${resolved.name} [PRESS E TO CAST]`;
-      this.activeSpellPreview.style.color = resolved.color;
+    const selectedSlot = player.slottedSpells[player.selectedSpellIndex];
+    if (selectedSlot) {
+      this.activeSpellPreview.textContent = `READY: ${selectedSlot.definition.name} [CAST · SWAP]`;
+      this.activeSpellPreview.style.color = selectedSlot.definition.color;
     } else {
       const hand = player.runeHand.map((rune) => rune.name).join(' · ');
       this.activeSpellPreview.textContent = hand ? `RUNE HAND: ${hand} — DRAW ONE` : 'RUNE DECK EMPTY';

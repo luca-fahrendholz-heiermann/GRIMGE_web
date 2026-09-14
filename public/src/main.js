@@ -16,6 +16,7 @@ export class GameWorld {
 
     this.runeCanvas = document.getElementById('rune-canvas');
     this.runeCtx = this.runeCanvas.getContext('2d');
+    this.uiLayer = document.getElementById('ui-layer');
 
     this.logicalWidth = VIEWPORT.width;
     this.logicalHeight = VIEWPORT.height;
@@ -91,8 +92,23 @@ export class GameWorld {
     if ('imageSmoothingQuality' in context) context.imageSmoothingQuality = 'high';
   }
 
+  clearRuneCanvas() {
+    this.runeCtx.save();
+    this.runeCtx.setTransform?.(1, 0, 0, 1, 0, 0);
+    this.runeCtx.clearRect(0, 0, this.runeCanvas.width, this.runeCanvas.height);
+    this.runeCtx.restore();
+  }
+
+  syncHudScale() {
+    const width = this.canvas.getBoundingClientRect().width;
+    if (width > 0 && this.uiLayer) this.uiLayer.style['--hud-scale'] = String(width / this.logicalWidth);
+  }
+
   async init() {
     this.setupInputs();
+    this.syncHudScale();
+    window.addEventListener('resize', () => this.syncHudScale());
+    window.visualViewport?.addEventListener?.('resize', () => this.syncHudScale());
 
     // Load character sprites
     await sprites.loadAll();
@@ -145,9 +161,6 @@ export class GameWorld {
       // Cast Spell (E)
       if (e.code === 'KeyE') this.castPreparedSpell();
 
-      // Immediate crowd-control spell. It intentionally lives beside rune
-      // casting so the player always has a fast escape tool in a brawl.
-      if (e.code === 'KeyR') this.castAuraShock();
       if (e.code === 'KeyF') this.castArcaneShield();
 
       // Clear selected spell components (Q). It does not delete or cycle
@@ -376,7 +389,7 @@ export class GameWorld {
     this.drawing.currentStroke = [];
     this.drawing.autoLockArmed = false;
     this.drawing.lastStrokeTime = 0;
-    this.runeCtx.clearRect(0, 0, this.logicalWidth, this.logicalHeight);
+    this.clearRuneCanvas();
   }
 
   confirmRuneDrawing(autoLock = false) {
@@ -414,7 +427,7 @@ export class GameWorld {
     this.drawing.expectedCardId = null;
     this.drawing.autoLockArmed = false;
     this.targetTimeScale = this.timeScale = 1;
-    this.runeCtx.clearRect(0, 0, this.logicalWidth, this.logicalHeight);
+    this.clearRuneCanvas();
     ui.setDrawingMode(false);
   }
 
@@ -437,7 +450,7 @@ export class GameWorld {
     ui.setDrawingMode(false);
 
     if (!this.isMatchRunning() || !this.player.isAlive) {
-      this.runeCtx.clearRect(0, 0, this.logicalWidth, this.logicalHeight);
+      this.clearRuneCanvas();
       return;
     }
     const result = recognizedResult ?? recognizer.recognize(this.drawing.strokes);
@@ -445,6 +458,7 @@ export class GameWorld {
     if (result && result.rune) {
       const added = this.player.playRuneCard(result.rune.id, expectedCardId);
       if (added) {
+        this.slotRuneSpell(added);
         audio.playRuneSuccess();
         ui.showRecognitionBadge(result.rune, result.confidence);
         combat.spawnShockwave(this.player.x, this.player.y - 30, 70, result.rune.color);
@@ -457,12 +471,14 @@ export class GameWorld {
       ui.showRecognitionBadge(null, 0);
     }
 
-    this.runeCtx.clearRect(0, 0, this.logicalWidth, this.logicalHeight);
+    this.clearRuneCanvas();
     this.drawing.expectedCardId = null;
   }
 
   castPreparedSpell() {
     if (!this.isMatchRunning() || !this.player.isAlive) return false;
+    const selectedSlot = this.player.slottedSpells[this.player.selectedSpellIndex];
+    if (selectedSlot) return this.castSpellSlot(selectedSlot, true);
     if (this.player.preparedRunes.length === 0) {
       this.showAnnouncement('NO RUNES PREPARED! DRAW RUNES FIRST');
       audio.playRuneFail();
@@ -472,6 +488,18 @@ export class GameWorld {
     const selectedRunes = [...this.player.preparedRunes];
     const resolved = spells.resolveSpell(selectedRunes);
     if (resolved) {
+      if (resolved.id === 'aura_shock' && this.player.auraShockCooldown > 0) {
+        this.showAnnouncement('AURA SHOCK IS RECHARGING');
+        audio.playRuneFail();
+        return false;
+      }
+      if (this.player.mp < (resolved.manaCost ?? 0)) {
+        this.showAnnouncement('NOT ENOUGH MANA');
+        audio.playRuneFail();
+        return false;
+      }
+      this.player.mp -= resolved.manaCost ?? 0;
+      if (resolved.id === 'aura_shock') this.player.auraShockCooldown = resolved.cooldown;
       spells.cast(this.player, resolved, this);
       this.showAnnouncement(`CAST: ${resolved.name}!`);
       // Drawing already recycled each physical card to the deck back and
@@ -482,20 +510,70 @@ export class GameWorld {
     return false;
   }
 
-  castAuraShock() {
-    const caster = this.player;
-    if (!this.isMatchRunning() || !caster.isAlive || caster.auraShockCooldown > 0) return false;
-    const manaCost = 20;
-    if (caster.mp < manaCost) {
-      this.showAnnouncement('NOT ENOUGH MANA FOR AURA SHOCK');
-      audio.playRuneFail();
-      return false;
+  slotRuneSpell(rune) {
+    const slots = this.player.slottedSpells;
+    const previous = slots[slots.length - 1];
+    if (previous && previous.runes.length < 3) {
+      const combinedRunes = [...previous.runes, rune];
+      const combined = spells.resolveSpell(combinedRunes);
+      if (combined?.tier > 1) {
+        previous.runes = combinedRunes;
+        previous.definition = combined;
+        previous.isCombo = true;
+        this.player.selectedSpellIndex = slots.length - 1;
+        return previous;
+      }
     }
-    caster.mp -= manaCost;
-    caster.auraShockCooldown = 3.5;
-    spells.castAuraShock(caster, this);
-    this.showAnnouncement('AURA SHOCK');
+    const definition = spells.resolveSpell([rune]);
+    const slot = { runes: [rune], definition, isCombo: false };
+    slots.push(slot);
+    this.player.selectedSpellIndex = slots.length - 1;
+    return slot;
+  }
+
+  castSpellSlot(slot, consumeSelected = false) {
+    const resolved = slot?.definition;
+    if (!resolved) return false;
+    if (resolved.id === 'aura_shock' && this.player.auraShockCooldown > 0) {
+      this.showAnnouncement('AURA SHOCK IS RECHARGING'); audio.playRuneFail(); return false;
+    }
+    if (this.player.mp < (resolved.manaCost ?? 0)) {
+      this.showAnnouncement('NOT ENOUGH MANA'); audio.playRuneFail(); return false;
+    }
+    this.player.mp -= resolved.manaCost ?? 0;
+    if (resolved.id === 'aura_shock') this.player.auraShockCooldown = resolved.cooldown;
+    spells.cast(this.player, resolved, this);
+    this.showAnnouncement(`CAST: ${resolved.name}!`);
+    if (consumeSelected) {
+      this.player.slottedSpells.splice(this.player.selectedSpellIndex, 1);
+      this.player.selectedSpellIndex = Math.max(0, Math.min(this.player.selectedSpellIndex, this.player.slottedSpells.length - 1));
+      this.player.preparedRunes = this.player.slottedSpells.flatMap((entry) => entry.runes);
+    }
     return true;
+  }
+
+  swapSlottedSpell() {
+    const slots = this.player.slottedSpells;
+    if (slots.length < 2) return false;
+    this.player.selectedSpellIndex = (this.player.selectedSpellIndex + 1) % slots.length;
+    audio.playRuneChime(660);
+    return true;
+  }
+
+  castGrimoireSpells() {
+    const slots = this.player.slottedSpells;
+    if (!this.isMatchRunning() || !this.player.isAlive || !slots.length) {
+      this.showAnnouncement('NO SLOTTED SPELLS'); audio.playRuneFail(); return false;
+    }
+    const hasCombo = slots.some((slot) => slot.isCombo);
+    const toCast = hasCombo ? [...slots] : [slots[Math.floor(Math.random() * slots.length)]];
+    let castAny = false;
+    for (const slot of toCast) castAny = this.castSpellSlot(slot, false) || castAny;
+    if (castAny) {
+      this.player.clearPreparedRunes();
+      this.showAnnouncement(hasCombo ? 'GRIMOIRE: COMBO VOLLEY!' : 'GRIMOIRE: ARCANE RELEASE!');
+    }
+    return castAny;
   }
 
   castArcaneShield() {
@@ -902,7 +980,7 @@ export class GameWorld {
 
   renderRuneStrokes() {
     const rctx = this.runeCtx;
-    rctx.clearRect(0, 0, this.logicalWidth, this.logicalHeight);
+    this.clearRuneCanvas();
 
     rctx.save();
     rctx.fillStyle = 'rgba(8, 6, 18, 0.45)';

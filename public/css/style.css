@@ -72,8 +72,12 @@ html, body {
   position: absolute;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
+  /* Fixed logical HUD surface. GameWorld scales this entire 1024×576 layer
+     with the Canvas, preserving the laptop composition on every device. */
+  width: 1024px;
+  height: 576px;
+  transform-origin: top left;
+  transform: scale(var(--hud-scale, 1));
   pointer-events: none;
   z-index: 20;
 }
@@ -591,10 +595,11 @@ html, body {
 /* Right Actions */
 #bottom-right-actions {
   pointer-events: auto;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 8px;
+  position: absolute;
+  right: 3%;
+  bottom: 0;
+  width: 188px;
+  height: 168px;
 }
 
 .action-wrap {
@@ -641,10 +646,14 @@ html, body {
   opacity: .8;
 }
 
-.shock-action { border-color: #b388ff; color: #eadfff; box-shadow: 0 0 11px rgba(179, 136, 255, .35); }
 .shield-action { border-color: #8ea8ff; color: #e5eaff; box-shadow: 0 0 11px rgba(112, 143, 255, .34); }
 
 .cast-action { border-color: #00c8ff; color: #bdefff; }
+
+.triangle-jump { position: absolute; left: 70px; top: 0; }
+.triangle-shield { position: absolute; left: 0; bottom: 0; }
+.triangle-cast { position: absolute; right: 0; bottom: 0; }
+.swap-action { position: absolute; left: 69px; bottom: 0; min-width: 50px; height: 28px; font-size: 8px; border-color: #d3a4ff; color: #f2dcff; }
 
 .action-wrap:hover {
   transform: scale(1.08);
@@ -659,8 +668,11 @@ html, body {
 
 .arcane-circle-wrap {
   cursor: pointer;
-  width: 104px;
-  height: 104px;
+  position: absolute;
+  left: 52px;
+  top: 46px;
+  width: 82px;
+  height: 82px;
   border: 2px solid rgba(0, 210, 255, .8);
   border-radius: 50%;
   color: #d8fbff;
@@ -676,7 +688,7 @@ html, body {
   filter: drop-shadow(0 0 22px #00e5ff);
 }
 
-.arcane-circle-glyph { display: block; font: 700 53px/62px 'Cinzel', serif; text-shadow: 0 0 16px #00e5ff; }
+.arcane-circle-glyph { display: block; font: 700 42px/49px 'Cinzel', serif; text-shadow: 0 0 16px #00e5ff; }
 .arcane-circle-wrap small { display: block; margin-top: -7px; font: 700 9px 'Rajdhani', sans-serif; letter-spacing: 2px; }
 
 @keyframes pulseAura {
