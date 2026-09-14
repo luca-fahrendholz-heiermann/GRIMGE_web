@@ -25,19 +25,24 @@ html, body {
   display: flex;
   justify-content: center;
   align-items: center;
+  touch-action: none;
+  overscroll-behavior: none;
 }
 
 #game-container {
   position: relative;
-  width: 100vw;
-  height: 100vh;
-  max-width: 177.78vh; /* 16:9 aspect ratio */
-  max-height: 56.25vw;
+  /* A single logical 16:9 game surface. Every browser/device receives the
+     same composition; unused portrait space remains a neutral backdrop. */
+  width: min(100vw, 177.7778vh);
+  height: auto;
+  aspect-ratio: 16 / 9;
+  max-height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
   background: #000;
   box-shadow: 0 0 50px rgba(0, 0, 0, 0.9);
+  touch-action: none;
 }
 
 #game-canvas {
@@ -157,6 +162,15 @@ html, body {
   font: 700 23px/1 'Rajdhani', sans-serif;
   pointer-events: auto;
   touch-action: none;
+}
+
+/* Mobile browser chrome can change the visible height while playing. Use the
+   dynamic viewport unit where available so the scene keeps its proportions. */
+@supports (height: 100dvh) {
+  #game-container {
+    width: min(100vw, 177.7778dvh);
+    max-height: 100dvh;
+  }
 }
 
 /* ====================================================
@@ -428,8 +442,8 @@ html, body {
 .card-slot {
   position: relative;
   cursor: pointer;
-  width: 52px;
-  height: 66px;
+  width: 64px;
+  height: 82px;
   padding: 0;
   border: 1px solid rgba(154, 132, 215, .78);
   border-radius: 7px;
@@ -471,19 +485,21 @@ html, body {
 }
 
 .card-overlay span {
-  font-size: 25px;
+  font-size: 39px;
   line-height: 1;
 }
 
 .card-overlay small {
-  max-width: 42px;
+  max-width: 54px;
   overflow: hidden;
-  font-size: 7px;
+  font-size: 8px;
   letter-spacing: 0.4px;
   text-overflow: ellipsis;
 }
 
 .card-overlay em {
+  max-width: 54px;
+  overflow: hidden;
   font-size: 6px;
   font-style: normal;
   letter-spacing: .8px;
@@ -494,11 +510,12 @@ html, body {
   cursor: pointer;
   border: 1px solid rgba(255, 212, 108, .72);
   border-radius: 7px;
-  width: 56px;
-  height: 66px;
+  position: relative;
+  width: 68px;
+  height: 82px;
   padding: 4px;
   color: #ffe5a3;
-  background: linear-gradient(145deg, rgba(88, 53, 24, .94), rgba(26, 14, 29, .98));
+  background: linear-gradient(90deg, #24140e 0 13%, #89521e 14% 19%, #3b1f13 20% 100%);
   box-shadow: inset 0 0 15px rgba(255, 184, 54, .2), 0 4px 10px rgba(0,0,0,.5);
   touch-action: manipulation;
   transition: transform 0.18s ease-out;
@@ -510,6 +527,9 @@ html, body {
 
 .grimoire-wrap .grimoire-glyph { display: block; font-size: 27px; line-height: 36px; text-shadow: 0 0 12px #ffb74d; }
 .grimoire-wrap small { display: block; font: 700 6px 'Rajdhani', sans-serif; letter-spacing: .5px; }
+.grimoire-wrap::before { content: ''; position: absolute; inset: 5px 5px 18px 14px; border: 1px solid rgba(255, 211, 112, .72); box-shadow: inset 0 0 10px rgba(255, 196, 76, .18); pointer-events: none; }
+.grimoire-wrap .grimoire-glyph { position: relative; z-index: 1; margin-top: 7px; font-size: 31px; line-height: 35px; }
+.grimoire-wrap .grimoire-pages { position: absolute; right: 4px; top: 9px; bottom: 21px; width: 3px; border-right: 1px solid rgba(255, 233, 181, .75); border-left: 1px solid rgba(255, 233, 181, .28); }
 
 .grimoire-img {
   width: 52px;

@@ -287,11 +287,13 @@ export class UIManager {
         cardEl.style.filter = `drop-shadow(0 0 10px ${rune.color})`;
         overlay.style.color = rune.color;
         overlay.style.borderColor = rune.color;
-        overlay.innerHTML = `<span>${rune.glyph}</span><small>${rune.name}</small><em>DRAW</em>`;
+        cardEl.style.background = `linear-gradient(145deg, ${rune.color}38, rgba(10, 8, 25, .96) 72%)`;
+        overlay.innerHTML = `<span>${rune.glyph}</span><small>${rune.name}</small><em>${rune.desc}</em>`;
       } else {
         cardEl.style.opacity = '0.55';
         cardEl.style.transform = 'none';
         cardEl.style.filter = 'grayscale(0.6)';
+        cardEl.style.background = 'linear-gradient(145deg, rgba(38, 29, 70, .96), rgba(11, 9, 25, .96))';
         overlay.style.color = '#6f687a';
         overlay.style.borderColor = '#554d63';
         overlay.innerHTML = '<span>·</span><small>EMPTY</small>';

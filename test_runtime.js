@@ -82,7 +82,7 @@ game.canvas.listeners.touchstart({ changedTouches: [incompleteRuneTouch] });
 windowListeners.touchend({ changedTouches: [incompleteRuneTouch] });
 assert(game.drawing.active && game.drawing.inputMode === null, 'Releasing an unrecognized mobile stroke keeps Arcane Focus open');
 arcaneCircle.listeners.pointerdown(runePointer);
-assert(game.drawing.active, 'A second mobile circle press explicitly attempts rune lock-in without auto-closing a failed gesture');
+assert(game.drawing.active && game.drawing.strokes.length === 0 && game.drawing.currentStroke.length === 0, 'An unrecognized rune keeps Arcane Focus open but resets the old sketch');
 game.cancelRuneDrawing();
 assert(!game.drawing.active && game.timeScale === 1, 'Escape/cancel path cleanly exits persistent drawing mode');
 

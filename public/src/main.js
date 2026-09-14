@@ -180,6 +180,11 @@ export class GameWorld {
     });
 
     window.addEventListener('contextmenu', (e) => e.preventDefault());
+    // A canvas game owns double taps and long presses. Without these guards
+    // mobile browsers may treat the controls as a webpage to zoom or save.
+    document.addEventListener?.('dblclick', (e) => e.preventDefault(), { passive: false });
+    document.addEventListener?.('gesturestart', (e) => e.preventDefault(), { passive: false });
+    document.addEventListener?.('dragstart', (e) => e.preventDefault(), { passive: false });
 
     this.canvas.addEventListener('mousedown', (e) => {
       audio.ensureContext();
@@ -366,12 +371,20 @@ export class GameWorld {
     return true;
   }
 
+  resetRuneSketch() {
+    this.drawing.strokes = [];
+    this.drawing.currentStroke = [];
+    this.drawing.autoLockArmed = false;
+    this.drawing.lastStrokeTime = 0;
+    this.runeCtx.clearRect(0, 0, this.logicalWidth, this.logicalHeight);
+  }
+
   confirmRuneDrawing(autoLock = false) {
     if (!this.drawing.active) return false;
     this.completeRuneStroke();
     const result = recognizer.recognize(this.drawing.strokes);
     if (!result?.rune || result.confidence < 0.70) {
-      if (autoLock) this.drawing.autoLockArmed = false;
+      this.resetRuneSketch();
       audio.playRuneFail();
       ui.showRecognitionBadge(null, 0);
       this.showAnnouncement('RUNE NOT RECOGNIZED — DRAW AGAIN');
@@ -382,7 +395,7 @@ export class GameWorld {
     // that the player has not drawn into their hand.
     const availableCard = this.player.getRuneCard(this.drawing.expectedCardId, result.rune.id);
     if (!availableCard || availableCard.id !== result.rune.id) {
-      if (autoLock) this.drawing.autoLockArmed = false;
+      this.resetRuneSketch();
       audio.playRuneFail();
       ui.showRecognitionBadge(null, 0);
       this.showAnnouncement('RUNE NOT IN HAND — DRAW ONE OF THE THREE');
@@ -395,8 +408,7 @@ export class GameWorld {
   cancelRuneDrawing() {
     if (!this.drawing.active) return;
     this.drawing.active = false;
-    this.drawing.strokes = [];
-    this.drawing.currentStroke = [];
+    this.resetRuneSketch();
     this.drawing.touchId = null;
     this.drawing.inputMode = null;
     this.drawing.expectedCardId = null;
