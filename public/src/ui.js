@@ -73,7 +73,8 @@ export class UIManager {
     this.playMatchBtn.addEventListener('click', () => window.gameWorld?.startMatch());
     this.rematchBtn.addEventListener('click', () => window.gameWorld?.startMatch());
     this.hubBtn.addEventListener('click', () => window.gameWorld?.returnToHub());
-    this.grimoireBtn.addEventListener('click', (e) => {
+    this.grimoireBtn.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
       e.stopPropagation();
       const game = window.gameWorld;
       // The Grimoire is the deliberate combo trigger. With prepared runes it
@@ -151,7 +152,8 @@ export class UIManager {
     });
 
     this.cards.forEach((card) => {
-      card.addEventListener('click', (e) => {
+      card.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
         e.stopPropagation();
         const index = this.cards.indexOf(card);
         const runeCard = window.gameWorld?.player?.runeHand?.[index];

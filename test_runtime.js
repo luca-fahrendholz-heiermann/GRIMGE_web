@@ -109,6 +109,20 @@ assert(!game.drawing.active && game.timeScale === 1 && game.player.preparedRunes
 const spellCount = spells.activeSpells.length;
 game.castPreparedSpell();
 assert(spells.activeSpells.length > spellCount && game.player.preparedRunes.length === 0 && game.player.runeHand.map((rune) => rune.id).join(',') === 'fulgur,terra,ventus' && initialHand === 'fulgur,terra,ignis', 'Casting consumes slotted spell components without cycling untouched hand cards');
+const handBeforeMismatch = game.player.runeHand.map((rune) => rune.cardId).join(',');
+const fulgurCard = game.player.runeHand.find((rune) => rune.id === 'fulgur');
+game.startRuneDrawing(fulgurCard.cardId);
+game.drawing.strokes = [[...Array.from({ length: 26 }, (_, index) => ({ x: 100 + index * 10, y: 200 + Math.sin((100 + index * 10) * .1) * 2 }))]];
+game.confirmRuneDrawing();
+assert(game.drawing.active && game.player.runeHand.map((rune) => rune.cardId).join(',') === handBeforeMismatch, 'Recognized gestures are rejected when they do not match the selected hand card');
+game.cancelRuneDrawing();
+const ventusCard = game.player.runeHand.find((rune) => rune.id === 'ventus');
+game.startRuneDrawing(ventusCard.cardId);
+game.drawing.strokes = [[...Array.from({ length: 26 }, (_, index) => ({ x: 100 + index * 10, y: 200 + Math.sin((100 + index * 10) * .1) * 2 }))]];
+game.drawing.lastStrokeTime = performance.now() - 2001;
+game.drawing.autoLockArmed = true;
+game.loop(game.lastFrameTime + 16);
+assert(!game.drawing.active && game.player.preparedRunes.length === 1 && game.player.preparedRunes[0].id === 'ventus', 'A paused rune stroke automatically locks in after two seconds');
 game.player.clearPreparedRunes();
 
 game.player.invulnerableTimer = 0;

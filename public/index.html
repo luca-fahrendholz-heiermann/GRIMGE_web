@@ -176,10 +176,10 @@
           <button id="action-shield-btn" class="touch-action shield-action" title="Arcane Shield (F)">SHIELD</button>
           <button id="action-cast-btn" class="touch-action cast-action" title="Cast prepared runes (E)">CAST</button>
 
-          <!-- Arcane Rune Weaving Circle -->
-          <div id="arcane-circle-trigger" class="arcane-circle-wrap" title="Arcane Rune Weaving (Hold Right-Click / Tap Circle to Draw)">
-            <img src="assets/ui/arcane_circle.png" class="arcane-circle-img" alt="Arcane Circle">
-          </div>
+          <!-- Code-rendered Arcane Rune Weaving Circle, not a screenshot asset. -->
+          <button id="arcane-circle-trigger" class="arcane-circle-wrap" type="button" title="Tap to draw; tap again to lock in">
+            <span class="arcane-circle-glyph">✧</span><small>DRAW</small>
+          </button>
 
           <!-- Chat Button -->
           <div id="chat-btn" class="chat-wrap" title="Emotes">
@@ -226,7 +226,7 @@
 
       <!-- Drawing Feedback Overlay -->
       <div id="drawing-hud" class="hidden">
-        <div id="drawing-prompt">ARCANE FOCUS ACTIVE — DRAW RUNE SHAPE · TAP CIRCLE AGAIN TO LOCK IN · ESC CANCELS</div>
+          <div id="drawing-prompt">ARCANE FOCUS — DRAW A HAND RUNE · TAP CIRCLE TO LOCK · AUTO-LOCK AFTER 2s · ESC CANCELS</div>
         <div id="recognition-result"></div>
       </div>
     </div>

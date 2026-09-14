@@ -4,7 +4,16 @@
   box-sizing: border-box;
   user-select: none;
   -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
+
+img, button, #ui-layer, #game-container {
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+  user-select: none;
+}
+
+button { touch-action: manipulation; }
 
 html, body {
   width: 100%;
@@ -419,6 +428,14 @@ html, body {
 .card-slot {
   position: relative;
   cursor: pointer;
+  width: 52px;
+  height: 66px;
+  padding: 0;
+  border: 1px solid rgba(154, 132, 215, .78);
+  border-radius: 7px;
+  background: linear-gradient(145deg, rgba(38, 29, 70, .96), rgba(11, 9, 25, .96));
+  box-shadow: inset 0 0 14px rgba(113, 82, 204, .16), 0 4px 10px rgba(0,0,0,.5);
+  touch-action: manipulation;
   transition: transform 0.18s ease-out, filter 0.18s;
 }
 
@@ -466,14 +483,33 @@ html, body {
   text-overflow: ellipsis;
 }
 
+.card-overlay em {
+  font-size: 6px;
+  font-style: normal;
+  letter-spacing: .8px;
+  opacity: .8;
+}
+
 .grimoire-wrap {
   cursor: pointer;
+  border: 1px solid rgba(255, 212, 108, .72);
+  border-radius: 7px;
+  width: 56px;
+  height: 66px;
+  padding: 4px;
+  color: #ffe5a3;
+  background: linear-gradient(145deg, rgba(88, 53, 24, .94), rgba(26, 14, 29, .98));
+  box-shadow: inset 0 0 15px rgba(255, 184, 54, .2), 0 4px 10px rgba(0,0,0,.5);
+  touch-action: manipulation;
   transition: transform 0.18s ease-out;
 }
 
 .grimoire-wrap:hover {
   transform: translateY(-5px);
 }
+
+.grimoire-wrap .grimoire-glyph { display: block; font-size: 27px; line-height: 36px; text-shadow: 0 0 12px #ffb74d; }
+.grimoire-wrap small { display: block; font: 700 6px 'Rajdhani', sans-serif; letter-spacing: .5px; }
 
 .grimoire-img {
   width: 52px;
@@ -603,7 +639,14 @@ html, body {
 
 .arcane-circle-wrap {
   cursor: pointer;
-  touch-action: none;
+  width: 104px;
+  height: 104px;
+  border: 2px solid rgba(0, 210, 255, .8);
+  border-radius: 50%;
+  color: #d8fbff;
+  background: radial-gradient(circle, rgba(38, 134, 190, .33) 0 26%, rgba(14, 37, 78, .64) 27% 55%, rgba(4, 10, 26, .7) 56%);
+  box-shadow: inset 0 0 0 7px rgba(117, 234, 255, .08), inset 0 0 23px rgba(0, 183, 255, .38), 0 0 18px rgba(0, 176, 255, .42);
+  touch-action: manipulation;
   transition: transform 0.2s, filter 0.2s;
   animation: pulseAura 3s ease-in-out infinite alternate;
 }
@@ -613,12 +656,8 @@ html, body {
   filter: drop-shadow(0 0 22px #00e5ff);
 }
 
-.arcane-circle-img {
-  width: 120px;
-  height: 120px;
-  display: block;
-  filter: drop-shadow(0 0 14px #00b0ff);
-}
+.arcane-circle-glyph { display: block; font: 700 53px/62px 'Cinzel', serif; text-shadow: 0 0 16px #00e5ff; }
+.arcane-circle-wrap small { display: block; margin-top: -7px; font: 700 9px 'Rajdhani', sans-serif; letter-spacing: 2px; }
 
 @keyframes pulseAura {
   from { filter: drop-shadow(0 0 10px #00b0ff); }
