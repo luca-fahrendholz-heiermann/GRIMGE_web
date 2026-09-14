@@ -15,11 +15,12 @@
 - Minions retain target locks, light separation, lane preferences, and objective progression without player lane locking.
 - Match lifecycle is separate from objective phase: `Menu → Running → Ending (0.9s) → Results`; `Rematch` reconstructs match state without reload; `Return to Hub` reaches the minimal menu.
 - Results display victory/defeat, final match time, objective state, Wizard kills, Rematch, and Hub controls. Enter rematches; Escape returns to Hub.
-- Rune drawing exits immediately on recognition/end: drawing slow motion is cleared directly back to full speed. On touch, the arcane circle now owns its gesture (press → draw → release), so a simultaneous left-thumb joystick touch cannot delay or corrupt rune recognition.
+- Rune drawing has no fixed timeout. Tapping the mobile arcane circle opens persistent Arcane Focus; the circle may be released before drawing. Unrecognized strokes keep the mode open, recognition closes it immediately, and a second circle tap (or Escape) cancels. Simultaneous left-thumb joystick input cannot corrupt the rune touch.
+- Mobile attack, jump, dash, and cast use `pointerdown` rather than delayed click input. A top-right fullscreen button requests browser fullscreen and landscape orientation where the browser permits it.
 
 ## Automated Validation Complete
 
-- `npm test` passes: 13 rune/spell checks, 6 world checks, 52 runtime checks.
+- `npm test` passes: 13 rune/spell checks, 6 world checks, 53 runtime checks.
 - Runtime coverage includes upper battlement spawn/access/fall, depth/dash/jump, melee recovery, death/respawn, depth-aware spells, Tower target filtering, objectives, ending/results, Rematch, and Hub return.
 - All browser modules pass `node --check`; local HTTP checks return 200 for `/` and `/src/main.js`.
 

@@ -56,9 +56,9 @@ export class UIManager {
     this.jumpBtn = document.getElementById('action-jump-btn');
     this.dashBtn = document.getElementById('action-dash-btn');
     this.castBtn = document.getElementById('action-cast-btn');
+    this.fullscreenBtn = document.getElementById('fullscreen-btn');
 
     this.drawingHud = document.getElementById('drawing-hud');
-    this.drawingTimerFill = document.getElementById('drawing-timer-fill');
     this.recognitionResult = document.getElementById('recognition-result');
 
     this.heroChips = document.querySelectorAll('.hero-chip');
@@ -80,61 +80,48 @@ export class UIManager {
       this.toggleGrimoire(false);
     });
 
-    // The arcane circle is the touch equivalent of holding the right mouse
-    // button: press, draw with the same finger, release. Pointer capture
-    // keeps the gesture alive after the thumb leaves the small control and
-    // works independently of the movement joystick's other pointer.
-    let runePointerId = null;
-    const beginRuneGesture = (e) => {
+    // The circle opens persistent Arcane Focus. The thumb can be released
+    // before drawing; the mode closes only after rune recognition (or a
+    // second circle press / Escape cancels it).
+    const toggleRuneDrawing = (e) => {
       e.preventDefault();
       e.stopPropagation();
       const game = window.gameWorld;
       if (!game) return;
-      game.startRuneDrawing();
-      if (!game.drawing.active) return;
-      runePointerId = e.pointerId;
-      game.drawing.inputMode = 'pointer';
-      game.drawing.touchId = e.pointerId;
-      this.arcaneCircle.setPointerCapture?.(e.pointerId);
-      // Begin exactly where the player pressed, just like right-click.
-      const point = game.getCanvasCoords(e.clientX, e.clientY);
-      game.addRunePoint(point.x, point.y);
+      if (game.drawing.active) game.cancelRuneDrawing();
+      else game.startRuneDrawing();
     };
-    const drawRuneGesture = (e) => {
-      if (e.pointerId !== runePointerId || !window.gameWorld?.drawing.active) return;
-      e.preventDefault();
-      const point = window.gameWorld.getCanvasCoords(e.clientX, e.clientY);
-      window.gameWorld.addRunePoint(point.x, point.y);
-    };
-    const endRuneGesture = (e) => {
-      if (e.pointerId !== runePointerId) return;
-      e.preventDefault();
-      runePointerId = null;
-      window.gameWorld?.finishRuneDrawing();
-    };
-    this.arcaneCircle.addEventListener('pointerdown', beginRuneGesture);
-    this.arcaneCircle.addEventListener('pointermove', drawRuneGesture);
-    this.arcaneCircle.addEventListener('pointerup', endRuneGesture);
-    this.arcaneCircle.addEventListener('pointercancel', endRuneGesture);
+    this.arcaneCircle.addEventListener('pointerdown', toggleRuneDrawing);
 
-    this.attackBtn.addEventListener('click', (e) => {
+    // Pointer-down avoids the mobile click-delay. All action input reaches
+    // the same shared gameplay state as keyboard/mouse actions.
+    this.attackBtn.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
       e.stopPropagation();
       if (window.gameWorld && window.gameWorld.player) {
         window.gameWorld.player.executeAttack(window.gameWorld.input);
       }
     });
 
-    this.jumpBtn.addEventListener('click', (e) => {
+    this.jumpBtn.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
       e.stopPropagation();
       if (window.gameWorld?.player?.isAlive) window.gameWorld.input.justPressedKeys.Space = true;
     });
-    this.dashBtn.addEventListener('click', (e) => {
+    this.dashBtn.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
       e.stopPropagation();
       if (window.gameWorld?.player?.isAlive) window.gameWorld.input.justPressedKeys.ShiftLeft = true;
     });
-    this.castBtn.addEventListener('click', (e) => {
+    this.castBtn.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
       e.stopPropagation();
       window.gameWorld?.castPreparedSpell();
+    });
+    this.fullscreenBtn?.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      window.gameWorld?.enterFullscreen();
     });
 
     this.heroChips.forEach(chip => {
@@ -308,12 +295,10 @@ export class UIManager {
     }
   }
 
-  setDrawingMode(active, remainingTime = 2.5, maxTime = 2.5) {
+  setDrawingMode(active) {
     if (active) {
       this.drawingHud.classList.remove('hidden');
       this.drawingHud.style.display = 'flex';
-      const pct = Math.max(0, (remainingTime / maxTime) * 100);
-      this.drawingTimerFill.style.width = `${pct}%`;
     } else {
       this.drawingHud.classList.add('hidden');
       this.drawingHud.style.display = 'none';

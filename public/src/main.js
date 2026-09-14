@@ -65,8 +65,6 @@ export class GameWorld {
       active: false,
       strokes: [],
       currentStroke: [],
-      timer: 2.5,
-      maxTimer: 2.5,
       lastPointTime: 0,
       lastRecognitionCheck: 0,
       // A rune gesture owns exactly one touch. This prevents the movement
@@ -151,6 +149,12 @@ export class GameWorld {
         audio.playRuneFail();
       }
 
+      // The no-time-limit drawing mode always has an explicit cancel path.
+      if (e.code === 'Escape' && this.drawing.active) {
+        this.cancelRuneDrawing();
+        return;
+      }
+
       // Toggle Grimoire (H)
       if (e.code === 'KeyH') ui.toggleGrimoire();
 
@@ -203,15 +207,12 @@ export class GameWorld {
       if (e.button === 0) {
         this.input.mouse.isDown = false;
         if (this.drawing.active && !this.input.mouse.rightDown) {
-          if (this.drawing.currentStroke.length > 0) {
-            this.drawing.strokes.push([...this.drawing.currentStroke]);
-            this.drawing.currentStroke = [];
-          }
+          this.completeRuneStroke();
         }
       } else if (e.button === 2) {
         this.input.mouse.rightDown = false;
         if (this.drawing.active) {
-          this.finishRuneDrawing();
+          this.completeRuneStroke();
         }
       }
     });
@@ -249,11 +250,10 @@ export class GameWorld {
       const endedRuneTouch = this.drawing.inputMode === 'touch'
         && Array.from(e.changedTouches ?? []).some((touch) => touch.identifier === this.drawing.touchId);
       if (this.drawing.active && endedRuneTouch) {
-        if (this.drawing.currentStroke.length > 0) {
-          this.drawing.strokes.push([...this.drawing.currentStroke]);
-          this.drawing.currentStroke = [];
-        }
-        this.finishRuneDrawing();
+        this.completeRuneStroke();
+        // A non-recognized stroke leaves Arcane Focus open for another try.
+        this.drawing.touchId = null;
+        this.drawing.inputMode = null;
       }
     });
 
@@ -308,13 +308,12 @@ export class GameWorld {
     this.drawing.active = true;
     this.drawing.strokes = [];
     this.drawing.currentStroke = [];
-    this.drawing.timer = this.drawing.maxTimer;
     this.drawing.lastRecognitionCheck = 0;
     this.drawing.touchId = null;
     this.drawing.inputMode = null;
     this.targetTimeScale = 0.22;
 
-    ui.setDrawingMode(true, this.drawing.timer, this.drawing.maxTimer);
+    ui.setDrawingMode(true);
     audio.playRuneChime(392);
   }
 
@@ -333,11 +332,49 @@ export class GameWorld {
     // A clean gesture should return the player to the brawl immediately. The
     // short throttle, minimum point count, and confidence guard avoid closing
     // the menu on a stray first stroke.
-    if (this.drawing.currentStroke.length >= 10 && now - this.drawing.lastRecognitionCheck > 110) {
+    if (this.drawing.currentStroke.length >= 8 && now - this.drawing.lastRecognitionCheck > 80) {
       this.drawing.lastRecognitionCheck = now;
       const liveResult = recognizer.recognize([...this.drawing.strokes, [...this.drawing.currentStroke]]);
-      if (liveResult?.rune && liveResult.confidence >= 0.84) this.finishRuneDrawing(liveResult);
+      if (liveResult?.rune && liveResult.confidence >= 0.78) this.finishRuneDrawing(liveResult);
     }
+  }
+
+  enterFullscreen() {
+    const root = document.documentElement ?? document.getElementById('game-container');
+    const request = root?.requestFullscreen ?? root?.webkitRequestFullscreen;
+    if (!request) {
+      this.showAnnouncement('FULLSCREEN NOT SUPPORTED BY THIS BROWSER');
+      return;
+    }
+    Promise.resolve(request.call(root, { navigationUI: 'hide' }))
+      .then(() => globalThis.screen?.orientation?.lock?.('landscape').catch(() => {}))
+      .catch(() => this.showAnnouncement('FULLSCREEN WAS BLOCKED'));
+  }
+
+  completeRuneStroke() {
+    if (!this.drawing.active || this.drawing.currentStroke.length === 0) return false;
+    this.drawing.strokes.push([...this.drawing.currentStroke]);
+    this.drawing.currentStroke = [];
+    const result = recognizer.recognize(this.drawing.strokes);
+    // Releasing a line is not a failure or a timeout. The player can keep
+    // drawing until a real rune is recognized, then returns instantly.
+    if (result?.rune && result.confidence >= 0.70) {
+      this.finishRuneDrawing(result);
+      return true;
+    }
+    return false;
+  }
+
+  cancelRuneDrawing() {
+    if (!this.drawing.active) return;
+    this.drawing.active = false;
+    this.drawing.strokes = [];
+    this.drawing.currentStroke = [];
+    this.drawing.touchId = null;
+    this.drawing.inputMode = null;
+    this.targetTimeScale = this.timeScale = 1;
+    this.runeCtx.clearRect(0, 0, this.logicalWidth, this.logicalHeight);
+    ui.setDrawingMode(false);
   }
 
   finishRuneDrawing(recognizedResult = null) {
@@ -618,11 +655,10 @@ export class GameWorld {
     this.timeScale += (this.targetTimeScale - this.timeScale) * Math.min(1, dt * 10);
     const scaledDt = dt * this.timeScale;
 
-    // 1. Drawing Timer
+    // 1. Rune drawing deliberately has no countdown. It remains active until
+    // a rune is recognized, the player cancels it, or their life state ends.
     if (this.drawing.active) {
-      this.drawing.timer -= dt;
-      ui.setDrawingMode(true, this.drawing.timer, this.drawing.maxTimer);
-      if (this.drawing.timer <= 0) this.finishRuneDrawing();
+      ui.setDrawingMode(true);
     }
 
     // 2. Match Timer — only active play contributes to the final result.

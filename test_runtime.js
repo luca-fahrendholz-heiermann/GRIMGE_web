@@ -71,15 +71,18 @@ game.player.update(1 / 60, game.input, game.battlefield);
 game.input.justPressedKeys = {};
 assert(game.player.elevation > 0 && game.player.z === preJumpZ, 'Jump changes elevation without corrupting depth');
 
-// The mobile circle owns its pointer until release, so a simultaneous
-// left-thumb joystick touch cannot become the rune stroke.
+// The mobile circle opens a persistent rune mode. Releasing the circle (or
+// a non-rune canvas stroke) cannot trigger the old timeout/auto-close path.
 const arcaneCircle = elements.get('arcane-circle-trigger');
 const runePointer = { pointerId: 77, clientX: 850, clientY: 470, preventDefault() {}, stopPropagation() {} };
 arcaneCircle.listeners.pointerdown(runePointer);
-arcaneCircle.listeners.pointermove({ ...runePointer, clientX: 880, clientY: 450, preventDefault() {} });
-assert(game.drawing.active && game.drawing.inputMode === 'pointer' && game.drawing.touchId === 77, 'Mobile arcane circle begins a direct owned rune gesture');
-arcaneCircle.listeners.pointerup(runePointer);
-assert(!game.drawing.active && game.timeScale === 1, 'Mobile rune release resolves immediately without drawing slow-motion');
+assert(game.drawing.active && game.drawing.inputMode === null, 'Mobile arcane circle opens persistent drawing mode without a countdown');
+const incompleteRuneTouch = { identifier: 77, clientX: 850, clientY: 470 };
+game.canvas.listeners.touchstart({ changedTouches: [incompleteRuneTouch] });
+windowListeners.touchend({ changedTouches: [incompleteRuneTouch] });
+assert(game.drawing.active && game.drawing.inputMode === null, 'Releasing an unrecognized mobile stroke keeps Arcane Focus open');
+arcaneCircle.listeners.pointerdown(runePointer);
+assert(!game.drawing.active && game.timeScale === 1, 'A second mobile circle press cancels persistent drawing mode immediately');
 
 game.player.elevation = 0; game.player.vElevation = 0; game.player.grounded = true; game.player.state = 'idle'; game.player.canAttack = true; game.player.invulnerableTimer = 0;
 game.enemyChampion.x = game.player.x + 40; game.enemyChampion.z = game.player.z;
