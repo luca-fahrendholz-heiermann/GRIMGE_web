@@ -26,6 +26,16 @@ export class CombatEngine {
     this.hitstopFrames = Math.max(this.hitstopFrames, frames);
   }
 
+  resetEffects() {
+    this.hitstopFrames = 0;
+    this.damageNumbers = [];
+    this.particles = [];
+    this.slashTrails = [];
+    this.camera.trauma = 0;
+    this.camera.shakeX = 0;
+    this.camera.shakeY = 0;
+  }
+
   // Camera Shake
   shakeCamera(intensity = 8, duration = 0.25) {
     this.camera.trauma = Math.min(1.0, this.camera.trauma + intensity / 10);

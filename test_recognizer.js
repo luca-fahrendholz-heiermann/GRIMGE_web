@@ -63,6 +63,7 @@ const rIgnis = recognizer.runes.find(r => r.id === 'ignis');
 const rVentus = recognizer.runes.find(r => r.id === 'ventus');
 const rFulgur = recognizer.runes.find(r => r.id === 'fulgur');
 const rTerra = recognizer.runes.find(r => r.id === 'terra');
+const rAqua = recognizer.runes.find(r => r.id === 'aqua');
 
 const sSingleFire = spells.resolveSpell([rIgnis]);
 assert(sSingleFire && sSingleFire.id === 'fireball', 'Spell: Single Ignis -> Fireball');
@@ -78,6 +79,12 @@ assert(sTempest && sTempest.id === 'tempest_blitz', 'Spell: Ventus + Fulgur -> T
 
 const sMagma = spells.resolveSpell([rIgnis, rTerra]);
 assert(sMagma && sMagma.id === 'magma_fissure', 'Spell: Ignis + Terra -> MAGMA FISSURE');
+
+const sSandstorm = spells.resolveSpell([rTerra, rVentus]);
+assert(sSandstorm && sSandstorm.id === 'sandstorm_bastion', 'Spell: Terra + Ventus -> SANDSTORM BASTION');
+
+const sBlizzard = spells.resolveSpell([rAqua, rVentus]);
+assert(sBlizzard && sBlizzard.id === 'blizzard_surge', 'Spell: Aqua + Ventus -> BLIZZARD SURGE');
 
 const sGrand = spells.resolveSpell([rIgnis, rVentus, rFulgur]);
 assert(sGrand && sGrand.id === 'apocalyptic_heavensurge', 'Spell: Grand 3-Rune -> APOCALYPTIC HEAVENSURGE');

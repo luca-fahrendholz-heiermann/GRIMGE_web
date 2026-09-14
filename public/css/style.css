@@ -38,8 +38,9 @@ html, body {
   width: 100%;
   height: 100%;
   display: block;
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
+  /* The backing buffer is DPR-aware; let the browser use its high-quality
+     source downsampling instead of scaling a 1024px canvas as pixel blocks. */
+  image-rendering: auto;
   cursor: crosshair;
 }
 
@@ -61,6 +62,76 @@ html, body {
   height: 100%;
   pointer-events: none;
   z-index: 20;
+}
+
+.match-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  background: radial-gradient(circle at 50% 35%, rgba(24, 30, 53, .45), rgba(3, 3, 8, .82));
+  transition: opacity .22s ease;
+}
+
+.match-overlay.hidden { opacity: 0; pointer-events: none; display: none; }
+
+.match-panel {
+  min-width: 300px;
+  max-width: 440px;
+  padding: 28px 34px;
+  text-align: center;
+  border: 1px solid rgba(255, 211, 102, .75);
+  border-radius: 10px;
+  background: rgba(10, 9, 20, .91);
+  box-shadow: 0 15px 55px rgba(0,0,0,.85), 0 0 30px rgba(255, 187, 55, .16);
+  font-family: 'Cinzel', serif;
+}
+
+.match-kicker { color: #88dfff; font: 700 10px 'Rajdhani', sans-serif; letter-spacing: 3px; }
+.match-panel h1 { margin: 8px 0 2px; color: #ffd66b; font-size: 56px; letter-spacing: 7px; text-shadow: 0 0 25px rgba(255, 182, 50, .55); }
+.match-panel h2 { margin: 8px 0; font-size: 43px; letter-spacing: 4px; color: #ffd66b; text-shadow: 0 0 25px rgba(255, 190, 55, .62); }
+.match-panel p, .match-panel small { display: block; margin: 8px 0; color: #c7c1d5; font: 700 11px 'Rajdhani', sans-serif; letter-spacing: 1.5px; }
+.results-time { margin: 14px 0 10px; color: #f5e8c4; font: 700 15px 'Rajdhani', sans-serif; letter-spacing: 2px; }
+.results-stats { display: grid; gap: 5px; margin: 12px 0 18px; color: #b9e4ff; font: 700 13px 'Rajdhani', sans-serif; letter-spacing: 1px; }
+.results-actions { display: flex; justify-content: center; gap: 10px; }
+.match-button { min-width: 128px; padding: 9px 13px; border: 1px solid #76658f; border-radius: 5px; background: #211a31; color: #f3e9d3; font: 700 13px 'Cinzel', serif; cursor: pointer; }
+.match-button.primary { border-color: #ffd66b; background: linear-gradient(180deg, #7d5420, #33200f); color: #fff0bd; box-shadow: 0 0 15px rgba(255, 183, 55, .3); }
+.match-button:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.15); }
+.match-button.muted { opacity: .45; cursor: default; }
+
+/* 2.5D mobile movement surface. Pointer events keep its left-thumb gesture
+   independent from the right-side action controls and rune drawing. */
+#touch-joystick {
+  position: absolute;
+  left: 4%;
+  bottom: 5%;
+  width: 132px;
+  height: 132px;
+  border-radius: 50%;
+  border: 2px solid rgba(112, 210, 255, 0.58);
+  background: radial-gradient(circle, rgba(15, 54, 83, 0.36), rgba(4, 8, 17, 0.16));
+  box-shadow: inset 0 0 22px rgba(0, 190, 255, 0.18), 0 4px 16px rgba(0, 0, 0, 0.55);
+  pointer-events: auto;
+  touch-action: none;
+  z-index: 30;
+}
+
+#touch-joystick-knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 54px;
+  height: 54px;
+  margin: -27px;
+  border-radius: 50%;
+  border: 2px solid rgba(210, 249, 255, 0.85);
+  background: radial-gradient(circle at 35% 28%, #b5f4ff, #1985bd 60%, #073a62);
+  box-shadow: 0 0 16px rgba(0, 208, 255, 0.6);
+  pointer-events: none;
+  transition: transform 0.04s linear;
 }
 
 /* ====================================================
@@ -221,6 +292,23 @@ html, body {
   transform: translateX(-50%) scale(1);
 }
 
+#objective-hud {
+  position: absolute;
+  top: 19%;
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 230px;
+  padding: 4px 12px;
+  border: 1px solid rgba(255, 215, 112, .7);
+  border-radius: 5px;
+  background: rgba(8, 7, 16, .78);
+  color: #ffe59a;
+  font: 700 12px 'Cinzel', serif;
+  text-align: center;
+  letter-spacing: .8px;
+  text-shadow: 0 0 8px rgba(255, 187, 55, .55);
+}
+
 /* Quick Hero Swapper (Top Left) */
 #hero-select-bar {
   position: absolute;
@@ -283,10 +371,7 @@ html, body {
 
 /* D-Pad */
 #dpad-container {
-  pointer-events: auto;
-  cursor: pointer;
-  margin-bottom: 8px;
-  transition: transform 0.15s;
+  display: none; /* superseded by the analog 2.5D joystick */
 }
 
 #dpad-container:hover {
@@ -331,6 +416,38 @@ html, body {
   display: block;
   border-radius: 6px;
   filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.7));
+}
+
+.card-overlay {
+  position: absolute;
+  inset: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  overflow: hidden;
+  border: 1px solid #554d63;
+  border-radius: 4px;
+  background: rgba(8, 6, 16, 0.78);
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  text-align: center;
+  text-shadow: 0 0 7px currentColor;
+  pointer-events: none;
+}
+
+.card-overlay span {
+  font-size: 25px;
+  line-height: 1;
+}
+
+.card-overlay small {
+  max-width: 42px;
+  overflow: hidden;
+  font-size: 7px;
+  letter-spacing: 0.4px;
+  text-overflow: ellipsis;
 }
 
 .grimoire-wrap {
@@ -413,6 +530,21 @@ html, body {
   transition: transform 0.15s;
 }
 
+.touch-action {
+  min-width: 47px;
+  height: 42px;
+  border: 1px solid #6d5b83;
+  border-radius: 50%;
+  background: radial-gradient(circle, #35294a, #120e1e);
+  color: #f8e8bb;
+  font: 700 10px 'Rajdhani', sans-serif;
+  letter-spacing: .5px;
+  box-shadow: 0 3px 9px rgba(0, 0, 0, .65);
+  cursor: pointer;
+}
+
+.cast-action { border-color: #00c8ff; color: #bdefff; }
+
 .action-wrap:hover {
   transform: scale(1.08);
 }
@@ -426,6 +558,7 @@ html, body {
 
 .arcane-circle-wrap {
   cursor: pointer;
+  touch-action: none;
   transition: transform 0.2s, filter 0.2s;
   animation: pulseAura 3s ease-in-out infinite alternate;
 }

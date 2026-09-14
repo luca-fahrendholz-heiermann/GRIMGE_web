@@ -19,6 +19,37 @@
 
     <!-- UI Overlay matching Mockup Exactly -->
     <div id="ui-layer">
+      <section id="hub-overlay" class="match-overlay">
+        <div class="match-panel hub-panel">
+          <div class="match-kicker">ARCANE SIEGE PROTOTYPE</div>
+          <h1>GRIMGE</h1>
+          <p>FAST 2.5D BRAWL · MAGIC · SIEGE</p>
+          <button id="play-match-btn" class="match-button primary">PLAY</button>
+          <button class="match-button muted" disabled>TRAINING — SOON</button>
+          <button class="match-button muted" disabled>OPTIONS — SOON</button>
+          <small>ENTER / TAP PLAY TO BEGIN</small>
+        </div>
+      </section>
+      <section id="results-overlay" class="match-overlay hidden" aria-live="polite">
+        <div class="match-panel results-panel">
+          <div id="results-kicker" class="match-kicker">MATCH COMPLETE</div>
+          <h2 id="results-title">VICTORY</h2>
+          <div id="results-time" class="results-time">MATCH TIME 00:00</div>
+          <div class="results-stats">
+            <span id="results-tower">TOWER DESTROYED: —</span>
+            <span id="results-castle">CASTLE DESTROYED: —</span>
+            <span id="results-kills">WIZARD KILLS: 0</span>
+          </div>
+          <div class="results-actions">
+            <button id="rematch-btn" class="match-button primary">REMATCH</button>
+            <button id="hub-btn" class="match-button">RETURN TO HUB</button>
+          </div>
+          <small>ENTER: REMATCH · ESC: HUB</small>
+        </div>
+      </section>
+      <div id="touch-joystick" aria-label="Move">
+        <div id="touch-joystick-knob"></div>
+      </div>
       <!-- TOP HUD BAR -->
       <div id="top-hud-bar">
         <!-- Blue Team (Left) -->
@@ -73,6 +104,7 @@
 
       <!-- Center Announcement Toast -->
       <div id="announcement-banner"></div>
+      <div id="objective-hud">DESTROY ENEMY TOWER</div>
 
       <!-- Quick Hero Swapper (Top Left) -->
       <div id="hero-select-bar">
@@ -136,6 +168,10 @@
             <img src="assets/ui/attack_btn.png" class="action-btn-img" alt="Attack">
           </div>
 
+          <button id="action-jump-btn" class="touch-action" title="Jump (Space)">JUMP</button>
+          <button id="action-dash-btn" class="touch-action" title="Dash (Shift)">DASH</button>
+          <button id="action-cast-btn" class="touch-action cast-action" title="Cast prepared runes (E)">CAST</button>
+
           <!-- Arcane Rune Weaving Circle -->
           <div id="arcane-circle-trigger" class="arcane-circle-wrap" title="Arcane Rune Weaving (Hold Right-Click / Tap Circle to Draw)">
             <img src="assets/ui/arcane_circle.png" class="arcane-circle-img" alt="Arcane Circle">
@@ -169,14 +205,17 @@
             <div class="g-item">🔥 + ⚡ = <strong>METEOR CATACLYSM</strong> (Cosmic strike + crater)</div>
             <div class="g-item">💨 + ⚡ = <strong>TEMPEST BLITZ</strong> (Supersonic lightning dash)</div>
             <div class="g-item">🪨 + 🔥 = <strong>MAGMA FISSURE</strong> (Molten lava floor trap)</div>
+            <div class="g-item">🪨 + 💨 = <strong>SANDSTORM BASTION</strong> (Guards against lane shots)</div>
+            <div class="g-item">❄️ + 💨 = <strong>BLIZZARD SURGE</strong> (Freezing lane pressure)</div>
             <div class="g-item">🔥+💨+⚡ = <strong>APOCALYPTIC HEAVENSURGE</strong> (Grand storm)</div>
           </div>
           <div class="g-col">
             <h3>✦ CONTROLS</h3>
-            <div><strong>A / D</strong>: Move | <strong>W</strong>: Jump (x2) | <strong>S</strong>: Fast-Fall</div>
-            <div><strong>Left-Click / J</strong>: Melee Combo | <strong>W + Attack</strong>: Uppercut</div>
+            <div><strong>A / D</strong>: Horizontal | <strong>W / S</strong>: Depth | <strong>Space</strong>: Jump (x2)</div>
+            <div><strong>Left-Click / J</strong>: Melee Combo | <strong>U + Attack</strong>: Uppercut</div>
             <div><strong>Shift</strong>: Dodge Roll | <strong>E</strong>: Cast Spell | <strong>Q</strong>: Discard</div>
             <div><strong>Keys 1-5</strong>: Switch Hero Character</div>
+            <div><strong>F3</strong>: Toggle arena geometry debug overlay</div>
           </div>
         </div>
       </div>

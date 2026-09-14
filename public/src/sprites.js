@@ -1,4 +1,6 @@
 // GRIMGE Prototype — Sprite Pipeline & Procedural Animation Engine
+import { ENTITY_VISUALS } from './world.js';
+
 export class SpriteManager {
   constructor() {
     this.sprites = {};
@@ -46,6 +48,7 @@ export class SpriteManager {
     rawCanvas.width = img.width;
     rawCanvas.height = img.height;
     const rawCtx = rawCanvas.getContext('2d', { willReadFrequently: true });
+    rawCtx.imageSmoothingEnabled = false; // source-sized copy: never resample before chroma keying
     rawCtx.drawImage(img, 0, 0);
 
     const imgData = rawCtx.getImageData(0, 0, img.width, img.height);
@@ -257,12 +260,18 @@ export class SpriteManager {
       animTime = 0,
       hitFlash = 0,
       alpha = 1.0,
-      targetScale = 0.11, // High-res pixel sprite scale matching mockup proportions (~76px height)
+      visualHeight = ENTITY_VISUALS.heroHeight,
+      targetScale = null,
       tint = null
     } = opt;
+    const renderScale = targetScale ?? (visualHeight / spr.height);
 
     ctx.save();
     ctx.globalAlpha = alpha;
+    // Render straight from the full-resolution chroma-keyed crop. The only
+    // resample is this final DPR-backed draw, avoiding cached low-res sprites.
+    ctx.imageSmoothingEnabled = true;
+    if ('imageSmoothingQuality' in ctx) ctx.imageSmoothingQuality = 'high';
 
     // 1. Draw Ground Shadow
     if (state !== 'dive') {
@@ -373,7 +382,7 @@ export class SpriteManager {
 
     // 3. Apply Transformations
     ctx.translate(x, y + offsetY);
-    ctx.scale(facing * targetScale * sx, targetScale * sy);
+    ctx.scale(facing * renderScale * sx, renderScale * sy);
     ctx.rotate(rot);
 
     // 4. Draw Sprite or Hit Flash

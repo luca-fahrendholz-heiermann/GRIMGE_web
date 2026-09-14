@@ -1,6 +1,7 @@
 // GRIMGE Prototype — Composable Spell System & Elemental Combinations
 import { audio } from './audio.js';
 import { combat } from './combat.js';
+import { groundDistance, groundYForDepth } from './world.js';
 
 export class SpellSystem {
   constructor() {
@@ -119,44 +120,45 @@ export class SpellSystem {
 
     const facing = caster.facing;
     const startX = caster.x + facing * 35;
-    const startY = caster.y - 30;
+    const startZ = caster.z;
+    const startHeight = caster.worldHeight ?? 0;
 
     switch (spellDef.id) {
       case 'fireball': {
-        this.activeSpells.push(new FireballSpell(startX, startY, facing, caster.team));
+        this.activeSpells.push(new FireballSpell(startX, startZ, facing, caster.team, startHeight));
         break;
       }
 
       case 'gale_blast': {
-        this.activeSpells.push(new GaleBlastSpell(startX, startY, facing, caster.team));
+        this.activeSpells.push(new GaleBlastSpell(startX, startZ, facing, caster.team, startHeight));
         break;
       }
 
       case 'chain_lightning': {
-        this.activeSpells.push(new ChainLightningSpell(startX, startY, facing, caster.team, gameWorld));
+        this.activeSpells.push(new ChainLightningSpell(startX, startZ, facing, caster.team, gameWorld, startHeight));
         break;
       }
 
       case 'stone_spikes': {
-        this.activeSpells.push(new StoneSpikesSpell(startX, caster.y, facing, caster.team));
+        this.activeSpells.push(new StoneSpikesSpell(startX, startZ, facing, caster.team));
         break;
       }
 
       case 'frost_nova': {
-        this.activeSpells.push(new FrostNovaSpell(caster.x, caster.y, caster.team));
+        this.activeSpells.push(new FrostNovaSpell(caster.x, startZ, caster.team));
         break;
       }
 
       case 'firestorm': {
         // High-value combo: fire tornado
-        this.activeSpells.push(new FirestormSpell(startX, caster.y, facing, caster.team));
+        this.activeSpells.push(new FirestormSpell(startX, startZ, facing, caster.team));
         break;
       }
 
       case 'meteor_cataclysm': {
         // High-value combo: blazing meteor
         const targetX = caster.x + facing * 240;
-        this.activeSpells.push(new MeteorSpell(targetX, caster.y, caster.team));
+        this.activeSpells.push(new MeteorSpell(targetX, startZ, caster.team));
         break;
       }
 
@@ -167,30 +169,35 @@ export class SpellSystem {
       }
 
       case 'magma_fissure': {
-        this.activeSpells.push(new MagmaFissureSpell(startX, caster.y, facing, caster.team));
+        this.activeSpells.push(new MagmaFissureSpell(startX, startZ, facing, caster.team));
+        break;
+      }
+
+      case 'sandstorm_bastion': {
+        this.activeSpells.push(new SandstormBastionSpell(caster));
         break;
       }
 
       case 'blizzard_surge': {
-        this.activeSpells.push(new BlizzardSurgeSpell(startX, caster.y, facing, caster.team));
+        this.activeSpells.push(new BlizzardSurgeSpell(startX, startZ, facing, caster.team));
         break;
       }
 
       case 'apocalyptic_heavensurge': {
         // Grand 3-rune combination
-        this.activeSpells.push(new FirestormSpell(startX, caster.y, facing, caster.team));
+        this.activeSpells.push(new FirestormSpell(startX, startZ, facing, caster.team));
         const targetX = caster.x + facing * 280;
-        this.activeSpells.push(new MeteorSpell(targetX, caster.y, caster.team));
-        this.activeSpells.push(new BlizzardSurgeSpell(startX + facing * 50, caster.y, facing, caster.team));
+        this.activeSpells.push(new MeteorSpell(targetX, startZ, caster.team));
+        this.activeSpells.push(new BlizzardSurgeSpell(startX + facing * 50, startZ, facing, caster.team));
         combat.shakeCamera(16, 0.8);
         break;
       }
 
       case 'tri_elemental_burst': {
-        this.activeSpells.push(new FireballSpell(startX, startY - 20, facing, caster.team));
-        this.activeSpells.push(new FireballSpell(startX, startY + 20, facing, caster.team));
-        this.activeSpells.push(new GaleBlastSpell(startX, startY, facing, caster.team));
-        this.activeSpells.push(new ChainLightningSpell(startX, startY, facing, caster.team, gameWorld));
+        this.activeSpells.push(new FireballSpell(startX, startZ, facing, caster.team, startHeight));
+        this.activeSpells.push(new FireballSpell(startX, startZ, facing, caster.team, startHeight));
+        this.activeSpells.push(new GaleBlastSpell(startX, startZ, facing, caster.team, startHeight));
+        this.activeSpells.push(new ChainLightningSpell(startX, startZ, facing, caster.team, gameWorld, startHeight));
         break;
       }
     }
@@ -218,9 +225,10 @@ export class SpellSystem {
 // ----------------------------------------------------
 
 class FireballSpell {
-  constructor(x, y, facing, team) {
+  constructor(x, z, facing, team, height = 0) {
     this.x = x;
-    this.y = y;
+    this.z = z;
+    this.height = height;
     this.vx = facing * 620;
     this.vy = 0;
     this.facing = facing;
@@ -230,6 +238,7 @@ class FireballSpell {
     this.isFinished = false;
     this.damage = 65;
   }
+  get y() { return groundYForDepth(this.z) - this.height - 30; }
 
   update(dt, gameWorld) {
     this.x += this.vx * dt;
@@ -241,8 +250,8 @@ class FireballSpell {
     // Collision check against hostile entities
     const targets = gameWorld.getHostileTargets(this.team);
     for (const t of targets) {
-      const dist = Math.hypot(t.x - this.x, (t.y - 25) - this.y);
-      if (dist < this.radius + (t.radius || 20)) {
+      const dist = groundDistance(this, t);
+      if (dist < this.radius + (t.radius || 20) && Math.abs((t.worldHeight ?? 0) - this.height) < 110) {
         this.detonate(gameWorld);
         break;
       }
@@ -262,9 +271,9 @@ class FireballSpell {
     // AoE Damage
     const targets = gameWorld.getHostileTargets(this.team);
     for (const t of targets) {
-      const dist = Math.hypot(t.x - this.x, t.y - this.y);
-      if (dist < 80) {
-        t.takeDamage(this.damage, this.facing * 380, -220, 0.4);
+      const dist = groundDistance(this, t);
+      if (dist < 80 && Math.abs((t.worldHeight ?? 0) - this.height) < 120) {
+        t.takeDamage(this.damage, this.facing * 380, 220, 0.4);
       }
     }
   }
@@ -286,9 +295,10 @@ class FireballSpell {
 }
 
 class GaleBlastSpell {
-  constructor(x, y, facing, team) {
+  constructor(x, z, facing, team, height = 0) {
     this.x = x;
-    this.y = y;
+    this.z = z;
+    this.heightAboveSurface = height;
     this.vx = facing * 750;
     this.facing = facing;
     this.team = team;
@@ -298,6 +308,7 @@ class GaleBlastSpell {
     this.isFinished = false;
     this.hitEntities = new Set();
   }
+  get y() { return groundYForDepth(this.z) - this.heightAboveSurface - 26; }
 
   update(dt, gameWorld) {
     this.x += this.vx * dt;
@@ -308,9 +319,9 @@ class GaleBlastSpell {
     const targets = gameWorld.getHostileTargets(this.team);
     for (const t of targets) {
       if (!this.hitEntities.has(t)) {
-        if (Math.abs(t.x - this.x) < 45 && Math.abs(t.y - this.y) < 55) {
+        if (Math.abs(t.x - this.x) < 45 && Math.abs(t.z - this.z) < 0.2 && Math.abs((t.worldHeight ?? 0) - this.heightAboveSurface) < 105) {
           this.hitEntities.add(t);
-          t.takeDamage(35, this.facing * 600, -280, 0.6);
+          t.takeDamage(35, this.facing * 600, 280, 0.6);
           combat.spawnHitSparks(t.x, t.y - 20, this.facing, '#4deeea', 10);
         }
       }
@@ -332,7 +343,7 @@ class GaleBlastSpell {
 }
 
 class ChainLightningSpell {
-  constructor(x, y, facing, team, gameWorld) {
+  constructor(x, z, facing, team, gameWorld, height = 0) {
     this.isFinished = false;
     this.life = 0.35;
     this.segments = [];
@@ -341,7 +352,9 @@ class ChainLightningSpell {
     // Find up to 4 nearby hostile targets to chain
     const targets = gameWorld.getHostileTargets(team);
     let currX = x;
-    let currY = y;
+    let currZ = z;
+    let currY = groundYForDepth(z) - height - 28;
+    let currHeight = height;
     const hitList = [];
 
     for (let c = 0; c < 4; c++) {
@@ -349,8 +362,8 @@ class ChainLightningSpell {
       let nearDist = 320;
       for (const t of targets) {
         if (!hitList.includes(t)) {
-          const d = Math.hypot(t.x - currX, (t.y - 25) - currY);
-          if (d < nearDist) {
+          const d = Math.hypot(t.x - currX, (t.z - currZ) * 150);
+          if (d < nearDist && Math.abs((t.worldHeight ?? 0) - currHeight) < 125) {
             nearDist = d;
             nearest = t;
           }
@@ -360,10 +373,12 @@ class ChainLightningSpell {
       if (nearest) {
         hitList.push(nearest);
         this.segments.push({ x1: currX, y1: currY, x2: nearest.x, y2: nearest.y - 25 });
-        nearest.takeDamage(48, facing * 220, -120, 0.5);
+        nearest.takeDamage(48, facing * 220, 120, 0.5);
         combat.spawnHitSparks(nearest.x, nearest.y - 25, facing, '#ffff00', 12);
         currX = nearest.x;
+        currZ = nearest.z;
         currY = nearest.y - 25;
+        currHeight = nearest.worldHeight ?? 0;
       } else {
         break;
       }
@@ -371,7 +386,7 @@ class ChainLightningSpell {
 
     if (this.segments.length === 0) {
       // Strike straight forward
-      this.segments.push({ x1: x, y1: y, x2: x + facing * 240, y2: y });
+      this.segments.push({ x1: x, y1: currY, x2: x + facing * 240, y2: currY });
     }
   }
 
@@ -403,9 +418,10 @@ class ChainLightningSpell {
 }
 
 class StoneSpikesSpell {
-  constructor(startX, startY, facing, team) {
+  constructor(startX, z, facing, team) {
     this.startX = startX;
-    this.y = startY;
+    this.z = z;
+    this.y = groundYForDepth(z);
     this.facing = facing;
     this.team = team;
     this.spikes = [];
@@ -416,7 +432,8 @@ class StoneSpikesSpell {
     for (let i = 0; i < 4; i++) {
       this.spikes.push({
         x: startX + facing * (i * 45 + 30),
-        y: startY,
+        y: this.y,
+        z,
         height: 0,
         maxHeight: 48 + i * 8,
         delay: i * 0.1,
@@ -446,8 +463,8 @@ class StoneSpikesSpell {
           sp.hitDone = true;
           const targets = gameWorld.getHostileTargets(this.team);
           for (const t of targets) {
-            if (Math.abs(t.x - sp.x) < 32 && Math.abs(t.y - sp.y) < 40) {
-              t.takeDamage(42, this.facing * 120, -420, 0.6); // Knock straight up
+            if (Math.abs(t.x - sp.x) < 32 && Math.abs(t.z - sp.z) < 0.16) {
+              t.takeDamage(42, this.facing * 120, 420, 0.6); // Knock straight up
               combat.spawnElementalParticles(sp.x, sp.y, 'terra', 8);
             }
           }
@@ -479,9 +496,9 @@ class StoneSpikesSpell {
 }
 
 class FrostNovaSpell {
-  constructor(x, y, team) {
+  constructor(x, z, team) {
     this.x = x;
-    this.y = y;
+    this.z = z;
     this.team = team;
     this.radius = 10;
     this.maxRadius = 140;
@@ -489,6 +506,7 @@ class FrostNovaSpell {
     this.isFinished = false;
     this.hitEntities = new Set();
   }
+  get y() { return groundYForDepth(this.z); }
 
   update(dt, gameWorld) {
     this.radius += (this.maxRadius - this.radius) * Math.min(1, dt * 10);
@@ -497,11 +515,11 @@ class FrostNovaSpell {
     const targets = gameWorld.getHostileTargets(this.team);
     for (const t of targets) {
       if (!this.hitEntities.has(t)) {
-        const d = Math.hypot(t.x - this.x, t.y - this.y);
+        const d = groundDistance(this, t);
         if (d < this.radius) {
           this.hitEntities.add(t);
-          t.takeDamage(30, 0, -80, 0.4);
-          t.freeze(2.5); // Freeze solid!
+          t.takeDamage(30, 0, 80, 0.4);
+          t.freeze?.(2.5); // Structures take damage but cannot be frozen.
           combat.spawnElementalParticles(t.x, t.y - 20, 'aqua', 12);
         }
       }
@@ -527,9 +545,9 @@ class FrostNovaSpell {
 // ----------------------------------------------------
 
 class FirestormSpell {
-  constructor(startX, startY, facing, team) {
+  constructor(startX, z, facing, team) {
     this.x = startX;
-    this.y = startY;
+    this.z = z;
     this.vx = facing * 180; // Sweeps steadily across lane
     this.facing = facing;
     this.team = team;
@@ -539,6 +557,7 @@ class FirestormSpell {
     this.isFinished = false;
     this.tickTimer = 0;
   }
+  get y() { return groundYForDepth(this.z); }
 
   update(dt, gameWorld) {
     this.x += this.vx * dt;
@@ -553,17 +572,18 @@ class FirestormSpell {
     const targets = gameWorld.getHostileTargets(this.team);
     for (const t of targets) {
       const dx = this.x - t.x;
-      const dy = (this.y - 50) - t.y;
-      const dist = Math.hypot(dx, dy);
+      const dz = this.z - t.z;
+      const dist = Math.hypot(dx, dz * 150);
 
       if (dist < 180) {
         // Pull inwards into the tornado eye!
-        t.vx += (dx / dist) * 350 * dt;
-        t.vy -= 160 * dt; // Lift up into the air!
+        const safeDist = Math.max(1, dist);
+        t.vx += (dx / safeDist) * 350 * dt;
+        t.vElevation += 160 * dt; // Lift up into the air!
 
         // Continuous burn ticks
         if (this.tickTimer >= 0.15 && dist < 100) {
-          t.takeDamage(12, this.facing * 40, -120, 0.2);
+          t.takeDamage(12, this.facing * 40, 120, 0.2);
           combat.spawnHitSparks(t.x, t.y - 20, this.facing, '#ff9100', 4);
         }
       }
@@ -603,12 +623,13 @@ class FirestormSpell {
 }
 
 class MeteorSpell {
-  constructor(targetX, targetY, team) {
+  constructor(targetX, targetZ, team) {
     this.targetX = targetX;
-    this.targetY = targetY;
+    this.targetZ = targetZ;
+    this.targetY = groundYForDepth(targetZ);
     this.team = team;
     this.x = targetX - 160;
-    this.y = targetY - 450;
+    this.y = this.targetY - 450;
     this.vx = 320;
     this.vy = 850;
     this.isLanded = false;
@@ -639,9 +660,9 @@ class MeteorSpell {
         this.damageDone = true;
         const targets = gameWorld.getHostileTargets(this.team);
         for (const t of targets) {
-          const dist = Math.hypot(t.x - this.targetX, t.y - this.targetY);
+          const dist = Math.hypot(t.x - this.targetX, (t.z - this.targetZ) * 150);
           if (dist < 150) {
-            t.takeDamage(120, (t.x > this.targetX ? 1 : -1) * 450, -350, 0.7);
+            t.takeDamage(120, (t.x > this.targetX ? 1 : -1) * 450, 350, 0.7);
           }
         }
       }
@@ -682,7 +703,9 @@ class TempestBlitzSpell {
     this.life = 0.3;
     const facing = caster.facing;
     const startX = caster.x;
-    const endX = caster.x + facing * 420;
+    const unclampedEndX = caster.x + facing * 420;
+    const bounds = gameWorld.battlefield.playableBounds;
+    const endX = Math.max(bounds.left, Math.min(bounds.right, unclampedEndX));
 
     // Instant blink dash
     caster.x = endX;
@@ -698,8 +721,8 @@ class TempestBlitzSpell {
     const maxX = Math.max(startX, endX);
 
     for (const t of targets) {
-      if (t.x >= minX && t.x <= maxX && Math.abs(t.y - caster.y) < 60) {
-        t.takeDamage(75, facing * 350, -180, 0.6);
+      if (t.x >= minX && t.x <= maxX && Math.abs(t.z - caster.z) < 0.2) {
+        t.takeDamage(75, facing * 350, 180, 0.6);
         combat.spawnHitSparks(t.x, t.y - 25, facing, '#00e5ff', 16);
       }
     }
@@ -730,14 +753,15 @@ class TempestBlitzSpell {
 }
 
 class MagmaFissureSpell {
-  constructor(startX, y, facing, team) {
+  constructor(startX, z, facing, team) {
     this.x = startX + facing * 80;
-    this.y = y;
+    this.z = z;
     this.team = team;
     this.life = 3.5;
     this.isFinished = false;
     this.tick = 0;
   }
+  get y() { return groundYForDepth(this.z); }
 
   update(dt, gameWorld) {
     this.life -= dt;
@@ -751,8 +775,8 @@ class MagmaFissureSpell {
       this.tick = 0;
       const targets = gameWorld.getHostileTargets(this.team);
       for (const t of targets) {
-        if (Math.abs(t.x - this.x) < 60 && Math.abs(t.y - this.y) < 30) {
-          t.takeDamage(18, 0, -80, 0.2);
+        if (Math.abs(t.x - this.x) < 60 && Math.abs(t.z - this.z) < 0.18) {
+          t.takeDamage(18, 0, 80, 0.2);
         }
       }
     }
@@ -771,29 +795,93 @@ class MagmaFissureSpell {
   }
 }
 
+class SandstormBastionSpell {
+  constructor(caster) {
+    this.caster = caster;
+    this.team = caster.team;
+    this.x = caster.x;
+    this.z = caster.z;
+    this.radius = 105;
+    this.life = 2.6;
+    this.tickTimer = 0;
+    this.isFinished = false;
+  }
+  get y() { return groundYForDepth(this.z) - 28; }
+
+  update(dt, gameWorld) {
+    this.life -= dt;
+    this.tickTimer -= dt;
+    this.x = this.caster.x;
+    this.z = this.caster.z;
+
+    combat.spawnElementalParticles(this.x + (Math.random() * 80 - 40), this.y, 'terra', 2);
+    combat.spawnElementalParticles(this.x + (Math.random() * 80 - 40), this.y, 'ventus', 2);
+
+    // The bastion is a short-lived tactical guard that erases hostile lane shots.
+    for (const projectile of gameWorld.projectiles) {
+      if (projectile.team !== this.team && Math.hypot(projectile.x - this.x, (projectile.z - this.z) * 150) < this.radius) {
+        projectile.life = 0;
+        combat.spawnShockwave(projectile.x, groundYForDepth(projectile.z) - 20, 18, '#ffd54f');
+      }
+    }
+
+    if (this.tickTimer <= 0) {
+      this.tickTimer = 0.38;
+      const targets = gameWorld.getHostileTargets(this.team);
+      for (const target of targets) {
+        const dx = target.x - this.x;
+        if (Math.hypot(dx, (target.z - this.z) * 150) < this.radius) {
+          target.takeDamage(14, Math.sign(dx || 1) * 240, 80, 0.18);
+        }
+      }
+    }
+
+    if (this.life <= 0) this.isFinished = true;
+  }
+
+  render(ctx) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.strokeStyle = 'rgba(255, 214, 96, 0.82)';
+    ctx.shadowColor = '#b2ffff';
+    ctx.shadowBlur = 10;
+    ctx.lineWidth = 4;
+    ctx.setLineDash([10, 7]);
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+}
+
 class BlizzardSurgeSpell {
-  constructor(startX, y, facing, team) {
+  constructor(startX, z, facing, team) {
     this.x = startX;
-    this.y = y - 30;
+    this.z = z;
     this.vx = facing * 240;
     this.team = team;
     this.life = 2.5;
+    this.tickTimer = 0;
     this.isFinished = false;
   }
+  get y() { return groundYForDepth(this.z) - 30; }
 
   update(dt, gameWorld) {
     this.x += this.vx * dt;
     this.life -= dt;
+    this.tickTimer -= dt;
 
     combat.spawnElementalParticles(this.x, this.y, 'aqua', 4);
 
     const targets = gameWorld.getHostileTargets(this.team);
     for (const t of targets) {
-      if (Math.abs(t.x - this.x) < 80 && Math.abs(t.y - this.y) < 60) {
-        t.takeDamage(8, 0, 0, 0.1);
-        t.slow(1.5, 0.35); // 65% slow
+      if (Math.abs(t.x - this.x) < 80 && Math.abs(t.z - this.z) < 0.22) {
+        if (this.tickTimer <= 0) t.takeDamage(8, 0, 0, 0.1);
+        t.slow?.(1.5, 0.35); // Structures take damage but cannot be slowed.
       }
     }
+    if (this.tickTimer <= 0) this.tickTimer = 0.25;
 
     if (this.life <= 0) this.isFinished = true;
   }

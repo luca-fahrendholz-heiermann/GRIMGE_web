@@ -20,12 +20,28 @@ export class UIManager {
     this.playerPortraitImg = document.getElementById('player-portrait-img');
 
     this.announcementBanner = document.getElementById('announcement-banner');
+    this.objectiveHud = document.getElementById('objective-hud');
     this.announcementTimer = 0;
+    this.hubOverlay = document.getElementById('hub-overlay');
+    this.resultsOverlay = document.getElementById('results-overlay');
+    this.playMatchBtn = document.getElementById('play-match-btn');
+    this.rematchBtn = document.getElementById('rematch-btn');
+    this.hubBtn = document.getElementById('hub-btn');
+    this.resultsTitle = document.getElementById('results-title');
+    this.resultsTime = document.getElementById('results-time');
+    this.resultsTower = document.getElementById('results-tower');
+    this.resultsCastle = document.getElementById('results-castle');
+    this.resultsKills = document.getElementById('results-kills');
 
     this.cards = [
       document.getElementById('card-0'),
       document.getElementById('card-1'),
       document.getElementById('card-2')
+    ];
+    this.cardOverlays = [
+      document.getElementById('card-overlay-0'),
+      document.getElementById('card-overlay-1'),
+      document.getElementById('card-overlay-2')
     ];
     this.activeSpellPreview = document.getElementById('active-spell-preview');
     this.manaBarFill = document.getElementById('mana-bar-fill');
@@ -37,6 +53,9 @@ export class UIManager {
 
     this.arcaneCircle = document.getElementById('arcane-circle-trigger');
     this.attackBtn = document.getElementById('action-attack-btn');
+    this.jumpBtn = document.getElementById('action-jump-btn');
+    this.dashBtn = document.getElementById('action-dash-btn');
+    this.castBtn = document.getElementById('action-cast-btn');
 
     this.drawingHud = document.getElementById('drawing-hud');
     this.drawingTimerFill = document.getElementById('drawing-timer-fill');
@@ -48,6 +67,9 @@ export class UIManager {
   }
 
   setupListeners() {
+    this.playMatchBtn.addEventListener('click', () => window.gameWorld?.startMatch());
+    this.rematchBtn.addEventListener('click', () => window.gameWorld?.startMatch());
+    this.hubBtn.addEventListener('click', () => window.gameWorld?.returnToHub());
     this.grimoireBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       this.toggleGrimoire();
@@ -58,22 +80,61 @@ export class UIManager {
       this.toggleGrimoire(false);
     });
 
-    this.arcaneCircle.addEventListener('mousedown', (e) => {
-      e.stopPropagation();
-      if (window.gameWorld) window.gameWorld.startRuneDrawing();
-    });
-
-    this.arcaneCircle.addEventListener('touchstart', (e) => {
+    // The arcane circle is the touch equivalent of holding the right mouse
+    // button: press, draw with the same finger, release. Pointer capture
+    // keeps the gesture alive after the thumb leaves the small control and
+    // works independently of the movement joystick's other pointer.
+    let runePointerId = null;
+    const beginRuneGesture = (e) => {
       e.preventDefault();
       e.stopPropagation();
-      if (window.gameWorld) window.gameWorld.startRuneDrawing();
-    }, { passive: false });
+      const game = window.gameWorld;
+      if (!game) return;
+      game.startRuneDrawing();
+      if (!game.drawing.active) return;
+      runePointerId = e.pointerId;
+      game.drawing.inputMode = 'pointer';
+      game.drawing.touchId = e.pointerId;
+      this.arcaneCircle.setPointerCapture?.(e.pointerId);
+      // Begin exactly where the player pressed, just like right-click.
+      const point = game.getCanvasCoords(e.clientX, e.clientY);
+      game.addRunePoint(point.x, point.y);
+    };
+    const drawRuneGesture = (e) => {
+      if (e.pointerId !== runePointerId || !window.gameWorld?.drawing.active) return;
+      e.preventDefault();
+      const point = window.gameWorld.getCanvasCoords(e.clientX, e.clientY);
+      window.gameWorld.addRunePoint(point.x, point.y);
+    };
+    const endRuneGesture = (e) => {
+      if (e.pointerId !== runePointerId) return;
+      e.preventDefault();
+      runePointerId = null;
+      window.gameWorld?.finishRuneDrawing();
+    };
+    this.arcaneCircle.addEventListener('pointerdown', beginRuneGesture);
+    this.arcaneCircle.addEventListener('pointermove', drawRuneGesture);
+    this.arcaneCircle.addEventListener('pointerup', endRuneGesture);
+    this.arcaneCircle.addEventListener('pointercancel', endRuneGesture);
 
     this.attackBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       if (window.gameWorld && window.gameWorld.player) {
         window.gameWorld.player.executeAttack(window.gameWorld.input);
       }
+    });
+
+    this.jumpBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (window.gameWorld?.player?.isAlive) window.gameWorld.input.justPressedKeys.Space = true;
+    });
+    this.dashBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (window.gameWorld?.player?.isAlive) window.gameWorld.input.justPressedKeys.ShiftLeft = true;
+    });
+    this.castBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      window.gameWorld?.castPreparedSpell();
     });
 
     this.heroChips.forEach(chip => {
@@ -117,12 +178,39 @@ export class UIManager {
         chip.classList.remove('active');
       }
     });
+
+    const portraitByHero = {
+      paladin: 'assets/ui/portrait_hero.png',
+      berserker: 'assets/ui/portrait_knight.png',
+      mage: 'assets/ui/portrait_mage.png',
+      warlord: 'assets/ui/portrait_warlord.png',
+      fighter: 'assets/ui/portrait_hero.png'
+    };
+    if (portraitByHero[heroKey]) this.playerPortraitImg.src = portraitByHero[heroKey];
   }
 
   showAnnouncement(text, duration = 2.4) {
     this.announcementBanner.textContent = text;
     this.announcementBanner.classList.add('show');
     this.announcementTimer = duration;
+  }
+
+  showHub(visible) {
+    this.hubOverlay.classList.toggle('hidden', !visible);
+  }
+
+  showResults(visible, result = null) {
+    this.resultsOverlay.classList.toggle('hidden', !visible);
+    if (!visible || !result) return;
+    const won = result.winner === 'blue';
+    const minutes = Math.floor(result.elapsed / 60);
+    const seconds = Math.floor(result.elapsed % 60);
+    this.resultsTitle.textContent = won ? 'VICTORY' : 'DEFEAT';
+    this.resultsTitle.style.color = won ? '#ffd66b' : '#ff6b6b';
+    this.resultsTime.textContent = `MATCH TIME ${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    this.resultsTower.textContent = `TOWER DESTROYED: ${result.stats.towersDestroyed[won ? 'red' : 'blue'] ? 'YES' : 'NO'}`;
+    this.resultsCastle.textContent = `CASTLE DESTROYED: ${result.stats.castlesDestroyed[won ? 'red' : 'blue'] ? 'YES' : 'NO'}`;
+    this.resultsKills.textContent = `WIZARD KILLS: ${result.stats.wizardKills[won ? 'blue' : 'red']}`;
   }
 
   showRecognitionBadge(rune, confidence) {
@@ -139,7 +227,7 @@ export class UIManager {
     }, 1200);
   }
 
-  update(dt, player, battlefield) {
+  update(dt, player, enemyChampion, battlefield) {
     if (this.announcementTimer > 0) {
       this.announcementTimer -= dt;
       if (this.announcementTimer <= 0) {
@@ -169,26 +257,43 @@ export class UIManager {
     const redCurrentHp = Math.round(redHpRatio * redBaseMax);
     this.redHpFill.style.width = `${Math.max(0, redHpRatio * 100)}%`;
     this.redHpText.textContent = `${redCurrentHp} / ${redBaseMax}`;
+    const redMpMax = 1000;
+    const redMpRatio = enemyChampion ? enemyChampion.mp / 100 : 0;
+    this.redMpFill.style.width = `${Math.max(0, redMpRatio * 100)}%`;
+    this.redMpText.textContent = `${Math.round(redMpRatio * redMpMax)} / ${redMpMax}`;
+
+    if (window.gameWorld) {
+      this.blueCrystalCount.textContent = window.gameWorld.blueCrystals;
+      this.redCrystalCount.textContent = window.gameWorld.redCrystals;
+    }
 
     // Match Clock
     if (window.gameWorld) {
       const mins = Math.floor(window.gameWorld.matchTime / 60);
       const secs = Math.floor(window.gameWorld.matchTime % 60);
       this.clockDisplay.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+      this.objectiveHud.textContent = window.gameWorld.getObjectiveStatus();
     }
 
     // Card highlight states
     for (let i = 0; i < 3; i++) {
       const cardEl = this.cards[i];
+      const overlay = this.cardOverlays[i];
       const rune = player.preparedRunes[i];
       if (rune) {
         cardEl.style.opacity = '1.0';
         cardEl.style.transform = 'translateY(-4px)';
-        cardEl.style.filter = 'drop-shadow(0 0 10px #00e5ff)';
+        cardEl.style.filter = `drop-shadow(0 0 10px ${rune.color})`;
+        overlay.style.color = rune.color;
+        overlay.style.borderColor = rune.color;
+        overlay.innerHTML = `<span>${rune.glyph}</span><small>${rune.name}</small>`;
       } else {
         cardEl.style.opacity = '0.55';
         cardEl.style.transform = 'none';
         cardEl.style.filter = 'grayscale(0.6)';
+        overlay.style.color = '#6f687a';
+        overlay.style.borderColor = '#554d63';
+        overlay.innerHTML = '<span>·</span><small>EMPTY</small>';
       }
     }
 

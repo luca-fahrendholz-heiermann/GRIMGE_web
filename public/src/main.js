@@ -4,9 +4,10 @@ import { sprites } from './sprites.js';
 import { recognizer } from './recognizer.js';
 import { combat } from './combat.js';
 import { spells } from './spells.js';
-import { Player, EnemyChampion, Minion, Tower } from './entities.js';
+import { Player, EnemyChampion } from './entities.js';
 import { Battlefield } from './battlefield.js';
 import { ui } from './ui.js';
+import { VIEWPORT, ARENA_LAYOUT, groundDistance, groundYForDepth } from './world.js';
 
 export class GameWorld {
   constructor() {
@@ -16,21 +17,30 @@ export class GameWorld {
     this.runeCanvas = document.getElementById('rune-canvas');
     this.runeCtx = this.runeCanvas.getContext('2d');
 
-    // 1024 x 576 Fixed Resolution matching Setup Mockup
-    this.canvas.width = 1024;
-    this.canvas.height = 576;
-    this.runeCanvas.width = 1024;
-    this.runeCanvas.height = 576;
+    this.logicalWidth = VIEWPORT.width;
+    this.logicalHeight = VIEWPORT.height;
+    this.deviceScale = Math.min(2, window.devicePixelRatio || 1);
+    this.configureCanvas(this.canvas, this.ctx);
+    this.configureCanvas(this.runeCanvas, this.runeCtx);
 
     this.battlefield = new Battlefield();
-    this.player = new Player(280, this.battlefield.groundY);
-    this.enemyChampion = new EnemyChampion(740, this.battlefield.groundY, 'warlord');
+    this.player = new Player(ARENA_LAYOUT.spawns.blueCastle.x, ARENA_LAYOUT.spawns.blueCastle.z);
+    this.enemyChampion = new EnemyChampion(ARENA_LAYOUT.spawns.redCastle.x, ARENA_LAYOUT.spawns.redCastle.z, 'warlord');
+    this.battlefield.placeOnSurface(this.player);
+    this.battlefield.placeOnSurface(this.enemyChampion);
 
     this.minions = [];
     this.projectiles = [];
-
-    // Match Timer (06:42 like mockup)
-    this.matchTime = 402;
+    this.matchState = 'Menu';
+    this.objectivePhase = 'LanePhase';
+    // Compatibility alias retained for the existing objective/debug callers.
+    this.matchPhase = this.objectivePhase;
+    this.winnerTeam = null;
+    this.endingTimer = 0;
+    this.matchDuration = 402;
+    this.matchTime = this.matchDuration;
+    this.stats = null;
+    this.attachBattlefieldCallbacks();
     this.blueCrystals = 2;
     this.redCrystals = 1;
 
@@ -40,6 +50,9 @@ export class GameWorld {
       justPressedKeys: {},
       mouse: { x: 0, y: 0, isDown: false, rightDown: false },
       justPressedMouse: {},
+      gameplayBlocked: false,
+      move: { x: 0, z: 0 },
+      touchMove: { x: 0, z: 0 },
       justPressed: (code) => {
         if (code === 'Mouse0') return !!this.input.justPressedMouse[0];
         if (code === 'Mouse2') return !!this.input.justPressedMouse[2];
@@ -54,14 +67,28 @@ export class GameWorld {
       currentStroke: [],
       timer: 2.5,
       maxTimer: 2.5,
-      lastPointTime: 0
+      lastPointTime: 0,
+      lastRecognitionCheck: 0,
+      // A rune gesture owns exactly one touch. This prevents the movement
+      // thumb from becoming the rune stroke when the player uses two thumbs.
+      touchId: null,
+      inputMode: null
     };
 
     this.timeScale = 1.0;
     this.targetTimeScale = 1.0;
+    this.debugVisible = false;
 
     this.lastFrameTime = performance.now();
     this.running = false;
+  }
+
+  configureCanvas(canvas, context) {
+    canvas.width = Math.round(this.logicalWidth * this.deviceScale);
+    canvas.height = Math.round(this.logicalHeight * this.deviceScale);
+    context.setTransform?.(this.deviceScale, 0, 0, this.deviceScale, 0, 0);
+    context.imageSmoothingEnabled = true;
+    if ('imageSmoothingQuality' in context) context.imageSmoothingQuality = 'high';
   }
 
   async init() {
@@ -70,16 +97,9 @@ export class GameWorld {
     // Load character sprites
     await sprites.loadAll();
 
-    // Default prepared runes matching mockup cards (Fulgur, Terra, Ignis)
-    const fulgurRune = recognizer.runes.find(r => r.id === 'fulgur');
-    const terraRune = recognizer.runes.find(r => r.id === 'terra');
-    const ignisRune = recognizer.runes.find(r => r.id === 'ignis');
-    if (fulgurRune) this.player.addPreparedRune(fulgurRune);
-    if (terraRune) this.player.addPreparedRune(terraRune);
-    if (ignisRune) this.player.addPreparedRune(ignisRune);
-
-    // Initial minion wave
-    this.battlefield.spawnWave(this);
+    this.resetMatch();
+    this.matchState = 'Menu';
+    ui.showHub(true);
 
     window.gameWorld = this;
 
@@ -90,8 +110,8 @@ export class GameWorld {
 
   getCanvasCoords(clientX, clientY) {
     const rect = this.canvas.getBoundingClientRect();
-    const scaleX = this.canvas.width / rect.width;
-    const scaleY = this.canvas.height / rect.height;
+    const scaleX = this.logicalWidth / rect.width;
+    const scaleY = this.logicalHeight / rect.height;
     return {
       x: (clientX - rect.left) * scaleX,
       y: (clientY - rect.top) * scaleY
@@ -100,6 +120,15 @@ export class GameWorld {
 
   setupInputs() {
     window.addEventListener('keydown', (e) => {
+      if (this.matchState === 'Results') {
+        if (e.code === 'Enter') this.startMatch();
+        if (e.code === 'Escape') this.returnToHub();
+        return;
+      }
+      if (this.matchState === 'Menu') {
+        if (e.code === 'Enter' || e.code === 'Space') this.startMatch();
+        return;
+      }
       if (!this.input.keys[e.code]) {
         this.input.justPressedKeys[e.code] = true;
       }
@@ -125,17 +154,17 @@ export class GameWorld {
       // Toggle Grimoire (H)
       if (e.code === 'KeyH') ui.toggleGrimoire();
 
-      // Drawing Focus Mode with Spacebar
-      if (e.code === 'Space' && !this.drawing.active && this.player.grounded) {
-        this.startRuneDrawing();
+      if (e.code === 'F3') {
+        e.preventDefault();
+        this.debugVisible = !this.debugVisible;
+        this.showAnnouncement(this.debugVisible ? 'ARENA DEBUG ON' : 'ARENA DEBUG OFF', 1.2);
       }
+
+      if (e.code === 'Space') e.preventDefault();
     });
 
     window.addEventListener('keyup', (e) => {
       this.input.keys[e.code] = false;
-      if (e.code === 'Space' && this.drawing.active) {
-        this.finishRuneDrawing();
-      }
     });
 
     window.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -148,9 +177,10 @@ export class GameWorld {
 
       if (e.button === 0) {
         this.input.mouse.isDown = true;
-        this.input.justPressedMouse[0] = true;
         if (this.drawing.active) {
           this.addRunePoint(pt.x, pt.y);
+        } else {
+          this.input.justPressedMouse[0] = true;
         }
       } else if (e.button === 2) {
         e.preventDefault();
@@ -189,25 +219,36 @@ export class GameWorld {
     // Touch support
     this.canvas.addEventListener('touchstart', (e) => {
       audio.ensureContext();
-      if (e.touches.length > 0) {
-        const pt = this.getCanvasCoords(e.touches[0].clientX, e.touches[0].clientY);
+      // This is the fallback path after opening the rune mode with the
+      // circle. Use changedTouches, rather than touches[0], so a left-thumb
+      // joystick touch can never be mistaken for the drawing finger.
+      const touch = e.changedTouches?.[0];
+      if (touch && this.drawing.active && !this.drawing.inputMode) {
+        this.drawing.touchId = touch.identifier;
+        this.drawing.inputMode = 'touch';
+        const pt = this.getCanvasCoords(touch.clientX, touch.clientY);
         this.input.mouse.x = pt.x;
         this.input.mouse.y = pt.y;
-        if (this.drawing.active) this.addRunePoint(pt.x, pt.y);
+        this.addRunePoint(pt.x, pt.y);
       }
     }, { passive: false });
 
-    this.canvas.addEventListener('touchmove', (e) => {
-      if (e.touches.length > 0) {
-        const pt = this.getCanvasCoords(e.touches[0].clientX, e.touches[0].clientY);
+    window.addEventListener('touchmove', (e) => {
+      if (!this.drawing.active || this.drawing.inputMode !== 'touch') return;
+      e.preventDefault();
+      const touch = Array.from(e.touches).find((candidate) => candidate.identifier === this.drawing.touchId);
+      if (touch) {
+        const pt = this.getCanvasCoords(touch.clientX, touch.clientY);
         this.input.mouse.x = pt.x;
         this.input.mouse.y = pt.y;
-        if (this.drawing.active) this.addRunePoint(pt.x, pt.y);
+        this.addRunePoint(pt.x, pt.y);
       }
     }, { passive: false });
 
-    this.canvas.addEventListener('touchend', () => {
-      if (this.drawing.active) {
+    window.addEventListener('touchend', (e) => {
+      const endedRuneTouch = this.drawing.inputMode === 'touch'
+        && Array.from(e.changedTouches ?? []).some((touch) => touch.identifier === this.drawing.touchId);
+      if (this.drawing.active && endedRuneTouch) {
         if (this.drawing.currentStroke.length > 0) {
           this.drawing.strokes.push([...this.drawing.currentStroke]);
           this.drawing.currentStroke = [];
@@ -215,14 +256,62 @@ export class GameWorld {
         this.finishRuneDrawing();
       }
     });
+
+    this.setupTouchJoystick();
+  }
+
+  setupTouchJoystick() {
+    const joystick = document.getElementById('touch-joystick');
+    const knob = document.getElementById('touch-joystick-knob');
+    if (!joystick || !knob) return;
+    let pointerId = null;
+    const update = (event) => {
+      if (pointerId !== event.pointerId) return;
+      const rect = joystick.getBoundingClientRect();
+      const radius = rect.width * 0.5;
+      let dx = event.clientX - (rect.left + radius);
+      let dy = event.clientY - (rect.top + radius);
+      const length = Math.hypot(dx, dy);
+      if (length > radius) { dx = dx / length * radius; dy = dy / length * radius; }
+      const deadzone = radius * 0.14;
+      this.input.touchMove.x = Math.abs(dx) < deadzone ? 0 : dx / radius;
+      this.input.touchMove.z = Math.abs(dy) < deadzone ? 0 : dy / radius;
+      knob.style.transform = `translate(${dx}px, ${dy}px)`;
+    };
+    const clear = (event) => {
+      if (pointerId !== event.pointerId) return;
+      pointerId = null;
+      this.input.touchMove.x = 0; this.input.touchMove.z = 0;
+      knob.style.transform = 'translate(0, 0)';
+    };
+    joystick.addEventListener('pointerdown', (event) => { pointerId = event.pointerId; joystick.setPointerCapture?.(pointerId); update(event); });
+    joystick.addEventListener('pointermove', update);
+    joystick.addEventListener('pointerup', clear);
+    joystick.addEventListener('pointercancel', clear);
+  }
+
+  refreshMovement() {
+    const keys = this.input.keys;
+    const keyboard = {
+      x: (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0),
+      z: (keys.KeyS || keys.ArrowDown ? 1 : 0) - (keys.KeyW || keys.ArrowUp ? 1 : 0)
+    };
+    const x = keyboard.x || this.input.touchMove.x;
+    const z = keyboard.z || this.input.touchMove.z;
+    const magnitude = Math.hypot(x, z);
+    this.input.move.x = magnitude > 1 ? x / magnitude : x;
+    this.input.move.z = magnitude > 1 ? z / magnitude : z;
   }
 
   startRuneDrawing() {
-    if (this.drawing.active) return;
+    if (!this.isMatchRunning() || this.drawing.active || !this.player.isAlive) return;
     this.drawing.active = true;
     this.drawing.strokes = [];
     this.drawing.currentStroke = [];
     this.drawing.timer = this.drawing.maxTimer;
+    this.drawing.lastRecognitionCheck = 0;
+    this.drawing.touchId = null;
+    this.drawing.inputMode = null;
     this.targetTimeScale = 0.22;
 
     ui.setDrawingMode(true, this.drawing.timer, this.drawing.maxTimer);
@@ -240,9 +329,18 @@ export class GameWorld {
       const freq = 440 + (canvasX % 300);
       audio.playRuneChime(freq);
     }
+
+    // A clean gesture should return the player to the brawl immediately. The
+    // short throttle, minimum point count, and confidence guard avoid closing
+    // the menu on a stray first stroke.
+    if (this.drawing.currentStroke.length >= 10 && now - this.drawing.lastRecognitionCheck > 110) {
+      this.drawing.lastRecognitionCheck = now;
+      const liveResult = recognizer.recognize([...this.drawing.strokes, [...this.drawing.currentStroke]]);
+      if (liveResult?.rune && liveResult.confidence >= 0.84) this.finishRuneDrawing(liveResult);
+    }
   }
 
-  finishRuneDrawing() {
+  finishRuneDrawing(recognizedResult = null) {
     if (!this.drawing.active) return;
 
     if (this.drawing.currentStroke.length > 0) {
@@ -251,10 +349,19 @@ export class GameWorld {
     }
 
     this.drawing.active = false;
+    this.drawing.touchId = null;
+    this.drawing.inputMode = null;
+    // Recognition should return immediately to full-speed combat. Do not let
+    // the previous drawing slow-motion ease back in after a successful rune.
     this.targetTimeScale = 1.0;
+    this.timeScale = 1.0;
     ui.setDrawingMode(false);
 
-    const result = recognizer.recognize(this.drawing.strokes);
+    if (!this.isMatchRunning() || !this.player.isAlive) {
+      this.runeCtx.clearRect(0, 0, this.logicalWidth, this.logicalHeight);
+      return;
+    }
+    const result = recognizedResult ?? recognizer.recognize(this.drawing.strokes);
 
     if (result && result.rune) {
       const added = this.player.addPreparedRune(result.rune);
@@ -271,14 +378,15 @@ export class GameWorld {
       ui.showRecognitionBadge(null, 0);
     }
 
-    this.runeCtx.clearRect(0, 0, this.runeCanvas.width, this.runeCanvas.height);
+    this.runeCtx.clearRect(0, 0, this.logicalWidth, this.logicalHeight);
   }
 
   castPreparedSpell() {
+    if (!this.isMatchRunning() || !this.player.isAlive) return false;
     if (this.player.preparedRunes.length === 0) {
       this.showAnnouncement('NO RUNES PREPARED! DRAW RUNES FIRST');
       audio.playRuneFail();
-      return;
+      return false;
     }
 
     const resolved = spells.resolveSpell(this.player.preparedRunes);
@@ -286,27 +394,191 @@ export class GameWorld {
       spells.cast(this.player, resolved, this);
       this.showAnnouncement(`CAST: ${resolved.name}!`);
       this.player.clearPreparedRunes();
+      return true;
     }
+    return false;
   }
 
-  getHostileTargets(myTeam) {
+  getHostileTargets(myTeam, includeProtectedCastle = false) {
     const targets = [];
     for (const m of this.minions) {
       if (m.team !== myTeam && !m.isDead) targets.push(m);
     }
-    if (myTeam === 'red' && this.player.hp > 0) targets.push(this.player);
-    if (myTeam === 'blue' && this.enemyChampion.hp > 0) targets.push(this.enemyChampion);
+    if (myTeam === 'red' && this.player.isAlive) targets.push(this.player);
+    if (myTeam === 'blue' && this.enemyChampion.isAlive) targets.push(this.enemyChampion);
 
-    const enemyTower = (myTeam === 'blue') ? this.battlefield.redTower : this.battlefield.blueTower;
+    const enemyTower = this.battlefield.getTower(myTeam === 'blue' ? 'red' : 'blue');
     if (!enemyTower.isDead) targets.push(enemyTower);
+    const enemyCastle = this.battlefield.getCastle(myTeam === 'blue' ? 'red' : 'blue');
+    if (!enemyCastle.isDestroyed && (includeProtectedCastle || enemyCastle.isVulnerable)) targets.push(enemyCastle);
 
     return targets;
   }
 
-  spawnMinionBolt(x, y, facing, team, damage) {
+  // Towers use this deliberately narrower query. Objectives remain valid
+  // player/minion/spell targets, but are never valid Tower targets.
+  getHostileMobileTargets(myTeam) {
+    const targets = [];
+    for (const minion of this.minions) {
+      if (minion.team !== myTeam && !minion.isDead && minion.isMobileCombatant) targets.push(minion);
+    }
+    if (myTeam === 'red' && this.player.isAlive && this.player.isMobileCombatant) targets.push(this.player);
+    if (myTeam === 'blue' && this.enemyChampion.isAlive && this.enemyChampion.isMobileCombatant) targets.push(this.enemyChampion);
+    return targets;
+  }
+
+  findMinionTarget(minion) {
+    const targetIsValid = (target) => {
+      if (!target || target.team === minion.team || target.isDead || target.isDestroyed) return false;
+      if (target.isObjective && target.isVulnerable === false) return false;
+      return true;
+    };
+    // A brief lock stops the crowd from frame-by-frame target thrashing while
+    // still letting nearby threats interrupt a march toward an objective.
+    if (minion.targetLockTimer > 0 && targetIsValid(minion.target)) {
+      const retainedDistance = groundDistance(minion, minion.target);
+      if (minion.target.isObjective || retainedDistance < 225) return minion.target;
+    }
+    const commit = (target) => { minion.target = target; minion.targetLockTimer = target ? 0.55 : 0; return target; };
+    const enemies = this.minions.filter((candidate) => candidate.team !== minion.team && !candidate.isDead);
+    let nearest = null; let nearestDistance = Infinity;
+    for (const enemy of enemies) {
+      const distance = Math.hypot(enemy.x - minion.x, (enemy.z - minion.z) * 150);
+      if (distance < nearestDistance) { nearest = enemy; nearestDistance = distance; }
+    }
+    if (nearest && nearestDistance < 150) return commit(nearest);
+    const wizard = minion.team === 'blue' ? this.enemyChampion : this.player;
+    if (wizard.isAlive) {
+      const wizardDistance = Math.hypot(wizard.x - minion.x, (wizard.z - minion.z) * 150);
+      if (wizardDistance < 180) return commit(wizard);
+    }
+    const enemyTeam = minion.team === 'blue' ? 'red' : 'blue';
+    const tower = this.battlefield.getTower(enemyTeam);
+    if (!tower.isDead) return commit(tower);
+    const castle = this.battlefield.getCastle(enemyTeam);
+    return commit(castle.isVulnerable && !castle.isDestroyed ? castle : null);
+  }
+
+  isMatchRunning() { return this.matchState === 'Running'; }
+
+  setObjectivePhase(phase) {
+    this.objectivePhase = phase;
+    this.matchPhase = phase;
+  }
+
+  canRespawn(team) { return this.isMatchRunning() && !this.battlefield.getCastle(team).isDestroyed; }
+
+  onTowerDestroyed(tower, castle) {
+    this.showAnnouncement(`${tower.team.toUpperCase()} TOWER FALLEN — CASTLE VULNERABLE`, 2.5);
+    this.setObjectivePhase('CastlePhase');
+    this.stats.towersDestroyed[tower.team] = true;
+  }
+
+  onCastleDestroyed(castle) {
+    this.setObjectivePhase('FinalWizardPhase');
+    this.stats.castlesDestroyed[castle.team] = true;
+    this.showAnnouncement(`${castle.team.toUpperCase()} CASTLE DESTROYED — DEFEAT THE WIZARD`, 3);
+  }
+
+  onFinalWizardDeath(team) {
+    if (!this.isMatchRunning()) return;
+    this.winnerTeam = team === 'blue' ? 'red' : 'blue';
+    this.matchState = 'Ending';
+    this.endingTimer = 0.9;
+    this.input.gameplayBlocked = true;
+    this.showAnnouncement(this.winnerTeam === 'blue' ? 'VICTORY — ENEMY WIZARD DEFEATED' : 'DEFEAT — YOUR WIZARD HAS FALLEN', 1.1);
+    combat.shakeCamera(20, 1);
+  }
+
+  recordWizardDeath(team) {
+    if (!this.isMatchRunning() || !this.stats) return;
+    const killer = team === 'blue' ? 'red' : 'blue';
+    this.stats.wizardKills[killer]++;
+    if (team === 'blue') this.stats.playerDeaths++;
+  }
+
+  getObjectiveStatus() {
+    if (this.matchState === 'Ending' || this.matchState === 'Results') return this.winnerTeam === 'blue' ? 'VICTORY' : 'DEFEAT';
+    const tower = this.battlefield.redTower;
+    const castle = this.battlefield.redCastle;
+    if (!tower.isDead) return `DESTROY ENEMY TOWER ${Math.ceil(tower.hp)}/${tower.maxHp}`;
+    if (!castle.isDestroyed) return `DESTROY ENEMY CASTLE ${Math.ceil(castle.hp)}/${castle.maxHp}`;
+    return 'DEFEAT ENEMY WIZARD';
+  }
+
+  attachBattlefieldCallbacks() {
+    this.battlefield.onTowerDestroyed = (tower, castle) => this.onTowerDestroyed(tower, castle);
+    this.battlefield.onCastleDestroyed = (castle) => this.onCastleDestroyed(castle);
+    this.battlefield.onProtectedCastleHit = (castle) => this.showAnnouncement(`${castle.team.toUpperCase()} CASTLE PROTECTED — DESTROY THE TOWER FIRST`, 1.5);
+  }
+
+  prepareDefaultRunes() {
+    const ids = ['fulgur', 'terra', 'ignis'];
+    for (const id of ids) {
+      const rune = recognizer.runes.find((candidate) => candidate.id === id);
+      if (rune) this.player.addPreparedRune(rune);
+    }
+  }
+
+  resetMatch() {
+    spells.activeSpells = [];
+    combat.resetEffects();
+    this.battlefield = new Battlefield();
+    this.attachBattlefieldCallbacks();
+    this.player = new Player(ARENA_LAYOUT.spawns.blueCastle.x, ARENA_LAYOUT.spawns.blueCastle.z);
+    this.enemyChampion = new EnemyChampion(ARENA_LAYOUT.spawns.redCastle.x, ARENA_LAYOUT.spawns.redCastle.z, 'warlord');
+    this.battlefield.placeOnSurface(this.player);
+    this.battlefield.placeOnSurface(this.enemyChampion);
+    this.minions = [];
+    this.projectiles = [];
+    this.setObjectivePhase('LanePhase');
+    this.winnerTeam = null;
+    this.endingTimer = 0;
+    this.matchTime = this.matchDuration;
+    this.stats = { wizardKills: { blue: 0, red: 0 }, playerDeaths: 0, towersDestroyed: { blue: false, red: false }, castlesDestroyed: { blue: false, red: false } };
+    this.drawing.active = false;
+    this.drawing.strokes = [];
+    this.drawing.currentStroke = [];
+    this.targetTimeScale = this.timeScale = 1;
+    this.input.gameplayBlocked = false;
+    this.prepareDefaultRunes();
+    this.battlefield.spawnWave(this);
+  }
+
+  startMatch() {
+    this.resetMatch();
+    this.matchState = 'Running';
+    ui.showHub(false);
+    ui.showResults(false);
+    this.showAnnouncement('DESTROY ENEMY TOWER', 1.5);
+  }
+
+  completeResults() {
+    if (this.matchState !== 'Ending') return;
+    this.matchState = 'Results';
+    this.projectiles = [];
+    spells.activeSpells = [];
+    ui.showResults(true, { winner: this.winnerTeam, elapsed: this.matchDuration - this.matchTime, stats: this.stats });
+  }
+
+  returnToHub() {
+    this.matchState = 'Menu';
+    this.input.gameplayBlocked = true;
+    this.projectiles = [];
+    spells.activeSpells = [];
+    this.drawing.active = false;
+    this.targetTimeScale = this.timeScale = 1;
+    ui.setDrawingMode(false);
+    ui.showResults(false);
+    ui.showHub(true);
+  }
+
+  spawnMinionBolt(x, z, facing, team, damage, targetZ = z, height = 18) {
     this.projectiles.push({
       type: 'bolt',
-      x, y,
+      x, z,
+      targetZ,
+      height,
       vx: facing * 440,
       vy: 0,
       facing,
@@ -317,11 +589,12 @@ export class GameWorld {
     });
   }
 
-  spawnTowerOrb(startX, startY, target, team, damage) {
+  spawnTowerOrb(startX, startZ, target, team, damage, height = 95) {
     this.projectiles.push({
       type: 'towerOrb',
       x: startX,
-      y: startY,
+      z: startZ,
+      height,
       target,
       team,
       damage,
@@ -352,45 +625,45 @@ export class GameWorld {
       if (this.drawing.timer <= 0) this.finishRuneDrawing();
     }
 
-    // 2. Match Timer
-    this.matchTime = Math.max(0, this.matchTime - dt);
+    // 2. Match Timer — only active play contributes to the final result.
+    if (this.isMatchRunning()) this.matchTime = Math.max(0, this.matchTime - dt);
 
     // 3. Combat Engine Update
     const normalFrame = combat.update(
       scaledDt,
       this.player.x,
       this.player.y,
-      this.canvas.width,
-      this.canvas.height,
+      this.logicalWidth,
+      this.logicalHeight,
       this.battlefield
     );
 
-    if (normalFrame) {
+    if (normalFrame && this.isMatchRunning()) {
       this.battlefield.update(scaledDt, this);
+      this.input.gameplayBlocked = this.drawing.active;
+      this.refreshMovement();
 
-      if (this.player.hp > 0) {
-        this.player.update(scaledDt, this.input, this.battlefield);
-      }
-      if (this.enemyChampion.hp > 0) {
-        this.enemyChampion.update(scaledDt, this, this.battlefield);
-      }
+      this.player.update(scaledDt, this.input, this.battlefield, this);
+      this.enemyChampion.update(scaledDt, this, this.battlefield);
 
-      for (let i = this.minions.length - 1; i >= 0; i--) {
-        const m = this.minions[i];
-        m.update(scaledDt, this, this.battlefield);
-        if (m.isDead) this.minions.splice(i, 1);
-      }
+      if (this.isMatchRunning()) {
+        for (let i = this.minions.length - 1; i >= 0; i--) {
+          const m = this.minions[i];
+          m.update(scaledDt, this, this.battlefield);
+          if (m.isDead) this.minions.splice(i, 1);
+        }
 
-      for (let i = this.projectiles.length - 1; i >= 0; i--) {
-        const p = this.projectiles[i];
-        p.life -= scaledDt;
+        for (let i = this.projectiles.length - 1; i >= 0; i--) {
+          const p = this.projectiles[i];
+          p.life -= scaledDt;
 
         if (p.type === 'bolt') {
           p.x += p.vx * scaledDt;
+          p.z += (p.targetZ - p.z) * Math.min(1, scaledDt * 6);
           const targets = this.getHostileTargets(p.team);
           for (const t of targets) {
-            if (Math.abs(t.x - p.x) < 22 && Math.abs((t.y - 20) - p.y) < 30) {
-              t.takeDamage(p.damage, p.facing * 80, -40, 0.15);
+            if (Math.abs(t.x - p.x) < 22 && Math.abs((t.z ?? p.z) - p.z) < 0.15 && Math.abs((t.worldHeight ?? 0) - p.height) < 90) {
+              t.takeDamage(p.damage, p.facing * 80, 40, 0.15);
               p.life = 0;
               break;
             }
@@ -398,28 +671,39 @@ export class GameWorld {
         } else if (p.type === 'towerOrb') {
           if (p.target && p.target.hp > 0) {
             const dx = p.target.x - p.x;
-            const dy = (p.target.y - 25) - p.y;
-            const dist = Math.hypot(dx, dy);
+            const dz = p.target.z - p.z;
+            const targetHeight = p.target.worldHeight ?? 0;
+            const dist = Math.hypot(dx, dz * 150, targetHeight - p.height);
             if (dist < 18) {
-              p.target.takeDamage(p.damage, Math.sign(dx) * 160, -80, 0.2);
-              combat.spawnShockwave(p.x, p.y, 30, p.team === 'blue' ? '#00e5ff' : '#ff1744');
+              p.target.takeDamage(p.damage, Math.sign(dx) * 160, 80, 0.2);
+              combat.spawnShockwave(p.x, groundYForDepth(p.z) - p.height, 30, p.team === 'blue' ? '#00e5ff' : '#ff1744');
               p.life = 0;
             } else {
               p.x += (dx / dist) * p.speed * scaledDt;
-              p.y += (dy / dist) * p.speed * scaledDt;
+              p.z += (dz * 150 / dist) * (p.speed / 150) * scaledDt;
+              p.height += (targetHeight - p.height) / dist * p.speed * scaledDt;
             }
           } else {
             p.life = 0;
           }
         }
 
-        if (p.life <= 0) this.projectiles.splice(i, 1);
-      }
+          if (p.life <= 0) this.projectiles.splice(i, 1);
+        }
 
-      spells.update(scaledDt, this);
+        spells.update(scaledDt, this);
+      }
     }
 
-    ui.update(dt, this.player, this.battlefield);
+    // Ending deliberately does not run combat AI, spawns, projectiles, or
+    // player input. It still receives real dt so feedback can resolve and the
+    // game always reaches a usable Results screen.
+    if (this.matchState === 'Ending') {
+      this.endingTimer -= dt;
+      if (this.endingTimer <= 0) this.completeResults();
+    }
+
+    ui.update(dt, this.player, this.enemyChampion, this.battlefield);
 
     this.input.justPressedKeys = {};
     this.input.justPressedMouse = {};
@@ -431,8 +715,8 @@ export class GameWorld {
 
   render() {
     const ctx = this.ctx;
-    const viewW = this.canvas.width;
-    const viewH = this.canvas.height;
+    const viewW = this.logicalWidth;
+    const viewH = this.logicalHeight;
     const cam = combat.camera;
 
     ctx.clearRect(0, 0, viewW, viewH);
@@ -447,14 +731,11 @@ export class GameWorld {
     // Foreground Crystal Glows on Beacons
     this.battlefield.renderForeground(ctx);
 
-    // Minions
-    for (const m of this.minions) m.render(ctx);
-
-    // Enemy Champion
-    if (this.enemyChampion.hp > 0) this.enemyChampion.render(ctx);
-
-    // Player
-    if (this.player.hp > 0) this.player.render(ctx);
+    const actors = [...this.minions];
+    if (this.enemyChampion.lifeState !== 'Dead') actors.push(this.enemyChampion);
+    if (this.player.lifeState !== 'Dead') actors.push(this.player);
+    actors.sort((a, b) => a.y - b.y);
+    for (const actor of actors) actor.render(ctx);
 
     // Projectiles
     this.renderProjectiles(ctx);
@@ -464,6 +745,8 @@ export class GameWorld {
 
     // Combat VFX
     combat.render(ctx);
+
+    if (this.debugVisible) this.battlefield.renderDebug(ctx, this);
 
     ctx.restore();
 
@@ -481,14 +764,14 @@ export class GameWorld {
         ctx.shadowColor = ctx.fillStyle;
         ctx.shadowBlur = 8;
         ctx.beginPath();
-        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.arc(p.x, groundYForDepth(p.z) - p.height, p.radius, 0, Math.PI * 2);
         ctx.fill();
       } else if (p.type === 'towerOrb') {
         ctx.fillStyle = p.team === 'blue' ? '#00e5ff' : '#ff1744';
         ctx.shadowColor = ctx.fillStyle;
         ctx.shadowBlur = 14;
         ctx.beginPath();
-        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.arc(p.x, groundYForDepth(p.z) - p.height, p.radius, 0, Math.PI * 2);
         ctx.fill();
       }
     }
@@ -497,11 +780,11 @@ export class GameWorld {
 
   renderRuneStrokes() {
     const rctx = this.runeCtx;
-    rctx.clearRect(0, 0, this.runeCanvas.width, this.runeCanvas.height);
+    rctx.clearRect(0, 0, this.logicalWidth, this.logicalHeight);
 
     rctx.save();
     rctx.fillStyle = 'rgba(8, 6, 18, 0.45)';
-    rctx.fillRect(0, 0, this.runeCanvas.width, this.runeCanvas.height);
+    rctx.fillRect(0, 0, this.logicalWidth, this.logicalHeight);
 
     const allStrokes = [...this.drawing.strokes];
     if (this.drawing.currentStroke.length > 0) {
