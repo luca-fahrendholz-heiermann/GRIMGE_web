@@ -1,0 +1,20 @@
+{
+    "name": "GRIMGE.Prototype.Editor",
+    "rootNamespace": "GRIMGE.Prototype.Editor",
+    "references": [
+        "GRIMGE.Prototype",
+        "Unity.InputSystem",
+        "UnityEngine.UI"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

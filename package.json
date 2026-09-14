@@ -1,0 +1,14 @@
+{
+  "name": "grimge-prototype",
+  "version": "1.0.0",
+  "description": "GRIMGE - Autonomous Playable Prototype: 2.5D Fantasy Action, Rune Weaving & Lane Battles",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "test": "node test_recognizer.js"
+  },
+  "author": "Antigravity Autonomous Prototype Experiment",
+  "license": "MIT"
+}

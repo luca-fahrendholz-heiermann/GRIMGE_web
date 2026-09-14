@@ -1,0 +1,26 @@
+# Unity
+Library/
+Builds/
+Logs/
+UserSettings/
+Temp/
+obj/
+*.csproj
+*.sln
+*.pidb
+*.unityproj
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb.meta
+*.pdb
+*.mdb
+
+# Node
+node_modules/
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp

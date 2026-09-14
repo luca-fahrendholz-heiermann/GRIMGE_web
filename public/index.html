@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GRIMGE — Autonomous Playable Prototype</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div id="game-container">
+    <!-- Main Game Canvas (16:9 Aspect Ratio matching Mockup) -->
+    <canvas id="game-canvas" width="1024" height="576"></canvas>
+
+    <!-- Rune Drawing Layer -->
+    <canvas id="rune-canvas" width="1024" height="576"></canvas>
+
+    <!-- UI Overlay matching Mockup Exactly -->
+    <div id="ui-layer">
+      <!-- TOP HUD BAR -->
+      <div id="top-hud-bar">
+        <!-- Blue Team (Left) -->
+        <div class="team-side blue-side">
+          <div class="portraits-wrap">
+            <img src="assets/ui/portrait_hero.png" class="p-img" id="player-portrait-img" alt="Hero">
+            <img src="assets/ui/portrait_knight.png" class="p-img sub-p" alt="Knight">
+          </div>
+          <div class="bars-wrap">
+            <div class="bar-strip hp-strip">
+              <div id="blue-hp-fill" class="fill green-fill" style="width: 100%;"></div>
+              <span id="blue-hp-text" class="bar-caption">3100 / 3100</span>
+            </div>
+            <div class="bar-strip mp-strip">
+              <div id="blue-mp-fill" class="fill blue-fill" style="width: 75%;"></div>
+              <span id="blue-mp-text" class="bar-caption">450 / 600</span>
+            </div>
+          </div>
+          <div class="crystal-pill blue-pill">
+            <span class="c-icon">🔷</span>
+            <span id="blue-crystal-count">2</span>
+          </div>
+        </div>
+
+        <!-- Match Clock (Center) -->
+        <div id="match-clock-box">
+          <span id="clock-display">06:42</span>
+        </div>
+
+        <!-- Red Team (Right) -->
+        <div class="team-side red-side">
+          <div class="crystal-pill red-pill">
+            <span class="c-icon">♦️</span>
+            <span id="red-crystal-count">1</span>
+          </div>
+          <div class="bars-wrap red-bars-wrap">
+            <div class="bar-strip hp-strip">
+              <span id="red-hp-text" class="bar-caption">2400 / 2400</span>
+              <div id="red-hp-fill" class="fill red-fill" style="width: 100%;"></div>
+            </div>
+            <div class="bar-strip mp-strip">
+              <span id="red-mp-text" class="bar-caption">380 / 1000</span>
+              <div id="red-mp-fill" class="fill cyan-fill" style="width: 38%;"></div>
+            </div>
+          </div>
+          <div class="portraits-wrap">
+            <img src="assets/ui/portrait_warlord.png" class="p-img" alt="Warlord">
+            <img src="assets/ui/portrait_mage.png" class="p-img sub-p" alt="Mage">
+          </div>
+        </div>
+      </div>
+
+      <!-- Center Announcement Toast -->
+      <div id="announcement-banner"></div>
+
+      <!-- Quick Hero Swapper (Top Left) -->
+      <div id="hero-select-bar">
+        <span class="select-label">HERO [1-5]:</span>
+        <button class="hero-chip active" data-hero="paladin">Paladin</button>
+        <button class="hero-chip" data-hero="berserker">Berserker</button>
+        <button class="hero-chip" data-hero="mage">Mage</button>
+        <button class="hero-chip" data-hero="warlord">Warlord</button>
+        <button class="hero-chip" data-hero="fighter">Fighter</button>
+      </div>
+
+      <!-- BOTTOM HUD BAR -->
+      <div id="bottom-hud-bar">
+        <!-- D-Pad (Bottom Left) -->
+        <div id="dpad-container" title="Virtual D-Pad (A/D to move, W to jump, S to fall)">
+          <img src="assets/ui/dpad.png" class="dpad-img" alt="D-Pad">
+        </div>
+
+        <!-- Center: 3 Rune Cards + Grimoire + Mana Bar -->
+        <div id="bottom-center-deck">
+          <div id="rune-cards-row">
+            <!-- Card 1 (Slot 0) -->
+            <div class="card-slot active-card" id="card-0" data-slot="0" title="Rune 1 (Lightning FULGUR)">
+              <img src="assets/ui/card_lightning.png" class="card-img" alt="Card 1">
+              <div class="card-overlay" id="card-overlay-0"></div>
+            </div>
+            <!-- Card 2 (Slot 1) -->
+            <div class="card-slot active-card" id="card-1" data-slot="1" title="Rune 2 (Earth TERRA)">
+              <img src="assets/ui/card_shield.png" class="card-img" alt="Card 2">
+              <div class="card-overlay" id="card-overlay-1"></div>
+            </div>
+            <!-- Card 3 (Slot 2) -->
+            <div class="card-slot active-card" id="card-2" data-slot="2" title="Rune 3 (Fire IGNIS)">
+              <img src="assets/ui/card_fire.png" class="card-img" alt="Card 3">
+              <div class="card-overlay" id="card-overlay-2"></div>
+            </div>
+
+            <!-- Grimoire Button -->
+            <div id="grimoire-btn" class="grimoire-wrap" title="Arcane Grimoire & Combo Guide (Key H)">
+              <img src="assets/ui/grimoire_icon.png" class="grimoire-img" alt="Grimoire">
+            </div>
+          </div>
+
+          <!-- Bottom Mana Bar Frame -->
+          <div id="bottom-mana-container">
+            <div class="mana-frame-wrap">
+              <img src="assets/ui/mana_bar_frame.png" class="mana-frame-img" alt="Mana Bar">
+              <div id="mana-bar-fill" class="mana-live-fill" style="width: 75%;"></div>
+              <span id="mana-bar-text" class="mana-live-text">450 / 600</span>
+            </div>
+          </div>
+
+          <!-- Active Spell Name Preview -->
+          <div id="active-spell-preview">FIRESTORM VORTEX READY [PRESS E TO CAST]</div>
+        </div>
+
+        <!-- Right: Action Buttons & Arcane Rune Circle -->
+        <div id="bottom-right-actions">
+          <!-- Melee Attack Button -->
+          <div id="action-attack-btn" class="action-wrap" title="Melee Attack (Left-Click / J)">
+            <img src="assets/ui/attack_btn.png" class="action-btn-img" alt="Attack">
+          </div>
+
+          <!-- Arcane Rune Weaving Circle -->
+          <div id="arcane-circle-trigger" class="arcane-circle-wrap" title="Arcane Rune Weaving (Hold Right-Click / Tap Circle to Draw)">
+            <img src="assets/ui/arcane_circle.png" class="arcane-circle-img" alt="Arcane Circle">
+          </div>
+
+          <!-- Chat Button -->
+          <div id="chat-btn" class="chat-wrap" title="Emotes">
+            <img src="assets/ui/chat_btn.png" class="chat-btn-img" alt="Chat">
+          </div>
+        </div>
+      </div>
+
+      <!-- Grimoire Modal -->
+      <div id="grimoire-modal" class="hidden">
+        <div class="modal-header">
+          <span>📜 GRIMGE ARCANE GRIMOIRE & CONTROLS</span>
+          <button id="close-grimoire-btn">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="g-col">
+            <h3>✦ RUNE GESTURES (HOLD RIGHT-CLICK / SPACE TO DRAW)</h3>
+            <div class="g-item"><span class="r-icon">🔥</span><strong>IGNIS (Fire)</strong>: Draw Triangle <code>▲</code></div>
+            <div class="g-item"><span class="r-icon">💨</span><strong>VENTUS (Wind)</strong>: Draw Dash <code>—</code></div>
+            <div class="g-item"><span class="r-icon">⚡</span><strong>FULGUR (Lightning)</strong>: Draw Zig-Zag <code>Z</code></div>
+            <div class="g-item"><span class="r-icon">🪨</span><strong>TERRA (Earth)</strong>: Draw Square <code>□</code></div>
+            <div class="g-item"><span class="r-icon">❄️</span><strong>AQUA (Frost)</strong>: Draw Circle <code>○</code></div>
+          </div>
+          <div class="g-col">
+            <h3>✦ POWER COMBINATIONS (PREPARE UP TO 3, PRESS E)</h3>
+            <div class="g-item">🔥 + 💨 = <strong>FIRESTORM VORTEX</strong> (Sucks & burns lane)</div>
+            <div class="g-item">🔥 + ⚡ = <strong>METEOR CATACLYSM</strong> (Cosmic strike + crater)</div>
+            <div class="g-item">💨 + ⚡ = <strong>TEMPEST BLITZ</strong> (Supersonic lightning dash)</div>
+            <div class="g-item">🪨 + 🔥 = <strong>MAGMA FISSURE</strong> (Molten lava floor trap)</div>
+            <div class="g-item">🔥+💨+⚡ = <strong>APOCALYPTIC HEAVENSURGE</strong> (Grand storm)</div>
+          </div>
+          <div class="g-col">
+            <h3>✦ CONTROLS</h3>
+            <div><strong>A / D</strong>: Move | <strong>W</strong>: Jump (x2) | <strong>S</strong>: Fast-Fall</div>
+            <div><strong>Left-Click / J</strong>: Melee Combo | <strong>W + Attack</strong>: Uppercut</div>
+            <div><strong>Shift</strong>: Dodge Roll | <strong>E</strong>: Cast Spell | <strong>Q</strong>: Discard</div>
+            <div><strong>Keys 1-5</strong>: Switch Hero Character</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Drawing Feedback Overlay -->
+      <div id="drawing-hud" class="hidden">
+        <div id="drawing-timer-bar"><div id="drawing-timer-fill"></div></div>
+        <div id="drawing-prompt">ARCANE FOCUS ACTIVE — DRAW RUNE SHAPE</div>
+        <div id="recognition-result"></div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
