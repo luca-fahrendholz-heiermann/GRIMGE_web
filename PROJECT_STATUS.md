@@ -15,6 +15,7 @@
 - Tower/Castle HP is shown above a damaged objective. Player melee and Fireball both use the ordinary combat/spell path against Towers; Fireball's structural explosion radius now matches its valid objective contact volume.
 - Minions retain target locks, light separation, lane preferences, and objective progression without player lane locking. When pushing a structure they converge tightly enough for both melee and ranged attacks to connect, then continue to the unlocked Castle.
 - Match lifecycle is separate from objective phase: `Menu → Running → Ending (0.9s) → Results`; `Rematch` reconstructs match state without reload; `Return to Hub` reaches the minimal menu.
+- `PLAY` and `REMATCH` use immediate pointer input with an accessible click fallback. A duplicate browser click cannot reset an already running match.
 - Results display victory/defeat, final match time, objective state, Wizard kills, Rematch, and Hub controls. Enter rematches; Escape returns to Hub.
 - Rune drawing is constrained to the current three-card `runeHand`. Tapping the mobile arcane circle opens Arcane Focus; a second tap locks in immediately, or a completed stroke auto-locks after two seconds. Non-hand or unrecognised gestures leave the mode active but clear the old drawing through a DPR-safe physical-canvas clear; Escape cancels.
 - Rune deck foundation: exactly three physical rune cards are drawn into `runeHand`. A correctly drawn hand card moves immediately to the deck back and a replacement is drawn. Recognition is restricted to those current hand cards.
@@ -29,7 +30,7 @@
 
 ## Automated Validation Complete
 
-- `npm test` passes: 14 rune/spell checks, 6 world checks, 68 runtime checks (88 total).
+- `npm test` passes: 14 rune/spell checks, 6 world checks, 69 runtime checks (89 total).
 - Runtime coverage includes upper battlement spawn/access/fall, depth/dash/jump, melee recovery, death/respawn, rune-hand cycling, selected-card validation, 2-second auto-lock, selected-slot casting, slot swapping, Grimoire combination/random resolution, Aura Shock, Arcane Shield, depth-aware spells, Tower target filtering, and an input-driven siege chain (player melee/Fireball → Tower → Castle → final Wizard → Results → Rematch/Hub).
 - All browser modules pass `node --check`; local HTTP checks return 200 for `/` and `/src/main.js`.
 

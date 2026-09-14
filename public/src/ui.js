@@ -70,8 +70,20 @@ export class UIManager {
   }
 
   setupListeners() {
-    this.playMatchBtn.addEventListener('click', () => window.gameWorld?.startMatch());
-    this.rematchBtn.addEventListener('click', () => window.gameWorld?.startMatch());
+    // `click` is delayed or occasionally swallowed by mobile browser gesture
+    // handling. Start/Rematch are primary game controls, so activate them on
+    // the same immediate pointer path as the combat controls. Keep keyboard
+    // accessibility through the click fallback; GameWorld ignores a duplicate
+    // call once the match is already running.
+    const startMatch = (e) => {
+      e?.preventDefault?.();
+      e?.stopPropagation?.();
+      window.gameWorld?.startMatch();
+    };
+    this.playMatchBtn.addEventListener('pointerdown', startMatch);
+    this.playMatchBtn.addEventListener('click', startMatch);
+    this.rematchBtn.addEventListener('pointerdown', startMatch);
+    this.rematchBtn.addEventListener('click', startMatch);
     this.hubBtn.addEventListener('click', () => window.gameWorld?.returnToHub());
     this.grimoireBtn.addEventListener('pointerdown', (e) => {
       e.preventDefault();

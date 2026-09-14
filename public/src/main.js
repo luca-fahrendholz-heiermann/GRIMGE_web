@@ -735,6 +735,10 @@ export class GameWorld {
   }
 
   startMatch() {
+    // Pointer controls emit pointerdown followed by click. Do not let the
+    // follow-up click rebuild a just-started match and do not restart an
+    // already live game through an accidental overlay tap.
+    if (this.matchState === 'Running' || this.matchState === 'Ending') return;
     this.resetMatch();
     this.matchState = 'Running';
     ui.showHub(false);
