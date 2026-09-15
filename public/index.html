@@ -26,7 +26,7 @@
           <p>FAST 2.5D BRAWL · MAGIC · SIEGE</p>
           <button id="play-match-btn" class="match-button primary">PLAY</button>
           <button class="match-button muted" disabled>TRAINING — SOON</button>
-          <button class="match-button muted" disabled>OPTIONS — SOON</button>
+          <button id="ui-layout-btn" class="match-button">SETTINGS: CLASSIC UI</button>
           <small>ENTER / TAP PLAY TO BEGIN</small>
         </div>
       </section>
@@ -170,13 +170,15 @@
           <button id="action-cast-btn" class="touch-action cast-action triangle-cast" title="Cast prepared runes (E)">CAST</button>
           <button id="action-swap-btn" class="touch-action swap-action" title="Swap selected spell">SWAP</button>
 
-          <!-- Code-rendered Arcane Rune Weaving Circle, not a screenshot asset. -->
-          <button id="arcane-circle-trigger" class="arcane-circle-wrap" type="button" title="Tap to draw; tap again to lock in">
-            <span class="arcane-circle-glyph">✧</span><small>DRAW</small>
-          </button>
-
         </div>
       </div>
+
+      <!-- Code-rendered Arcane Rune Weaving Circle. It is a direct child of
+           the HUD so the alternate touch layout can place it above the
+           dynamically-created left-thumb joystick. -->
+      <button id="arcane-circle-trigger" class="arcane-circle-wrap" type="button" title="Tap to draw; tap again to lock in">
+        <span class="arcane-circle-glyph">✧</span><small>DRAW</small>
+      </button>
 
       <!-- Grimoire Modal -->
       <div id="grimoire-modal" class="hidden">

@@ -24,6 +24,8 @@
 - Mobile viewport is locked to the game surface (`maximum-scale=1`, `user-scalable=no`, `touch-action:none`); double-click, gesture-start, drag, and context-menu gestures are prevented by the game input layer.
 - The runtime viewport uses a single 16:9 container bounded by dynamic viewport height (`dvh` where supported). The HUD now renders as one logical 1024×576 layer and is scaled from actual Canvas width on viewport/visual-viewport resize, keeping scene and UI proportions intact across browser sizes/orientations.
 - Mobile attack, jump, dash, and cast use `pointerdown` rather than delayed click input. A top-right fullscreen button requests browser fullscreen and landscape orientation where the browser permits it.
+- The touch joystick is now dynamic: touching an unused left-side area creates it under that thumb, uses the same normalized x/z movement model, and removes it on release. The hub Settings control toggles a compact alternate touch layout: Draw follows above the joystick, Cast is central on the right, Swap sits to its left, Shield remains lower-left, and Jump becomes a vertical right-side control.
+- Right-side touch combat gestures are deliberately mapped to the current compact combat foundation: tap = normal combo, swipe up = uppercut, swipe right = heavy forward strike, and airborne swipe down = dive attack.
 - Aura Shock is the `AQUA + FULGUR` rune combination: 20 mana, 3.5s cooldown, short radial damage and true x/z knockback. It has no standalone hotkey or mobile button and does not damage objectives.
 - Arcane Shield is available through `F` or the mobile `SHIELD` button: 30 mana, 8s cooldown, 90 absorption for up to 5 seconds; it breaks cleanly and is reset on respawn.
 - The mobile action cluster is triangular: Jump at the upper point, Shield lower-left, Cast lower-right, Draw in the centre, and a compact `SWAP` action beneath it. No standalone Shock/Dash/Attack action buttons remain there.
@@ -33,7 +35,7 @@
 
 ## Automated Validation Complete
 
-- `npm test` passes: 15 rune/spell checks, 6 world checks, 75 runtime checks (96 total).
+- `npm test` passes: 15 rune/spell checks, 6 world checks, 78 runtime checks (99 total).
 - Runtime coverage includes upper battlement spawn/access/fall, depth/dash/jump, melee recovery, death/respawn, rune-hand cycling, selected-card validation, 2-second auto-lock, selected-slot casting, slot swapping, Grimoire combination/random resolution, held guard stability/guard-break, perfect projectile reflection, Aura Shock, Arcane Shield, depth-aware spells, Tower target filtering, and an input-driven siege chain (player melee/Fireball → Tower → Castle → final Wizard → Results → Rematch/Hub).
 - All browser modules pass `node --check`; local HTTP checks return 200 for `/` and `/src/main.js`.
 

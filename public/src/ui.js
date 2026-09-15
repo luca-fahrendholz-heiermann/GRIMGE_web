@@ -60,6 +60,9 @@ export class UIManager {
     this.castBtn = document.getElementById('action-cast-btn');
     this.swapBtn = document.getElementById('action-swap-btn');
     this.fullscreenBtn = document.getElementById('fullscreen-btn');
+    this.uiLayoutBtn = document.getElementById('ui-layout-btn');
+    this.uiLayer = document.getElementById('ui-layer');
+    this.touchLayout = 'classic';
 
     this.drawingHud = document.getElementById('drawing-hud');
     this.recognitionResult = document.getElementById('recognition-result');
@@ -67,6 +70,11 @@ export class UIManager {
     this.heroChips = document.querySelectorAll('.hero-chip');
 
     this.setupListeners();
+    // Keep a deliberately small local UI preference; match state remains
+    // entirely transient and is never stored here.
+    let savedLayout = null;
+    try { savedLayout = window.localStorage?.getItem?.('grimge-touch-layout'); } catch { /* storage may be disabled */ }
+    this.setTouchLayout(savedLayout === 'alternate' ? 'alternate' : 'classic');
   }
 
   setupListeners() {
@@ -161,6 +169,11 @@ export class UIManager {
       e.stopPropagation();
       window.gameWorld?.enterFullscreen();
     });
+    this.uiLayoutBtn?.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.setTouchLayout(this.touchLayout === 'classic' ? 'alternate' : 'classic');
+    });
 
     this.heroChips.forEach(chip => {
       chip.addEventListener('click', () => {
@@ -181,6 +194,31 @@ export class UIManager {
         if (runeCard) window.gameWorld.startRuneDrawing(runeCard.cardId);
       });
     });
+  }
+
+  setTouchLayout(layout) {
+    this.touchLayout = layout === 'alternate' ? 'alternate' : 'classic';
+    this.uiLayer?.classList.toggle('touch-layout-alt', this.touchLayout === 'alternate');
+    if (this.touchLayout === 'classic') {
+      this.arcaneCircle?.style.removeProperty?.('left');
+      this.arcaneCircle?.style.removeProperty?.('top');
+      this.arcaneCircle?.style.removeProperty?.('right');
+      this.arcaneCircle?.style.removeProperty?.('bottom');
+    }
+    if (this.uiLayoutBtn) this.uiLayoutBtn.textContent = this.touchLayout === 'alternate' ? 'SETTINGS: ALT TOUCH UI' : 'SETTINGS: CLASSIC UI';
+    try { window.localStorage?.setItem?.('grimge-touch-layout', this.touchLayout); } catch { /* preference is optional */ }
+  }
+
+  placeDrawNearJoystick(x, y) {
+    if (this.touchLayout !== 'alternate' || !this.arcaneCircle) return;
+    // x/y are logical 1024×576 HUD coordinates. Keep the draw button inside
+    // the left-side play area, above and slightly left of the thumb origin.
+    const left = Math.max(10, Math.min(300, x - 92));
+    const top = Math.max(70, Math.min(410, y - 136));
+    this.arcaneCircle.style.left = `${left}px`;
+    this.arcaneCircle.style.top = `${top}px`;
+    this.arcaneCircle.style.right = 'auto';
+    this.arcaneCircle.style.bottom = 'auto';
   }
 
   toggleGrimoire(forceState) {

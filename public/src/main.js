@@ -301,6 +301,25 @@ export class GameWorld {
     const knob = document.getElementById('touch-joystick-knob');
     if (!joystick || !knob) return;
     let pointerId = null;
+    let attackPointerId = null;
+    let attackStart = null;
+    const JOYSTICK_RADIUS = 66;
+    const beginJoystick = (event) => {
+      if (event.pointerType && event.pointerType !== 'touch') return false;
+      const pt = this.getCanvasCoords(event.clientX, event.clientY);
+      // A dynamic stick belongs to the left thumb.  The right half remains a
+      // combat gesture surface and is never stolen for movement.
+      if (pt.x > this.logicalWidth * 0.48 || this.drawing.active || !this.isMatchRunning()) return false;
+      pointerId = event.pointerId;
+      joystick.style.left = `${Math.max(0, Math.min(this.logicalWidth - JOYSTICK_RADIUS * 2, pt.x - JOYSTICK_RADIUS))}px`;
+      joystick.style.top = `${Math.max(0, Math.min(this.logicalHeight - JOYSTICK_RADIUS * 2, pt.y - JOYSTICK_RADIUS))}px`;
+      joystick.style.bottom = 'auto';
+      joystick.classList.add('is-active');
+      this.canvas.setPointerCapture?.(pointerId);
+      ui.placeDrawNearJoystick(pt.x, pt.y);
+      update(event);
+      return true;
+    };
     const update = (event) => {
       if (pointerId !== event.pointerId) return;
       const rect = joystick.getBoundingClientRect();
@@ -319,11 +338,61 @@ export class GameWorld {
       pointerId = null;
       this.input.touchMove.x = 0; this.input.touchMove.z = 0;
       knob.style.transform = 'translate(0, 0)';
+      joystick.classList.remove('is-active');
     };
-    joystick.addEventListener('pointerdown', (event) => { pointerId = event.pointerId; joystick.setPointerCapture?.(pointerId); update(event); });
+    const beginAttackGesture = (event) => {
+      if (event.pointerType && event.pointerType !== 'touch') return;
+      if (this.drawing.active || !this.isMatchRunning() || event.pointerId === pointerId) return;
+      const pt = this.getCanvasCoords(event.clientX, event.clientY);
+      if (pt.x < this.logicalWidth * 0.48) return;
+      attackPointerId = event.pointerId;
+      attackStart = pt;
+      this.canvas.setPointerCapture?.(attackPointerId);
+    };
+    const finishAttackGesture = (event) => {
+      if (attackPointerId !== event.pointerId || !attackStart) return;
+      const end = this.getCanvasCoords(event.clientX, event.clientY);
+      const dx = end.x - attackStart.x;
+      const dy = end.y - attackStart.y;
+      attackPointerId = null;
+      attackStart = null;
+      this.performTouchAttackGesture(dx, dy);
+    };
+
+    // The old fixed joystick remains a valid direct target while visible,
+    // while the canvas itself creates it dynamically anywhere on the left.
+    joystick.addEventListener('pointerdown', (event) => {
+      pointerId = event.pointerId;
+      joystick.setPointerCapture?.(pointerId);
+      update(event);
+    });
     joystick.addEventListener('pointermove', update);
     joystick.addEventListener('pointerup', clear);
     joystick.addEventListener('pointercancel', clear);
+    this.canvas.addEventListener('pointerdown', (event) => {
+      if (beginJoystick(event)) {
+        event.preventDefault?.();
+        return;
+      }
+      beginAttackGesture(event);
+    }, { passive: false });
+    window.addEventListener('pointermove', update, { passive: false });
+    window.addEventListener('pointerup', (event) => { clear(event); finishAttackGesture(event); }, { passive: false });
+    window.addEventListener('pointercancel', (event) => { clear(event); attackPointerId = null; attackStart = null; }, { passive: false });
+  }
+
+  performTouchAttackGesture(dx, dy) {
+    if (!this.isMatchRunning() || !this.player?.isAlive || this.drawing.active) return false;
+    const threshold = 34;
+    const distance = Math.hypot(dx, dy);
+    let attackKind = 'normal';
+    // Right-half up-swipe is an uppercut; a right-swipe is the compact heavy
+    // lunge. In the air a down-swipe becomes the existing dive strike.
+    if (!this.player.grounded && dy > threshold && Math.abs(dy) > Math.abs(dx)) attackKind = 'dive';
+    else if (dy < -threshold && Math.abs(dy) > Math.abs(dx)) attackKind = 'uppercut';
+    else if (dx > threshold && Math.abs(dx) >= Math.abs(dy)) attackKind = 'heavy';
+    else if (distance > threshold) return false;
+    return this.player.executeAttack(this.input, attackKind);
   }
 
   refreshMovement() {

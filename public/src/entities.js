@@ -5,7 +5,7 @@ import { audio } from './audio.js';
 import { spells } from './spells.js';
 import { ARENA_LAYOUT, ENTITY_VISUALS, GroundEntity, groundDistance } from './world.js';
 
-const ACTION_STATES = new Set(['attack1', 'attack2', 'attack3', 'uppercut', 'dive', 'dash', 'hurt']);
+const ACTION_STATES = new Set(['attack1', 'attack2', 'attack3', 'uppercut', 'heavyStrike', 'dive', 'dash', 'hurt']);
 // z is projected more strongly than x, but needs to stay quick enough for
 // brawler-style depth dodges and lane changes.
 const DEPTH_SPEED = 1.15;
@@ -216,22 +216,29 @@ export class Player extends GroundEntity {
     this.canAttack = true;
   }
 
-  executeAttack(input) {
+  executeAttack(input, attackKind = 'normal') {
     if (!this.isAlive || this.isGuarding || !this.canAttack || ACTION_STATES.has(this.state) || !window.gameWorld?.isMatchRunning?.()) return false;
     this.canAttack = false;
     const move = moveVector(input);
-    if (input.keys?.KeyU) {
+    if (attackKind === 'uppercut' || input.keys?.KeyU) {
       this.state = 'uppercut'; this.stateTimer = 0.28; this.vElevation = 280;
       audio.playSlash(1.2);
       combat.spawnSlashArc(this.x, this.y - 25, this.facing, { radius: 46, angleStart: -1.2, angleEnd: 0.6, color: '#ffea00', glow: '#ff9800' });
       this.triggerMeleeHitbox(40, this.facing * 140, 480, 0.5);
       return true;
     }
-    if (!this.grounded && move.z > 0.55) {
+    if (!this.grounded && (attackKind === 'dive' || move.z > 0.55)) {
       this.state = 'dive'; this.stateTimer = 0.35; this.vElevation = -850;
       audio.playSlash(0.9);
       combat.spawnSlashArc(this.x, this.y - 15, this.facing, { radius: 50, angleStart: 0.8, angleEnd: 2.2, color: '#ff5722', glow: '#d50000' });
       this.triggerMeleeHitbox(55, this.facing * 200, -300, 0.6);
+      return true;
+    }
+    if (attackKind === 'heavy') {
+      this.state = 'heavyStrike'; this.stateTimer = 0.34; this.vx = this.facing * 360;
+      audio.playSlash(0.78);
+      combat.spawnSlashArc(this.x + this.facing * 28, this.y - 25, this.facing, { radius: 58, angleStart: -0.9, angleEnd: 0.9, color: '#ffd54f', glow: '#ff6d00', width: 7 });
+      this.triggerMeleeHitbox(48, this.facing * 620, 170, 0.48, true);
       return true;
     }
     this.comboStep = (this.comboStep % 3) + 1;

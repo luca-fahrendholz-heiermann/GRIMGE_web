@@ -124,17 +124,26 @@ html, body {
    independent from the right-side action controls and rune drawing. */
 #touch-joystick {
   position: absolute;
-  left: 4%;
-  bottom: 5%;
+  left: -180px;
+  top: -180px;
   width: 132px;
   height: 132px;
   border-radius: 50%;
   border: 2px solid rgba(112, 210, 255, 0.58);
   background: radial-gradient(circle, rgba(15, 54, 83, 0.36), rgba(4, 8, 17, 0.16));
   box-shadow: inset 0 0 22px rgba(0, 190, 255, 0.18), 0 4px 16px rgba(0, 0, 0, 0.55);
-  pointer-events: auto;
+  pointer-events: none;
   touch-action: none;
   z-index: 30;
+  opacity: 0;
+  transform: scale(.82);
+  transition: opacity .08s linear, transform .08s ease-out;
+}
+
+#touch-joystick.is-active {
+  pointer-events: auto;
+  opacity: 1;
+  transform: scale(1);
 }
 
 #touch-joystick-knob {
@@ -675,8 +684,8 @@ html, body {
 .arcane-circle-wrap {
   cursor: pointer;
   position: absolute;
-  left: 52px;
-  top: 46px;
+  right: 42px;
+  bottom: 30px;
   width: 82px;
   height: 82px;
   border: 2px solid rgba(0, 210, 255, .8);
@@ -687,6 +696,38 @@ html, body {
   touch-action: manipulation;
   transition: transform 0.2s, filter 0.2s;
   animation: pulseAura 3s ease-in-out infinite alternate;
+}
+
+/* Alternate mobile layout: the player chooses it from the hub settings.
+   It leaves the left side clear for a dynamic joystick and arranges the
+   actions as a compact right-hand combat cluster. */
+#ui-layer.touch-layout-alt #bottom-right-actions {
+  right: 2%;
+  bottom: 2%;
+  width: 238px;
+  height: 142px;
+}
+
+#ui-layer.touch-layout-alt .triangle-shield { left: 0; bottom: 0; }
+#ui-layer.touch-layout-alt .triangle-cast { left: 104px; top: 66px; right: auto; bottom: auto; min-width: 60px; height: 58px; }
+#ui-layer.touch-layout-alt .swap-action { left: 45px; top: 78px; bottom: auto; min-width: 52px; height: 30px; }
+#ui-layer.touch-layout-alt .triangle-jump {
+  left: auto;
+  right: 0;
+  top: 0;
+  width: 52px;
+  height: 114px;
+  border-radius: 26px;
+  writing-mode: vertical-rl;
+  letter-spacing: 1px;
+  background: linear-gradient(90deg, #34284a, #161021);
+}
+
+#ui-layer.touch-layout-alt .arcane-circle-wrap {
+  left: 32px;
+  top: 300px;
+  right: auto;
+  bottom: auto;
 }
 
 .arcane-circle-wrap:hover {

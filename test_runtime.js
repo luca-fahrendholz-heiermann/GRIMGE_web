@@ -111,6 +111,13 @@ game.enemyChampion.elevation = 0;
 let recoveredAttacks = 0;
 for (let i = 0; i < 20; i++) { game.player.state = 'idle'; game.player.stateTimer = 0; game.player.canAttack = true; if (game.player.executeAttack(game.input)) recoveredAttacks++; game.player.update(0.5, game.input, game.battlefield); }
 assert(recoveredAttacks === 20 && game.player.canAttack, 'Repeated melee actions always recover to an attack-ready state');
+game.player.state = 'idle'; game.player.stateTimer = 0; game.player.canAttack = true; game.player.grounded = true;
+assert(game.performTouchAttackGesture(0, -60) && game.player.state === 'uppercut', 'Right-side upward swipe maps to a responsive uppercut');
+game.player.finishAction(); game.player.state = 'idle'; game.player.canAttack = true;
+assert(game.performTouchAttackGesture(65, 0) && game.player.state === 'heavyStrike', 'Right-side horizontal swipe maps to the compact heavy lunge');
+game.player.finishAction(); game.player.state = 'jump'; game.player.canAttack = true; game.player.grounded = false; game.player.elevation = 55;
+assert(game.performTouchAttackGesture(0, 65) && game.player.state === 'dive', 'Airborne downward swipe maps to the existing dive strike');
+game.player.finishAction(); game.player.grounded = true; game.player.elevation = 0;
 
 const ignisCard = game.player.runeHand.find((rune) => rune.id === 'ignis');
 const initialHand = game.player.runeHand.map((rune) => rune.id).join(',');
