@@ -89,6 +89,9 @@ assert(sBlizzard && sBlizzard.id === 'blizzard_surge', 'Spell: Aqua + Ventus -> 
 const sAuraShock = spells.resolveSpell([rAqua, rFulgur]);
 assert(sAuraShock && sAuraShock.id === 'aura_shock', 'Spell: Aqua + Fulgur -> AURA SHOCK');
 
+const sArcaneAegis = spells.resolveSpell([rAqua, rTerra]);
+assert(sArcaneAegis && sArcaneAegis.id === 'arcane_aegis', 'Spell: Aqua + Terra -> ARCANE AEGIS');
+
 const sGrand = spells.resolveSpell([rIgnis, rVentus, rFulgur]);
 assert(sGrand && sGrand.id === 'apocalyptic_heavensurge', 'Spell: Grand 3-Rune -> APOCALYPTIC HEAVENSURGE');
 

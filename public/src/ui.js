@@ -96,21 +96,24 @@ export class UIManager {
       this.toggleGrimoire(false);
     });
 
-    // First press opens Arcane Focus; the second explicitly locks in the
-    // finished gesture. Nothing auto-confirms while drawing.
+    // First press opens Arcane Focus; the second commits a valid gesture and
+    // always closes it. Waiting two seconds remains the alternate auto-lock.
     const toggleRuneDrawing = (e) => {
       e.preventDefault();
       e.stopPropagation();
       const game = window.gameWorld;
       if (!game) return;
-      if (game.drawing.active) game.confirmRuneDrawing();
+      if (game.drawing.active) game.lockOrExitRuneDrawing();
       else game.startRuneDrawing();
     };
     this.arcaneCircle.addEventListener('pointerdown', toggleRuneDrawing);
 
     // Pointer-down avoids the mobile click-delay. All action input reaches
     // the same shared gameplay state as keyboard/mouse actions.
-    this.attackBtn.addEventListener('pointerdown', (e) => {
+    // These two legacy mobile buttons are intentionally absent from the
+    // current triangular control cluster. They stay optional so removing a
+    // visual control can never abort the entire UI/module initialization.
+    this.attackBtn?.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       e.stopPropagation();
       if (window.gameWorld && window.gameWorld.player) {
@@ -127,7 +130,7 @@ export class UIManager {
       e.stopPropagation();
       if (window.gameWorld?.player?.isAlive) window.gameWorld.input.justPressedKeys.Space = true;
     });
-    this.dashBtn.addEventListener('pointerdown', (e) => {
+    this.dashBtn?.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       e.stopPropagation();
       if (window.gameWorld?.player?.isAlive) window.gameWorld.input.justPressedKeys.ShiftLeft = true;
@@ -135,8 +138,16 @@ export class UIManager {
     this.shieldBtn.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      window.gameWorld?.castArcaneShield();
+      this.shieldBtn.setPointerCapture?.(e.pointerId);
+      window.gameWorld?.setGuardHeld(true);
     });
+    const releaseShield = (e) => {
+      e?.preventDefault?.();
+      window.gameWorld?.setGuardHeld(false);
+    };
+    this.shieldBtn.addEventListener('pointerup', releaseShield);
+    this.shieldBtn.addEventListener('pointercancel', releaseShield);
+    this.shieldBtn.addEventListener('lostpointercapture', releaseShield);
     this.castBtn.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -246,15 +257,15 @@ export class UIManager {
       }
     }
 
-    // Top Team HP & MP Bars
-    const blueBaseMax = 3100;
-    const blueHpRatio = (battlefield.blueTower.hp / battlefield.blueTower.maxHp);
-    const blueCurrentHp = Math.round(blueHpRatio * blueBaseMax);
+    // Top HUD is the Wizard's live state, not the lane Tower. Objectives keep
+    // their own world/UI feedback, while this bar must visibly spend HP/MP.
+    const blueHpRatio = player.hp / player.maxHp;
+    const blueCurrentHp = Math.ceil(player.hp);
     this.blueHpFill.style.width = `${Math.max(0, blueHpRatio * 100)}%`;
-    this.blueHpText.textContent = `${blueCurrentHp} / ${blueBaseMax}`;
+    this.blueHpText.textContent = `${blueCurrentHp} / ${player.maxHp}`;
 
-    const blueMpMax = 600;
-    const blueCurrentMp = Math.round((player.mp / player.maxMp) * blueMpMax);
+    const blueMpMax = player.maxMp;
+    const blueCurrentMp = Math.ceil(player.mp);
     this.blueMpFill.style.width = `${Math.max(0, (player.mp / player.maxMp) * 100)}%`;
     this.blueMpText.textContent = `${blueCurrentMp} / ${blueMpMax}`;
 
@@ -263,13 +274,12 @@ export class UIManager {
     this.manaBarText.textContent = `${blueCurrentMp} / ${blueMpMax}`;
 
     // Red Team Bars
-    const redBaseMax = 2400;
-    const redHpRatio = (battlefield.redTower.hp / battlefield.redTower.maxHp);
-    const redCurrentHp = Math.round(redHpRatio * redBaseMax);
+    const redHpRatio = enemyChampion ? enemyChampion.hp / enemyChampion.maxHp : 0;
+    const redCurrentHp = Math.ceil(enemyChampion?.hp ?? 0);
     this.redHpFill.style.width = `${Math.max(0, redHpRatio * 100)}%`;
-    this.redHpText.textContent = `${redCurrentHp} / ${redBaseMax}`;
-    const redMpMax = 1000;
-    const redMpRatio = enemyChampion ? enemyChampion.mp / 100 : 0;
+    this.redHpText.textContent = `${redCurrentHp} / ${enemyChampion?.maxHp ?? 0}`;
+    const redMpMax = enemyChampion?.maxMp ?? 100;
+    const redMpRatio = enemyChampion ? enemyChampion.mp / redMpMax : 0;
     this.redMpFill.style.width = `${Math.max(0, redMpRatio * 100)}%`;
     this.redMpText.textContent = `${Math.round(redMpRatio * redMpMax)} / ${redMpMax}`;
 

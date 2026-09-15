@@ -52,6 +52,7 @@ export class GameWorld {
       mouse: { x: 0, y: 0, isDown: false, rightDown: false },
       justPressedMouse: {},
       gameplayBlocked: false,
+      guardHeld: false,
       move: { x: 0, z: 0 },
       touchMove: { x: 0, z: 0 },
       justPressed: (code) => {
@@ -101,12 +102,23 @@ export class GameWorld {
 
   syncHudScale() {
     const width = this.canvas.getBoundingClientRect().width;
-    if (width > 0 && this.uiLayer) this.uiLayer.style['--hud-scale'] = String(width / this.logicalWidth);
+    if (width > 0 && this.uiLayer) {
+      const scale = String(width / this.logicalWidth);
+      // Custom CSS properties must be written through setProperty in a real
+      // CSSStyleDeclaration. Bracket assignment happened to work in the test
+      // stub but is ignored by browsers, leaving a 1024px HUD over a scaled
+      // Canvas.
+      if (this.uiLayer.style.setProperty) this.uiLayer.style.setProperty('--hud-scale', scale);
+      else this.uiLayer.style['--hud-scale'] = scale;
+    }
   }
 
   async init() {
     this.setupInputs();
     this.syncHudScale();
+    // The first script turn can run before the final responsive layout has
+    // settled. Re-read the Canvas rectangle on the next paint as well.
+    requestAnimationFrame(() => this.syncHudScale());
     window.addEventListener('resize', () => this.syncHudScale());
     window.visualViewport?.addEventListener?.('resize', () => this.syncHudScale());
 
@@ -160,8 +172,6 @@ export class GameWorld {
 
       // Cast Spell (E)
       if (e.code === 'KeyE') this.castPreparedSpell();
-
-      if (e.code === 'KeyF') this.castArcaneShield();
 
       // Clear selected spell components (Q). It does not delete or cycle
       // cards from the rune hand.
@@ -418,6 +428,18 @@ export class GameWorld {
     return true;
   }
 
+  // DRAW is an explicit mode toggle: pressing it while Arcane Focus is open
+  // commits a valid sketch, then always exits the drawing mode. The automatic
+  // two-second check stays forgiving and leaves a failed sketch open to retry.
+  lockOrExitRuneDrawing() {
+    if (!this.drawing.active) return false;
+    const hadInk = this.drawing.currentStroke.length > 0
+      || this.drawing.strokes.some((stroke) => stroke.length > 0);
+    const committed = hadInk && this.confirmRuneDrawing(false);
+    if (this.drawing.active) this.cancelRuneDrawing();
+    return committed;
+  }
+
   cancelRuneDrawing() {
     if (!this.drawing.active) return;
     this.drawing.active = false;
@@ -493,6 +515,11 @@ export class GameWorld {
         audio.playRuneFail();
         return false;
       }
+      if (resolved.id === 'arcane_aegis' && this.player.arcaneShieldCooldown > 0) {
+        this.showAnnouncement('ARCANE AEGIS IS RECHARGING');
+        audio.playRuneFail();
+        return false;
+      }
       if (this.player.mp < (resolved.manaCost ?? 0)) {
         this.showAnnouncement('NOT ENOUGH MANA');
         audio.playRuneFail();
@@ -500,6 +527,7 @@ export class GameWorld {
       }
       this.player.mp -= resolved.manaCost ?? 0;
       if (resolved.id === 'aura_shock') this.player.auraShockCooldown = resolved.cooldown;
+      if (resolved.id === 'arcane_aegis') this.player.arcaneShieldCooldown = resolved.cooldown;
       spells.cast(this.player, resolved, this);
       this.showAnnouncement(`CAST: ${resolved.name}!`);
       // Drawing already recycled each physical card to the deck back and
@@ -512,18 +540,9 @@ export class GameWorld {
 
   slotRuneSpell(rune) {
     const slots = this.player.slottedSpells;
-    const previous = slots[slots.length - 1];
-    if (previous && previous.runes.length < 3) {
-      const combinedRunes = [...previous.runes, rune];
-      const combined = spells.resolveSpell(combinedRunes);
-      if (combined?.tier > 1) {
-        previous.runes = combinedRunes;
-        previous.definition = combined;
-        previous.isCombo = true;
-        this.player.selectedSpellIndex = slots.length - 1;
-        return previous;
-      }
-    }
+    // A drawn rune is always visible as its own orbiting component. Combining
+    // is a conscious Grimoire action, never an implicit side effect of drawing
+    // the next card.
     const definition = spells.resolveSpell([rune]);
     const slot = { runes: [rune], definition, isCombo: false };
     slots.push(slot);
@@ -537,11 +556,15 @@ export class GameWorld {
     if (resolved.id === 'aura_shock' && this.player.auraShockCooldown > 0) {
       this.showAnnouncement('AURA SHOCK IS RECHARGING'); audio.playRuneFail(); return false;
     }
+    if (resolved.id === 'arcane_aegis' && this.player.arcaneShieldCooldown > 0) {
+      this.showAnnouncement('ARCANE AEGIS IS RECHARGING'); audio.playRuneFail(); return false;
+    }
     if (this.player.mp < (resolved.manaCost ?? 0)) {
       this.showAnnouncement('NOT ENOUGH MANA'); audio.playRuneFail(); return false;
     }
     this.player.mp -= resolved.manaCost ?? 0;
     if (resolved.id === 'aura_shock') this.player.auraShockCooldown = resolved.cooldown;
+    if (resolved.id === 'arcane_aegis') this.player.arcaneShieldCooldown = resolved.cooldown;
     spells.cast(this.player, resolved, this);
     this.showAnnouncement(`CAST: ${resolved.name}!`);
     if (consumeSelected) {
@@ -565,26 +588,45 @@ export class GameWorld {
     if (!this.isMatchRunning() || !this.player.isAlive || !slots.length) {
       this.showAnnouncement('NO SLOTTED SPELLS'); audio.playRuneFail(); return false;
     }
-    const hasCombo = slots.some((slot) => slot.isCombo);
-    const toCast = hasCombo ? [...slots] : [slots[Math.floor(Math.random() * slots.length)]];
-    let castAny = false;
-    for (const slot of toCast) castAny = this.castSpellSlot(slot, false) || castAny;
+    const existingCombo = slots.find((slot) => slot.isCombo);
+    if (existingCombo) {
+      this.player.selectedSpellIndex = slots.indexOf(existingCombo);
+      this.showAnnouncement(`COMBO READY: ${existingCombo.definition.name} — PRESS CAST`);
+      audio.playRuneChime(720);
+      return true;
+    }
+
+    const components = slots.flatMap((slot) => slot.runes);
+    const combined = components.length >= 2 ? spells.resolveSpell(components) : null;
+    if (combined?.tier > 1) {
+      const comboSlot = { runes: components, definition: combined, isCombo: true };
+      slots.splice(0, slots.length, comboSlot);
+      this.player.selectedSpellIndex = 0;
+      this.player.preparedRunes = [...components];
+      combat.spawnShockwave(this.player.x, this.player.y - 36, 48, combined.color);
+      audio.playRuneChime(720);
+      this.showAnnouncement(`GRIMOIRE FUSED: ${combined.name} — PRESS CAST`);
+      return true;
+    }
+
+    // Without a valid combination the Grimoire remains a volatile release:
+    // it fires one random orbiting spell and clears the unresolved components.
+    const randomSlot = slots[Math.floor(Math.random() * slots.length)];
+    const castAny = this.castSpellSlot(randomSlot, false);
     if (castAny) {
       this.player.clearPreparedRunes();
-      this.showAnnouncement(hasCombo ? 'GRIMOIRE: COMBO VOLLEY!' : 'GRIMOIRE: ARCANE RELEASE!');
+      this.showAnnouncement('GRIMOIRE: ARCANE RELEASE!');
     }
     return castAny;
   }
 
-  castArcaneShield() {
-    const caster = this.player;
-    if (!this.isMatchRunning() || !caster.isAlive || caster.arcaneShieldCooldown > 0) return false;
-    const manaCost = 30;
-    if (caster.mp < manaCost) { this.showAnnouncement('NOT ENOUGH MANA FOR ARCANE SHIELD'); audio.playRuneFail(); return false; }
-    caster.mp -= manaCost;
-    caster.arcaneShieldCooldown = 8;
-    spells.castArcaneShield(caster);
-    this.showAnnouncement('ARCANE SHIELD');
+  setGuardHeld(held) {
+    if (!this.isMatchRunning() || !this.player.isAlive) return false;
+    this.input.guardHeld = !!held;
+    if (!held) {
+      this.player.isGuarding = false;
+      this.player.guardHoldTime = 0;
+    }
     return true;
   }
 
@@ -888,8 +930,21 @@ export class GameWorld {
         for (const t of targets) {
           const heightReach = t.hitHeightTolerance ?? 90;
           if (Math.abs(t.x - p.x) < 22 && Math.abs((t.z ?? p.z) - p.z) < 0.15 && Math.abs((t.worldHeight ?? 0) - p.height) < heightReach) {
-            t.takeDamage(p.damage, p.facing * 80, 40, 0.15);
-            p.life = 0;
+            const outcome = t.takeDamage(p.damage, p.facing * 80, 40, 0.15, false, 'spell');
+            if (outcome?.perfect) {
+              // Reflect into the defender's team and give it a fresh travel
+              // window so a perfect block is visibly useful rather than a
+              // mere damage cancel.
+              p.team = t.team;
+              p.facing *= -1;
+              p.vx *= -1;
+              p.targetZ = t.z;
+              p.x = t.x + t.facing * 18;
+              p.z = t.z;
+              p.height = t.worldHeight + 18;
+              p.life = 1.05;
+              combat.spawnShockwave(p.x, groundYForDepth(p.z) - p.height, 24, '#b3e5fc');
+            } else p.life = 0;
             break;
           }
         }
@@ -900,9 +955,20 @@ export class GameWorld {
           const targetHeight = p.target.worldHeight ?? 0;
           const dist = Math.hypot(dx, dz * 150, targetHeight - p.height);
           if (dist < 18) {
-            p.target.takeDamage(p.damage, Math.sign(dx) * 160, 80, 0.2);
-            combat.spawnShockwave(p.x, groundYForDepth(p.z) - p.height, 30, p.team === 'blue' ? '#00e5ff' : '#ff1744');
-            p.life = 0;
+            const outcome = p.target.takeDamage(p.damage, Math.sign(dx) * 160, 80, 0.2, false, 'spell');
+            if (outcome?.perfect) {
+              const reflectedTargets = this.getHostileMobileTargets(p.target.team).filter((candidate) => candidate !== p.target);
+              p.team = p.target.team;
+              p.target = reflectedTargets[0] ?? null;
+              p.x = p.target ? p.target.x + (p.target.facing ?? -1) * 50 : p.x;
+              p.z = p.target ? p.target.z : p.z;
+              p.height = p.target ? (p.target.worldHeight ?? 0) + 28 : p.height;
+              p.life = p.target ? 1.5 : 0;
+              combat.spawnShockwave(p.x, groundYForDepth(p.z) - p.height, 34, '#b3e5fc');
+            } else {
+              combat.spawnShockwave(p.x, groundYForDepth(p.z) - p.height, 30, p.team === 'blue' ? '#00e5ff' : '#ff1744');
+              p.life = 0;
+            }
           } else {
             p.x += (dx / dist) * p.speed * dt;
             p.z += (dz * 150 / dist) * (p.speed / 150) * dt;

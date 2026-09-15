@@ -98,6 +98,9 @@ export class SpellSystem {
       if (key === 'aqua+fulgur') {
         return { id: 'aura_shock', name: 'AURA SHOCK', tier: 2, manaCost: 20, cooldown: 3.5, color: '#b388ff', desc: 'Frost-lightning pulse blasting surrounding enemies away.' };
       }
+      if (key === 'aqua+terra') {
+        return { id: 'arcane_aegis', name: 'ARCANE AEGIS', tier: 2, manaCost: 30, cooldown: 8, color: '#b388ff', desc: 'A temporary protective aura that absorbs incoming damage.' };
+      }
     }
 
     // 3. Single Rune Base Spells
@@ -195,6 +198,11 @@ export class SpellSystem {
         break;
       }
 
+      case 'arcane_aegis': {
+        this.castArcaneShield(caster);
+        break;
+      }
+
       case 'apocalyptic_heavensurge': {
         // Grand 3-rune combination
         this.activeSpells.push(new FirestormSpell(startX, startZ, facing, caster.team));
@@ -232,7 +240,7 @@ export class SpellSystem {
       if (distance > radius || !withinHeight(target, caster.worldHeight, 88)) continue;
       const safeDistance = Math.max(1, distance);
       const push = 340 * (1 - distance / radius * 0.35);
-      target.takeDamage(damage, (dx / safeDistance) * push, 90, 0.18);
+      target.takeDamage(damage, (dx / safeDistance) * push, 90, 0.18, false, 'spell');
       // `vz` is independent ground-plane depth momentum; Aura Shock is a
       // true radial 2.5D push rather than a horizontal-only hit.
       target.vz += (dz / safeDistance) * (push / 150);
@@ -300,6 +308,23 @@ class FireballSpell {
     for (const t of targets) {
       const dist = groundDistance(this, t);
       if (dist < this.radius + (t.radius || t.hitRadiusX || 20) && withinHeight(t, this.height)) {
+        // A freshly raised physical shield can reverse a travelling Fireball
+        // before it detonates.  Area spells are still blockable, but only a
+        // discrete projectile gets this literal return-to-sender behaviour.
+        if (t === gameWorld.player) {
+          const outcome = t.takeDamage(0, this.facing * 380, 0, 0, false, 'spell');
+          if (outcome?.perfect) {
+            this.team = t.team;
+            this.facing *= -1;
+            this.vx *= -1;
+            this.x = t.x + t.facing * 22;
+            this.z = t.z;
+            this.height = t.worldHeight + 24;
+            this.life = Math.max(this.life, 0.8);
+            combat.spawnShockwave(this.x, this.y, 30, '#b3e5fc');
+            return;
+          }
+        }
         this.detonate(gameWorld);
         break;
       }
@@ -325,7 +350,7 @@ class FireballSpell {
       // exploding just outside an unrelated smaller AoE radius.
       const impactRadius = 80 + (t.isObjective ? (t.hitRadiusX ?? 0) * 0.5 : 0);
       if (dist < impactRadius && withinHeight(t, this.height, 120)) {
-        t.takeDamage(this.damage, this.facing * 380, 220, 0.4);
+        t.takeDamage(this.damage, this.facing * 380, 220, 0.4, false, 'spell');
       }
     }
   }
@@ -373,7 +398,7 @@ class GaleBlastSpell {
       if (!this.hitEntities.has(t)) {
         if (Math.abs(t.x - this.x) < 45 && Math.abs(t.z - this.z) < 0.2 && Math.abs((t.worldHeight ?? 0) - this.heightAboveSurface) < 105) {
           this.hitEntities.add(t);
-          t.takeDamage(35, this.facing * 600, 280, 0.6);
+          t.takeDamage(35, this.facing * 600, 280, 0.6, false, 'spell');
           combat.spawnHitSparks(t.x, t.y - 20, this.facing, '#4deeea', 10);
         }
       }
@@ -425,7 +450,7 @@ class ChainLightningSpell {
       if (nearest) {
         hitList.push(nearest);
         this.segments.push({ x1: currX, y1: currY, x2: nearest.x, y2: nearest.y - 25 });
-        nearest.takeDamage(48, facing * 220, 120, 0.5);
+        nearest.takeDamage(48, facing * 220, 120, 0.5, false, 'spell');
         combat.spawnHitSparks(nearest.x, nearest.y - 25, facing, '#ffff00', 12);
         currX = nearest.x;
         currZ = nearest.z;
@@ -516,7 +541,7 @@ class StoneSpikesSpell {
           const targets = gameWorld.getHostileTargets(this.team);
           for (const t of targets) {
             if (Math.abs(t.x - sp.x) < 32 && Math.abs(t.z - sp.z) < 0.16) {
-              t.takeDamage(42, this.facing * 120, 420, 0.6); // Knock straight up
+              t.takeDamage(42, this.facing * 120, 420, 0.6, false, 'spell'); // Knock straight up
               combat.spawnElementalParticles(sp.x, sp.y, 'terra', 8);
             }
           }
@@ -570,7 +595,7 @@ class FrostNovaSpell {
         const d = groundDistance(this, t);
         if (d < this.radius) {
           this.hitEntities.add(t);
-          t.takeDamage(30, 0, 80, 0.4);
+          t.takeDamage(30, 0, 80, 0.4, false, 'spell');
           t.freeze?.(2.5); // Structures take damage but cannot be frozen.
           combat.spawnElementalParticles(t.x, t.y - 20, 'aqua', 12);
         }
@@ -635,7 +660,7 @@ class FirestormSpell {
 
         // Continuous burn ticks
         if (this.tickTimer >= 0.15 && dist < 100) {
-          t.takeDamage(12, this.facing * 40, 120, 0.2);
+          t.takeDamage(12, this.facing * 40, 120, 0.2, false, 'spell');
           combat.spawnHitSparks(t.x, t.y - 20, this.facing, '#ff9100', 4);
         }
       }
@@ -714,7 +739,7 @@ class MeteorSpell {
         for (const t of targets) {
           const dist = Math.hypot(t.x - this.targetX, (t.z - this.targetZ) * 150);
           if (dist < 150) {
-            t.takeDamage(120, (t.x > this.targetX ? 1 : -1) * 450, 350, 0.7);
+            t.takeDamage(120, (t.x > this.targetX ? 1 : -1) * 450, 350, 0.7, false, 'spell');
           }
         }
       }
@@ -774,7 +799,7 @@ class TempestBlitzSpell {
 
     for (const t of targets) {
       if (t.x >= minX && t.x <= maxX && Math.abs(t.z - caster.z) < 0.2) {
-        t.takeDamage(75, facing * 350, 180, 0.6);
+        t.takeDamage(75, facing * 350, 180, 0.6, false, 'spell');
         combat.spawnHitSparks(t.x, t.y - 25, facing, '#00e5ff', 16);
       }
     }
@@ -828,7 +853,7 @@ class MagmaFissureSpell {
       const targets = gameWorld.getHostileTargets(this.team);
       for (const t of targets) {
         if (Math.abs(t.x - this.x) < 60 && Math.abs(t.z - this.z) < 0.18) {
-          t.takeDamage(18, 0, 80, 0.2);
+          t.takeDamage(18, 0, 80, 0.2, false, 'spell');
         }
       }
     }
@@ -883,7 +908,7 @@ class SandstormBastionSpell {
       for (const target of targets) {
         const dx = target.x - this.x;
         if (Math.hypot(dx, (target.z - this.z) * 150) < this.radius) {
-          target.takeDamage(14, Math.sign(dx || 1) * 240, 80, 0.18);
+          target.takeDamage(14, Math.sign(dx || 1) * 240, 80, 0.18, false, 'spell');
         }
       }
     }
@@ -929,7 +954,7 @@ class BlizzardSurgeSpell {
     const targets = gameWorld.getHostileTargets(this.team);
     for (const t of targets) {
       if (Math.abs(t.x - this.x) < 80 && Math.abs(t.z - this.z) < 0.22) {
-        if (this.tickTimer <= 0) t.takeDamage(8, 0, 0, 0.1);
+        if (this.tickTimer <= 0) t.takeDamage(8, 0, 0, 0.1, false, 'spell');
         t.slow?.(1.5, 0.35); // Structures take damage but cannot be slowed.
       }
     }

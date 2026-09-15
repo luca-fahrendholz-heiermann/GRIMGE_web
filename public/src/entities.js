@@ -78,6 +78,13 @@ export class Player extends GroundEntity {
     this.arcaneShield = 0;
     this.arcaneShieldTimer = 0;
     this.arcaneShieldCooldown = 0;
+    this.isGuarding = false;
+    // Physical guarding deliberately has a hidden stability meter.  It is
+    // not another HUD resource: it only exists to prevent permanently
+    // holding SHIELD through a whole melee crowd.
+    this.guardStability = 100;
+    this.guardHoldTime = 0;
+    this.guardBreakTimer = 0;
     this.ghosts = [];
     this.lifeState = 'Alive';
     this.respawnTimer = 0;
@@ -121,6 +128,7 @@ export class Player extends GroundEntity {
     this.auraShockCooldown = Math.max(0, this.auraShockCooldown - dt);
     this.arcaneShieldTimer = Math.max(0, this.arcaneShieldTimer - dt);
     this.arcaneShieldCooldown = Math.max(0, this.arcaneShieldCooldown - dt);
+    this.guardBreakTimer = Math.max(0, this.guardBreakTimer - dt);
     if (this.arcaneShieldTimer <= 0) this.arcaneShield = 0;
     this.freezeTimer = Math.max(0, this.freezeTimer - dt);
     this.slowTimer = Math.max(0, this.slowTimer - dt);
@@ -138,6 +146,22 @@ export class Player extends GroundEntity {
 
     const controlsBlocked = input.gameplayBlocked || this.freezeTimer > 0 || this.state === 'hurt' || !this.isAlive;
     const isAction = ACTION_STATES.has(this.state) && this.state !== 'hurt';
+    // SHIELD is a held, physical front guard. It has no mana cost and is
+    // deliberately different from the temporary rune-created Arcane Aegis.
+    const guardRequested = !!(input.keys?.KeyF || input.guardHeld);
+    const wasGuarding = this.isGuarding;
+    this.isGuarding = !controlsBlocked && !isAction && this.grounded
+      && guardRequested && this.sp > 0 && this.guardBreakTimer <= 0;
+    if (this.isGuarding) {
+      this.guardHoldTime = wasGuarding ? this.guardHoldTime + dt : 0;
+      this.sp = Math.max(0, this.sp - dt * 8);
+      this.state = 'guard';
+    } else {
+      this.guardHoldTime = 0;
+      // Recovery is intentionally invisible and only happens while the
+      // shield is down.  A player must release the shield after a break.
+      this.guardStability = Math.min(100, this.guardStability + dt * 28);
+    }
     if (!controlsBlocked && !isAction) this.handleMovementInput(dt, input);
 
     // Air movement remains available, but jump elevation never changes z by itself.
@@ -152,16 +176,17 @@ export class Player extends GroundEntity {
   handleMovementInput(dt, input) {
     const move = normalizeMove(moveVector(input));
     if (Math.abs(move.x) > 0.02) this.facing = Math.sign(move.x);
-    const targetX = move.x * this.moveSpeed * this.slowFactor;
-    const targetZ = move.z * this.depthSpeed * this.slowFactor;
+    const guardSpeed = this.isGuarding ? 0.38 : 1;
+    const targetX = move.x * this.moveSpeed * this.slowFactor * guardSpeed;
+    const targetZ = move.z * this.depthSpeed * this.slowFactor * guardSpeed;
     this.vx += (targetX - this.vx) * Math.min(1, dt * 18);
     this.vz += (targetZ - this.vz) * Math.min(1, dt * 18);
     if (Math.hypot(move.x, move.z) > 0.05 && this.grounded) {
       this.state = 'run';
       if (Math.random() < 0.18) combat.spawnDust(this.x, this.y, 1);
-    } else if (this.grounded && this.state === 'run') this.state = 'idle';
+    } else if (this.grounded && (this.state === 'run' || this.state === 'guard')) this.state = this.isGuarding ? 'guard' : 'idle';
 
-    if (input.justPressed('Space') && this.jumpsLeft > 0) {
+    if (!this.isGuarding && input.justPressed('Space') && this.jumpsLeft > 0) {
       this.jumpsLeft--;
       this.vElevation = this.jumpForce;
       this.grounded = false;
@@ -169,7 +194,7 @@ export class Player extends GroundEntity {
       audio.playJump();
       combat.spawnDust(this.x, this.y, 3);
     }
-    if ((input.justPressed('ShiftLeft') || input.justPressed('ShiftRight')) && this.sp >= 25) {
+    if (!this.isGuarding && (input.justPressed('ShiftLeft') || input.justPressed('ShiftRight')) && this.sp >= 25) {
       this.sp -= 25;
       this.state = 'dash'; this.stateTimer = 0.26; this.invulnerableTimer = 0.28;
       const dashMove = normalizeMove(moveVector(input));
@@ -192,7 +217,7 @@ export class Player extends GroundEntity {
   }
 
   executeAttack(input) {
-    if (!this.isAlive || !this.canAttack || ACTION_STATES.has(this.state) || !window.gameWorld?.isMatchRunning?.()) return false;
+    if (!this.isAlive || this.isGuarding || !this.canAttack || ACTION_STATES.has(this.state) || !window.gameWorld?.isMatchRunning?.()) return false;
     this.canAttack = false;
     const move = moveVector(input);
     if (input.keys?.KeyU) {
@@ -245,15 +270,48 @@ export class Player extends GroundEntity {
     }
   }
 
-  takeDamage(amount, kx = 0, lift = 0, stun = 0.3, isCrit = false) {
-    if (!this.isAlive || this.invulnerableTimer > 0) return;
+  takeDamage(amount, kx = 0, lift = 0, stun = 0.3, isCrit = false, hitKind = 'melee') {
+    if (!this.isAlive || this.invulnerableTimer > 0) return { ignored: true };
+    // Knockback points away from the attacker, so its inverse identifies the
+    // attacker's approach direction. Only an attack from the held shield's
+    // front receives the physical guard reduction.
+    const incomingFromFront = Math.abs(kx) > 0.01 && Math.sign(-kx) === this.facing;
+    if (this.isGuarding && incomingFromFront && hitKind === 'spell' && this.guardHoldTime <= 0.18) {
+      // The first fraction of a held guard is a precise parry moment.  The
+      // caller receives this result and reverses a reflectable projectile.
+      combat.spawnHitSparks(this.x + this.facing * 26, this.y - 42, this.facing, '#e1f5fe', 14);
+      combat.spawnShockwave(this.x + this.facing * 24, this.y - 40, 32, '#80d8ff');
+      audio.playImpact(true);
+      return { blocked: true, perfect: true };
+    }
+    if (this.isGuarding && incomingFromFront) {
+      if (hitKind === 'melee') {
+        this.guardStability = Math.max(0, this.guardStability - 10);
+        if (this.guardStability <= 0) {
+          this.isGuarding = false;
+          this.guardHoldTime = 0;
+          this.guardBreakTimer = 0.7;
+          this.state = 'hurt'; this.stateTimer = 0.7; this.canAttack = false;
+          this.vx = -this.facing * 110; this.vElevation = 35;
+          combat.spawnShockwave(this.x, this.y - 28, 46, '#ffca28');
+          combat.spawnDamageText(this.x, this.y - 56, 'BREAK', { color: '#ffca28', isCrit: true });
+          return { blocked: true, guardBroken: true };
+        }
+      }
+      const guardedAmount = Math.max(1, Math.ceil(amount * 0.22));
+      this.sp = Math.max(0, this.sp - (6 + amount * 0.25));
+      amount = guardedAmount;
+      kx *= 0.12; lift *= 0.12; stun *= 0.18;
+      combat.spawnHitSparks(this.x + this.facing * 24, this.y - 38, this.facing, '#7de8ff', 7);
+      combat.spawnShockwave(this.x + this.facing * 22, this.y - 38, 18, '#4fc3f7');
+    }
     if (this.arcaneShield > 0) {
       const absorbed = Math.min(amount, this.arcaneShield);
       this.arcaneShield -= absorbed;
       amount -= absorbed;
       combat.spawnElementalParticles(this.x, this.y - 35, 'fulgur', 6);
       if (this.arcaneShield <= 0) { this.arcaneShield = 0; this.arcaneShieldTimer = 0; combat.spawnShockwave(this.x, this.y - 30, 44, '#b388ff'); }
-      if (amount <= 0) return;
+      if (amount <= 0) return { blocked: true };
     }
     this.hp = Math.max(0, this.hp - amount);
     this.hitFlash = 0.15; this.vx = kx; this.vElevation = lift;
@@ -262,12 +320,13 @@ export class Player extends GroundEntity {
     combat.spawnDamageText(this.x, this.y - 45, amount, { isCrit, color: '#ff5252' });
     combat.shakeCamera(isCrit ? 9 : 5, 0.25);
     if (this.hp <= 0) this.beginDeath();
+    return { blocked: false };
   }
 
   beginDeath() {
     window.gameWorld?.recordWizardDeath?.(this.team);
     this.lifeState = 'Dying';
-    this.state = 'dead'; this.stateTimer = 0.45; this.canAttack = false;
+    this.state = 'dead'; this.stateTimer = 0.45; this.canAttack = false; this.isGuarding = false;
     this.vx = 0; this.vz = 0; this.clearPreparedRunes();
     combat.spawnShockwave(this.x, this.y - 25, 60, '#ff1744');
   }
@@ -279,7 +338,7 @@ export class Player extends GroundEntity {
     this.hp = this.maxHp; this.mp = this.maxMp; this.sp = this.maxSp;
     this.state = 'idle'; this.stateTimer = 0; this.comboStep = 0; this.comboResetTimer = 0;
     this.canAttack = true; this.freezeTimer = 0; this.slowTimer = 0; this.slowFactor = 1;
-    this.invulnerableTimer = 1.25; this.auraShockCooldown = 0; this.arcaneShield = 0; this.arcaneShieldTimer = 0; this.arcaneShieldCooldown = 0; this.jumpsLeft = 2; this.ghosts = [];
+    this.invulnerableTimer = 1.25; this.auraShockCooldown = 0; this.arcaneShield = 0; this.arcaneShieldTimer = 0; this.arcaneShieldCooldown = 0; this.isGuarding = false; this.guardStability = 100; this.guardHoldTime = 0; this.guardBreakTimer = 0; this.jumpsLeft = 2; this.ghosts = [];
     this.lifeState = 'Alive'; this.respawnTimer = 0; this.grounded = true;
     battlefield?.resolveEntityCollision(this);
     combat.spawnShockwave(this.x, this.y - 25, 55, '#80d8ff');
@@ -349,6 +408,31 @@ export class Player extends GroundEntity {
     }
     for (const g of this.ghosts) sprites.renderEntity(ctx, this.heroKey, g.x, g.y, { facing: g.facing, state: g.state, animTime: g.animTime, alpha: g.alpha, hitFlash: 1 });
     sprites.renderEntity(ctx, this.heroKey, this.x, this.y, { facing: this.facing, state: this.state, animTime: this.animTime, hitFlash: this.hitFlash > 0 ? 1 : 0, alpha: this.lifeState === 'Dead' ? 0 : 1 });
+    if (this.isAlive) {
+      const ratio = Math.max(0, this.hp / this.maxHp);
+      ctx.save();
+      ctx.fillStyle = 'rgba(4, 8, 14, .82)'; ctx.fillRect(this.x - 24, this.y - 84, 48, 5);
+      ctx.fillStyle = ratio > .34 ? '#49c86b' : '#ff5252'; ctx.fillRect(this.x - 23, this.y - 83, 46 * ratio, 3);
+      ctx.strokeStyle = 'rgba(202, 239, 255, .7)'; ctx.lineWidth = 1; ctx.strokeRect(this.x - 24, this.y - 84, 48, 5);
+      ctx.restore();
+    }
+    if (this.isGuarding && this.isAlive) {
+      const shieldX = this.x + this.facing * 26;
+      const shieldY = this.y - 40;
+      ctx.save();
+      ctx.translate(shieldX, shieldY);
+      ctx.scale(this.facing, 1);
+      ctx.fillStyle = 'rgba(33, 104, 154, .78)';
+      ctx.strokeStyle = '#b9f4ff';
+      ctx.lineWidth = 2.5;
+      ctx.shadowColor = '#3ad8ff'; ctx.shadowBlur = 10;
+      ctx.beginPath();
+      ctx.moveTo(0, -25); ctx.lineTo(14, -16); ctx.lineTo(14, 14); ctx.lineTo(0, 25); ctx.lineTo(-14, 14); ctx.lineTo(-14, -16); ctx.closePath();
+      ctx.fill(); ctx.stroke();
+      ctx.shadowBlur = 0; ctx.strokeStyle = 'rgba(255,255,255,.82)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(0, -18); ctx.lineTo(0, 17); ctx.moveTo(-9, -2); ctx.lineTo(9, -2); ctx.stroke();
+      ctx.restore();
+    }
     if (this.arcaneShield > 0 && this.isAlive) {
       ctx.save(); ctx.strokeStyle = 'rgba(194, 164, 255, .9)'; ctx.fillStyle = 'rgba(137, 98, 255, .12)'; ctx.lineWidth = 2;
       ctx.shadowColor = '#b388ff'; ctx.shadowBlur = 14; ctx.beginPath(); ctx.ellipse(this.x, this.y - 37, 32, 45, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.restore();

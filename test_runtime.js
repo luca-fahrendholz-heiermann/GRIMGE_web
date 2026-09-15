@@ -4,8 +4,12 @@ function makeContext() { const gradient = { addColorStop() {} }; return new Prox
 class ElementStub { constructor(id = '') { this.id = id; this.style = {}; this.classList = new ClassListStub(); this.listeners = {}; this.attributes = {}; this.textContent = ''; this.innerHTML = ''; this.src = ''; } addEventListener(type, handler) { this.listeners[type] = handler; } getAttribute(name) { return this.attributes[name] ?? null; } setAttribute(name, value) { this.attributes[name] = value; } querySelector() { return new ElementStub(); } getBoundingClientRect() { return { left: 0, top: 0, width: 1024, height: 576 }; } }
 class CanvasStub extends ElementStub { constructor(id = '') { super(id); this.width = 2; this.height = 2; this.context = makeContext(); } getContext() { return this.context; } }
 const elements = new Map();
+// The current triangular mobile HUD deliberately has no separate attack or
+// dash buttons. Model that real DOM shape so an obsolete listener cannot hide
+// behind an overly-permissive test stub and abort browser startup.
+const absentElementIds = new Set(['action-attack-btn', 'action-dash-btn']);
 const heroChips = ['paladin', 'berserker', 'mage', 'warlord', 'fighter'].map((hero) => { const chip = new ElementStub(); chip.setAttribute('data-hero', hero); return chip; });
-globalThis.document = { getElementById(id) { if (!elements.has(id)) elements.set(id, id.includes('canvas') ? new CanvasStub(id) : new ElementStub(id)); return elements.get(id); }, querySelectorAll(selector) { return selector === '.hero-chip' ? heroChips : []; }, createElement(tag) { return tag === 'canvas' ? new CanvasStub() : new ElementStub(); } };
+globalThis.document = { getElementById(id) { if (absentElementIds.has(id)) return null; if (!elements.has(id)) elements.set(id, id.includes('canvas') ? new CanvasStub(id) : new ElementStub(id)); return elements.get(id); }, querySelectorAll(selector) { return selector === '.hero-chip' ? heroChips : []; }, createElement(tag) { return tag === 'canvas' ? new CanvasStub() : new ElementStub(); } };
 const windowListeners = {};
 globalThis.window = { addEventListener(type, handler) { windowListeners[type] = handler; }, devicePixelRatio: 2 };
 globalThis.Image = class { constructor() { this.width = 1024; this.height = 1024; } set src(value) { this._src = value; queueMicrotask(() => this.onload?.()); } get src() { return this._src; } };
@@ -91,9 +95,7 @@ game.canvas.listeners.touchstart({ changedTouches: [incompleteRuneTouch] });
 windowListeners.touchend({ changedTouches: [incompleteRuneTouch] });
 assert(game.drawing.active && game.drawing.inputMode === null, 'Releasing an unrecognized mobile stroke keeps Arcane Focus open');
 arcaneCircle.listeners.pointerdown(runePointer);
-assert(game.drawing.active && game.drawing.strokes.length === 0 && game.drawing.currentStroke.length === 0, 'An unrecognized rune keeps Arcane Focus open but resets the old sketch');
-game.cancelRuneDrawing();
-assert(!game.drawing.active && game.timeScale === 1, 'Escape/cancel path cleanly exits persistent drawing mode');
+assert(!game.drawing.active && game.drawing.strokes.length === 0 && game.drawing.currentStroke.length === 0 && game.timeScale === 1, 'A second Draw press exits Arcane Focus after rejecting and clearing an unrecognized sketch');
 
 game.player.elevation = 0; game.player.vElevation = 0; game.player.grounded = true; game.player.state = 'idle'; game.player.canAttack = true; game.player.invulnerableTimer = 0;
 game.enemyChampion.x = game.player.x + 40; game.enemyChampion.z = game.player.z;
@@ -144,7 +146,10 @@ game.slotRuneSpell(slotIgnis); game.slotRuneSpell(slotAqua);
 assert(game.castGrimoireSpells() && game.player.slottedSpells.length === 0, 'Grimoire releases one random non-combo slot then clears all remaining slots');
 game.player.clearPreparedRunes();
 game.slotRuneSpell(slotIgnis); game.slotRuneSpell(recognizer.runes.find((rune) => rune.id === 'ventus'));
-assert(game.player.slottedSpells.length === 1 && game.player.slottedSpells[0].isCombo && game.castGrimoireSpells() && game.player.slottedSpells.length === 0, 'Consecutive compatible runes merge into a combo slot and Grimoire releases combo slots');
+const beforeGrimoireFusion = spells.activeSpells.length;
+assert(game.player.slottedSpells.length === 2 && game.player.slottedSpells.every((slot) => !slot.isCombo), 'Compatible drawn runes remain separate orbiting slots until Grimoire is used');
+assert(game.castGrimoireSpells() && game.player.slottedSpells.length === 1 && game.player.slottedSpells[0].isCombo && spells.activeSpells.length === beforeGrimoireFusion, 'Grimoire fuses compatible slots into a ready combo without firing it');
+assert(game.castPreparedSpell() && game.player.slottedSpells.length === 0 && spells.activeSpells.length === beforeGrimoireFusion + 1, 'CAST fires the Grimoire-fused combo slot');
 
 game.player.invulnerableTimer = 0;
 game.player.takeDamage(999, 0, 0, 0.1);
@@ -200,13 +205,37 @@ assert(game.castPreparedSpell() && game.enemyChampion.hp < auraHp && game.player
 const auraCooldownHp = game.enemyChampion.hp;
 game.player.preparedRunes = auraRunes;
 assert(!game.castPreparedSpell() && game.enemyChampion.hp === auraCooldownHp, 'Aura Shock respects its cooldown instead of spamming crowd control');
+game.player.clearPreparedRunes();
 game.player.mp = game.player.maxMp; game.player.arcaneShieldCooldown = 0; game.player.invulnerableTimer = 0;
 const shieldHp = game.player.hp;
-assert(game.castArcaneShield() && game.player.arcaneShield === 90 && game.player.mp === game.player.maxMp - 30, 'Arcane Shield casts through the player ability path with mana cost');
+game.player.preparedRunes = [recognizer.runes.find((rune) => rune.id === 'aqua'), recognizer.runes.find((rune) => rune.id === 'terra')];
+assert(game.castPreparedSpell() && game.player.arcaneShield === 90 && game.player.mp === game.player.maxMp - 30, 'Arcane Aegis casts as an Aqua + Terra defensive rune combination');
 game.player.takeDamage(40, 0, 0, 0.1);
 assert(game.player.hp === shieldHp && game.player.arcaneShield === 50, 'Arcane Shield absorbs incoming damage before player health');
 game.player.takeDamage(60, 0, 0, 0.1);
-assert(game.player.hp === shieldHp - 10 && game.player.arcaneShield === 0 && !game.castArcaneShield(), 'Shield breaks cleanly and its cooldown prevents immediate recast');
+game.player.preparedRunes = [recognizer.runes.find((rune) => rune.id === 'aqua'), recognizer.runes.find((rune) => rune.id === 'terra')];
+assert(game.player.hp === shieldHp - 10 && game.player.arcaneShield === 0 && !game.castPreparedSpell(), 'Arcane Aegis breaks cleanly and its cooldown prevents immediate recast');
+
+game.player.arcaneShield = 0; game.player.hp = game.player.maxHp; game.player.sp = game.player.maxSp; game.player.facing = 1; game.player.state = 'idle'; game.player.grounded = true;
+game.input.keys.KeyF = true;
+game.player.update(1 / 60, game.input, game.battlefield, game);
+const guardedHp = game.player.hp;
+game.player.takeDamage(100, -200, 80, .3);
+assert(game.player.isGuarding && game.player.hp === guardedHp - 22 && game.player.sp < game.player.maxSp, 'Held SHIELD creates a directional physical guard that reduces frontal damage and spends stamina');
+assert(game.player.guardStability === 90, 'A blocked melee hit consumes 10 hidden guard-stability points');
+for (let i = 0; i < 9; i++) game.player.takeDamage(12, -120, 0, .2);
+assert(game.player.guardBreakTimer > 0 && !game.player.isGuarding && game.player.state === 'hurt', 'Guard breaks and stuns the player after 100 blocked melee stability damage');
+game.input.keys.KeyF = false;
+game.player.update(1 / 60, game.input, game.battlefield, game);
+assert(!game.player.isGuarding, 'Releasing SHIELD lowers the physical guard');
+game.player.state = 'idle'; game.player.stateTimer = 0; game.player.canAttack = true; game.player.guardBreakTimer = 0; game.player.guardStability = 100;
+game.player.x = 500; game.player.z = 0.5; game.player.elevation = 0; game.player.grounded = true; game.battlefield.resolveEntityCollision(game.player);
+game.player.hp = game.player.maxHp; game.player.invulnerableTimer = 0; game.player.facing = 1; game.input.keys.KeyF = true;
+game.player.update(1 / 60, game.input, game.battlefield, game);
+game.spawnMinionBolt(game.player.x + 12, game.player.z, -1, 'red', 20, game.player.z, game.player.worldHeight + 18);
+game.updateProjectiles(0.01);
+assert(game.projectiles.length === 1 && game.projectiles[0].team === 'blue' && game.projectiles[0].facing === 1 && game.player.hp === game.player.maxHp, 'Fresh physical guard perfectly reflects a hostile spell projectile without harming the player');
+game.projectiles = []; game.input.keys.KeyF = false; game.player.update(1 / 60, game.input, game.battlefield, game);
 
 // Objective progression is authoritative: tower -> Castle -> final Wizard.
 game.enemyChampion.isDead = false; game.enemyChampion.hp = game.enemyChampion.maxHp;
