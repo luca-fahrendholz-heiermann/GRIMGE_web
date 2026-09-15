@@ -186,6 +186,65 @@ body.portrait-gameplay #game-container { visibility: hidden; pointer-events: non
 .match-button:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.15); }
 .match-button.muted { opacity: .45; cursor: default; }
 
+/* ============================================================
+   MAIN HUB — a mobile-game style home screen, deliberately separate from
+   the live-match HUD. The hub uses the same responsive logical surface as
+   the game, so its cards and navigation never depend on a fixed device.
+   ============================================================ */
+#hub-overlay {
+  display: block;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 50% 42%, rgba(42, 108, 159, .78), rgba(8, 20, 42, .94) 62%, rgba(4, 8, 20, .99)),
+    linear-gradient(180deg, #172e53, #071123);
+}
+
+.hub-shell { position: absolute; inset: 0; display: grid; grid-template-rows: 62px minmax(0, 1fr) 70px; color: #f4eddd; overflow: hidden; }
+.hub-topbar { position: relative; z-index: 2; display: grid; grid-template-columns: minmax(150px, 1fr) minmax(270px, 1.5fr) minmax(190px, 1fr); align-items: center; gap: 12px; padding: 8px 24px; border-bottom: 2px solid #c59943; background: linear-gradient(180deg, rgba(74, 29, 37, .98), rgba(42, 17, 35, .96)); box-shadow: 0 3px 13px rgba(0,0,0,.42); }
+.hub-brand { display: grid; line-height: 1; }
+.hub-brand b { color: #ffd66b; font: 900 25px/1 'Cinzel', serif; letter-spacing: 2px; text-shadow: 0 2px 0 #3a170e, 0 0 15px rgba(255,184,57,.4); }
+.hub-brand span { margin-top: 4px; color: #9ee5ff; font: 800 8px 'Rajdhani', sans-serif; letter-spacing: 2px; }
+.hub-topbar .profile-summary { justify-self: center; min-width: 0; padding: 7px 15px; border: 1px solid rgba(116, 206, 255, .65); border-radius: 7px; background: rgba(8, 20, 42, .7); color: #cceeff; font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hub-resources { justify-self: end; display: flex; gap: 7px; font: 800 10px 'Rajdhani', sans-serif; letter-spacing: .7px; }
+.hub-resources span { padding: 6px 8px; border: 1px solid rgba(245, 192, 83, .55); border-radius: 6px; background: rgba(42, 20, 33, .76); color: #f7e2a5; white-space: nowrap; }
+
+.hub-swipe-area { position: relative; overflow: hidden; touch-action: pan-y; }
+.hub-page { position: absolute; inset: 0; display: none; min-height: 0; padding: 13px 26px 10px; pointer-events: none; opacity: 0; transform: translateX(18px); transition: opacity .16s ease, transform .18s ease; }
+.hub-page.active { display: flex; flex-direction: column; pointer-events: auto; opacity: 1; transform: translateX(0); }
+.hub-page-heading { align-self: center; max-width: 650px; text-align: center; }
+.hub-page-heading small { color: #92e4ff; font: 800 10px 'Rajdhani', sans-serif; letter-spacing: 2px; }
+.hub-page-heading h2 { margin: 3px 0 4px; color: #ffd66b; font: 900 28px 'Cinzel', serif; letter-spacing: 2px; text-shadow: 0 2px 0 #351a13; }
+.hub-page-heading p { color: #cbd5e7; font: 700 12px 'Rajdhani', sans-serif; letter-spacing: .4px; }
+
+.hub-character-layout { flex: 1; min-height: 0; display: grid; grid-template-columns: 156px minmax(250px, 1fr) 156px; align-items: center; gap: 20px; max-width: 860px; width: 100%; margin: 0 auto; }
+.hub-side-list { display: grid; gap: 9px; align-content: center; }
+.hub-hero-card, .hub-companion-card { position: relative; min-height: 62px; display: grid; grid-template-columns: 47px 1fr; align-items: center; gap: 7px; padding: 5px 8px; border: 1px solid rgba(141, 203, 255, .48); border-radius: 9px; background: linear-gradient(145deg, rgba(17,38,72,.94), rgba(10,18,42,.92)); color: #dbeeff; text-align: left; cursor: pointer; box-shadow: inset 0 0 12px rgba(53, 160, 255, .09), 0 4px 11px rgba(0,0,0,.27); }
+.hub-hero-card img { width: 43px; height: 50px; object-fit: contain; image-rendering: auto; filter: drop-shadow(0 3px 5px #000); }
+.hub-hero-card span, .hub-companion-card span { font: 800 10px 'Cinzel', serif; letter-spacing: .3px; }
+.hub-hero-card.active, .hub-companion-card.active { border-color: #ffd25d; background: linear-gradient(145deg, rgba(112,72,26,.96), rgba(32,23,42,.96)); box-shadow: 0 0 15px rgba(255,193,57,.4), inset 0 0 14px rgba(255,209,91,.12); }
+.hub-companion-card { grid-template-columns: 34px 1fr; min-height: 60px; }
+.hub-companion-card b { display:grid; place-items:center; width:31px; height:31px; border:1px solid rgba(165,116,255,.75); border-radius:50%; background:rgba(49,23,78,.75); font-size:18px; }
+.hub-companion-card small { grid-column: 2; margin-top: -8px; color: #a9c8e8; font: 800 8px 'Rajdhani', sans-serif; letter-spacing: 1px; }
+.hub-hero-stage { position: relative; align-self: stretch; min-height: 235px; display: grid; place-items: center; overflow: hidden; border: 2px solid rgba(245, 204, 100, .72); border-radius: 18px; background: radial-gradient(circle at 50% 44%, rgba(91, 183, 235, .38), rgba(23,59,101,.68) 45%, rgba(8,16,39,.92) 78%); box-shadow: inset 0 0 40px rgba(109, 214, 255, .22), 0 10px 23px rgba(0,0,0,.42); }
+.hub-stage-glow { position:absolute; bottom:-28px; width:220px; height:76px; border-radius:50%; background:radial-gradient(ellipse, rgba(255,214,94,.55), rgba(72,210,255,.18) 48%, transparent 70%); filter: blur(4px); }
+#hub-hero-preview { position: relative; z-index: 1; max-width: 175px; max-height: 220px; object-fit: contain; image-rendering: auto; filter: drop-shadow(0 8px 4px rgba(0,0,0,.58)); animation: hubHeroFloat 2.9s ease-in-out infinite alternate; }
+@keyframes hubHeroFloat { from { transform: translateY(3px); } to { transform: translateY(-5px); } }
+.hub-stage-orbit { position:absolute; z-index:1; display:grid; place-items:center; width:29px; height:29px; border:1px solid rgba(115,229,255,.72); border-radius:50%; color:#c7f8ff; background:rgba(20,99,163,.55); box-shadow:0 0 13px rgba(53,206,255,.55); }
+.orbit-a { left:22%; top:23%; animation: hubOrbit 2.4s ease-in-out infinite alternate; }.orbit-b { right:22%; top:46%; animation: hubOrbit 2.1s .5s ease-in-out infinite alternate; }
+@keyframes hubOrbit { from { transform: translateY(-5px) rotate(0); } to { transform: translateY(6px) rotate(40deg); } }
+.hub-hero-caption { position:absolute; z-index:2; left:16px; top:14px; display:grid; text-align:left; text-shadow:0 2px 3px #000; }.hub-hero-caption small { color:#93e8ff; font:800 8px 'Rajdhani', sans-serif; letter-spacing:1.4px; }.hub-hero-caption strong { color:#ffe09a; font:900 18px 'Cinzel', serif; letter-spacing:1px; }.hub-hero-caption span { color:#d4e6ff; font:800 9px 'Rajdhani', sans-serif; letter-spacing:1px; }
+.hub-stat-row { position:absolute; z-index:2; left:0; right:0; bottom:10px; display:flex; justify-content:center; gap:8px; }.hub-stat-row span { min-width:113px; padding:6px 10px; border:1px solid rgba(255,210,103,.58); border-radius:7px; background:rgba(25,15,34,.78); color:#ffdca0; font:800 9px 'Rajdhani', sans-serif; letter-spacing:.5px; }.hub-stat-row b { color:#fff; font-size:13px; }
+.hub-home-actions { display:flex; justify-content:center; gap:10px; padding-top:8px; }.hub-play-button, .hub-utility-button { min-width:190px; padding:11px 18px; border:2px solid #ffd66b; border-radius:9px; background:linear-gradient(180deg,#a77029,#513016); color:#fff1c0; font:900 14px 'Cinzel', serif; letter-spacing:1px; cursor:pointer; box-shadow:0 4px 0 #24140b,0 0 19px rgba(255,185,54,.3); }.hub-utility-button { min-width:150px; border-color:#76cef6; background:linear-gradient(180deg,#285b8e,#152b4a); color:#d9f4ff; box-shadow:0 4px 0 #0e1e35; font-size:10px; }
+
+.hub-deck-preview { flex:1; min-height:0; display:flex; align-items:center; justify-content:center; gap:12px; max-width:760px; width:100%; margin:8px auto; overflow-x:auto; padding:12px 6px; }.hub-deck-card { flex:0 0 84px; min-height:123px; display:grid; place-content:center; gap:6px; padding:8px; border:2px solid var(--rune-color); border-radius:10px; background:linear-gradient(145deg, color-mix(in srgb, var(--rune-color) 25%, #1b1431), #100d20); color:var(--rune-color); text-align:center; box-shadow:0 4px 13px rgba(0,0,0,.42), inset 0 0 17px color-mix(in srgb, var(--rune-color) 20%, transparent); }.hub-deck-card b { font:900 38px/1 'Cinzel',serif; }.hub-deck-card span { color:#f5ebd5; font:800 8px 'Rajdhani',sans-serif; letter-spacing:1px; }.hub-deck-card.locked { filter:grayscale(.8); opacity:.43; }
+.hub-page-actions { display:flex; justify-content:center; padding:4px 0 8px; }.hub-skill-summary { flex:1; min-height:0; display:grid; grid-template-columns:repeat(4, minmax(120px, 1fr)); gap:10px; align-content:center; max-width:760px; width:100%; margin:auto; }.hub-skill-chip { min-height:92px; padding:12px; border:1px solid rgba(170,130,255,.64); border-radius:11px; background:rgba(35,23,62,.78); box-shadow:inset 0 0 17px rgba(174,116,255,.1); }.hub-skill-chip b { display:block; color:#e5c7ff; font:900 12px 'Cinzel',serif; }.hub-skill-chip span { display:block; margin-top:8px; color:#c5bad8; font:800 9px 'Rajdhani',sans-serif; letter-spacing:.7px; }
+.hub-mode-list,.hub-settings-list { flex:1; min-height:0; display:grid; align-content:center; gap:10px; max-width:650px; width:100%; margin:auto; }.hub-mode-card { width:100%; min-height:62px; display:grid; grid-template-columns:120px 1fr auto; align-items:center; gap:10px; padding:11px 14px; border:1px solid #506d9b; border-radius:10px; background:linear-gradient(110deg,rgba(26,54,92,.94),rgba(18,26,59,.92)); color:#ecf4ff; text-align:left; cursor:pointer; }.hub-mode-card b { color:#9ceaff; font:900 14px 'Cinzel',serif; }.hub-mode-card span { color:#c1d7ee; font:800 11px 'Rajdhani',sans-serif; }.hub-mode-card em { color:#ffd66b; font:900 9px 'Rajdhani',sans-serif; letter-spacing:1px; font-style:normal; }.hub-mode-card.active { border-color:#ffcf5b; box-shadow:0 0 17px rgba(255,193,54,.23), inset 0 0 16px rgba(255,207,92,.08); }.hub-mode-card.locked { opacity:.48; cursor:default; }
+
+.hub-tabs { display:grid; grid-template-columns:repeat(5, minmax(0,1fr)); align-items:stretch; gap:1px; padding:6px max(20px, env(safe-area-inset-left)) max(8px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-right)); border-top:2px solid #bd913f; background:linear-gradient(180deg,rgba(28,37,78,.98),rgba(14,20,55,.99)); }.hub-tab { display:grid; place-items:center; gap:1px; border:0; border-radius:8px; background:transparent; color:#a8c2eb; cursor:pointer; }.hub-tab b { font-size:18px; line-height:18px; }.hub-tab span { font:900 8px 'Rajdhani',sans-serif; letter-spacing:1px; }.hub-tab.active { color:#ffdd82; background:linear-gradient(180deg,rgba(135,87,25,.94),rgba(69,39,24,.88)); box-shadow:inset 0 0 0 1px rgba(255,220,125,.65),0 0 13px rgba(255,181,45,.22); }
+
+@media (max-height: 520px) { .hub-shell { grid-template-rows:54px minmax(0,1fr) 60px; }.hub-topbar { padding:6px 18px; }.hub-character-layout { grid-template-columns:134px minmax(205px,1fr) 134px; gap:13px; }.hub-side-list { gap:6px; }.hub-hero-card,.hub-companion-card { min-height:48px; }.hub-hero-card img { height:38px; width:36px; }.hub-hero-stage { min-height:180px; }.hub-hero-stage #hub-hero-preview { max-height:170px; }.hub-stat-row { bottom:6px; }.hub-page { padding-top:8px; }.hub-home-actions { padding-top:5px; }.hub-play-button { padding:8px 14px; }.hub-page-heading h2 { font-size:22px; } }
+@media (max-width: 640px) { .hub-topbar { grid-template-columns:1fr auto; gap:6px; padding-inline:10px; }.hub-topbar .profile-summary { display:none; }.hub-resources span:last-child { display:none; }.hub-character-layout { grid-template-columns:104px minmax(170px,1fr) 104px; gap:7px; }.hub-hero-card,.hub-companion-card { grid-template-columns:1fr; min-height:51px; padding:4px; text-align:center; justify-items:center; }.hub-hero-card img { display:none; }.hub-companion-card b { display:none; }.hub-companion-card small { grid-column:auto; margin-top:-4px; }.hub-hero-card span,.hub-companion-card span { font-size:8px; }.hub-hero-stage { border-radius:11px; }.hub-hero-caption { top:8px; left:9px; }.hub-hero-caption strong { font-size:14px; }.hub-stat-row span { min-width:76px; padding:4px; }.hub-utility-button { display:none; }.hub-deck-preview { justify-content:flex-start; }.hub-skill-summary { grid-template-columns:repeat(2,1fr); }.hub-mode-card { grid-template-columns:92px 1fr auto; padding:8px; }.hub-mode-card span { font-size:9px; } }
+
 /* 2.5D mobile movement surface. Pointer events keep its left-thumb gesture
    independent from the right-side action controls and rune drawing. */
 #touch-joystick {

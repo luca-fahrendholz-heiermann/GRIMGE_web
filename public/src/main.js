@@ -197,11 +197,10 @@ export class GameWorld {
     // Load character sprites
     await sprites.loadAll();
 
+    window.gameWorld = this;
     this.resetMatch();
     this.matchState = 'Menu';
     ui.showHub(true);
-
-    window.gameWorld = this;
 
     this.running = true;
     requestAnimationFrame((t) => this.loop(t));
@@ -543,6 +542,15 @@ export class GameWorld {
     window.addEventListener('pointermove', update, { passive: false });
     window.addEventListener('pointerup', (event) => { clear(event); finishLeftControlTap(event); finishAttackGesture(event); }, { passive: false });
     window.addEventListener('pointercancel', (event) => { clear(event); controlTapPointerId = null; attackPointerId = null; attackStart = null; }, { passive: false });
+  }
+
+  setSelectedHero(heroKey) {
+    if (!sprites.sprites[heroKey]) return false;
+    this.selectedHeroKey = heroKey;
+    // The Hub is a loadout space: update its idle preview immediately, while
+    // every new match reconstructs the selected hero cleanly below.
+    if (this.matchState === 'Menu' && this.player) this.player.heroKey = heroKey;
+    return true;
   }
 
   syncOrientationState() {
@@ -1177,6 +1185,7 @@ export class GameWorld {
     this.battlefield = new Battlefield();
     this.attachBattlefieldCallbacks();
     this.player = new Player(ARENA_LAYOUT.spawns.blueCastle.x, ARENA_LAYOUT.spawns.blueCastle.z);
+    this.player.heroKey = this.selectedHeroKey ?? ui.getSelectedHero?.() ?? 'paladin';
     this.enemyChampion = new EnemyChampion(ARENA_LAYOUT.spawns.redCastle.x, ARENA_LAYOUT.spawns.redCastle.z, 'warlord');
     this.battlefield.placeOnSurface(this.player);
     this.applyProfile();

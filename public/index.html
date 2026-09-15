@@ -40,17 +40,67 @@
     <!-- UI Overlay matching Mockup Exactly -->
     <div id="ui-layer">
       <section id="hub-overlay" class="match-overlay">
-        <div class="match-panel hub-panel">
-          <div class="match-kicker">ARCANE SIEGE PROTOTYPE</div>
-          <h1>GRIMGE</h1>
-          <p>FAST 2.5D BRAWL · MAGIC · SIEGE</p>
-          <div id="profile-summary" class="profile-summary">MAGE LV.1 · XP 0/70 · SKILL POINTS 0</div>
-          <button id="play-match-btn" class="match-button primary">PLAY</button>
-          <button id="deck-builder-btn" class="match-button">RUNE DECK</button>
-          <button id="skill-tree-btn" class="match-button">MAGE SKILL TREE</button>
-          <button class="match-button muted" disabled>TRAINING — SOON</button>
-          <button id="ui-layout-btn" class="match-button">SETTINGS: CLASSIC UI</button>
-          <small>ENTER / TAP PLAY TO BEGIN</small>
+        <div id="hub-shell" class="hub-shell" aria-label="GRIMGE main hub">
+          <header class="hub-topbar">
+            <div class="hub-brand"><b>GRIMGE</b><span>ARCANE SIEGE</span></div>
+            <div id="profile-summary" class="profile-summary">MAGE LV.1 · XP 0/70 · SKILL POINTS 0</div>
+            <div class="hub-resources"><span>✦ <b id="hub-skill-points">0</b> SP</span><span>◈ <b id="hub-deck-count">10</b>/10 RUNES</span></div>
+          </header>
+
+          <main id="hub-swipe-area" class="hub-swipe-area">
+            <section class="hub-page active" data-hub-page="character">
+              <div class="hub-character-layout">
+                <aside class="hub-side-list">
+                  <button class="hub-hero-card active" data-hub-hero="paladin"><img src="assets/sprites/char_paladin.png" alt="Paladin"><span>PALADIN</span></button>
+                  <button class="hub-hero-card" data-hub-hero="mage"><img src="assets/sprites/char_mage.png" alt="Mage"><span>MAGE</span></button>
+                  <button class="hub-hero-card" data-hub-hero="darklord"><img src="assets/sprites/char_dark_lord.png" alt="Dark Lord"><span>DARK LORD</span></button>
+                </aside>
+                <section class="hub-hero-stage">
+                  <div class="hub-stage-glow"></div>
+                  <div class="hub-stage-orbit orbit-a">✦</div><div class="hub-stage-orbit orbit-b">✧</div>
+                  <img id="hub-hero-preview" src="assets/sprites/char_paladin.png" alt="Selected hero">
+                  <div class="hub-hero-caption"><small>ACTIVE HERO</small><strong id="hub-hero-name">PALADIN</strong><span id="hub-hero-class">ARCANE VANGUARD</span></div>
+                  <div class="hub-stat-row"><span>⚔ <b id="hub-attack-stat">120</b> POWER</span><span>♥ <b id="hub-health-stat">200</b> VITALITY</span></div>
+                </section>
+                <aside class="hub-side-list hub-companion-list">
+                  <button class="hub-companion-card active" data-companion="spirit_wolf"><b>🐺</b><span>SPIRIT WOLF</span><small>HUNTER</small></button>
+                  <button class="hub-companion-card" data-companion="rune_golem"><b>🪨</b><span>RUNE GOLEM</span><small>VANGUARD</small></button>
+                  <button class="hub-companion-card" data-companion="rune_snake"><b>🐍</b><span>RUNE SERPENT</span><small>CONTROL</small></button>
+                </aside>
+              </div>
+              <div class="hub-home-actions"><button id="hub-play-btn" class="hub-play-button" type="button">⚔ PLAY SIEGE</button><button id="hub-customize-btn" class="hub-utility-button" type="button">✦ CUSTOMIZE — SOON</button></div>
+            </section>
+
+            <section class="hub-page" data-hub-page="deck">
+              <div class="hub-page-heading"><small>YOUR MATCH LOADOUT</small><h2>RUNE DECK</h2><p>Draw only these cards in battle. Each cast cycles its rune back into the deck.</p></div>
+              <div id="hub-deck-preview" class="hub-deck-preview"></div>
+              <div class="hub-page-actions"><button id="hub-edit-deck-btn" class="hub-play-button" type="button">EDIT RUNE DECK</button></div>
+            </section>
+
+            <section class="hub-page" data-hub-page="skills">
+              <div class="hub-page-heading"><small>BUILD YOUR MAGE</small><h2>ARCANE PATHS</h2><p>Earn XP by playing. Skill points create distinct Elemental, Defensive, Summoner and Rune-Mastery builds.</p></div>
+              <div id="hub-skill-summary" class="hub-skill-summary"></div>
+              <div class="hub-page-actions"><button id="hub-open-skills-btn" class="hub-play-button" type="button">OPEN SKILL TREE</button></div>
+            </section>
+
+            <section class="hub-page" data-hub-page="modes">
+              <div class="hub-page-heading"><small>CHOOSE A BATTLE</small><h2>GAME MODES</h2></div>
+              <div class="hub-mode-list"><button id="hub-siege-mode-btn" class="hub-mode-card active" type="button"><b>⚔ SIEGE</b><span>Tower → Castle → Final Wizard</span><em>PLAY NOW</em></button><button class="hub-mode-card locked" type="button" disabled><b>✦ COMBAT LAB</b><span>Practice spells, mounts and builds</span><em>SOON</em></button><button class="hub-mode-card locked" type="button" disabled><b>☽ CAMPAIGN</b><span>Arcane encounters beyond the siege</span><em>SOON</em></button></div>
+            </section>
+
+            <section class="hub-page" data-hub-page="settings">
+              <div class="hub-page-heading"><small>CONTROL & DISPLAY</small><h2>SETTINGS</h2><p>Choose the touch arrangement that feels fastest on your device.</p></div>
+              <div class="hub-settings-list"><button id="ui-layout-btn" class="hub-mode-card active" type="button">SETTINGS: CLASSIC UI</button><button id="hub-fullscreen-btn" class="hub-mode-card" type="button">⛶ FULLSCREEN</button></div>
+            </section>
+          </main>
+
+          <nav class="hub-tabs" aria-label="Hub sections">
+            <button class="hub-tab active" data-hub-tab="character" type="button"><b>♙</b><span>HERO</span></button>
+            <button class="hub-tab" data-hub-tab="deck" type="button"><b>◇</b><span>DECK</span></button>
+            <button class="hub-tab" data-hub-tab="skills" type="button"><b>✦</b><span>SKILLS</span></button>
+            <button class="hub-tab" data-hub-tab="modes" type="button"><b>⚔</b><span>MODES</span></button>
+            <button class="hub-tab" data-hub-tab="settings" type="button"><b>⚙</b><span>SETTINGS</span></button>
+          </nav>
         </div>
       </section>
       <section id="results-overlay" class="match-overlay hidden" aria-live="polite">

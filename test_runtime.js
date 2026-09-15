@@ -16,7 +16,7 @@ globalThis.Image = class { constructor() { this.width = 1024; this.height = 1024
 let nextFrame = null;
 globalThis.requestAnimationFrame = (callback) => { nextFrame = callback; return 1; };
 
-const [{ GameWorld }, { audio }, { spells }, { recognizer }, { groundYForDepth }] = await Promise.all([import('./public/src/main.js'), import('./public/src/audio.js'), import('./public/src/spells.js'), import('./public/src/recognizer.js'), import('./public/src/world.js')]);
+const [{ GameWorld }, { audio }, { spells }, { recognizer }, { groundYForDepth }, { ui }] = await Promise.all([import('./public/src/main.js'), import('./public/src/audio.js'), import('./public/src/spells.js'), import('./public/src/recognizer.js'), import('./public/src/world.js'), import('./public/src/ui.js')]);
 for (const method of ['playSlash', 'playImpact', 'playJump', 'playDash', 'playRuneChime', 'playRuneSuccess', 'playRuneFail', 'playSpell', 'playTowerShot']) audio[method] = () => {};
 audio.ensureContext = () => {};
 let passed = 0; let failed = 0;
@@ -26,6 +26,8 @@ console.log('\n🎮 Starting GRIMGE 2.5D runtime smoke test...\n');
 const game = new GameWorld();
 await game.init();
 assert(game.matchState === 'Menu', 'Boot enters the playable Hub state');
+ui.setHubHero('darklord');
+assert(ui.getSelectedHero() === 'darklord' && game.player.heroKey === 'darklord', 'Hub hero selection updates the current loadout preview before a match starts');
 game.startMatch();
 await Promise.resolve();
 assert(game.running && typeof nextFrame === 'function', 'Game loop initializes and schedules a frame');
@@ -58,6 +60,7 @@ game.updateViewport();
 assert(game.minions.length === 6 && game.battlefield.waveNumber === 1, 'Initial lane wave spawns coherently');
 assert(game.battlefield.bgLoaded, 'Clean arena background load path completes');
 assert(game.player.x === game.battlefield.getSpawn('blue').x && game.player.z === game.battlefield.getSpawn('blue').z, 'Player starts at the blue Castle spawn');
+assert(game.player.heroKey === 'darklord', 'A selected Hub hero carries into the reconstructed match without changing gameplay geometry');
 assert(new Set(game.minions.filter((minion) => minion.team === 'blue').map((minion) => minion.laneIndex)).size === 3, 'A wave populates all three authored depth lanes');
 const battlementMinionProbe = game.minions[0];
 const probeStart = { x: battlementMinionProbe.x, z: battlementMinionProbe.z, preferredZ: battlementMinionProbe.preferredZ };
