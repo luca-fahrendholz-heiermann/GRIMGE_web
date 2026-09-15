@@ -2,14 +2,24 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="GRIMGE">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#050408">
   <title>GRIMGE — Autonomous Playable Prototype</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
   <link rel="stylesheet" href="css/style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
 </head>
 <body>
+  <!-- An untransformed probe lets the logical 1024×576 HUD read iOS safe
+       insets correctly before applying its own scale. It never receives input. -->
+  <div id="safe-area-probe" aria-hidden="true"></div>
   <div id="game-container">
     <!-- Main Game Canvas (16:9 Aspect Ratio matching Mockup) -->
     <canvas id="game-canvas" width="1024" height="576"></canvas>

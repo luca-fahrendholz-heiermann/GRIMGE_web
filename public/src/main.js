@@ -115,6 +115,24 @@ export class GameWorld {
       // Canvas.
       if (this.uiLayer.style.setProperty) this.uiLayer.style.setProperty('--hud-scale', scale);
       else this.uiLayer.style['--hud-scale'] = scale;
+
+      // `env(safe-area-inset-*)` values are physical CSS pixels. The HUD is
+      // transformed from a fixed 1024×576 logical surface, so convert the
+      // insets before using them for individual controls. The arena/canvas
+      // itself deliberately remains edge-to-edge.
+      const probe = document.getElementById?.('safe-area-probe');
+      const computed = probe && globalThis.getComputedStyle?.(probe);
+      const toLogical = (value) => Math.max(0, (Number.parseFloat(value) || 0) / Number(scale));
+      const safe = {
+        top: toLogical(computed?.paddingTop),
+        right: toLogical(computed?.paddingRight),
+        bottom: toLogical(computed?.paddingBottom),
+        left: toLogical(computed?.paddingLeft)
+      };
+      for (const [edge, value] of Object.entries(safe)) {
+        this.uiLayer.style.setProperty?.(`--safe-${edge}`, `${value}px`);
+      }
+      this.uiLayer.classList?.toggle?.('has-safe-area', Object.values(safe).some(value => value > .5));
     }
   }
 

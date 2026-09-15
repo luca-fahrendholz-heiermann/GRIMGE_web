@@ -3,6 +3,7 @@
 ## Implemented
 
 - Browser Canvas prototype with fixed 1024×576 simulation and DPR-aware backing buffers.
+- PWA/iOS shell: `manifest.webmanifest`, Apple standalone meta tags, `viewport-fit=cover`, GRIMGE Home-Screen naming, and branded derived app icons are all relative to `public/`, so the same deployment works at a GitHub Pages domain root or repository subpath. iOS safe insets are converted from physical CSS pixels into logical HUD coordinates; gameplay canvas remains edge-to-edge while critical HUD controls move clear of cut-outs/Home Indicator.
 - Heroes render at an explicit **120% visual scale** (`74px × 1.20 = 88.8px`) for stronger character/cosmetic readability. Player and enemy Wizard share it; minion/summon sizes remain authored separately, and hero colliders stay `24×54` so movement, feet anchoring, hit ranges, and tuned physics remain unchanged.
 - 2.5D state is `x`, continuous `z`, `surfaceHeight`, and independent `elevation`; render `y` is projected only.
 - Main arena depth is z=.06–.94. Minion preferences use broad z=.20/.52/.84 lanes; the player remains unrestricted across the ground plane.
@@ -50,7 +51,7 @@
 
 ## Automated Validation Complete
 
-- `npm test` passes: 38 rune/spell checks, 8 world checks, 7 Mage progression checks, and 104 runtime checks (157 total).
+- `npm test` passes: 38 rune/spell checks, 8 world checks, 7 Mage progression checks, 104 runtime checks, and 17 PWA shell checks (174 total).
 - Runtime coverage includes upper battlement spawn/access/fall, Wizard-only battlement/minion exclusion, depth/dash/jump, melee recovery, death/respawn, rune-hand cycling, recognition quality retained by a real spell slot, selected-card validation, 2-second auto-lock, selected-slot casting, slot swapping, Grimoire combination/random resolution, held guard stability/guard-break, perfect projectile reflection, Aura Shock, Arcane Shield, Eidolon Mantle mitigation, Ninefold Beast Form activation, Stone Wall projectile/movement blocking, Dark Lord selection, Spirit Wolf target acquisition/damage, World Rune Serpent launch/mount behavior, mount → input-driven summon movement → automatic dismount on mount death, Dragon Invocation impact/cleanup, depth-aware spells, Tower target filtering, and an input-driven siege chain (player melee/Fireball → Tower → Castle → final Wizard → Results → Rematch/Hub).
 - All browser modules pass `node --check`; local HTTP checks return 200 for `/` and `/src/main.js`.
 
@@ -61,3 +62,4 @@
 - Full manual siege match flow and touch UI confirmation still require an attached browser.
 - The exact visual placement/readability of floating spell slots, the triangular mobile controls, and Grimoire/portrait interactions requires manual device validation.
 - Skill Tree layout and first-session local-storage behavior require manual browser validation; no browser-driven playtest was available for this pass.
+- PWA/iOS install must be manually confirmed after GitHub Pages deploy: remove any old Home-Screen icon, reload the deployed page in Safari, install it again, then verify standalone chrome removal plus landscape safe-area placement on the target iPhone/iPad. No Service Worker is intentionally installed for this shell-only PWA pass.

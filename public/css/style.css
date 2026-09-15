@@ -29,6 +29,19 @@ html, body {
   overscroll-behavior: none;
 }
 
+/* Kept outside the transformed logical HUD so JavaScript can convert the
+   physical iOS insets into the HUD's 1024×576 coordinate system. */
+#safe-area-probe {
+  position: fixed;
+  inset: 0;
+  visibility: hidden;
+  pointer-events: none;
+  padding-top: env(safe-area-inset-top);
+  padding-right: env(safe-area-inset-right);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+}
+
 #game-container {
   position: relative;
   /* A single logical 16:9 game surface. Every browser/device receives the
@@ -80,6 +93,36 @@ html, body {
   transform: scale(var(--hud-scale, 1));
   pointer-events: none;
   z-index: 20;
+}
+
+/* The arena may still use the complete edge-to-edge display. Only controls
+   move inboard on devices with cut-outs or a Home Indicator. Values are set
+   in logical HUD pixels by GameWorld.syncHudScale(). */
+#ui-layer.has-safe-area #top-hud-bar {
+  top: calc(1.5% + var(--safe-top));
+  left: calc(3% + var(--safe-left));
+  right: calc(3% + var(--safe-right));
+  width: auto;
+  transform: none;
+}
+
+#ui-layer.has-safe-area #hero-select-bar {
+  top: calc(9% + var(--safe-top));
+  left: calc(3% + var(--safe-left));
+}
+
+#ui-layer.has-safe-area #bottom-center-deck {
+  bottom: calc(4px + var(--safe-bottom));
+}
+
+#ui-layer.has-safe-area:not(.touch-layout-alt) #touch-joystick {
+  left: calc(4% + var(--safe-left));
+  bottom: calc(5% + var(--safe-bottom));
+}
+
+#ui-layer.has-safe-area #bottom-right-actions {
+  right: calc(2% + var(--safe-right));
+  bottom: calc(2% + var(--safe-bottom));
 }
 
 .match-overlay {
