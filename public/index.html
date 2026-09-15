@@ -24,7 +24,9 @@
           <div class="match-kicker">ARCANE SIEGE PROTOTYPE</div>
           <h1>GRIMGE</h1>
           <p>FAST 2.5D BRAWL · MAGIC · SIEGE</p>
+          <div id="profile-summary" class="profile-summary">MAGE LV.1 · XP 0/70 · SKILL POINTS 0</div>
           <button id="play-match-btn" class="match-button primary">PLAY</button>
+          <button id="skill-tree-btn" class="match-button">MAGE SKILL TREE</button>
           <button class="match-button muted" disabled>TRAINING — SOON</button>
           <button id="ui-layout-btn" class="match-button">SETTINGS: CLASSIC UI</button>
           <small>ENTER / TAP PLAY TO BEGIN</small>
@@ -45,6 +47,13 @@
             <button id="hub-btn" class="match-button">RETURN TO HUB</button>
           </div>
           <small>ENTER: REMATCH · ESC: HUB</small>
+        </div>
+      </section>
+      <section id="skill-tree-modal" class="skill-tree-modal hidden" aria-live="polite">
+        <div class="skill-tree-panel">
+          <div class="modal-header"><span>✦ MAGE PATHS</span><button id="close-skill-tree-btn" type="button">✕</button></div>
+          <p>Earn XP by drawing and casting runes, then specialize your Mage.</p>
+          <div id="skill-tree-content" class="skill-tree-content"></div>
         </div>
       </section>
       <div id="touch-joystick" aria-label="Move">

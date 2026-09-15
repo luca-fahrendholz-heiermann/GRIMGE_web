@@ -195,6 +195,29 @@ export class SpellSystem {
     return quality;
   }
 
+  // The profile only adjusts final cast values. The recognizer remains the
+  // authority for the grade, so a better drawing is still always better.
+  applyCasterModifiers(caster, spellDef, quality) {
+    let adjusted = { ...this.normalizeQuality(quality) };
+    const mods = caster?.buildModifiers ?? {};
+    if (mods.qualityFloor === 'B' && adjusted.grade === 'C') {
+      const floor = RUNE_GRADE_PROFILES.B;
+      adjusted = {
+        ...adjusted,
+        grade: 'B',
+        power: Math.max(adjusted.power, floor.power),
+        area: Math.max(adjusted.area, floor.area),
+        duration: Math.max(adjusted.duration, floor.duration),
+        particles: Math.max(adjusted.particles, floor.particles)
+      };
+    }
+    const isSummon = spellDef?.id?.startsWith('summon_');
+    adjusted.power *= (isSummon ? 1 : (mods.spellPower ?? 1)) * (spellDef?.tier > 1 ? (mods.comboPower ?? 1) : 1);
+    adjusted.area *= (mods.spellArea ?? 1) * (spellDef?.id === 'dragon_invocation' ? (mods.dragonArea ?? 1) : 1);
+    adjusted.duration *= (mods.spellDuration ?? 1);
+    return adjusted;
+  }
+
   addSpell(spell, quality) {
     spell.quality = this.normalizeQuality(quality);
     // These cover projectile collision, radial coverage, path width and the
@@ -222,6 +245,10 @@ export class SpellSystem {
     const existing = this.activeSummons.find((summon) => summon.team === caster.team && summon.definition.role === definition.role);
     if (existing) existing.isDead = true;
     const summon = new SummonedCreature(caster.x + caster.facing * 34, caster.z, caster.team, caster.surfaceHeight ?? 0, definition, quality, gameWorld.sprites);
+    const mods = caster.buildModifiers ?? {};
+    summon.maxHp = Math.round(summon.maxHp * (mods.summonHp ?? 1));
+    summon.hp = summon.maxHp;
+    summon.damage *= mods.summonDamage ?? 1;
     // A ground summon inherits the caster's local platform height, then uses
     // the same surface solver as a Wizard. If it was created at a ledge it
     // visibly drops rather than retaining a Castle-battlement height forever.
@@ -235,7 +262,7 @@ export class SpellSystem {
   // Cast the resolved spell into the game world
   cast(caster, spellDef, gameWorld, quality = null) {
     if (!spellDef) return;
-    const castQuality = this.normalizeQuality(quality);
+    const castQuality = this.applyCasterModifiers(caster, spellDef, quality);
 
     audio.playSpell(spellDef.id);
     combat.shakeCamera(spellDef.tier * 4 + 3, 0.3);
@@ -399,7 +426,8 @@ export class SpellSystem {
   }
 
   castAuraShock(caster, gameWorld, quality = RUNE_GRADE_PROFILES.B) {
-    const radius = 112 * quality.area;
+    const mods = caster.buildModifiers ?? {};
+    const radius = 112 * quality.area * (mods.auraArea ?? 1);
     const damage = 22 * quality.power;
     audio.playSpell('aura_shock');
     combat.shakeCamera(7, 0.18);
@@ -414,7 +442,7 @@ export class SpellSystem {
       const distance = Math.hypot(dx, dz);
       if (distance > radius || !withinHeight(target, caster.worldHeight, 88)) continue;
       const safeDistance = Math.max(1, distance);
-      const push = 340 * quality.power * (1 - distance / radius * 0.35);
+      const push = 340 * quality.power * (mods.auraPush ?? 1) * (1 - distance / radius * 0.35);
       target.takeDamage(damage, (dx / safeDistance) * push, 90, 0.18, false, 'spell');
       // `vz` is independent ground-plane depth momentum; Aura Shock is a
       // true radial 2.5D push rather than a horizontal-only hit.
@@ -468,7 +496,10 @@ export class SpellSystem {
       if (spell.isStoneWall && spell.team === caster.team) spell.isFinished = true;
     }
     const offset = caster.facing * 78;
-    const wall = this.addSpell(new StoneWallSpell(caster.x + offset, caster.z, caster.team, caster.surfaceHeight ?? 0), quality);
+    const mods = caster.buildModifiers ?? {};
+    const wall = this.addSpell(new StoneWallSpell(caster.x + offset, caster.z, caster.team, caster.surfaceHeight ?? 0, {
+      halfZ: .24 * (mods.wallHp ?? 1), life: 3.8 * (mods.wallDuration ?? 1)
+    }), quality);
     audio.playSpell('stone_spikes');
     combat.shakeCamera(5, 0.2);
     combat.spawnShockwave(wall.x, wall.y, 48 * quality.area, '#8d6e63');

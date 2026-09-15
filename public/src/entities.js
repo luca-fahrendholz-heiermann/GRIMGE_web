@@ -437,6 +437,9 @@ export class Player extends GroundEntity {
       amount *= .88;
       kx *= .88;
     }
+    // Passive build modifiers are applied after temporary forms/shields so
+    // every incoming source shares the same final damage rule.
+    amount *= this.buildModifiers?.damageTaken ?? 1;
     this.hp = Math.max(0, this.hp - amount);
     this.hitFlash = 0.15; this.vx = kx; this.vElevation = lift;
     this.state = 'hurt'; this.stateTimer = stun; this.canAttack = false;

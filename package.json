@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "test": "node test_recognizer.js && node test_world.js && node test_runtime.js"
+    "test": "node test_recognizer.js && node test_world.js && node test_progression.js && node test_runtime.js"
   },
   "author": "Antigravity Autonomous Prototype Experiment",
   "license": "MIT"

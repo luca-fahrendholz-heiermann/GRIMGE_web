@@ -41,10 +41,12 @@
 - Upper Castle battlements are now Wizard-only spell-duel spaces. Minions always resolve to the main ground surface, spawn outside the access ramps, and will not acquire a Wizard standing on a battlement. Wizard melee is suppressed when both are on a battlement; enemy AI uses Fireball pressure there instead. Ranged minion bolts use an objective's authored depth footprint so all three lanes can legitimately damage a Tower without collapsing their formation early.
 - Dark Lord is selectable as hero 6 / `DARK LORD`. A web-native fallback sprite based on the supplied dark-armour, crimson-crown reference is used if `public/assets/sprites/char_dark_lord.png` is absent. The supplied external reference PNG was not imported because the external asset-copy action was unavailable; its visual registration still requires manual validation once an approved copy is present.
 - The top HUD now consumes the actual Wizard HP/MP values (rather than Tower HP); the player also has a live world-space health bar. The rune deck is independently anchored, reduced, and centred at the bottom of the logical HUD.
+- Mage progression vertical slice: a locally persisted `MageProfile` gains XP from each successfully logged rune (`C/B/A/S = 6/10/14/18 XP`) and match completion (25 defeat / 60 victory XP). Every level grants one skill point; rune XP is retained per rune and exposed through the profile model for later rune-level unlocks.
+- The Hub now exposes a usable Mage Skill Tree with 12 data-driven nodes in four real branches: Elemental, Defense, Summoning, and Rune Mastery. Prerequisites and skill points are authoritative rather than UI-only. Current modifiers directly affect spell power/coverage/duration, combined-spell power, incoming damage, wall duration/coverage, Aura Shock radius/push, summon health/damage, Dragon coverage, and the Quick Draw C→B cast-quality floor.
 
 ## Automated Validation Complete
 
-- `npm test` passes: 37 rune/spell checks, 6 world checks, 102 runtime checks (145 total).
+- `npm test` passes: 37 rune/spell checks, 6 world checks, 5 Mage progression checks, and 102 runtime checks (150 total).
 - Runtime coverage includes upper battlement spawn/access/fall, Wizard-only battlement/minion exclusion, depth/dash/jump, melee recovery, death/respawn, rune-hand cycling, recognition quality retained by a real spell slot, selected-card validation, 2-second auto-lock, selected-slot casting, slot swapping, Grimoire combination/random resolution, held guard stability/guard-break, perfect projectile reflection, Aura Shock, Arcane Shield, Eidolon Mantle mitigation, Ninefold Beast Form activation, Stone Wall projectile/movement blocking, Dark Lord selection, Spirit Wolf target acquisition/damage, mount → input-driven summon movement → automatic dismount on mount death, Dragon Invocation impact/cleanup, depth-aware spells, Tower target filtering, and an input-driven siege chain (player melee/Fireball → Tower → Castle → final Wizard → Results → Rematch/Hub).
 - All browser modules pass `node --check`; local HTTP checks return 200 for `/` and `/src/main.js`.
 
@@ -54,3 +56,4 @@
 - Subjective arcade feel: diagonal/joystick movement, jump/dash, hit impact, Tower pressure, minion crowd readability, and full-depth comfort.
 - Full manual siege match flow and touch UI confirmation still require an attached browser.
 - The exact visual placement/readability of floating spell slots, the triangular mobile controls, and Grimoire/portrait interactions requires manual device validation.
+- Skill Tree layout and first-session local-storage behavior require manual browser validation; no browser-driven playtest was available for this pass.

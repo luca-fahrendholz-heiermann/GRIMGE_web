@@ -1,5 +1,6 @@
 // GRIMGE Prototype — UI & HUD Controller matching Setup Mockup Exactly
 import { spells } from './spells.js';
+import { MAGE_SKILL_TREE } from './progression.js';
 
 export class UIManager {
   constructor() {
@@ -32,6 +33,11 @@ export class UIManager {
     this.resultsTower = document.getElementById('results-tower');
     this.resultsCastle = document.getElementById('results-castle');
     this.resultsKills = document.getElementById('results-kills');
+    this.profileSummary = document.getElementById('profile-summary');
+    this.skillTreeBtn = document.getElementById('skill-tree-btn');
+    this.skillTreeModal = document.getElementById('skill-tree-modal');
+    this.skillTreeContent = document.getElementById('skill-tree-content');
+    this.closeSkillTreeBtn = document.getElementById('close-skill-tree-btn');
 
     this.cards = [
       document.getElementById('card-0'),
@@ -94,6 +100,18 @@ export class UIManager {
     this.rematchBtn.addEventListener('pointerdown', startMatch);
     this.rematchBtn.addEventListener('click', startMatch);
     this.hubBtn.addEventListener('click', () => window.gameWorld?.returnToHub());
+    this.skillTreeBtn?.addEventListener('pointerdown', (e) => {
+      e.preventDefault(); e.stopPropagation(); this.toggleSkillTree(true);
+      this.renderSkillTree(window.gameWorld?.profile);
+    });
+    this.closeSkillTreeBtn?.addEventListener('pointerdown', (e) => {
+      e.preventDefault(); e.stopPropagation(); this.toggleSkillTree(false);
+    });
+    this.skillTreeContent?.addEventListener('pointerdown', (e) => {
+      const button = e.target?.closest?.('[data-skill-id]');
+      const id = button?.getAttribute?.('data-skill-id');
+      if (id) window.gameWorld?.unlockMageSkill(id);
+    });
     this.grimoireBtn.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -245,6 +263,32 @@ export class UIManager {
     }
   }
 
+  toggleSkillTree(forceState) {
+    if (!this.skillTreeModal) return;
+    if (forceState === undefined) this.skillTreeModal.classList.toggle('hidden');
+    else this.skillTreeModal.classList.toggle('hidden', !forceState);
+  }
+
+  renderProfile(profile) {
+    if (!profile || !this.profileSummary) return;
+    this.profileSummary.textContent = `MAGE LV.${profile.level} · XP ${profile.xp}/${profile.xpToNextLevel()} · SKILL POINTS ${profile.skillPoints}`;
+  }
+
+  renderSkillTree(profile) {
+    if (!profile || !this.skillTreeContent) return;
+    this.renderProfile(profile);
+    const branches = [...new Set(MAGE_SKILL_TREE.map((node) => node.branch))];
+    this.skillTreeContent.innerHTML = branches.map((branch) => {
+      const nodes = MAGE_SKILL_TREE.filter((node) => node.branch === branch).map((node) => {
+        const unlocked = profile.unlockedSkills.has(node.id);
+        const ready = profile.canUnlock(node.id);
+        const prerequisite = (node.prerequisites ?? []).length ? ` · needs ${node.prerequisites.join(', ')}` : '';
+        return `<button class="skill-node ${unlocked ? 'unlocked' : ''}" data-skill-id="${node.id}" ${ready ? '' : 'disabled'}><b>${unlocked ? '✓ ' : ''}${node.title}</b><span>${node.desc}</span><em>${unlocked ? 'UNLOCKED' : ready ? `UNLOCK · ${node.cost} SP` : `LOCKED${prerequisite}`}</em></button>`;
+      }).join('');
+      return `<section class="skill-branch"><h3>${branch}</h3>${nodes}</section>`;
+    }).join('');
+  }
+
   updateActiveHeroBtn(heroKey) {
     this.heroChips.forEach(chip => {
       if (chip.getAttribute('data-hero') === heroKey) {
@@ -272,6 +316,7 @@ export class UIManager {
 
   showHub(visible) {
     this.hubOverlay.classList.toggle('hidden', !visible);
+    if (visible) this.renderProfile(window.gameWorld?.profile);
   }
 
   showResults(visible, result = null) {

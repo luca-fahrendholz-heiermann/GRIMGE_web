@@ -8,12 +8,16 @@ import { Player, EnemyChampion } from './entities.js';
 import { Battlefield } from './battlefield.js';
 import { ui } from './ui.js';
 import { VIEWPORT, ARENA_LAYOUT, groundDistance, groundYForDepth } from './world.js';
+import { MageProfile, MAGE_SKILL_TREE, applyMageProfile } from './progression.js';
 
 export class GameWorld {
   constructor() {
     this.canvas = document.getElementById('game-canvas');
     this.ctx = this.canvas.getContext('2d');
     this.sprites = sprites;
+    // Profile is deliberately independent from a Match: rematches rebuild
+    // combat state while rune mastery and unlocked Mage nodes persist locally.
+    this.profile = new MageProfile();
 
     this.runeCanvas = document.getElementById('rune-canvas');
     this.runeCtx = this.runeCanvas.getContext('2d');
@@ -633,6 +637,9 @@ export class GameWorld {
         // particular prepared instance, not to every future redraw of it.
         const prepared = { ...added, grade: result.grade ?? recognizer.gradeForConfidence(result.confidence), quality: result.confidence };
         this.slotRuneSpell(prepared);
+        const runeProgress = this.profile.awardRuneUse(prepared.id, prepared.grade);
+        this.applyProfile();
+        if (runeProgress.levels > 0) this.showAnnouncement(`MAGE LEVEL ${this.profile.level} — SKILL POINT READY`, 2.4);
         audio.playRuneSuccess();
         ui.showRecognitionBadge(result.rune, result.confidence, prepared.grade);
         combat.spawnShockwave(this.player.x, this.player.y - 30, 70, result.rune.color);
@@ -694,6 +701,7 @@ export class GameWorld {
       if (resolved.id === 'ninefold_beast_form') this.player.ninefoldCooldown = resolved.cooldown;
       spells.cast(this.player, resolved, this, spells.qualityForRunes(selectedRunes));
       this.showAnnouncement(`CAST: ${resolved.name}!`);
+      this.noteSpellDiscovery(resolved);
       // Drawing already recycled each physical card to the deck back and
       // refilled the hand. Casting consumes only the prepared components.
       this.player.consumePreparedRunes();
@@ -754,6 +762,7 @@ export class GameWorld {
     if (resolved.id === 'ninefold_beast_form') this.player.ninefoldCooldown = resolved.cooldown;
     spells.cast(this.player, resolved, this, slot.quality);
     this.showAnnouncement(`CAST: ${resolved.name}!`);
+    this.noteSpellDiscovery(resolved);
     if (consumeSelected) {
       this.player.slottedSpells.splice(this.player.selectedSpellIndex, 1);
       this.player.selectedSpellIndex = Math.max(0, Math.min(this.player.selectedSpellIndex, this.player.slottedSpells.length - 1));
@@ -963,8 +972,31 @@ export class GameWorld {
     // Ordered prototype deck. Exactly three rune cards form the hand; each
     // correctly drawn card cycles itself to the deck back and is replaced.
     const ids = ['fulgur', 'terra', 'ignis', 'ventus', 'aqua', 'bestia', 'construct', 'void', 'ignis', 'terra'];
-    const deck = ids.map((id) => recognizer.runes.find((candidate) => candidate.id === id)).filter(Boolean);
+    const deck = ids.filter((id) => this.profile.isRuneUnlocked(id))
+      .map((id) => recognizer.runes.find((candidate) => candidate.id === id)).filter(Boolean);
     this.player.configureRuneDeck(deck);
+  }
+
+  applyProfile() {
+    applyMageProfile(this.player, this.profile);
+    ui.renderProfile?.(this.profile);
+  }
+
+  unlockMageSkill(id) {
+    if (!this.profile.unlock(id)) {
+      this.showAnnouncement('SKILL LOCKED — NEED POINTS / PREREQUISITE');
+      return false;
+    }
+    this.applyProfile();
+    const node = MAGE_SKILL_TREE.find((entry) => entry.id === id);
+    ui.renderSkillTree?.(this.profile);
+    this.showAnnouncement(`UNLOCKED: ${node?.title ?? id}`, 1.8);
+    return true;
+  }
+
+  noteSpellDiscovery(spell) {
+    if (!spell || spell.tier < 2 || !this.profile.discoverSpell(spell.id)) return;
+    this.showAnnouncement(`DISCOVERED: ${spell.name}`, 2.1);
   }
 
   resetMatch() {
@@ -975,6 +1007,7 @@ export class GameWorld {
     this.player = new Player(ARENA_LAYOUT.spawns.blueCastle.x, ARENA_LAYOUT.spawns.blueCastle.z);
     this.enemyChampion = new EnemyChampion(ARENA_LAYOUT.spawns.redCastle.x, ARENA_LAYOUT.spawns.redCastle.z, 'warlord');
     this.battlefield.placeOnSurface(this.player);
+    this.applyProfile();
     this.battlefield.placeOnSurface(this.enemyChampion);
     this.minions = [];
     this.projectiles = [];
@@ -1009,6 +1042,12 @@ export class GameWorld {
     this.matchState = 'Results';
     this.projectiles = [];
     spells.clearRuntime();
+    // A compact match reward gives the tree a real play loop without making
+    // results depend on a server or a browser reload.
+    const reward = this.winnerTeam === 'blue' ? 60 : 25;
+    const progression = this.profile.awardXp(reward);
+    this.applyProfile();
+    if (progression.levels > 0) this.showAnnouncement(`MAGE LEVEL ${this.profile.level} — SKILL POINT READY`, 2.4);
     ui.showResults(true, { winner: this.winnerTeam, elapsed: this.matchDuration - this.matchTime, stats: this.stats });
   }
 
