@@ -635,11 +635,12 @@ export class GameWorld {
       if (added) {
         // A card remains a reusable deck card.  Cast quality belongs to this
         // particular prepared instance, not to every future redraw of it.
-        const prepared = { ...added, grade: result.grade ?? recognizer.gradeForConfidence(result.confidence), quality: result.confidence };
+        const grade = result.grade ?? recognizer.gradeForConfidence(result.confidence);
+        const runeProgress = this.profile.awardRuneUse(added.id, grade);
+        const prepared = { ...added, grade, quality: result.confidence, runeLevel: this.profile.runeLevel(added.id) };
         this.slotRuneSpell(prepared);
-        const runeProgress = this.profile.awardRuneUse(prepared.id, prepared.grade);
         this.applyProfile();
-        if (runeProgress.levels > 0) this.showAnnouncement(`MAGE LEVEL ${this.profile.level} — SKILL POINT READY`, 2.4);
+        this.reportProfileProgress(runeProgress, prepared);
         audio.playRuneSuccess();
         ui.showRecognitionBadge(result.rune, result.confidence, prepared.grade);
         combat.spawnShockwave(this.player.x, this.player.y - 30, 70, result.rune.color);
@@ -982,6 +983,26 @@ export class GameWorld {
     ui.renderProfile?.(this.profile);
   }
 
+  reportProfileProgress(progress, rune = null) {
+    const unlocked = progress?.newlyUnlockedRunes ?? [];
+    if (unlocked.length) {
+      this.addNewRuneCards(unlocked.map((entry) => entry.runeId));
+      this.showAnnouncement(unlocked.map((entry) => entry.title).join(' · '), 2.8);
+    } else if (progress?.runeLevelUp && rune) {
+      this.showAnnouncement(`${rune.name} RUNE LEVEL ${progress.runeLevel}`, 1.8);
+    } else if (progress?.levels > 0) {
+      this.showAnnouncement(`MAGE LEVEL ${this.profile.level} — SKILL POINT READY`, 2.4);
+    }
+  }
+
+  addNewRuneCards(runeIds) {
+    if (!this.player || !Array.isArray(runeIds) || !runeIds.length) return;
+    for (const id of runeIds) {
+      const rune = recognizer.runes.find((candidate) => candidate.id === id);
+      if (rune) this.player.runeDeck.push(this.player.makeRuneCard(rune));
+    }
+  }
+
   unlockMageSkill(id) {
     if (!this.profile.unlock(id)) {
       this.showAnnouncement('SKILL LOCKED — NEED POINTS / PREREQUISITE');
@@ -1047,7 +1068,7 @@ export class GameWorld {
     const reward = this.winnerTeam === 'blue' ? 60 : 25;
     const progression = this.profile.awardXp(reward);
     this.applyProfile();
-    if (progression.levels > 0) this.showAnnouncement(`MAGE LEVEL ${this.profile.level} — SKILL POINT READY`, 2.4);
+    this.reportProfileProgress(progression);
     ui.showResults(true, { winner: this.winnerTeam, elapsed: this.matchDuration - this.matchTime, stats: this.stats });
   }
 

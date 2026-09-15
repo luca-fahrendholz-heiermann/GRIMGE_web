@@ -25,6 +25,20 @@ test('Rune use can level the Mage and provides a spendable skill point', () => {
   assert.equal(profile.skillPoints, 1);
 });
 
+test('Mage levels unlock Bestia, Konstrukt and Void as real deck-eligible runes', () => {
+  const profile = new MageProfile({ level: 1, xp: 0, skillPoints: 0, unlockedRunes: ['ignis', 'ventus', 'fulgur', 'terra', 'aqua'] });
+  assert.equal(profile.isRuneUnlocked('bestia'), false);
+  profile.awardXp(70);
+  assert.equal(profile.level, 2);
+  assert.equal(profile.isRuneUnlocked('bestia'), true);
+  profile.awardXp(105);
+  assert.equal(profile.level, 3);
+  assert.equal(profile.isRuneUnlocked('construct'), true);
+  profile.awardXp(140);
+  assert.equal(profile.level, 4);
+  assert.equal(profile.isRuneUnlocked('void'), true);
+});
+
 test('Mage skill prerequisites and aggregate modifiers are authoritative', () => {
   const profile = new MageProfile({ level: 4, skillPoints: 3 });
   assert.equal(profile.unlock('elemental_reach'), false);
@@ -36,11 +50,13 @@ test('Mage skill prerequisites and aggregate modifiers are authoritative', () =>
 });
 
 test('Applied Mage profile updates the runtime player modifier surface', () => {
-  const profile = new MageProfile({ level: 2, skillPoints: 1, unlockedSkills: ['arcane_skin'] });
+  const profile = new MageProfile({ level: 2, skillPoints: 1, unlockedSkills: ['arcane_skin', 'spirit_bond'] });
   const player = {};
   applyMageProfile(player, profile);
   assert.equal(player.profileLevel, 2);
   assert.equal(player.buildModifiers.damageTaken, .90);
+  assert.equal(player.buildModifiers.summonHp, 1.25);
+  assert.equal(player.buildModifiers.mountSpeed, 1.10);
 });
 
 test('Skill tree remains a compact 12-node Mage vertical slice', () => {

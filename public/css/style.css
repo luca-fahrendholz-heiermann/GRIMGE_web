@@ -648,6 +648,22 @@ html, body {
   touch-action: none;
 }
 
+#summon-status {
+  min-height: 12px;
+  max-width: 420px;
+  color: #8fffe0;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: .7px;
+  line-height: 1.25;
+  opacity: 0;
+  text-align: center;
+  text-shadow: 0 0 7px rgba(65, 235, 183, .65);
+  transition: opacity .16s ease;
+}
+
+#summon-status.visible { opacity: 1; }
+
 #prepared-runes {
   min-height: 15px;
   margin-top: 4px;
@@ -885,6 +901,23 @@ html, body {
   gap: 5px;
   margin-bottom: 5px;
 }
+
+.rune-progression-list {
+  margin-top: 10px;
+  border-top: 1px solid #443c5e;
+  padding-top: 6px;
+}
+.rune-progress {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 3px 0;
+  font-size: 9px;
+  border-bottom: 1px solid rgba(82, 68, 113, .28);
+}
+.rune-progress span { color: #8ee8ff; white-space: nowrap; }
+.rune-progress.locked { opacity: .48; filter: grayscale(1); }
+.rune-progress.locked span { color: #c5b9d4; }
 
 code {
   background: #2b2342;

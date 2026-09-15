@@ -253,7 +253,9 @@ export class Player extends GroundEntity {
     }
     const move = blocked ? { x: 0, z: 0 } : normalizeMove(moveVector(input));
     const moving = Math.hypot(move.x, move.z) > .05;
-    const speed = mount.definition.mountSpeed ?? mount.speed;
+    // Mount movement is intentionally a build modifier rather than a
+    // separate control scheme: Spirit Bond improves every rideable summon.
+    const speed = (mount.definition.mountSpeed ?? mount.speed) * (this.buildModifiers?.mountSpeed ?? 1);
     const previousX = mount.x; const previousZ = mount.z;
     mount.vx = moving ? move.x * speed : 0;
     mount.vz = moving ? move.z * speed / 150 : 0;

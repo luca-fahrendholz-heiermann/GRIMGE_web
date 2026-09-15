@@ -171,6 +171,7 @@
 
           <!-- Active Spell Name Preview -->
           <div id="active-spell-preview">RUNE HAND: DRAW A CARD</div>
+          <div id="summon-status" aria-live="polite"></div>
         </div>
 
         <!-- Right: Action Buttons & Arcane Rune Circle -->
@@ -179,7 +180,7 @@
           <button id="action-shield-btn" class="touch-action shield-action triangle-shield" title="Hold to block (F)">BLOCK</button>
           <button id="action-cast-btn" class="touch-action cast-action triangle-cast" title="Cast prepared runes (E)">CAST</button>
           <button id="action-swap-btn" class="touch-action swap-action" title="Swap selected spell">SWAP</button>
-          <button id="action-mount-btn" class="touch-action mount-action" title="Mount or dismount a nearby own Wolf or Golem (R); Jump dismounts">MOUNT</button>
+          <button id="action-mount-btn" class="touch-action mount-action" title="Mount or dismount a nearby own Wolf, Golem, or Serpent (R); Jump dismounts">MOUNT</button>
 
         </div>
       </div>
@@ -207,23 +208,34 @@
             <div class="g-item"><span class="r-icon">🐺</span><strong>BESTIA (Beast)</strong>: Draw three-peaked Claw <code>M</code></div>
             <div class="g-item"><span class="r-icon">⚙️</span><strong>KONSTRUKT (Construct)</strong>: Draw tall Pillar <code>|</code></div>
             <div class="g-item"><span class="r-icon">🕳️</span><strong>VOID</strong>: Draw open Spiral / Eye <code>◉</code></div>
+            <div id="rune-progression-list" class="rune-progression-list"></div>
           </div>
           <div class="g-col">
-            <h3>✦ POWER COMBINATIONS</h3>
-            <div class="g-item">🔥 + 💨 = <strong>FIRESTORM VORTEX</strong> (Sucks & burns lane)</div>
-            <div class="g-item">🔥 + ⚡ = <strong>METEOR CATACLYSM</strong> (Cosmic strike + crater)</div>
-            <div class="g-item">💨 + ⚡ = <strong>TEMPEST BLITZ</strong> (Supersonic lightning dash)</div>
-            <div class="g-item">🪨 + 🔥 = <strong>MAGMA FISSURE</strong> (Molten lava floor trap)</div>
-            <div class="g-item">🪨 + 💨 = <strong>SANDSTORM BASTION</strong> (Guards against lane shots)</div>
-            <div class="g-item">❄️ + 💨 = <strong>BLIZZARD SURGE</strong> (Freezing lane pressure)</div>
-            <div class="g-item">🔥+💨+⚡ = <strong>APOCALYPTIC HEAVENSURGE</strong> (Grand storm)</div>
-            <div class="g-item">🐺 + ⚡ = <strong>STORM WOLF</strong> (Hunter: chases Wizard)</div>
-            <div class="g-item">🕳️ + 🐺 = <strong>VOID SPIDER</strong> (Control: web slow)</div>
-            <div class="g-item">⚙️ + 🪨 = <strong>RUNE GOLEM</strong> (Vanguard: holds lane)</div>
-            <div class="g-item">🐺 + 🔥 + 💨 = <strong>INFERNO DRAGON</strong> (Siege fire invocation)</div>
-            <div class="g-item">❄️ + 🪨 + 💨 = <strong>SPIRIT WOLF</strong> (Fast frost summon)</div>
-            <div class="g-item">⚡ + 🪨 + 🪨 = <strong>SIEGE GOLEM</strong> (Durable objective summon)</div>
-            <div class="g-item">🔥 + 🪨 + ⚡ = <strong>DRAGON INVOCATION</strong> (Temporary fire-dragon strike)</div>
+            <h3>✦ ALL RUNE FUSIONS</h3>
+            <h4>DUAL FUSIONS</h4>
+            <div class="g-item">🔥 + 💨 = <strong>FIRESTORM VORTEX</strong> (pulls, burns, launches)</div>
+            <div class="g-item">🔥 + ⚡ = <strong>METEOR CATACLYSM</strong> (meteor + magma crater)</div>
+            <div class="g-item">💨 + ⚡ = <strong>TEMPEST BLITZ</strong> (lightning dash)</div>
+            <div class="g-item">🔥 + 🪨 = <strong>MAGMA FISSURE</strong> (lava floor trap)</div>
+            <div class="g-item">🪨 + 💨 = <strong>SANDSTORM BASTION</strong> (deflects lane shots)</div>
+            <div class="g-item">❄️ + 💨 = <strong>BLIZZARD SURGE</strong> (freeze and slow)</div>
+            <div class="g-item">❄️ + ⚡ = <strong>AURA SHOCK</strong> (radial knockback)</div>
+            <div class="g-item">❄️ + 🪨 = <strong>ARCANE AEGIS</strong> (temporary magic shield)</div>
+            <div class="g-item">🪨 + 🪨 = <strong>STONE WALL</strong> (blocks foes and projectiles)</div>
+            <div class="g-item">🐺 + ⚡ = <strong>STORM WOLF</strong> (mountable Wizard hunter)</div>
+            <div class="g-item">🐺 + 🕳️ = <strong>VOID SPIDER</strong> (web slow control summon)</div>
+            <div class="g-item">⚙️ + 🪨 = <strong>RUNE GOLEM</strong> (mountable vanguard)</div>
+            <h4>TRIPLE FUSIONS</h4>
+            <div class="g-item">🔥 + 💨 + ⚡ = <strong>APOCALYPTIC HEAVENSURGE</strong> (grand storm)</div>
+            <div class="g-item">🐺 + 🪨 + 🕳️ = <strong>EIDOLON MANTLE</strong> (guardian combat form)</div>
+            <div class="g-item">🐺 + 🔥 + 🕳️ = <strong>NINEFOLD BEAST FORM</strong> (feral combat form)</div>
+            <div class="g-item">🐺 + 🔥 + 💨 = <strong>INFERNO DRAGON INVOCATION</strong> (siege fire strike)</div>
+            <div class="g-item">🐺 + 🪨 + 💨 = <strong>WORLD RUNE SERPENT</strong> (mountable lane control, launches)</div>
+            <div class="g-item">❄️ + 🪨 + 💨 = <strong>SPIRIT WOLF</strong> (mountable frost hunter)</div>
+            <div class="g-item">⚡ + 🪨 + 🪨 = <strong>SIEGE GOLEM</strong> (mountable objective tank)</div>
+            <div class="g-item">🔥 + 🪨 + ⚡ = <strong>DRAGON INVOCATION</strong> (temporary fire-dragon strike)</div>
+            <div class="g-item"><strong>OTHER 3-RUNE SETS = TRI-ELEMENTAL CONVERGENCE</strong> (generic area burst)</div>
+            <div class="g-item"><small>Rune order never matters. Unlisted two-rune pairs do not form a special fusion.</small></div>
           </div>
           <div class="g-col">
             <h3>✦ CONTROLS</h3>

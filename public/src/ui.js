@@ -1,6 +1,7 @@
 // GRIMGE Prototype — UI & HUD Controller matching Setup Mockup Exactly
 import { spells } from './spells.js';
 import { MAGE_SKILL_TREE } from './progression.js';
+import { recognizer } from './recognizer.js';
 
 export class UIManager {
   constructor() {
@@ -50,6 +51,7 @@ export class UIManager {
       document.getElementById('card-overlay-2')
     ];
     this.activeSpellPreview = document.getElementById('active-spell-preview');
+    this.summonStatus = document.getElementById('summon-status');
     this.preparedRunesEl = document.getElementById('prepared-runes');
     this.manaBarFill = document.getElementById('mana-bar-fill');
     this.manaBarText = document.getElementById('mana-bar-text');
@@ -57,6 +59,7 @@ export class UIManager {
     this.grimoireBtn = document.getElementById('grimoire-btn');
     this.grimoireModal = document.getElementById('grimoire-modal');
     this.closeGrimoireBtn = document.getElementById('close-grimoire-btn');
+    this.runeProgressList = document.getElementById('rune-progression-list');
 
     this.arcaneCircle = document.getElementById('arcane-circle-trigger');
     this.attackBtn = document.getElementById('action-attack-btn');
@@ -261,6 +264,7 @@ export class UIManager {
     } else {
       this.grimoireModal.classList.toggle('hidden');
     }
+    this.renderRuneProgression(window.gameWorld?.profile);
   }
 
   toggleSkillTree(forceState) {
@@ -272,6 +276,17 @@ export class UIManager {
   renderProfile(profile) {
     if (!profile || !this.profileSummary) return;
     this.profileSummary.textContent = `MAGE LV.${profile.level} · XP ${profile.xp}/${profile.xpToNextLevel()} · SKILL POINTS ${profile.skillPoints}`;
+  }
+
+  renderRuneProgression(profile) {
+    if (!profile || !this.runeProgressList) return;
+    this.runeProgressList.innerHTML = recognizer.runes.map((rune) => {
+      const unlocked = profile.isRuneUnlocked(rune.id);
+      const level = profile.runeLevel(rune.id);
+      const xp = profile.runeXpIntoLevel(rune.id);
+      const requirement = rune.id === 'bestia' ? 'MAGE LV.2' : rune.id === 'construct' ? 'MAGE LV.3' : rune.id === 'void' ? 'MAGE LV.4' : 'STARTER';
+      return `<div class="rune-progress ${unlocked ? '' : 'locked'}"><b style="color:${rune.color}">${rune.glyph} ${rune.name}</b><span>${unlocked ? `RUNE LV.${level} · ${xp}/60 XP` : `LOCKED · ${requirement}`}</span></div>`;
+    }).join('');
   }
 
   renderSkillTree(profile) {
@@ -407,7 +422,8 @@ export class UIManager {
         overlay.style.color = rune.color;
         overlay.style.borderColor = rune.color;
         cardEl.style.background = `linear-gradient(145deg, ${rune.color}38, rgba(10, 8, 25, .96) 72%)`;
-        overlay.innerHTML = `<span>${rune.glyph}</span><small>${rune.name}</small><em>${rune.desc}</em>`;
+        const runeLevel = window.gameWorld?.profile?.runeLevel?.(rune.id) ?? 1;
+        overlay.innerHTML = `<span>${rune.glyph}</span><small>${rune.name} · LV.${runeLevel}</small><em>${rune.desc}</em>`;
       } else {
         cardEl.style.opacity = '0.55';
         cardEl.style.transform = 'none';
@@ -438,6 +454,26 @@ export class UIManager {
       const hand = player.runeHand.map((rune) => rune.name).join(' · ');
       this.activeSpellPreview.textContent = hand ? `RUNE HAND: ${hand} — DRAW ONE` : 'RUNE DECK EMPTY';
       this.activeSpellPreview.style.color = '#ffd54f';
+    }
+
+    // Summons are match entities, not hidden buffs. Keep a small persistent
+    // readout close to the deck so their remaining lifetime and a mounted
+    // state remain legible without adding a separate HUD panel.
+    if (this.summonStatus) {
+      const summons = spells.getSummons(player.team);
+      if (!summons.length) {
+        this.summonStatus.textContent = '';
+        this.summonStatus.classList.remove('visible');
+      } else {
+        const status = summons.map((summon) => {
+          const seconds = Math.max(0, Math.ceil(summon.duration));
+          const hp = Math.round((summon.hp / summon.maxHp) * 100);
+          const riding = player.mountedSummon === summon ? ' · RIDING' : '';
+          return `${summon.definition.name} ${seconds}s · ${hp}%${riding}`;
+        }).join('  |  ');
+        this.summonStatus.textContent = `SUMMON: ${status}`;
+        this.summonStatus.classList.add('visible');
+      }
     }
   }
 

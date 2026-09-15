@@ -35,7 +35,8 @@ export class SpriteManager {
       this.loadSummonSprite('storm_wolf', 'assets/sprites/summon_storm_wolf.png'),
       this.loadSummonSprite('siege_golem', 'assets/sprites/summon_siege_golem.png'),
       this.loadSummonSprite('dragon', 'assets/sprites/summon_fire_dragon.png'),
-      this.loadSummonSprite('void_spider', 'assets/sprites/summon_void_spider.png')
+      this.loadSummonSprite('void_spider', 'assets/sprites/summon_void_spider.png'),
+      this.loadSummonSprite('rune_snake', 'assets/sprites/summon_rune_snake.png')
     ]);
     this.createMinionSprites();
     this.loaded = true;

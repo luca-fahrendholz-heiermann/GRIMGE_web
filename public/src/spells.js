@@ -22,7 +22,8 @@ export const SUMMON_DEFINITIONS = Object.freeze({
   storm_wolf: Object.freeze({ id: 'storm_wolf', spriteKey: 'storm_wolf', name: 'STORM WOLF', hp: 86, duration: 11, speed: 275, attackRange: 42, damage: 23, attackCooldown: .62, radius: 17, color: '#ffd54f', role: 'hunter', particleElement: 'fulgur', mountable: true, mountSpeed: 465, riderOffsetY: 42 }),
   siege_golem: Object.freeze({ id: 'siege_golem', name: 'SIEGE GOLEM', hp: 260, duration: 16, speed: 105, attackRange: 48, damage: 38, attackCooldown: 1.15, radius: 25, color: '#a1887f', role: 'vanguard', mountable: true, mountSpeed: 245, riderOffsetY: 64 }),
   rune_golem: Object.freeze({ id: 'rune_golem', spriteKey: 'siege_golem', name: 'RUNE GOLEM', hp: 235, duration: 15, speed: 120, attackRange: 48, damage: 32, attackCooldown: 1.0, radius: 24, color: '#b0bec5', role: 'vanguard', mountable: true, mountSpeed: 260, riderOffsetY: 64 }),
-  void_spider: Object.freeze({ id: 'void_spider', spriteKey: 'void_spider', name: 'VOID SPIDER', hp: 125, duration: 14, speed: 178, attackRange: 54, damage: 14, attackCooldown: .9, radius: 22, color: '#d500f9', role: 'control', particleElement: 'void', slowDuration: 1.35, slowFactor: .45 })
+  void_spider: Object.freeze({ id: 'void_spider', spriteKey: 'void_spider', name: 'VOID SPIDER', hp: 125, duration: 14, speed: 178, attackRange: 54, damage: 14, attackCooldown: .9, radius: 22, color: '#d500f9', role: 'control', particleElement: 'void', slowDuration: 1.35, slowFactor: .45 }),
+  rune_snake: Object.freeze({ id: 'rune_snake', spriteKey: 'rune_snake', name: 'WORLD RUNE SERPENT', hp: 180, duration: 15, speed: 205, attackRange: 58, damage: 25, attackCooldown: .95, radius: 27, color: '#b668ff', role: 'lane_control', particleElement: 'void', mountable: true, mountSpeed: 355, riderOffsetY: 54, launch: 175 })
 });
 
 function gradeForQuality(quality) {
@@ -56,6 +57,7 @@ export class SpellSystem {
       // evoke a legendary beast without borrowing a named character or form.
       if (key === 'bestia+ignis+void') return { id: 'ninefold_beast_form', name: 'NINEFOLD BEAST FORM', tier: 3, manaCost: 55, cooldown: 22, color: '#ff7a2f', desc: 'Bestia, Fire and Void awaken a short feral rune form: faster movement, savage melee and light damage resistance.' };
       if (key === 'bestia+ignis+ventus') return { id: 'dragon_invocation', name: 'INFERNO DRAGON INVOCATION', tier: 3, manaCost: 70, color: '#ff7043', desc: 'Bestia, Fire and Wind call a temporary fire dragon to scorch a battlefield zone.' };
+      if (key === 'bestia+terra+ventus') return { id: 'summon_rune_snake', name: 'WORLD RUNE SERPENT', tier: 3, manaCost: 48, color: '#b668ff', desc: 'A mountable lane-control serpent that slithers through the fight and launches enemies upward.' };
       if (key === 'aqua+terra+ventus') return { id: 'summon_spirit_wolf', name: 'SPIRIT WOLF', tier: 3, manaCost: 32, color: '#80d8ff', desc: 'Summons a quick frost spirit that hunts nearby enemies.' };
       if (key === 'fulgur+terra+terra') return { id: 'summon_siege_golem', name: 'SIEGE GOLEM', tier: 3, manaCost: 46, color: '#a1887f', desc: 'Summons a slow, durable golem that presses objectives.' };
       if (key === 'fulgur+ignis+terra') return { id: 'dragon_invocation', name: 'DRAGON INVOCATION', tier: 3, manaCost: 70, color: '#ff7043', desc: 'Calls a temporary fire dragon to scorch a battlefield zone.' };
@@ -184,9 +186,17 @@ export class SpellSystem {
       return RUNE_GRADE_PROFILES.B;
     });
     const average = (key) => profiles.reduce((sum, profile) => sum + profile[key], 0) / profiles.length;
-    const power = average('power');
+    // Rune levels are intentionally modest and additive to execution skill:
+    // a great drawing still matters more than grinding a single element.
+    const runeMastery = runes.reduce((sum, rune) => sum + Math.max(0, (rune?.runeLevel ?? 1) - 1), 0) / runes.length;
+    const power = average('power') * (1 + runeMastery * .04);
     const grade = gradeForQuality(power);
-    return Object.freeze({ grade, power, area: average('area'), duration: average('duration'), particles: average('particles') });
+    return Object.freeze({
+      grade, power,
+      area: average('area') * (1 + runeMastery * .025),
+      duration: average('duration') * (1 + runeMastery * .02),
+      particles: average('particles') * (1 + runeMastery * .05)
+    });
   }
 
   normalizeQuality(quality) {
@@ -387,6 +397,11 @@ export class SpellSystem {
 
       case 'summon_void_spider': {
         this.summon(caster, SUMMON_DEFINITIONS.void_spider, gameWorld, castQuality);
+        break;
+      }
+
+      case 'summon_rune_snake': {
+        this.summon(caster, SUMMON_DEFINITIONS.rune_snake, gameWorld, castQuality);
         break;
       }
 
@@ -1359,6 +1374,12 @@ class SummonedCreature extends GroundEntity {
       const wizard = sortNearest(mobile.filter((target) => target.heroKey));
       return wizard[0] ?? sortNearest(mobile)[0] ?? sortNearest(structures)[0];
     }
+    if (this.definition.role === 'lane_control') {
+      // The serpent does not tunnel straight for objectives. It keeps lane
+      // pressure readable by disrupting the closest mobile group first.
+      const nearby = sortNearest(mobile)[0];
+      return nearby ?? sortNearest(structures)[0];
+    }
     if (this.definition.role === 'vanguard') {
       // The Golem holds the front line when it encounters a defender, but
       // continues its siege push when the path is clear.
@@ -1405,10 +1426,17 @@ class SummonedCreature extends GroundEntity {
         this.attackTimer = this.attackCooldown;
         const direction = Math.sign(this.target.x - this.x) || 1;
         this.facing = direction; this.state = 'attack';
-        this.target.takeDamage(this.damage, direction * (this.definition.role === 'siege' ? 250 : 180), 80, .22, false, 'summon');
+        const isLaneControl = this.definition.role === 'lane_control';
+        this.target.takeDamage(this.damage, direction * (this.definition.role === 'siege' ? 250 : isLaneControl ? 210 : 180), isLaneControl ? (this.definition.launch ?? 160) : 80, .22, false, 'summon');
         if (this.definition.role === 'control') {
           this.target.slow?.(this.definition.slowDuration * this.quality.duration, this.definition.slowFactor);
           combat.spawnShockwave(this.target.x, this.target.y - 18, 24, this.definition.color);
+        }
+        if (isLaneControl) {
+          // A small depth displacement makes the launch a 2.5D crowd-control
+          // tool rather than a purely horizontal knockback skin.
+          this.target.vz += Math.sign((this.target.z ?? this.z) - this.z || .01) * .26;
+          combat.spawnShockwave(this.target.x, this.target.y - 18, 34, this.definition.color);
         }
         combat.spawnSlashArc(this.x + direction * this.radius, this.y - 18, direction, { radius: this.radius + 12, color: this.definition.color, glow: this.definition.color, width: 4 });
         combat.spawnHitSparks(this.target.x, this.target.y - 20, direction, this.definition.color, 8);
@@ -1437,7 +1465,7 @@ class SummonedCreature extends GroundEntity {
   render(ctx) {
     const color = this.definition.color;
     const spriteKey = this.definition.spriteKey ?? this.definition.id;
-    if (this.spriteManager?.renderSummon(ctx, spriteKey, this.x, this.y, { facing: this.facing, state: this.state, animTime: this.animTime, visualHeight: spriteKey === 'siege_golem' ? 84 : 58 })) {
+    if (this.spriteManager?.renderSummon(ctx, spriteKey, this.x, this.y, { facing: this.facing, state: this.state, animTime: this.animTime, visualHeight: spriteKey === 'siege_golem' ? 84 : spriteKey === 'rune_snake' ? 90 : 58 })) {
       ctx.save(); ctx.fillStyle = 'rgba(0,0,0,.75)'; ctx.fillRect(this.x - 17, this.y - 64, 34, 4); ctx.fillStyle = color; ctx.fillRect(this.x - 17, this.y - 64, 34 * (this.hp / this.maxHp), 4); ctx.restore();
       return;
     }

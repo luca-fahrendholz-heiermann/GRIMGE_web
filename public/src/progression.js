@@ -9,7 +9,7 @@ export const MAGE_SKILL_TREE = Object.freeze([
   { id: 'arcane_skin', branch: 'DEFENSE', title: 'Arcane Skin', desc: 'Take 10% less damage.', cost: 1, modifiers: { damageTaken: .90 } },
   { id: 'barrier_mastery', branch: 'DEFENSE', title: 'Barrier Mastery', desc: 'Walls last 30% longer and cover more ground.', cost: 1, prerequisites: ['arcane_skin'], modifiers: { wallDuration: 1.30, wallHp: 1.25 } },
   { id: 'aura_shock_mastery', branch: 'DEFENSE', title: 'Aura Shock Mastery', desc: '+18% Aura Shock radius and knockback.', cost: 1, prerequisites: ['barrier_mastery'], modifiers: { auraArea: 1.18, auraPush: 1.18 } },
-  { id: 'spirit_bond', branch: 'SUMMONING', title: 'Spirit Bond', desc: '+25% summon health.', cost: 1, modifiers: { summonHp: 1.25 } },
+  { id: 'spirit_bond', branch: 'SUMMONING', title: 'Spirit Bond', desc: '+25% summon health and +10% mount speed.', cost: 1, modifiers: { summonHp: 1.25, mountSpeed: 1.10 } },
   { id: 'empowered_summons', branch: 'SUMMONING', title: 'Empowered Summons', desc: '+18% summon damage.', cost: 1, prerequisites: ['spirit_bond'], modifiers: { summonDamage: 1.18 } },
   { id: 'dragon_heart', branch: 'SUMMONING', title: 'Dragon Heart', desc: '+25% Dragon Invocation coverage.', cost: 1, prerequisites: ['empowered_summons'], modifiers: { dragonArea: 1.25 } },
   { id: 'quick_draw', branch: 'RUNE MASTERY', title: 'Quick Draw', desc: 'C-grade runes become B-grade for spell scaling.', cost: 1, modifiers: { qualityFloor: 'B' } },
@@ -29,12 +29,20 @@ const BASE_MODIFIERS = Object.freeze({
   auraPush: 1,
   summonHp: 1,
   summonDamage: 1,
+  mountSpeed: 1,
   dragonArea: 1,
   qualityFloor: null
 });
 
-const RUNE_XP_BY_GRADE = Object.freeze({ C: 6, B: 10, A: 14, S: 18 });
-const ALL_STARTER_RUNES = Object.freeze(['ignis', 'ventus', 'fulgur', 'terra', 'aqua', 'bestia', 'construct', 'void']);
+export const RUNE_XP_BY_GRADE = Object.freeze({ C: 6, B: 10, A: 14, S: 18 });
+export const STARTER_RUNES = Object.freeze(['ignis', 'ventus', 'fulgur', 'terra', 'aqua']);
+// These are real cards, not UI flags. Once unlocked they are appended to a
+// live deck and can be drawn/recognised using the ordinary hand-card path.
+export const MAGE_LEVEL_RUNE_UNLOCKS = Object.freeze([
+  { level: 2, runeId: 'bestia', title: 'BESTIA RUNE UNLOCKED' },
+  { level: 3, runeId: 'construct', title: 'KONSTRUKT RUNE UNLOCKED' },
+  { level: 4, runeId: 'void', title: 'VOID RUNE UNLOCKED' }
+]);
 
 function clone(value) { return JSON.parse(JSON.stringify(value)); }
 
@@ -48,9 +56,8 @@ export class MageProfile {
     this.unlockedSkills = new Set(source?.unlockedSkills ?? []);
     this.runeXp = { ...(source?.runeXp ?? {}) };
     this.discoveredSpells = new Set(source?.discoveredSpells ?? []);
-    // Existing prototype runes remain available: progression enriches their
-    // use instead of invalidating players' current deck on an update.
-    this.unlockedRunes = new Set(source?.unlockedRunes ?? ALL_STARTER_RUNES);
+    this.unlockedRunes = new Set(source?.unlockedRunes ?? STARTER_RUNES);
+    this.syncRuneUnlocks();
   }
 
   readLocal() {
@@ -68,18 +75,33 @@ export class MageProfile {
     return {
       level: this.level, xp: this.xp, skillPoints: this.skillPoints,
       unlockedSkills: [...this.unlockedSkills], runeXp: clone(this.runeXp),
-      discoveredSpells: [...this.discoveredSpells], unlockedRunes: [...this.unlockedRunes]
+      discoveredSpells: [...this.discoveredSpells], unlockedRunes: [...this.unlockedRunes], progressionVersion: 2
     };
   }
 
   xpToNextLevel() { return 70 + (this.level - 1) * 35; }
   runeLevel(id) { return 1 + Math.floor((this.runeXp[id] ?? 0) / 60); }
+  runeXpIntoLevel(id) { return (this.runeXp[id] ?? 0) % 60; }
   isRuneUnlocked(id) { return this.unlockedRunes.has(id); }
+
+  syncRuneUnlocks() {
+    const unlocked = [];
+    for (const entry of MAGE_LEVEL_RUNE_UNLOCKS) {
+      if (this.level >= entry.level && !this.unlockedRunes.has(entry.runeId)) {
+        this.unlockedRunes.add(entry.runeId);
+        unlocked.push(entry);
+      }
+    }
+    return unlocked;
+  }
 
   awardRuneUse(id, grade = 'B') {
     const gained = RUNE_XP_BY_GRADE[grade] ?? RUNE_XP_BY_GRADE.B;
     this.runeXp[id] = (this.runeXp[id] ?? 0) + gained;
+    const beforeLevel = this.runeLevel(id);
     const result = this.awardXp(gained, { save: false });
+    result.runeLevelUp = this.runeLevel(id) > beforeLevel;
+    result.runeLevel = this.runeLevel(id);
     this.save();
     return result;
   }
@@ -93,8 +115,9 @@ export class MageProfile {
       this.skillPoints++;
       levels++;
     }
+    const newlyUnlockedRunes = this.syncRuneUnlocks();
     if (save) this.save();
-    return { levels, gained: amount };
+    return { levels, gained: amount, newlyUnlockedRunes };
   }
 
   discoverSpell(id) {

@@ -133,7 +133,7 @@ const ignisCard = game.player.runeHand.find((rune) => rune.id === 'ignis');
 const initialHand = game.player.runeHand.map((rune) => rune.id).join(',');
 game.startRuneDrawing(ignisCard.cardId);
 game.finishRuneDrawing({ rune: recognizer.runes.find((rune) => rune.id === 'ignis'), confidence: 0.99 });
-assert(!game.drawing.active && game.timeScale === 1 && game.player.preparedRunes.map((rune) => rune.id).join(',') === 'ignis' && game.player.runeHand.map((rune) => rune.id).join(',') === 'fulgur,terra,ventus' && game.player.runeDeck.map((rune) => rune.id).join(',') === 'aqua,bestia,construct,void,ignis,terra,ignis', 'Drawing a hand card slots its rune, returns the card to the deck back, and draws a replacement');
+assert(!game.drawing.active && game.timeScale === 1 && game.player.preparedRunes.map((rune) => rune.id).join(',') === 'ignis' && game.player.runeHand.map((rune) => rune.id).join(',') === 'fulgur,terra,ventus' && game.player.runeDeck.map((rune) => rune.id).join(',') === 'aqua,ignis,terra,ignis', 'Drawing a hand card slots its rune, returns the card to the deck back, and draws a replacement');
 assert(game.player.slottedSpells[0].quality.grade === 'S', 'Rune-recognition quality is retained by the concrete orbiting spell slot');
 const spellCount = spells.activeSpells.length;
 game.castPreparedSpell();
@@ -281,10 +281,11 @@ spells.cast(game.player, spells.resolveSpell(wolfRunes), game);
 const rideWolf = spells.getSummons('blue')[0];
 assert(game.toggleMount() && game.player.mountedSummon === rideWolf && rideWolf.rider === game.player, 'Nearby own Spirit Wolf can be mounted through the real match input path');
 const mountedStartX = rideWolf.x;
+game.player.buildModifiers = { ...(game.player.buildModifiers ?? {}), mountSpeed: 1.10 };
 game.input.move = { x: 1, z: 0 };
 game.player.update(.1, game.input, game.battlefield, game);
 spells.update(.1, game);
-assert(rideWolf.x > mountedStartX && game.player.x === rideWolf.x && rideWolf.target === null, 'Mounted input drives the ground summon while its autonomous attack AI pauses');
+assert(rideWolf.x - mountedStartX > rideWolf.definition.mountSpeed * .105 && game.player.x === rideWolf.x && rideWolf.target === null, 'Mounted input uses the Spirit Bond mount-speed modifier while autonomous summon AI pauses');
 rideWolf.takeDamage(rideWolf.hp);
 assert(!game.player.isMounted && !rideWolf.rider, 'Mount death cleanly dismounts the Wizard without leaving stale rider state');
 game.input.move = { x: 0, z: 0 };
@@ -307,6 +308,22 @@ const voidSpider = spells.getSummons('blue')[0];
 voidSpider.attackTimer = 0;
 spells.update(.4, game);
 assert(voidSpider?.definition.id === 'void_spider' && voidSpider.target === game.enemyChampion && game.enemyChampion.slowTimer > 0, 'Void Spider Control summon entangles a nearby Wizard with a slowing web');
+spells.clearRuntime();
+// The World Rune Serpent is a ground mount and lane-control summon: it uses
+// the same creature/mount path as wolves while its real attack launches a
+// nearby hostile upward instead of being a decorative spell effect.
+game.minions.forEach((minion) => { minion.isDead = true; });
+game.enemyChampion.elevation = 0; game.enemyChampion.vElevation = 0;
+game.enemyChampion.x = game.player.x + 44; game.enemyChampion.z = game.player.z;
+const snakeRunes = [bestia, recognizer.runes.find((rune) => rune.id === 'terra'), recognizer.runes.find((rune) => rune.id === 'ventus')];
+spells.cast(game.player, spells.resolveSpell(snakeRunes), game);
+const runeSnake = spells.getSummons('blue')[0];
+runeSnake.attackTimer = 0;
+spells.update(.2, game);
+assert(runeSnake?.definition.id === 'rune_snake' && runeSnake.definition.mountable && game.enemyChampion.vElevation > 0, 'World Rune Serpent is a mountable lane-control summon whose shared attack path launches enemies');
+game.player.x = runeSnake.x; game.player.z = runeSnake.z;
+assert(game.toggleMount() && game.player.mountedSummon === runeSnake, 'Nearby World Rune Serpent can be mounted through the normal mount input path');
+game.player.dismount();
 spells.clearRuntime();
 // Vanguard role: with no defender in its nearby engagement band, the Rune
 // Golem advances onto the living enemy Tower rather than idling in lane.

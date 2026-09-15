@@ -164,6 +164,8 @@ const sInfernoDragon = spells.resolveSpell([rBestia, rIgnis, rVentus]);
 assert(sInfernoDragon?.id === 'dragon_invocation', 'Spell: Bestia + Ignis + Ventus -> INFERNO DRAGON');
 const sVoidSpider = spells.resolveSpell([rBestia, rVoid]);
 assert(sVoidSpider?.id === 'summon_void_spider', 'Spell: Bestia + Void -> VOID SPIDER');
+const sRuneSnake = spells.resolveSpell([rBestia, rTerra, rVentus]);
+assert(sRuneSnake?.id === 'summon_rune_snake', 'Spell: Bestia + Terra + Ventus -> WORLD RUNE SERPENT');
 
 const sGrand = spells.resolveSpell([rIgnis, rVentus, rFulgur]);
 assert(sGrand && sGrand.id === 'apocalyptic_heavensurge', 'Spell: Grand 3-Rune -> APOCALYPTIC HEAVENSURGE');
