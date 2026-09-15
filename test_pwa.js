@@ -37,7 +37,7 @@ assert(read('server.js').includes("'.webmanifest': 'application/manifest+json; c
 const css = read('public/css/style.css');
 const main = read('public/src/main.js');
 assert(css.includes('#ui-layer.has-safe-area') && css.includes('env(safe-area-inset-left)'), 'Safe-area CSS protects HUD controls without shrinking the arena');
-assert(main.includes('`--safe-${edge}`') && main.includes('safe-area-probe'), 'Runtime converts physical safe-area insets into logical HUD coordinates');
+assert(main.includes('`--safe-${edge}`') && main.includes('safe-area-probe') && main.includes("display-mode: standalone"), 'Runtime converts physical safe-area insets into logical HUD coordinates');
 
 console.log(`\nPWA results: ${passed} passed, ${failed} failed.`);
 if (failed) process.exit(1);

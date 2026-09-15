@@ -3,7 +3,7 @@
 ## Implemented
 
 - Browser Canvas prototype with fixed 1024×576 simulation and DPR-aware backing buffers.
-- PWA/iOS shell: `manifest.webmanifest`, Apple standalone meta tags, `viewport-fit=cover`, GRIMGE Home-Screen naming, and branded derived app icons are all relative to `public/`, so the same deployment works at a GitHub Pages domain root or repository subpath. iOS safe insets are converted from physical CSS pixels into logical HUD coordinates; gameplay canvas remains edge-to-edge while critical HUD controls move clear of cut-outs/Home Indicator.
+- PWA/iOS shell: `manifest.webmanifest`, Apple standalone meta tags, `viewport-fit=cover`, GRIMGE Home-Screen naming, and branded derived app icons are all relative to `public/`, so the same deployment works at a GitHub Pages domain root or repository subpath. iOS safe insets are converted from physical CSS pixels into logical HUD coordinates; gameplay canvas remains edge-to-edge while critical HUD controls move clear of cut-outs/Home Indicator. Installed iOS standalone launches also reserve a small Home-Indicator clearance if Safari reports its inset late.
 - Heroes render at an explicit **120% visual scale** (`74px × 1.20 = 88.8px`) for stronger character/cosmetic readability. Player and enemy Wizard share it; minion/summon sizes remain authored separately, and hero colliders stay `24×54` so movement, feet anchoring, hit ranges, and tuned physics remain unchanged.
 - 2.5D state is `x`, continuous `z`, `surfaceHeight`, and independent `elevation`; render `y` is projected only.
 - Main arena depth is z=.06–.94. Minion preferences use broad z=.20/.52/.84 lanes; the player remains unrestricted across the ground plane.

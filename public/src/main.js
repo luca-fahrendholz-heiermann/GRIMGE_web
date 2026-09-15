@@ -129,6 +129,14 @@ export class GameWorld {
         bottom: toLogical(computed?.paddingBottom),
         left: toLogical(computed?.paddingLeft)
       };
+      // Some iOS standalone launches expose the Home Indicator inset a paint
+      // late. Reserve its small physical clearance immediately for installed
+      // iPhone/iPad apps, then let the real env() value take precedence.
+      const nav = globalThis.navigator;
+      const isIOS = /iPad|iPhone|iPod/.test(nav?.userAgent || '')
+        || (nav?.platform === 'MacIntel' && (nav?.maxTouchPoints || 0) > 1);
+      const isStandalone = globalThis.matchMedia?.('(display-mode: standalone)')?.matches || nav?.standalone === true;
+      if (isIOS && isStandalone) safe.bottom = Math.max(safe.bottom, toLogical('22px'));
       for (const [edge, value] of Object.entries(safe)) {
         this.uiLayer.style.setProperty?.(`--safe-${edge}`, `${value}px`);
       }

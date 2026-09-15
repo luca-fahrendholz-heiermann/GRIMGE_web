@@ -809,6 +809,18 @@ html, body {
   display: none;
 }
 
+/* These come after the two chosen touch-layout definitions so an iPhone's
+   safe space cannot be overwritten by the classic/alternate placement. */
+#ui-layer.has-safe-area.touch-layout-alt #bottom-right-actions {
+  right: calc(2% + var(--safe-right));
+  bottom: calc(2% + var(--safe-bottom));
+}
+
+#ui-layer.has-safe-area:not(.touch-layout-alt) .arcane-circle-wrap {
+  top: auto;
+  bottom: calc(5% + var(--safe-bottom));
+}
+
 .arcane-circle-wrap:hover {
   transform: scale(1.06);
   filter: drop-shadow(0 0 22px #00e5ff);
