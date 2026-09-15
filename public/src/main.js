@@ -25,6 +25,11 @@ export class GameWorld {
 
     this.logicalWidth = VIEWPORT.width;
     this.logicalHeight = VIEWPORT.height;
+    // Simulation coordinates deliberately remain the authored 1024×576
+    // battlefield. Rendering receives a wider *camera* on ultrawide screens;
+    // this never changes spawns, ranges, collision, or travel distance.
+    this.renderWidth = this.logicalWidth;
+    this.cameraOffsetX = 0;
     this.deviceScale = Math.min(2, window.devicePixelRatio || 1);
     this.configureCanvas(this.canvas, this.ctx);
     this.configureCanvas(this.runeCanvas, this.runeCtx);
@@ -95,7 +100,7 @@ export class GameWorld {
   }
 
   configureCanvas(canvas, context) {
-    canvas.width = Math.round(this.logicalWidth * this.deviceScale);
+    canvas.width = Math.round(this.renderWidth * this.deviceScale);
     canvas.height = Math.round(this.logicalHeight * this.deviceScale);
     context.setTransform?.(this.deviceScale, 0, 0, this.deviceScale, 0, 0);
     context.imageSmoothingEnabled = true;
@@ -110,15 +115,20 @@ export class GameWorld {
   }
 
   syncHudScale() {
-    const width = this.canvas.getBoundingClientRect().width;
-    if (width > 0 && this.uiLayer) {
-      const scale = String(width / this.logicalWidth);
+    const rect = this.canvas.getBoundingClientRect();
+    const height = rect.height;
+    if (height > 0 && this.uiLayer) {
+      // HUD scale follows the available height, not the width. This keeps the
+      // perceived character/card size stable while an ultrawide viewport
+      // exposes more horizontal world space.
+      const scale = String(height / this.logicalHeight);
       // Custom CSS properties must be written through setProperty in a real
       // CSSStyleDeclaration. Bracket assignment happened to work in the test
       // stub but is ignored by browsers, leaving a 1024px HUD over a scaled
       // Canvas.
       if (this.uiLayer.style.setProperty) this.uiLayer.style.setProperty('--hud-scale', scale);
       else this.uiLayer.style['--hud-scale'] = scale;
+      this.uiLayer.style.width = `${this.renderWidth}px`;
 
       // `env(safe-area-inset-*)` values are physical CSS pixels. The HUD is
       // transformed from a fixed 1024×576 logical surface, so convert the
@@ -148,14 +158,37 @@ export class GameWorld {
     }
   }
 
+  updateViewport() {
+    const rect = this.canvas.getBoundingClientRect();
+    const width = rect.width || globalThis.innerWidth || this.logicalWidth;
+    const height = rect.height || globalThis.innerHeight || this.logicalHeight;
+    if (width <= 0 || height <= 0) return;
+
+    // Constant logical height, variable camera width. Keep the full authored
+    // arena on narrow landscape displays, then add only visual overscan on
+    // wider ones. Gameplay continues to use logicalWidth everywhere.
+    const nextRenderWidth = Math.max(this.logicalWidth, Math.round(this.logicalHeight * (width / height)));
+    const nextDeviceScale = Math.min(2, globalThis.window?.devicePixelRatio || globalThis.devicePixelRatio || 1);
+    const changed = nextRenderWidth !== this.renderWidth || nextDeviceScale !== this.deviceScale;
+    this.renderWidth = nextRenderWidth;
+    this.deviceScale = nextDeviceScale;
+    this.cameraOffsetX = (this.renderWidth - this.logicalWidth) * 0.5;
+    if (changed || this.canvas.width !== Math.round(this.renderWidth * this.deviceScale)) {
+      this.configureCanvas(this.canvas, this.ctx);
+      this.configureCanvas(this.runeCanvas, this.runeCtx);
+      this.clearRuneCanvas();
+    }
+    this.syncHudScale();
+  }
+
   async init() {
     this.setupInputs();
-    this.syncHudScale();
+    this.updateViewport();
     this.syncOrientationState();
     // The first script turn can run before the final responsive layout has
     // settled. Re-read the Canvas rectangle on the next paint as well.
-    requestAnimationFrame(() => { this.syncHudScale(); this.syncOrientationState(); });
-    const syncViewport = () => { this.syncHudScale(); this.syncOrientationState(); };
+    requestAnimationFrame(() => { this.updateViewport(); this.syncOrientationState(); });
+    const syncViewport = () => { this.updateViewport(); this.syncOrientationState(); };
     window.addEventListener('resize', syncViewport);
     window.addEventListener('orientationchange', syncViewport);
     window.visualViewport?.addEventListener?.('resize', syncViewport);
@@ -171,12 +204,12 @@ export class GameWorld {
 
     this.running = true;
     requestAnimationFrame((t) => this.loop(t));
-    console.log('⚔️ GRIMGE Game Loop running at 1024x576.');
+    console.log('⚔️ GRIMGE Game Loop running with a 1024×576 combat field and adaptive camera.');
   }
 
   getCanvasCoords(clientX, clientY) {
     const rect = this.canvas.getBoundingClientRect();
-    const scaleX = this.logicalWidth / rect.width;
+    const scaleX = this.renderWidth / rect.width;
     const scaleY = this.logicalHeight / rect.height;
     return {
       x: (clientX - rect.left) * scaleX,
@@ -365,11 +398,11 @@ export class GameWorld {
       const pt = this.getCanvasCoords(event.clientX, event.clientY);
       // A dynamic stick belongs to the left thumb.  The right half remains a
       // combat gesture surface and is never stolen for movement.
-      if (pt.x > this.logicalWidth * 0.48 || this.drawing.active || !this.isMatchRunning()) return false;
+      if (pt.x > this.renderWidth * 0.48 || this.drawing.active || !this.isMatchRunning()) return false;
       pointerId = event.pointerId;
       joystickOrigin = pt;
       joystickMoved = false;
-      joystick.style.left = `${Math.max(0, Math.min(this.logicalWidth - JOYSTICK_RADIUS * 2, pt.x - JOYSTICK_RADIUS))}px`;
+      joystick.style.left = `${Math.max(0, Math.min(this.renderWidth - JOYSTICK_RADIUS * 2, pt.x - JOYSTICK_RADIUS))}px`;
       joystick.style.top = `${Math.max(0, Math.min(this.logicalHeight - JOYSTICK_RADIUS * 2, pt.y - JOYSTICK_RADIUS))}px`;
       joystick.style.bottom = 'auto';
       joystick.classList.add('is-active');
@@ -418,7 +451,7 @@ export class GameWorld {
       if (event.pointerType && event.pointerType !== 'touch') return;
       if (this.drawing.active || !this.isMatchRunning() || event.pointerId === pointerId) return;
       const pt = this.getCanvasCoords(event.clientX, event.clientY);
-      if (pt.x < this.logicalWidth * 0.48) return;
+      if (pt.x < this.renderWidth * 0.48) return;
       attackPointerId = event.pointerId;
       attackStart = pt;
       this.canvas.setPointerCapture?.(attackPointerId);
@@ -426,7 +459,7 @@ export class GameWorld {
     const handleLeftDoubleTap = (event) => {
       if (event.pointerType && event.pointerType !== 'touch') return false;
       const pt = this.getCanvasCoords(event.clientX, event.clientY);
-      if (pt.x > this.logicalWidth * 0.48 || !this.isMatchRunning()) return false;
+      if (pt.x > this.renderWidth * 0.48 || !this.isMatchRunning()) return false;
       const now = performance.now();
       const isDoubleTap = lastLeftTap
         && now - lastLeftTap.time <= 340
@@ -1417,18 +1450,18 @@ export class GameWorld {
 
   render() {
     const ctx = this.ctx;
-    const viewW = this.logicalWidth;
+    const viewW = this.renderWidth;
     const viewH = this.logicalHeight;
     const cam = combat.camera;
 
     ctx.clearRect(0, 0, viewW, viewH);
 
     // 1. Scene Backdrop (High-Def Waterfalls & Fortress Arena)
-    this.battlefield.renderBackground(ctx, cam, viewW, viewH);
+    this.battlefield.renderBackground(ctx, cam, this.logicalWidth, viewH, viewW, this.cameraOffsetX);
 
     // 2. World Space Layer (with Camera Shake)
     ctx.save();
-    ctx.translate(cam.shakeX, cam.shakeY);
+    ctx.translate(this.cameraOffsetX + cam.shakeX, cam.shakeY);
 
     // Foreground Crystal Glows on Beacons
     this.battlefield.renderForeground(ctx);
@@ -1490,7 +1523,7 @@ export class GameWorld {
 
     rctx.save();
     rctx.fillStyle = 'rgba(8, 6, 18, 0.45)';
-    rctx.fillRect(0, 0, this.logicalWidth, this.logicalHeight);
+    rctx.fillRect(0, 0, this.renderWidth, this.logicalHeight);
 
     const allStrokes = [...this.drawing.strokes];
     if (this.drawing.currentStroke.length > 0) {

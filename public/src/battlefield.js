@@ -107,12 +107,30 @@ export class Battlefield {
     entity.surfaceHeight = surfaceHeight(surface, entity.x);
   }
 
-  renderBackground(ctx, camera, viewW, viewH) {
-    if (this.bgLoaded) ctx.drawImage(this.bgImage, 0, 0, viewW, viewH);
-    else {
-      ctx.fillStyle = '#1c2838';
-      ctx.fillRect(0, 0, viewW, viewH);
+  renderBackground(ctx, camera, gameplayWidth, viewH, renderWidth = gameplayWidth, cameraOffsetX = 0) {
+    // The authored arena art remains at its intended 16:9 composition.
+    // Wider displays reveal decorative edge continuation rather than
+    // stretching the arena, changing combat coordinates, or adding black
+    // pillar bars. Game objects are translated by cameraOffsetX separately.
+    const overflow = Math.max(0, renderWidth - gameplayWidth);
+    ctx.fillStyle = '#101925';
+    ctx.fillRect(0, 0, renderWidth, viewH);
+    if (!this.bgLoaded) return;
+
+    if (overflow > 0 && this.bgImage.naturalWidth) {
+      const band = Math.max(24, Math.min(96, Math.floor(this.bgImage.naturalWidth * 0.12)));
+      const leftDest = cameraOffsetX;
+      const rightDest = cameraOffsetX + gameplayWidth;
+      // Repeating narrow edge strips creates a decorative stone/sky
+      // continuation with no anisotropic scaling of the central pixel art.
+      for (let x = leftDest - band; x >= -band; x -= band) {
+        ctx.drawImage(this.bgImage, 0, 0, band, this.bgImage.naturalHeight, x, 0, band, viewH);
+      }
+      for (let x = rightDest; x < renderWidth; x += band) {
+        ctx.drawImage(this.bgImage, this.bgImage.naturalWidth - band, 0, band, this.bgImage.naturalHeight, x, 0, band, viewH);
+      }
     }
+    ctx.drawImage(this.bgImage, cameraOffsetX, 0, gameplayWidth, viewH);
   }
 
   renderForeground(ctx) {

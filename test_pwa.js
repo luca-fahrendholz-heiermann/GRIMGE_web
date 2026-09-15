@@ -40,8 +40,10 @@ const main = read('public/src/main.js');
 assert(css.includes('#ui-layer.has-safe-area') && css.includes('env(safe-area-inset-left)'), 'Safe-area CSS protects HUD controls without shrinking the arena');
 assert(main.includes('`--safe-${edge}`') && main.includes('safe-area-probe') && main.includes("display-mode: standalone"), 'Runtime converts physical safe-area insets into logical HUD coordinates');
 assert(css.includes('body.portrait-gameplay #rotate-overlay') && css.includes('body.portrait-gameplay #game-container'), 'Portrait gameplay replaces the tiny stage with a rotate screen');
-assert(css.includes("url('../assets/arena_bg.jpg')"), 'Wider landscape devices receive an arena backdrop instead of permanent black side bars');
-assert(css.includes('aspect-ratio: 1 / 1') && css.includes('.mount-action.is-available'), 'Mobile action controls stay circular and Mount has a contextual visual state');
+assert(css.includes('position: fixed;') && css.includes('width: 100vw;') && css.includes('height: 100dvh;'), 'Outer game surface is edge-to-edge instead of a fixed 16:9 contain stage');
+assert(main.includes('renderWidth') && main.includes('cameraOffsetX') && main.includes('updateViewport()'), 'Runtime uses a constant-height adaptive camera rather than stretching gameplay');
+assert(css.includes("url('../assets/arena_bg.jpg')") && read('public/src/battlefield.js').includes('decorative edge continuation'), 'Wider landscape devices receive decorative world overscan instead of permanent black side bars');
+assert(css.includes('aspect-ratio: 1 / 1') && css.includes('.mount-action.is-available') && css.includes('height: 132px;'), 'Cast, Block, Swap and Mount remain circular while Jump is an intentional vertical swipe rail');
 assert(css.includes('left: 150px; bottom: 12px; width: 84px; height: 84px') && css.includes('left: 166px; bottom: 110px; width: 52px; height: 52px'), 'Mount is centered at 12 o’clock above the dominant Cast button');
 assert(main.includes('syncOrientationState()') && main.includes('updateMountCandidate()'), 'Runtime pauses portrait gameplay and maintains an authoritative mount candidate');
 
