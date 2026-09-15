@@ -204,21 +204,25 @@ export class UIManager {
       this.arcaneCircle?.style.removeProperty?.('top');
       this.arcaneCircle?.style.removeProperty?.('right');
       this.arcaneCircle?.style.removeProperty?.('bottom');
+      const joystick = document.getElementById('touch-joystick');
+      joystick?.classList.remove('is-active');
+      joystick?.style.removeProperty?.('left');
+      joystick?.style.removeProperty?.('top');
+      joystick?.style.removeProperty?.('bottom');
     }
     if (this.uiLayoutBtn) this.uiLayoutBtn.textContent = this.touchLayout === 'alternate' ? 'SETTINGS: ALT TOUCH UI' : 'SETTINGS: CLASSIC UI';
     try { window.localStorage?.setItem?.('grimge-touch-layout', this.touchLayout); } catch { /* preference is optional */ }
   }
 
-  placeDrawNearJoystick(x, y) {
+  placeDrawNearJoystick() {
     if (this.touchLayout !== 'alternate' || !this.arcaneCircle) return;
-    // x/y are logical 1024×576 HUD coordinates. Keep the draw button inside
-    // the left-side play area, above and slightly left of the thumb origin.
-    const left = Math.max(10, Math.min(300, x - 92));
-    const top = Math.max(70, Math.min(410, y - 136));
-    this.arcaneCircle.style.left = `${left}px`;
-    this.arcaneCircle.style.top = `${top}px`;
-    this.arcaneCircle.style.right = 'auto';
-    this.arcaneCircle.style.bottom = 'auto';
+    // Draw deliberately has a stable lower-left home. It must not jump under
+    // the player’s thumb just because the dynamic movement stick was spawned
+    // at a different left-side location.
+    this.arcaneCircle.style.removeProperty?.('left');
+    this.arcaneCircle.style.removeProperty?.('top');
+    this.arcaneCircle.style.removeProperty?.('right');
+    this.arcaneCircle.style.removeProperty?.('bottom');
   }
 
   toggleGrimoire(forceState) {

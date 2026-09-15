@@ -339,6 +339,14 @@ export class GameWorld {
       this.input.touchMove.x = 0; this.input.touchMove.z = 0;
       knob.style.transform = 'translate(0, 0)';
       joystick.classList.remove('is-active');
+      // Restoring classic after a touch is important: it is the original
+      // fixed joystick layout, whereas only the alternate setting is meant
+      // to leave the stick at a dynamic touch origin.
+      if (ui.touchLayout !== 'alternate') {
+        joystick.style.removeProperty?.('left');
+        joystick.style.removeProperty?.('top');
+        joystick.style.removeProperty?.('bottom');
+      }
     };
     const beginAttackGesture = (event) => {
       if (event.pointerType && event.pointerType !== 'touch') return;

@@ -146,6 +146,17 @@ html, body {
   transform: scale(1);
 }
 
+/* Classic is intentionally kept as the former fixed control layout. The
+   alternate layout alone owns the dynamic left-thumb stick. */
+#ui-layer:not(.touch-layout-alt) #touch-joystick {
+  left: 4%;
+  top: auto;
+  bottom: 5%;
+  pointer-events: auto;
+  opacity: 1;
+  transform: scale(1);
+}
+
 #touch-joystick-knob {
   position: absolute;
   left: 50%;
@@ -698,25 +709,35 @@ html, body {
   animation: pulseAura 3s ease-in-out infinite alternate;
 }
 
+/* Original classic placement: center of the former right-side triangle. */
+#ui-layer:not(.touch-layout-alt) .arcane-circle-wrap {
+  left: 83.7%;
+  top: 78.8%;
+  right: auto;
+  bottom: auto;
+}
+
 /* Alternate mobile layout: the player chooses it from the hub settings.
    It leaves the left side clear for a dynamic joystick and arranges the
    actions as a compact right-hand combat cluster. */
 #ui-layer.touch-layout-alt #bottom-right-actions {
   right: 2%;
   bottom: 2%;
-  width: 238px;
-  height: 142px;
+  width: 286px;
+  height: 154px;
 }
 
-#ui-layer.touch-layout-alt .triangle-shield { left: 0; bottom: 0; }
-#ui-layer.touch-layout-alt .triangle-cast { left: 104px; top: 66px; right: auto; bottom: auto; min-width: 60px; height: 58px; }
-#ui-layer.touch-layout-alt .swap-action { left: 45px; top: 78px; bottom: auto; min-width: 52px; height: 30px; }
+/* A compact clock-face action group: central Cast, Block at roughly 7
+   o'clock and Swap around 10 o'clock. */
+#ui-layer.touch-layout-alt .triangle-shield { left: 34px; top: 96px; bottom: auto; min-width: 58px; height: 54px; }
+#ui-layer.touch-layout-alt .triangle-cast { left: 116px; top: 58px; right: auto; bottom: auto; min-width: 82px; height: 78px; font-size: 14px; }
+#ui-layer.touch-layout-alt .swap-action { left: 54px; top: 24px; bottom: auto; min-width: 58px; height: 34px; }
 #ui-layer.touch-layout-alt .triangle-jump {
   left: auto;
   right: 0;
-  top: 0;
+  top: 20px;
   width: 52px;
-  height: 114px;
+  height: 130px;
   border-radius: 26px;
   writing-mode: vertical-rl;
   letter-spacing: 1px;
@@ -724,10 +745,10 @@ html, body {
 }
 
 #ui-layer.touch-layout-alt .arcane-circle-wrap {
-  left: 32px;
-  top: 300px;
+  left: 4%;
+  top: auto;
   right: auto;
-  bottom: auto;
+  bottom: 4%;
 }
 
 .arcane-circle-wrap:hover {
