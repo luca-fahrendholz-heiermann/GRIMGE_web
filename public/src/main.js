@@ -13,6 +13,7 @@ export class GameWorld {
   constructor() {
     this.canvas = document.getElementById('game-canvas');
     this.ctx = this.canvas.getContext('2d');
+    this.sprites = sprites;
 
     this.runeCanvas = document.getElementById('rune-canvas');
     this.runeCtx = this.runeCanvas.getContext('2d');
@@ -163,15 +164,20 @@ export class GameWorld {
       this.input.keys[e.code] = true;
       audio.ensureContext();
 
-      // Hero Swapping (Keys 1-5)
+      // Hero Swapping (Keys 1-6)
       if (e.code === 'Digit1') { this.player.setHero('paladin'); ui.updateActiveHeroBtn('paladin'); }
       if (e.code === 'Digit2') { this.player.setHero('berserker'); ui.updateActiveHeroBtn('berserker'); }
       if (e.code === 'Digit3') { this.player.setHero('mage'); ui.updateActiveHeroBtn('mage'); }
       if (e.code === 'Digit4') { this.player.setHero('warlord'); ui.updateActiveHeroBtn('warlord'); }
       if (e.code === 'Digit5') { this.player.setHero('fighter'); ui.updateActiveHeroBtn('fighter'); }
+      if (e.code === 'Digit6') { this.player.setHero('darklord'); ui.updateActiveHeroBtn('darklord'); }
 
       // Cast Spell (E)
       if (e.code === 'KeyE') this.castPreparedSpell();
+
+      // Own Wolves and Golems can be ridden. Mounting is deliberately a
+      // proximity action, not another spell slot: R toggles on/off.
+      if (e.code === 'KeyR') this.toggleMount();
 
       // Clear selected spell components (Q). It does not delete or cycle
       // cards from the rune hand.
@@ -548,8 +554,8 @@ export class GameWorld {
   confirmRuneDrawing(autoLock = false) {
     if (!this.drawing.active) return false;
     this.completeRuneStroke();
-    const result = recognizer.recognize(this.drawing.strokes);
-    if (!result?.rune || result.confidence < 0.70) {
+    const result = recognizer.recognize(this.drawing.strokes, this.player.runeHand.map((card) => card.id));
+    if (!result?.rune || result.confidence < 0.48) {
       this.resetRuneSketch();
       audio.playRuneFail();
       ui.showRecognitionBadge(null, 0);
@@ -618,16 +624,19 @@ export class GameWorld {
       this.clearRuneCanvas();
       return;
     }
-    const result = recognizedResult ?? recognizer.recognize(this.drawing.strokes);
+    const result = recognizedResult ?? recognizer.recognize(this.drawing.strokes, this.player.runeHand.map((card) => card.id));
 
     if (result && result.rune) {
       const added = this.player.playRuneCard(result.rune.id, expectedCardId);
       if (added) {
-        this.slotRuneSpell(added);
+        // A card remains a reusable deck card.  Cast quality belongs to this
+        // particular prepared instance, not to every future redraw of it.
+        const prepared = { ...added, grade: result.grade ?? recognizer.gradeForConfidence(result.confidence), quality: result.confidence };
+        this.slotRuneSpell(prepared);
         audio.playRuneSuccess();
-        ui.showRecognitionBadge(result.rune, result.confidence);
+        ui.showRecognitionBadge(result.rune, result.confidence, prepared.grade);
         combat.spawnShockwave(this.player.x, this.player.y - 30, 70, result.rune.color);
-        combat.spawnElementalParticles(this.player.x, this.player.y - 30, result.rune.id, 20);
+        combat.spawnElementalParticles(this.player.x, this.player.y - 30, result.rune.id, Math.round(14 * spells.qualityForRunes([prepared]).particles));
       } else {
         ui.showAnnouncement(this.player.preparedRunes.length >= 3 ? 'SPELL SLOTS FULL — CAST OR CLEAR!' : 'DRAW A RUNE FROM YOUR HAND');
       }
@@ -663,6 +672,11 @@ export class GameWorld {
         audio.playRuneFail();
         return false;
       }
+      if (resolved.id === 'eidolon_mantle' && this.player.eidolonCooldown > 0) {
+        this.showAnnouncement('EIDOLON MANTLE IS RECHARGING');
+        audio.playRuneFail();
+        return false;
+      }
       if (this.player.mp < (resolved.manaCost ?? 0)) {
         this.showAnnouncement('NOT ENOUGH MANA');
         audio.playRuneFail();
@@ -671,7 +685,8 @@ export class GameWorld {
       this.player.mp -= resolved.manaCost ?? 0;
       if (resolved.id === 'aura_shock') this.player.auraShockCooldown = resolved.cooldown;
       if (resolved.id === 'arcane_aegis') this.player.arcaneShieldCooldown = resolved.cooldown;
-      spells.cast(this.player, resolved, this);
+      if (resolved.id === 'eidolon_mantle') this.player.eidolonCooldown = resolved.cooldown;
+      spells.cast(this.player, resolved, this, spells.qualityForRunes(selectedRunes));
       this.showAnnouncement(`CAST: ${resolved.name}!`);
       // Drawing already recycled each physical card to the deck back and
       // refilled the hand. Casting consumes only the prepared components.
@@ -686,8 +701,18 @@ export class GameWorld {
     // A drawn rune is always visible as its own orbiting component. Combining
     // is a conscious Grimoire action, never an implicit side effect of drawing
     // the next card.
-    const definition = spells.resolveSpell([rune]);
-    const slot = { runes: [rune], definition, isCombo: false };
+    // Unknown future rune families still receive a safe component record, but
+    // all currently draw-able runes resolve to a real standalone effect.
+    const definition = spells.resolveSpell([rune]) ?? {
+      id: 'rune_component',
+      name: `${rune.name} COMPONENT`,
+      tier: 0,
+      manaCost: 0,
+      color: rune.color,
+      isComponent: true,
+      desc: `${rune.name} must be fused with another rune in the Grimoire.`
+    };
+    const slot = { runes: [rune], definition, isCombo: false, quality: spells.qualityForRunes([rune]) };
     slots.push(slot);
     this.player.selectedSpellIndex = slots.length - 1;
     return slot;
@@ -696,11 +721,19 @@ export class GameWorld {
   castSpellSlot(slot, consumeSelected = false) {
     const resolved = slot?.definition;
     if (!resolved) return false;
+    if (resolved.isComponent) {
+      this.showAnnouncement(`${slot.runes[0].name} NEEDS A RUNE COMBINATION`);
+      audio.playRuneFail();
+      return false;
+    }
     if (resolved.id === 'aura_shock' && this.player.auraShockCooldown > 0) {
       this.showAnnouncement('AURA SHOCK IS RECHARGING'); audio.playRuneFail(); return false;
     }
     if (resolved.id === 'arcane_aegis' && this.player.arcaneShieldCooldown > 0) {
       this.showAnnouncement('ARCANE AEGIS IS RECHARGING'); audio.playRuneFail(); return false;
+    }
+    if (resolved.id === 'eidolon_mantle' && this.player.eidolonCooldown > 0) {
+      this.showAnnouncement('EIDOLON MANTLE IS RECHARGING'); audio.playRuneFail(); return false;
     }
     if (this.player.mp < (resolved.manaCost ?? 0)) {
       this.showAnnouncement('NOT ENOUGH MANA'); audio.playRuneFail(); return false;
@@ -708,7 +741,8 @@ export class GameWorld {
     this.player.mp -= resolved.manaCost ?? 0;
     if (resolved.id === 'aura_shock') this.player.auraShockCooldown = resolved.cooldown;
     if (resolved.id === 'arcane_aegis') this.player.arcaneShieldCooldown = resolved.cooldown;
-    spells.cast(this.player, resolved, this);
+    if (resolved.id === 'eidolon_mantle') this.player.eidolonCooldown = resolved.cooldown;
+    spells.cast(this.player, resolved, this, slot.quality);
     this.showAnnouncement(`CAST: ${resolved.name}!`);
     if (consumeSelected) {
       this.player.slottedSpells.splice(this.player.selectedSpellIndex, 1);
@@ -734,21 +768,21 @@ export class GameWorld {
     const existingCombo = slots.find((slot) => slot.isCombo);
     if (existingCombo) {
       this.player.selectedSpellIndex = slots.indexOf(existingCombo);
-      this.showAnnouncement(`COMBO READY: ${existingCombo.definition.name} — PRESS CAST`);
-      audio.playRuneChime(720);
-      return true;
+      // First Grimoire press fuses components. A second Grimoire press
+      // releases that fusion; CAST stays available as an alternate control.
+      return this.castSpellSlot(existingCombo, true);
     }
 
     const components = slots.flatMap((slot) => slot.runes);
     const combined = components.length >= 2 ? spells.resolveSpell(components) : null;
     if (combined?.tier > 1) {
-      const comboSlot = { runes: components, definition: combined, isCombo: true };
+      const comboSlot = { runes: components, definition: combined, isCombo: true, quality: spells.qualityForRunes(components) };
       slots.splice(0, slots.length, comboSlot);
       this.player.selectedSpellIndex = 0;
       this.player.preparedRunes = [...components];
       combat.spawnShockwave(this.player.x, this.player.y - 36, 48, combined.color);
       audio.playRuneChime(720);
-      this.showAnnouncement(`GRIMOIRE FUSED: ${combined.name} — PRESS CAST`);
+      this.showAnnouncement(`GRIMOIRE FUSED: ${combined.name} — PRESS GRIMOIRE TO CAST`);
       return true;
     }
 
@@ -773,10 +807,35 @@ export class GameWorld {
     return true;
   }
 
+  toggleMount() {
+    if (!this.isMatchRunning() || !this.player.isAlive) return false;
+    if (this.player.isMounted) {
+      const name = this.player.mountedSummon.definition.name;
+      this.player.dismount();
+      this.showAnnouncement(`DISMOUNTED: ${name}`, 1.1);
+      return true;
+    }
+    const mount = spells.getSummons(this.player.team)
+      .filter((summon) => summon.definition?.mountable && !summon.isDead && !summon.rider
+        && groundDistance(this.player, summon) <= 76
+        && Math.abs((this.player.worldHeight ?? 0) - (summon.worldHeight ?? 0)) <= 90)
+      .sort((a, b) => groundDistance(this.player, a) - groundDistance(this.player, b))[0];
+    if (!mount) {
+      this.showAnnouncement('MOVE CLOSE TO YOUR WOLF OR GOLEM TO MOUNT', 1.25);
+      return false;
+    }
+    if (!this.player.mount(mount)) return false;
+    this.showAnnouncement(`RIDING: ${mount.definition.name}  [R TO DISMOUNT]`, 1.25);
+    return true;
+  }
+
   getHostileTargets(myTeam, includeProtectedCastle = false) {
     const targets = [];
     for (const m of this.minions) {
       if (m.team !== myTeam && !m.isDead) targets.push(m);
+    }
+    for (const summon of spells.getSummons()) {
+      if (summon.team !== myTeam) targets.push(summon);
     }
     if (myTeam === 'red' && this.player.isAlive) targets.push(this.player);
     if (myTeam === 'blue' && this.enemyChampion.isAlive) targets.push(this.enemyChampion);
@@ -795,6 +854,9 @@ export class GameWorld {
     const targets = [];
     for (const minion of this.minions) {
       if (minion.team !== myTeam && !minion.isDead && minion.isMobileCombatant) targets.push(minion);
+    }
+    for (const summon of spells.getSummons()) {
+      if (summon.team !== myTeam && summon.isMobileCombatant) targets.push(summon);
     }
     if (myTeam === 'red' && this.player.isAlive && this.player.isMobileCombatant) targets.push(this.player);
     if (myTeam === 'blue' && this.enemyChampion.isAlive && this.enemyChampion.isMobileCombatant) targets.push(this.enemyChampion);
@@ -889,13 +951,13 @@ export class GameWorld {
   prepareDefaultRunes() {
     // Ordered prototype deck. Exactly three rune cards form the hand; each
     // correctly drawn card cycles itself to the deck back and is replaced.
-    const ids = ['fulgur', 'terra', 'ignis', 'ventus', 'aqua', 'ignis'];
+    const ids = ['fulgur', 'terra', 'ignis', 'ventus', 'aqua', 'bestia', 'construct', 'void', 'ignis', 'terra'];
     const deck = ids.map((id) => recognizer.runes.find((candidate) => candidate.id === id)).filter(Boolean);
     this.player.configureRuneDeck(deck);
   }
 
   resetMatch() {
-    spells.activeSpells = [];
+    spells.clearRuntime();
     combat.resetEffects();
     this.battlefield = new Battlefield();
     this.attachBattlefieldCallbacks();
@@ -935,7 +997,7 @@ export class GameWorld {
     if (this.matchState !== 'Ending') return;
     this.matchState = 'Results';
     this.projectiles = [];
-    spells.activeSpells = [];
+    spells.clearRuntime();
     ui.showResults(true, { winner: this.winnerTeam, elapsed: this.matchDuration - this.matchTime, stats: this.stats });
   }
 
@@ -943,7 +1005,7 @@ export class GameWorld {
     this.matchState = 'Menu';
     this.input.gameplayBlocked = true;
     this.projectiles = [];
-    spells.activeSpells = [];
+    spells.clearRuntime();
     this.drawing.active = false;
     this.targetTimeScale = this.timeScale = 1;
     ui.setDrawingMode(false);
@@ -1059,6 +1121,23 @@ export class GameWorld {
     requestAnimationFrame((t) => this.loop(t));
   }
 
+  resolveSpellObstacles(entity, previousX, previousZ) {
+    if (!entity?.isMobileCombatant) return false;
+    for (const spell of spells.activeSpells) {
+      if (!spell.isStoneWall || spell.isFinished || spell.team === entity.team) continue;
+      if ((entity.worldHeight ?? 0) > spell.surfaceHeight + spell.wallHeight + 18) continue;
+      const hitX = Math.abs(entity.x - spell.x) <= spell.halfX + (entity.width ?? 24) * .5;
+      const hitZ = Math.abs(entity.z - spell.z) <= spell.halfZ + .05;
+      if (!hitX || !hitZ) continue;
+      entity.x = previousX;
+      entity.z = previousZ;
+      entity.vx *= .15;
+      entity.vz *= .15;
+      return true;
+    }
+    return false;
+  }
+
   // Kept as a named runtime step so simulated integration tests use the
   // identical projectile collision path as the live game loop.
   updateProjectiles(dt) {
@@ -1146,7 +1225,7 @@ export class GameWorld {
 
     const actors = [...this.minions];
     if (this.enemyChampion.lifeState !== 'Dead') actors.push(this.enemyChampion);
-    if (this.player.lifeState !== 'Dead') actors.push(this.player);
+    if (this.player.lifeState !== 'Dead' && !this.player.isMounted) actors.push(this.player);
     actors.sort((a, b) => a.y - b.y);
     for (const actor of actors) actor.render(ctx);
 
@@ -1155,6 +1234,10 @@ export class GameWorld {
 
     // Spells
     spells.render(ctx);
+
+    // Summons render with the spell layer. Draw the mounted wizard afterward
+    // so they visibly sit on the creature instead of being hidden behind it.
+    if (this.player.lifeState !== 'Dead' && this.player.isMounted) this.player.render(ctx);
 
     // Combat VFX
     combat.render(ctx);

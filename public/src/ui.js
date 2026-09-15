@@ -59,6 +59,7 @@ export class UIManager {
     this.shieldBtn = document.getElementById('action-shield-btn');
     this.castBtn = document.getElementById('action-cast-btn');
     this.swapBtn = document.getElementById('action-swap-btn');
+    this.mountBtn = document.getElementById('action-mount-btn');
     this.fullscreenBtn = document.getElementById('fullscreen-btn');
     this.uiLayoutBtn = document.getElementById('ui-layout-btn');
     this.uiLayer = document.getElementById('ui-layer');
@@ -102,6 +103,17 @@ export class UIManager {
     this.closeGrimoireBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       this.toggleGrimoire(false);
+    });
+
+    // Classic UI retains the original explicit Draw button. The alternative
+    // touch layout hides this control and uses cards / left double-tap.
+    this.arcaneCircle?.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const game = window.gameWorld;
+      if (!game) return;
+      if (game.drawing.active) game.lockOrExitRuneDrawing();
+      else game.startRuneDrawing();
     });
 
     // Pointer-down avoids the mobile click-delay. All action input reaches
@@ -151,6 +163,9 @@ export class UIManager {
     });
     this.swapBtn.addEventListener('pointerdown', (e) => {
       e.preventDefault(); e.stopPropagation(); window.gameWorld?.swapSlottedSpell();
+    });
+    this.mountBtn?.addEventListener('pointerdown', (e) => {
+      e.preventDefault(); e.stopPropagation(); window.gameWorld?.toggleMount();
     });
     this.fullscreenBtn?.addEventListener('pointerdown', (e) => {
       e.preventDefault();
@@ -273,9 +288,10 @@ export class UIManager {
     this.resultsKills.textContent = `WIZARD KILLS: ${result.stats.wizardKills[won ? 'blue' : 'red']}`;
   }
 
-  showRecognitionBadge(rune, confidence) {
+  showRecognitionBadge(rune, confidence, grade = null) {
     if (rune) {
-      this.recognitionResult.textContent = `✦ ${rune.name} (${Math.round(confidence * 100)}%) ✦`;
+      const rank = grade ? ` · ${grade}-RANK` : '';
+      this.recognitionResult.textContent = `✦ ${rune.name}${rank} (${Math.round(confidence * 100)}%) ✦`;
       this.recognitionResult.className = 'show success';
     } else {
       this.recognitionResult.textContent = '✖ UNRECOGNIZED RUNE';
@@ -369,7 +385,9 @@ export class UIManager {
     // Active Spell Preview
     const selectedSlot = player.slottedSpells[player.selectedSpellIndex];
     if (selectedSlot) {
-      this.activeSpellPreview.textContent = `READY: ${selectedSlot.definition.name} [CAST · SWAP]`;
+      this.activeSpellPreview.textContent = selectedSlot.definition.isComponent
+        ? `COMPONENT: ${selectedSlot.definition.name} — DRAW A MATCHING RUNE`
+        : `READY: ${selectedSlot.definition.name} [CAST · SWAP]`;
       this.activeSpellPreview.style.color = selectedSlot.definition.color;
     } else {
       const hand = player.runeHand.map((rune) => rune.name).join(' · ');

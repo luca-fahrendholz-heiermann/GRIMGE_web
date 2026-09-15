@@ -115,12 +115,13 @@
         <button class="hero-chip" data-hero="mage">Mage</button>
         <button class="hero-chip" data-hero="warlord">Warlord</button>
         <button class="hero-chip" data-hero="fighter">Fighter</button>
+        <button class="hero-chip" data-hero="darklord">Dark Lord</button>
       </div>
 
       <!-- BOTTOM HUD BAR -->
       <div id="bottom-hud-bar">
         <!-- D-Pad (Bottom Left) -->
-        <div id="dpad-container" title="Virtual D-Pad (A/D to move, W to jump, S to fall)">
+        <div id="dpad-container" title="Virtual D-Pad (move in 2.5D)">
           <img src="assets/ui/dpad.png" class="dpad-img" alt="D-Pad">
         </div>
 
@@ -141,7 +142,7 @@
             </button>
 
             <!-- Grimoire Button -->
-            <button id="grimoire-btn" class="grimoire-wrap" type="button" title="Cast prepared spell or open combo guide">
+            <button id="grimoire-btn" class="grimoire-wrap" type="button" title="Fuse orbiting runes; press again to cast the fusion">
               <span class="grimoire-glyph">✦</span><span class="grimoire-pages"></span><small>GRIMOIRE</small>
             </button>
           </div>
@@ -169,9 +170,16 @@
           <button id="action-shield-btn" class="touch-action shield-action triangle-shield" title="Hold to block (F)">BLOCK</button>
           <button id="action-cast-btn" class="touch-action cast-action triangle-cast" title="Cast prepared runes (E)">CAST</button>
           <button id="action-swap-btn" class="touch-action swap-action" title="Swap selected spell">SWAP</button>
+          <button id="action-mount-btn" class="touch-action mount-action" title="Mount or dismount a nearby own Wolf or Golem (R); Jump dismounts">MOUNT</button>
 
         </div>
       </div>
+
+      <!-- Classic UI keeps its explicit central Draw control. The alternate
+           touch layout hides this in favour of rune cards and left double-tap. -->
+      <button id="arcane-circle-trigger" class="arcane-circle-wrap" type="button" title="Draw rune; tap again to lock">
+        <span class="arcane-circle-glyph">✧</span><small>DRAW</small>
+      </button>
 
       <!-- Grimoire Modal -->
       <div id="grimoire-modal" class="hidden">
@@ -187,9 +195,12 @@
             <div class="g-item"><span class="r-icon">⚡</span><strong>FULGUR (Lightning)</strong>: Draw Zig-Zag <code>Z</code></div>
             <div class="g-item"><span class="r-icon">🪨</span><strong>TERRA (Earth)</strong>: Draw Square <code>□</code></div>
             <div class="g-item"><span class="r-icon">❄️</span><strong>AQUA (Frost)</strong>: Draw Circle <code>○</code></div>
+            <div class="g-item"><span class="r-icon">🐺</span><strong>BESTIA (Beast)</strong>: Draw three-peaked Claw <code>M</code></div>
+            <div class="g-item"><span class="r-icon">⚙️</span><strong>KONSTRUKT (Construct)</strong>: Draw tall Pillar <code>|</code></div>
+            <div class="g-item"><span class="r-icon">🕳️</span><strong>VOID</strong>: Draw open Spiral / Eye <code>◉</code></div>
           </div>
           <div class="g-col">
-            <h3>✦ POWER COMBINATIONS (PREPARE UP TO 3, PRESS E)</h3>
+            <h3>✦ POWER COMBINATIONS</h3>
             <div class="g-item">🔥 + 💨 = <strong>FIRESTORM VORTEX</strong> (Sucks & burns lane)</div>
             <div class="g-item">🔥 + ⚡ = <strong>METEOR CATACLYSM</strong> (Cosmic strike + crater)</div>
             <div class="g-item">💨 + ⚡ = <strong>TEMPEST BLITZ</strong> (Supersonic lightning dash)</div>
@@ -197,13 +208,21 @@
             <div class="g-item">🪨 + 💨 = <strong>SANDSTORM BASTION</strong> (Guards against lane shots)</div>
             <div class="g-item">❄️ + 💨 = <strong>BLIZZARD SURGE</strong> (Freezing lane pressure)</div>
             <div class="g-item">🔥+💨+⚡ = <strong>APOCALYPTIC HEAVENSURGE</strong> (Grand storm)</div>
+            <div class="g-item">🐺 + ⚡ = <strong>STORM WOLF</strong> (Hunter: chases Wizard)</div>
+            <div class="g-item">🕳️ + 🐺 = <strong>VOID SPIDER</strong> (Control: web slow)</div>
+            <div class="g-item">⚙️ + 🪨 = <strong>RUNE GOLEM</strong> (Vanguard: holds lane)</div>
+            <div class="g-item">🐺 + 🔥 + 💨 = <strong>INFERNO DRAGON</strong> (Siege fire invocation)</div>
+            <div class="g-item">❄️ + 🪨 + 💨 = <strong>SPIRIT WOLF</strong> (Fast frost summon)</div>
+            <div class="g-item">⚡ + 🪨 + 🪨 = <strong>SIEGE GOLEM</strong> (Durable objective summon)</div>
+            <div class="g-item">🔥 + 🪨 + ⚡ = <strong>DRAGON INVOCATION</strong> (Temporary fire-dragon strike)</div>
           </div>
           <div class="g-col">
             <h3>✦ CONTROLS</h3>
             <div><strong>A / D</strong>: Horizontal | <strong>W / S</strong>: Depth | <strong>Space</strong>: Jump (x2)</div>
             <div><strong>Left-Click / J</strong>: Melee Combo | <strong>U + Attack</strong>: Uppercut</div>
             <div><strong>Shift</strong>: Dodge Roll | <strong>E</strong>: Cast Spell | <strong>Q</strong>: Discard</div>
-            <div><strong>Keys 1-5</strong>: Switch Hero Character</div>
+            <div><strong>Summon / Combo:</strong> Draw all 2–3 rune cards, press <strong>GRIMOIRE</strong> once to fuse them, then press <strong>GRIMOIRE</strong> again to cast. Rune order does not matter.</div>
+              <div><strong>Keys 1-6</strong>: Switch Hero Character</div>
             <div><strong>F3</strong>: Toggle arena geometry debug overlay</div>
           </div>
         </div>

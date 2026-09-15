@@ -1,7 +1,36 @@
 // GRIMGE Prototype — Composable Spell System & Elemental Combinations
 import { audio } from './audio.js';
 import { combat } from './combat.js';
-import { groundDistance, groundYForDepth } from './world.js';
+import { GroundEntity, groundDistance, groundYForDepth } from './world.js';
+
+// Rune accuracy is intentionally a gameplay value instead of a pass/fail
+// gate.  C casts are still useful; S casts are cleaner, stronger versions of
+// the same spell.  The four multipliers map to damage, ground coverage,
+// persistent effect time, and visual particle density respectively.
+export const RUNE_GRADE_PROFILES = Object.freeze({
+  C: Object.freeze({ grade: 'C', power: 0.80, area: 0.86, duration: 0.84, particles: 0.78 }),
+  B: Object.freeze({ grade: 'B', power: 1.00, area: 1.00, duration: 1.00, particles: 1.00 }),
+  A: Object.freeze({ grade: 'A', power: 1.10, area: 1.08, duration: 1.08, particles: 1.15 }),
+  S: Object.freeze({ grade: 'S', power: 1.25, area: 1.20, duration: 1.20, particles: 1.40 })
+});
+
+export const SUMMON_DEFINITIONS = Object.freeze({
+  lesser_beast: Object.freeze({ id: 'lesser_beast', spriteKey: 'spirit_wolf', name: 'BEAST FAMILIAR', hp: 54, duration: 7, speed: 230, attackRange: 36, damage: 12, attackCooldown: .85, radius: 15, color: '#b388ff', role: 'hunter', particleElement: 'bestia', mountable: true, mountSpeed: 390, riderOffsetY: 36 }),
+  // Roles are gameplay contracts, not visual skins. New rune families can
+  // reuse them without duplicating the movement/targeting implementation.
+  spirit_wolf: Object.freeze({ id: 'spirit_wolf', name: 'SPIRIT WOLF', hp: 95, duration: 13, speed: 245, attackRange: 40, damage: 20, attackCooldown: .72, radius: 17, color: '#80d8ff', role: 'hunter', mountable: true, mountSpeed: 430, riderOffsetY: 39 }),
+  storm_wolf: Object.freeze({ id: 'storm_wolf', spriteKey: 'storm_wolf', name: 'STORM WOLF', hp: 86, duration: 11, speed: 275, attackRange: 42, damage: 23, attackCooldown: .62, radius: 17, color: '#ffd54f', role: 'hunter', particleElement: 'fulgur', mountable: true, mountSpeed: 465, riderOffsetY: 42 }),
+  siege_golem: Object.freeze({ id: 'siege_golem', name: 'SIEGE GOLEM', hp: 260, duration: 16, speed: 105, attackRange: 48, damage: 38, attackCooldown: 1.15, radius: 25, color: '#a1887f', role: 'vanguard', mountable: true, mountSpeed: 245, riderOffsetY: 64 }),
+  rune_golem: Object.freeze({ id: 'rune_golem', spriteKey: 'siege_golem', name: 'RUNE GOLEM', hp: 235, duration: 15, speed: 120, attackRange: 48, damage: 32, attackCooldown: 1.0, radius: 24, color: '#b0bec5', role: 'vanguard', mountable: true, mountSpeed: 260, riderOffsetY: 64 }),
+  void_spider: Object.freeze({ id: 'void_spider', spriteKey: 'void_spider', name: 'VOID SPIDER', hp: 125, duration: 14, speed: 178, attackRange: 54, damage: 14, attackCooldown: .9, radius: 22, color: '#d500f9', role: 'control', particleElement: 'void', slowDuration: 1.35, slowFactor: .45 })
+});
+
+function gradeForQuality(quality) {
+  if (quality >= 1.18) return 'S';
+  if (quality >= 1.05) return 'A';
+  if (quality >= 0.91) return 'B';
+  return 'C';
+}
 
 function withinHeight(target, sourceHeight, fallback = 110) {
   return Math.abs((target.worldHeight ?? 0) - sourceHeight) < (target.hitHeightTolerance ?? fallback);
@@ -10,6 +39,7 @@ function withinHeight(target, sourceHeight, fallback = 110) {
 export class SpellSystem {
   constructor() {
     this.activeSpells = [];
+    this.activeSummons = [];
   }
 
   // Determine which spell is formed by a given set of prepared runes
@@ -21,6 +51,11 @@ export class SpellSystem {
 
     // 1. Triple Rune Grand Combinations
     if (ids.length === 3) {
+      if (key === 'bestia+terra+void') return { id: 'eidolon_mantle', name: 'EIDOLON MANTLE', tier: 3, manaCost: 45, cooldown: 18, color: '#b668ff', desc: 'Bestia, Earth and Void form a temporary spectral guardian around the Wizard: damage resistance, knockback resistance and empowered melee.' };
+      if (key === 'bestia+ignis+ventus') return { id: 'dragon_invocation', name: 'INFERNO DRAGON INVOCATION', tier: 3, manaCost: 70, color: '#ff7043', desc: 'Bestia, Fire and Wind call a temporary fire dragon to scorch a battlefield zone.' };
+      if (key === 'aqua+terra+ventus') return { id: 'summon_spirit_wolf', name: 'SPIRIT WOLF', tier: 3, manaCost: 32, color: '#80d8ff', desc: 'Summons a quick frost spirit that hunts nearby enemies.' };
+      if (key === 'fulgur+terra+terra') return { id: 'summon_siege_golem', name: 'SIEGE GOLEM', tier: 3, manaCost: 46, color: '#a1887f', desc: 'Summons a slow, durable golem that presses objectives.' };
+      if (key === 'fulgur+ignis+terra') return { id: 'dragon_invocation', name: 'DRAGON INVOCATION', tier: 3, manaCost: 70, color: '#ff7043', desc: 'Calls a temporary fire dragon to scorch a battlefield zone.' };
       if (key === 'fulgur+ignis+ventus') {
         return {
           id: 'apocalyptic_heavensurge',
@@ -41,6 +76,9 @@ export class SpellSystem {
 
     // 2. Dual Rune Combinations
     if (ids.length === 2) {
+      if (key === 'bestia+fulgur') return { id: 'summon_storm_wolf', name: 'STORM WOLF', tier: 2, manaCost: 26, color: '#ffd54f', desc: 'A lightning Hunter that bypasses the minion line to chase the Wizard.' };
+      if (key === 'bestia+void') return { id: 'summon_void_spider', name: 'VOID SPIDER', tier: 2, manaCost: 34, color: '#d500f9', desc: 'A Control summon that entangles nearby enemies in slowing void webs.' };
+      if (key === 'construct+terra') return { id: 'summon_rune_golem', name: 'RUNE GOLEM', tier: 2, manaCost: 38, color: '#b0bec5', desc: 'A durable Vanguard that binds defenders and marches on objectives.' };
       if (key === 'ignis+ventus') {
         return {
           id: 'firestorm',
@@ -101,6 +139,9 @@ export class SpellSystem {
       if (key === 'aqua+terra') {
         return { id: 'arcane_aegis', name: 'ARCANE AEGIS', tier: 2, manaCost: 30, cooldown: 8, color: '#b388ff', desc: 'A temporary protective aura that absorbs incoming damage.' };
       }
+      if (key === 'terra+terra') {
+        return { id: 'stone_wall', name: 'STONE WALL', tier: 2, manaCost: 25, color: '#8d6e63', desc: 'Raises a temporary earth wall that stops hostile movement and projectiles.' };
+      }
     }
 
     // 3. Single Rune Base Spells
@@ -116,14 +157,82 @@ export class SpellSystem {
         return { id: 'stone_spikes', name: 'STONE SPIKES', tier: 1, color: '#795548', desc: 'Erupts jagged stone spikes from the ground.' };
       case 'aqua':
         return { id: 'frost_nova', name: 'FROST NOVA', tier: 1, color: '#00e5ff', desc: 'Freezes surrounding foes solid.' };
+      case 'bestia':
+        return { id: 'summon_lesser_beast', name: 'BEAST FAMILIAR', tier: 1, manaCost: 18, color: '#b388ff', desc: 'Summons a short-lived hunter familiar.' };
+      case 'construct':
+        return { id: 'construct_bulwark', name: 'CONSTRUCT BULWARK', tier: 1, manaCost: 16, color: '#b0bec5', desc: 'Raises a short physical barrier in front of the caster.' };
+      case 'void':
+        return { id: 'void_bolt', name: 'VOID BOLT', tier: 1, manaCost: 16, color: '#d500f9', desc: 'Fires a void projectile that slows the first target hit.' };
     }
 
     return null;
   }
 
+  qualityForRunes(runes = []) {
+    if (!runes.length) return RUNE_GRADE_PROFILES.B;
+    const profiles = runes.map((rune) => {
+      if (rune?.grade && RUNE_GRADE_PROFILES[rune.grade]) return RUNE_GRADE_PROFILES[rune.grade];
+      const confidence = Number(rune?.quality);
+      if (Number.isFinite(confidence)) {
+        if (confidence >= .92) return RUNE_GRADE_PROFILES.S;
+        if (confidence >= .80) return RUNE_GRADE_PROFILES.A;
+        if (confidence >= .64) return RUNE_GRADE_PROFILES.B;
+      }
+      return RUNE_GRADE_PROFILES.B;
+    });
+    const average = (key) => profiles.reduce((sum, profile) => sum + profile[key], 0) / profiles.length;
+    const power = average('power');
+    const grade = gradeForQuality(power);
+    return Object.freeze({ grade, power, area: average('area'), duration: average('duration'), particles: average('particles') });
+  }
+
+  normalizeQuality(quality) {
+    if (!quality) return RUNE_GRADE_PROFILES.B;
+    if (typeof quality === 'string') return RUNE_GRADE_PROFILES[quality] ?? RUNE_GRADE_PROFILES.B;
+    return quality;
+  }
+
+  addSpell(spell, quality) {
+    spell.quality = this.normalizeQuality(quality);
+    // These cover projectile collision, radial coverage, path width and the
+    // persistence of fields.  Individual damage ticks below read quality.power.
+    if (typeof spell.radius === 'number') spell.radius *= spell.quality.area;
+    if (typeof spell.maxRadius === 'number') spell.maxRadius *= spell.quality.area;
+    if (typeof spell.width === 'number') spell.width *= spell.quality.area;
+    if (typeof spell.damage === 'number') spell.damage *= spell.quality.power;
+    if (typeof spell.life === 'number') spell.life *= spell.quality.duration;
+    if (typeof spell.craterLife === 'number') spell.craterLife *= spell.quality.duration;
+    this.activeSpells.push(spell);
+    return spell;
+  }
+
+  getSummons(team = null) {
+    return this.activeSummons.filter((summon) => !summon.isDead && (team == null || summon.team === team));
+  }
+
+  clearRuntime() {
+    this.activeSpells = [];
+    this.activeSummons = [];
+  }
+
+  summon(caster, definition, gameWorld, quality) {
+    const existing = this.activeSummons.find((summon) => summon.team === caster.team && summon.definition.role === definition.role);
+    if (existing) existing.isDead = true;
+    const summon = new SummonedCreature(caster.x + caster.facing * 34, caster.z, caster.team, caster.surfaceHeight ?? 0, definition, quality, gameWorld.sprites);
+    // A ground summon inherits the caster's local platform height, then uses
+    // the same surface solver as a Wizard. If it was created at a ledge it
+    // visibly drops rather than retaining a Castle-battlement height forever.
+    if (!summon.isFlying) gameWorld.battlefield.resolveEntityCollision(summon);
+    this.activeSummons.push(summon);
+    combat.spawnShockwave(summon.x, summon.y - 20, 42 * quality.area, definition.color);
+    combat.spawnElementalParticles(summon.x, summon.y - 25, definition.particleElement ?? (definition.id === 'siege_golem' ? 'terra' : 'aqua'), Math.round(18 * quality.particles));
+    return summon;
+  }
+
   // Cast the resolved spell into the game world
-  cast(caster, spellDef, gameWorld) {
+  cast(caster, spellDef, gameWorld, quality = null) {
     if (!spellDef) return;
+    const castQuality = this.normalizeQuality(quality);
 
     audio.playSpell(spellDef.id);
     combat.shakeCamera(spellDef.tier * 4 + 3, 0.3);
@@ -135,101 +244,159 @@ export class SpellSystem {
 
     switch (spellDef.id) {
       case 'fireball': {
-        this.activeSpells.push(new FireballSpell(startX, startZ, facing, caster.team, startHeight));
+        this.addSpell(new FireballSpell(startX, startZ, facing, caster.team, startHeight), castQuality);
         break;
       }
 
       case 'gale_blast': {
-        this.activeSpells.push(new GaleBlastSpell(startX, startZ, facing, caster.team, startHeight));
+        this.addSpell(new GaleBlastSpell(startX, startZ, facing, caster.team, startHeight), castQuality);
         break;
       }
 
       case 'chain_lightning': {
-        this.activeSpells.push(new ChainLightningSpell(startX, startZ, facing, caster.team, gameWorld, startHeight));
+        this.addSpell(new ChainLightningSpell(startX, startZ, facing, caster.team, gameWorld, startHeight, castQuality), castQuality);
         break;
       }
 
       case 'stone_spikes': {
-        this.activeSpells.push(new StoneSpikesSpell(startX, startZ, facing, caster.team));
+        this.addSpell(new StoneSpikesSpell(startX, startZ, facing, caster.team), castQuality);
         break;
       }
 
       case 'frost_nova': {
-        this.activeSpells.push(new FrostNovaSpell(caster.x, startZ, caster.team));
+        this.addSpell(new FrostNovaSpell(caster.x, startZ, caster.team), castQuality);
         break;
       }
 
       case 'firestorm': {
         // High-value combo: fire tornado
-        this.activeSpells.push(new FirestormSpell(startX, startZ, facing, caster.team));
+        this.addSpell(new FirestormSpell(startX, startZ, facing, caster.team), castQuality);
         break;
       }
 
       case 'meteor_cataclysm': {
         // High-value combo: blazing meteor
         const targetX = caster.x + facing * 240;
-        this.activeSpells.push(new MeteorSpell(targetX, startZ, caster.team));
+        this.addSpell(new MeteorSpell(targetX, startZ, caster.team), castQuality);
         break;
       }
 
       case 'tempest_blitz': {
         // High-value combo: lightning dash
-        this.activeSpells.push(new TempestBlitzSpell(caster, gameWorld));
+        this.addSpell(new TempestBlitzSpell(caster, gameWorld, castQuality), castQuality);
         break;
       }
 
       case 'magma_fissure': {
-        this.activeSpells.push(new MagmaFissureSpell(startX, startZ, facing, caster.team));
+        this.addSpell(new MagmaFissureSpell(startX, startZ, facing, caster.team), castQuality);
         break;
       }
 
       case 'sandstorm_bastion': {
-        this.activeSpells.push(new SandstormBastionSpell(caster));
+        this.addSpell(new SandstormBastionSpell(caster), castQuality);
         break;
       }
 
       case 'blizzard_surge': {
-        this.activeSpells.push(new BlizzardSurgeSpell(startX, startZ, facing, caster.team));
+        this.addSpell(new BlizzardSurgeSpell(startX, startZ, facing, caster.team), castQuality);
         break;
       }
 
       case 'aura_shock': {
-        this.castAuraShock(caster, gameWorld);
+        this.castAuraShock(caster, gameWorld, castQuality);
         break;
       }
 
       case 'arcane_aegis': {
-        this.castArcaneShield(caster);
+        this.castArcaneShield(caster, castQuality);
+        break;
+      }
+
+      case 'eidolon_mantle': {
+        this.castEidolonMantle(caster, castQuality);
+        break;
+      }
+
+      case 'stone_wall': {
+        this.castStoneWall(caster, gameWorld, castQuality);
+        break;
+      }
+
+      case 'construct_bulwark': {
+        this.castConstructBulwark(caster, gameWorld, castQuality);
+        break;
+      }
+
+      case 'void_bolt': {
+        this.addSpell(new FireballSpell(startX, startZ, facing, caster.team, startHeight, {
+          element: 'void', damage: 30, radius: 13, speed: 680,
+          coreColor: '#f3e5f5', midColor: '#d500f9', edgeColor: '#4a148c', slowDuration: 1.15, slowFactor: .5
+        }), castQuality);
+        break;
+      }
+
+      case 'summon_lesser_beast': {
+        this.summon(caster, SUMMON_DEFINITIONS.lesser_beast, gameWorld, castQuality);
+        break;
+      }
+
+      case 'summon_spirit_wolf': {
+        this.summon(caster, SUMMON_DEFINITIONS.spirit_wolf, gameWorld, castQuality);
+        break;
+      }
+
+      case 'summon_storm_wolf': {
+        this.summon(caster, SUMMON_DEFINITIONS.storm_wolf, gameWorld, castQuality);
+        break;
+      }
+
+      case 'summon_void_spider': {
+        this.summon(caster, SUMMON_DEFINITIONS.void_spider, gameWorld, castQuality);
+        break;
+      }
+
+      case 'summon_siege_golem': {
+        this.summon(caster, SUMMON_DEFINITIONS.siege_golem, gameWorld, castQuality);
+        break;
+      }
+
+      case 'summon_rune_golem': {
+        this.summon(caster, SUMMON_DEFINITIONS.rune_golem, gameWorld, castQuality);
+        break;
+      }
+
+      case 'dragon_invocation': {
+        this.addSpell(new DragonInvocationSpell(caster, gameWorld.sprites), castQuality);
         break;
       }
 
       case 'apocalyptic_heavensurge': {
         // Grand 3-rune combination
-        this.activeSpells.push(new FirestormSpell(startX, startZ, facing, caster.team));
+        this.addSpell(new FirestormSpell(startX, startZ, facing, caster.team), castQuality);
         const targetX = caster.x + facing * 280;
-        this.activeSpells.push(new MeteorSpell(targetX, startZ, caster.team));
-        this.activeSpells.push(new BlizzardSurgeSpell(startX + facing * 50, startZ, facing, caster.team));
+        this.addSpell(new MeteorSpell(targetX, startZ, caster.team), castQuality);
+        this.addSpell(new BlizzardSurgeSpell(startX + facing * 50, startZ, facing, caster.team), castQuality);
         combat.shakeCamera(16, 0.8);
         break;
       }
 
       case 'tri_elemental_burst': {
-        this.activeSpells.push(new FireballSpell(startX, startZ, facing, caster.team, startHeight));
-        this.activeSpells.push(new FireballSpell(startX, startZ, facing, caster.team, startHeight));
-        this.activeSpells.push(new GaleBlastSpell(startX, startZ, facing, caster.team, startHeight));
-        this.activeSpells.push(new ChainLightningSpell(startX, startZ, facing, caster.team, gameWorld, startHeight));
+        this.addSpell(new FireballSpell(startX, startZ, facing, caster.team, startHeight), castQuality);
+        this.addSpell(new FireballSpell(startX, startZ, facing, caster.team, startHeight), castQuality);
+        this.addSpell(new GaleBlastSpell(startX, startZ, facing, caster.team, startHeight), castQuality);
+        this.addSpell(new ChainLightningSpell(startX, startZ, facing, caster.team, gameWorld, startHeight, castQuality), castQuality);
         break;
       }
     }
   }
 
-  castAuraShock(caster, gameWorld) {
-    const radius = 112;
-    const damage = 22;
+  castAuraShock(caster, gameWorld, quality = RUNE_GRADE_PROFILES.B) {
+    const radius = 112 * quality.area;
+    const damage = 22 * quality.power;
     audio.playSpell('aura_shock');
     combat.shakeCamera(7, 0.18);
     combat.spawnShockwave(caster.x, caster.y - 28, radius, '#b388ff');
-    combat.spawnElementalParticles(caster.x, caster.y - 28, 'fulgur', 24);
+    combat.spawnElementalParticles(caster.x, caster.y - 28, 'fulgur', Math.round(24 * quality.particles));
 
     let hitAny = false;
     for (const target of gameWorld.getHostileTargets(caster.team)) {
@@ -239,7 +406,7 @@ export class SpellSystem {
       const distance = Math.hypot(dx, dz);
       if (distance > radius || !withinHeight(target, caster.worldHeight, 88)) continue;
       const safeDistance = Math.max(1, distance);
-      const push = 340 * (1 - distance / radius * 0.35);
+      const push = 340 * quality.power * (1 - distance / radius * 0.35);
       target.takeDamage(damage, (dx / safeDistance) * push, 90, 0.18, false, 'spell');
       // `vz` is independent ground-plane depth momentum; Aura Shock is a
       // true radial 2.5D push rather than a horizontal-only hit.
@@ -251,12 +418,53 @@ export class SpellSystem {
     return hitAny;
   }
 
-  castArcaneShield(caster) {
-    caster.arcaneShield = 90;
-    caster.arcaneShieldTimer = 5;
+  castArcaneShield(caster, quality = RUNE_GRADE_PROFILES.B) {
+    caster.arcaneShield = Math.round(90 * quality.power);
+    caster.arcaneShieldTimer = 5 * quality.duration;
     audio.playSpell('arcane_shield');
     combat.spawnShockwave(caster.x, caster.y - 32, 52, '#b388ff');
-    combat.spawnElementalParticles(caster.x, caster.y - 30, 'fulgur', 18);
+    combat.spawnElementalParticles(caster.x, caster.y - 30, 'fulgur', Math.round(18 * quality.particles));
+  }
+
+  castEidolonMantle(caster, quality = RUNE_GRADE_PROFILES.B) {
+    // This is an original GRIMGE transformation, not a character skin. It
+    // intentionally layers with neither a permanent summon nor a new button:
+    // runes decide when a short, high-pressure guardian form is available.
+    caster.eidolonTimer = 10 * quality.duration;
+    caster.eidolonPower = quality.power;
+    caster.eidolonArmor = Math.min(.48, .30 + (quality.power - 1) * .35);
+    combat.spawnShockwave(caster.x, caster.y - 38, 78 * quality.area, '#b668ff');
+    combat.spawnElementalParticles(caster.x, caster.y - 38, 'void', Math.round(34 * quality.particles));
+    audio.playSpell('eidolon_mantle');
+  }
+
+  castStoneWall(caster, gameWorld, quality = RUNE_GRADE_PROFILES.B) {
+    // One wall per Wizard keeps the arena readable and prevents a deck cycle
+    // from turning the brawler plane into a permanent maze.
+    for (const spell of this.activeSpells) {
+      if (spell.isStoneWall && spell.team === caster.team) spell.isFinished = true;
+    }
+    const offset = caster.facing * 78;
+    const wall = this.addSpell(new StoneWallSpell(caster.x + offset, caster.z, caster.team, caster.surfaceHeight ?? 0), quality);
+    audio.playSpell('stone_spikes');
+    combat.shakeCamera(5, 0.2);
+    combat.spawnShockwave(wall.x, wall.y, 48 * quality.area, '#8d6e63');
+    combat.spawnElementalParticles(wall.x, wall.y, 'terra', Math.round(18 * quality.particles));
+    return wall;
+  }
+
+  castConstructBulwark(caster, gameWorld, quality = RUNE_GRADE_PROFILES.B) {
+    for (const spell of this.activeSpells) {
+      if (spell.isStoneWall && spell.team === caster.team) spell.isFinished = true;
+    }
+    const offset = caster.facing * 64;
+    const wall = this.addSpell(new StoneWallSpell(caster.x + offset, caster.z, caster.team, caster.surfaceHeight ?? 0, {
+      halfX: 12, halfZ: .18, wallHeight: 66, life: 2.25, color: '#90a4ae'
+    }), quality);
+    audio.playSpell('stone_spikes');
+    combat.spawnShockwave(wall.x, wall.y, 38 * quality.area, '#b0bec5');
+    combat.spawnElementalParticles(wall.x, wall.y, 'construct', Math.round(12 * quality.particles));
+    return wall;
   }
 
   update(dt, gameWorld) {
@@ -267,12 +475,18 @@ export class SpellSystem {
         this.activeSpells.splice(i, 1);
       }
     }
+    for (let i = this.activeSummons.length - 1; i >= 0; i--) {
+      const summon = this.activeSummons[i];
+      summon.update(dt, gameWorld);
+      if (summon.isDead) this.activeSummons.splice(i, 1);
+    }
   }
 
   render(ctx) {
     for (const spell of this.activeSpells) {
       spell.render(ctx);
     }
+    for (const summon of this.activeSummons) summon.render(ctx);
   }
 }
 
@@ -281,33 +495,49 @@ export class SpellSystem {
 // ----------------------------------------------------
 
 class FireballSpell {
-  constructor(x, z, facing, team, height = 0) {
+  // Fireball is also the compact projectile base for element variants.  The
+  // original IGNIS call site passes no options, so its old behaviour remains
+  // unchanged while VOID can supply its own visuals and on-hit control.
+  constructor(x, z, facing, team, height = 0, options = {}) {
     this.x = x;
     this.z = z;
     this.height = height;
-    this.vx = facing * 620;
+    this.vx = facing * (options.speed ?? 620);
     this.vy = 0;
     this.facing = facing;
     this.team = team;
-    this.radius = 16;
+    this.radius = options.radius ?? 16;
     this.life = 1.4;
     this.isFinished = false;
-    this.damage = 65;
+    this.damage = options.damage ?? 65;
+    this.element = options.element ?? 'ignis';
+    this.coreColor = options.coreColor ?? '#ffffff';
+    this.midColor = options.midColor ?? '#ff9100';
+    this.edgeColor = options.edgeColor ?? '#ff3d00';
+    this.slowDuration = options.slowDuration ?? 0;
+    this.slowFactor = options.slowFactor ?? 1;
   }
   get y() { return groundYForDepth(this.z) - this.height - 30; }
 
   update(dt, gameWorld) {
+    const previousX = this.x;
     this.x += this.vx * dt;
     this.life -= dt;
 
-    // Emit fire sparks
-    combat.spawnElementalParticles(this.x, this.y, 'ignis', 3);
+    combat.spawnElementalParticles(this.x, this.y, this.element, 3);
 
     // Collision check against hostile entities
     const targets = gameWorld.getHostileTargets(this.team);
     for (const t of targets) {
       const dist = groundDistance(this, t);
-      if (dist < this.radius + (t.radius || t.hitRadiusX || 20) && withinHeight(t, this.height)) {
+      // Projectiles must not tunnel through a fighter after a dropped frame.
+      // The ground plane's z scale is preserved while x is tested across the
+      // travelled segment rather than only at the final frame position.
+      const segmentX = Math.max(Math.min(previousX, this.x), Math.min(Math.max(previousX, this.x), t.x));
+      const sweptDist = Math.hypot(segmentX - t.x, (this.z - (t.z ?? this.z)) * 150);
+      const hitRadius = this.radius + (t.radius || t.hitRadiusX || 20);
+      if (Math.min(dist, sweptDist) < hitRadius && withinHeight(t, this.height)) {
+        this.x = segmentX;
         // A freshly raised physical shield can reverse a travelling Fireball
         // before it detonates.  Area spells are still blockable, but only a
         // discrete projectile gets this literal return-to-sender behaviour.
@@ -338,8 +568,8 @@ class FireballSpell {
     this.isFinished = true;
     audio.playImpact(true);
     combat.shakeCamera(6, 0.2);
-    combat.spawnShockwave(this.x, this.y, 65, '#ff5722');
-    combat.spawnHitSparks(this.x, this.y, this.facing, '#ff9100', 16);
+    combat.spawnShockwave(this.x, this.y, 65, this.midColor);
+    combat.spawnHitSparks(this.x, this.y, this.facing, this.midColor, 16);
 
     // AoE Damage
     const targets = gameWorld.getHostileTargets(this.team);
@@ -348,9 +578,10 @@ class FireballSpell {
       // Structures are wider than fighters. A Fireball that legitimately
       // collides with the edge of a Tower must damage that Tower rather than
       // exploding just outside an unrelated smaller AoE radius.
-      const impactRadius = 80 + (t.isObjective ? (t.hitRadiusX ?? 0) * 0.5 : 0);
+      const impactRadius = 80 * this.quality.area + (t.isObjective ? (t.hitRadiusX ?? 0) * 0.5 : 0);
       if (dist < impactRadius && withinHeight(t, this.height, 120)) {
         t.takeDamage(this.damage, this.facing * 380, 220, 0.4, false, 'spell');
+        if (this.slowDuration > 0) t.slow?.(this.slowDuration * this.quality.duration, this.slowFactor);
       }
     }
   }
@@ -359,10 +590,10 @@ class FireballSpell {
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     const grad = ctx.createRadialGradient(this.x, this.y, 2, this.x, this.y, this.radius * 1.6);
-    grad.addColorStop(0, '#ffffff');
-    grad.addColorStop(0.3, '#ff9100');
-    grad.addColorStop(0.8, '#ff3d00');
-    grad.addColorStop(1, 'rgba(255, 61, 0, 0)');
+    grad.addColorStop(0, this.coreColor);
+    grad.addColorStop(0.3, this.midColor);
+    grad.addColorStop(0.8, this.edgeColor);
+    grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
     ctx.fillStyle = grad;
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.radius * 1.6, 0, Math.PI * 2);
@@ -398,7 +629,7 @@ class GaleBlastSpell {
       if (!this.hitEntities.has(t)) {
         if (Math.abs(t.x - this.x) < 45 && Math.abs(t.z - this.z) < 0.2 && Math.abs((t.worldHeight ?? 0) - this.heightAboveSurface) < 105) {
           this.hitEntities.add(t);
-          t.takeDamage(35, this.facing * 600, 280, 0.6, false, 'spell');
+          t.takeDamage(35 * this.quality.power, this.facing * 600, 280, 0.6, false, 'spell');
           combat.spawnHitSparks(t.x, t.y - 20, this.facing, '#4deeea', 10);
         }
       }
@@ -420,7 +651,7 @@ class GaleBlastSpell {
 }
 
 class ChainLightningSpell {
-  constructor(x, z, facing, team, gameWorld, height = 0) {
+  constructor(x, z, facing, team, gameWorld, height = 0, quality = RUNE_GRADE_PROFILES.B) {
     this.isFinished = false;
     this.life = 0.35;
     this.segments = [];
@@ -450,7 +681,7 @@ class ChainLightningSpell {
       if (nearest) {
         hitList.push(nearest);
         this.segments.push({ x1: currX, y1: currY, x2: nearest.x, y2: nearest.y - 25 });
-        nearest.takeDamage(48, facing * 220, 120, 0.5, false, 'spell');
+        nearest.takeDamage(48 * quality.power, facing * 220, 120, 0.5, false, 'spell');
         combat.spawnHitSparks(nearest.x, nearest.y - 25, facing, '#ffff00', 12);
         currX = nearest.x;
         currZ = nearest.z;
@@ -540,9 +771,9 @@ class StoneSpikesSpell {
           sp.hitDone = true;
           const targets = gameWorld.getHostileTargets(this.team);
           for (const t of targets) {
-            if (Math.abs(t.x - sp.x) < 32 && Math.abs(t.z - sp.z) < 0.16) {
-              t.takeDamage(42, this.facing * 120, 420, 0.6, false, 'spell'); // Knock straight up
-              combat.spawnElementalParticles(sp.x, sp.y, 'terra', 8);
+            if (Math.abs(t.x - sp.x) < 32 * this.quality.area && Math.abs(t.z - sp.z) < 0.16 * this.quality.area) {
+              t.takeDamage(42 * this.quality.power, this.facing * 120, 420, 0.6, false, 'spell'); // Knock straight up
+              combat.spawnElementalParticles(sp.x, sp.y, 'terra', Math.round(8 * this.quality.particles));
             }
           }
         }
@@ -595,9 +826,9 @@ class FrostNovaSpell {
         const d = groundDistance(this, t);
         if (d < this.radius) {
           this.hitEntities.add(t);
-          t.takeDamage(30, 0, 80, 0.4, false, 'spell');
-          t.freeze?.(2.5); // Structures take damage but cannot be frozen.
-          combat.spawnElementalParticles(t.x, t.y - 20, 'aqua', 12);
+          t.takeDamage(30 * this.quality.power, 0, 80, 0.4, false, 'spell');
+          t.freeze?.(2.5 * this.quality.duration); // Structures take damage but cannot be frozen.
+          combat.spawnElementalParticles(t.x, t.y - 20, 'aqua', Math.round(12 * this.quality.particles));
         }
       }
     }
@@ -652,15 +883,15 @@ class FirestormSpell {
       const dz = this.z - t.z;
       const dist = Math.hypot(dx, dz * 150);
 
-      if (dist < 180) {
+      if (dist < 180 * this.quality.area) {
         // Pull inwards into the tornado eye!
         const safeDist = Math.max(1, dist);
-        t.vx += (dx / safeDist) * 350 * dt;
-        t.vElevation += 160 * dt; // Lift up into the air!
+        t.vx += (dx / safeDist) * 350 * this.quality.power * dt;
+        t.vElevation += 160 * this.quality.power * dt; // Lift up into the air!
 
         // Continuous burn ticks
-        if (this.tickTimer >= 0.15 && dist < 100) {
-          t.takeDamage(12, this.facing * 40, 120, 0.2, false, 'spell');
+        if (this.tickTimer >= 0.15 && dist < 100 * this.quality.area) {
+          t.takeDamage(12 * this.quality.power, this.facing * 40, 120, 0.2, false, 'spell');
           combat.spawnHitSparks(t.x, t.y - 20, this.facing, '#ff9100', 4);
         }
       }
@@ -738,8 +969,8 @@ class MeteorSpell {
         const targets = gameWorld.getHostileTargets(this.team);
         for (const t of targets) {
           const dist = Math.hypot(t.x - this.targetX, (t.z - this.targetZ) * 150);
-          if (dist < 150) {
-            t.takeDamage(120, (t.x > this.targetX ? 1 : -1) * 450, 350, 0.7, false, 'spell');
+          if (dist < 150 * this.quality.area) {
+            t.takeDamage(120 * this.quality.power, (t.x > this.targetX ? 1 : -1) * 450, 350, 0.7, false, 'spell');
           }
         }
       }
@@ -775,7 +1006,7 @@ class MeteorSpell {
 }
 
 class TempestBlitzSpell {
-  constructor(caster, gameWorld) {
+  constructor(caster, gameWorld, quality = RUNE_GRADE_PROFILES.B) {
     this.isFinished = false;
     this.life = 0.3;
     const facing = caster.facing;
@@ -799,7 +1030,7 @@ class TempestBlitzSpell {
 
     for (const t of targets) {
       if (t.x >= minX && t.x <= maxX && Math.abs(t.z - caster.z) < 0.2) {
-        t.takeDamage(75, facing * 350, 180, 0.6, false, 'spell');
+        t.takeDamage(75 * quality.power, facing * 350, 180, 0.6, false, 'spell');
         combat.spawnHitSparks(t.x, t.y - 25, facing, '#00e5ff', 16);
       }
     }
@@ -852,8 +1083,8 @@ class MagmaFissureSpell {
       this.tick = 0;
       const targets = gameWorld.getHostileTargets(this.team);
       for (const t of targets) {
-        if (Math.abs(t.x - this.x) < 60 && Math.abs(t.z - this.z) < 0.18) {
-          t.takeDamage(18, 0, 80, 0.2, false, 'spell');
+        if (Math.abs(t.x - this.x) < 60 * this.quality.area && Math.abs(t.z - this.z) < 0.18 * this.quality.area) {
+          t.takeDamage(18 * this.quality.power, 0, 80, 0.2, false, 'spell');
         }
       }
     }
@@ -908,7 +1139,7 @@ class SandstormBastionSpell {
       for (const target of targets) {
         const dx = target.x - this.x;
         if (Math.hypot(dx, (target.z - this.z) * 150) < this.radius) {
-          target.takeDamage(14, Math.sign(dx || 1) * 240, 80, 0.18, false, 'spell');
+          target.takeDamage(14 * this.quality.power, Math.sign(dx || 1) * 240, 80, 0.18, false, 'spell');
         }
       }
     }
@@ -953,9 +1184,9 @@ class BlizzardSurgeSpell {
 
     const targets = gameWorld.getHostileTargets(this.team);
     for (const t of targets) {
-      if (Math.abs(t.x - this.x) < 80 && Math.abs(t.z - this.z) < 0.22) {
-        if (this.tickTimer <= 0) t.takeDamage(8, 0, 0, 0.1, false, 'spell');
-        t.slow?.(1.5, 0.35); // Structures take damage but cannot be slowed.
+      if (Math.abs(t.x - this.x) < 80 * this.quality.area && Math.abs(t.z - this.z) < 0.22 * this.quality.area) {
+        if (this.tickTimer <= 0) t.takeDamage(8 * this.quality.power, 0, 0, 0.1, false, 'spell');
+        t.slow?.(1.5 * this.quality.duration, 0.35); // Structures take damage but cannot be slowed.
       }
     }
     if (this.tickTimer <= 0) this.tickTimer = 0.25;
@@ -972,6 +1203,225 @@ class BlizzardSurgeSpell {
     ctx.arc(this.x, this.y, 50, 0, Math.PI * 2);
     ctx.stroke();
     ctx.restore();
+  }
+}
+
+// A compact authored barrier rather than a generic physics framework.  It is
+// deliberately wide across depth and narrow across x so it reads as a wall
+// laid across the 2.5D battlefield.
+class StoneWallSpell {
+  constructor(x, z, team, surfaceHeight = 0, options = {}) {
+    this.x = x;
+    this.z = z;
+    this.team = team;
+    this.surfaceHeight = surfaceHeight;
+    this.halfX = options.halfX ?? 16;
+    this.halfZ = options.halfZ ?? 0.24;
+    this.wallHeight = options.wallHeight ?? 88;
+    this.life = options.life ?? 3.8;
+    this.color = options.color ?? '#4e342e';
+    this.isStoneWall = true;
+    this.blocksMovement = true;
+    this.blocksProjectiles = true;
+    this.isFinished = false;
+  }
+  get y() { return groundYForDepth(this.z) - this.surfaceHeight; }
+
+  blocksProjectile(projectile) {
+    if (projectile.team === this.team || projectile.life <= 0) return false;
+    const sameX = Math.abs(projectile.x - this.x) <= this.halfX + (projectile.radius ?? 4);
+    const sameZ = Math.abs(projectile.z - this.z) <= this.halfZ + .03;
+    return sameX && sameZ && (projectile.height ?? 0) <= this.surfaceHeight + this.wallHeight + 18;
+  }
+
+  update(dt, gameWorld) {
+    this.life -= dt;
+    for (const projectile of gameWorld.projectiles) {
+      if (!this.blocksProjectile(projectile)) continue;
+      projectile.life = 0;
+      combat.spawnHitSparks(projectile.x, groundYForDepth(projectile.z) - 20, projectile.facing ?? 1, '#c7b299', 8);
+      combat.spawnShockwave(projectile.x, groundYForDepth(projectile.z) - 20, 18, '#8d6e63');
+    }
+    if (this.life <= 0) {
+      this.isFinished = true;
+      combat.spawnDust(this.x, this.y, 10);
+    }
+  }
+
+  render(ctx) {
+    const fade = Math.min(1, this.life / .45);
+    ctx.save();
+    ctx.globalAlpha = Math.max(.18, fade);
+    ctx.fillStyle = this.color;
+    ctx.strokeStyle = '#bcaaa4';
+    ctx.lineWidth = 2;
+    const depthPixels = this.halfZ * 150;
+    ctx.beginPath();
+    ctx.moveTo(this.x - this.halfX, this.y + depthPixels * .18);
+    ctx.lineTo(this.x - this.halfX + 5, this.y - this.wallHeight);
+    ctx.lineTo(this.x + this.halfX - 5, this.y - this.wallHeight);
+    ctx.lineTo(this.x + this.halfX, this.y + depthPixels * .18);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = 'rgba(215, 204, 200, .65)';
+    ctx.beginPath(); ctx.moveTo(this.x - this.halfX + 6, this.y - this.wallHeight * .55); ctx.lineTo(this.x + this.halfX - 6, this.y - this.wallHeight * .55); ctx.stroke();
+    ctx.restore();
+  }
+}
+
+class SummonedCreature extends GroundEntity {
+  constructor(x, z, team, surfaceHeight, definition, quality, spriteManager = null) {
+    super(x, z);
+    this.team = team; this.surfaceHeight = surfaceHeight; this.grounded = true;
+    this.definition = definition; this.quality = quality;
+    this.maxHp = Math.round(definition.hp * quality.power); this.hp = this.maxHp;
+    this.duration = definition.duration * quality.duration;
+    this.speed = definition.speed; this.attackRange = definition.attackRange * quality.area;
+    this.damage = definition.damage * quality.power; this.attackCooldown = definition.attackCooldown;
+    this.attackTimer = .25; this.radius = definition.radius; this.width = definition.radius * 2;
+    this.isMobileCombatant = true; this.isSummon = true; this.isDead = false;
+    this.isFlying = definition.isFlying === true;
+    this.rider = null;
+    this.target = null;
+    this.animTime = 0; this.state = 'idle'; this.facing = team === 'blue' ? 1 : -1;
+    this.spriteManager = spriteManager;
+  }
+  chooseTarget(gameWorld) {
+    const candidates = gameWorld.getHostileTargets(this.team).filter((target) => !target.isDead && !target.isDestroyed);
+    if (!candidates.length) return null;
+    const sortNearest = (list) => list.sort((a, b) => groundDistance(this, a) - groundDistance(this, b));
+    const mobile = candidates.filter((target) => target.isMobileCombatant);
+    const structures = candidates.filter((target) => target.isObjective);
+    if (this.definition.role === 'hunter') {
+      // The Wolf is an assassin: it deliberately looks past the minion line
+      // for a hostile Wizard, then falls back to the nearest mobile target.
+      const wizard = sortNearest(mobile.filter((target) => target.heroKey));
+      return wizard[0] ?? sortNearest(mobile)[0] ?? sortNearest(structures)[0];
+    }
+    if (this.definition.role === 'vanguard') {
+      // The Golem holds the front line when it encounters a defender, but
+      // continues its siege push when the path is clear.
+      const nearbyDefender = sortNearest(mobile)[0];
+      if (nearbyDefender && groundDistance(this, nearbyDefender) < 118) return nearbyDefender;
+      const structure = sortNearest(structures)[0];
+      if (structure) return structure;
+    }
+    if (this.definition.role === 'siege') {
+      const structure = candidates.filter((target) => target.isObjective).sort((a, b) => groundDistance(this, a) - groundDistance(this, b))[0];
+      if (structure) return structure;
+    }
+    return candidates.sort((a, b) => groundDistance(this, a) - groundDistance(this, b))[0];
+  }
+
+  update(dt, gameWorld) {
+    this.duration -= dt; this.attackTimer -= dt; this.animTime += dt;
+    if (this.duration <= 0) {
+      this.rider?.dismount?.();
+      this.rider = null;
+      this.isDead = true; combat.spawnShockwave(this.x, this.y - 18, 32, this.definition.color); return;
+    }
+    // A rider owns this creature's locomotion. It remains a normal ground
+    // entity (including ramps and falls) but pauses autonomous chasing and
+    // attacks so the mount does not fight against the player's input.
+    if (this.rider?.isAlive) {
+      this.target = null;
+      this.vx = 0; this.vz = 0;
+      this.state = this.rider.state === 'run' ? 'run' : 'idle';
+      return;
+    }
+    this.rider = null;
+    if (!this.isFlying) this.integrateElevation(dt, 1350);
+    if (!this.target || this.target.isDead || this.target.isDestroyed || this.target.team === this.team) this.target = this.chooseTarget(gameWorld);
+    if (!this.target) {
+      if (!this.isFlying) gameWorld.battlefield.resolveEntityCollision(this);
+      return;
+    }
+    const distance = groundDistance(this, this.target);
+    const previousX = this.x; const previousZ = this.z;
+    if (distance <= this.attackRange + (this.target.radius ?? this.target.hitRadiusX ?? 18) * .25) {
+      this.vx = this.vz = 0;
+      if (this.attackTimer <= 0) {
+        this.attackTimer = this.attackCooldown;
+        const direction = Math.sign(this.target.x - this.x) || 1;
+        this.facing = direction; this.state = 'attack';
+        this.target.takeDamage(this.damage, direction * (this.definition.role === 'siege' ? 250 : 180), 80, .22, false, 'summon');
+        if (this.definition.role === 'control') {
+          this.target.slow?.(this.definition.slowDuration * this.quality.duration, this.definition.slowFactor);
+          combat.spawnShockwave(this.target.x, this.target.y - 18, 24, this.definition.color);
+        }
+        combat.spawnSlashArc(this.x + direction * this.radius, this.y - 18, direction, { radius: this.radius + 12, color: this.definition.color, glow: this.definition.color, width: 4 });
+        combat.spawnHitSparks(this.target.x, this.target.y - 20, direction, this.definition.color, 8);
+      }
+    } else {
+      const dx = this.target.x - this.x; const dz = (this.target.z - this.z) * 150;
+      const length = Math.max(1, Math.hypot(dx, dz));
+      this.facing = Math.sign(dx) || this.facing; this.state = 'run';
+      this.vx = dx / length * this.speed;
+      this.vz = dz / length * this.speed / 150;
+      this.x += this.vx * dt; this.z += this.vz * dt;
+      gameWorld.resolveSpellObstacles(this, previousX, previousZ);
+    }
+    if (!this.isFlying) gameWorld.battlefield.resolveEntityCollision(this);
+  }
+
+  takeDamage(amount) {
+    this.hp = Math.max(0, this.hp - amount);
+    if (this.hp <= 0) {
+      this.rider?.dismount?.();
+      this.rider = null;
+      this.isDead = true;
+    }
+  }
+
+  render(ctx) {
+    const color = this.definition.color;
+    const spriteKey = this.definition.spriteKey ?? this.definition.id;
+    if (this.spriteManager?.renderSummon(ctx, spriteKey, this.x, this.y, { facing: this.facing, state: this.state, animTime: this.animTime, visualHeight: spriteKey === 'siege_golem' ? 84 : 58 })) {
+      ctx.save(); ctx.fillStyle = 'rgba(0,0,0,.75)'; ctx.fillRect(this.x - 17, this.y - 64, 34, 4); ctx.fillStyle = color; ctx.fillRect(this.x - 17, this.y - 64, 34 * (this.hp / this.maxHp), 4); ctx.restore();
+      return;
+    }
+    ctx.save(); ctx.translate(this.x, this.y - 20);
+    ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = `${color}55`; ctx.beginPath(); ctx.arc(0, 0, this.radius + 9, 0, Math.PI * 2); ctx.fill();
+    ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = color; ctx.strokeStyle = '#e8f7ff'; ctx.lineWidth = 2;
+    if (this.definition.id === 'spirit_wolf') {
+      ctx.beginPath(); ctx.moveTo(-this.radius, 8); ctx.lineTo(-4, -this.radius); ctx.lineTo(this.radius, -4); ctx.lineTo(this.radius - 3, 11); ctx.lineTo(-this.radius, 11); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#fff'; ctx.fillRect(4, -4, 4, 3);
+    } else {
+      ctx.fillStyle = '#5d4037'; ctx.fillRect(-this.radius, -this.radius, this.radius * 2, this.radius * 2 + 12); ctx.strokeRect(-this.radius, -this.radius, this.radius * 2, this.radius * 2 + 12);
+      ctx.fillStyle = color; ctx.beginPath(); ctx.arc(0, -this.radius * .25, 7, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.fillStyle = 'rgba(0,0,0,.75)'; ctx.fillRect(-this.radius, this.radius + 16, this.radius * 2, 4); ctx.fillStyle = color; ctx.fillRect(-this.radius, this.radius + 16, this.radius * 2 * (this.hp / this.maxHp), 4);
+    ctx.restore();
+  }
+}
+
+class DragonInvocationSpell {
+  constructor(caster, spriteManager = null) {
+    this.team = caster.team; this.x = caster.x + caster.facing * 175; this.z = caster.z;
+    this.y = groundYForDepth(this.z) - 180; this.life = 1.45; this.didBreathe = false; this.isFinished = false;
+    this.facing = caster.facing; this.spriteManager = spriteManager;
+  }
+  update(dt, gameWorld) {
+    this.life -= dt;
+    if (!this.didBreathe && this.life <= .78) {
+      this.didBreathe = true;
+      const radius = 135 * this.quality.area;
+      combat.shakeCamera(16, .55); combat.spawnShockwave(this.x, groundYForDepth(this.z), radius, '#ff5722');
+      for (const target of gameWorld.getHostileTargets(this.team)) {
+        if (groundDistance(this, target) <= radius && Math.abs((target.worldHeight ?? 0)) < 180) target.takeDamage(110 * this.quality.power, Math.sign(target.x - this.x || 1) * 430, 260, .65, true, 'spell');
+      }
+    }
+    if (this.life <= 0) this.isFinished = true;
+  }
+  render(ctx) {
+    if (this.spriteManager?.renderSummon(ctx, 'dragon', this.x, this.y + 46, { facing: this.facing, visualHeight: 170, alpha: Math.min(1, this.life * 3) })) {
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = '#ffe082'; ctx.shadowColor = '#ff5722'; ctx.shadowBlur = 18; ctx.lineWidth = 6;
+      ctx.beginPath(); ctx.moveTo(this.x + this.facing * 35, this.y + 28); ctx.lineTo(this.x + this.facing * 112, groundYForDepth(this.z) - 12); ctx.stroke(); ctx.restore();
+      return;
+    }
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = '#ff7044'; ctx.shadowColor = '#ffd54f'; ctx.shadowBlur = 22;
+    ctx.beginPath(); ctx.ellipse(this.x, this.y, 56, 22, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#ffe082'; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(this.x - 45, this.y + 8); ctx.lineTo(this.x + 92, groundYForDepth(this.z) - 12); ctx.stroke(); ctx.restore();
   }
 }
 

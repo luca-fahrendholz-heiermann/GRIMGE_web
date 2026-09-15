@@ -51,11 +51,41 @@ export class RuneRecognizer {
         glowColor: '#b2ebf2',
         icon: '❄️',
         desc: 'Circular Glyph'
+      },
+      {
+        id: 'bestia',
+        name: 'BESTIA',
+        element: 'Beast',
+        glyph: 'ᛗ',
+        color: '#b388ff',
+        glowColor: '#e1bee7',
+        icon: '🐺',
+        desc: 'Three-Peak Claw / M'
+      },
+      {
+        id: 'construct',
+        name: 'KONSTRUKT',
+        element: 'Construct',
+        glyph: '▥',
+        color: '#b0bec5',
+        glowColor: '#eceff1',
+        icon: '⚙️',
+        desc: 'Tall Pillar / Tower Stroke'
+      },
+      {
+        id: 'void',
+        name: 'VOID',
+        element: 'Void',
+        glyph: '◉',
+        color: '#8e24aa',
+        glowColor: '#ea80fc',
+        icon: '🕳️',
+        desc: 'Open Spiral / Void Eye'
       }
     ];
   }
 
-  recognize(strokes) {
+  recognize(strokes, allowedRuneIds = null) {
     if (!strokes || strokes.length === 0) return null;
 
     const rawPoints = [];
@@ -125,6 +155,19 @@ export class RuneRecognizer {
       }
     }
 
+    // An M/claw travels left-to-right, but reverses vertically several
+    // times. FULGUR is the opposite: it reverses in X.
+    let yReversals = 0;
+    let lastDirY = 0;
+    for (let i = 4; i < points.length; i += 4) {
+      const dy = points[i].y - points[i - 4].y;
+      if (Math.abs(dy) > bbHeight * 0.12) {
+        const dir = Math.sign(dy);
+        if (lastDirY !== 0 && dir !== lastDirY) yReversals++;
+        lastDirY = dir;
+      }
+    }
+
     // 7. Apex point (highest point / minimum Y)
     let minYIdx = 0;
     for (let i = 1; i < points.length; i++) {
@@ -135,11 +178,17 @@ export class RuneRecognizer {
     // Scoring
     const scores = {};
 
+    // The recognizer deliberately has a generous "can identify" band.  A
+    // player should not lose a rune because a finger path is wobbly; the
+    // quality grade carries the precision signal into spell strength instead.
+    // Very short paths and generic scribbles are still rejected above.
     // VENTUS (Horizontal Dash: wide aspect ratio, low height)
     if (aspectRatio >= 2.0 && bbHeight < 75) {
       scores.ventus = 0.95;
     } else if (aspectRatio >= 1.6 && Math.abs(startPt.y - endPt.y) < bbHeight * 0.45) {
       scores.ventus = 0.85;
+    } else if (aspectRatio >= 1.32 && Math.abs(startPt.y - endPt.y) < Math.max(14, bbHeight * 0.78)) {
+      scores.ventus = 0.53;
     } else {
       scores.ventus = 0.1;
     }
@@ -149,15 +198,26 @@ export class RuneRecognizer {
       scores.fulgur = 0.95;
     } else if (xReversals === 1 && !isClosed && aspectRatio > 0.6) {
       scores.fulgur = 0.72;
+    } else if (xReversals >= 1 && !isClosed && aspectRatio > 0.48) {
+      scores.fulgur = 0.55;
     } else {
       scores.fulgur = 0.1;
     }
 
-    // AQUA (Circle: closed, very low radial variance rStd < 0.08, aspect ratio ~ 1)
+    // AQUA: a touch circle is rarely a perfect mathematical loop. Treat a
+    // near-closed, wobbly oval as a valid C-quality rune; accuracy affects
+    // spell strength rather than making the input unusable.
+    const nearClosed = (closureDist / Math.max(bbWidth, bbHeight)) < 0.92;
     if (isClosed && rStd < 0.09 && aspectRatio >= 0.7 && aspectRatio <= 1.45) {
       scores.aqua = 0.96;
     } else if (isClosed && rStd < 0.11 && aspectRatio >= 0.65 && aspectRatio <= 1.55) {
       scores.aqua = 0.82;
+    } else if (isClosed && rStd < 0.16 && aspectRatio >= 0.52 && aspectRatio <= 1.85) {
+      scores.aqua = 0.55;
+    } else if (nearClosed && rStd < 0.25 && aspectRatio >= 0.45 && aspectRatio <= 2.15) {
+      scores.aqua = 0.62;
+    } else if (nearClosed && rStd < 0.34 && aspectRatio >= 0.36 && aspectRatio <= 2.45) {
+      scores.aqua = 0.51;
     } else {
       scores.aqua = 0.1;
     }
@@ -167,8 +227,45 @@ export class RuneRecognizer {
       scores.terra = 0.92;
     } else if ((isClosed || closureDist < bbWidth * 0.6) && rStd >= 0.08 && rStd <= 0.22 && aspectRatio >= 0.65 && aspectRatio <= 1.55) {
       scores.terra = 0.78;
+    } else if ((isClosed || closureDist < Math.max(bbWidth, bbHeight) * 0.72)
+        && rStd >= 0.07 && rStd <= 0.29 && aspectRatio >= 0.52 && aspectRatio <= 1.85) {
+      scores.terra = 0.54;
     } else {
       scores.terra = 0.1;
+    }
+
+    if (!isClosed && xReversals === 0 && yReversals >= 2 && aspectRatio >= 0.58 && aspectRatio <= 2.3) {
+      scores.bestia = 0.94;
+    } else if (!isClosed && xReversals <= 1 && yReversals >= 2 && aspectRatio >= 0.42 && aspectRatio <= 2.7) {
+      scores.bestia = 0.72;
+    } else if (!isClosed && yReversals >= 1 && aspectRatio >= 0.48 && aspectRatio <= 2.8) {
+      scores.bestia = 0.53;
+    } else {
+      scores.bestia = 0.1;
+    }
+
+    // The deck-hand restriction makes a deliberately forgiving pillar a
+    // readable, low-friction KONSTRUKT gesture instead of a precision test.
+    if (!isClosed && aspectRatio <= 0.42 && bbHeight >= 58) {
+      scores.construct = 0.94;
+    } else if (!isClosed && aspectRatio <= 0.62 && bbHeight >= 42) {
+      scores.construct = 0.72;
+    } else if (!isClosed && aspectRatio <= 0.82 && bbHeight >= 34) {
+      scores.construct = 0.53;
+    } else {
+      scores.construct = 0.1;
+    }
+
+    // VOID is an open spiral/eye: unlike FULGUR it changes direction in both
+    // axes repeatedly. Hand-card filtering keeps this lenient under touch.
+    if (!isClosed && xReversals >= 2 && yReversals >= 2 && rStd > 0.16) {
+      scores.void = 0.96;
+    } else if (!isClosed && xReversals >= 1 && yReversals >= 2 && rStd > 0.12) {
+      scores.void = 0.74;
+    } else if (!isClosed && xReversals >= 1 && yReversals >= 1 && rStd > 0.10) {
+      scores.void = 0.53;
+    } else {
+      scores.void = 0.1;
     }
 
     // IGNIS (Triangle / Chevron: apex in middle, higher rStd, apex higher than ends)
@@ -176,14 +273,19 @@ export class RuneRecognizer {
       scores.ignis = isClosed ? 0.95 : 0.90;
     } else if (apexIsMid && !isClosed && (aspectRatio >= 0.6 && aspectRatio <= 2.0)) {
       scores.ignis = 0.80;
+    } else if (apexIsMid && !isClosed && aspectRatio >= 0.42 && aspectRatio <= 2.45
+        && points[minYIdx].y < Math.min(startPt.y, endPt.y) - Math.max(8, bbHeight * 0.18)) {
+      scores.ignis = 0.55;
     } else {
       scores.ignis = 0.1;
     }
 
     let bestRune = null;
-    let bestScore = 0.60;
+    let bestScore = 0.48;
 
+    const allowed = allowedRuneIds ? new Set(allowedRuneIds) : null;
     for (const [id, score] of Object.entries(scores)) {
+      if (allowed && !allowed.has(id)) continue;
       if (score > bestScore) {
         bestScore = score;
         bestRune = this.runes.find(r => r.id === id);
@@ -194,11 +296,19 @@ export class RuneRecognizer {
       return {
         rune: bestRune,
         confidence: bestScore,
+        grade: this.gradeForConfidence(bestScore),
         bounds: { minX, maxX, minY, maxY, width: bbWidth, height: bbHeight }
       };
     }
 
     return null;
+  }
+
+  gradeForConfidence(confidence) {
+    if (confidence >= 0.92) return 'S';
+    if (confidence >= 0.80) return 'A';
+    if (confidence >= 0.64) return 'B';
+    return 'C';
   }
 
   resample(points, n) {

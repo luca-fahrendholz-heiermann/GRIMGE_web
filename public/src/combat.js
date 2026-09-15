@@ -156,6 +156,15 @@ export class CombatEngine {
     } else if (element === 'aqua' || element === 'frost') {
       color = '#80d8ff';
       grav = -30;
+    } else if (element === 'void') {
+      color = '#d500f9';
+      grav = -20;
+    } else if (element === 'bestia') {
+      color = '#b388ff';
+      grav = 30;
+    } else if (element === 'construct') {
+      color = '#b0bec5';
+      grav = 320;
     }
 
     for (let i = 0; i < count; i++) {

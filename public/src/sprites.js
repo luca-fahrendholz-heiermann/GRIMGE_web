@@ -4,13 +4,15 @@ import { ENTITY_VISUALS } from './world.js';
 export class SpriteManager {
   constructor() {
     this.sprites = {};
+    this.summonSprites = {};
     this.loaded = false;
     this.heroDefs = {
       paladin: { name: 'Valerius the Vanguard', file: 'char_paladin.png', weapon: 'Greatsword & Shield', role: 'Balanced / Heavy Impact' },
       berserker: { name: 'Torin the Marauder', file: 'char_berserker.png', weapon: 'Dual Axes', role: 'Aggressive / High Speed' },
       mage: { name: 'Ignis the Archmage', file: 'char_mage.png', weapon: 'Grimoire of Runes', role: 'Spellcaster / High Mana' },
       warlord: { name: 'Aurelius the Sovereign', file: 'char_warlord.png', weapon: 'Runic Broadsword', role: 'Commander / Sweeping Strikes' },
-      fighter: { name: 'Kaen the Unbroken', file: 'char_fighter.png', weapon: 'Bare Fists & Ki', role: 'Martial Artist / Rapid Hits' }
+      fighter: { name: 'Kaen the Unbroken', file: 'char_fighter.png', weapon: 'Bare Fists & Ki', role: 'Martial Artist / Rapid Hits' },
+      darklord: { name: 'The Dark Lord', file: 'char_dark_lord.png', weapon: 'Blood Crown & Blacksteel', role: 'Dark Vanguard / Control' }
     };
     this.shadowCanvas = this.createShadowCanvas();
   }
@@ -21,6 +23,20 @@ export class SpriteManager {
     });
 
     await Promise.all(promises);
+    // The reference asset can be dropped in as char_dark_lord.png.  Until it
+    // is present, retain a visible, code-owned fallback rather than leaving
+    // a selectable hero invisible due to a missing image request.
+    if (!this.sprites.darklord) this.sprites.darklord = this.createDarkLordFallback();
+    await Promise.all([
+      // The imported wolf is one transparent character sprite, not the
+      // earlier reference-sheet layout. Treat it as one source image so no
+      // arbitrary 128px crop window can reveal a moving rectangle.
+      this.loadSummonSprite('spirit_wolf', 'assets/sprites/summon_spirit_wolf.png'),
+      this.loadSummonSprite('storm_wolf', 'assets/sprites/summon_storm_wolf.png'),
+      this.loadSummonSprite('siege_golem', 'assets/sprites/summon_siege_golem.png'),
+      this.loadSummonSprite('dragon', 'assets/sprites/summon_fire_dragon.png'),
+      this.loadSummonSprite('void_spider', 'assets/sprites/summon_void_spider.png')
+    ]);
     this.createMinionSprites();
     this.loaded = true;
     console.log('⚔️ All GRIMGE character sprites processed & cached.');
@@ -160,6 +176,78 @@ export class SpriteManager {
     ctx.ellipse(24, 9, 22, 7, 0, 0, Math.PI * 2);
     ctx.fill();
     return c;
+  }
+
+  // Retained for a future true animated wolf-sheet export. The current wolf
+  // asset is static and deliberately goes through loadSummonSprite instead.
+  loadWolfSheet(src) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        // The supplied sheet is an 8-column greenscreen layout. These rows
+        // intentionally crop above the embedded labels: idle, run and melee.
+        const makeFrames = (y, h, count) => Array.from({ length: count }, (_, i) => {
+          const cell = document.createElement('canvas');
+          cell.width = 128; cell.height = h;
+          const cctx = cell.getContext('2d', { willReadFrequently: true });
+          cctx.imageSmoothingEnabled = false;
+          cctx.drawImage(img, i * 128, y, 128, h, 0, 0, 128, h);
+          return this.chromaKeyAndCrop(cell);
+        });
+        this.summonSprites.spirit_wolf = {
+          idle: makeFrames(0, 148, 7),
+          run: makeFrames(312, 126, 8),
+          attack: makeFrames(586, 126, 6)
+        };
+        console.log('🐺 Spirit Wolf sprite sheet processed & cached.');
+        resolve(true);
+      };
+      img.onerror = () => resolve(false);
+      img.src = src;
+    });
+  }
+
+  // Static summon art follows the exact same source-resolution chroma-key
+  // and feet-anchor pipeline as heroes.  Animated sheets (the wolf) keep
+  // their own frame processing above.
+  loadSummonSprite(key, src) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        this.summonSprites[key] = { static: this.chromaKeyAndCrop(img) };
+        console.log(`✦ ${key} summon sprite processed & cached.`);
+        resolve(true);
+      };
+      img.onerror = () => resolve(false);
+      img.src = src;
+    });
+  }
+
+  createDarkLordFallback() {
+    const c = document.createElement('canvas');
+    c.width = 72; c.height = 104;
+    const ctx = c.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+    // Red crown/spikes, white hair, black armour and a torn crimson mantle:
+    // a compact pixel-art homage to the supplied Dark Lord reference.
+    ctx.fillStyle = '#250f16'; ctx.fillRect(20, 28, 32, 44);
+    ctx.fillStyle = '#4a2529'; ctx.fillRect(16, 36, 40, 26);
+    ctx.fillStyle = '#7d1d2e'; ctx.fillRect(12, 58, 48, 30);
+    ctx.fillStyle = '#b71c1c'; ctx.fillRect(19, 63, 34, 27);
+    ctx.fillStyle = '#2e2023'; ctx.fillRect(22, 72, 12, 26); ctx.fillRect(39, 72, 12, 26);
+    ctx.fillStyle = '#141216'; ctx.fillRect(18, 92, 18, 8); ctx.fillRect(37, 92, 18, 8);
+    ctx.fillStyle = '#c78354'; ctx.fillRect(26, 21, 20, 17);
+    ctx.fillStyle = '#f4edf0'; ctx.fillRect(22, 16, 28, 13); ctx.fillRect(19, 24, 8, 19); ctx.fillRect(45, 24, 8, 19);
+    ctx.fillStyle = '#6f1025';
+    ctx.fillRect(24, 8, 4, 12); ctx.fillRect(32, 3, 5, 17); ctx.fillRect(42, 8, 4, 12);
+    ctx.fillRect(15, 13, 6, 8); ctx.fillRect(51, 13, 6, 8);
+    ctx.fillStyle = '#ff5252'; ctx.fillRect(29, 27, 4, 3); ctx.fillRect(39, 27, 4, 3);
+    ctx.fillStyle = '#a68a8c'; ctx.fillRect(25, 39, 22, 5); ctx.fillRect(29, 48, 14, 4);
+    const flash = document.createElement('canvas'); flash.width = c.width; flash.height = c.height;
+    const fctx = flash.getContext('2d'); fctx.drawImage(c, 0, 0); fctx.globalCompositeOperation = 'source-in'; fctx.fillStyle = '#fff'; fctx.fillRect(0, 0, c.width, c.height);
+    const hurt = document.createElement('canvas'); hurt.width = c.width; hurt.height = c.height;
+    const hctx = hurt.getContext('2d'); hctx.drawImage(c, 0, 0); hctx.globalCompositeOperation = 'source-in'; hctx.fillStyle = '#ff1744'; hctx.fillRect(0, 0, c.width, c.height);
+    return { canvas: c, flashCanvas: flash, hurtCanvas: hurt, width: c.width, height: c.height, anchorX: c.width * .5, anchorY: 100 };
   }
 
   createMinionSprites() {
@@ -397,6 +485,26 @@ export class SpriteManager {
     );
 
     ctx.restore();
+  }
+
+  renderSummon(ctx, summonKey, x, y, opt = {}) {
+    const sheet = this.summonSprites[summonKey];
+    if (!sheet) return false;
+    const state = sheet[opt.state] ? opt.state : 'idle';
+    const frames = sheet[state];
+    const frame = sheet.static ?? frames?.[Math.floor((opt.animTime ?? 0) * (state === 'attack' ? 10 : 8)) % frames.length];
+    if (!frame) return false;
+    const height = opt.visualHeight ?? 54;
+    const scale = height / frame.height;
+    ctx.save();
+    ctx.globalAlpha = opt.alpha ?? 1;
+    ctx.imageSmoothingEnabled = true;
+    if ('imageSmoothingQuality' in ctx) ctx.imageSmoothingQuality = 'high';
+    ctx.translate(x, y);
+    ctx.scale((opt.facing ?? 1) * scale, scale);
+    ctx.drawImage(frame.canvas, -frame.anchorX, -frame.anchorY);
+    ctx.restore();
+    return true;
   }
 }
 

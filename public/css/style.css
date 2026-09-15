@@ -680,6 +680,7 @@ html, body {
 .triangle-shield { position: absolute; left: 0; bottom: 0; }
 .triangle-cast { position: absolute; right: 0; bottom: 0; }
 .swap-action { position: absolute; left: 69px; bottom: 0; min-width: 50px; height: 28px; font-size: 8px; border-color: #d3a4ff; color: #f2dcff; }
+.mount-action { position: absolute; left: 66px; top: 38px; min-width: 56px; height: 28px; font-size: 8px; border-color: #75e5c0; color: #d8fff1; }
 
 .action-wrap:hover {
   transform: scale(1.08);
@@ -732,6 +733,7 @@ html, body {
 #ui-layer.touch-layout-alt .triangle-shield { left: 34px; top: 96px; bottom: auto; min-width: 58px; height: 54px; }
 #ui-layer.touch-layout-alt .triangle-cast { left: 116px; top: 58px; right: auto; bottom: auto; min-width: 82px; height: 78px; font-size: 14px; }
 #ui-layer.touch-layout-alt .swap-action { left: 54px; top: 24px; bottom: auto; min-width: 58px; height: 34px; }
+#ui-layer.touch-layout-alt .mount-action { left: 124px; top: 135px; min-width: 66px; height: 28px; }
 #ui-layer.touch-layout-alt .triangle-jump {
   left: auto;
   right: 0;
@@ -745,10 +747,7 @@ html, body {
 }
 
 #ui-layer.touch-layout-alt .arcane-circle-wrap {
-  left: 4%;
-  top: auto;
-  right: auto;
-  bottom: 4%;
+  display: none;
 }
 
 .arcane-circle-wrap:hover {

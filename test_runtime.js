@@ -124,7 +124,8 @@ const ignisCard = game.player.runeHand.find((rune) => rune.id === 'ignis');
 const initialHand = game.player.runeHand.map((rune) => rune.id).join(',');
 game.startRuneDrawing(ignisCard.cardId);
 game.finishRuneDrawing({ rune: recognizer.runes.find((rune) => rune.id === 'ignis'), confidence: 0.99 });
-assert(!game.drawing.active && game.timeScale === 1 && game.player.preparedRunes.map((rune) => rune.id).join(',') === 'ignis' && game.player.runeHand.map((rune) => rune.id).join(',') === 'fulgur,terra,ventus' && game.player.runeDeck.map((rune) => rune.id).join(',') === 'aqua,ignis,ignis', 'Drawing a hand card slots its rune, returns the card to the deck back, and draws a replacement');
+assert(!game.drawing.active && game.timeScale === 1 && game.player.preparedRunes.map((rune) => rune.id).join(',') === 'ignis' && game.player.runeHand.map((rune) => rune.id).join(',') === 'fulgur,terra,ventus' && game.player.runeDeck.map((rune) => rune.id).join(',') === 'aqua,bestia,construct,void,ignis,terra,ignis', 'Drawing a hand card slots its rune, returns the card to the deck back, and draws a replacement');
+assert(game.player.slottedSpells[0].quality.grade === 'S', 'Rune-recognition quality is retained by the concrete orbiting spell slot');
 const spellCount = spells.activeSpells.length;
 game.castPreparedSpell();
 assert(spells.activeSpells.length > spellCount && game.player.preparedRunes.length === 0 && game.player.runeHand.map((rune) => rune.id).join(',') === 'fulgur,terra,ventus' && initialHand === 'fulgur,terra,ignis', 'Casting consumes slotted spell components without cycling untouched hand cards');
@@ -157,7 +158,48 @@ game.slotRuneSpell(slotIgnis); game.slotRuneSpell(recognizer.runes.find((rune) =
 const beforeGrimoireFusion = spells.activeSpells.length;
 assert(game.player.slottedSpells.length === 2 && game.player.slottedSpells.every((slot) => !slot.isCombo), 'Compatible drawn runes remain separate orbiting slots until Grimoire is used');
 assert(game.castGrimoireSpells() && game.player.slottedSpells.length === 1 && game.player.slottedSpells[0].isCombo && spells.activeSpells.length === beforeGrimoireFusion, 'Grimoire fuses compatible slots into a ready combo without firing it');
-assert(game.castPreparedSpell() && game.player.slottedSpells.length === 0 && spells.activeSpells.length === beforeGrimoireFusion + 1, 'CAST fires the Grimoire-fused combo slot');
+assert(game.castGrimoireSpells() && game.player.slottedSpells.length === 0 && spells.activeSpells.length === beforeGrimoireFusion + 1, 'A second Grimoire press casts the Grimoire-fused combo slot');
+
+// Every rune is independently useful. BESTIA still participates in stronger
+// combinations, but a normal successful drawing must slot and cast its own
+// Beast Familiar through the exact hand -> slot -> CAST path.
+const bestiaCardRune = recognizer.runes.find((rune) => rune.id === 'bestia');
+game.player.configureRuneDeck([bestiaCardRune, slotIgnis, slotAqua]);
+const bestiaCard = game.player.runeHand.find((rune) => rune.id === 'bestia');
+game.startRuneDrawing(bestiaCard.cardId);
+game.finishRuneDrawing({ rune: bestiaCardRune, confidence: .94, grade: 'S' });
+spells.clearRuntime();
+assert(!game.drawing.active && game.player.slottedSpells[0]?.definition?.id === 'summon_lesser_beast' && game.castPreparedSpell() && spells.getSummons('blue').some((summon) => summon.definition.id === 'lesser_beast'), 'Drawing and casting BESTIA creates a Beast Familiar instead of blocking or freezing');
+const battlementSummon = spells.getSummons('blue')[0];
+battlementSummon.x = 198; battlementSummon.z = game.player.z; battlementSummon.surfaceHeight = game.player.surfaceHeight; battlementSummon.grounded = true;
+game.enemyChampion.isDead = false; game.enemyChampion.x = 470; game.enemyChampion.z = game.player.z; game.enemyChampion.surfaceHeight = 0; game.enemyChampion.elevation = 0;
+for (let i = 0; i < 12; i++) spells.update(.1, game);
+assert(battlementSummon.surfaceHeight < 145 && battlementSummon.worldHeight < 145, 'A non-flying summon leaving a Castle battlement transitions down instead of hovering at platform height');
+spells.clearRuntime();
+game.player.clearPreparedRunes();
+const constructBaseRune = recognizer.runes.find((rune) => rune.id === 'construct');
+game.player.mp = game.player.maxMp;
+game.slotRuneSpell(constructBaseRune);
+assert(game.castPreparedSpell() && spells.activeSpells.some((spell) => spell.isStoneWall && spell.wallHeight === 66 && spell.life < 3), 'Single KONSTRUKT casts a short Construct Bulwark through the selected-slot cast path');
+spells.clearRuntime();
+const voidBaseRune = recognizer.runes.find((rune) => rune.id === 'void');
+game.enemyChampion.isDead = false; game.enemyChampion.hp = game.enemyChampion.maxHp; game.enemyChampion.slowTimer = 0;
+game.enemyChampion.x = game.player.x + 82; game.enemyChampion.z = game.player.z;
+// Isolate the projectile-height rule: this target occupies the same
+// battlement surface as the caster, so a valid VOID hit is not rejected as
+// an intentional cross-level shot.
+game.enemyChampion.surfaceHeight = game.player.surfaceHeight; game.enemyChampion.elevation = 0;
+const minionDeadState = game.minions.map((minion) => minion.isDead);
+game.minions.forEach((minion) => { minion.isDead = true; });
+game.player.facing = 1;
+game.player.mp = game.player.maxMp;
+game.slotRuneSpell(voidBaseRune);
+assert(game.castPreparedSpell(), 'Single VOID is castable from an orbiting selected slot');
+spells.update(.12, game);
+assert(game.enemyChampion.slowTimer > 0, 'Single VOID Bolt hits and slows a same-depth hostile target');
+game.minions.forEach((minion, index) => { minion.isDead = minionDeadState[index]; });
+spells.clearRuntime();
+game.prepareDefaultRunes();
 
 game.player.invulnerableTimer = 0;
 game.player.takeDamage(999, 0, 0, 0.1);
@@ -178,6 +220,24 @@ game.projectiles.push(hostileShot);
 spells.update(1 / 60, game);
 assert(hostileShot.life === 0, 'Sandstorm Bastion blocks hostile shots on its depth lane');
 
+// Stone Wall is a deck-driven Terra + Terra defensive entity: it is not a
+// button, blocks hostile bolts, and uses the same movement-obstacle hook the
+// actor update path calls each frame.
+spells.activeSpells = [];
+const terraWallRunes = [recognizer.runes.find((rune) => rune.id === 'terra'), recognizer.runes.find((rune) => rune.id === 'terra')];
+spells.cast(game.player, spells.resolveSpell(terraWallRunes), game);
+const stoneWall = spells.activeSpells.find((spell) => spell.isStoneWall);
+assert(stoneWall && stoneWall.blocksMovement && stoneWall.blocksProjectiles, 'Terra + Terra creates a temporary physical Stone Wall spell entity');
+const wallShot = { x: stoneWall.x, z: stoneWall.z, team: 'red', life: 1, radius: 5, height: 18, facing: -1 };
+game.projectiles = [wallShot];
+spells.update(1 / 60, game);
+assert(wallShot.life === 0, 'Stone Wall blocks an incoming hostile projectile through the active spell update path');
+const wallBeforeX = stoneWall.x - 40;
+game.enemyChampion.x = stoneWall.x; game.enemyChampion.z = stoneWall.z; game.enemyChampion.elevation = 0; game.battlefield.placeOnSurface(game.enemyChampion);
+assert(game.resolveSpellObstacles(game.enemyChampion, wallBeforeX, stoneWall.z) && game.enemyChampion.x === wallBeforeX, 'Stone Wall rejects a hostile actor movement overlap instead of acting as visual-only scenery');
+spells.activeSpells = [];
+game.projectiles = [];
+
 spells.activeSpells = [];
 const ignis = recognizer.runes.find((rune) => rune.id === 'ignis');
 game.enemyChampion.isDead = false; game.enemyChampion.hp = game.enemyChampion.maxHp;
@@ -192,6 +252,72 @@ spells.cast(game.player, spells.resolveSpell([ignis]), game);
 spells.update(0.05, game);
 assert(game.enemyChampion.hp < crossLaneHp, 'Ground projectile hits an enemy on the same depth lane');
 
+game.player.setHero('darklord');
+assert(game.player.heroKey === 'darklord', 'Dark Lord is a selectable playable hero even when the optional source sprite is absent');
+spells.clearRuntime();
+game.player.x = 470; game.player.z = .52; game.player.facing = 1; game.battlefield.placeOnSurface(game.player);
+game.enemyChampion.isDead = false; game.enemyChampion.hp = game.enemyChampion.maxHp; game.enemyChampion.x = 510; game.enemyChampion.z = .52; game.battlefield.placeOnSurface(game.enemyChampion);
+const wolfRunes = ['aqua', 'terra', 'ventus'].map((id) => recognizer.runes.find((rune) => rune.id === id));
+spells.cast(game.player, spells.resolveSpell(wolfRunes), game);
+assert(spells.getSummons('blue').length === 1 && spells.getSummons('blue')[0].definition.id === 'spirit_wolf', 'Rune combination creates a real active Spirit Wolf summon');
+const wolfTargetHp = game.enemyChampion.hp;
+spells.update(1, game);
+assert(game.enemyChampion.hp < wolfTargetHp, 'Spirit Wolf acquires and damages a hostile through the shared world target path');
+spells.clearRuntime();
+// Mounting reuses the real summoned creature rather than a separate player
+// movement mode: proximity toggles the rider, input moves the summon, and a
+// dead mount automatically returns control to the Wizard.
+game.player.state = 'idle'; game.player.canAttack = true; game.player.vx = game.player.vz = 0;
+spells.cast(game.player, spells.resolveSpell(wolfRunes), game);
+const rideWolf = spells.getSummons('blue')[0];
+assert(game.toggleMount() && game.player.mountedSummon === rideWolf && rideWolf.rider === game.player, 'Nearby own Spirit Wolf can be mounted through the real match input path');
+const mountedStartX = rideWolf.x;
+game.input.move = { x: 1, z: 0 };
+game.player.update(.1, game.input, game.battlefield, game);
+spells.update(.1, game);
+assert(rideWolf.x > mountedStartX && game.player.x === rideWolf.x && rideWolf.target === null, 'Mounted input drives the ground summon while its autonomous attack AI pauses');
+rideWolf.takeDamage(rideWolf.hp);
+assert(!game.player.isMounted && !rideWolf.rider, 'Mount death cleanly dismounts the Wizard without leaving stale rider state');
+game.input.move = { x: 0, z: 0 };
+spells.clearRuntime();
+const bestia = recognizer.runes.find((rune) => rune.id === 'bestia');
+const construct = recognizer.runes.find((rune) => rune.id === 'construct');
+// Hunter role: a Storm Wolf deliberately selects the hostile Wizard even
+// when lane minions exist as closer incidental targets.
+game.enemyChampion.isDead = false; game.enemyChampion.x = game.player.x + 85; game.enemyChampion.z = game.player.z;
+const stormWolfRunes = [bestia, recognizer.runes.find((rune) => rune.id === 'fulgur')];
+spells.cast(game.player, spells.resolveSpell(stormWolfRunes), game);
+const stormWolf = spells.getSummons('blue')[0];
+spells.update(.1, game);
+assert(stormWolf?.definition.id === 'storm_wolf' && stormWolf.definition.spriteKey === 'storm_wolf' && stormWolf.target === game.enemyChampion, 'Storm Wolf Hunter uses its dedicated sprite and prioritizes the hostile Wizard over the minion line');
+spells.clearRuntime();
+const voidRune = recognizer.runes.find((rune) => rune.id === 'void');
+game.enemyChampion.slowTimer = 0; game.enemyChampion.x = game.player.x + 72; game.enemyChampion.z = game.player.z;
+spells.cast(game.player, spells.resolveSpell([bestia, voidRune]), game);
+const voidSpider = spells.getSummons('blue')[0];
+spells.update(.4, game);
+assert(voidSpider?.definition.id === 'void_spider' && voidSpider.target === game.enemyChampion && game.enemyChampion.slowTimer > 0, 'Void Spider Control summon entangles a nearby Wizard with a slowing web');
+spells.clearRuntime();
+// Vanguard role: with no defender in its nearby engagement band, the Rune
+// Golem advances onto the living enemy Tower rather than idling in lane.
+game.minions.forEach((minion) => { minion.isDead = true; });
+game.enemyChampion.x = game.player.x + 300; game.enemyChampion.z = game.player.z;
+game.battlefield.redTower.isDead = false; game.battlefield.redTower.hp = game.battlefield.redTower.maxHp;
+spells.cast(game.player, spells.resolveSpell([construct, recognizer.runes.find((rune) => rune.id === 'terra')]), game);
+const runeGolem = spells.getSummons('blue')[0];
+spells.update(.1, game);
+assert(runeGolem?.definition.id === 'rune_golem' && runeGolem.target === game.battlefield.redTower, 'Rune Golem Vanguard naturally progresses onto the enemy Tower');
+spells.clearRuntime();
+game.minions.forEach((minion) => { minion.isDead = false; });
+const dragonRunes = ['ignis', 'terra', 'fulgur'].map((id) => recognizer.runes.find((rune) => rune.id === id));
+const dragonTargetHp = game.enemyChampion.hp = game.enemyChampion.maxHp;
+game.enemyChampion.x = game.player.x + 175; game.enemyChampion.z = game.player.z;
+spells.cast(game.player, spells.resolveSpell(dragonRunes), game);
+spells.update(.7, game);
+assert(game.enemyChampion.hp < dragonTargetHp, 'Dragon Invocation resolves a strong temporary battlefield strike through normal spell targets');
+spells.update(1, game);
+assert(spells.activeSpells.length === 0, 'Dragon Invocation cleans itself up after its short attack run');
+
 const spellSets = [['ventus'], ['fulgur'], ['terra'], ['aqua'], ['ignis', 'ventus'], ['ignis', 'fulgur'], ['fulgur', 'ventus'], ['ignis', 'terra'], ['aqua', 'ventus'], ['aqua', 'fulgur']];
 for (const ids of spellSets) {
   spells.activeSpells = [];
@@ -199,6 +325,16 @@ for (const ids of spellSets) {
   spells.update(0.1, game);
 }
 assert(true, 'All core spells update against the 2.5D actor model without exceptions');
+
+// EIDOLON MANTLE is a combat form, not a cosmetic: its real spell path
+// creates a temporary guardian state that improves melee and mitigates damage.
+const eidolonRunes = ['bestia', 'terra', 'void'].map((id) => recognizer.runes.find((rune) => rune.id === id));
+game.player.eidolonTimer = 0; game.player.eidolonCooldown = 0; game.player.eidolonArmor = 0; game.player.hp = game.player.maxHp; game.player.invulnerableTimer = 0; game.player.isGuarding = false; game.player.arcaneShield = 0;
+spells.cast(game.player, spells.resolveSpell(eidolonRunes), game, spells.qualityForRunes(eidolonRunes));
+const eidolonHp = game.player.hp;
+game.player.takeDamage(100, 200, 0, .1, false, 'spell');
+assert(game.player.eidolonTimer > 0 && game.player.eidolonArmor > 0 && game.player.hp > eidolonHp - 100, 'Eidolon Mantle creates a temporary protective guardian form with real mitigation');
+game.player.eidolonTimer = 0; game.player.eidolonArmor = 0; game.player.eidolonPower = 1;
 
 // Aura Shock is a rune combination: Aqua + Fulgur, mana/cooldown gated radial
 // damage and 2.5D push, with no separate action button or shortcut.
