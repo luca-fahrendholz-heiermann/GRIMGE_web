@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { MageProfile, MAGE_SKILL_TREE, applyMageProfile } from './public/src/progression.js';
+import { MageProfile, MAGE_SKILL_TREE, applyMageProfile, DEFAULT_MATCH_DECK } from './public/src/progression.js';
 
 let passed = 0;
 function test(name, fn) {
@@ -37,6 +37,22 @@ test('Mage levels unlock Bestia, Konstrukt and Void as real deck-eligible runes'
   profile.awardXp(140);
   assert.equal(profile.level, 4);
   assert.equal(profile.isRuneUnlocked('void'), true);
+});
+
+test('Deckbuilder persists a legal 10-card selected deck and enforces unlock/copy limits', () => {
+  const profile = new MageProfile({ level: 1, unlockedRunes: ['ignis', 'ventus', 'fulgur', 'terra', 'aqua'] });
+  assert.deepEqual(profile.getMatchDeck(), DEFAULT_MATCH_DECK);
+  assert.equal(profile.isDeckReady(), true);
+  assert.equal(profile.addRuneToDeck('bestia').reason, 'LOCKED');
+  assert.equal(profile.removeRuneFromDeck('ignis').ok, true);
+  assert.equal(profile.getRuneCopies('ignis'), 1);
+  assert.equal(profile.addRuneToDeck('ignis').ok, true);
+  assert.equal(profile.addRuneToDeck('ignis').reason, 'DECK FULL');
+  profile.removeRuneFromDeck('ignis'); profile.removeRuneFromDeck('ignis');
+  profile.removeRuneFromDeck('aqua'); profile.removeRuneFromDeck('aqua');
+  assert.equal(profile.addRuneToDeck('ignis').ok, true);
+  assert.equal(profile.addRuneToDeck('ignis').ok, true);
+  assert.equal(profile.addRuneToDeck('ignis').reason, 'COPY LIMIT');
 });
 
 test('Mage skill prerequisites and aggregate modifiers are authoritative', () => {

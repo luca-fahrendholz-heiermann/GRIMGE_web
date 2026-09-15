@@ -4,7 +4,12 @@
 export const VIEWPORT = Object.freeze({ width: 1024, height: 576 });
 
 export const ENTITY_VISUALS = Object.freeze({
-  heroHeight: 74,
+  // Rendering is deliberately independent of the tuned gameplay collider.
+  // This gives player cosmetics, armour, auras and transformations more
+  // presence without changing movement, feet anchoring or hit validation.
+  heroBaseHeight: 74,
+  heroVisualScale: 1.20,
+  heroHeight: 74 * 1.20,
   minionHeight: 40,
   heroColliderWidth: 24,
   heroColliderHeight: 54,

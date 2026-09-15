@@ -133,7 +133,7 @@ const ignisCard = game.player.runeHand.find((rune) => rune.id === 'ignis');
 const initialHand = game.player.runeHand.map((rune) => rune.id).join(',');
 game.startRuneDrawing(ignisCard.cardId);
 game.finishRuneDrawing({ rune: recognizer.runes.find((rune) => rune.id === 'ignis'), confidence: 0.99 });
-assert(!game.drawing.active && game.timeScale === 1 && game.player.preparedRunes.map((rune) => rune.id).join(',') === 'ignis' && game.player.runeHand.map((rune) => rune.id).join(',') === 'fulgur,terra,ventus' && game.player.runeDeck.map((rune) => rune.id).join(',') === 'aqua,ignis,terra,ignis', 'Drawing a hand card slots its rune, returns the card to the deck back, and draws a replacement');
+assert(!game.drawing.active && game.timeScale === 1 && game.player.preparedRunes.map((rune) => rune.id).join(',') === 'ignis' && game.player.runeHand.map((rune) => rune.id).join(',') === 'fulgur,terra,ventus' && game.player.runeDeck.map((rune) => rune.id).join(',') === 'aqua,fulgur,terra,ignis,ventus,aqua,ignis', 'Drawing a hand card slots its rune, returns the card to the deck back, and draws a replacement from the selected 10-card deck');
 assert(game.player.slottedSpells[0].quality.grade === 'S', 'Rune-recognition quality is retained by the concrete orbiting spell slot');
 const spellCount = spells.activeSpells.length;
 game.castPreparedSpell();

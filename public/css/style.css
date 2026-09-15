@@ -854,6 +854,14 @@ html, body {
 .skill-node b { color: #e5d5ff; font-size: 11px; }.skill-node span { color: #bbb1d2; font-size: 10px; }.skill-node em { color: #82dfff; font-size: 9px; font-style: normal; }
 .skill-node.unlocked { border-color: #55d6a6; background: rgba(34, 110, 82, .33); }.skill-node.unlocked b { color: #99ffd5; }
 .skill-node:disabled { opacity: .55; cursor: not-allowed; }.skill-node:not(:disabled):hover { border-color: #ffd770; transform: translateY(-1px); }
+.deck-builder-panel { max-width: 740px; }
+.deck-builder-summary { margin: 12px 16px 0; color: #8ee8ff; font: 700 11px 'Rajdhani', sans-serif; letter-spacing: 1px; }
+.deck-builder-content { display: grid; grid-template-columns: repeat(2, minmax(210px, 1fr)); gap: 8px; padding: 12px 16px; }
+.deck-rune { display: grid; grid-template-columns: 1fr auto; gap: 3px 8px; align-items: center; padding: 8px; border: 1px solid color-mix(in srgb, var(--rune-color) 60%, #3d3554); border-radius: 7px; background: rgba(22, 17, 42, .9); }
+.deck-rune b { color: var(--rune-color); font-size: 12px; }.deck-rune span { color: #bdb5d0; font-size: 9px; }.deck-rune div { grid-row: span 2; display: flex; gap: 4px; }
+.deck-rune button { width: 25px; height: 25px; border: 1px solid var(--rune-color); border-radius: 5px; background: #171125; color: #fff; font-weight: 900; cursor: pointer; }.deck-rune button:disabled { opacity: .32; cursor: not-allowed; }
+.deck-rune.locked { filter: grayscale(.8); opacity: .55; }.deck-builder-actions { display: flex; justify-content: center; padding: 0 16px 16px; }
+@media (max-width: 720px) { .deck-builder-content { grid-template-columns: 1fr; } }
 @media (max-width: 720px) { .skill-tree-content { grid-template-columns: 1fr; } }
 
 .modal-header {

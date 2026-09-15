@@ -39,6 +39,12 @@ export class UIManager {
     this.skillTreeModal = document.getElementById('skill-tree-modal');
     this.skillTreeContent = document.getElementById('skill-tree-content');
     this.closeSkillTreeBtn = document.getElementById('close-skill-tree-btn');
+    this.deckBuilderBtn = document.getElementById('deck-builder-btn');
+    this.deckBuilderModal = document.getElementById('deck-builder-modal');
+    this.deckBuilderContent = document.getElementById('deck-builder-content');
+    this.deckBuilderSummary = document.getElementById('deck-builder-summary');
+    this.closeDeckBuilderBtn = document.getElementById('close-deck-builder-btn');
+    this.resetDeckBtn = document.getElementById('reset-deck-btn');
 
     this.cards = [
       document.getElementById('card-0'),
@@ -109,6 +115,22 @@ export class UIManager {
     });
     this.closeSkillTreeBtn?.addEventListener('pointerdown', (e) => {
       e.preventDefault(); e.stopPropagation(); this.toggleSkillTree(false);
+    });
+    this.deckBuilderBtn?.addEventListener('pointerdown', (e) => {
+      e.preventDefault(); e.stopPropagation(); this.toggleDeckBuilder(true);
+      this.renderDeckBuilder(window.gameWorld?.profile);
+    });
+    this.closeDeckBuilderBtn?.addEventListener('pointerdown', (e) => {
+      e.preventDefault(); e.stopPropagation(); this.toggleDeckBuilder(false);
+    });
+    this.deckBuilderContent?.addEventListener('pointerdown', (e) => {
+      const button = e.target?.closest?.('[data-deck-action]');
+      const action = button?.getAttribute?.('data-deck-action');
+      const runeId = button?.getAttribute?.('data-rune-id');
+      if (action) window.gameWorld?.updateMatchDeck(action, runeId);
+    });
+    this.resetDeckBtn?.addEventListener('pointerdown', (e) => {
+      e.preventDefault(); e.stopPropagation(); window.gameWorld?.updateMatchDeck('reset');
     });
     this.skillTreeContent?.addEventListener('pointerdown', (e) => {
       const button = e.target?.closest?.('[data-skill-id]');
@@ -273,9 +295,26 @@ export class UIManager {
     else this.skillTreeModal.classList.toggle('hidden', !forceState);
   }
 
+  toggleDeckBuilder(forceState) {
+    if (!this.deckBuilderModal) return;
+    if (forceState === undefined) this.deckBuilderModal.classList.toggle('hidden');
+    else this.deckBuilderModal.classList.toggle('hidden', !forceState);
+  }
+
   renderProfile(profile) {
     if (!profile || !this.profileSummary) return;
-    this.profileSummary.textContent = `MAGE LV.${profile.level} · XP ${profile.xp}/${profile.xpToNextLevel()} · SKILL POINTS ${profile.skillPoints}`;
+    this.profileSummary.textContent = `MAGE LV.${profile.level} · XP ${profile.xp}/${profile.xpToNextLevel()} · SKILL POINTS ${profile.skillPoints} · DECK ${profile.matchDeck.length}/10`;
+  }
+
+  renderDeckBuilder(profile) {
+    if (!profile || !this.deckBuilderContent || !this.deckBuilderSummary) return;
+    this.deckBuilderSummary.textContent = `MATCH DECK ${profile.matchDeck.length}/10 · MAX 2 COPIES PER RUNE`;
+    this.deckBuilderContent.innerHTML = recognizer.runes.map((rune) => {
+      const unlocked = profile.isRuneUnlocked(rune.id);
+      const copies = profile.getRuneCopies(rune.id);
+      const lockedText = rune.id === 'bestia' ? 'MAGE LV.2' : rune.id === 'construct' ? 'MAGE LV.3' : rune.id === 'void' ? 'MAGE LV.4' : 'STARTER';
+      return `<article class="deck-rune ${unlocked ? '' : 'locked'}" style="--rune-color:${rune.color}"><b>${rune.glyph} ${rune.name}</b><span>${unlocked ? `${copies}/2 IN DECK · RUNE LV.${profile.runeLevel(rune.id)}` : `LOCKED · ${lockedText}`}</span><div><button data-deck-action="remove" data-rune-id="${rune.id}" ${copies ? '' : 'disabled'}>−</button><button data-deck-action="add" data-rune-id="${rune.id}" ${(!unlocked || copies >= 2 || profile.matchDeck.length >= 10) ? 'disabled' : ''}>+</button></div></article>`;
+    }).join('');
   }
 
   renderRuneProgression(profile) {

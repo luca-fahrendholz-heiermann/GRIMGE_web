@@ -28,6 +28,8 @@ const sameLane = new GroundEntity(540, 0.72);
 const otherDepth = new GroundEntity(540, 0.12);
 assert(groundDistance(near, sameLane) < groundDistance(near, otherDepth), 'Ground distance includes depth separation');
 assert(ENTITY_VISUALS.heroHeight > ENTITY_VISUALS.minionHeight, 'Hero/minion scale convention remains readable');
+assert(ENTITY_VISUALS.heroVisualScale === 1.20 && ENTITY_VISUALS.heroHeight === ENTITY_VISUALS.heroBaseHeight * ENTITY_VISUALS.heroVisualScale, 'Hero visual scale is an explicit 120% render-only multiplier');
+assert(ENTITY_VISUALS.heroColliderWidth === 24 && ENTITY_VISUALS.heroColliderHeight === 54, 'Hero visual scale does not change the tuned gameplay collider');
 assert(groundYForDepth(ARENA_LAYOUT.playableBounds.nearZ) > groundYForDepth(ARENA_LAYOUT.playableBounds.farZ), 'Arena projection preserves front-to-back ordering');
 
 console.log(`\nArena results: ${passed} passed, ${failed} failed.`);

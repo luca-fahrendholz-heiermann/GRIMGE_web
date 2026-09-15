@@ -970,10 +970,9 @@ export class GameWorld {
   }
 
   prepareDefaultRunes() {
-    // Ordered prototype deck. Exactly three rune cards form the hand; each
-    // correctly drawn card cycles itself to the deck back and is replaced.
-    const ids = ['fulgur', 'terra', 'ignis', 'ventus', 'aqua', 'bestia', 'construct', 'void', 'ignis', 'terra'];
-    const deck = ids.filter((id) => this.profile.isRuneUnlocked(id))
+    // The Hub-selected profile deck is the sole source for a match hand.
+    // A card always cycles hand -> deck back -> replacement within this list.
+    const deck = this.profile.getMatchDeck()
       .map((id) => recognizer.runes.find((candidate) => candidate.id === id)).filter(Boolean);
     this.player.configureRuneDeck(deck);
   }
@@ -986,8 +985,7 @@ export class GameWorld {
   reportProfileProgress(progress, rune = null) {
     const unlocked = progress?.newlyUnlockedRunes ?? [];
     if (unlocked.length) {
-      this.addNewRuneCards(unlocked.map((entry) => entry.runeId));
-      this.showAnnouncement(unlocked.map((entry) => entry.title).join(' · '), 2.8);
+      this.showAnnouncement(`${unlocked.map((entry) => entry.title).join(' · ')} — ADD IN DECK BUILDER`, 2.8);
     } else if (progress?.runeLevelUp && rune) {
       this.showAnnouncement(`${rune.name} RUNE LEVEL ${progress.runeLevel}`, 1.8);
     } else if (progress?.levels > 0) {
@@ -1001,6 +999,24 @@ export class GameWorld {
       const rune = recognizer.runes.find((candidate) => candidate.id === id);
       if (rune) this.player.runeDeck.push(this.player.makeRuneCard(rune));
     }
+  }
+
+  updateMatchDeck(action, runeId = null) {
+    let result;
+    if (action === 'reset') {
+      this.profile.resetMatchDeck();
+      result = { ok: true, message: 'STARTER DECK RESTORED' };
+    } else if (action === 'add') result = this.profile.addRuneToDeck(runeId);
+    else if (action === 'remove') result = this.profile.removeRuneFromDeck(runeId);
+    else return false;
+    if (!result.ok) {
+      this.showAnnouncement(`DECK: ${result.reason}`, 1.2);
+      return false;
+    }
+    this.applyProfile();
+    ui.renderDeckBuilder?.(this.profile);
+    if (result.message) this.showAnnouncement(result.message, 1.3);
+    return true;
   }
 
   unlockMageSkill(id) {
@@ -1051,6 +1067,11 @@ export class GameWorld {
     // follow-up click rebuild a just-started match and do not restart an
     // already live game through an accidental overlay tap.
     if (this.matchState === 'Running' || this.matchState === 'Ending') return;
+    if (!this.profile.isDeckReady()) {
+      this.showAnnouncement(`BUILD A ${10}-CARD RUNE DECK FIRST`, 1.8);
+      ui.showHub(true);
+      return;
+    }
     this.resetMatch();
     this.matchState = 'Running';
     ui.showHub(false);

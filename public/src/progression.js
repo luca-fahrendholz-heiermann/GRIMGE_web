@@ -36,6 +36,12 @@ const BASE_MODIFIERS = Object.freeze({
 
 export const RUNE_XP_BY_GRADE = Object.freeze({ C: 6, B: 10, A: 14, S: 18 });
 export const STARTER_RUNES = Object.freeze(['ignis', 'ventus', 'fulgur', 'terra', 'aqua']);
+export const MATCH_DECK_SIZE = 10;
+export const MAX_RUNE_COPIES = 2;
+export const ALL_RUNE_IDS = Object.freeze(['ignis', 'ventus', 'fulgur', 'terra', 'aqua', 'bestia', 'construct', 'void']);
+// The first deck deliberately contains two copies of every starter rune.
+// It is a legal 10-card deck and guarantees a varied initial three-card hand.
+export const DEFAULT_MATCH_DECK = Object.freeze(['fulgur', 'terra', 'ignis', 'ventus', 'aqua', 'fulgur', 'terra', 'ignis', 'ventus', 'aqua']);
 // These are real cards, not UI flags. Once unlocked they are appended to a
 // live deck and can be drawn/recognised using the ordinary hand-card path.
 export const MAGE_LEVEL_RUNE_UNLOCKS = Object.freeze([
@@ -58,6 +64,8 @@ export class MageProfile {
     this.discoveredSpells = new Set(source?.discoveredSpells ?? []);
     this.unlockedRunes = new Set(source?.unlockedRunes ?? STARTER_RUNES);
     this.syncRuneUnlocks();
+    const savedDeck = Array.isArray(source?.matchDeck) ? source.matchDeck : DEFAULT_MATCH_DECK;
+    this.matchDeck = this.sanitizeDeck(savedDeck);
   }
 
   readLocal() {
@@ -75,7 +83,8 @@ export class MageProfile {
     return {
       level: this.level, xp: this.xp, skillPoints: this.skillPoints,
       unlockedSkills: [...this.unlockedSkills], runeXp: clone(this.runeXp),
-      discoveredSpells: [...this.discoveredSpells], unlockedRunes: [...this.unlockedRunes], progressionVersion: 2
+      discoveredSpells: [...this.discoveredSpells], unlockedRunes: [...this.unlockedRunes],
+      matchDeck: [...this.matchDeck], progressionVersion: 3
     };
   }
 
@@ -83,6 +92,42 @@ export class MageProfile {
   runeLevel(id) { return 1 + Math.floor((this.runeXp[id] ?? 0) / 60); }
   runeXpIntoLevel(id) { return (this.runeXp[id] ?? 0) % 60; }
   isRuneUnlocked(id) { return this.unlockedRunes.has(id); }
+
+  sanitizeDeck(ids = []) {
+    const copies = new Map();
+    return ids.filter((id) => {
+      if (!ALL_RUNE_IDS.includes(id) || !this.isRuneUnlocked(id)) return false;
+      const count = copies.get(id) ?? 0;
+      if (count >= MAX_RUNE_COPIES || copies.size > ALL_RUNE_IDS.length) return false;
+      copies.set(id, count + 1);
+      return true;
+    }).slice(0, MATCH_DECK_SIZE);
+  }
+
+  getMatchDeck() { return [...this.matchDeck]; }
+  getRuneCopies(id) { return this.matchDeck.filter((entry) => entry === id).length; }
+  isDeckReady() { return this.matchDeck.length === MATCH_DECK_SIZE; }
+
+  addRuneToDeck(id) {
+    if (!this.isRuneUnlocked(id)) return { ok: false, reason: 'LOCKED' };
+    if (this.matchDeck.length >= MATCH_DECK_SIZE) return { ok: false, reason: 'DECK FULL' };
+    if (this.getRuneCopies(id) >= MAX_RUNE_COPIES) return { ok: false, reason: 'COPY LIMIT' };
+    this.matchDeck.push(id); this.save();
+    return { ok: true };
+  }
+
+  removeRuneFromDeck(id) {
+    const index = this.matchDeck.lastIndexOf(id);
+    if (index < 0) return { ok: false, reason: 'NOT IN DECK' };
+    this.matchDeck.splice(index, 1); this.save();
+    return { ok: true };
+  }
+
+  resetMatchDeck() {
+    this.matchDeck = this.sanitizeDeck(DEFAULT_MATCH_DECK);
+    this.save();
+    return this.getMatchDeck();
+  }
 
   syncRuneUnlocks() {
     const unlocked = [];

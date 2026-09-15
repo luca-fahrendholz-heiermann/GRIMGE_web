@@ -26,6 +26,7 @@
           <p>FAST 2.5D BRAWL · MAGIC · SIEGE</p>
           <div id="profile-summary" class="profile-summary">MAGE LV.1 · XP 0/70 · SKILL POINTS 0</div>
           <button id="play-match-btn" class="match-button primary">PLAY</button>
+          <button id="deck-builder-btn" class="match-button">RUNE DECK</button>
           <button id="skill-tree-btn" class="match-button">MAGE SKILL TREE</button>
           <button class="match-button muted" disabled>TRAINING — SOON</button>
           <button id="ui-layout-btn" class="match-button">SETTINGS: CLASSIC UI</button>
@@ -54,6 +55,15 @@
           <div class="modal-header"><span>✦ MAGE PATHS</span><button id="close-skill-tree-btn" type="button">✕</button></div>
           <p>Earn XP by drawing and casting runes, then specialize your Mage.</p>
           <div id="skill-tree-content" class="skill-tree-content"></div>
+        </div>
+      </section>
+      <section id="deck-builder-modal" class="skill-tree-modal hidden" aria-live="polite">
+        <div class="skill-tree-panel deck-builder-panel">
+          <div class="modal-header"><span>✦ RUNE DECK</span><button id="close-deck-builder-btn" type="button">✕</button></div>
+          <p>Build exactly 10 cards. Each unlocked rune may appear at most twice. Your three-card hand is drawn only from this deck.</p>
+          <div id="deck-builder-summary" class="deck-builder-summary"></div>
+          <div id="deck-builder-content" class="deck-builder-content"></div>
+          <div class="deck-builder-actions"><button id="reset-deck-btn" class="match-button" type="button">RESTORE STARTER DECK</button></div>
         </div>
       </section>
       <div id="touch-joystick" aria-label="Move">
