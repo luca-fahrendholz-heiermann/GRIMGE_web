@@ -303,6 +303,11 @@ export class GameWorld {
     let pointerId = null;
     let attackPointerId = null;
     let attackStart = null;
+    let joystickOrigin = null;
+    let joystickMoved = false;
+    let lastLeftTap = null;
+    let controlTapPointerId = null;
+    let suppressControlTapRecord = false;
     const JOYSTICK_RADIUS = 66;
     const beginJoystick = (event) => {
       if (event.pointerType && event.pointerType !== 'touch') return false;
@@ -311,6 +316,8 @@ export class GameWorld {
       // combat gesture surface and is never stolen for movement.
       if (pt.x > this.logicalWidth * 0.48 || this.drawing.active || !this.isMatchRunning()) return false;
       pointerId = event.pointerId;
+      joystickOrigin = pt;
+      joystickMoved = false;
       joystick.style.left = `${Math.max(0, Math.min(this.logicalWidth - JOYSTICK_RADIUS * 2, pt.x - JOYSTICK_RADIUS))}px`;
       joystick.style.top = `${Math.max(0, Math.min(this.logicalHeight - JOYSTICK_RADIUS * 2, pt.y - JOYSTICK_RADIUS))}px`;
       joystick.style.bottom = 'auto';
@@ -329,6 +336,10 @@ export class GameWorld {
       const length = Math.hypot(dx, dy);
       if (length > radius) { dx = dx / length * radius; dy = dy / length * radius; }
       const deadzone = radius * 0.14;
+      if (joystickOrigin) {
+        const moved = this.getCanvasCoords(event.clientX, event.clientY);
+        if (Math.hypot(moved.x - joystickOrigin.x, moved.y - joystickOrigin.y) > 16) joystickMoved = true;
+      }
       this.input.touchMove.x = Math.abs(dx) < deadzone ? 0 : dx / radius;
       this.input.touchMove.z = Math.abs(dy) < deadzone ? 0 : dy / radius;
       knob.style.transform = `translate(${dx}px, ${dy}px)`;
@@ -347,6 +358,10 @@ export class GameWorld {
         joystick.style.removeProperty?.('top');
         joystick.style.removeProperty?.('bottom');
       }
+      const released = this.getCanvasCoords(event.clientX, event.clientY);
+      if (!joystickMoved) lastLeftTap = { x: released.x, y: released.y, time: performance.now() };
+      else lastLeftTap = null;
+      joystickOrigin = null;
     };
     const beginAttackGesture = (event) => {
       if (event.pointerType && event.pointerType !== 'touch') return;
@@ -356,6 +371,53 @@ export class GameWorld {
       attackPointerId = event.pointerId;
       attackStart = pt;
       this.canvas.setPointerCapture?.(attackPointerId);
+    };
+    const handleLeftDoubleTap = (event) => {
+      if (event.pointerType && event.pointerType !== 'touch') return false;
+      const pt = this.getCanvasCoords(event.clientX, event.clientY);
+      if (pt.x > this.logicalWidth * 0.48 || !this.isMatchRunning()) return false;
+      const now = performance.now();
+      const isDoubleTap = lastLeftTap
+        && now - lastLeftTap.time <= 340
+        && Math.hypot(pt.x - lastLeftTap.x, pt.y - lastLeftTap.y) <= 30;
+      if (isDoubleTap) {
+        lastLeftTap = null;
+        if (this.drawing.active) this.lockOrExitRuneDrawing();
+        else {
+          this.startRuneDrawing();
+          // The second tap that opens Arcane Focus must not also become the
+          // first ink dot of the rune gesture.
+          controlTapPointerId = event.pointerId;
+          suppressControlTapRecord = true;
+          this.drawing.inputMode = 'left-control';
+          this.drawing.touchId = event.pointerId;
+          this.canvas.setPointerCapture?.(controlTapPointerId);
+        }
+        return true;
+      }
+      // While drawing, reserve the first left tap of the next double-tap so
+      // it cannot be accidentally appended as an ink stroke.
+      if (this.drawing.active) {
+        controlTapPointerId = event.pointerId;
+        this.drawing.inputMode = 'left-control';
+        this.drawing.touchId = event.pointerId;
+        this.canvas.setPointerCapture?.(controlTapPointerId);
+        return true;
+      }
+      return false;
+    };
+    const finishLeftControlTap = (event) => {
+      if (controlTapPointerId !== event.pointerId) return;
+      const pt = this.getCanvasCoords(event.clientX, event.clientY);
+      controlTapPointerId = null;
+      if (this.drawing.inputMode === 'left-control') {
+        this.drawing.inputMode = null;
+        this.drawing.touchId = null;
+      }
+      if (suppressControlTapRecord) {
+        suppressControlTapRecord = false;
+        lastLeftTap = null;
+      } else lastLeftTap = { x: pt.x, y: pt.y, time: performance.now() };
     };
     const finishAttackGesture = (event) => {
       if (attackPointerId !== event.pointerId || !attackStart) return;
@@ -378,6 +440,10 @@ export class GameWorld {
     joystick.addEventListener('pointerup', clear);
     joystick.addEventListener('pointercancel', clear);
     this.canvas.addEventListener('pointerdown', (event) => {
+      if (handleLeftDoubleTap(event)) {
+        event.preventDefault?.();
+        return;
+      }
       if (beginJoystick(event)) {
         event.preventDefault?.();
         return;
@@ -385,8 +451,8 @@ export class GameWorld {
       beginAttackGesture(event);
     }, { passive: false });
     window.addEventListener('pointermove', update, { passive: false });
-    window.addEventListener('pointerup', (event) => { clear(event); finishAttackGesture(event); }, { passive: false });
-    window.addEventListener('pointercancel', (event) => { clear(event); attackPointerId = null; attackStart = null; }, { passive: false });
+    window.addEventListener('pointerup', (event) => { clear(event); finishLeftControlTap(event); finishAttackGesture(event); }, { passive: false });
+    window.addEventListener('pointercancel', (event) => { clear(event); controlTapPointerId = null; attackPointerId = null; attackStart = null; }, { passive: false });
   }
 
   performTouchAttackGesture(dx, dy) {

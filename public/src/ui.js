@@ -104,18 +104,6 @@ export class UIManager {
       this.toggleGrimoire(false);
     });
 
-    // First press opens Arcane Focus; the second commits a valid gesture and
-    // always closes it. Waiting two seconds remains the alternate auto-lock.
-    const toggleRuneDrawing = (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const game = window.gameWorld;
-      if (!game) return;
-      if (game.drawing.active) game.lockOrExitRuneDrawing();
-      else game.startRuneDrawing();
-    };
-    this.arcaneCircle.addEventListener('pointerdown', toggleRuneDrawing);
-
     // Pointer-down avoids the mobile click-delay. All action input reaches
     // the same shared gameplay state as keyboard/mouse actions.
     // These two legacy mobile buttons are intentionally absent from the
@@ -190,8 +178,16 @@ export class UIManager {
         e.preventDefault();
         e.stopPropagation();
         const index = this.cards.indexOf(card);
-        const runeCard = window.gameWorld?.player?.runeHand?.[index];
-        if (runeCard) window.gameWorld.startRuneDrawing(runeCard.cardId);
+        const game = window.gameWorld;
+        if (!game) return;
+        // Rune cards open the focus layer. A second card tap is an explicit
+        // commit/close action, so touch users never need a separate Draw UI.
+        if (game.drawing.active) {
+          game.lockOrExitRuneDrawing();
+          return;
+        }
+        const runeCard = game.player?.runeHand?.[index];
+        if (runeCard) game.startRuneDrawing(runeCard.cardId);
       });
     });
   }

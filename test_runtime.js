@@ -84,18 +84,19 @@ game.player.update(1 / 60, game.input, game.battlefield);
 game.input.justPressedKeys = {};
 assert(game.player.elevation > 0 && game.player.z === preJumpZ, 'Jump changes elevation without corrupting depth');
 
-// The mobile circle opens a persistent rune mode. Releasing the circle (or
-// a non-rune canvas stroke) cannot trigger the old timeout/auto-close path.
-const arcaneCircle = elements.get('arcane-circle-trigger');
+// A rune card opens persistent Arcane Focus. Releasing a non-rune stroke
+// cannot trigger the old timeout/auto-close path; another card tap commits
+// or rejects and closes it without needing a separate Draw button.
+const firstRuneCard = elements.get('card-0');
 const runePointer = { pointerId: 77, clientX: 850, clientY: 470, preventDefault() {}, stopPropagation() {} };
-arcaneCircle.listeners.pointerdown(runePointer);
-assert(game.drawing.active && game.drawing.inputMode === null, 'Mobile arcane circle opens persistent drawing mode without a countdown');
+firstRuneCard.listeners.pointerdown(runePointer);
+assert(game.drawing.active && game.drawing.inputMode === null, 'Tapping a hand rune card opens persistent drawing mode without a Draw button');
 const incompleteRuneTouch = { identifier: 77, clientX: 850, clientY: 470 };
 game.canvas.listeners.touchstart({ changedTouches: [incompleteRuneTouch] });
 windowListeners.touchend({ changedTouches: [incompleteRuneTouch] });
 assert(game.drawing.active && game.drawing.inputMode === null, 'Releasing an unrecognized mobile stroke keeps Arcane Focus open');
-arcaneCircle.listeners.pointerdown(runePointer);
-assert(!game.drawing.active && game.drawing.strokes.length === 0 && game.drawing.currentStroke.length === 0 && game.timeScale === 1, 'A second Draw press exits Arcane Focus after rejecting and clearing an unrecognized sketch');
+firstRuneCard.listeners.pointerdown(runePointer);
+assert(!game.drawing.active && game.drawing.strokes.length === 0 && game.drawing.currentStroke.length === 0 && game.timeScale === 1, 'A second rune-card press exits Arcane Focus after rejecting and clearing an unrecognized sketch');
 
 game.player.elevation = 0; game.player.vElevation = 0; game.player.grounded = true; game.player.state = 'idle'; game.player.canAttack = true; game.player.invulnerableTimer = 0;
 game.enemyChampion.x = game.player.x + 40; game.enemyChampion.z = game.player.z;

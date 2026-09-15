@@ -173,13 +173,6 @@
         </div>
       </div>
 
-      <!-- Code-rendered Arcane Rune Weaving Circle. It is a direct child of
-           the HUD so the alternate touch layout can place it above the
-           dynamically-created left-thumb joystick. -->
-      <button id="arcane-circle-trigger" class="arcane-circle-wrap" type="button" title="Tap to draw; tap again to lock in">
-        <span class="arcane-circle-glyph">✧</span><small>DRAW</small>
-      </button>
-
       <!-- Grimoire Modal -->
       <div id="grimoire-modal" class="hidden">
         <div class="modal-header">
@@ -188,7 +181,7 @@
         </div>
         <div class="modal-body">
           <div class="g-col">
-            <h3>✦ RUNE GESTURES (HOLD RIGHT-CLICK / SPACE TO DRAW)</h3>
+            <h3>✦ RUNE GESTURES (RUNE CARD / DOUBLE-TAP LEFT TO DRAW)</h3>
             <div class="g-item"><span class="r-icon">🔥</span><strong>IGNIS (Fire)</strong>: Draw Triangle <code>▲</code></div>
             <div class="g-item"><span class="r-icon">💨</span><strong>VENTUS (Wind)</strong>: Draw Dash <code>—</code></div>
             <div class="g-item"><span class="r-icon">⚡</span><strong>FULGUR (Lightning)</strong>: Draw Zig-Zag <code>Z</code></div>
@@ -218,7 +211,7 @@
 
       <!-- Drawing Feedback Overlay -->
       <div id="drawing-hud" class="hidden">
-          <div id="drawing-prompt">ARCANE FOCUS — DRAW A HAND RUNE · TAP CIRCLE TO LOCK · AUTO-LOCK AFTER 2s · ESC CANCELS</div>
+          <div id="drawing-prompt">ARCANE FOCUS — DRAW A HAND RUNE · TAP A RUNE CARD OR DOUBLE-TAP LEFT TO LOCK · AUTO-LOCK AFTER 2s · ESC CANCELS</div>
         <div id="recognition-result"></div>
       </div>
     </div>
