@@ -93,6 +93,7 @@ export class GameWorld {
     // Portrait is presentation/input state, not match state: a siege resumes
     // exactly where it was after the device rotates back to landscape.
     this.orientationBlocked = false;
+    this.menuPaused = false;
     this.mountCandidate = null;
 
     this.lastFrameTime = performance.now();
@@ -226,6 +227,11 @@ export class GameWorld {
       }
       if (this.matchState === 'Menu') {
         if (e.code === 'Enter' || e.code === 'Space') this.startMatch();
+        return;
+      }
+      if (e.code === 'Escape' && this.isMatchRunning()) {
+        ui.toggleIngameMenu?.(!this.menuPaused);
+        e.preventDefault();
         return;
       }
       if (this.orientationBlocked) {
@@ -1181,6 +1187,7 @@ export class GameWorld {
     this.winnerTeam = null;
     this.endingTimer = 0;
     this.matchTime = this.matchDuration;
+    this.menuPaused = false;
     this.stats = { wizardKills: { blue: 0, red: 0 }, playerDeaths: 0, towersDestroyed: { blue: false, red: false }, castlesDestroyed: { blue: false, red: false } };
     this.drawing.active = false;
     this.drawing.strokes = [];
@@ -1210,6 +1217,22 @@ export class GameWorld {
     this.showAnnouncement('DESTROY ENEMY TOWER', 1.5);
   }
 
+  restartMatch() {
+    if (!this.profile.isDeckReady()) return false;
+    this.resetMatch();
+    this.matchState = 'Running';
+    this.syncOrientationState();
+    ui.showHub(false);
+    ui.showResults(false);
+    this.showAnnouncement('MATCH RESTARTED', 1.1);
+    return true;
+  }
+
+  setMenuPaused(open) {
+    this.menuPaused = !!open && this.isMatchRunning();
+    this.clearGameplayInput();
+  }
+
   completeResults() {
     if (this.matchState !== 'Ending') return;
     this.matchState = 'Results';
@@ -1227,6 +1250,7 @@ export class GameWorld {
   returnToHub() {
     this.matchState = 'Menu';
     this.orientationBlocked = false;
+    this.menuPaused = false;
     document.body?.classList?.remove?.('portrait-gameplay');
     this.input.gameplayBlocked = true;
     this.projectiles = [];
@@ -1287,6 +1311,14 @@ export class GameWorld {
     if (this.orientationBlocked) {
       this.input.gameplayBlocked = true;
       this.clearGameplayInput();
+      requestAnimationFrame((t) => this.loop(t));
+      return;
+    }
+
+    if (this.menuPaused) {
+      this.input.gameplayBlocked = true;
+      this.clearGameplayInput();
+      this.render();
       requestAnimationFrame((t) => this.loop(t));
       return;
     }

@@ -89,6 +89,7 @@
       <div id="touch-joystick" aria-label="Move">
         <div id="touch-joystick-knob"></div>
       </div>
+      <button id="game-menu-btn" class="hud-menu-btn" type="button" title="Match menu" aria-label="Match menu">☰</button>
       <button id="fullscreen-btn" class="fullscreen-btn" type="button" title="Fullscreen landscape">⛶</button>
       <!-- TOP HUD BAR -->
       <div id="top-hud-bar">
@@ -223,13 +224,28 @@
         <span class="arcane-circle-glyph">✧</span><small>DRAW</small>
       </button>
 
+      <section id="game-menu-modal" class="game-menu-modal hidden" aria-live="polite">
+        <div class="game-menu-panel">
+          <div class="modal-header"><span>☰ MATCH MENU</span><button id="close-game-menu-btn" type="button">✕</button></div>
+          <div class="game-menu-actions">
+            <button id="resume-match-btn" class="match-button primary" type="button">RESUME</button>
+            <button id="restart-match-btn" class="match-button" type="button">RESTART MATCH</button>
+            <button id="menu-layout-btn" class="match-button" type="button">TOUCH UI: CLASSIC</button>
+            <button id="menu-fullscreen-btn" class="match-button" type="button">FULLSCREEN</button>
+            <button id="menu-hub-btn" class="match-button" type="button">RETURN TO HUB</button>
+          </div>
+          <small>Tap outside this panel to resume.</small>
+        </div>
+      </section>
+
       <!-- Grimoire Modal -->
       <div id="grimoire-modal" class="hidden">
-        <div class="modal-header">
+        <div id="grimoire-panel" class="grimoire-panel">
+          <div class="modal-header">
           <span>📜 GRIMGE ARCANE GRIMOIRE & CONTROLS</span>
           <button id="close-grimoire-btn">✕</button>
-        </div>
-        <div class="modal-body">
+          </div>
+          <div class="modal-body">
           <div class="g-col">
             <h3>✦ RUNE GESTURES (RUNE CARD / DOUBLE-TAP LEFT TO DRAW)</h3>
             <div class="g-item"><span class="r-icon">🔥</span><strong>IGNIS (Fire)</strong>: Draw Triangle <code>▲</code></div>
@@ -277,6 +293,7 @@
             <div><strong>Summon / Combo:</strong> Draw all 2–3 rune cards, press <strong>GRIMOIRE</strong> once to fuse them, then press <strong>GRIMOIRE</strong> again to cast. Rune order does not matter.</div>
               <div><strong>Keys 1-6</strong>: Switch Hero Character</div>
             <div><strong>F3</strong>: Toggle arena geometry debug overlay</div>
+          </div>
           </div>
         </div>
       </div>

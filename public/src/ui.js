@@ -78,6 +78,14 @@ export class UIManager {
     this.swapBtn = document.getElementById('action-swap-btn');
     this.mountBtn = document.getElementById('action-mount-btn');
     this.fullscreenBtn = document.getElementById('fullscreen-btn');
+    this.gameMenuBtn = document.getElementById('game-menu-btn');
+    this.gameMenuModal = document.getElementById('game-menu-modal');
+    this.closeGameMenuBtn = document.getElementById('close-game-menu-btn');
+    this.resumeMatchBtn = document.getElementById('resume-match-btn');
+    this.restartMatchBtn = document.getElementById('restart-match-btn');
+    this.menuLayoutBtn = document.getElementById('menu-layout-btn');
+    this.menuFullscreenBtn = document.getElementById('menu-fullscreen-btn');
+    this.menuHubBtn = document.getElementById('menu-hub-btn');
     this.uiLayoutBtn = document.getElementById('ui-layout-btn');
     this.uiLayer = document.getElementById('ui-layer');
     this.touchLayout = 'classic';
@@ -149,6 +157,38 @@ export class UIManager {
       e.stopPropagation();
       this.toggleGrimoire(false);
     });
+
+    // Every long-form overlay has a true backdrop. A tap beside the panel is
+    // always a fast, reliable close path on touch devices.
+    const closeFromBackdrop = (modal, close) => modal?.addEventListener('pointerdown', (e) => {
+      if (e.target === modal) close();
+    });
+    closeFromBackdrop(this.grimoireModal, () => this.toggleGrimoire(false));
+    closeFromBackdrop(this.skillTreeModal, () => this.toggleSkillTree(false));
+    closeFromBackdrop(this.deckBuilderModal, () => this.toggleDeckBuilder(false));
+
+    this.gameMenuBtn?.addEventListener('pointerdown', (e) => {
+      e.preventDefault(); e.stopPropagation(); this.toggleIngameMenu(true);
+    });
+    this.closeGameMenuBtn?.addEventListener('pointerdown', (e) => {
+      e.preventDefault(); e.stopPropagation(); this.toggleIngameMenu(false);
+    });
+    this.resumeMatchBtn?.addEventListener('pointerdown', (e) => {
+      e.preventDefault(); e.stopPropagation(); this.toggleIngameMenu(false);
+    });
+    this.restartMatchBtn?.addEventListener('pointerdown', (e) => {
+      e.preventDefault(); e.stopPropagation(); this.toggleIngameMenu(false); window.gameWorld?.restartMatch();
+    });
+    this.menuLayoutBtn?.addEventListener('pointerdown', (e) => {
+      e.preventDefault(); e.stopPropagation(); this.setTouchLayout(this.touchLayout === 'classic' ? 'alternate' : 'classic');
+    });
+    this.menuFullscreenBtn?.addEventListener('pointerdown', (e) => {
+      e.preventDefault(); e.stopPropagation(); window.gameWorld?.enterFullscreen();
+    });
+    this.menuHubBtn?.addEventListener('pointerdown', (e) => {
+      e.preventDefault(); e.stopPropagation(); this.toggleIngameMenu(false); window.gameWorld?.returnToHub();
+    });
+    closeFromBackdrop(this.gameMenuModal, () => this.toggleIngameMenu(false));
 
     // Classic UI retains the original explicit Draw button. The alternative
     // touch layout hides this control and uses cards / left double-tap.
@@ -270,6 +310,7 @@ export class UIManager {
       joystick?.style.removeProperty?.('bottom');
     }
     if (this.uiLayoutBtn) this.uiLayoutBtn.textContent = this.touchLayout === 'alternate' ? 'SETTINGS: ALT TOUCH UI' : 'SETTINGS: CLASSIC UI';
+    if (this.menuLayoutBtn) this.menuLayoutBtn.textContent = this.touchLayout === 'alternate' ? 'TOUCH UI: ALT' : 'TOUCH UI: CLASSIC';
     try { window.localStorage?.setItem?.('grimge-touch-layout', this.touchLayout); } catch { /* preference is optional */ }
   }
 
@@ -304,6 +345,13 @@ export class UIManager {
     if (!this.deckBuilderModal) return;
     if (forceState === undefined) this.deckBuilderModal.classList.toggle('hidden');
     else this.deckBuilderModal.classList.toggle('hidden', !forceState);
+  }
+
+  toggleIngameMenu(forceState = true) {
+    if (!this.gameMenuModal) return;
+    const open = forceState !== false;
+    this.gameMenuModal.classList.toggle('hidden', !open);
+    window.gameWorld?.setMenuPaused?.(open);
   }
 
   renderProfile(profile) {

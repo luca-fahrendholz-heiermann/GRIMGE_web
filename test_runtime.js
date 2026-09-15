@@ -1,5 +1,5 @@
 // Browserless integration smoke test for the real 2.5D module graph.
-class ClassListStub { constructor() { this.values = new Set(); } add(v) { this.values.add(v); } remove(v) { this.values.delete(v); } toggle(v) { this.values.has(v) ? this.values.delete(v) : this.values.add(v); } }
+class ClassListStub { constructor() { this.values = new Set(); } add(v) { this.values.add(v); } remove(v) { this.values.delete(v); } toggle(v, force) { if (force === true) { this.values.add(v); return true; } if (force === false) { this.values.delete(v); return false; } if (this.values.has(v)) { this.values.delete(v); return false; } this.values.add(v); return true; } }
 function makeContext() { const gradient = { addColorStop() {} }; return new Proxy({ createRadialGradient: () => gradient, createLinearGradient: () => gradient, getImageData: () => ({ data: new Uint8ClampedArray([0,255,0,255,0,0,0,255,0,0,0,255,0,0,0,255]) }), putImageData() {} }, { get(target, prop) { return prop in target ? target[prop] : () => {}; }, set(target, prop, value) { target[prop] = value; return true; } }); }
 class ElementStub { constructor(id = '') { this.id = id; this.style = {}; this.classList = new ClassListStub(); this.listeners = {}; this.attributes = {}; this.textContent = ''; this.innerHTML = ''; this.src = ''; } addEventListener(type, handler) { this.listeners[type] = handler; } getAttribute(name) { return this.attributes[name] ?? null; } setAttribute(name, value) { this.attributes[name] = value; } querySelector() { return new ElementStub(); } getBoundingClientRect() { return { left: 0, top: 0, width: 1024, height: 576 }; } }
 class CanvasStub extends ElementStub { constructor(id = '') { super(id); this.width = 2; this.height = 2; this.context = makeContext(); } getContext() { return this.context; } }
@@ -39,6 +39,12 @@ const initialPlayer = game.player;
 game.startMatch();
 assert(game.player === initialPlayer && game.matchState === 'Running', 'A duplicate PLAY activation cannot reset a live match');
 assert(game.canvas.width === 2048 && game.canvas.height === 1152, 'DPR-aware backing canvas preserves logical 1024x576 gameplay coordinates');
+const menuButton = elements.get('game-menu-btn');
+const menuModal = elements.get('game-menu-modal');
+menuButton.listeners.pointerdown({ preventDefault() {}, stopPropagation() {} });
+assert(game.menuPaused && !menuModal.classList.values.has('hidden'), 'Match menu opens from the HUD button and pauses the live match');
+menuModal.listeners.pointerdown({ target: menuModal });
+assert(!game.menuPaused && menuModal.classList.values.has('hidden'), 'Tapping beside the match-menu panel closes it and resumes the match');
 const fullViewportRect = game.canvas.getBoundingClientRect;
 game.canvas.getBoundingClientRect = () => ({ left: 0, top: 0, width: 512, height: 288 });
 game.syncHudScale();
