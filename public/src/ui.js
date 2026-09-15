@@ -61,6 +61,8 @@ export class UIManager {
     this.preparedRunesEl = document.getElementById('prepared-runes');
     this.manaBarFill = document.getElementById('mana-bar-fill');
     this.manaBarText = document.getElementById('mana-bar-text');
+    this.focusReadout = document.getElementById('focus-readout');
+    this.focusActivateBtn = document.getElementById('focus-activate-btn');
 
     this.grimoireBtn = document.getElementById('grimoire-btn');
     this.grimoireModal = document.getElementById('grimoire-modal');
@@ -210,6 +212,9 @@ export class UIManager {
     this.mountBtn?.addEventListener('pointerdown', (e) => {
       e.preventDefault(); e.stopPropagation(); window.gameWorld?.toggleMount();
     });
+    this.focusActivateBtn?.addEventListener('pointerdown', (e) => {
+      e.preventDefault(); e.stopPropagation(); window.gameWorld?.activateFocusTransformation();
+    });
     this.fullscreenBtn?.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -303,7 +308,8 @@ export class UIManager {
 
   renderProfile(profile) {
     if (!profile || !this.profileSummary) return;
-    this.profileSummary.textContent = `MAGE LV.${profile.level} · XP ${profile.xp}/${profile.xpToNextLevel()} · SKILL POINTS ${profile.skillPoints} · DECK ${profile.matchDeck.length}/10`;
+    const build = profile.getBuildIdentity?.().label ?? 'UNBOUND MAGE';
+    this.profileSummary.textContent = `${build} · LV.${profile.level} · XP ${profile.xp}/${profile.xpToNextLevel()} · SKILL POINTS ${profile.skillPoints} · DECK ${profile.matchDeck.length}/10`;
   }
 
   renderDeckBuilder(profile) {
@@ -425,6 +431,19 @@ export class UIManager {
     // Bottom Mana Bar
     this.manaBarFill.style.width = `${Math.max(0, (player.mp / player.maxMp) * 100)}%`;
     this.manaBarText.textContent = `${blueCurrentMp} / ${blueMpMax}`;
+    if (this.focusActivateBtn) {
+      const ready = player.focus >= player.maxFocus && player.focusTransformTimer <= 0;
+      this.focusActivateBtn.textContent = ready
+        ? 'ACTIVATE FOCUS'
+        : `FOCUS ${Math.round(player.focus)}/${player.maxFocus}`;
+      this.focusActivateBtn.classList.toggle('ready', ready);
+      this.focusActivateBtn.disabled = !ready;
+    }
+    if (this.focusReadout) {
+      this.focusReadout.textContent = player.focusTransformTimer > 0
+        ? `FOCUS ASCENDANT ${player.focusTransformTimer.toFixed(1)}s`
+        : `FOCUS ${Math.round(player.focus)}/${player.maxFocus}`;
+    }
 
     // Red Team Bars
     const redHpRatio = enemyChampion ? enemyChampion.hp / enemyChampion.maxHp : 0;

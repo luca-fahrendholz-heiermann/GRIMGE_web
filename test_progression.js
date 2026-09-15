@@ -75,6 +75,13 @@ test('Applied Mage profile updates the runtime player modifier surface', () => {
   assert.equal(player.buildModifiers.mountSpeed, 1.10);
 });
 
+test('Rune Mastery produces a distinct live Focus-oriented Mage identity', () => {
+  const profile = new MageProfile({ level: 4, skillPoints: 2, unlockedSkills: ['quick_draw', 'focused_casting'] });
+  const modifiers = profile.getModifiers();
+  assert.equal(modifiers.focusGain, 1.15);
+  assert.equal(profile.getBuildIdentity().label, 'RUNE MASTER');
+});
+
 test('Skill tree remains a compact 12-node Mage vertical slice', () => {
   assert.equal(MAGE_SKILL_TREE.length, 12);
   assert.deepEqual(new Set(MAGE_SKILL_TREE.map((node) => node.branch)), new Set(['ELEMENTAL', 'DEFENSE', 'SUMMONING', 'RUNE MASTERY']));

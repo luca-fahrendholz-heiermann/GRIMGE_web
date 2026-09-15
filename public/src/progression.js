@@ -13,7 +13,7 @@ export const MAGE_SKILL_TREE = Object.freeze([
   { id: 'empowered_summons', branch: 'SUMMONING', title: 'Empowered Summons', desc: '+18% summon damage.', cost: 1, prerequisites: ['spirit_bond'], modifiers: { summonDamage: 1.18 } },
   { id: 'dragon_heart', branch: 'SUMMONING', title: 'Dragon Heart', desc: '+25% Dragon Invocation coverage.', cost: 1, prerequisites: ['empowered_summons'], modifiers: { dragonArea: 1.25 } },
   { id: 'quick_draw', branch: 'RUNE MASTERY', title: 'Quick Draw', desc: 'C-grade runes become B-grade for spell scaling.', cost: 1, modifiers: { qualityFloor: 'B' } },
-  { id: 'focused_casting', branch: 'RUNE MASTERY', title: 'Focused Casting', desc: '+12% duration of sustained spells and summons.', cost: 1, prerequisites: ['quick_draw'], modifiers: { spellDuration: 1.12 } },
+  { id: 'focused_casting', branch: 'RUNE MASTERY', title: 'Focused Casting', desc: '+12% duration and +15% Focus gain.', cost: 1, prerequisites: ['quick_draw'], modifiers: { spellDuration: 1.12, focusGain: 1.15 } },
   { id: 'combination_scholar', branch: 'RUNE MASTERY', title: 'Combination Scholar', desc: '+12% combined-spell power.', cost: 1, prerequisites: ['focused_casting'], modifiers: { comboPower: 1.12 } }
 ]);
 
@@ -31,6 +31,7 @@ const BASE_MODIFIERS = Object.freeze({
   summonDamage: 1,
   mountSpeed: 1,
   dragonArea: 1,
+  focusGain: 1,
   qualityFloor: null
 });
 
@@ -182,6 +183,16 @@ export class MageProfile {
       }
     }
     return modifiers;
+  }
+
+  getBuildIdentity() {
+    const counts = new Map();
+    for (const node of MAGE_SKILL_TREE) {
+      if (this.unlockedSkills.has(node.id)) counts.set(node.branch, (counts.get(node.branch) ?? 0) + 1);
+    }
+    const [branch, count] = [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0] ?? ['UNBOUND', 0];
+    const labels = { ELEMENTAL: 'ELEMENTAL MAGE', DEFENSE: 'DEFENSIVE MAGE', SUMMONING: 'SUMMONER MAGE', 'RUNE MASTERY': 'RUNE MASTER' };
+    return { branch, count, label: labels[branch] ?? 'UNBOUND MAGE' };
   }
 
   canUnlock(id) {

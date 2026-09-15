@@ -6,6 +6,20 @@ import { spells } from './spells.js';
 import { ARENA_LAYOUT, ENTITY_VISUALS, GroundEntity, groundDistance } from './world.js';
 
 const ACTION_STATES = new Set(['attack1', 'attack2', 'attack3', 'uppercut', 'heavyStrike', 'dive', 'dash', 'hurt']);
+// Deliberately the shared prototype baseline, not the future weapon system.
+// Every future weapon may replace this table, but must retain its timing and
+// input contract unless its own combo specification explicitly says otherwise.
+export const MELEE_BASELINE = Object.freeze({
+  normal: Object.freeze([
+    Object.freeze({ state: 'attack1', time: .22, vx: 180, damage: 28, knockback: 220, lift: 100, radius: 40, color: '#fff', glow: '#ffd54f' }),
+    Object.freeze({ state: 'attack2', time: .24, vx: 220, damage: 34, knockback: 260, lift: 140, radius: 44, color: '#fff', glow: '#ff9800' }),
+    Object.freeze({ state: 'attack3', time: .35, vx: 320, damage: 52, knockback: 480, lift: 320, radius: 54, color: '#ffd700', glow: '#ff3d00', finisher: true })
+  ]),
+  bufferWindow: .13,
+  uppercut: Object.freeze({ time: .28, damage: 40, knockback: 140, lift: 480 }),
+  heavy: Object.freeze({ time: .34, damage: 48, knockback: 620, lift: 170 }),
+  dive: Object.freeze({ time: .35, damage: 55, knockback: 200, lift: -300 })
+});
 // z is projected more strongly than x, but needs to stay quick enough for
 // brawler-style depth dodges and lane changes.
 const DEPTH_SPEED = 1.15;
@@ -70,6 +84,8 @@ export class Player extends GroundEntity {
     this.slowFactor = 1;
     this.comboStep = 0;
     this.comboResetTimer = 0;
+    this.queuedAttack = null;
+    this.attackBufferTimer = 0;
     this.canAttack = true;
     // Rune cards (the three cards in the hand) deliberately stay separate
     // from prepared spell components. Drawing a card consumes that *card*,
@@ -93,6 +109,10 @@ export class Player extends GroundEntity {
     this.ninefoldTimer = 0;
     this.ninefoldCooldown = 0;
     this.ninefoldPower = 1;
+    this.focus = 0;
+    this.maxFocus = 100;
+    this.focusTransformTimer = 0;
+    this.focusTransformPower = 1;
     this.isGuarding = false;
     // Physical guarding deliberately has a hidden stability meter.  It is
     // not another HUD resource: it only exists to prevent permanently
@@ -152,6 +172,10 @@ export class Player extends GroundEntity {
     this.ninefoldTimer = Math.max(0, this.ninefoldTimer - dt);
     this.ninefoldCooldown = Math.max(0, this.ninefoldCooldown - dt);
     if (this.ninefoldTimer <= 0) this.ninefoldPower = 1;
+    this.focusTransformTimer = Math.max(0, this.focusTransformTimer - dt);
+    if (this.focusTransformTimer <= 0) this.focusTransformPower = 1;
+    this.attackBufferTimer = Math.max(0, this.attackBufferTimer - dt);
+    if (this.attackBufferTimer <= 0) this.queuedAttack = null;
     this.guardBreakTimer = Math.max(0, this.guardBreakTimer - dt);
     if (this.arcaneShieldTimer <= 0) this.arcaneShield = 0;
     this.freezeTimer = Math.max(0, this.freezeTimer - dt);
@@ -165,7 +189,7 @@ export class Player extends GroundEntity {
       if (this.state === 'dash' && Math.random() < 0.6) {
         this.ghosts.push({ x: this.x, y: this.y, z: this.z, elevation: this.elevation, facing: this.facing, alpha: 0.5, state: this.state, animTime: this.animTime });
       }
-      if (this.stateTimer <= 0) this.finishAction();
+      if (this.stateTimer <= 0) this.finishAction(input);
     }
 
     const controlsBlocked = input.gameplayBlocked || this.freezeTimer > 0 || this.state === 'hurt' || !this.isAlive;
@@ -275,8 +299,9 @@ export class Player extends GroundEntity {
     if (Math.abs(move.x) > 0.02) this.facing = Math.sign(move.x);
     const guardSpeed = this.isGuarding ? 0.38 : 1;
     const beastSpeed = this.ninefoldTimer > 0 ? 1.23 : 1;
-    const targetX = move.x * this.moveSpeed * this.slowFactor * guardSpeed * beastSpeed;
-    const targetZ = move.z * this.depthSpeed * this.slowFactor * guardSpeed * beastSpeed;
+    const focusSpeed = this.focusTransformTimer > 0 ? 1.12 : 1;
+    const targetX = move.x * this.moveSpeed * this.slowFactor * guardSpeed * beastSpeed * focusSpeed;
+    const targetZ = move.z * this.depthSpeed * this.slowFactor * guardSpeed * beastSpeed * focusSpeed;
     this.vx += (targetX - this.vx) * Math.min(1, dt * 18);
     this.vz += (targetZ - this.vz) * Math.min(1, dt * 18);
     if (Math.hypot(move.x, move.z) > 0.05 && this.grounded) {
@@ -307,50 +332,59 @@ export class Player extends GroundEntity {
     if (input.justPressed('KeyJ') || input.justPressed('Mouse0')) this.executeAttack(input);
   }
 
-  finishAction() {
+  finishAction(input = null) {
     if (!this.isAlive) return;
     this.state = this.grounded ? 'idle' : (this.vElevation > 0 ? 'jump' : 'fall');
     this.stateTimer = 0;
     this.canAttack = true;
+    if (this.queuedAttack && this.attackBufferTimer > 0) {
+      const queued = this.queuedAttack;
+      this.queuedAttack = null;
+      this.attackBufferTimer = 0;
+      this.executeAttack(input ?? { move: { x: 0, z: 0 }, keys: {} }, queued);
+    }
   }
 
   executeAttack(input, attackKind = 'normal') {
-    if (!this.isAlive || this.isGuarding || !this.canAttack || ACTION_STATES.has(this.state) || !window.gameWorld?.isMatchRunning?.()) return false;
+    if (!this.isAlive || this.isGuarding || !window.gameWorld?.isMatchRunning?.()) return false;
+    if (ACTION_STATES.has(this.state) || !this.canAttack) {
+      const canBuffer = attackKind === 'normal' && /^attack[123]$/.test(this.state) && this.stateTimer <= MELEE_BASELINE.bufferWindow;
+      if (canBuffer) {
+        this.queuedAttack = 'normal';
+        this.attackBufferTimer = MELEE_BASELINE.bufferWindow + .10;
+      }
+      return canBuffer;
+    }
     this.canAttack = false;
     const move = moveVector(input);
     if (attackKind === 'uppercut' || input.keys?.KeyU) {
-      this.state = 'uppercut'; this.stateTimer = 0.28; this.vElevation = 280;
+      this.state = 'uppercut'; this.stateTimer = MELEE_BASELINE.uppercut.time; this.vElevation = 280;
       audio.playSlash(1.2);
       combat.spawnSlashArc(this.x, this.y - 25, this.facing, { radius: 46, angleStart: -1.2, angleEnd: 0.6, color: '#ffea00', glow: '#ff9800' });
-      this.triggerMeleeHitbox(40, this.facing * 140, 480, 0.5);
+      this.triggerMeleeHitbox(MELEE_BASELINE.uppercut.damage, this.facing * MELEE_BASELINE.uppercut.knockback, MELEE_BASELINE.uppercut.lift, 0.5);
       return true;
     }
     if (!this.grounded && (attackKind === 'dive' || move.z > 0.55)) {
-      this.state = 'dive'; this.stateTimer = 0.35; this.vElevation = -850;
+      this.state = 'dive'; this.stateTimer = MELEE_BASELINE.dive.time; this.vElevation = -850;
       audio.playSlash(0.9);
       combat.spawnSlashArc(this.x, this.y - 15, this.facing, { radius: 50, angleStart: 0.8, angleEnd: 2.2, color: '#ff5722', glow: '#d50000' });
-      this.triggerMeleeHitbox(55, this.facing * 200, -300, 0.6);
+      this.triggerMeleeHitbox(MELEE_BASELINE.dive.damage, this.facing * MELEE_BASELINE.dive.knockback, MELEE_BASELINE.dive.lift, 0.6);
       return true;
     }
     if (attackKind === 'heavy') {
-      this.state = 'heavyStrike'; this.stateTimer = 0.34; this.vx = this.facing * 360;
+      this.state = 'heavyStrike'; this.stateTimer = MELEE_BASELINE.heavy.time; this.vx = this.facing * 360;
       audio.playSlash(0.78);
       combat.spawnSlashArc(this.x + this.facing * 28, this.y - 25, this.facing, { radius: 58, angleStart: -0.9, angleEnd: 0.9, color: '#ffd54f', glow: '#ff6d00', width: 7 });
-      this.triggerMeleeHitbox(48, this.facing * 620, 170, 0.48, true);
+      this.triggerMeleeHitbox(MELEE_BASELINE.heavy.damage, this.facing * MELEE_BASELINE.heavy.knockback, MELEE_BASELINE.heavy.lift, 0.48, true);
       return true;
     }
     this.comboStep = (this.comboStep % 3) + 1;
     this.comboResetTimer = 0.65;
-    const moves = [
-      { state: 'attack1', time: 0.22, vx: 180, dmg: 28, knock: 220, lift: 100, radius: 40, color: '#fff', glow: '#ffd54f' },
-      { state: 'attack2', time: 0.24, vx: 220, dmg: 34, knock: 260, lift: 140, radius: 44, color: '#fff', glow: '#ff9800' },
-      { state: 'attack3', time: 0.35, vx: 320, dmg: 52, knock: 480, lift: 320, radius: 54, color: '#ffd700', glow: '#ff3d00', finisher: true }
-    ];
-    const attack = moves[this.comboStep - 1];
+    const attack = MELEE_BASELINE.normal[this.comboStep - 1];
     this.state = attack.state; this.stateTimer = attack.time; this.vx = this.facing * attack.vx;
     audio.playSlash(this.comboStep === 3 ? 0.85 : 1 + this.comboStep * 0.1);
     combat.spawnSlashArc(this.x + this.facing * 22, this.y - 28, this.facing, { radius: attack.radius, color: attack.color, glow: attack.glow, width: attack.finisher ? 7 : 4 });
-    this.triggerMeleeHitbox(attack.dmg, this.facing * attack.knock, attack.lift, attack.finisher ? 0.6 : 0.4, !!attack.finisher);
+    this.triggerMeleeHitbox(attack.damage, this.facing * attack.knockback, attack.lift, attack.finisher ? 0.6 : 0.4, !!attack.finisher);
     return true;
   }
 
@@ -365,8 +399,13 @@ export class Player extends GroundEntity {
       kx *= 1.30;
       lift *= 1.18;
     }
+    if (this.focusTransformTimer > 0) {
+      dmg *= 1.18 * this.focusTransformPower;
+      kx *= 1.14;
+      lift *= 1.10;
+    }
     const targets = window.gameWorld?.getHostileTargets(this.team, true) ?? [];
-    let hitAny = false;
+    let hitAny = false; let hitCount = 0;
     for (const target of targets) {
       if (isUpperCastleBattlement(this) && isUpperCastleBattlement(target) && target.heroKey) continue;
       const inFront = (target.x - this.x) * this.facing >= -10 && Math.abs(target.x - this.x) <= (target.hitRadiusX ?? 78);
@@ -376,10 +415,11 @@ export class Player extends GroundEntity {
       if (inFront && closeDepth && heightDifference <= verticalReach) {
         target.takeDamage(dmg, kx, lift, stunDuration, isFinisher);
         combat.spawnHitSparks(target.x, target.y - 25, this.facing, isFinisher ? '#ffea00' : '#fff', isFinisher ? 16 : 8);
-        hitAny = true;
+        hitAny = true; hitCount++;
       }
     }
     if (hitAny) {
+      this.gainFocus(Math.min(16, 5 + hitCount * (isFinisher ? 4 : 3)), isFinisher ? 'FINISHER' : 'MELEE');
       audio.playImpact(isFinisher);
       combat.triggerHitstop(isFinisher ? 6 : 4);
       combat.shakeCamera(isFinisher ? 8 : 4, 0.2);
@@ -439,6 +479,11 @@ export class Player extends GroundEntity {
       amount *= .88;
       kx *= .88;
     }
+    if (this.focusTransformTimer > 0) {
+      amount *= .86;
+      kx *= .82;
+      lift *= .88;
+    }
     // Passive build modifiers are applied after temporary forms/shields so
     // every incoming source shares the same final damage rule.
     amount *= this.buildModifiers?.damageTaken ?? 1;
@@ -467,9 +512,9 @@ export class Player extends GroundEntity {
     this.x = spawn.x; this.z = spawn.z; this.elevation = 0;
     this.vx = 0; this.vz = 0; this.vElevation = 0;
     this.hp = this.maxHp; this.mp = this.maxMp; this.sp = this.maxSp;
-    this.state = 'idle'; this.stateTimer = 0; this.comboStep = 0; this.comboResetTimer = 0;
+    this.state = 'idle'; this.stateTimer = 0; this.comboStep = 0; this.comboResetTimer = 0; this.queuedAttack = null; this.attackBufferTimer = 0;
     this.canAttack = true; this.freezeTimer = 0; this.slowTimer = 0; this.slowFactor = 1;
-    this.invulnerableTimer = 1.25; this.auraShockCooldown = 0; this.arcaneShield = 0; this.arcaneShieldTimer = 0; this.arcaneShieldCooldown = 0; this.eidolonTimer = 0; this.eidolonCooldown = 0; this.eidolonPower = 1; this.eidolonArmor = 0; this.ninefoldTimer = 0; this.ninefoldCooldown = 0; this.ninefoldPower = 1; this.isGuarding = false; this.guardStability = 100; this.guardHoldTime = 0; this.guardBreakTimer = 0; this.jumpsLeft = 2; this.ghosts = [];
+    this.invulnerableTimer = 1.25; this.auraShockCooldown = 0; this.arcaneShield = 0; this.arcaneShieldTimer = 0; this.arcaneShieldCooldown = 0; this.eidolonTimer = 0; this.eidolonCooldown = 0; this.eidolonPower = 1; this.eidolonArmor = 0; this.ninefoldTimer = 0; this.ninefoldCooldown = 0; this.ninefoldPower = 1; this.focus = 0; this.focusTransformTimer = 0; this.focusTransformPower = 1; this.isGuarding = false; this.guardStability = 100; this.guardHoldTime = 0; this.guardBreakTimer = 0; this.jumpsLeft = 2; this.ghosts = [];
     this.lifeState = 'Alive'; this.respawnTimer = 0; this.grounded = true;
     battlefield?.resolveEntityCollision(this);
     combat.spawnShockwave(this.x, this.y - 25, 55, '#80d8ff');
@@ -543,6 +588,7 @@ export class Player extends GroundEntity {
       }
       ctx.restore();
     }
+    if (this.isAlive && this.focusTransformTimer > 0) this.renderFocusAscendant(ctx, renderY);
     if (this.isAlive && this.ninefoldTimer > 0) this.renderNinefoldBeast(ctx, renderY);
     if (this.isAlive && this.eidolonTimer > 0) this.renderEidolonMantle(ctx, renderY);
     for (const g of this.ghosts) sprites.renderEntity(ctx, this.heroKey, g.x, g.y, { facing: g.facing, state: g.state, animTime: g.animTime, alpha: g.alpha, hitFlash: 1 });
@@ -581,6 +627,47 @@ export class Player extends GroundEntity {
       ctx.save(); ctx.fillStyle = 'rgba(0,229,255,.45)'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
       ctx.fillRect(this.x - 24, this.y - 75, 48, 75); ctx.strokeRect(this.x - 24, this.y - 75, 48, 75); ctx.restore();
     }
+  }
+
+  renderFocusAscendant(ctx, renderY) {
+    const pulse = 1 + Math.sin(this.animTime * 7) * .08;
+    ctx.save();
+    ctx.globalAlpha = .52;
+    ctx.strokeStyle = '#f0a6ff';
+    ctx.shadowColor = '#b668ff';
+    ctx.shadowBlur = 18;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.ellipse(this.x, renderY - 28, 31 * pulse, 46 * pulse, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.globalAlpha = .92;
+    ctx.fillStyle = '#fff0ff';
+    ctx.font = '9px Cinzel';
+    ctx.textAlign = 'center';
+    ctx.fillText('ASCENDANT', this.x, renderY - 78);
+    ctx.restore();
+  }
+
+  gainFocus(amount, source = 'COMBAT') {
+    if (!this.isAlive || this.focusTransformTimer > 0) return false;
+    const previous = this.focus;
+    this.focus = Math.min(this.maxFocus, this.focus + Math.max(0, amount) * (this.buildModifiers?.focusGain ?? 1));
+    if (previous < this.maxFocus && this.focus >= this.maxFocus) {
+      window.gameWorld?.showAnnouncement?.('FOCUS FULL — TAP FOCUS OR PRESS T', 1.8);
+      combat.spawnShockwave(this.x, this.y - 34, 52, '#f0c8ff');
+    }
+    return this.focus > previous;
+  }
+
+  activateFocusTransformation() {
+    if (!this.isAlive || this.focus < this.maxFocus || this.focusTransformTimer > 0) return false;
+    this.focus = 0;
+    this.focusTransformTimer = 8;
+    this.focusTransformPower = 1;
+    combat.spawnShockwave(this.x, this.y - 38, 92, '#f0a6ff');
+    combat.spawnElementalParticles(this.x, this.y - 38, 'void', 34);
+    audio.playSpell('focus_ascendant');
+    return true;
   }
 
   renderEidolonMantle(ctx, renderY) {
@@ -723,7 +810,7 @@ export class Castle extends GroundEntity {
 }
 
 export class EnemyChampion extends GroundEntity {
-  constructor(x, z, heroKey = 'warlord') { super(x, z); this.heroKey = heroKey; this.team = 'red'; this.isMobileCombatant = true; this.facing = -1; this.width = ENTITY_VISUALS.heroColliderWidth; this.height = ENTITY_VISUALS.heroColliderHeight; this.maxHp = this.hp = 280; this.mp = 100; this.speed = 230; this.state = 'idle'; this.animTime = 0; this.hitFlash = 0; this.freezeTimer = 0; this.slowTimer = 0; this.slowFactor = 1; this.attackCooldown = 0; this.spellCooldown = 3; this.stateTimer = 0; this.lifeState = 'Alive'; this.respawnTimer = 0; this.respawnDuration = 3; }
+  constructor(x, z, heroKey = 'warlord') { super(x, z); this.heroKey = heroKey; this.team = 'red'; this.isMobileCombatant = true; this.facing = -1; this.width = ENTITY_VISUALS.heroColliderWidth; this.height = ENTITY_VISUALS.heroColliderHeight; this.maxHp = this.hp = 280; this.maxMp = this.mp = 100; this.speed = 230; this.state = 'idle'; this.animTime = 0; this.hitFlash = 0; this.freezeTimer = 0; this.slowTimer = 0; this.slowFactor = 1; this.attackCooldown = 0; this.spellCooldown = 1.4; this.defensiveCooldown = 0; this.arcaneShield = 0; this.arcaneShieldTimer = 0; this.aiMode = 'DEFEND_CASTLE'; this.stateTimer = 0; this.lifeState = 'Alive'; this.respawnTimer = 0; this.respawnDuration = 3; }
   get isAlive() { return this.lifeState === 'Alive'; }
   get isDead() { return this.lifeState === 'Dead'; }
   set isDead(value) { this.lifeState = value ? 'Dead' : 'Alive'; }
@@ -731,28 +818,62 @@ export class EnemyChampion extends GroundEntity {
     this.animTime += dt; this.hitFlash = Math.max(0, this.hitFlash - dt);
     if (this.lifeState === 'Dying') { this.stateTimer -= dt; if (this.stateTimer <= 0) { this.lifeState = 'Dead'; this.respawnTimer = gameWorld.canRespawn(this.team) ? this.respawnDuration : Infinity; if (!Number.isFinite(this.respawnTimer)) gameWorld.onFinalWizardDeath(this.team); } return; }
     if (this.lifeState === 'Dead') { this.respawnTimer -= dt; if (this.respawnTimer <= 0) this.respawn(battlefield); return; }
-    this.attackCooldown -= dt; this.spellCooldown -= dt; this.freezeTimer = Math.max(0, this.freezeTimer - dt); this.slowTimer = Math.max(0, this.slowTimer - dt); if (!this.slowTimer) this.slowFactor = 1;
+    this.attackCooldown -= dt; this.spellCooldown -= dt; this.defensiveCooldown -= dt; this.mp = Math.min(this.maxMp, this.mp + dt * 11); this.arcaneShieldTimer = Math.max(0, this.arcaneShieldTimer - dt); if (this.arcaneShieldTimer <= 0) this.arcaneShield = 0; this.freezeTimer = Math.max(0, this.freezeTimer - dt); this.slowTimer = Math.max(0, this.slowTimer - dt); if (!this.slowTimer) this.slowFactor = 1;
     if (this.stateTimer > 0) { this.stateTimer -= dt; if (this.stateTimer <= 0) this.state = this.grounded ? 'idle' : 'fall'; }
     const player = gameWorld.player; const distance = player.isAlive ? groundDistance(this, player) : Infinity;
     const home = battlefield.getSpawn(this.team);
+    const ownTower = battlefield.getTower(this.team);
+    const ownCastle = battlefield.getCastle(this.team);
+    const objectiveThreat = player.isAlive && [ownTower, ownCastle].some((objective) => !objective.isDead && !objective.isDestroyed && groundDistance(player, objective) < 245);
     if (this.freezeTimer > 0) { this.vx = this.vz = 0; }
     else if (player.isAlive && distance <= 70) {
+      this.aiMode = 'DUEL';
       this.vx = this.vz = 0;
       this.facing = Math.sign(player.x - this.x) || this.facing;
       // The upper battlements are Wizard-only spell-duel spaces.  Champions
       // can pressure each other there, but not with grounded melee strings.
       if (isUpperCastleBattlement(this) && isUpperCastleBattlement(player)) {
         this.state = 'idle';
-        if (this.spellCooldown <= 0) { this.spellCooldown = 3; spells.cast(this, { id: 'fireball', tier: 1 }, gameWorld); }
+        this.tryAICast('fireball', gameWorld, 12, 2.0);
+      } else if (this.tryAIDefense(player, distance, objectiveThreat, gameWorld)) {
+        this.vx = this.vz = 0;
       } else if (this.attackCooldown <= 0) this.executeAIAttack(player);
     }
-    else if (player.isAlive && distance < 340 && Math.abs(player.x - home.x) < 420) { const move = normalizeMove({ x: player.x - this.x, z: (player.z - this.z) * 150 }); this.facing = Math.sign(move.x) || this.facing; this.vx = move.x * this.speed * this.slowFactor; this.vz = move.z * this.speed / 150 * this.slowFactor; this.state = 'run'; if (this.spellCooldown <= 0 && distance > 120) { this.spellCooldown = 4.5; spells.cast(this, { id: 'fireball', tier: 1 }, gameWorld); } }
-    else { const move = normalizeMove({ x: home.x - this.x, z: (home.z - this.z) * 150 }); this.facing = Math.sign(move.x) || this.facing; this.vx = move.x * this.speed * .45; this.vz = move.z * this.speed / 150 * .45; this.state = 'run'; }
+    else if (player.isAlive && distance < 400 && (objectiveThreat || Math.abs(player.x - home.x) < 430)) {
+      this.aiMode = objectiveThreat ? 'PROTECT_OBJECTIVE' : 'INTERCEPT';
+      const retreating = this.hp / this.maxHp < .30 && distance < 180;
+      const destination = retreating ? home : player;
+      const move = normalizeMove({ x: destination.x - this.x, z: (destination.z - this.z) * 150 });
+      this.facing = retreating ? -Math.sign(move.x || this.facing) : Math.sign(move.x) || this.facing;
+      this.vx = move.x * this.speed * this.slowFactor * (retreating ? -.82 : 1);
+      this.vz = move.z * this.speed / 150 * this.slowFactor * (retreating ? -.82 : 1);
+      this.state = 'run';
+      if (!this.tryAIDefense(player, distance, objectiveThreat, gameWorld) && distance > 110) this.tryAICast('fireball', gameWorld, 12, objectiveThreat ? 2.1 : 3.1);
+    } else {
+      this.aiMode = 'DEFEND_CASTLE';
+      const move = normalizeMove({ x: home.x - this.x, z: (home.z - this.z) * 150 }); this.facing = Math.sign(move.x) || this.facing; this.vx = move.x * this.speed * .45; this.vz = move.z * this.speed / 150 * .45; this.state = 'run';
+    }
     this.integrateElevation(dt, 1200); const previousX = this.x; const previousZ = this.z; this.x += this.vx * dt; this.z += this.vz * dt; battlefield.resolveEntityCollision(this); gameWorld.resolveSpellObstacles(this, previousX, previousZ);
   }
+  tryAICast(id, gameWorld, manaCost, cooldown) {
+    if (this.spellCooldown > 0 || this.mp < manaCost) return false;
+    this.mp -= manaCost; this.spellCooldown = cooldown;
+    spells.cast(this, { id, tier: id === 'stone_wall' || id === 'arcane_aegis' ? 2 : 1 }, gameWorld);
+    return true;
+  }
+  tryAIDefense(player, distance, objectiveThreat, gameWorld) {
+    if (this.hp / this.maxHp < .48 && this.defensiveCooldown <= 0 && this.mp >= 24) {
+      this.mp -= 24; this.defensiveCooldown = 8; this.arcaneShield = 72; this.arcaneShieldTimer = 4;
+      spells.cast(this, { id: 'arcane_aegis', tier: 2 }, gameWorld);
+      return true;
+    }
+    if (distance <= 105 && this.mp >= 18 && this.spellCooldown <= 0) return this.tryAICast('frost_nova', gameWorld, 18, 3.1);
+    if (objectiveThreat && distance < 230 && this.mp >= 22 && this.spellCooldown <= 0) return this.tryAICast('stone_wall', gameWorld, 22, 5.0);
+    return false;
+  }
   executeAIAttack(target) { this.attackCooldown = 1.1; this.state = 'attack1'; this.stateTimer = .28; audio.playSlash(1.1); combat.spawnSlashArc(this.x + this.facing * 20, this.y - 28, this.facing, { radius: 42, color: '#f44336', glow: '#b71c1c' }); if (!(isUpperCastleBattlement(this) && isUpperCastleBattlement(target)) && Math.abs(target.z - this.z) <= .22 && Math.abs((target.worldHeight ?? 0) - this.worldHeight) <= 70) target.takeDamage(24, this.facing * 240, 100, .3); }
-  takeDamage(amount, kx = 0, lift = 0, stun = .35, isCrit = false) { if (!this.isAlive) return; this.hp = Math.max(0, this.hp - amount); this.hitFlash = .15; this.vx = kx; this.vElevation = lift; this.state = 'hurt'; this.stateTimer = stun; combat.spawnDamageText(this.x, this.y - 45, amount, { isCrit, color: '#ff7043' }); if (!this.hp) { window.gameWorld?.recordWizardDeath?.(this.team); this.lifeState = 'Dying'; this.state = 'dead'; this.stateTimer = .45; combat.spawnShockwave(this.x, this.y - 30, 80, '#ff5252'); } }
-  respawn(battlefield) { const spawn = battlefield.getSpawn(this.team); this.x = spawn.x; this.z = spawn.z; this.elevation = 0; this.vx = this.vz = this.vElevation = 0; this.hp = this.maxHp; this.state = 'idle'; this.lifeState = 'Alive'; this.respawnTimer = 0; this.attackCooldown = 0; this.spellCooldown = 1; battlefield.resolveEntityCollision(this); combat.spawnShockwave(this.x, this.y - 28, 50, '#ff5252'); }
+  takeDamage(amount, kx = 0, lift = 0, stun = .35, isCrit = false) { if (!this.isAlive) return; if (this.arcaneShield > 0) { const absorbed = Math.min(amount, this.arcaneShield); this.arcaneShield -= absorbed; amount -= absorbed; if (amount <= 0) { combat.spawnElementalParticles(this.x, this.y - 35, 'fulgur', 5); return; } } this.hp = Math.max(0, this.hp - amount); this.hitFlash = .15; this.vx = kx; this.vElevation = lift; this.state = 'hurt'; this.stateTimer = stun; combat.spawnDamageText(this.x, this.y - 45, amount, { isCrit, color: '#ff7043' }); if (!this.hp) { window.gameWorld?.recordWizardDeath?.(this.team); this.lifeState = 'Dying'; this.state = 'dead'; this.stateTimer = .45; combat.spawnShockwave(this.x, this.y - 30, 80, '#ff5252'); } }
+  respawn(battlefield) { const spawn = battlefield.getSpawn(this.team); this.x = spawn.x; this.z = spawn.z; this.elevation = 0; this.vx = this.vz = this.vElevation = 0; this.hp = this.maxHp; this.mp = this.maxMp; this.arcaneShield = 0; this.arcaneShieldTimer = 0; this.state = 'idle'; this.lifeState = 'Alive'; this.respawnTimer = 0; this.attackCooldown = 0; this.spellCooldown = 1; this.defensiveCooldown = 0; battlefield.resolveEntityCollision(this); combat.spawnShockwave(this.x, this.y - 28, 50, '#ff5252'); }
   freeze(duration) { this.freezeTimer = duration; } slow(duration, factor) { this.slowTimer = duration; this.slowFactor = factor; }
   render(ctx) { sprites.renderEntity(ctx, this.heroKey, this.x, this.y, { facing: this.facing, state: this.state, animTime: this.animTime, hitFlash: this.hitFlash > 0, alpha: this.lifeState === 'Dead' ? 0 : 1 }); if (this.lifeState !== 'Dead') { const healthBarY = this.y - ENTITY_VISUALS.heroHeight - 8; ctx.fillStyle = 'rgba(0,0,0,.8)'; ctx.fillRect(this.x - 27, healthBarY, 54, 6); ctx.fillStyle = '#f44336'; ctx.fillRect(this.x - 27, healthBarY, 54 * this.hp / this.maxHp, 6); } }
 }

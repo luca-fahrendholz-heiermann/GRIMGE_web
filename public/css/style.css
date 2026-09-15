@@ -751,6 +751,34 @@ body.portrait-gameplay #game-container { visibility: hidden; pointer-events: non
   vertical-align: -1px;
 }
 
+#focus-readout {
+  min-height: 10px;
+  color: #d8b5ff;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-align: center;
+  text-shadow: 0 0 8px rgba(196, 104, 255, .65);
+}
+
+.focus-activate {
+  display: none;
+  min-width: 102px;
+  padding: 3px 9px;
+  border: 1px solid #f0a6ff;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(94, 46, 130, .94), rgba(30, 16, 54, .94));
+  color: #fff0ff;
+  font: 800 8px 'Cinzel', serif;
+  letter-spacing: .8px;
+  box-shadow: 0 0 12px rgba(197, 104, 255, .5);
+  touch-action: manipulation;
+  pointer-events: auto;
+}
+
+.focus-activate.ready { display: block; animation: focusReadyPulse .8s ease-in-out infinite alternate; }
+@keyframes focusReadyPulse { from { transform: scale(.96); } to { transform: scale(1.04); } }
+
 .card-overlay em {
   font-size: 6px;
   font-style: normal;

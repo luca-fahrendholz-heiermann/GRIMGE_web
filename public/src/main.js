@@ -216,6 +216,10 @@ export class GameWorld {
       // Cast Spell (E)
       if (e.code === 'KeyE') this.castPreparedSpell();
 
+      // Earned Focus is a match-only transformation resource. It deliberately
+      // stays off the rune deck so a full meter remains a fast tactical choice.
+      if (e.code === 'KeyT') this.activateFocusTransformation();
+
       // Own Wolves and Golems can be ridden. Mounting is deliberately a
       // proximity action, not another spell slot: R toggles on/off.
       if (e.code === 'KeyR') this.toggleMount();
@@ -702,6 +706,7 @@ export class GameWorld {
         const runeProgress = this.profile.awardRuneUse(added.id, grade);
         const prepared = { ...added, grade, quality: result.confidence, runeLevel: this.profile.runeLevel(added.id) };
         this.slotRuneSpell(prepared);
+        this.player.gainFocus({ C: 4, B: 6, A: 8, S: 10 }[grade] ?? 6, 'RUNE QUALITY');
         this.applyProfile();
         this.reportProfileProgress(runeProgress, prepared);
         audio.playRuneSuccess();
@@ -763,7 +768,8 @@ export class GameWorld {
       if (resolved.id === 'arcane_aegis') this.player.arcaneShieldCooldown = resolved.cooldown;
       if (resolved.id === 'eidolon_mantle') this.player.eidolonCooldown = resolved.cooldown;
       if (resolved.id === 'ninefold_beast_form') this.player.ninefoldCooldown = resolved.cooldown;
-      spells.cast(this.player, resolved, this, spells.qualityForRunes(selectedRunes));
+    spells.cast(this.player, resolved, this, spells.qualityForRunes(selectedRunes));
+      this.player.gainFocus(resolved.tier > 1 ? 8 : 4, 'SPELL CAST');
       this.showAnnouncement(`CAST: ${resolved.name}!`);
       this.noteSpellDiscovery(resolved);
       // Drawing already recycled each physical card to the deck back and
@@ -825,6 +831,7 @@ export class GameWorld {
     if (resolved.id === 'eidolon_mantle') this.player.eidolonCooldown = resolved.cooldown;
     if (resolved.id === 'ninefold_beast_form') this.player.ninefoldCooldown = resolved.cooldown;
     spells.cast(this.player, resolved, this, slot.quality);
+    this.player.gainFocus(resolved.tier > 1 ? 8 : 4, 'SPELL CAST');
     this.showAnnouncement(`CAST: ${resolved.name}!`);
     this.noteSpellDiscovery(resolved);
     if (consumeSelected) {
@@ -840,6 +847,15 @@ export class GameWorld {
     if (slots.length < 2) return false;
     this.player.selectedSpellIndex = (this.player.selectedSpellIndex + 1) % slots.length;
     audio.playRuneChime(660);
+    return true;
+  }
+
+  activateFocusTransformation() {
+    if (!this.isMatchRunning() || !this.player?.activateFocusTransformation?.()) {
+      this.showAnnouncement(this.player?.focus >= this.player?.maxFocus ? 'FOCUS ALREADY ACTIVE' : `FOCUS ${Math.round(this.player?.focus ?? 0)}/${this.player?.maxFocus ?? 100}`);
+      return false;
+    }
+    this.showAnnouncement('FOCUS ASCENDANT — 8 SECONDS', 1.4);
     return true;
   }
 
