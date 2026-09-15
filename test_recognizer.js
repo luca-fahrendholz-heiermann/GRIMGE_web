@@ -144,6 +144,9 @@ assert(sArcaneAegis && sArcaneAegis.id === 'arcane_aegis', 'Spell: Aqua + Terra 
 const sEidolonMantle = spells.resolveSpell([rBestia, rTerra, rVoid]);
 assert(sEidolonMantle && sEidolonMantle.id === 'eidolon_mantle', 'Spell: Bestia + Terra + Void -> EIDOLON MANTLE');
 
+const sNinefoldBeast = spells.resolveSpell([rBestia, rIgnis, rVoid]);
+assert(sNinefoldBeast && sNinefoldBeast.id === 'ninefold_beast_form', 'Spell: Bestia + Ignis + Void -> NINEFOLD BEAST FORM');
+
 const sStoneWall = spells.resolveSpell([rTerra, rTerra]);
 assert(sStoneWall && sStoneWall.id === 'stone_wall', 'Spell: Terra + Terra -> STONE WALL');
 

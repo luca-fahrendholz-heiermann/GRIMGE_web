@@ -72,7 +72,7 @@ export class Battlefield {
     clampToArena(entity);
     if (entity.x !== oldX) entity.vx = 0;
     if (entity.z !== oldZ) entity.vz = 0;
-    const surface = this.getSurfaceAt(entity.x, entity.z);
+    const surface = this.getSurfaceAt(entity.x, entity.z, entity);
     const nextSurfaceHeight = surfaceHeight(surface, entity.x);
     // Ramps are continuous ground. Leaving the side/front of a raised Castle
     // platform is a meaningful drop: preserve that height as elevation so an
@@ -91,14 +91,18 @@ export class Battlefield {
     entity.surfaceHeight = nextSurfaceHeight;
   }
 
-  getSurfaceAt(x, z) {
+  getSurfaceAt(x, z, entity = null) {
+    // Lane units always remain on the ground plane. This intentionally makes
+    // Castle battlements a Wizard-only spell-duel zone without reintroducing
+    // separate rails or platformer physics for the rest of the arena.
+    if (entity?.isMinion) return this.surfaces[0];
     // Main arena is the fallback; elevated authored surfaces take priority.
     return [...this.surfaces].reverse().find((surface) => surfaceContains(surface, x, z)) ?? this.surfaces[0];
   }
 
   placeOnSurface(entity) {
     entity.elevation = 0; entity.grounded = true;
-    const surface = this.getSurfaceAt(entity.x, entity.z);
+    const surface = this.getSurfaceAt(entity.x, entity.z, entity);
     entity.surfaceId = surface.id;
     entity.surfaceHeight = surfaceHeight(surface, entity.x);
   }

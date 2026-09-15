@@ -52,6 +52,9 @@ export class SpellSystem {
     // 1. Triple Rune Grand Combinations
     if (ids.length === 3) {
       if (key === 'bestia+terra+void') return { id: 'eidolon_mantle', name: 'EIDOLON MANTLE', tier: 3, manaCost: 45, cooldown: 18, color: '#b668ff', desc: 'Bestia, Earth and Void form a temporary spectral guardian around the Wizard: damage resistance, knockback resistance and empowered melee.' };
+      // An original GRIMGE feral transformation: its nine rune-flame tails
+      // evoke a legendary beast without borrowing a named character or form.
+      if (key === 'bestia+ignis+void') return { id: 'ninefold_beast_form', name: 'NINEFOLD BEAST FORM', tier: 3, manaCost: 55, cooldown: 22, color: '#ff7a2f', desc: 'Bestia, Fire and Void awaken a short feral rune form: faster movement, savage melee and light damage resistance.' };
       if (key === 'bestia+ignis+ventus') return { id: 'dragon_invocation', name: 'INFERNO DRAGON INVOCATION', tier: 3, manaCost: 70, color: '#ff7043', desc: 'Bestia, Fire and Wind call a temporary fire dragon to scorch a battlefield zone.' };
       if (key === 'aqua+terra+ventus') return { id: 'summon_spirit_wolf', name: 'SPIRIT WOLF', tier: 3, manaCost: 32, color: '#80d8ff', desc: 'Summons a quick frost spirit that hunts nearby enemies.' };
       if (key === 'fulgur+terra+terra') return { id: 'summon_siege_golem', name: 'SIEGE GOLEM', tier: 3, manaCost: 46, color: '#a1887f', desc: 'Summons a slow, durable golem that presses objectives.' };
@@ -317,6 +320,11 @@ export class SpellSystem {
         break;
       }
 
+      case 'ninefold_beast_form': {
+        this.castNinefoldBeast(caster, castQuality);
+        break;
+      }
+
       case 'stone_wall': {
         this.castStoneWall(caster, gameWorld, castQuality);
         break;
@@ -430,12 +438,27 @@ export class SpellSystem {
     // This is an original GRIMGE transformation, not a character skin. It
     // intentionally layers with neither a permanent summon nor a new button:
     // runes decide when a short, high-pressure guardian form is available.
+    caster.ninefoldTimer = 0;
+    caster.ninefoldPower = 1;
     caster.eidolonTimer = 10 * quality.duration;
     caster.eidolonPower = quality.power;
     caster.eidolonArmor = Math.min(.48, .30 + (quality.power - 1) * .35);
     combat.spawnShockwave(caster.x, caster.y - 38, 78 * quality.area, '#b668ff');
     combat.spawnElementalParticles(caster.x, caster.y - 38, 'void', Math.round(34 * quality.particles));
     audio.playSpell('eidolon_mantle');
+  }
+
+  castNinefoldBeast(caster, quality = RUNE_GRADE_PROFILES.B) {
+    // Forms are intentionally mutually exclusive: the player chooses a
+    // defensive guardian or a short aggressive transformation, not both.
+    caster.eidolonTimer = 0;
+    caster.eidolonPower = 1;
+    caster.eidolonArmor = 0;
+    caster.ninefoldTimer = 8 * quality.duration;
+    caster.ninefoldPower = quality.power;
+    combat.spawnShockwave(caster.x, caster.y - 38, 88 * quality.area, '#ff6f3b');
+    combat.spawnElementalParticles(caster.x, caster.y - 38, 'ignis', Math.round(32 * quality.particles));
+    audio.playSpell('ignis');
   }
 
   castStoneWall(caster, gameWorld, quality = RUNE_GRADE_PROFILES.B) {
@@ -1295,6 +1318,13 @@ class SummonedCreature extends GroundEntity {
     if (this.definition.role === 'hunter') {
       // The Wolf is an assassin: it deliberately looks past the minion line
       // for a hostile Wizard, then falls back to the nearest mobile target.
+      const wizard = sortNearest(mobile.filter((target) => target.heroKey));
+      return wizard[0] ?? sortNearest(mobile)[0] ?? sortNearest(structures)[0];
+    }
+    if (this.definition.role === 'control') {
+      // The spider is an anti-Wizard control summon. It can still fall back
+      // to a minion or objective, but a nearby enemy caster is its tactical
+      // priority instead of being hidden by incidental lane traffic.
       const wizard = sortNearest(mobile.filter((target) => target.heroKey));
       return wizard[0] ?? sortNearest(mobile)[0] ?? sortNearest(structures)[0];
     }

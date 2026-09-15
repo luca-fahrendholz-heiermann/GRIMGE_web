@@ -43,6 +43,15 @@ assert(game.minions.length === 6 && game.battlefield.waveNumber === 1, 'Initial 
 assert(game.battlefield.bgLoaded, 'Clean arena background load path completes');
 assert(game.player.x === game.battlefield.getSpawn('blue').x && game.player.z === game.battlefield.getSpawn('blue').z, 'Player starts at the blue Castle spawn');
 assert(new Set(game.minions.filter((minion) => minion.team === 'blue').map((minion) => minion.laneIndex)).size === 3, 'A wave populates all three authored depth lanes');
+const battlementMinionProbe = game.minions[0];
+const probeStart = { x: battlementMinionProbe.x, z: battlementMinionProbe.z, preferredZ: battlementMinionProbe.preferredZ };
+battlementMinionProbe.x = 170; battlementMinionProbe.z = .48;
+game.battlefield.resolveEntityCollision(battlementMinionProbe);
+assert(battlementMinionProbe.surfaceId === 'mainArena' && battlementMinionProbe.surfaceHeight === 0, 'Lane minions remain on the ground and cannot enter upper Castle battlements');
+battlementMinionProbe.x = probeStart.x; battlementMinionProbe.z = probeStart.z; battlementMinionProbe.preferredZ = probeStart.preferredZ;
+game.battlefield.resolveEntityCollision(battlementMinionProbe);
+const redMinionProbe = game.minions.find((minion) => minion.team === 'red');
+assert(game.findMinionTarget(redMinionProbe) !== game.player, 'Minions do not target a Wizard standing on an upper Castle battlement');
 for (let i = 0; i < 15; i++) for (const minion of game.minions) minion.update(0.1, game, game.battlefield);
 const blueLaneSpan = Math.max(...game.minions.filter((minion) => minion.team === 'blue').map((minion) => minion.z)) - Math.min(...game.minions.filter((minion) => minion.team === 'blue').map((minion) => minion.z));
 assert(blueLaneSpan > 0.45, 'AI minions retain meaningful front-to-back lane separation while advancing');
@@ -98,8 +107,8 @@ assert(game.drawing.active && game.drawing.inputMode === null, 'Releasing an unr
 firstRuneCard.listeners.pointerdown(runePointer);
 assert(!game.drawing.active && game.drawing.strokes.length === 0 && game.drawing.currentStroke.length === 0 && game.timeScale === 1, 'A second rune-card press exits Arcane Focus after rejecting and clearing an unrecognized sketch');
 
-game.player.elevation = 0; game.player.vElevation = 0; game.player.grounded = true; game.player.state = 'idle'; game.player.canAttack = true; game.player.invulnerableTimer = 0;
-game.enemyChampion.x = game.player.x + 40; game.enemyChampion.z = game.player.z;
+game.player.x = 470; game.player.z = .52; game.player.elevation = 0; game.player.vElevation = 0; game.player.grounded = true; game.player.state = 'idle'; game.player.canAttack = true; game.player.invulnerableTimer = 0; game.battlefield.placeOnSurface(game.player);
+game.enemyChampion.x = game.player.x + 40; game.enemyChampion.z = game.player.z; game.enemyChampion.elevation = 0; game.enemyChampion.lifeState = 'Alive'; game.battlefield.placeOnSurface(game.enemyChampion);
 const enemyHp = game.enemyChampion.hp;
 game.player.executeAttack(game.input);
 assert(game.enemyChampion.hp < enemyHp, 'Melee hitbox damages a target in the same depth lane');
@@ -295,6 +304,7 @@ const voidRune = recognizer.runes.find((rune) => rune.id === 'void');
 game.enemyChampion.slowTimer = 0; game.enemyChampion.x = game.player.x + 72; game.enemyChampion.z = game.player.z;
 spells.cast(game.player, spells.resolveSpell([bestia, voidRune]), game);
 const voidSpider = spells.getSummons('blue')[0];
+voidSpider.attackTimer = 0;
 spells.update(.4, game);
 assert(voidSpider?.definition.id === 'void_spider' && voidSpider.target === game.enemyChampion && game.enemyChampion.slowTimer > 0, 'Void Spider Control summon entangles a nearby Wizard with a slowing web');
 spells.clearRuntime();
@@ -335,6 +345,12 @@ const eidolonHp = game.player.hp;
 game.player.takeDamage(100, 200, 0, .1, false, 'spell');
 assert(game.player.eidolonTimer > 0 && game.player.eidolonArmor > 0 && game.player.hp > eidolonHp - 100, 'Eidolon Mantle creates a temporary protective guardian form with real mitigation');
 game.player.eidolonTimer = 0; game.player.eidolonArmor = 0; game.player.eidolonPower = 1;
+
+const ninefoldRunes = ['bestia', 'ignis', 'void'].map((id) => recognizer.runes.find((rune) => rune.id === id));
+game.player.ninefoldTimer = 0; game.player.ninefoldCooldown = 0; game.player.ninefoldPower = 1;
+spells.cast(game.player, spells.resolveSpell(ninefoldRunes), game, spells.qualityForRunes(ninefoldRunes));
+assert(game.player.ninefoldTimer > 0 && game.player.ninefoldPower >= 1, 'Ninefold Beast Form creates a temporary aggressive rune transformation');
+game.player.ninefoldTimer = 0; game.player.ninefoldPower = 1;
 
 // Aura Shock is a rune combination: Aqua + Fulgur, mana/cooldown gated radial
 // damage and 2.5D push, with no separate action button or shortcut.
@@ -447,9 +463,9 @@ assert(redTower.hp < towerHp, 'Minion can attack the enemy lane tower');
 
 // A front-lane minion begins at its real lane depth and must steer into the
 // Tower's attack band rather than being teleported next to the objective.
-frontLaneMinion.x = 132; frontLaneMinion.z = 0.84; frontLaneMinion.preferredZ = 0.84; frontLaneMinion.attackTimer = 0; frontLaneMinion.isDead = false;
+frontLaneMinion.x = 132; frontLaneMinion.z = 0.84; frontLaneMinion.preferredZ = 0.84; frontLaneMinion.attackTimer = 0; frontLaneMinion.isDead = false; frontLaneMinion.hp = frontLaneMinion.maxHp; frontLaneMinion.target = null; frontLaneMinion.targetLockTimer = 0; frontLaneMinion.hurtTimer = 0; frontLaneMinion.freezeTimer = 0; frontLaneMinion.slowTimer = 0; frontLaneMinion.slowFactor = 1;
 const beforeNaturalTowerPush = redTower.hp;
-for (let i = 0; i < 120; i++) { frontLaneMinion.update(0.1, game, game.battlefield); game.updateProjectiles(0.1); }
+for (let i = 0; i < 160; i++) { frontLaneMinion.update(0.1, game, game.battlefield); for (let step = 0; step < 6; step++) game.updateProjectiles(1 / 60); }
 assert(frontLaneMinion.z < 0.55 && redTower.hp < beforeNaturalTowerPush, 'Front-lane minion naturally steers to and damages the rear Tower');
 
 playerMeleeObjective(redTower, 30);
@@ -464,11 +480,17 @@ assert(redCastle.hp < castleHp, 'AI-controlled minion naturally progresses from 
 
 playerMeleeObjective(redCastle, 60);
 assert(redCastle.isDestroyed && !game.canRespawn('red') && game.matchPhase === 'FinalWizardPhase', 'Repeated real player melee destroys Castle and disables respawn');
-game.enemyChampion.isDead = false; game.enemyChampion.hp = game.enemyChampion.maxHp;
+// Upper Castle battlements intentionally allow Wizard-vs-Wizard spell duels,
+// not melee.  Resolve the final kill through the same prepared-Fireball path
+// a player uses at runtime.
+game.enemyChampion.isDead = false; game.enemyChampion.hp = 30;
 game.enemyChampion.x = redCastle.x; game.enemyChampion.z = redCastle.z; game.enemyChampion.elevation = 0; game.battlefield.placeOnSurface(game.enemyChampion);
-playerMeleeObjective(game.enemyChampion, 12);
+game.player.x = 830; game.player.z = redCastle.z; game.player.elevation = 0; game.player.grounded = true; game.player.facing = 1; game.player.mp = game.player.maxMp; game.battlefield.placeOnSurface(game.player);
+game.player.preparedRunes = [recognizer.runes.find((rune) => rune.id === 'ignis')];
+game.castPreparedSpell();
+for (let i = 0; i < 18; i++) spells.update(1 / 60, game);
 game.enemyChampion.update(0.5, game, game.battlefield);
-assert(game.matchState === 'Ending' && game.winnerTeam === 'blue' && game.enemyChampion.isDead, 'Real player melee kills final Wizard and enters the controlled Victory ending');
+assert(game.matchState === 'Ending' && game.winnerTeam === 'blue' && game.enemyChampion.isDead, 'Prepared spell kills final Wizard on the Castle battlement and enters the controlled Victory ending');
 const endingMatchTime = game.matchTime;
 for (let i = 1; i <= 12; i++) game.loop(game.lastFrameTime + 100);
 assert(game.matchState === 'Results' && game.matchTime === endingMatchTime, 'Ending advances to Results while the final match time remains frozen');

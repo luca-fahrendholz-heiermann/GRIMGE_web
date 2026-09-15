@@ -25,6 +25,10 @@ function normalizeMove(move) {
   return magnitude > 1 ? { x: move.x / magnitude, z: move.z / magnitude } : move;
 }
 
+function isUpperCastleBattlement(entity) {
+  return entity?.surfaceId === 'blueCastleUpperPlatform' || entity?.surfaceId === 'redCastleUpperPlatform';
+}
+
 function objectiveApproachZ(minion, objective) {
   // A lane remains a preference, not a rail. When marching on a structure,
   // guide each lane into the structure's reachable depth band so front-lane
@@ -32,6 +36,10 @@ function objectiveApproachZ(minion, objective) {
   // Ranged bolts keep a narrow depth hit tolerance, so objective approach is
   // intentionally tighter than the large melee contact band. This lets every
   // lane join a siege without ranged minions firing harmlessly past a Tower.
+  // Preserve the broad three-lane silhouette while a wave is still crossing
+  // the arena. It folds toward the objective only in the final approach, so
+  // minions do not prematurely collapse into a single rear-wall train.
+  if (Math.abs(objective.x - minion.x) > 108) return minion.preferredZ;
   const reach = Math.max(0.12, Math.min(0.16, (objective.hitRadiusZ ?? 0.25) - 0.06));
   return Math.max(objective.z - reach, Math.min(objective.z + reach, minion.preferredZ));
 }
@@ -82,6 +90,9 @@ export class Player extends GroundEntity {
     this.eidolonCooldown = 0;
     this.eidolonPower = 1;
     this.eidolonArmor = 0;
+    this.ninefoldTimer = 0;
+    this.ninefoldCooldown = 0;
+    this.ninefoldPower = 1;
     this.isGuarding = false;
     // Physical guarding deliberately has a hidden stability meter.  It is
     // not another HUD resource: it only exists to prevent permanently
@@ -138,6 +149,9 @@ export class Player extends GroundEntity {
     this.eidolonTimer = Math.max(0, this.eidolonTimer - dt);
     this.eidolonCooldown = Math.max(0, this.eidolonCooldown - dt);
     if (this.eidolonTimer <= 0) { this.eidolonPower = 1; this.eidolonArmor = 0; }
+    this.ninefoldTimer = Math.max(0, this.ninefoldTimer - dt);
+    this.ninefoldCooldown = Math.max(0, this.ninefoldCooldown - dt);
+    if (this.ninefoldTimer <= 0) this.ninefoldPower = 1;
     this.guardBreakTimer = Math.max(0, this.guardBreakTimer - dt);
     if (this.arcaneShieldTimer <= 0) this.arcaneShield = 0;
     this.freezeTimer = Math.max(0, this.freezeTimer - dt);
@@ -258,8 +272,9 @@ export class Player extends GroundEntity {
     const move = normalizeMove(moveVector(input));
     if (Math.abs(move.x) > 0.02) this.facing = Math.sign(move.x);
     const guardSpeed = this.isGuarding ? 0.38 : 1;
-    const targetX = move.x * this.moveSpeed * this.slowFactor * guardSpeed;
-    const targetZ = move.z * this.depthSpeed * this.slowFactor * guardSpeed;
+    const beastSpeed = this.ninefoldTimer > 0 ? 1.23 : 1;
+    const targetX = move.x * this.moveSpeed * this.slowFactor * guardSpeed * beastSpeed;
+    const targetZ = move.z * this.depthSpeed * this.slowFactor * guardSpeed * beastSpeed;
     this.vx += (targetX - this.vx) * Math.min(1, dt * 18);
     this.vz += (targetZ - this.vz) * Math.min(1, dt * 18);
     if (Math.hypot(move.x, move.z) > 0.05 && this.grounded) {
@@ -343,9 +358,15 @@ export class Player extends GroundEntity {
       kx *= 1.18;
       lift *= 1.12;
     }
+    if (this.ninefoldTimer > 0) {
+      dmg *= 1.38 * this.ninefoldPower;
+      kx *= 1.30;
+      lift *= 1.18;
+    }
     const targets = window.gameWorld?.getHostileTargets(this.team, true) ?? [];
     let hitAny = false;
     for (const target of targets) {
+      if (isUpperCastleBattlement(this) && isUpperCastleBattlement(target) && target.heroKey) continue;
       const inFront = (target.x - this.x) * this.facing >= -10 && Math.abs(target.x - this.x) <= (target.hitRadiusX ?? 78);
       const closeDepth = Math.abs((target.z ?? this.z) - this.z) <= (target.hitRadiusZ ?? 0.22);
       const heightDifference = Math.abs((target.worldHeight ?? target.elevation ?? 0) - this.worldHeight);
@@ -412,6 +433,10 @@ export class Player extends GroundEntity {
       lift *= .78;
       combat.spawnElementalParticles(this.x, this.y - 38, 'void', 4);
     }
+    if (this.ninefoldTimer > 0) {
+      amount *= .88;
+      kx *= .88;
+    }
     this.hp = Math.max(0, this.hp - amount);
     this.hitFlash = 0.15; this.vx = kx; this.vElevation = lift;
     this.state = 'hurt'; this.stateTimer = stun; this.canAttack = false;
@@ -439,7 +464,7 @@ export class Player extends GroundEntity {
     this.hp = this.maxHp; this.mp = this.maxMp; this.sp = this.maxSp;
     this.state = 'idle'; this.stateTimer = 0; this.comboStep = 0; this.comboResetTimer = 0;
     this.canAttack = true; this.freezeTimer = 0; this.slowTimer = 0; this.slowFactor = 1;
-    this.invulnerableTimer = 1.25; this.auraShockCooldown = 0; this.arcaneShield = 0; this.arcaneShieldTimer = 0; this.arcaneShieldCooldown = 0; this.eidolonTimer = 0; this.eidolonCooldown = 0; this.eidolonPower = 1; this.eidolonArmor = 0; this.isGuarding = false; this.guardStability = 100; this.guardHoldTime = 0; this.guardBreakTimer = 0; this.jumpsLeft = 2; this.ghosts = [];
+    this.invulnerableTimer = 1.25; this.auraShockCooldown = 0; this.arcaneShield = 0; this.arcaneShieldTimer = 0; this.arcaneShieldCooldown = 0; this.eidolonTimer = 0; this.eidolonCooldown = 0; this.eidolonPower = 1; this.eidolonArmor = 0; this.ninefoldTimer = 0; this.ninefoldCooldown = 0; this.ninefoldPower = 1; this.isGuarding = false; this.guardStability = 100; this.guardHoldTime = 0; this.guardBreakTimer = 0; this.jumpsLeft = 2; this.ghosts = [];
     this.lifeState = 'Alive'; this.respawnTimer = 0; this.grounded = true;
     battlefield?.resolveEntityCollision(this);
     combat.spawnShockwave(this.x, this.y - 25, 55, '#80d8ff');
@@ -513,6 +538,7 @@ export class Player extends GroundEntity {
       }
       ctx.restore();
     }
+    if (this.isAlive && this.ninefoldTimer > 0) this.renderNinefoldBeast(ctx, renderY);
     if (this.isAlive && this.eidolonTimer > 0) this.renderEidolonMantle(ctx, renderY);
     for (const g of this.ghosts) sprites.renderEntity(ctx, this.heroKey, g.x, g.y, { facing: g.facing, state: g.state, animTime: g.animTime, alpha: g.alpha, hitFlash: 1 });
     sprites.renderEntity(ctx, this.heroKey, this.x, renderY, { facing: this.facing, state: this.state, animTime: this.animTime, hitFlash: this.hitFlash > 0 ? 1 : 0, alpha: this.lifeState === 'Dead' ? 0 : 1 });
@@ -580,11 +606,34 @@ export class Player extends GroundEntity {
     ctx.fillText('✦', 0, -47);
     ctx.restore();
   }
+
+  renderNinefoldBeast(ctx, renderY) {
+    const alpha = Math.min(1, this.ninefoldTimer * 2) * .50;
+    const wave = Math.sin(this.animTime * 7) * 5;
+    ctx.save();
+    ctx.translate(this.x - this.facing * 8, renderY - 26);
+    ctx.scale(this.facing, 1);
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = '#ffb13b'; ctx.fillStyle = 'rgba(255, 70, 30, .23)';
+    ctx.shadowColor = '#ff4c24'; ctx.shadowBlur = 22; ctx.lineWidth = 4;
+    // Nine independent energy tails make the form readable as a fast,
+    // original GRIMGE beast manifestation rather than a borrowed character.
+    for (let i = 0; i < 9; i++) {
+      const angle = -2.65 + i * .66;
+      const length = 42 + (i % 3) * 9;
+      ctx.beginPath(); ctx.moveTo(-3, 16);
+      ctx.quadraticCurveTo(Math.cos(angle) * length * .55, Math.sin(angle) * length + wave, Math.cos(angle) * length, Math.sin(angle) * length * 1.25 + wave);
+      ctx.stroke();
+    }
+    ctx.beginPath(); ctx.ellipse(0, -17, 29, 43, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#ffe7a0'; ctx.beginPath(); ctx.arc(11, -32, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowBlur = 0; ctx.restore();
+  }
 }
 
 export class Minion extends GroundEntity {
   constructor(x, z, team, type = 'melee', laneIndex = 1) {
-    super(x, z); this.team = team; this.isMobileCombatant = true; this.type = type; this.laneIndex = laneIndex; this.preferredZ = z; this.spriteKey = `minion_${team}_${type}`; this.facing = team === 'blue' ? 1 : -1;
+    super(x, z); this.team = team; this.isMobileCombatant = true; this.isMinion = true; this.type = type; this.laneIndex = laneIndex; this.preferredZ = z; this.spriteKey = `minion_${team}_${type}`; this.facing = team === 'blue' ? 1 : -1;
     this.maxHp = type === 'melee' ? 90 : 55; this.hp = this.maxHp; this.speed = type === 'melee' ? 75 : 60;
     this.attackRange = type === 'melee' ? 36 : 190; this.attackCooldown = type === 'melee' ? 1.4 : 2; this.attackTimer = Math.random() * .8; this.damage = type === 'melee' ? 14 : 18;
     this.width = ENTITY_VISUALS.minionColliderWidth; this.height = ENTITY_VISUALS.minionColliderHeight; this.state = 'run'; this.animTime = Math.random() * 10; this.hitFlash = 0; this.isDead = false; this.freezeTimer = 0; this.slowTimer = 0; this.slowFactor = 1; this.hurtTimer = 0;
@@ -681,12 +730,21 @@ export class EnemyChampion extends GroundEntity {
     const player = gameWorld.player; const distance = player.isAlive ? groundDistance(this, player) : Infinity;
     const home = battlefield.getSpawn(this.team);
     if (this.freezeTimer > 0) { this.vx = this.vz = 0; }
-    else if (player.isAlive && distance <= 70) { this.vx = this.vz = 0; this.facing = Math.sign(player.x - this.x) || this.facing; if (this.attackCooldown <= 0) this.executeAIAttack(player); }
+    else if (player.isAlive && distance <= 70) {
+      this.vx = this.vz = 0;
+      this.facing = Math.sign(player.x - this.x) || this.facing;
+      // The upper battlements are Wizard-only spell-duel spaces.  Champions
+      // can pressure each other there, but not with grounded melee strings.
+      if (isUpperCastleBattlement(this) && isUpperCastleBattlement(player)) {
+        this.state = 'idle';
+        if (this.spellCooldown <= 0) { this.spellCooldown = 3; spells.cast(this, { id: 'fireball', tier: 1 }, gameWorld); }
+      } else if (this.attackCooldown <= 0) this.executeAIAttack(player);
+    }
     else if (player.isAlive && distance < 340 && Math.abs(player.x - home.x) < 420) { const move = normalizeMove({ x: player.x - this.x, z: (player.z - this.z) * 150 }); this.facing = Math.sign(move.x) || this.facing; this.vx = move.x * this.speed * this.slowFactor; this.vz = move.z * this.speed / 150 * this.slowFactor; this.state = 'run'; if (this.spellCooldown <= 0 && distance > 120) { this.spellCooldown = 4.5; spells.cast(this, { id: 'fireball', tier: 1 }, gameWorld); } }
     else { const move = normalizeMove({ x: home.x - this.x, z: (home.z - this.z) * 150 }); this.facing = Math.sign(move.x) || this.facing; this.vx = move.x * this.speed * .45; this.vz = move.z * this.speed / 150 * .45; this.state = 'run'; }
     this.integrateElevation(dt, 1200); const previousX = this.x; const previousZ = this.z; this.x += this.vx * dt; this.z += this.vz * dt; battlefield.resolveEntityCollision(this); gameWorld.resolveSpellObstacles(this, previousX, previousZ);
   }
-  executeAIAttack(target) { this.attackCooldown = 1.1; this.state = 'attack1'; this.stateTimer = .28; audio.playSlash(1.1); combat.spawnSlashArc(this.x + this.facing * 20, this.y - 28, this.facing, { radius: 42, color: '#f44336', glow: '#b71c1c' }); if (Math.abs(target.z - this.z) <= .22 && Math.abs((target.worldHeight ?? 0) - this.worldHeight) <= 70) target.takeDamage(24, this.facing * 240, 100, .3); }
+  executeAIAttack(target) { this.attackCooldown = 1.1; this.state = 'attack1'; this.stateTimer = .28; audio.playSlash(1.1); combat.spawnSlashArc(this.x + this.facing * 20, this.y - 28, this.facing, { radius: 42, color: '#f44336', glow: '#b71c1c' }); if (!(isUpperCastleBattlement(this) && isUpperCastleBattlement(target)) && Math.abs(target.z - this.z) <= .22 && Math.abs((target.worldHeight ?? 0) - this.worldHeight) <= 70) target.takeDamage(24, this.facing * 240, 100, .3); }
   takeDamage(amount, kx = 0, lift = 0, stun = .35, isCrit = false) { if (!this.isAlive) return; this.hp = Math.max(0, this.hp - amount); this.hitFlash = .15; this.vx = kx; this.vElevation = lift; this.state = 'hurt'; this.stateTimer = stun; combat.spawnDamageText(this.x, this.y - 45, amount, { isCrit, color: '#ff7043' }); if (!this.hp) { window.gameWorld?.recordWizardDeath?.(this.team); this.lifeState = 'Dying'; this.state = 'dead'; this.stateTimer = .45; combat.spawnShockwave(this.x, this.y - 30, 80, '#ff5252'); } }
   respawn(battlefield) { const spawn = battlefield.getSpawn(this.team); this.x = spawn.x; this.z = spawn.z; this.elevation = 0; this.vx = this.vz = this.vElevation = 0; this.hp = this.maxHp; this.state = 'idle'; this.lifeState = 'Alive'; this.respawnTimer = 0; this.attackCooldown = 0; this.spellCooldown = 1; battlefield.resolveEntityCollision(this); combat.spawnShockwave(this.x, this.y - 28, 50, '#ff5252'); }
   freeze(duration) { this.freezeTimer = duration; } slow(duration, factor) { this.slowTimer = duration; this.slowFactor = factor; }

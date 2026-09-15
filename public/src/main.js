@@ -677,6 +677,11 @@ export class GameWorld {
         audio.playRuneFail();
         return false;
       }
+      if (resolved.id === 'ninefold_beast_form' && this.player.ninefoldCooldown > 0) {
+        this.showAnnouncement('NINEFOLD FORM IS RECHARGING');
+        audio.playRuneFail();
+        return false;
+      }
       if (this.player.mp < (resolved.manaCost ?? 0)) {
         this.showAnnouncement('NOT ENOUGH MANA');
         audio.playRuneFail();
@@ -686,6 +691,7 @@ export class GameWorld {
       if (resolved.id === 'aura_shock') this.player.auraShockCooldown = resolved.cooldown;
       if (resolved.id === 'arcane_aegis') this.player.arcaneShieldCooldown = resolved.cooldown;
       if (resolved.id === 'eidolon_mantle') this.player.eidolonCooldown = resolved.cooldown;
+      if (resolved.id === 'ninefold_beast_form') this.player.ninefoldCooldown = resolved.cooldown;
       spells.cast(this.player, resolved, this, spells.qualityForRunes(selectedRunes));
       this.showAnnouncement(`CAST: ${resolved.name}!`);
       // Drawing already recycled each physical card to the deck back and
@@ -735,6 +741,9 @@ export class GameWorld {
     if (resolved.id === 'eidolon_mantle' && this.player.eidolonCooldown > 0) {
       this.showAnnouncement('EIDOLON MANTLE IS RECHARGING'); audio.playRuneFail(); return false;
     }
+    if (resolved.id === 'ninefold_beast_form' && this.player.ninefoldCooldown > 0) {
+      this.showAnnouncement('NINEFOLD FORM IS RECHARGING'); audio.playRuneFail(); return false;
+    }
     if (this.player.mp < (resolved.manaCost ?? 0)) {
       this.showAnnouncement('NOT ENOUGH MANA'); audio.playRuneFail(); return false;
     }
@@ -742,6 +751,7 @@ export class GameWorld {
     if (resolved.id === 'aura_shock') this.player.auraShockCooldown = resolved.cooldown;
     if (resolved.id === 'arcane_aegis') this.player.arcaneShieldCooldown = resolved.cooldown;
     if (resolved.id === 'eidolon_mantle') this.player.eidolonCooldown = resolved.cooldown;
+    if (resolved.id === 'ninefold_beast_form') this.player.ninefoldCooldown = resolved.cooldown;
     spells.cast(this.player, resolved, this, slot.quality);
     this.showAnnouncement(`CAST: ${resolved.name}!`);
     if (consumeSelected) {
@@ -867,6 +877,7 @@ export class GameWorld {
     const targetIsValid = (target) => {
       if (!target || target.team === minion.team || target.isDead || target.isDestroyed) return false;
       if (target.isObjective && target.isVulnerable === false) return false;
+      if (target.heroKey && (target.surfaceId === 'blueCastleUpperPlatform' || target.surfaceId === 'redCastleUpperPlatform')) return false;
       return true;
     };
     // A brief lock stops the crowd from frame-by-frame target thrashing while
@@ -884,7 +895,7 @@ export class GameWorld {
     }
     if (nearest && nearestDistance < 150) return commit(nearest);
     const wizard = minion.team === 'blue' ? this.enemyChampion : this.player;
-    if (wizard.isAlive) {
+    if (wizard.isAlive && wizard.surfaceId !== 'blueCastleUpperPlatform' && wizard.surfaceId !== 'redCastleUpperPlatform') {
       const wizardDistance = Math.hypot(wizard.x - minion.x, (wizard.z - minion.z) * 150);
       if (wizardDistance < 180) return commit(wizard);
     }
@@ -1151,7 +1162,12 @@ export class GameWorld {
         const targets = this.getHostileTargets(p.team);
         for (const t of targets) {
           const heightReach = t.hitHeightTolerance ?? 90;
-          if (Math.abs(t.x - p.x) < 22 && Math.abs((t.z ?? p.z) - p.z) < 0.15 && Math.abs((t.worldHeight ?? 0) - p.height) < heightReach) {
+          // A moving Wizard/minion needs a tight depth lane hit. A large
+          // structure has an authored ground footprint, so a ranged minion
+          // aiming from a front lane can legitimately strike the Tower core
+          // rather than threading an implausible one-pixel rear-wall line.
+          const depthHitTolerance = t.isObjective ? (t.hitRadiusZ ?? .35) : .15;
+          if (Math.abs(t.x - p.x) < 22 && Math.abs((t.z ?? p.z) - p.z) < depthHitTolerance && Math.abs((t.worldHeight ?? 0) - p.height) < heightReach) {
             const outcome = t.takeDamage(p.damage, p.facing * 80, 40, 0.15, false, 'spell');
             if (outcome?.perfect) {
               // Reflect into the defender's team and give it a fresh travel

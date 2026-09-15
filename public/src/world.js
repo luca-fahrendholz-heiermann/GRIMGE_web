@@ -26,8 +26,10 @@ export const ARENA_LAYOUT = Object.freeze({
     redCastle: Object.freeze({ x: 878, z: 0.48 }),
     player: Object.freeze({ x: 178, z: 0.55 }),
     enemyChampion: Object.freeze({ x: 846, z: 0.55 }),
-    blueWave: Object.freeze([176, 154, 132]),
-    redWave: Object.freeze([848, 870, 892]),
+    // Minions enter from the ground plane outside the battlement ramps.
+    // Castle tops belong to the Wizards' spell-duel space, not lane traffic.
+    blueWave: Object.freeze([304, 328, 352]),
+    redWave: Object.freeze([720, 696, 672]),
     laneZ: Object.freeze([0.20, 0.52, 0.84])
   }),
   towers: Object.freeze({
