@@ -439,6 +439,16 @@ export class UIManager {
     if (window.gameWorld) {
       this.blueCrystalCount.textContent = window.gameWorld.blueCrystals;
       this.redCrystalCount.textContent = window.gameWorld.redCrystals;
+      // Mount is a contextual action, never a permanent disabled control.
+      // GameWorld owns the stable nearest-candidate decision; UI only mirrors
+      // that authoritative state.
+      const canMount = !!window.gameWorld.mountCandidate && !player.isMounted;
+      if (this.mountBtn) {
+        if (canMount) this.mountBtn.classList.add('is-available');
+        else this.mountBtn.classList.remove('is-available');
+        this.mountBtn.disabled = !canMount;
+        this.mountBtn.setAttribute('aria-hidden', canMount ? 'false' : 'true');
+      }
     }
 
     // Match Clock

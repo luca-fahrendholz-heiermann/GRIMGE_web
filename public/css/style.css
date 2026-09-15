@@ -19,7 +19,9 @@ html, body {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background-color: #050408;
+  /* Keep the 16:9 combat coordinate system intact. Wider phone screens get
+     a dark arena continuation instead of permanent black side pillars. */
+  background: linear-gradient(rgba(3, 4, 10, .42), rgba(3, 4, 10, .68)), url('../assets/arena_bg.jpg') center / cover no-repeat #050408;
   font-family: 'Rajdhani', sans-serif;
   color: #f1e9d8;
   display: flex;
@@ -28,6 +30,29 @@ html, body {
   touch-action: none;
   overscroll-behavior: none;
 }
+
+#rotate-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  padding: max(24px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
+  color: #f8e8bb;
+  text-align: center;
+  pointer-events: auto;
+  background: radial-gradient(circle at 50% 42%, rgba(24, 62, 98, .52), rgba(3, 4, 10, .97) 68%);
+}
+
+body.portrait-gameplay #rotate-overlay { display: flex; }
+body.portrait-gameplay #game-container { visibility: hidden; pointer-events: none; }
+
+.rotate-panel { display: grid; justify-items: center; gap: 12px; max-width: 300px; }
+.rotate-panel h1 { font: 900 42px/1 'Cinzel', serif; color: #ffd66b; letter-spacing: 5px; text-shadow: 0 0 18px rgba(255, 200, 79, .5); }
+.rotate-panel strong { font: 900 16px 'Rajdhani', sans-serif; letter-spacing: 2px; }
+.rotate-panel p { font-size: 14px; color: #c9d9e8; }
+.rotate-rune { width: 90px; height: 90px; display: grid; place-items: center; border: 2px solid #35d9ff; border-radius: 50%; font: 700 58px/1 'Cinzel', serif; color: #b9f5ff; box-shadow: 0 0 25px rgba(0, 190, 255, .5), inset 0 0 20px rgba(0, 190, 255, .25); }
 
 /* Kept outside the transformed logical HUD so JavaScript can convert the
    physical iOS insets into the HUD's 1024×576 coordinate system. */
@@ -665,10 +690,10 @@ html, body {
 #bottom-right-actions {
   pointer-events: auto;
   position: absolute;
-  right: 3%;
-  bottom: 0;
-  width: 188px;
-  height: 168px;
+  right: 2.5%;
+  bottom: 2%;
+  width: 300px;
+  height: 190px;
 }
 
 .action-wrap {
@@ -677,8 +702,10 @@ html, body {
 }
 
 .touch-action {
-  min-width: 47px;
-  height: 42px;
+  width: 58px;
+  min-width: 0;
+  height: 58px;
+  aspect-ratio: 1 / 1;
   border: 1px solid #6d5b83;
   border-radius: 50%;
   background: radial-gradient(circle, #35294a, #120e1e);
@@ -735,11 +762,14 @@ html, body {
 
 .cast-action { border-color: #00c8ff; color: #bdefff; }
 
-.triangle-jump { position: absolute; left: 70px; top: 0; }
-.triangle-shield { position: absolute; left: 0; bottom: 0; }
-.triangle-cast { position: absolute; right: 0; bottom: 0; }
-.swap-action { position: absolute; left: 69px; bottom: 0; min-width: 50px; height: 28px; font-size: 8px; border-color: #d3a4ff; color: #f2dcff; }
-.mount-action { position: absolute; left: 66px; top: 38px; min-width: 56px; height: 28px; font-size: 8px; border-color: #75e5c0; color: #d8fff1; }
+/* A single right-hand clock-face cluster for both control layouts.  Cast is
+   the dominant action; Mount is exactly at its 12-o'clock position. */
+.triangle-cast { position: absolute; left: 150px; bottom: 12px; width: 84px; height: 84px; font-size: 14px; }
+.mount-action { position: absolute; left: 166px; bottom: 110px; width: 52px; height: 52px; font-size: 8px; border-color: #75e5c0; color: #d8fff1; opacity: 0; pointer-events: none; transform: scale(.85); transition: opacity .14s ease, transform .14s ease; }
+.mount-action.is-available { opacity: 1; pointer-events: auto; transform: scale(1); }
+.triangle-shield { position: absolute; left: 75px; bottom: 14px; }
+.triangle-jump { position: absolute; right: 4px; bottom: 30px; }
+.swap-action { position: absolute; left: 76px; bottom: 100px; width: 50px; height: 50px; font-size: 8px; border-color: #d3a4ff; color: #f2dcff; }
 
 .action-wrap:hover {
   transform: scale(1.08);
@@ -771,39 +801,30 @@ html, body {
 
 /* Original classic placement: center of the former right-side triangle. */
 #ui-layer:not(.touch-layout-alt) .arcane-circle-wrap {
-  left: 83.7%;
-  top: 78.8%;
+  /* Keep Draw distinct from the Cast clock-face cluster in classic mode. */
+  left: 66.5%;
+  top: auto;
   right: auto;
-  bottom: auto;
+  bottom: 5%;
 }
 
 /* Alternate mobile layout: the player chooses it from the hub settings.
    It leaves the left side clear for a dynamic joystick and arranges the
    actions as a compact right-hand combat cluster. */
 #ui-layer.touch-layout-alt #bottom-right-actions {
-  right: 2%;
+  right: 2.5%;
   bottom: 2%;
-  width: 286px;
-  height: 154px;
+  width: 300px;
+  height: 190px;
 }
 
 /* A compact clock-face action group: central Cast, Block at roughly 7
    o'clock and Swap around 10 o'clock. */
-#ui-layer.touch-layout-alt .triangle-shield { left: 34px; top: 96px; bottom: auto; min-width: 58px; height: 54px; }
-#ui-layer.touch-layout-alt .triangle-cast { left: 116px; top: 58px; right: auto; bottom: auto; min-width: 82px; height: 78px; font-size: 14px; }
-#ui-layer.touch-layout-alt .swap-action { left: 54px; top: 24px; bottom: auto; min-width: 58px; height: 34px; }
-#ui-layer.touch-layout-alt .mount-action { left: 124px; top: 135px; min-width: 66px; height: 28px; }
-#ui-layer.touch-layout-alt .triangle-jump {
-  left: auto;
-  right: 0;
-  top: 20px;
-  width: 52px;
-  height: 130px;
-  border-radius: 26px;
-  writing-mode: vertical-rl;
-  letter-spacing: 1px;
-  background: linear-gradient(90deg, #34284a, #161021);
-}
+#ui-layer.touch-layout-alt .triangle-shield { left: 75px; bottom: 14px; top: auto; }
+#ui-layer.touch-layout-alt .triangle-cast { left: 150px; bottom: 12px; top: auto; right: auto; width: 84px; height: 84px; }
+#ui-layer.touch-layout-alt .swap-action { left: 76px; bottom: 100px; top: auto; width: 50px; height: 50px; }
+#ui-layer.touch-layout-alt .mount-action { left: 166px; bottom: 110px; top: auto; width: 52px; height: 52px; }
+#ui-layer.touch-layout-alt .triangle-jump { right: 4px; bottom: 30px; top: auto; left: auto; width: 58px; height: 58px; writing-mode: initial; }
 
 #ui-layer.touch-layout-alt .arcane-circle-wrap {
   display: none;

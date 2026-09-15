@@ -85,6 +85,10 @@ export class GameWorld {
     this.timeScale = 1.0;
     this.targetTimeScale = 1.0;
     this.debugVisible = false;
+    // Portrait is presentation/input state, not match state: a siege resumes
+    // exactly where it was after the device rotates back to landscape.
+    this.orientationBlocked = false;
+    this.mountCandidate = null;
 
     this.lastFrameTime = performance.now();
     this.running = false;
@@ -147,11 +151,14 @@ export class GameWorld {
   async init() {
     this.setupInputs();
     this.syncHudScale();
+    this.syncOrientationState();
     // The first script turn can run before the final responsive layout has
     // settled. Re-read the Canvas rectangle on the next paint as well.
-    requestAnimationFrame(() => this.syncHudScale());
-    window.addEventListener('resize', () => this.syncHudScale());
-    window.visualViewport?.addEventListener?.('resize', () => this.syncHudScale());
+    requestAnimationFrame(() => { this.syncHudScale(); this.syncOrientationState(); });
+    const syncViewport = () => { this.syncHudScale(); this.syncOrientationState(); };
+    window.addEventListener('resize', syncViewport);
+    window.addEventListener('orientationchange', syncViewport);
+    window.visualViewport?.addEventListener?.('resize', syncViewport);
 
     // Load character sprites
     await sprites.loadAll();
@@ -186,6 +193,10 @@ export class GameWorld {
       }
       if (this.matchState === 'Menu') {
         if (e.code === 'Enter' || e.code === 'Space') this.startMatch();
+        return;
+      }
+      if (this.orientationBlocked) {
+        e.preventDefault();
         return;
       }
       if (!this.input.keys[e.code]) {
@@ -489,6 +500,32 @@ export class GameWorld {
     window.addEventListener('pointermove', update, { passive: false });
     window.addEventListener('pointerup', (event) => { clear(event); finishLeftControlTap(event); finishAttackGesture(event); }, { passive: false });
     window.addEventListener('pointercancel', (event) => { clear(event); controlTapPointerId = null; attackPointerId = null; attackStart = null; }, { passive: false });
+  }
+
+  syncOrientationState() {
+    const viewport = globalThis.window?.visualViewport;
+    const width = Number(viewport?.width ?? globalThis.window?.innerWidth);
+    const height = Number(viewport?.height ?? globalThis.window?.innerHeight);
+    // Headless tests do not supply viewport dimensions; do not incorrectly
+    // block their match flow.
+    const isPortrait = Number.isFinite(width) && Number.isFinite(height) && height > width;
+    const shouldBlock = this.matchState === 'Running' && isPortrait;
+    if (shouldBlock === this.orientationBlocked) return;
+    this.orientationBlocked = shouldBlock;
+    document.body?.classList?.toggle?.('portrait-gameplay', shouldBlock);
+    if (shouldBlock) this.clearGameplayInput();
+  }
+
+  clearGameplayInput() {
+    this.input.keys = {};
+    this.input.justPressedKeys = {};
+    this.input.justPressedMouse = {};
+    this.input.mouse.isDown = false;
+    this.input.mouse.rightDown = false;
+    this.input.move = { x: 0, z: 0 };
+    this.input.touchMove = { x: 0, z: 0 };
+    this.input.guardHeld = false;
+    if (this.player) this.player.isGuarding = false;
   }
 
   performTouchAttackGesture(dx, dy) {
@@ -861,11 +898,7 @@ export class GameWorld {
       this.showAnnouncement(`DISMOUNTED: ${name}`, 1.1);
       return true;
     }
-    const mount = spells.getSummons(this.player.team)
-      .filter((summon) => summon.definition?.mountable && !summon.isDead && !summon.rider
-        && groundDistance(this.player, summon) <= 76
-        && Math.abs((this.player.worldHeight ?? 0) - (summon.worldHeight ?? 0)) <= 90)
-      .sort((a, b) => groundDistance(this.player, a) - groundDistance(this.player, b))[0];
+    const mount = this.updateMountCandidate();
     if (!mount) {
       this.showAnnouncement('MOVE CLOSE TO YOUR WOLF OR GOLEM TO MOUNT', 1.25);
       return false;
@@ -873,6 +906,27 @@ export class GameWorld {
     if (!this.player.mount(mount)) return false;
     this.showAnnouncement(`RIDING: ${mount.definition.name}  [R TO DISMOUNT]`, 1.25);
     return true;
+  }
+
+  isValidMountCandidate(summon, range = 76) {
+    return !!(summon?.definition?.mountable && !summon.isDead && !summon.rider
+      && groundDistance(this.player, summon) <= range
+      && Math.abs((this.player.worldHeight ?? 0) - (summon.worldHeight ?? 0)) <= 90);
+  }
+
+  updateMountCandidate() {
+    if (!this.isMatchRunning() || !this.player?.isAlive || this.player.isMounted) {
+      this.mountCandidate = null;
+      return null;
+    }
+    // Preserve the current target through a small range margin. This stops
+    // the contextual UI from flickering between two equally close mounts.
+    if (this.isValidMountCandidate(this.mountCandidate, 84)) return this.mountCandidate;
+    const candidates = spells.getSummons(this.player.team)
+      .filter((summon) => this.isValidMountCandidate(summon));
+    candidates.sort((a, b) => groundDistance(this.player, a) - groundDistance(this.player, b));
+    this.mountCandidate = candidates[0] ?? null;
+    return this.mountCandidate;
   }
 
   getHostileTargets(myTeam, includeProtectedCastle = false) {
@@ -1084,6 +1138,7 @@ export class GameWorld {
     this.drawing.currentStroke = [];
     this.targetTimeScale = this.timeScale = 1;
     this.input.gameplayBlocked = false;
+    this.mountCandidate = null;
     this.prepareDefaultRunes();
     this.battlefield.spawnWave(this);
   }
@@ -1100,6 +1155,7 @@ export class GameWorld {
     }
     this.resetMatch();
     this.matchState = 'Running';
+    this.syncOrientationState();
     ui.showHub(false);
     ui.showResults(false);
     this.showAnnouncement('DESTROY ENEMY TOWER', 1.5);
@@ -1121,6 +1177,8 @@ export class GameWorld {
 
   returnToHub() {
     this.matchState = 'Menu';
+    this.orientationBlocked = false;
+    document.body?.classList?.remove?.('portrait-gameplay');
     this.input.gameplayBlocked = true;
     this.projectiles = [];
     spells.clearRuntime();
@@ -1173,6 +1231,17 @@ export class GameWorld {
     this.lastFrameTime = currentTime;
     if (dt > 0.1) dt = 0.1;
 
+    this.syncOrientationState();
+    // A portrait device gets a full rotate screen rather than a tiny live
+    // landscape canvas. Keep the loop alive for orientation changes but do
+    // not resolve hidden combat, timers, AI, or stale touch input.
+    if (this.orientationBlocked) {
+      this.input.gameplayBlocked = true;
+      this.clearGameplayInput();
+      requestAnimationFrame((t) => this.loop(t));
+      return;
+    }
+
     this.timeScale += (this.targetTimeScale - this.timeScale) * Math.min(1, dt * 10);
     const scaledDt = dt * this.timeScale;
 
@@ -1204,6 +1273,7 @@ export class GameWorld {
       this.battlefield.update(scaledDt, this);
       this.input.gameplayBlocked = this.drawing.active;
       this.refreshMovement();
+      this.updateMountCandidate();
 
       this.player.update(scaledDt, this.input, this.battlefield, this);
       this.enemyChampion.update(scaledDt, this, this.battlefield);
@@ -1229,6 +1299,7 @@ export class GameWorld {
       if (this.endingTimer <= 0) this.completeResults();
     }
 
+    this.updateMountCandidate();
     ui.update(dt, this.player, this.enemyChampion, this.battlefield);
 
     this.input.justPressedKeys = {};

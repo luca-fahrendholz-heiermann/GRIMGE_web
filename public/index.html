@@ -20,6 +20,16 @@
   <!-- An untransformed probe lets the logical 1024×576 HUD read iOS safe
        insets correctly before applying its own scale. It never receives input. -->
   <div id="safe-area-probe" aria-hidden="true"></div>
+  <!-- Gameplay is deliberately landscape-only. This lives outside the scaled
+       16:9 stage so portrait devices never see a tiny interactive preview. -->
+  <section id="rotate-overlay" aria-live="polite" aria-hidden="true">
+    <div class="rotate-panel">
+      <div class="rotate-rune">↻</div>
+      <h1>GRIMGE</h1>
+      <strong>BITTE DREHE DEIN GERÄT</strong>
+      <p>GRIMGE wird im Querformat gespielt.</p>
+    </div>
+  </section>
   <div id="game-container">
     <!-- Main Game Canvas (16:9 Aspect Ratio matching Mockup) -->
     <canvas id="game-canvas" width="1024" height="576"></canvas>

@@ -25,6 +25,7 @@ assert(/apple-mobile-web-app-title" content="GRIMGE"/.test(html), 'iOS Home Scre
 assert(/viewport-fit=cover/.test(html), 'Viewport opts into iOS safe-area coverage');
 assert(/apple-touch-icon/.test(html) && exists('public/icons/apple-touch-icon.png'), 'Apple touch icon is linked and present');
 assert(/id="safe-area-probe"/.test(html), 'HTML includes the iOS safe-area measurement probe');
+assert(/id="rotate-overlay"/.test(html), 'HTML includes a full-screen portrait rotate overlay');
 assert(manifest.name === 'GRIMGE' && manifest.short_name === 'GRIMGE', 'Manifest exposes the concise GRIMGE app name');
 assert(manifest.start_url === './' && manifest.scope === './', 'Manifest uses GitHub Pages-safe relative launch paths');
 assert(manifest.display === 'standalone' && manifest.orientation === 'landscape', 'Manifest requests standalone landscape gameplay');
@@ -38,6 +39,11 @@ const css = read('public/css/style.css');
 const main = read('public/src/main.js');
 assert(css.includes('#ui-layer.has-safe-area') && css.includes('env(safe-area-inset-left)'), 'Safe-area CSS protects HUD controls without shrinking the arena');
 assert(main.includes('`--safe-${edge}`') && main.includes('safe-area-probe') && main.includes("display-mode: standalone"), 'Runtime converts physical safe-area insets into logical HUD coordinates');
+assert(css.includes('body.portrait-gameplay #rotate-overlay') && css.includes('body.portrait-gameplay #game-container'), 'Portrait gameplay replaces the tiny stage with a rotate screen');
+assert(css.includes("url('../assets/arena_bg.jpg')"), 'Wider landscape devices receive an arena backdrop instead of permanent black side bars');
+assert(css.includes('aspect-ratio: 1 / 1') && css.includes('.mount-action.is-available'), 'Mobile action controls stay circular and Mount has a contextual visual state');
+assert(css.includes('left: 150px; bottom: 12px; width: 84px; height: 84px') && css.includes('left: 166px; bottom: 110px; width: 52px; height: 52px'), 'Mount is centered at 12 o’clock above the dominant Cast button');
+assert(main.includes('syncOrientationState()') && main.includes('updateMountCandidate()'), 'Runtime pauses portrait gameplay and maintains an authoritative mount candidate');
 
 console.log(`\nPWA results: ${passed} passed, ${failed} failed.`);
 if (failed) process.exit(1);
