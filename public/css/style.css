@@ -198,6 +198,11 @@ body.portrait-gameplay #game-container { visibility: hidden; pointer-events: non
     radial-gradient(ellipse at 50% 42%, rgba(42, 108, 159, .78), rgba(8, 20, 42, .94) 62%, rgba(4, 8, 20, .99)),
     linear-gradient(180deg, #172e53, #071123);
 }
+/* `#hub-overlay` intentionally owns its presentation, so it also needs its
+   own high-specificity hidden rule. Without this, the generic class rule
+   loses to `#hub-overlay { display:block }`: the invisible active Hub page
+   remains above lower HUD controls after entering Siege. */
+#hub-overlay.hidden { display: none; pointer-events: none; }
 
 .hub-shell { position: absolute; inset: 0; display: grid; grid-template-rows: 62px minmax(0, 1fr) 70px; color: #f4eddd; overflow: hidden; }
 .hub-topbar { position: relative; z-index: 2; display: grid; grid-template-columns: minmax(150px, 1fr) minmax(270px, 1.5fr) minmax(190px, 1fr); align-items: center; gap: 12px; padding: 8px 24px; border-bottom: 2px solid #c59943; background: linear-gradient(180deg, rgba(74, 29, 37, .98), rgba(42, 17, 35, .96)); box-shadow: 0 3px 13px rgba(0,0,0,.42); }

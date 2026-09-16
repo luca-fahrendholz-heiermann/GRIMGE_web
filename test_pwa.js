@@ -46,6 +46,7 @@ assert(css.includes("url('../assets/arena_bg.jpg')") && read('public/src/battlef
 assert(css.includes('aspect-ratio: 1 / 1') && css.includes('.mount-action.is-available') && css.includes('height: 132px;'), 'Cast, Block, Swap and Mount remain circular while Jump is an intentional vertical swipe rail');
 assert(css.includes('left: 150px; bottom: 12px; width: 84px; height: 84px') && css.includes('left: 166px; bottom: 110px; width: 52px; height: 52px'), 'Mount is centered at 12 o’clock above the dominant Cast button');
 assert(main.includes('syncOrientationState()') && main.includes('updateMountCandidate()'), 'Runtime pauses portrait gameplay and maintains an authoritative mount candidate');
+assert(css.includes('#hub-overlay.hidden { display: none; pointer-events: none; }'), 'Hidden Hub removes its interactive page layer before match controls become active');
 
 console.log(`\nPWA results: ${passed} passed, ${failed} failed.`);
 if (failed) process.exit(1);

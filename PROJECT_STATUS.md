@@ -59,7 +59,7 @@
 
 ## Automated Validation Complete
 
-- `npm test` passes: 38 rune/spell checks, 8 world checks, 8 Mage progression checks, 120 runtime checks, and 25 PWA shell checks (199 total).
+- `npm test` passes: 38 rune/spell checks, 8 world checks, 8 Mage progression checks, 120 runtime checks, and 26 PWA shell checks (200 total).
 - Runtime coverage includes upper battlement spawn/access/fall, Wizard-only battlement/minion exclusion, depth/dash/jump, melee recovery, death/respawn, rune-hand cycling, recognition quality retained by a real spell slot, selected-card validation, 2-second auto-lock, selected-slot casting, slot swapping, Grimoire combination/random resolution, held guard stability/guard-break, perfect projectile reflection, Aura Shock, Arcane Shield, Eidolon Mantle mitigation, Ninefold Beast Form activation, Stone Wall projectile/movement blocking, Dark Lord selection, Spirit Wolf target acquisition/damage, World Rune Serpent launch/mount behavior, mount → input-driven summon movement → automatic dismount on mount death, Dragon Invocation impact/cleanup, depth-aware spells, Tower target filtering, and an input-driven siege chain (player melee/Fireball → Tower → Castle → final Wizard → Results → Rematch/Hub).
 - All browser modules pass `node --check`; local HTTP checks return 200 for `/` and `/src/main.js`.
 
@@ -74,3 +74,4 @@
 - PWA/iOS install must be manually confirmed after GitHub Pages deploy: remove any old Home-Screen icon, reload the deployed page in Safari, install it again, then verify standalone chrome removal, portrait rotate state, landscape safe-area placement, circular action-button layout, and contextual Mount visibility on the target iPhone/iPad. No Service Worker is intentionally installed for this shell-only PWA pass.
 - Adaptive viewport visuals still require real-device validation: test 16:9, iPhone 19.5:9, and an ultrawide landscape viewport for edge-strip appearance, HUD comfort, safe-area clearance, and the vertical Jump rail. Browser automation was unavailable for this pass.
 - The responsive guide/menu panel scale and the exact new Cast-to-Jump spacing require real-device validation; browser automation was unavailable for this pass.
+- Hub-to-Siege input handoff: `#hub-overlay.hidden` now explicitly removes the Hub from layout and hit testing. This prevents the active but visually hidden Hub page from intercepting the lower match HUD's touch input after entering Siege.
