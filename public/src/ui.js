@@ -58,7 +58,6 @@ export class UIManager {
     this.hubEditDeckBtn = document.getElementById('hub-edit-deck-btn');
     this.hubOpenSkillsBtn = document.getElementById('hub-open-skills-btn');
     this.hubSiegeModeBtn = document.getElementById('hub-siege-mode-btn');
-    this.hubModeConfirmBtn = document.getElementById('hub-mode-confirm-btn');
     this.hubModesBackBtn = document.getElementById('hub-modes-back-btn');
     this.hubFullscreenBtn = document.getElementById('hub-fullscreen-btn');
     this.hubCustomizeBtn = document.getElementById('hub-customize-btn');
@@ -352,9 +351,10 @@ export class UIManager {
       e.preventDefault(); this.setHubPage('modes');
     });
     this.hubSiegeModeBtn?.addEventListener('pointerdown', (e) => {
-      e.preventDefault(); this.setHubMode('siege');
+      e.preventDefault();
+      this.setHubMode('siege');
+      startMatch(e);
     });
-    this.hubModeConfirmBtn?.addEventListener('pointerdown', startMatch);
     this.hubModesBackBtn?.addEventListener('pointerdown', (e) => {
       e.preventDefault(); this.setHubPage('character');
     });
@@ -426,7 +426,6 @@ export class UIManager {
     if (mode !== 'siege') return;
     this.selectedMode = mode;
     this.hubSiegeModeBtn?.classList.add('active');
-    if (this.hubModeConfirmBtn) this.hubModeConfirmBtn.setAttribute('aria-label', 'Start Castle Siege');
   }
 
   setHubHero(hero) {

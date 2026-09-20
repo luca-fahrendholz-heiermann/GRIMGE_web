@@ -50,7 +50,7 @@ assert(css.includes('aspect-ratio: 1 / 1') && css.includes('.mount-action.is-ava
 assert(css.includes('left: 150px; bottom: 12px; width: 84px; height: 84px') && css.includes('left: 166px; bottom: 110px; width: 52px; height: 52px'), 'Mount is centered at 12 o’clock above the dominant Cast button');
 assert(main.includes('syncOrientationState()') && main.includes('updateMountCandidate()'), 'Runtime pauses portrait gameplay and maintains an authoritative mount candidate');
 assert(css.includes('#hub-overlay.hidden { display: none; pointer-events: none; }'), 'Hidden Hub removes its interactive page layer before match controls become active');
-assert(html.includes('id="hub-battle-btn"') && html.includes('id="hub-mode-confirm-btn"') && ui.includes("this.setHubPage('modes')"), 'Hub separates Battle mode selection from the final Siege confirmation');
+assert(html.includes('id="hub-battle-btn"') && html.includes('id="hub-siege-mode-btn"') && ui.includes("this.setHubPage('modes')") && ui.includes('startMatch(e);'), 'Hub opens Battle mode selection and Free Play starts the available Castle Siege match');
 assert(
   html.includes('hub-game-types-menu')
   && html.includes('ui_hub_gametype_selection_screen_background.png')
