@@ -12,7 +12,9 @@ export class SpriteManager {
       mage: { name: 'Ignis the Archmage', file: 'char_mage.png', weapon: 'Grimoire of Runes', role: 'Spellcaster / High Mana' },
       warlord: { name: 'Aurelius the Sovereign', file: 'char_warlord.png', weapon: 'Runic Broadsword', role: 'Commander / Sweeping Strikes' },
       fighter: { name: 'Kaen the Unbroken', file: 'char_fighter.png', weapon: 'Bare Fists & Ki', role: 'Martial Artist / Rapid Hits' },
-      darklord: { name: 'The Dark Lord', file: 'char_dark_lord.png', weapon: 'Blood Crown & Blacksteel', role: 'Dark Vanguard / Control' }
+      darklord: { name: 'The Dark Lord', file: 'char_dark_lord.png', weapon: 'Blood Crown & Blacksteel', role: 'Dark Vanguard / Control' },
+      astral: { name: 'Astral', file: 'char_astral.png', weapon: 'Starbound Arcana', role: 'Starborn / Arcane Balance' },
+      astral_v2: { name: 'Astral Unhooded', file: 'char_astral_v2.png', weapon: 'Starbound Arcana', role: 'Starborn / Arcane Balance' }
     };
     this.shadowCanvas = this.createShadowCanvas();
   }
@@ -93,8 +95,13 @@ export class SpriteManager {
         const db = b - bgB;
         const dist = Math.sqrt(dr * dr + dg * dg + db * db);
 
-        // Check if green screen pixel
-        const isChroma = (dist < 48) || (g > 135 && g > r * 1.5 && g > b * 1.5 && dist < 95);
+        // Chroma-key the flat source background plus the darker green edge
+        // spill left by some supplied character exports.  The second clause
+        // is intentionally gated by a strongly green corner sample, so a
+        // normal green costume/weapon is not removed from non-keyed art.
+        const sourceIsGreenScreen = bgG > bgR * 1.45 && bgG > bgB * 1.45 && bgG > 100;
+        const greenSpill = sourceIsGreenScreen && g > 72 && g > r * 1.32 && g > b * 1.28 && (g - Math.max(r, b)) > 36;
+        const isChroma = (dist < 48) || greenSpill || (g > 135 && g > r * 1.5 && g > b * 1.5 && dist < 95);
 
         if (isChroma) {
           data[idx + 3] = 0; // Transparent

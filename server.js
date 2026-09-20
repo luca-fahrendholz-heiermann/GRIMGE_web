@@ -30,6 +30,15 @@ const MIME_TYPES = {
 
 const server = http.createServer((req, res) => {
   let reqUrl = req.url.split('?')[0];
+  try {
+    // Browser URLs encode spaces and punctuation. Decode before resolving the
+    // local static file so supplied UI assets keep working in development.
+    reqUrl = decodeURIComponent(reqUrl);
+  } catch {
+    res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
+    res.end('400 Bad Request');
+    return;
+  }
   if (reqUrl === '/') reqUrl = '/index.html';
 
   const safePath = path.normalize(reqUrl).replace(/^(\.\.[\/\\])+/, '');

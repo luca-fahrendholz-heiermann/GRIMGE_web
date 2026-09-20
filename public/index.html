@@ -49,26 +49,55 @@
 
           <main id="hub-swipe-area" class="hub-swipe-area">
             <section class="hub-page active" data-hub-page="character">
-              <div class="hub-character-layout">
-                <aside class="hub-side-list">
-                  <button class="hub-hero-card active" data-hub-hero="paladin"><img src="assets/sprites/char_paladin.png" alt="Paladin"><span>PALADIN</span></button>
-                  <button class="hub-hero-card" data-hub-hero="mage"><img src="assets/sprites/char_mage.png" alt="Mage"><span>MAGE</span></button>
-                  <button class="hub-hero-card" data-hub-hero="darklord"><img src="assets/sprites/char_dark_lord.png" alt="Dark Lord"><span>DARK LORD</span></button>
-                </aside>
-                <section class="hub-hero-stage">
-                  <div class="hub-stage-glow"></div>
-                  <div class="hub-stage-orbit orbit-a">✦</div><div class="hub-stage-orbit orbit-b">✧</div>
-                  <img id="hub-hero-preview" src="assets/sprites/char_paladin.png" alt="Selected hero">
-                  <div class="hub-hero-caption"><small>ACTIVE HERO</small><strong id="hub-hero-name">PALADIN</strong><span id="hub-hero-class">ARCANE VANGUARD</span></div>
-                  <div class="hub-stat-row"><span>⚔ <b id="hub-attack-stat">120</b> POWER</span><span>♥ <b id="hub-health-stat">200</b> VITALITY</span></div>
+              <div class="hub-art-menu" aria-label="GRIMGE main menu">
+                <img class="hub-art-background" src="assets/ui/ui_hub_start_screen_concept/ui_hub_start_screen_background.png" alt="">
+                <header class="hub-art-header">
+                  <button class="hub-art-profile hub-main-action" data-hub-action="classes" type="button" aria-label="Choose hero class">
+                    <img id="hub-art-profile-portrait" src="assets/ui/ui_hub_start_screen_concept/portrait_astral.png" alt="Active hero portrait">
+                    <span class="hub-art-profile-meta"><b id="hub-art-hero-name">ASTRAL</b><small id="hub-art-profile-level">ARCANA LV. 1</small><i class="hub-art-profile-xp" aria-label="Arcana experience"><em id="hub-art-profile-xp-fill"></em></i><small id="hub-art-hero-class">STARBORN WANDERER</small></span>
+                  </button>
+                  <img class="hub-art-logo" src="assets/ui/ui_hub_start_screen_concept/ui_logo_grimge.png" alt="GRIMGE">
+                  <div class="hub-art-resources" aria-label="Profile resources">
+                    <span><img src="assets/ui/ui_hub_start_screen_concept/ui_gold_symbol.png" alt="Gold"><b>0</b></span>
+                    <span><img src="assets/ui/ui_hub_start_screen_concept/ui_gem_symbol.png" alt="Gems"><b>0</b></span>
+                    <button class="hub-art-icon hub-main-action" data-hub-action="messages" type="button" aria-label="Messages"><img src="assets/ui/ui_hub_start_screen_concept/ui_button_messages.png" alt=""></button>
+                    <button class="hub-art-icon hub-main-action" data-hub-action="friends" type="button" aria-label="Friends"><img src="assets/ui/ui_hub_start_screen_concept/ui_button_friends.png" alt=""></button>
+                    <button class="hub-art-icon hub-main-action" data-hub-action="settings" type="button" aria-label="Settings"><img src="assets/ui/ui_hub_start_screen_concept/ui_button_settings.png" alt=""></button>
+                  </div>
+                </header>
+
+                <div class="hub-art-actions hub-art-actions-left" aria-label="Character systems">
+                  <button class="hub-art-action hub-main-action" data-hub-action="mastery" type="button"><img src="assets/ui/ui_hub_start_screen_concept/ui_button_mastery.png" alt="Mastery"></button>
+                  <button class="hub-art-action hub-main-action" data-hub-action="grimoire" type="button"><img src="assets/ui/ui_hub_start_screen_concept/ui_button_grimoire.png" alt="Grimoire"></button>
+                  <button class="hub-art-action hub-main-action" data-hub-action="wardrobe" type="button"><img src="assets/ui/ui_hub_start_screen_concept/ui_button_wardrobe.png" alt="Wardrobe"></button>
+                </div>
+
+                <section class="hub-art-hero" aria-label="Active hero">
+                  <img id="hub-hero-preview" src="assets/sprites/char_astral.png" alt="Selected hero">
+                  <div class="hub-art-hero-readout"><b id="hub-hero-name">ASTRAL</b><span id="hub-hero-class">STARBORN WANDERER</span><small>POWER <b id="hub-attack-stat">124</b> · VITALITY <b id="hub-health-stat">192</b></small></div>
                 </section>
-                <aside class="hub-side-list hub-companion-list">
-                  <button class="hub-companion-card active" data-companion="spirit_wolf"><b>🐺</b><span>SPIRIT WOLF</span><small>HUNTER</small></button>
-                  <button class="hub-companion-card" data-companion="rune_golem"><b>🪨</b><span>RUNE GOLEM</span><small>VANGUARD</small></button>
-                  <button class="hub-companion-card" data-companion="rune_snake"><b>🐍</b><span>RUNE SERPENT</span><small>CONTROL</small></button>
-                </aside>
+
+                <div class="hub-art-actions hub-art-actions-right" aria-label="Progression systems">
+                  <button class="hub-art-action hub-main-action" data-hub-action="classes" type="button"><img src="assets/ui/ui_hub_start_screen_concept/ui_button_classes.png" alt="Classes"></button>
+                  <button class="hub-art-action hub-main-action" data-hub-action="primals" type="button"><img src="assets/ui/ui_hub_start_screen_concept/ui_button_primals.png" alt="Primals"></button>
+                  <button class="hub-art-action hub-main-action" data-hub-action="transformations" type="button"><img src="assets/ui/ui_hub_start_screen_concept/ui_button_transformations.png" alt="Transformations"></button>
+                </div>
+
+                <div id="hub-hero-roster" class="hub-art-selection-panel hub-art-hero-roster" aria-label="Select playable hero">
+                  <button class="hub-hero-card active" data-hub-hero="astral" type="button"><img src="assets/sprites/char_astral.png" alt="Astral hooded"><span>ASTRAL</span></button>
+                  <button class="hub-hero-card" data-hub-hero="astral_v2" type="button"><img src="assets/sprites/char_astral_v2.png" alt="Astral unhooded"><span>ASTRAL II</span></button>
+                  <button class="hub-hero-card" data-hub-hero="paladin" type="button"><img src="assets/sprites/char_paladin.png" alt="Paladin"><span>PALADIN</span></button>
+                  <button class="hub-hero-card" data-hub-hero="mage" type="button"><img src="assets/sprites/char_mage.png" alt="Mage"><span>MAGE</span></button>
+                  <button class="hub-hero-card" data-hub-hero="darklord" type="button"><img src="assets/sprites/char_dark_lord.png" alt="Dark Lord"><span>DARK LORD</span></button>
+                </div>
+                <div id="hub-companion-roster" class="hub-art-selection-panel hub-art-companion-roster" aria-label="Select primal companion">
+                  <button class="hub-companion-card active" data-companion="spirit_wolf" type="button"><b>🐺</b><span>SPIRIT WOLF</span><small>HUNTER</small></button>
+                  <button class="hub-companion-card" data-companion="rune_golem" type="button"><b>🪨</b><span>RUNE GOLEM</span><small>VANGUARD</small></button>
+                  <button class="hub-companion-card" data-companion="rune_snake" type="button"><b>🐍</b><span>RUNE SERPENT</span><small>CONTROL</small></button>
+                </div>
+
+                <div class="hub-art-battle-wrap"><button id="hub-battle-btn" class="hub-play-button hub-battle-button" type="button">⚔ BATTLE</button></div>
               </div>
-              <div class="hub-home-actions"><button id="hub-play-btn" class="hub-play-button" type="button">⚔ PLAY SIEGE</button><button id="hub-customize-btn" class="hub-utility-button" type="button">✦ CUSTOMIZE — SOON</button></div>
             </section>
 
             <section class="hub-page" data-hub-page="deck">
@@ -84,8 +113,16 @@
             </section>
 
             <section class="hub-page" data-hub-page="modes">
-              <div class="hub-page-heading"><small>CHOOSE A BATTLE</small><h2>GAME MODES</h2></div>
-              <div class="hub-mode-list"><button id="hub-siege-mode-btn" class="hub-mode-card active" type="button"><b>⚔ SIEGE</b><span>Tower → Castle → Final Wizard</span><em>PLAY NOW</em></button><button class="hub-mode-card locked" type="button" disabled><b>✦ COMBAT LAB</b><span>Practice spells, mounts and builds</span><em>SOON</em></button><button class="hub-mode-card locked" type="button" disabled><b>☽ CAMPAIGN</b><span>Arcane encounters beyond the siege</span><em>SOON</em></button></div>
+              <div class="hub-page-heading hub-mode-heading"><small>STARS GUIDE THE FALLEN</small><h2>CHOOSE A GAME MODE</h2></div>
+              <div class="hub-mode-list hub-mode-grid" aria-label="Available and upcoming game modes">
+                <button id="hub-siege-mode-btn" class="hub-mode-card active" type="button"><b>⚔ CASTLE SIEGE</b><span>Castle vs. Castle with Minions, Towers and Wizard.</span><small class="mode-meta">SOLO BOT · CO-OP LATER · RANKED</small><em>READY</em></button>
+                <button class="hub-mode-card locked" type="button" disabled><b>♜ INVASION</b><span>Defend your own Castle against escalating monster waves.</span><small class="mode-meta">SOLO · CO-OP</small><em>IN DEVELOPMENT</em></button>
+                <button class="hub-mode-card locked" type="button" disabled><b>☽ DUNGEON</b><span>Advance, rescue companions, build an army, and face boss Trials.</span><small class="mode-meta">SOLO · CO-OP</small><em>IN DEVELOPMENT</em></button>
+                <button class="hub-mode-card locked" type="button" disabled><b>⚔ ARENA</b><span>Direct combat on a compact vertical battle platform.</span><small class="mode-meta">SOLO BOTS · CO-OP / PVP LATER</small><em>IN DEVELOPMENT</em></button>
+                <button class="hub-mode-card locked" type="button" disabled><b>✦ TRAINING</b><span>Freely test combat, runes, summons and your build.</span><small class="mode-meta">SOLO</small><em>IN DEVELOPMENT</em></button>
+                <button class="hub-mode-card locked" type="button" disabled><b>✧ TUTORIALS</b><span>Progressive mechanic lessons with prototype rewards.</span><small class="mode-meta">SOLO</small><em>IN DEVELOPMENT</em></button>
+              </div>
+              <div class="hub-page-actions"><button id="hub-mode-confirm-btn" class="hub-play-button hub-battle-button" type="button">CONFIRM SIEGE</button></div>
             </section>
 
             <section class="hub-page" data-hub-page="settings">

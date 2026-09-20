@@ -2,6 +2,7 @@
 import { spells } from './spells.js';
 import { MAGE_SKILL_TREE } from './progression.js';
 import { recognizer } from './recognizer.js';
+import { sprites } from './sprites.js';
 
 export class UIManager {
   constructor() {
@@ -25,33 +26,43 @@ export class UIManager {
     this.objectiveHud = document.getElementById('objective-hud');
     this.announcementTimer = 0;
     this.hubOverlay = document.getElementById('hub-overlay');
+    this.hubShell = document.getElementById('hub-shell');
     this.hubSwipeArea = document.getElementById('hub-swipe-area');
     this.hubPages = document.querySelectorAll('.hub-page');
     this.hubTabs = document.querySelectorAll('.hub-tab');
     this.hubHeroCards = document.querySelectorAll('.hub-hero-card');
     this.hubCompanionCards = document.querySelectorAll('.hub-companion-card');
     this.hubHeroPreview = document.getElementById('hub-hero-preview');
+    this.hubHeroRoster = document.getElementById('hub-hero-roster');
+    this.hubCompanionRoster = document.getElementById('hub-companion-roster');
     this.hubHeroName = document.getElementById('hub-hero-name');
     this.hubHeroClass = document.getElementById('hub-hero-class');
+    this.hubArtHeroName = document.getElementById('hub-art-hero-name');
+    this.hubArtHeroClass = document.getElementById('hub-art-hero-class');
+    this.hubArtProfilePortrait = document.getElementById('hub-art-profile-portrait');
+    this.hubArtProfileLevel = document.getElementById('hub-art-profile-level');
+    this.hubArtProfileXpFill = document.getElementById('hub-art-profile-xp-fill');
     this.hubAttackStat = document.getElementById('hub-attack-stat');
     this.hubHealthStat = document.getElementById('hub-health-stat');
     this.hubSkillPoints = document.getElementById('hub-skill-points');
     this.hubDeckCount = document.getElementById('hub-deck-count');
     this.hubDeckPreview = document.getElementById('hub-deck-preview');
     this.hubSkillSummary = document.getElementById('hub-skill-summary');
-    this.hubPlayBtn = document.getElementById('hub-play-btn');
+    this.hubBattleBtn = document.getElementById('hub-battle-btn');
     this.hubEditDeckBtn = document.getElementById('hub-edit-deck-btn');
     this.hubOpenSkillsBtn = document.getElementById('hub-open-skills-btn');
     this.hubSiegeModeBtn = document.getElementById('hub-siege-mode-btn');
+    this.hubModeConfirmBtn = document.getElementById('hub-mode-confirm-btn');
     this.hubFullscreenBtn = document.getElementById('hub-fullscreen-btn');
     this.hubCustomizeBtn = document.getElementById('hub-customize-btn');
     this.hubPage = 'character';
+    this.selectedMode = 'siege';
     this.hubSwipeStart = null;
     try {
-      this.selectedHero = window.localStorage?.getItem?.('grimge-selected-hero') || 'paladin';
+      this.selectedHero = window.localStorage?.getItem?.('grimge-selected-hero') || 'astral';
       this.selectedCompanion = window.localStorage?.getItem?.('grimge-selected-companion') || 'spirit_wolf';
     } catch {
-      this.selectedHero = 'paladin'; this.selectedCompanion = 'spirit_wolf';
+      this.selectedHero = 'astral'; this.selectedCompanion = 'spirit_wolf';
     }
     this.resultsOverlay = document.getElementById('results-overlay');
     this.playMatchBtn = document.getElementById('play-match-btn');
@@ -330,14 +341,37 @@ export class UIManager {
       e?.preventDefault?.(); e?.stopPropagation?.();
       this.setHubPage('deck'); this.toggleDeckBuilder(true); this.renderDeckBuilder(window.gameWorld?.profile);
     };
-    this.hubPlayBtn?.addEventListener('pointerdown', startMatch);
-    this.hubSiegeModeBtn?.addEventListener('pointerdown', startMatch);
+    this.hubBattleBtn?.addEventListener('pointerdown', (e) => {
+      e.preventDefault(); this.setHubPage('modes');
+    });
+    this.hubSiegeModeBtn?.addEventListener('pointerdown', (e) => {
+      e.preventDefault(); this.setHubMode('siege');
+    });
+    this.hubModeConfirmBtn?.addEventListener('pointerdown', startMatch);
     this.hubEditDeckBtn?.addEventListener('pointerdown', openDeckBuilder);
     this.hubOpenSkillsBtn?.addEventListener('pointerdown', openSkillTree);
     this.hubFullscreenBtn?.addEventListener('pointerdown', (e) => { e.preventDefault(); window.gameWorld?.enterFullscreen(); });
     this.hubCustomizeBtn?.addEventListener('pointerdown', (e) => { e.preventDefault(); this.showAnnouncement('COSMETIC CUSTOMIZATION IS THE NEXT HUB PASS', 2); });
     this.hubTabs.forEach((tab) => tab.addEventListener('pointerdown', (e) => {
       e.preventDefault(); this.setHubPage(tab.getAttribute('data-hub-tab'));
+    }));
+    document.querySelectorAll('.hub-quick-action').forEach((action) => action.addEventListener('pointerdown', (e) => {
+      e.preventDefault(); this.setHubPage(action.getAttribute('data-hub-route'));
+    }));
+    document.querySelectorAll('.hub-main-action').forEach((action) => action.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const route = action.getAttribute('data-hub-action');
+      if (route === 'classes') return this.toggleHubSelection('heroes');
+      if (route === 'primals') return this.toggleHubSelection('companions');
+      if (route === 'grimoire') return this.setHubPage('deck');
+      if (route === 'skills') return this.setHubPage('skills');
+      if (route === 'settings') return this.setHubPage('settings');
+      if (route === 'mastery') return this.showAnnouncement('MASTERY IS A FUTURE CANONICAL SYSTEM', 2.2);
+      if (route === 'transformations') return this.showAnnouncement('TRANSFORMATION PATHS ARE IN DEVELOPMENT', 2.2);
+      if (route === 'wardrobe') return this.showAnnouncement('WARDROBE & EQUIPMENT ARE IN DEVELOPMENT', 2.2);
+      if (route === 'messages') return this.showAnnouncement('MESSAGES ARE NOT AVAILABLE IN THE PROTOTYPE', 2.2);
+      if (route === 'friends') return this.showAnnouncement('FRIENDS WILL ARRIVE WITH CO-OP', 2.2);
     }));
     this.hubHeroCards.forEach((card) => card.addEventListener('pointerdown', (e) => {
       e.preventDefault(); this.setHubHero(card.getAttribute('data-hub-hero'));
@@ -358,14 +392,30 @@ export class UIManager {
     });
   }
 
-  getSelectedHero() { return this.selectedHero || 'paladin'; }
+  getSelectedHero() { return this.selectedHero || 'astral'; }
 
   setHubPage(page) {
     const valid = ['character', 'deck', 'skills', 'modes', 'settings'];
     if (!valid.includes(page)) return;
     this.hubPage = page;
+    this.hubShell?.classList.toggle('hub-main-active', page === 'character');
+    this.toggleHubSelection(null);
     this.hubPages.forEach((panel) => panel.classList.toggle('active', panel.getAttribute('data-hub-page') === page));
     this.hubTabs.forEach((tab) => tab.classList.toggle('active', tab.getAttribute('data-hub-tab') === page));
+  }
+
+  toggleHubSelection(selection) {
+    const openHeroes = selection === 'heroes' && !this.hubHeroRoster?.classList.contains('is-open');
+    const openCompanions = selection === 'companions' && !this.hubCompanionRoster?.classList.contains('is-open');
+    this.hubHeroRoster?.classList.toggle('is-open', openHeroes);
+    this.hubCompanionRoster?.classList.toggle('is-open', openCompanions);
+  }
+
+  setHubMode(mode) {
+    if (mode !== 'siege') return;
+    this.selectedMode = mode;
+    this.hubSiegeModeBtn?.classList.add('active');
+    if (this.hubModeConfirmBtn) this.hubModeConfirmBtn.textContent = 'CONFIRM SIEGE';
   }
 
   setHubHero(hero) {
@@ -374,18 +424,22 @@ export class UIManager {
     this.selectedHero = hero;
     try { window.localStorage?.setItem?.('grimge-selected-hero', hero); } catch { /* optional preference */ }
     window.gameWorld?.setSelectedHero?.(hero);
+    this.toggleHubSelection(null);
     this.renderHub(window.gameWorld?.profile);
   }
 
   setHubCompanion(companion) {
     this.selectedCompanion = companion;
     try { window.localStorage?.setItem?.('grimge-selected-companion', companion); } catch { /* optional preference */ }
+    this.toggleHubSelection(null);
     this.hubCompanionCards.forEach((card) => card.classList.toggle('active', card.getAttribute('data-companion') === companion));
     this.showAnnouncement(`PRIMAL COMPANION: ${companion.replaceAll('_', ' ').toUpperCase()}`, 1.4);
   }
 
   hubHeroDetails() {
     return {
+      astral: { name: 'ASTRAL', title: 'STARBORN WANDERER', attack: 124, health: 192, file: 'char_astral.png', profilePortrait: 'portrait_astral.png' },
+      astral_v2: { name: 'ASTRAL II', title: 'UNHOODED STARBORN', attack: 124, health: 192, file: 'char_astral_v2.png', profilePortrait: 'portrait_astral.png' },
       paladin: { name: 'PALADIN', title: 'ARCANE VANGUARD', attack: 120, health: 200 },
       mage: { name: 'MAGE', title: 'RUNE CHANNELER', attack: 112, health: 185 },
       darklord: { name: 'DARK LORD', title: 'VOID SOVEREIGN', attack: 132, health: 195 },
@@ -397,12 +451,39 @@ export class UIManager {
 
   renderHub(profile) {
     const details = this.hubHeroDetails()[this.selectedHero] || this.hubHeroDetails().paladin;
-    if (this.hubHeroPreview) this.hubHeroPreview.src = `assets/sprites/char_${this.selectedHero}.png`;
+    const processed = sprites.sprites[this.selectedHero]?.canvas;
+    if (this.hubHeroPreview) {
+      // The runtime sprite cache has already chroma-keyed/cropped supplied
+      // sprites. Reuse it for the Hub so green-screen hero sources never
+      // appear as solid rectangles in the menu.
+      this.hubHeroPreview.src = processed?.toDataURL?.() || `assets/sprites/${details.file || `char_${this.selectedHero}.png`}`;
+    }
     if (this.hubHeroName) this.hubHeroName.textContent = details.name;
     if (this.hubHeroClass) this.hubHeroClass.textContent = details.title;
+    if (this.hubArtHeroName) this.hubArtHeroName.textContent = details.name;
+    if (this.hubArtHeroClass) this.hubArtHeroClass.textContent = details.title;
+    if (this.hubArtProfilePortrait) {
+      this.hubArtProfilePortrait.src = details.profilePortrait
+        ? `assets/ui/ui_hub_start_screen_concept/${details.profilePortrait}`
+        : processed?.toDataURL?.() || `assets/sprites/${details.file || `char_${this.selectedHero}.png`}`;
+    }
+    const profileLevel = profile?.level ?? 1;
+    const profileXp = profile?.xp ?? 0;
+    const profileXpMax = Math.max(1, profile?.xpToNextLevel?.() ?? 70);
+    if (this.hubArtProfileLevel) this.hubArtProfileLevel.textContent = `ARCANA LV. ${profileLevel}`;
+    if (this.hubArtProfileXpFill) this.hubArtProfileXpFill.style.width = `${Math.round(Math.min(1, profileXp / profileXpMax) * 100)}%`;
     if (this.hubAttackStat) this.hubAttackStat.textContent = details.attack;
     if (this.hubHealthStat) this.hubHealthStat.textContent = details.health;
-    this.hubHeroCards.forEach((card) => card.classList.toggle('active', card.getAttribute('data-hub-hero') === this.selectedHero));
+    this.hubHeroCards.forEach((card) => {
+      const heroKey = card.getAttribute('data-hub-hero');
+      card.classList.toggle('active', heroKey === this.selectedHero);
+      // The roster thumbnails use the same processed Canvas frame as the
+      // large preview. This keeps green-screen source assets out of every
+      // visible Hub surface, not only the central character stage.
+      const portrait = card.querySelector?.('img');
+      const frame = sprites.sprites[heroKey]?.canvas;
+      if (portrait && frame?.toDataURL) portrait.src = frame.toDataURL();
+    });
     this.hubCompanionCards.forEach((card) => card.classList.toggle('active', card.getAttribute('data-companion') === this.selectedCompanion));
     if (!profile) return;
     if (this.hubSkillPoints) this.hubSkillPoints.textContent = profile.skillPoints;

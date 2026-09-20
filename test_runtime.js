@@ -26,6 +26,8 @@ console.log('\n🎮 Starting GRIMGE 2.5D runtime smoke test...\n');
 const game = new GameWorld();
 await game.init();
 assert(game.matchState === 'Menu', 'Boot enters the playable Hub state');
+ui.setHubHero('astral');
+assert(ui.getSelectedHero() === 'astral' && game.player.heroKey === 'astral' && game.sprites.sprites.astral && game.sprites.sprites.astral_v2, 'Astral hooded and unhooded variants are loaded selectable gameplay heroes');
 ui.setHubHero('darklord');
 assert(ui.getSelectedHero() === 'darklord' && game.player.heroKey === 'darklord', 'Hub hero selection updates the current loadout preview before a match starts');
 game.startMatch();

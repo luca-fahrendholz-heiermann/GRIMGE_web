@@ -18,6 +18,8 @@ const pngSize = (relative) => {
 console.log('\n📱 Starting GRIMGE PWA shell tests...\n');
 
 const html = read('public/index.html');
+const ui = read('public/src/ui.js');
+const sprites = read('public/src/sprites.js');
 const manifest = JSON.parse(read('public/manifest.webmanifest'));
 assert(/rel="manifest" href="\.\/manifest\.webmanifest"/.test(html), 'HTML links the relative web app manifest');
 assert(/apple-mobile-web-app-capable" content="yes"/.test(html), 'iOS standalone mode is enabled');
@@ -35,6 +37,7 @@ assert(pngSize('public/icons/icon-192.png').width === 192 && pngSize('public/ico
 assert(pngSize('public/icons/icon-512.png').width === 512 && pngSize('public/icons/icon-512.png').height === 512, '512px PWA icon has the declared dimensions');
 assert(pngSize('public/icons/apple-touch-icon.png').width === 180 && pngSize('public/icons/apple-touch-icon.png').height === 180, 'Apple touch icon has the declared dimensions');
 assert(read('server.js').includes("'.webmanifest': 'application/manifest+json; charset=utf-8'"), 'Local server exposes the manifest with its correct MIME type');
+assert(read('server.js').includes('decodeURIComponent(reqUrl)'), 'Local server resolves URL-encoded supplied asset names');
 const css = read('public/css/style.css');
 const main = read('public/src/main.js');
 assert(css.includes('#ui-layer.has-safe-area') && css.includes('env(safe-area-inset-left)'), 'Safe-area CSS protects HUD controls without shrinking the arena');
@@ -47,6 +50,25 @@ assert(css.includes('aspect-ratio: 1 / 1') && css.includes('.mount-action.is-ava
 assert(css.includes('left: 150px; bottom: 12px; width: 84px; height: 84px') && css.includes('left: 166px; bottom: 110px; width: 52px; height: 52px'), 'Mount is centered at 12 o’clock above the dominant Cast button');
 assert(main.includes('syncOrientationState()') && main.includes('updateMountCandidate()'), 'Runtime pauses portrait gameplay and maintains an authoritative mount candidate');
 assert(css.includes('#hub-overlay.hidden { display: none; pointer-events: none; }'), 'Hidden Hub removes its interactive page layer before match controls become active');
+assert(html.includes('id="hub-battle-btn"') && html.includes('id="hub-mode-confirm-btn"') && ui.includes("this.setHubPage('modes')"), 'Hub separates Battle mode selection from the final Siege confirmation');
+assert(sprites.includes('astral_v2') && sprites.includes("file: 'char_astral.png'"), 'Astral hooded and unhooded sprites are registered in the shared player sprite pipeline');
+assert(
+  exists('public/assets/ui/ui_hub_start_screen_concept/ui_hub_start_screen_background.png')
+  && exists('public/assets/ui/ui_hub_start_screen_concept/ui_logo_grimge.png')
+  && exists('public/assets/ui/ui_hub_start_screen_concept/ui_button_classes.png')
+  && exists('public/assets/ui/ui_hub_start_screen_concept/ui_button_mastery.png')
+  && exists('public/assets/ui/ui_hub_start_screen_concept/ui_button_transformations.png')
+  && html.includes('ui_button_mastery.png')
+  && html.includes('ui_button_transformations.png'),
+  'Asset-driven Hub scene ships its separate background, logo and interactive button art'
+);
+assert(html.includes('hub-art-profile-portrait') && html.includes('hub-art-profile-xp-fill'), 'Hub profile frame contains dynamic portrait, Arcana level and XP state');
+assert(
+  html.includes('hub-art-menu') && html.includes('hub-main-action')
+  && ui.includes('toggleHubSelection') && css.includes('.hub-shell.hub-main-active')
+  && ['classes', 'wardrobe', 'grimoire', 'primals', 'mastery', 'transformations'].every(action => html.includes(`data-hub-action="${action}"`)),
+  'Asset-driven Hub keeps decorative art separate from all six explicit menu actions'
+);
 
 console.log(`\nPWA results: ${passed} passed, ${failed} failed.`);
 if (failed) process.exit(1);

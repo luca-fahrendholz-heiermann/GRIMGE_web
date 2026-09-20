@@ -1,0 +1,40 @@
+1. Games
+- War of Wizards: https://war-of-wizards-official.fandom.com/wiki/All_Spells
+- Elden Ring: https://eldenring.wiki.fextralife.com/Skills
+- Elder Scrools Online (ESO): https://elderscrollsonline.wiki.fextralife.com/Skills
+- Silkroad Online (SRO): https://www.m3stat.com/SPCalc/
+- World of Warcraft (WoW): https://warcraft.wiki.gg/, https://warcraft.wiki.gg/wiki/Skills_tab
+- Diablo: https://diablo.fandom.com/wiki/Diablo_Wiki, https://diablo.fandom.com/wiki/Skill_Trees
+- Perfect World: https://pwi.fandom.com/wiki/Skill
+- League of Legends: https://wiki.leagueoflegends.com/en-us/List_of_abilities
+- Dota 2: https://dota2.fandom.com/wiki/Abilities/Abilities_by_type
+- Heroes of the Storm: https://www.fandom.com/universe/heroes-of-the-storm
+- Lost Magic (Nintendo): https://gamefaqs.gamespot.com/ds/929826-lost-magic/faqs/42774, https://www.spriters-resource.com/ds_dsi/lostmagic/asset/12352/
+- Naturo Ultimate Ninja Storm 5: https://naruto-ultimate-ninja-storm.fandom.com/wiki/Category:Move_Lists, https://naruto-ultimate-ninja-storm.fandom.com/wiki/Category:Ninjutsu
+- Dragon Ball Xenoverse 2: https://dbxv2.fandom.com/wiki/Category:Skills
+- Dragonball Fighterz: https://dragonballfighterz.fandom.com/wiki/Category:Move_List
+- Jump Force: https://jforce.fandom.com/wiki/Abilities
+- Jump Ultimate Stars (NDS): 
+- Golden Sun + The Lost Age (GBA):
+- Final Fantasy V (GBA):
+- Final Fantasy Tactics Advanced:
+- Tales of Phantasia (GBA):
+- Fire Emblem Scared Stones:
+- Crosscode:
+- Shining Soul 2:
+
+2. Animes:
+- Sword Art Online
+- Naruto
+- Boruto
+- Bleach
+- Dragonball
+- Solo Leveling
+- The Exiled Heavy Knight
+- Shaman King
+- Demon Slayer
+- Jujutsu Kaisen
+- Jack of all Trades
+- Bogus Skill
+- Fairy Tail
+- Avatar Herr der Elemente
