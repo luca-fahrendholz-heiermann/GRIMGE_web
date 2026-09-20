@@ -48,6 +48,11 @@ export class UIManager {
     this.hubModesProfileLevel = document.getElementById('hub-modes-profile-level');
     this.hubModesProfileTitle = document.getElementById('hub-modes-profile-title');
     this.hubModesProfileXpFill = document.getElementById('hub-modes-profile-xp-fill');
+    this.hubFreePlayProfilePortrait = document.getElementById('hub-freeplay-profile-portrait');
+    this.hubFreePlayProfileName = document.getElementById('hub-freeplay-profile-name');
+    this.hubFreePlayProfileLevel = document.getElementById('hub-freeplay-profile-level');
+    this.hubFreePlayProfileTitle = document.getElementById('hub-freeplay-profile-title');
+    this.hubFreePlayProfileXpFill = document.getElementById('hub-freeplay-profile-xp-fill');
     this.hubAttackStat = document.getElementById('hub-attack-stat');
     this.hubHealthStat = document.getElementById('hub-health-stat');
     this.hubSkillPoints = document.getElementById('hub-skill-points');
@@ -59,6 +64,8 @@ export class UIManager {
     this.hubOpenSkillsBtn = document.getElementById('hub-open-skills-btn');
     this.hubSiegeModeBtn = document.getElementById('hub-siege-mode-btn');
     this.hubModesBackBtn = document.getElementById('hub-modes-back-btn');
+    this.hubFreePlaySiegeBtn = document.getElementById('hub-freeplay-siege-btn');
+    this.hubFreePlayBackBtn = document.getElementById('hub-freeplay-back-btn');
     this.hubFullscreenBtn = document.getElementById('hub-fullscreen-btn');
     this.hubCustomizeBtn = document.getElementById('hub-customize-btn');
     this.hubPage = 'character';
@@ -353,10 +360,18 @@ export class UIManager {
     this.hubSiegeModeBtn?.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       this.setHubMode('siege');
-      startMatch(e);
+      this.setHubPage('freeplay');
     });
     this.hubModesBackBtn?.addEventListener('pointerdown', (e) => {
       e.preventDefault(); this.setHubPage('character');
+    });
+    this.hubFreePlaySiegeBtn?.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      this.setHubMode('siege');
+      startMatch(e);
+    });
+    this.hubFreePlayBackBtn?.addEventListener('pointerdown', (e) => {
+      e.preventDefault(); this.setHubPage('modes');
     });
     this.hubEditDeckBtn?.addEventListener('pointerdown', openDeckBuilder);
     this.hubOpenSkillsBtn?.addEventListener('pointerdown', openSkillTree);
@@ -396,7 +411,7 @@ export class UIManager {
       const dy = e.clientY - this.hubSwipeStart.y;
       this.hubSwipeStart = null;
       if (Math.abs(dx) < 48 || Math.abs(dx) < Math.abs(dy) * 1.25) return;
-      const pages = ['character', 'deck', 'skills', 'modes', 'settings'];
+      const pages = ['character', 'deck', 'skills', 'modes', 'freeplay', 'settings'];
       const from = Math.max(0, pages.indexOf(this.hubPage));
       this.setHubPage(pages[Math.max(0, Math.min(pages.length - 1, from + (dx < 0 ? 1 : -1)))]);
     });
@@ -405,11 +420,12 @@ export class UIManager {
   getSelectedHero() { return this.selectedHero || 'astral'; }
 
   setHubPage(page) {
-    const valid = ['character', 'deck', 'skills', 'modes', 'settings'];
+    const valid = ['character', 'deck', 'skills', 'modes', 'freeplay', 'settings'];
     if (!valid.includes(page)) return;
     this.hubPage = page;
     this.hubShell?.classList.toggle('hub-main-active', page === 'character');
     this.hubShell?.classList.toggle('hub-game-types-active', page === 'modes');
+    this.hubShell?.classList.toggle('hub-free-play-active', page === 'freeplay');
     this.toggleHubSelection(null);
     this.hubPages.forEach((panel) => panel.classList.toggle('active', panel.getAttribute('data-hub-page') === page));
     this.hubTabs.forEach((tab) => tab.classList.toggle('active', tab.getAttribute('data-hub-tab') === page));
@@ -483,6 +499,11 @@ export class UIManager {
         ? `assets/ui/ui_hub_start_screen_concept/${details.profilePortrait}`
         : processed?.toDataURL?.() || `assets/sprites/${details.file || `char_${this.selectedHero}.png`}`;
     }
+    if (this.hubFreePlayProfilePortrait) {
+      this.hubFreePlayProfilePortrait.src = details.profilePortrait
+        ? `assets/ui/ui_hub_free_play_screen_concept/${details.profilePortrait}`
+        : processed?.toDataURL?.() || `assets/sprites/${details.file || `char_${this.selectedHero}.png`}`;
+    }
     const profileLevel = profile?.level ?? 1;
     const profileXp = profile?.xp ?? 0;
     const profileXpMax = Math.max(1, profile?.xpToNextLevel?.() ?? 70);
@@ -492,6 +513,10 @@ export class UIManager {
     if (this.hubModesProfileLevel) this.hubModesProfileLevel.textContent = `ARCANA LV. ${profileLevel}`;
     if (this.hubModesProfileTitle) this.hubModesProfileTitle.textContent = details.title;
     if (this.hubModesProfileXpFill) this.hubModesProfileXpFill.style.width = `${Math.round(Math.min(1, profileXp / profileXpMax) * 100)}%`;
+    if (this.hubFreePlayProfileName) this.hubFreePlayProfileName.textContent = details.name;
+    if (this.hubFreePlayProfileLevel) this.hubFreePlayProfileLevel.textContent = `ARCANA LV. ${profileLevel}`;
+    if (this.hubFreePlayProfileTitle) this.hubFreePlayProfileTitle.textContent = details.title;
+    if (this.hubFreePlayProfileXpFill) this.hubFreePlayProfileXpFill.style.width = `${Math.round(Math.min(1, profileXp / profileXpMax) * 100)}%`;
     if (this.hubAttackStat) this.hubAttackStat.textContent = details.attack;
     if (this.hubHealthStat) this.hubHealthStat.textContent = details.health;
     this.hubHeroCards.forEach((card) => {
