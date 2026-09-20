@@ -51,6 +51,18 @@ assert(css.includes('left: 150px; bottom: 12px; width: 84px; height: 84px') && c
 assert(main.includes('syncOrientationState()') && main.includes('updateMountCandidate()'), 'Runtime pauses portrait gameplay and maintains an authoritative mount candidate');
 assert(css.includes('#hub-overlay.hidden { display: none; pointer-events: none; }'), 'Hidden Hub removes its interactive page layer before match controls become active');
 assert(html.includes('id="hub-battle-btn"') && html.includes('id="hub-mode-confirm-btn"') && ui.includes("this.setHubPage('modes')"), 'Hub separates Battle mode selection from the final Siege confirmation');
+assert(
+  html.includes('hub-game-types-menu')
+  && html.includes('ui_hub_gametype_selection_screen_background.png')
+  && ['campaign', 'ranked', 'coop', 'custom_match', 'free_play', 'training'].every((mode) => html.includes(`ui_button_gametype_${mode}.png`)),
+  'Battle opens an asset-driven game type selection scene using all supplied mode artwork'
+);
+assert(
+  css.includes('.hub-shell.hub-game-types-active')
+  && ui.includes("classList.toggle('hub-game-types-active', page === 'modes')")
+  && html.includes('id="hub-modes-back-btn"'),
+  'Game type selection has its own full-screen shell state and a reliable return path'
+);
 assert(sprites.includes('astral_v2') && sprites.includes("file: 'char_astral.png'"), 'Astral hooded and unhooded sprites are registered in the shared player sprite pipeline');
 assert(
   exists('public/assets/ui/ui_hub_start_screen_concept/ui_hub_start_screen_background.png')
@@ -58,8 +70,10 @@ assert(
   && exists('public/assets/ui/ui_hub_start_screen_concept/ui_button_classes.png')
   && exists('public/assets/ui/ui_hub_start_screen_concept/ui_button_mastery.png')
   && exists('public/assets/ui/ui_hub_start_screen_concept/ui_button_transformations.png')
+  && exists('public/assets/ui/ui_hub_start_screen_concept/ui_button_battle.png')
   && html.includes('ui_button_mastery.png')
-  && html.includes('ui_button_transformations.png'),
+  && html.includes('ui_button_transformations.png')
+  && html.includes('ui_button_battle.png'),
   'Asset-driven Hub scene ships its separate background, logo and interactive button art'
 );
 assert(html.includes('hub-art-profile-portrait') && html.includes('hub-art-profile-xp-fill'), 'Hub profile frame contains dynamic portrait, Arcana level and XP state');

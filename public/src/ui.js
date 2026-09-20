@@ -42,6 +42,12 @@ export class UIManager {
     this.hubArtProfilePortrait = document.getElementById('hub-art-profile-portrait');
     this.hubArtProfileLevel = document.getElementById('hub-art-profile-level');
     this.hubArtProfileXpFill = document.getElementById('hub-art-profile-xp-fill');
+    this.hubModesHeroPreview = document.getElementById('hub-modes-hero-preview');
+    this.hubModesProfilePortrait = document.getElementById('hub-modes-profile-portrait');
+    this.hubModesProfileName = document.getElementById('hub-modes-profile-name');
+    this.hubModesProfileLevel = document.getElementById('hub-modes-profile-level');
+    this.hubModesProfileTitle = document.getElementById('hub-modes-profile-title');
+    this.hubModesProfileXpFill = document.getElementById('hub-modes-profile-xp-fill');
     this.hubAttackStat = document.getElementById('hub-attack-stat');
     this.hubHealthStat = document.getElementById('hub-health-stat');
     this.hubSkillPoints = document.getElementById('hub-skill-points');
@@ -53,6 +59,7 @@ export class UIManager {
     this.hubOpenSkillsBtn = document.getElementById('hub-open-skills-btn');
     this.hubSiegeModeBtn = document.getElementById('hub-siege-mode-btn');
     this.hubModeConfirmBtn = document.getElementById('hub-mode-confirm-btn');
+    this.hubModesBackBtn = document.getElementById('hub-modes-back-btn');
     this.hubFullscreenBtn = document.getElementById('hub-fullscreen-btn');
     this.hubCustomizeBtn = document.getElementById('hub-customize-btn');
     this.hubPage = 'character';
@@ -348,6 +355,9 @@ export class UIManager {
       e.preventDefault(); this.setHubMode('siege');
     });
     this.hubModeConfirmBtn?.addEventListener('pointerdown', startMatch);
+    this.hubModesBackBtn?.addEventListener('pointerdown', (e) => {
+      e.preventDefault(); this.setHubPage('character');
+    });
     this.hubEditDeckBtn?.addEventListener('pointerdown', openDeckBuilder);
     this.hubOpenSkillsBtn?.addEventListener('pointerdown', openSkillTree);
     this.hubFullscreenBtn?.addEventListener('pointerdown', (e) => { e.preventDefault(); window.gameWorld?.enterFullscreen(); });
@@ -399,6 +409,7 @@ export class UIManager {
     if (!valid.includes(page)) return;
     this.hubPage = page;
     this.hubShell?.classList.toggle('hub-main-active', page === 'character');
+    this.hubShell?.classList.toggle('hub-game-types-active', page === 'modes');
     this.toggleHubSelection(null);
     this.hubPages.forEach((panel) => panel.classList.toggle('active', panel.getAttribute('data-hub-page') === page));
     this.hubTabs.forEach((tab) => tab.classList.toggle('active', tab.getAttribute('data-hub-tab') === page));
@@ -415,7 +426,7 @@ export class UIManager {
     if (mode !== 'siege') return;
     this.selectedMode = mode;
     this.hubSiegeModeBtn?.classList.add('active');
-    if (this.hubModeConfirmBtn) this.hubModeConfirmBtn.textContent = 'CONFIRM SIEGE';
+    if (this.hubModeConfirmBtn) this.hubModeConfirmBtn.setAttribute('aria-label', 'Start Castle Siege');
   }
 
   setHubHero(hero) {
@@ -458,6 +469,7 @@ export class UIManager {
       // appear as solid rectangles in the menu.
       this.hubHeroPreview.src = processed?.toDataURL?.() || `assets/sprites/${details.file || `char_${this.selectedHero}.png`}`;
     }
+    if (this.hubModesHeroPreview) this.hubModesHeroPreview.src = processed?.toDataURL?.() || `assets/sprites/${details.file || `char_${this.selectedHero}.png`}`;
     if (this.hubHeroName) this.hubHeroName.textContent = details.name;
     if (this.hubHeroClass) this.hubHeroClass.textContent = details.title;
     if (this.hubArtHeroName) this.hubArtHeroName.textContent = details.name;
@@ -467,11 +479,20 @@ export class UIManager {
         ? `assets/ui/ui_hub_start_screen_concept/${details.profilePortrait}`
         : processed?.toDataURL?.() || `assets/sprites/${details.file || `char_${this.selectedHero}.png`}`;
     }
+    if (this.hubModesProfilePortrait) {
+      this.hubModesProfilePortrait.src = details.profilePortrait
+        ? `assets/ui/ui_hub_start_screen_concept/${details.profilePortrait}`
+        : processed?.toDataURL?.() || `assets/sprites/${details.file || `char_${this.selectedHero}.png`}`;
+    }
     const profileLevel = profile?.level ?? 1;
     const profileXp = profile?.xp ?? 0;
     const profileXpMax = Math.max(1, profile?.xpToNextLevel?.() ?? 70);
     if (this.hubArtProfileLevel) this.hubArtProfileLevel.textContent = `ARCANA LV. ${profileLevel}`;
     if (this.hubArtProfileXpFill) this.hubArtProfileXpFill.style.width = `${Math.round(Math.min(1, profileXp / profileXpMax) * 100)}%`;
+    if (this.hubModesProfileName) this.hubModesProfileName.textContent = details.name;
+    if (this.hubModesProfileLevel) this.hubModesProfileLevel.textContent = `ARCANA LV. ${profileLevel}`;
+    if (this.hubModesProfileTitle) this.hubModesProfileTitle.textContent = details.title;
+    if (this.hubModesProfileXpFill) this.hubModesProfileXpFill.style.width = `${Math.round(Math.min(1, profileXp / profileXpMax) * 100)}%`;
     if (this.hubAttackStat) this.hubAttackStat.textContent = details.attack;
     if (this.hubHealthStat) this.hubHealthStat.textContent = details.health;
     this.hubHeroCards.forEach((card) => {

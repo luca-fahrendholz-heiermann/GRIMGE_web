@@ -96,7 +96,7 @@
                   <button class="hub-companion-card" data-companion="rune_snake" type="button"><b>🐍</b><span>RUNE SERPENT</span><small>CONTROL</small></button>
                 </div>
 
-                <div class="hub-art-battle-wrap"><button id="hub-battle-btn" class="hub-play-button hub-battle-button" type="button">⚔ BATTLE</button></div>
+                <div class="hub-art-battle-wrap"><button id="hub-battle-btn" class="hub-play-button hub-battle-button" type="button" aria-label="Battle"><img src="assets/ui/ui_hub_start_screen_concept/ui_button_battle.png" alt="Battle"></button></div>
               </div>
             </section>
 
@@ -113,16 +113,38 @@
             </section>
 
             <section class="hub-page" data-hub-page="modes">
-              <div class="hub-page-heading hub-mode-heading"><small>STARS GUIDE THE FALLEN</small><h2>CHOOSE A GAME MODE</h2></div>
-              <div class="hub-mode-list hub-mode-grid" aria-label="Available and upcoming game modes">
-                <button id="hub-siege-mode-btn" class="hub-mode-card active" type="button"><b>⚔ CASTLE SIEGE</b><span>Castle vs. Castle with Minions, Towers and Wizard.</span><small class="mode-meta">SOLO BOT · CO-OP LATER · RANKED</small><em>READY</em></button>
-                <button class="hub-mode-card locked" type="button" disabled><b>♜ INVASION</b><span>Defend your own Castle against escalating monster waves.</span><small class="mode-meta">SOLO · CO-OP</small><em>IN DEVELOPMENT</em></button>
-                <button class="hub-mode-card locked" type="button" disabled><b>☽ DUNGEON</b><span>Advance, rescue companions, build an army, and face boss Trials.</span><small class="mode-meta">SOLO · CO-OP</small><em>IN DEVELOPMENT</em></button>
-                <button class="hub-mode-card locked" type="button" disabled><b>⚔ ARENA</b><span>Direct combat on a compact vertical battle platform.</span><small class="mode-meta">SOLO BOTS · CO-OP / PVP LATER</small><em>IN DEVELOPMENT</em></button>
-                <button class="hub-mode-card locked" type="button" disabled><b>✦ TRAINING</b><span>Freely test combat, runes, summons and your build.</span><small class="mode-meta">SOLO</small><em>IN DEVELOPMENT</em></button>
-                <button class="hub-mode-card locked" type="button" disabled><b>✧ TUTORIALS</b><span>Progressive mechanic lessons with prototype rewards.</span><small class="mode-meta">SOLO</small><em>IN DEVELOPMENT</em></button>
+              <div class="hub-game-types-menu" aria-label="Game mode selection">
+                <img class="hub-game-types-background" src="assets/ui/ui_hub_gametype_selection_screen_concept/ui_hub_gametype_selection_screen_background.png" alt="">
+                <header class="hub-game-types-header">
+                  <div class="hub-game-types-profile" aria-label="Active character">
+                    <img id="hub-modes-profile-portrait" src="assets/ui/ui_hub_start_screen_concept/portrait_astral.png" alt="Active hero portrait">
+                    <span><b id="hub-modes-profile-name">ASTRAL</b><small id="hub-modes-profile-level">ARCANA LV. 1</small><i><em id="hub-modes-profile-xp-fill"></em></i><small id="hub-modes-profile-title">UNHOODED STARBORN</small></span>
+                  </div>
+                  <img class="hub-game-types-logo" src="assets/ui/ui_hub_gametype_selection_screen_concept/ui_logo_grimge.png" alt="GRIMGE">
+                  <div class="hub-game-types-resources" aria-label="Prototype currency display">
+                    <span><img src="assets/ui/ui_hub_gametype_selection_screen_concept/ui_gold_symbol.png" alt="">0</span>
+                    <span><img src="assets/ui/ui_hub_gametype_selection_screen_concept/ui_gem_symbol.png" alt="">0</span>
+                    <button class="hub-main-action" data-hub-action="messages" type="button"><img src="assets/ui/ui_hub_gametype_selection_screen_concept/ui_button_messages.png" alt="Messages"></button>
+                    <button class="hub-main-action" data-hub-action="friends" type="button"><img src="assets/ui/ui_hub_gametype_selection_screen_concept/ui_button_friends.png" alt="Friends"></button>
+                    <button class="hub-main-action" data-hub-action="settings" type="button"><img src="assets/ui/ui_hub_gametype_selection_screen_concept/ui_button_settings.png" alt="Settings"></button>
+                  </div>
+                </header>
+
+                <img class="hub-game-types-title" src="assets/ui/ui_hub_gametype_selection_screen_concept/ui_button_battle.png" alt="Battle — choose your path">
+                <img id="hub-modes-hero-preview" class="hub-game-types-hero" src="assets/sprites/char_astral.png" alt="Selected hero">
+
+                <div class="hub-game-types-cards" aria-label="Available and upcoming game modes">
+                  <button class="hub-game-type-card is-coming" type="button" disabled aria-label="Campaign — coming later"><img src="assets/ui/ui_hub_gametype_selection_screen_concept/ui_button_gametype_campaign.png" alt="Campaign"><em>COMING SOON</em></button>
+                  <button class="hub-game-type-card is-coming" type="button" disabled aria-label="Ranked PvP — coming later"><img src="assets/ui/ui_hub_gametype_selection_screen_concept/ui_button_gametype_ranked.png" alt="Ranked PvP"><em>COMING SOON</em></button>
+                  <button class="hub-game-type-card is-coming" type="button" disabled aria-label="Co-op — coming later"><img src="assets/ui/ui_hub_gametype_selection_screen_concept/ui_button_gametype_coop.png" alt="Co-op"><em>COMING SOON</em></button>
+                  <button class="hub-game-type-card is-coming" type="button" disabled aria-label="Custom Match — coming later"><img src="assets/ui/ui_hub_gametype_selection_screen_concept/ui_button_gametype_custom_match.png" alt="Custom Match"><em>COMING SOON</em></button>
+                  <button id="hub-siege-mode-btn" class="hub-game-type-card hub-game-type-freeplay active" type="button" aria-label="Castle Siege free play"><img src="assets/ui/ui_hub_gametype_selection_screen_concept/ui_button_gametype_free_play.png" alt="Free Play"><strong>CASTLE SIEGE READY</strong></button>
+                  <button class="hub-game-type-card hub-game-type-training is-coming" type="button" disabled aria-label="Training — coming later"><img src="assets/ui/ui_hub_gametype_selection_screen_concept/ui_button_gametype_training.png" alt="Training"><em>COMING SOON</em></button>
+                </div>
+
+                <button id="hub-mode-confirm-btn" class="hub-game-types-confirm" type="button" aria-label="Start Castle Siege"><img src="assets/ui/ui_hub_gametype_selection_screen_concept/ui_button_battle.png" alt="Confirm Castle Siege"><span>START CASTLE SIEGE</span></button>
+                <button id="hub-modes-back-btn" class="hub-game-types-back" type="button">← BACK</button>
               </div>
-              <div class="hub-page-actions"><button id="hub-mode-confirm-btn" class="hub-play-button hub-battle-button" type="button">CONFIRM SIEGE</button></div>
             </section>
 
             <section class="hub-page" data-hub-page="settings">
