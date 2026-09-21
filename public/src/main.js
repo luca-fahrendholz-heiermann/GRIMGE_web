@@ -481,6 +481,7 @@ export class GameWorld {
       if (!joystickMoved) lastLeftTap = { x: released.x, y: released.y, time: performance.now() };
       else lastLeftTap = null;
       joystickOrigin = null;
+      dashFlickPhase = 'idle';
     };
     const beginAttackGesture = (event) => {
       if (event.pointerType && event.pointerType !== 'touch') return;
