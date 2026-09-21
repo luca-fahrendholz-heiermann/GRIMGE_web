@@ -157,5 +157,18 @@ export const ART_ASSETS = Object.freeze({
     primaryAlly: 'ally_fighter'
   }),
 
+  // Combat archetypes derived from LF2 character specialties.
+  // Each archetype modifies base Minion stats and grants a special ability.
+  // hpMul/dmgMul/spdMul multiply the base Minion stats at spawn time.
+  // specialCd is the cooldown in seconds between special ability uses.
+  archetypes: Object.freeze({
+    enemy_knight: Object.freeze({ hpMul: 1.4, dmgMul: 1.0, spdMul: 0.85, combatType: 'melee', specialCd: 6, special: 'shield_charge', color: '#78909c', renderHeight: 60 }),
+    enemy_bandit: Object.freeze({ hpMul: 0.8, dmgMul: 1.3, spdMul: 1.35, combatType: 'melee', specialCd: 5, special: 'backstab', color: '#9c27b0', renderHeight: 52 }),
+    enemy_sorcerer: Object.freeze({ hpMul: 0.7, dmgMul: 1.2, spdMul: 0.9, combatType: 'ranged', specialCd: 7, special: 'arcane_burst', color: '#b388ff', renderHeight: 56 }),
+    ally_fighter: Object.freeze({ hpMul: 1.1, dmgMul: 1.1, spdMul: 1.0, combatType: 'melee', specialCd: 4, special: 'combo_strike', color: '#42a5f5', renderHeight: 58 }),
+    ally_blade: Object.freeze({ hpMul: 0.9, dmgMul: 1.4, spdMul: 1.15, combatType: 'melee', specialCd: 5, special: 'blade_dash', color: '#66bb6a', renderHeight: 56 }),
+    boss_firelord: Object.freeze({ hpMul: 3.0, dmgMul: 1.8, spdMul: 0.8, combatType: 'melee', specialCd: 4, special: 'fire_dash', color: '#ff6d00', renderHeight: 72 })
+  }),
+
   replacementGuide: 'art/authoring/README.md'
 });

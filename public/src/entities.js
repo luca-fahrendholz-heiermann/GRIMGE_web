@@ -740,10 +740,27 @@ export class Minion extends GroundEntity {
     this.attackRange = type === 'melee' ? 36 : 190; this.attackCooldown = type === 'melee' ? 1.4 : 2; this.attackTimer = Math.random() * .8; this.damage = type === 'melee' ? 14 : 18;
     this.width = ENTITY_VISUALS.minionColliderWidth; this.height = ENTITY_VISUALS.minionColliderHeight; this.state = 'run'; this.animTime = Math.random() * 10; this.hitFlash = 0; this.isDead = false; this.freezeTimer = 0; this.slowTimer = 0; this.slowFactor = 1; this.hurtTimer = 0;
     this.target = null; this.targetLockTimer = 0;
+    this.archetype = null; this.special = null; this.specialTimer = 0; this.specialCd = 0;
+  }
+  configureArchetype(config) {
+    if (!config) return;
+    this.archetype = config;
+    this.maxHp = Math.round(this.maxHp * (config.hpMul ?? 1));
+    this.hp = this.maxHp;
+    this.damage = Math.round(this.damage * (config.dmgMul ?? 1));
+    this.speed *= (config.spdMul ?? 1);
+    if (config.combatType === 'ranged' && this.type !== 'ranged') {
+      this.type = 'ranged'; this.attackRange = 190; this.attackCooldown = 2;
+    }
+    this.specialTimer = (config.specialCd ?? 99) * (0.4 + Math.random() * 0.3);
+    this.specialCd = config.specialCd ?? 99;
+    this.special = config.special ?? null;
+    this.renderHeight = config.renderHeight ?? 56;
   }
   update(dt, gameWorld, battlefield) {
     this.animTime += dt; this.hitFlash = Math.max(0, this.hitFlash - dt); this.attackTimer -= dt; this.targetLockTimer = Math.max(0, this.targetLockTimer - dt);
     this.freezeTimer = Math.max(0, this.freezeTimer - dt); this.slowTimer = Math.max(0, this.slowTimer - dt); if (!this.slowTimer) this.slowFactor = 1;
+    if (this.specialTimer > 0) this.specialTimer -= dt;
     const target = gameWorld.findMinionTarget(this);
     const distance = target ? groundDistance(this, target) : Infinity;
     if (this.freezeTimer > 0) { this.vx = this.vz = 0; }
@@ -777,7 +794,64 @@ export class Minion extends GroundEntity {
     this.vx += pushX * this.speed * 0.45;
     this.vz += pushZ * (this.speed / 150) * 0.45;
   }
-  performAttack(target, gameWorld) { audio.playSlash(1.4); if (this.type === 'melee') { combat.spawnSlashArc(this.x + this.facing * 14, this.y - 16, this.facing, { radius: 22, color: this.team === 'blue' ? '#42a5f5' : '#ef5350' }); target.takeDamage(this.damage, this.facing * 100, 50, .2); } else gameWorld.spawnMinionBolt(this.x + this.facing * 12, this.z, this.facing, this.team, this.damage, target.z, this.worldHeight + 18); }
+  performAttack(target, gameWorld) {
+    if (this.special && this.specialTimer <= 0) { this.specialTimer = this.specialCd; this.performSpecial(target, gameWorld); return; }
+    audio.playSlash(1.4); if (this.type === 'melee') { combat.spawnSlashArc(this.x + this.facing * 14, this.y - 16, this.facing, { radius: 22, color: this.team === 'blue' ? '#42a5f5' : '#ef5350' }); target.takeDamage(this.damage, this.facing * 100, 50, .2); } else gameWorld.spawnMinionBolt(this.x + this.facing * 12, this.z, this.facing, this.team, this.damage, target.z, this.worldHeight + 18);
+  }
+  performSpecial(target, gameWorld) {
+    const dir = Math.sign(target.x - this.x) || this.facing;
+    switch (this.special) {
+      case 'shield_charge': {
+        this.vx = dir * 320; this.state = 'attack';
+        audio.playSlash(0.8);
+        combat.spawnShockwave(this.x, this.y - 16, 28, '#78909c');
+        const targets = gameWorld?.getHostileTargets(this.team) ?? [];
+        for (const t of targets) { if (Math.abs(t.x - this.x) < 60 && Math.abs(t.z - this.z) < 0.2) t.takeDamage(Math.round(this.damage * 1.5), dir * 280, 120, 0.4); }
+        break;
+      }
+      case 'backstab': {
+        this.x = target.x - dir * 30; this.z = target.z;
+        this.facing = Math.sign(target.x - this.x) || this.facing;
+        audio.playSlash(1.6);
+        combat.spawnElementalParticles(this.x, this.y - 16, 'void', 6);
+        target.takeDamage(Math.round(this.damage * 2), this.facing * 160, 60, 0.3, true);
+        break;
+      }
+      case 'arcane_burst': {
+        audio.playSlash(0.6);
+        combat.spawnShockwave(this.x, this.y - 20, 50, '#b388ff');
+        combat.spawnElementalParticles(this.x, this.y - 20, 'fulgur', 8);
+        const targets = gameWorld?.getHostileTargets(this.team) ?? [];
+        for (const t of targets) { if (groundDistance(this, t) < 100) t.takeDamage(Math.round(this.damage * 0.8), 0, 30, 0.2); }
+        break;
+      }
+      case 'combo_strike': {
+        audio.playSlash(1.3);
+        combat.spawnSlashArc(this.x + this.facing * 14, this.y - 16, this.facing, { radius: 26, color: '#42a5f5' });
+        combat.spawnSlashArc(this.x + this.facing * 20, this.y - 20, this.facing, { radius: 30, color: '#ffd54f' });
+        target.takeDamage(Math.round(this.damage * 1.7), this.facing * 140, 80, 0.25);
+        combat.spawnHitSparks(target.x, target.y - 16, this.facing, '#ffd54f', 10);
+        break;
+      }
+      case 'blade_dash': {
+        this.vx = dir * 400; this.state = 'attack';
+        audio.playSlash(1.1);
+        combat.spawnShockwave(this.x, this.y - 16, 22, '#66bb6a');
+        const targets = gameWorld?.getHostileTargets(this.team) ?? [];
+        for (const t of targets) { if (Math.abs(t.x - this.x) < 80 && Math.abs(t.z - this.z) < 0.18) t.takeDamage(Math.round(this.damage * 1.2), dir * 140, 80, 0.25); }
+        break;
+      }
+      case 'fire_dash': {
+        this.vx = dir * 350; this.state = 'attack';
+        audio.playSlash(0.7);
+        combat.spawnShockwave(this.x, this.y - 20, 40, '#ff6d00');
+        combat.spawnElementalParticles(this.x, this.y - 20, 'fire', 12);
+        const targets = gameWorld?.getHostileTargets(this.team) ?? [];
+        for (const t of targets) { if (Math.abs(t.x - this.x) < 70 && Math.abs(t.z - this.z) < 0.2) t.takeDamage(Math.round(this.damage * 1.8), dir * 300, 150, 0.5, true); }
+        break;
+      }
+    }
+  }
   takeDamage(amount, kx = 0, lift = 0, stun = .25) { this.hp = Math.max(0, this.hp - amount); this.hitFlash = .15; this.vx = kx; this.vElevation = lift; this.hurtTimer = Math.max(this.hurtTimer, stun); combat.spawnDamageText(this.x, this.y - 25, amount, { color: this.team === 'blue' ? '#90caf9' : '#ffab91' }); if (!this.hp) { this.isDead = true; combat.spawnHitSparks(this.x, this.y - 16, this.facing, '#fff', 8); } }
   freeze(duration) { this.freezeTimer = duration; } slow(duration, factor) { this.slowTimer = duration; this.slowFactor = factor; }
   render(ctx) { const vh = this.renderHeight ?? ENTITY_VISUALS.minionHeight; sprites.renderEntity(ctx, this.spriteKey, this.x, this.y, { facing: this.facing, state: this.state, animTime: this.animTime, hitFlash: this.hitFlash > 0, visualHeight: vh }); if (this.hp < this.maxHp) { const barY = this.y - vh - 4; ctx.fillStyle = 'rgba(0,0,0,.7)'; ctx.fillRect(this.x - 11, barY, 22, 3); ctx.fillStyle = this.team === 'blue' ? '#42a5f5' : '#e53935'; ctx.fillRect(this.x - 11, barY, 22 * this.hp / this.maxHp, 3); } }

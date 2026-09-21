@@ -107,8 +107,12 @@ export class Battlefield {
     const { blueWave, redWave, laneZ } = ARENA_LAYOUT.spawns;
     for (let i = 0; i < 3; i++) {
       const type = i === 2 ? 'ranged' : 'melee';
-      gameWorld.minions.push(new Minion(blueWave[i], laneZ[i], 'blue', type, i));
-      gameWorld.minions.push(new Minion(redWave[i], laneZ[i], 'red', type, i));
+      const blue = new Minion(blueWave[i], laneZ[i], 'blue', type, i);
+      const red = new Minion(redWave[i], laneZ[i], 'red', type, i);
+      gameWorld.enhanceMinionSprite?.(blue);
+      gameWorld.enhanceMinionSprite?.(red);
+      gameWorld.minions.push(blue);
+      gameWorld.minions.push(red);
     }
     this.waveNumber++;
     gameWorld.showAnnouncement(`WAVE ${this.waveNumber} ADVANCES!`);

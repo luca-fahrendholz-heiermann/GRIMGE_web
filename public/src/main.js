@@ -8,6 +8,7 @@ import { Player, EnemyChampion, Minion } from './entities.js';
 import { Battlefield } from './battlefield.js';
 import { ui } from './ui.js';
 import { VIEWPORT, ARENA_LAYOUT, groundDistance, groundYForDepth } from './world.js';
+import { ART_ASSETS } from './art_assets.js';
 import { MageProfile, MAGE_SKILL_TREE, applyMageProfile } from './progression.js';
 import { getGameMode } from './game_modes.js';
 
@@ -1020,6 +1021,7 @@ export class GameWorld {
       const lane = laneOffsets[i % laneOffsets.length];
       const type = i % 3 === 2 ? 'ranged' : 'melee';
       const minion = new Minion(x + (team === 'red' ? i * 7 : -i * 7), z + lane * spread, team, type, i % 3);
+      this.enhanceMinionSprite(minion);
       if (elite) {
         minion.maxHp = Math.round(minion.maxHp * 1.35);
         minion.hp = minion.maxHp;
@@ -1028,6 +1030,16 @@ export class GameWorld {
       }
       this.minions.push(minion);
     }
+  }
+
+  enhanceMinionSprite(minion) {
+    const pool = ART_ASSETS.dungeonPool;
+    const archetypes = ART_ASSETS.archetypes;
+    if (!pool || !archetypes) return;
+    const keys = minion.team === 'blue' ? pool.allies : pool.enemies;
+    const key = keys[Math.floor(Math.random() * keys.length)];
+    minion.spriteKey = key;
+    minion.configureArchetype(archetypes[key]);
   }
 
   setupModeMatch() {
@@ -1116,9 +1128,7 @@ export class GameWorld {
       this.spawnModeWave('red', 2 + stage, { x: 745, z: 0.58, spread: 0.16, elite: stage >= 3 });
       for (let index = firstDungeonEnemy; index < this.minions.length; index++) {
         const m = this.minions[index];
-        m.spriteKey = 'dungeon_void_raider';
         m.isDungeonRaider = true;
-        m.renderHeight = 68;
         m.maxHp = m.hp = m.type === 'ranged' ? 35 : 55;
         m.damage = m.type === 'ranged' ? 12 : 10;
       }
@@ -1129,7 +1139,7 @@ export class GameWorld {
       return;
     }
     this.enemyChampion.x = 735; this.enemyChampion.z = 0.58;
-    this.enemyChampion.heroKey = 'darklord';
+    this.enemyChampion.heroKey = 'boss_firelord';
     this.enemyChampion.maxHp = this.enemyChampion.hp = 580;
     this.enemyChampion.lifeState = 'Alive';
     this.enemyChampion.respawnTimer = Infinity;
@@ -1146,8 +1156,7 @@ export class GameWorld {
     starter.damage = 8;
     starter.runXpValue = 30;
     starter.isDungeonStarter = true;
-    starter.spriteKey = 'dungeon_void_raider';
-    starter.renderHeight = 68;
+    this.enhanceMinionSprite(starter);
     this.battlefield.placeOnSurface(starter);
     this.minions.push(starter);
     this.showAnnouncement('DUNGEON START — DEFEAT THE SCOUT', 1.8);
@@ -1166,7 +1175,7 @@ export class GameWorld {
     const state = this.modeState;
     state.bossActive = true;
     this.enemyChampion.x = 265; this.enemyChampion.z = 0.58;
-    this.enemyChampion.heroKey = 'darklord';
+    this.enemyChampion.heroKey = 'boss_firelord';
     this.enemyChampion.maxHp = this.enemyChampion.hp = hp;
     this.enemyChampion.lifeState = 'Alive'; this.enemyChampion.respawnTimer = Infinity;
     this.battlefield.placeOnSurface(this.enemyChampion);
@@ -1223,7 +1232,7 @@ export class GameWorld {
     rescue.rescued = true; this.modeState.rescued++;
     const ally = new Minion(this.player.x - 24, this.player.z + .05, 'blue', 'melee', 1);
     ally.isRescuedCompanion = true; ally.maxHp = ally.hp = 220; ally.damage = 28; ally.speed = 105; ally.attackCooldown = 1.0;
-    ally.spriteKey = 'dungeon_dawn_guard'; ally.renderHeight = 78;
+    this.enhanceMinionSprite(ally); ally.renderHeight = 78;
     this.battlefield.placeOnSurface(ally); this.minions.push(ally);
     this.showAnnouncement('COMPANION RESCUED — JOINS UNTIL DEFEATED', 2.2);
   }

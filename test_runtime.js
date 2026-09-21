@@ -536,9 +536,10 @@ assert(redTower.isDead && redCastle.isVulnerable && game.matchPhase === 'CastleP
 game.projectiles = []; redTower.shootTimer = 0; redTower.update(1, game);
 assert(game.projectiles.length === 0, 'Destroyed Tower stops applying defensive pressure');
 // With the Tower gone, the same real minion AI continues toward the Castle.
-frontLaneMinion.attackTimer = 0;
+frontLaneMinion.attackTimer = 0; frontLaneMinion.specialTimer = 99;
+frontLaneMinion.isDead = false; frontLaneMinion.hp = frontLaneMinion.maxHp; frontLaneMinion.hurtTimer = 0;
 const castleHp = redCastle.hp;
-for (let i = 0; i < 130; i++) { frontLaneMinion.update(0.1, game, game.battlefield); game.updateProjectiles(0.1); }
+for (let i = 0; i < 250; i++) { frontLaneMinion.update(0.1, game, game.battlefield); game.updateProjectiles(0.1); }
 assert(redCastle.hp < castleHp, 'AI-controlled minion naturally progresses from Tower to vulnerable Castle');
 
 playerMeleeObjective(redCastle, 60);
@@ -574,7 +575,7 @@ game.returnToHub();
 
 game.setMatchMode('dungeon'); game.startMatch();
 assert(game.activeMode.id === 'dungeon' && !game.battlefield.objectivesActive && !game.modeState.run.pending && game.modeState.stage === 0 && game.minions.length === 1 && game.player.runeHand.length === 0, 'Dungeon starts with one melee scout and no opening Rune choice or inherited deck');
-assert(game.sprites.sprites.dungeon_void_raider && game.sprites.sprites.dungeon_dawn_guard && game.minions[0].spriteKey === 'dungeon_void_raider', 'Dungeon uses its own Void Raider scout art and has the original Dawn Guard companion sprite ready');
+assert(game.sprites.sprites.enemy_knight && game.sprites.sprites.ally_fighter && ['enemy_knight', 'enemy_bandit', 'enemy_sorcerer'].includes(game.minions[0].spriteKey), 'Dungeon scout uses an LF2 sheet sprite from the enemy pool');
 game.player.x = 872; game.player.z = .48; game.player.elevation = 0; game.player.grounded = true; game.battlefield.resolveEntityCollision(game.player);
 assert(game.player.surfaceId === 'mainArena' && game.player.surfaceHeight === 0, 'Dungeon has no inherited invisible Castle plateau');
 const dungeonRouteBefore = game.modeState.routeScroll;
@@ -589,17 +590,17 @@ assert(game.modeState.run.pending && game.modeState.run.options.length === 2, 'T
 game.minions = []; // mirrors the runtime's dead-minion cleanup before the pick is chosen
 game.chooseRunRune(game.modeState.run.options[0].id);
 assert(game.modeState.stage === 1 && game.minions.length === 3 && game.enemyChampion.isDead, 'A first Rune choice launches the first forward Dungeon room');
-assert(game.minions.every((minion) => minion.team !== 'red' || minion.spriteKey === 'dungeon_void_raider'), 'Dungeon room enemies retain the Void Raider sprite family without replacing shared Minion combat behavior');
+assert(game.minions.every((minion) => minion.team !== 'red' || ['enemy_knight', 'enemy_bandit', 'enemy_sorcerer'].includes(minion.spriteKey)), 'Dungeon room enemies use LF2 sheet sprites with distinct archetypes');
 game.minions.forEach((minion) => { minion.isDead = true; });
 game.updateMode(0.1);
 assert(game.modeState.stage === 2 && game.modeState.rescue && game.enemyChampion.isDead, 'Clearing a room advances the Dungeon route and can place a rescue companion');
 game.player.x = game.modeState.rescue.x; game.player.z = game.modeState.rescue.z;
 game.updateDungeonRescue();
 assert(game.modeState.rescue.rescued && game.minions.some((minion) => minion.team === 'blue' && minion.isRescuedCompanion), 'A reached prisoner becomes a persistent allied companion until defeated');
-assert(game.minions.some((minion) => minion.isRescuedCompanion && minion.spriteKey === 'dungeon_dawn_guard'), 'A rescued Dungeon companion uses the distinct Dawn Guard sprite');
+assert(game.minions.some((minion) => minion.isRescuedCompanion && ['ally_fighter', 'ally_blade'].includes(minion.spriteKey)), 'A rescued Dungeon companion uses an LF2 ally sheet sprite');
 game.minions.filter((minion) => minion.team === 'red').forEach((minion) => { minion.isDead = true; });
 game.updateMode(0.1); game.minions.filter((minion) => minion.team === 'red').forEach((minion) => { minion.isDead = true; }); game.updateMode(0.1);
-assert(game.modeState.stage === 4 && game.enemyChampion.isAlive && game.enemyChampion.heroKey === 'darklord', 'The final Dungeon room escalates into a dedicated end boss');
+assert(game.modeState.stage === 4 && game.enemyChampion.isAlive && game.enemyChampion.heroKey === 'boss_firelord', 'The final Dungeon room escalates into the Firelord boss using the LF2 Firen sheet');
 game.returnToHub();
 
 game.setMatchMode('arena'); game.startMatch();
