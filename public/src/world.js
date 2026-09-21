@@ -113,6 +113,8 @@ export class GroundEntity {
     this.surfaceHeight = 0;
     this.vx = 0;
     this.vz = 0;
+    this.kbVelX = 0;
+    this.kbVelZ = 0;
     this.vElevation = 0;
     this.grounded = elevation <= 0;
   }

@@ -102,11 +102,18 @@ assert(game.player.z > startZ && game.player.elevation === startElevation, 'Dept
 assert(game.player.y === groundYForDepth(game.player.z) - game.player.surfaceHeight, 'Grounded actor uses projected depth position plus surface height');
 assert(game.player.surfaceId === 'blueCastleUpperPlatform' && game.player.surfaceHeight > 0, 'Player starts on an upper Castle battlement');
 
-game.player.state = 'idle'; game.player.sp = game.player.maxSp; game.input.move = { x: 0, z: 1 }; game.input.justPressedKeys.ShiftLeft = true;
+game.player.state = 'idle'; game.player.sp = game.player.maxSp; game.player.facing = 1;
+game.player._prevInputDir = 0; game.player._lastFlickDir = 0; game.player._lastFlickTime = 0;
+game.input.move = { x: 1, z: 0 };
 game.player.update(1 / 60, game.input, game.battlefield);
-game.input.justPressedKeys = {}; game.input.move = { x: 0, z: 0 };
-assert(game.player.state === 'dash' && game.player.vz > 0.5 && Math.abs(game.player.vx) < 1, 'Dash follows the meaningful 2.5D movement direction');
-game.player.state = 'idle'; game.player.vx = game.player.vz = 0; game.player.canAttack = true;
+game.input.move = { x: 0, z: 0 };
+game.player.update(1 / 60, game.input, game.battlefield);
+game.player._lastFlickTime = performance.now() * 0.001;
+game.input.move = { x: -1, z: 0 };
+game.player.update(1 / 60, game.input, game.battlefield);
+game.input.move = { x: 0, z: 0 };
+assert(game.player.state === 'dash' && game.player.backdashTimer > 0, 'Backdash triggers on forward-then-backward flick reversal');
+game.player.backdashTimer = 0; game.player.state = 'idle'; game.player.vx = game.player.vz = 0; game.player.canAttack = true; game.player.stateTimer = 0;
 
 game.input.move = { x: 0, z: 0 };
 const preJumpZ = game.player.z;

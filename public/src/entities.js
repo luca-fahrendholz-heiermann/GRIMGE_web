@@ -23,8 +23,38 @@ export const MELEE_BASELINE = Object.freeze({
 // z is projected more strongly than x, but needs to stay quick enough for
 // brawler-style depth dodges and lane changes.
 const DEPTH_SPEED = 1.15;
-const DASH_SPEED = 720;
-const DASH_DEPTH_SPEED = 4.2;
+
+// ── Movement Spec Constants ────────────────────────────────────────────
+const WALK_ACCEL_TIME = 0.12;
+const WALK_DECEL_TIME = 0.08;
+const TURN_TIME = 0.07;
+
+const SPRINT_MULT = 1.65;
+const SPRINT_FLICK_WINDOW = 0.233;
+const SPRINT_ACCEL_TIME = 0.06;
+
+const JUMP_BUFFER_TIME = 0.1;
+
+const BACKDASH_DISTANCE = 280;
+const BACKDASH_DURATION = 0.25;
+const BACKDASH_INVULN_TIME = 0.05;
+const BACKDASH_REVERSAL_WINDOW = 0.15;
+const BACKDASH_SUPPRESS_TIME = 0.133;
+
+const KB_DECAY_RATE = 450;
+
+const AIR_STEER_ACCEL = 340;
+const LAUNCHER_GRAV_SCALE = 0.65;
+const LAUNCHER_APEX_GRAV_SCALE = 0.45;
+const LAUNCHER_APEX_VEL_THRESH = 75;
+
+const BLOCK_MOVE_MULT = 0.4;
+
+function moveTowards(current, target, maxDelta) {
+  const diff = target - current;
+  if (Math.abs(diff) <= maxDelta) return target;
+  return current + Math.sign(diff) * maxDelta;
+}
 
 function moveVector(input) {
   if (input.move) return { x: input.move.x, z: input.move.z };
@@ -77,7 +107,7 @@ export class Player extends GroundEntity {
     this.moveSpeed = 340;
     this.depthSpeed = DEPTH_SPEED;
     this.jumpForce = 580;
-    this.jumpsLeft = 2;
+    this.jumpsLeft = 1;
     this.state = 'idle';
     this.stateTimer = 0;
     this.animTime = 0;
@@ -129,6 +159,24 @@ export class Player extends GroundEntity {
     this.respawnTimer = 0;
     this.respawnDuration = 3;
     this.mountedSummon = null;
+    // ── Movement spec state ──
+    this.kbVelX = 0;
+    this.kbVelZ = 0;
+    this.sprintActive = false;
+    this.sprintDir = 0;
+    this._prevInputDir = 0;
+    this._lastFlickDir = 0;
+    this._lastFlickTime = 0;
+    this.backdashTimer = 0;
+    this.backdashDir = 0;
+    this.backdashTotalTicks = 0;
+    this.backdashTicksLeft = 0;
+    this.backdashSuppressTimer = 0;
+    this.jumpBufferTimer = 0;
+    this.isSprintJump = false;
+    this.launcherMode = false;
+    this.sprintLean = 0;
+    this.sprintBobPhase = 0;
   }
 
   get isAlive() { return this.lifeState === 'Alive'; }
@@ -196,39 +244,70 @@ export class Player extends GroundEntity {
       if (this.stateTimer <= 0) this.finishAction(input);
     }
 
+    this.jumpBufferTimer = Math.max(0, this.jumpBufferTimer - dt);
+    this.backdashSuppressTimer = Math.max(0, this.backdashSuppressTimer - dt);
+
     const controlsBlocked = input.gameplayBlocked || this.freezeTimer > 0 || this.state === 'hurt' || !this.isAlive;
     const isAction = ACTION_STATES.has(this.state) && this.state !== 'hurt';
-    // SHIELD is a held, physical front guard. It has no mana cost and is
-    // deliberately different from the temporary rune-created Arcane Aegis.
     const guardRequested = !!(input.keys?.KeyF || input.guardHeld);
     const wasGuarding = this.isGuarding;
     this.isGuarding = !controlsBlocked && !isAction && this.grounded
-      && guardRequested && this.sp > 0 && this.guardBreakTimer <= 0;
+      && guardRequested && this.sp > 0 && this.guardBreakTimer <= 0
+      && this.backdashTimer <= 0;
     if (this.isGuarding) {
       this.guardHoldTime = wasGuarding ? this.guardHoldTime + dt : 0;
       this.sp = Math.max(0, this.sp - dt * 8);
       this.state = 'guard';
+      this.cancelSprint();
     } else {
       this.guardHoldTime = 0;
-      // Recovery is intentionally invisible and only happens while the
-      // shield is down.  A player must release the shield after a break.
       this.guardStability = Math.min(100, this.guardStability + dt * 28);
     }
+
+    this.updateKnockback(dt);
+
     const riding = this.isMounted;
     if (riding) {
+      this.cancelSprint();
       this.updateMountedMovement(dt, input, battlefield, gameWorld, controlsBlocked || isAction);
-    } else {
-      if (!controlsBlocked && !isAction) this.handleMovementInput(dt, input);
-      // Air movement remains available, but jump elevation never changes z by itself.
-      this.integrateElevation(dt, 1250);
+    } else if (this.backdashTimer > 0) {
+      this.updateBackdash(dt);
+      this.integrateElevation(dt, this.getEffectiveGravity());
       const previousX = this.x; const previousZ = this.z;
-      this.x += this.vx * dt;
-      this.z += this.vz * dt;
+      this.x += this.kbVelX * dt;
+      this.z += this.kbVelZ * dt;
       battlefield.resolveEntityCollision(this);
       gameWorld?.resolveSpellObstacles(this, previousX, previousZ);
-      if (this.grounded) this.jumpsLeft = 2;
+    } else {
+      if (!controlsBlocked && !isAction) {
+        if (this.grounded) {
+          this.handleMovementInput(dt, input);
+        } else if (this.isSprintJump) {
+          this.updateAirSteering(dt, input);
+          if (input.justPressed('Space')) this.jumpBufferTimer = JUMP_BUFFER_TIME;
+        } else {
+          if (input.justPressed('Space')) this.jumpBufferTimer = JUMP_BUFFER_TIME;
+        }
+      }
+      this.integrateElevation(dt, this.getEffectiveGravity());
+      const previousX = this.x; const previousZ = this.z;
+      this.x += (this.vx + this.kbVelX) * dt;
+      this.z += (this.vz + this.kbVelZ) * dt;
+      battlefield.resolveEntityCollision(this);
+      gameWorld?.resolveSpellObstacles(this, previousX, previousZ);
+      if (this.grounded) {
+        this.jumpsLeft = 1;
+        if (this.isSprintJump) this.isSprintJump = false;
+        if (this.launcherMode) this.launcherMode = false;
+        if (this.jumpBufferTimer > 0 && !controlsBlocked && !isAction && !this.isGuarding) {
+          this.jumpBufferTimer = 0;
+          this.performJump();
+        }
+      }
       if (!this.grounded && !ACTION_STATES.has(this.state)) this.state = this.vElevation > 0 ? 'jump' : 'fall';
     }
+
+    this.updateSprintVisuals(dt);
   }
 
   get isMounted() { return !!this.mountedSummon && !this.mountedSummon.isDead && this.mountedSummon.rider === this; }
@@ -300,40 +379,195 @@ export class Player extends GroundEntity {
 
   handleMovementInput(dt, input) {
     const move = normalizeMove(moveVector(input));
-    if (Math.abs(move.x) > 0.02) this.facing = Math.sign(move.x);
-    const guardSpeed = this.isGuarding ? 0.38 : 1;
-    const beastSpeed = this.ninefoldTimer > 0 ? 1.23 : 1;
-    const focusSpeed = this.focusTransformTimer > 0 ? 1.12 : 1;
-    const targetX = move.x * this.moveSpeed * this.slowFactor * guardSpeed * beastSpeed * focusSpeed;
-    const targetZ = move.z * this.depthSpeed * this.slowFactor * guardSpeed * beastSpeed * focusSpeed;
-    this.vx += (targetX - this.vx) * Math.min(1, dt * 18);
-    this.vz += (targetZ - this.vz) * Math.min(1, dt * 18);
-    if (Math.hypot(move.x, move.z) > 0.05 && this.grounded) {
-      this.state = 'run';
-      if (Math.random() < 0.18) combat.spawnDust(this.x, this.y, 1);
-    } else if (this.grounded && (this.state === 'run' || this.state === 'guard')) this.state = this.isGuarding ? 'guard' : 'idle';
+
+    this.detectFlicks(move.x, input);
+
+    if (this.backdashTimer > 0) return;
+
+    if (Math.abs(move.x) > 0.02 && !this.sprintActive) this.facing = Math.sign(move.x);
+
+    const sprintMult = this.sprintActive ? SPRINT_MULT : 1;
+    const guardMult = this.isGuarding ? BLOCK_MOVE_MULT : 1;
+    const beastMult = this.ninefoldTimer > 0 ? 1.23 : 1;
+    const focusMult = this.focusTransformTimer > 0 ? 1.12 : 1;
+    const combinedMult = this.slowFactor * guardMult * beastMult * focusMult * sprintMult;
+
+    const baseSpeed = this.moveSpeed;
+    const baseDepth = this.depthSpeed;
+    const targetX = move.x * baseSpeed * combinedMult;
+    const targetZ = move.z * baseDepth * combinedMult;
+
+    const accelSpeed = this.sprintActive ? baseSpeed * SPRINT_MULT : baseSpeed;
+    this.vx = this.accelerateAxis(this.vx, targetX, accelSpeed, dt);
+    this.vz = this.accelerateAxis(this.vz, targetZ, baseDepth * (combinedMult > 1 ? combinedMult : 1), dt);
+
+    if (this.sprintActive) {
+      if (Math.abs(move.x) < 0.3 || Math.sign(move.x) !== this.sprintDir) {
+        this.cancelSprint();
+      }
+    }
+
+    const moving = Math.hypot(move.x, move.z) > 0.05;
+    if (moving && this.grounded) {
+      this.state = this.sprintActive ? 'run' : 'run';
+      if (Math.random() < (this.sprintActive ? 0.35 : 0.18)) combat.spawnDust(this.x, this.y, 1);
+    } else if (this.grounded && (this.state === 'run' || this.state === 'guard')) {
+      this.state = this.isGuarding ? 'guard' : 'idle';
+    }
 
     if (!this.isGuarding && input.justPressed('Space') && this.jumpsLeft > 0) {
-      this.jumpsLeft--;
-      this.vElevation = this.jumpForce;
-      this.grounded = false;
-      this.state = 'jump';
-      audio.playJump();
-      combat.spawnDust(this.x, this.y, 3);
+      this.performJump();
     }
-    if (!this.isGuarding && (input.justPressed('ShiftLeft') || input.justPressed('ShiftRight')) && this.sp >= 25) {
-      this.sp -= 25;
-      this.state = 'dash'; this.stateTimer = 0.26; this.invulnerableTimer = 0.28;
-      const dashMove = normalizeMove(moveVector(input));
-      const dashHasDirection = Math.hypot(dashMove.x, dashMove.z) > 0.08;
-      // Dash in the current 2.5D movement direction. Facing remains the
-      // intentional fallback when the player dashes without a movement input.
-      this.vx = dashHasDirection ? dashMove.x * DASH_SPEED : this.facing * DASH_SPEED;
-      this.vz = dashHasDirection ? dashMove.z * DASH_DEPTH_SPEED : 0;
-      audio.playDash();
-      combat.spawnShockwave(this.x, this.y - 25, 30, '#ffd700');
+
+    if (input.justPressed('KeyJ') || input.justPressed('Mouse0')) {
+      this.cancelSprint();
+      this.executeAttack(input);
     }
-    if (input.justPressed('KeyJ') || input.justPressed('Mouse0')) this.executeAttack(input);
+  }
+
+  accelerateAxis(current, target, refSpeed, dt) {
+    if (Math.abs(target) < 0.01 && Math.abs(current) < 0.01) return 0;
+    const isReversing = current !== 0 && target !== 0 && Math.sign(target) !== Math.sign(current);
+    let rate;
+    if (isReversing) {
+      rate = 2 * refSpeed / TURN_TIME;
+    } else if (Math.abs(target) >= Math.abs(current)) {
+      const accelTime = this.sprintActive ? SPRINT_ACCEL_TIME : WALK_ACCEL_TIME;
+      rate = refSpeed / accelTime;
+    } else {
+      rate = refSpeed / WALK_DECEL_TIME;
+    }
+    return moveTowards(current, target, rate * dt);
+  }
+
+  detectFlicks(moveX, input) {
+    const flickThresh = 0.45;
+    const currentDir = moveX > flickThresh ? 1 : moveX < -flickThresh ? -1 : 0;
+
+    if (currentDir !== 0 && this._prevInputDir === 0) {
+      this.onDirectionalFlick(currentDir);
+    }
+    this._prevInputDir = currentDir;
+  }
+
+  onDirectionalFlick(dir) {
+    const now = performance.now() * 0.001;
+    const timeSinceLast = now - this._lastFlickTime;
+
+    if (this._lastFlickDir !== 0 && timeSinceLast < BACKDASH_REVERSAL_WINDOW) {
+      if (this._lastFlickDir === this.facing && dir === -this.facing) {
+        this._lastFlickDir = 0;
+        this.triggerBackdash();
+        return;
+      }
+    }
+
+    if (this._lastFlickDir === dir && timeSinceLast < SPRINT_FLICK_WINDOW) {
+      this._lastFlickDir = 0;
+      this.activateSprint(dir);
+      return;
+    }
+
+    this._lastFlickDir = dir;
+    this._lastFlickTime = now;
+  }
+
+  performJump() {
+    if (this.jumpsLeft <= 0) return;
+    const wasSprinting = this.sprintActive;
+    this.cancelSprint();
+    this.jumpsLeft--;
+    this.vElevation = this.jumpForce;
+    this.grounded = false;
+    this.state = 'jump';
+    this.isSprintJump = wasSprinting;
+    audio.playJump();
+    combat.spawnDust(this.x, this.y, 3);
+  }
+
+  activateSprint(dir) {
+    if (this.isGuarding || this.backdashTimer > 0 || !this.grounded) return;
+    this.sprintActive = true;
+    this.sprintDir = dir;
+  }
+
+  cancelSprint() {
+    if (!this.sprintActive) return;
+    this.sprintActive = false;
+    this.sprintDir = 0;
+  }
+
+  triggerBackdash() {
+    if (this.isGuarding || this.backdashTimer > 0 || !this.grounded || !this.isAlive) return;
+    this.cancelSprint();
+    this.backdashDir = -this.facing;
+    this.backdashTimer = BACKDASH_DURATION;
+    this.backdashTotalTicks = Math.round(BACKDASH_DURATION * 60);
+    this.backdashTicksLeft = this.backdashTotalTicks;
+    this.invulnerableTimer = BACKDASH_INVULN_TIME;
+    this.state = 'dash';
+    this.stateTimer = BACKDASH_DURATION;
+    this.vx = 0; this.vz = 0;
+    audio.playDash();
+    combat.spawnShockwave(this.x, this.y - 25, 24, '#80d8ff');
+  }
+
+  updateBackdash(dt) {
+    this.backdashTimer -= dt;
+    if (this.backdashTimer <= 0) {
+      this.backdashTimer = 0;
+      this.backdashSuppressTimer = BACKDASH_SUPPRESS_TIME;
+      this.state = this.grounded ? 'idle' : 'fall';
+      this.stateTimer = 0;
+      this.canAttack = true;
+      return;
+    }
+    const total = this.backdashTotalTicks;
+    const tickWeight = 2 * this.backdashTicksLeft / (total * (total + 1));
+    const distThisTick = BACKDASH_DISTANCE * tickWeight;
+    const speed = distThisTick * 60;
+    this.x += this.backdashDir * speed * dt;
+    this.backdashTicksLeft = Math.max(0, this.backdashTicksLeft - dt * 60);
+    if (Math.random() < 0.5) {
+      this.ghosts.push({ x: this.x, y: this.y, z: this.z, elevation: this.elevation, facing: this.facing, alpha: 0.45, state: 'dash', animTime: this.animTime });
+    }
+  }
+
+  updateAirSteering(dt, input) {
+    const move = normalizeMove(moveVector(input));
+    const targetX = move.x * this.moveSpeed;
+    const accelDelta = AIR_STEER_ACCEL * dt;
+    this.vx = moveTowards(this.vx, targetX, accelDelta);
+    if (Math.abs(move.x) > 0.02) this.facing = Math.sign(move.x);
+  }
+
+  updateKnockback(dt) {
+    if (Math.abs(this.kbVelX) > 0.5) {
+      const decay = KB_DECAY_RATE * dt;
+      this.kbVelX = Math.abs(this.kbVelX) <= decay ? 0 : this.kbVelX - Math.sign(this.kbVelX) * decay;
+    } else {
+      this.kbVelX = 0;
+    }
+    if (Math.abs(this.kbVelZ) > 0.001) {
+      const decay = (KB_DECAY_RATE / 300) * dt;
+      this.kbVelZ = Math.abs(this.kbVelZ) <= decay ? 0 : this.kbVelZ - Math.sign(this.kbVelZ) * decay;
+    } else {
+      this.kbVelZ = 0;
+    }
+  }
+
+  getEffectiveGravity() {
+    if (!this.launcherMode) return 1250;
+    if (Math.abs(this.vElevation) <= LAUNCHER_APEX_VEL_THRESH) return 1250 * LAUNCHER_APEX_GRAV_SCALE;
+    return 1250 * LAUNCHER_GRAV_SCALE;
+  }
+
+  updateSprintVisuals(dt) {
+    const targetLean = this.sprintActive ? this.sprintDir * 12 : 0;
+    const leanRate = this.sprintActive ? (1 / 0.08) : (1 / 0.12);
+    this.sprintLean = moveTowards(this.sprintLean, targetLean, leanRate * Math.abs(targetLean || 12) * dt);
+    if (this.sprintActive) this.sprintBobPhase += dt * 8 * Math.PI * 2;
+    else this.sprintBobPhase = 0;
   }
 
   finishAction(input = null) {
@@ -452,7 +686,7 @@ export class Player extends GroundEntity {
           this.guardHoldTime = 0;
           this.guardBreakTimer = 0.7;
           this.state = 'hurt'; this.stateTimer = 0.7; this.canAttack = false;
-          this.vx = -this.facing * 110; this.vElevation = 35;
+          this.kbVelX = -this.facing * 110; this.vElevation = 35;
           combat.spawnShockwave(this.x, this.y - 28, 46, '#ffca28');
           combat.spawnDamageText(this.x, this.y - 56, 'BREAK', { color: '#ffca28', isCrit: true });
           return { blocked: true, guardBroken: true };
@@ -493,7 +727,15 @@ export class Player extends GroundEntity {
     amount *= this.buildModifiers?.damageTaken ?? 1;
     const receivedWhileGuarding = this.isGuarding && incomingFromFront;
     this.hp = Math.max(0, this.hp - amount);
-    this.hitFlash = 0.15; this.vx = kx; this.vElevation = lift;
+    this.hitFlash = 0.15;
+    this.kbVelX = kx;
+    this.vx = 0;
+    if (lift > 200) {
+      this.launcherMode = true;
+    }
+    this.vElevation = lift;
+    this.cancelSprint();
+    this.backdashTimer = 0;
     this.state = 'hurt'; this.stateTimer = stun; this.canAttack = false;
     // A tiny post-hit grace window prevents an overlapping minion pack from
     // deleting the player in one simulation tick. It is shorter than a combo
@@ -511,7 +753,9 @@ export class Player extends GroundEntity {
     window.gameWorld?.recordWizardDeath?.(this.team);
     this.lifeState = 'Dying';
     this.state = 'dead'; this.stateTimer = 0.45; this.canAttack = false; this.isGuarding = false;
-    this.vx = 0; this.vz = 0; this.clearPreparedRunes();
+    this.vx = 0; this.vz = 0; this.kbVelX = 0; this.kbVelZ = 0;
+    this.cancelSprint(); this.backdashTimer = 0;
+    this.clearPreparedRunes();
     combat.spawnShockwave(this.x, this.y - 25, 60, '#ff1744');
   }
 
@@ -519,11 +763,15 @@ export class Player extends GroundEntity {
     this.dismount();
     const spawn = battlefield?.getSpawn(this.team) ?? ARENA_LAYOUT.spawns.player;
     this.x = spawn.x; this.z = spawn.z; this.elevation = 0;
-    this.vx = 0; this.vz = 0; this.vElevation = 0;
+    this.vx = 0; this.vz = 0; this.vElevation = 0; this.kbVelX = 0; this.kbVelZ = 0;
     this.hp = this.maxHp; this.mp = this.maxMp; this.sp = this.maxSp;
     this.state = 'idle'; this.stateTimer = 0; this.comboStep = 0; this.comboResetTimer = 0; this.queuedAttack = null; this.attackBufferTimer = 0;
     this.canAttack = true; this.freezeTimer = 0; this.slowTimer = 0; this.slowFactor = 1;
-    this.invulnerableTimer = 1.25; this.auraShockCooldown = 0; this.arcaneShield = 0; this.arcaneShieldTimer = 0; this.arcaneShieldCooldown = 0; this.eidolonTimer = 0; this.eidolonCooldown = 0; this.eidolonPower = 1; this.eidolonArmor = 0; this.ninefoldTimer = 0; this.ninefoldCooldown = 0; this.ninefoldPower = 1; this.focus = 0; this.focusTransformTimer = 0; this.focusTransformPower = 1; this.isGuarding = false; this.guardStability = 100; this.guardHoldTime = 0; this.guardBreakTimer = 0; this.jumpsLeft = 2; this.ghosts = [];
+    this.invulnerableTimer = 1.25; this.auraShockCooldown = 0; this.arcaneShield = 0; this.arcaneShieldTimer = 0; this.arcaneShieldCooldown = 0; this.eidolonTimer = 0; this.eidolonCooldown = 0; this.eidolonPower = 1; this.eidolonArmor = 0; this.ninefoldTimer = 0; this.ninefoldCooldown = 0; this.ninefoldPower = 1; this.focus = 0; this.focusTransformTimer = 0; this.focusTransformPower = 1; this.isGuarding = false; this.guardStability = 100; this.guardHoldTime = 0; this.guardBreakTimer = 0; this.jumpsLeft = 1; this.ghosts = [];
+    this.sprintActive = false; this.sprintDir = 0; this.sprintLean = 0; this.sprintBobPhase = 0;
+    this.backdashTimer = 0; this.backdashSuppressTimer = 0; this.jumpBufferTimer = 0;
+    this.isSprintJump = false; this.launcherMode = false;
+    this._prevInputDir = 0; this._lastFlickDir = 0; this._lastFlickTime = 0;
     this.lifeState = 'Alive'; this.respawnTimer = 0; this.grounded = true;
     battlefield?.resolveEntityCollision(this);
     combat.spawnShockwave(this.x, this.y - 25, 55, '#80d8ff');
@@ -601,7 +849,18 @@ export class Player extends GroundEntity {
     if (this.isAlive && this.ninefoldTimer > 0) this.renderNinefoldBeast(ctx, renderY);
     if (this.isAlive && this.eidolonTimer > 0) this.renderEidolonMantle(ctx, renderY);
     for (const g of this.ghosts) sprites.renderEntity(ctx, this.heroKey, g.x, g.y, { facing: g.facing, state: g.state, animTime: g.animTime, alpha: g.alpha, hitFlash: 1 });
-    sprites.renderEntity(ctx, this.heroKey, this.x, renderY, { facing: this.facing, state: this.state, animTime: this.animTime, hitFlash: this.hitFlash > 0 ? 1 : 0, alpha: this.lifeState === 'Dead' ? 0 : 1 });
+    const sprintBobY = this.sprintActive ? Math.sin(this.sprintBobPhase) * 0.8 : 0;
+    const sprintDip = this.sprintActive ? 1.5 : 0;
+    if (Math.abs(this.sprintLean) > 0.5) {
+      ctx.save();
+      ctx.translate(this.x, renderY);
+      ctx.rotate(this.sprintLean * Math.PI / 180);
+      ctx.translate(-this.x, -renderY);
+      sprites.renderEntity(ctx, this.heroKey, this.x, renderY - sprintBobY + sprintDip, { facing: this.facing, state: this.state, animTime: this.animTime * (this.sprintActive ? 1.35 : 1), hitFlash: this.hitFlash > 0 ? 1 : 0, alpha: this.lifeState === 'Dead' ? 0 : 1 });
+      ctx.restore();
+    } else {
+      sprites.renderEntity(ctx, this.heroKey, this.x, renderY, { facing: this.facing, state: this.state, animTime: this.animTime, hitFlash: this.hitFlash > 0 ? 1 : 0, alpha: this.lifeState === 'Dead' ? 0 : 1 });
+    }
     if (this.isAlive) {
       const ratio = Math.max(0, this.hp / this.maxHp);
       ctx.save();
@@ -774,7 +1033,8 @@ export class Minion extends GroundEntity {
       this.facing = desired.x ? Math.sign(desired.x) : this.facing; this.vx = desired.x * this.speed * this.slowFactor; this.vz = desired.z * (this.speed / 150) * this.slowFactor; this.state = 'run';
     }
     this.applySeparation(gameWorld);
-    this.integrateElevation(dt, 1150); const previousX = this.x; const previousZ = this.z; this.x += this.vx * dt; this.z += this.vz * dt; battlefield.resolveEntityCollision(this); gameWorld.resolveSpellObstacles(this, previousX, previousZ);
+    if (Math.abs(this.kbVelX) > 0.5) { const decay = KB_DECAY_RATE * dt; this.kbVelX = Math.abs(this.kbVelX) <= decay ? 0 : this.kbVelX - Math.sign(this.kbVelX) * decay; } else { this.kbVelX = 0; }
+    this.integrateElevation(dt, 1150); const previousX = this.x; const previousZ = this.z; this.x += (this.vx + this.kbVelX) * dt; this.z += this.vz * dt; battlefield.resolveEntityCollision(this); gameWorld.resolveSpellObstacles(this, previousX, previousZ);
   }
   applySeparation(gameWorld) {
     if (this.freezeTimer > 0 || this.hurtTimer > 0) return;
@@ -884,7 +1144,7 @@ export class Minion extends GroundEntity {
       }
     }
   }
-  takeDamage(amount, kx = 0, lift = 0, stun = .25) { this.hp = Math.max(0, this.hp - amount); this.hitFlash = .15; this.vx = kx; this.vElevation = lift; this.hurtTimer = Math.max(this.hurtTimer, stun); combat.spawnDamageText(this.x, this.y - 25, amount, { color: this.team === 'blue' ? '#90caf9' : '#ffab91' }); if (!this.hp) { this.isDead = true; combat.spawnHitSparks(this.x, this.y - 16, this.facing, '#fff', 8); } }
+  takeDamage(amount, kx = 0, lift = 0, stun = .25) { this.hp = Math.max(0, this.hp - amount); this.hitFlash = .15; this.kbVelX = kx; this.vx = 0; this.vElevation = lift; this.hurtTimer = Math.max(this.hurtTimer, stun); combat.spawnDamageText(this.x, this.y - 25, amount, { color: this.team === 'blue' ? '#90caf9' : '#ffab91' }); if (!this.hp) { this.isDead = true; combat.spawnHitSparks(this.x, this.y - 16, this.facing, '#fff', 8); } }
   freeze(duration) { this.freezeTimer = duration; } slow(duration, factor) { this.slowTimer = duration; this.slowFactor = factor; }
   render(ctx) { const vh = this.renderHeight ?? ENTITY_VISUALS.minionHeight; sprites.renderEntity(ctx, this.spriteKey, this.x, this.y, { facing: this.facing, state: this.state, animTime: this.animTime, hitFlash: this.hitFlash > 0, visualHeight: vh }); if (this.hp < this.maxHp) { const barY = this.y - vh - 4; ctx.fillStyle = 'rgba(0,0,0,.7)'; ctx.fillRect(this.x - 11, barY, 22, 3); ctx.fillStyle = this.team === 'blue' ? '#42a5f5' : '#e53935'; ctx.fillRect(this.x - 11, barY, 22 * this.hp / this.maxHp, 3); } }
 }
@@ -969,7 +1229,8 @@ export class EnemyChampion extends GroundEntity {
       this.aiMode = 'DEFEND_CASTLE';
       const move = normalizeMove({ x: home.x - this.x, z: (home.z - this.z) * 150 }); this.facing = Math.sign(move.x) || this.facing; this.vx = move.x * this.speed * .45; this.vz = move.z * this.speed / 150 * .45; this.state = 'run';
     }
-    this.integrateElevation(dt, 1200); const previousX = this.x; const previousZ = this.z; this.x += this.vx * dt; this.z += this.vz * dt; battlefield.resolveEntityCollision(this); gameWorld.resolveSpellObstacles(this, previousX, previousZ);
+    if (Math.abs(this.kbVelX) > 0.5) { const decay = KB_DECAY_RATE * dt; this.kbVelX = Math.abs(this.kbVelX) <= decay ? 0 : this.kbVelX - Math.sign(this.kbVelX) * decay; } else { this.kbVelX = 0; }
+    this.integrateElevation(dt, 1200); const previousX = this.x; const previousZ = this.z; this.x += (this.vx + this.kbVelX) * dt; this.z += this.vz * dt; battlefield.resolveEntityCollision(this); gameWorld.resolveSpellObstacles(this, previousX, previousZ);
   }
   tryAICast(id, gameWorld, manaCost, cooldown) {
     if (this.spellCooldown > 0 || this.mp < manaCost) return false;
@@ -988,7 +1249,7 @@ export class EnemyChampion extends GroundEntity {
     return false;
   }
   executeAIAttack(target) { this.attackCooldown = 1.1; this.state = 'attack1'; this.stateTimer = .28; audio.playSlash(1.1); combat.spawnSlashArc(this.x + this.facing * 20, this.y - 28, this.facing, { radius: 42, color: '#f44336', glow: '#b71c1c' }); if (!(isUpperCastleBattlement(this) && isUpperCastleBattlement(target)) && Math.abs(target.z - this.z) <= .22 && Math.abs((target.worldHeight ?? 0) - this.worldHeight) <= 70) target.takeDamage(24, this.facing * 240, 100, .3); }
-  takeDamage(amount, kx = 0, lift = 0, stun = .35, isCrit = false) { if (!this.isAlive) return; if (this.arcaneShield > 0) { const absorbed = Math.min(amount, this.arcaneShield); this.arcaneShield -= absorbed; amount -= absorbed; if (amount <= 0) { combat.spawnElementalParticles(this.x, this.y - 35, 'fulgur', 5); return; } } this.hp = Math.max(0, this.hp - amount); this.hitFlash = .15; this.vx = kx; this.vElevation = lift; this.state = 'hurt'; this.stateTimer = stun; combat.spawnDamageText(this.x, this.y - 45, amount, { isCrit, color: '#ff7043' }); if (!this.hp) { window.gameWorld?.recordWizardDeath?.(this.team); this.lifeState = 'Dying'; this.state = 'dead'; this.stateTimer = .45; combat.spawnShockwave(this.x, this.y - 30, 80, '#ff5252'); } }
+  takeDamage(amount, kx = 0, lift = 0, stun = .35, isCrit = false) { if (!this.isAlive) return; if (this.arcaneShield > 0) { const absorbed = Math.min(amount, this.arcaneShield); this.arcaneShield -= absorbed; amount -= absorbed; if (amount <= 0) { combat.spawnElementalParticles(this.x, this.y - 35, 'fulgur', 5); return; } } this.hp = Math.max(0, this.hp - amount); this.hitFlash = .15; this.kbVelX = kx; this.vx = 0; this.vElevation = lift; this.state = 'hurt'; this.stateTimer = stun; combat.spawnDamageText(this.x, this.y - 45, amount, { isCrit, color: '#ff7043' }); if (!this.hp) { window.gameWorld?.recordWizardDeath?.(this.team); this.lifeState = 'Dying'; this.state = 'dead'; this.stateTimer = .45; combat.spawnShockwave(this.x, this.y - 30, 80, '#ff5252'); } }
   respawn(battlefield, gameWorld = null) { const spawn = gameWorld?.getEnemyHome?.(this.team, battlefield) ?? battlefield.getSpawn(this.team); this.x = spawn.x; this.z = spawn.z; this.elevation = 0; this.vx = this.vz = this.vElevation = 0; this.hp = this.maxHp; this.mp = this.maxMp; this.arcaneShield = 0; this.arcaneShieldTimer = 0; this.state = 'idle'; this.lifeState = 'Alive'; this.respawnTimer = 0; this.attackCooldown = 0; this.spellCooldown = 1; this.defensiveCooldown = 0; battlefield.resolveEntityCollision(this); combat.spawnShockwave(this.x, this.y - 28, 50, '#ff5252'); }
   freeze(duration) { this.freezeTimer = duration; } slow(duration, factor) { this.slowTimer = duration; this.slowFactor = factor; }
   render(ctx) { sprites.renderEntity(ctx, this.heroKey, this.x, this.y, { facing: this.facing, state: this.state, animTime: this.animTime, hitFlash: this.hitFlash > 0, alpha: this.lifeState === 'Dead' ? 0 : 1 }); if (this.lifeState !== 'Dead') { const healthBarY = this.y - ENTITY_VISUALS.heroHeight - 8; ctx.fillStyle = 'rgba(0,0,0,.8)'; ctx.fillRect(this.x - 27, healthBarY, 54, 6); ctx.fillStyle = '#f44336'; ctx.fillRect(this.x - 27, healthBarY, 54 * this.hp / this.maxHp, 6); } }

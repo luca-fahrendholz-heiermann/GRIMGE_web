@@ -408,9 +408,6 @@ export class GameWorld {
     let controlTapPointerId = null;
     let suppressControlTapRecord = false;
     const JOYSTICK_RADIUS = 66;
-    let dashFlickDir = 0;
-    let dashFlickTime = 0;
-    let dashFlickPhase = 'idle';
     const beginJoystick = (event) => {
       if (event.pointerType && event.pointerType !== 'touch') return false;
       const pt = this.getCanvasCoords(event.clientX, event.clientY);
@@ -447,21 +444,6 @@ export class GameWorld {
       this.input.touchMove.x = normX;
       this.input.touchMove.z = normZ;
       knob.style.transform = `translate(${dx}px, ${dy}px)`;
-      const now = performance.now();
-      const xDir = normX > 0.45 ? 1 : normX < -0.45 ? -1 : 0;
-      if (dashFlickPhase === 'idle' && xDir !== 0) {
-        dashFlickDir = xDir;
-        dashFlickTime = now;
-        dashFlickPhase = 'pushed';
-      } else if (dashFlickPhase === 'pushed' && xDir === 0 && now - dashFlickTime < 300) {
-        dashFlickPhase = 'neutral';
-        dashFlickTime = now;
-      } else if (dashFlickPhase === 'neutral' && xDir === dashFlickDir && now - dashFlickTime < 300) {
-        this.input.justPressedKeys.ShiftLeft = true;
-        dashFlickPhase = 'idle';
-      } else if (dashFlickPhase !== 'idle' && now - dashFlickTime > 400) {
-        dashFlickPhase = 'idle';
-      }
     };
     const clear = (event) => {
       if (pointerId !== event.pointerId) return;
@@ -481,7 +463,6 @@ export class GameWorld {
       if (!joystickMoved) lastLeftTap = { x: released.x, y: released.y, time: performance.now() };
       else lastLeftTap = null;
       joystickOrigin = null;
-      dashFlickPhase = 'idle';
     };
     const beginAttackGesture = (event) => {
       if (event.pointerType && event.pointerType !== 'touch') return;
