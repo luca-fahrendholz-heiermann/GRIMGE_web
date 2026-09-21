@@ -71,7 +71,7 @@ export class Player extends GroundEntity {
     // start at 280 HP and minion damage stacks quickly across three lanes, so
     // this gives the player time to dash, block and reposition without
     // changing attack cadence, enemy damage or movement speed.
-    this.maxHp = 270; this.hp = 270;
+    this.maxHp = 320; this.hp = 320;
     this.maxMp = 100; this.mp = 100;
     this.maxSp = 100; this.sp = 100;
     this.moveSpeed = 340;
@@ -748,7 +748,7 @@ export class Minion extends GroundEntity {
     const distance = target ? groundDistance(this, target) : Infinity;
     if (this.freezeTimer > 0) { this.vx = this.vz = 0; }
     else if (this.hurtTimer > 0) { this.hurtTimer -= dt; this.state = 'hurt'; }
-    else if (target && distance <= (target.isObjective ? 70 : this.attackRange)) { this.vx = this.vz = 0; this.facing = Math.sign(target.x - this.x) || this.facing; this.state = 'idle'; if (this.attackTimer <= 0) { this.attackTimer = this.attackCooldown; this.performAttack(target, gameWorld); } }
+    else if (target && distance <= (target.isObjective ? 70 : this.attackRange)) { this.vx = this.vz = 0; this.facing = Math.sign(target.x - this.x) || this.facing; if (this.attackTimer <= 0) { this.attackTimer = this.attackCooldown; this.state = 'attack'; this.performAttack(target, gameWorld); } else { this.state = this.attackTimer > this.attackCooldown - 0.35 ? 'attack' : 'idle'; } }
     else {
       // Structures are attacked from each lane; combat units may pull a minion
       // slightly off its lane only when already nearby.
@@ -780,7 +780,7 @@ export class Minion extends GroundEntity {
   performAttack(target, gameWorld) { audio.playSlash(1.4); if (this.type === 'melee') { combat.spawnSlashArc(this.x + this.facing * 14, this.y - 16, this.facing, { radius: 22, color: this.team === 'blue' ? '#42a5f5' : '#ef5350' }); target.takeDamage(this.damage, this.facing * 100, 50, .2); } else gameWorld.spawnMinionBolt(this.x + this.facing * 12, this.z, this.facing, this.team, this.damage, target.z, this.worldHeight + 18); }
   takeDamage(amount, kx = 0, lift = 0, stun = .25) { this.hp = Math.max(0, this.hp - amount); this.hitFlash = .15; this.vx = kx; this.vElevation = lift; this.hurtTimer = Math.max(this.hurtTimer, stun); combat.spawnDamageText(this.x, this.y - 25, amount, { color: this.team === 'blue' ? '#90caf9' : '#ffab91' }); if (!this.hp) { this.isDead = true; combat.spawnHitSparks(this.x, this.y - 16, this.facing, '#fff', 8); } }
   freeze(duration) { this.freezeTimer = duration; } slow(duration, factor) { this.slowTimer = duration; this.slowFactor = factor; }
-  render(ctx) { sprites.renderEntity(ctx, this.spriteKey, this.x, this.y, { facing: this.facing, state: this.state, animTime: this.animTime, hitFlash: this.hitFlash > 0, visualHeight: ENTITY_VISUALS.minionHeight }); if (this.hp < this.maxHp) { ctx.fillStyle = 'rgba(0,0,0,.7)'; ctx.fillRect(this.x - 11, this.y - 42, 22, 3); ctx.fillStyle = this.team === 'blue' ? '#42a5f5' : '#e53935'; ctx.fillRect(this.x - 11, this.y - 42, 22 * this.hp / this.maxHp, 3); } }
+  render(ctx) { const vh = this.renderHeight ?? ENTITY_VISUALS.minionHeight; sprites.renderEntity(ctx, this.spriteKey, this.x, this.y, { facing: this.facing, state: this.state, animTime: this.animTime, hitFlash: this.hitFlash > 0, visualHeight: vh }); if (this.hp < this.maxHp) { const barY = this.y - vh - 4; ctx.fillStyle = 'rgba(0,0,0,.7)'; ctx.fillRect(this.x - 11, barY, 22, 3); ctx.fillStyle = this.team === 'blue' ? '#42a5f5' : '#e53935'; ctx.fillRect(this.x - 11, barY, 22 * this.hp / this.maxHp, 3); } }
 }
 
 export class Tower extends GroundEntity {

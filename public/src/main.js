@@ -1018,10 +1018,10 @@ export class GameWorld {
       const type = i % 3 === 2 ? 'ranged' : 'melee';
       const minion = new Minion(x + (team === 'red' ? i * 7 : -i * 7), z + lane * spread, team, type, i % 3);
       if (elite) {
-        minion.maxHp = Math.round(minion.maxHp * 1.65);
+        minion.maxHp = Math.round(minion.maxHp * 1.35);
         minion.hp = minion.maxHp;
-        minion.damage = Math.round(minion.damage * 1.35);
-        minion.speed *= 1.08;
+        minion.damage = Math.round(minion.damage * 1.2);
+        minion.speed *= 1.05;
       }
       this.minions.push(minion);
     }
@@ -1036,6 +1036,7 @@ export class GameWorld {
       // floor and transformations arrive as a contested, temporary relic --
       // neither is inherited from the profile deck.
       transformationRelic: null, transformationRelicTimer: 8.5,
+      potions: [],
       run: mode.progression === 'run' ? { level: 0, xp: 0, xpToNext: 30, deck: [], pending: false, options: [], awaitingFirstKill: true } : null
     };
     if (mode.id === 'siege') {
@@ -1052,6 +1053,7 @@ export class GameWorld {
     }
     if (mode.id === 'dungeon') {
       this.player.x = 290; this.player.z = 0.58;
+      this.player.maxHp = this.player.hp = 300;
       this.enemyChampion.lifeState = 'Dead';
       this.enemyChampion.respawnTimer = Infinity;
       this.battlefield.placeOnSurface(this.player);
@@ -1082,14 +1084,14 @@ export class GameWorld {
     const state = this.modeState;
     if (!state || this.activeMode.id !== 'invasion') return;
     state.wave++;
-    const count = Math.min(14, 2 + state.wave * 2);
-    const scale = 1 + (state.wave - 1) * .15;
+    const count = Math.min(12, 3 + state.wave + Math.floor(state.wave / 3));
+    const scale = 1 + (state.wave - 1) * .08;
     const firstNew = this.minions.length;
-    this.spawnModeWave('red', count, { x: 900, z: 0.58, spread: 0.17, elite: state.wave >= 3 });
+    this.spawnModeWave('red', count, { x: 900, z: 0.58, spread: 0.17, elite: state.wave >= 5 });
     for (const minion of this.minions.slice(firstNew)) {
       minion.modeWave = state.wave;
       minion.maxHp = Math.round(minion.maxHp * scale); minion.hp = minion.maxHp;
-      minion.damage = Math.round(minion.damage * scale); minion.speed *= 1 + (state.wave - 1) * .025;
+      minion.damage = Math.round(minion.damage * scale); minion.speed *= 1 + (state.wave - 1) * .015;
     }
     this.showAnnouncement(`INVASION WAVE ${state.wave}/${this.activeMode.waveGoal}`, 1.4);
   }
@@ -1107,7 +1109,16 @@ export class GameWorld {
       // presentation moves forward.
       this.player.x = 290; this.player.z = 0.58;
       this.battlefield.placeOnSurface(this.player);
-      this.spawnModeWave('red', 3 + stage * 2, { x: 745, z: 0.58, spread: 0.16, elite: stage >= 2 });
+      const firstDungeonEnemy = this.minions.length;
+      this.spawnModeWave('red', 2 + stage, { x: 745, z: 0.58, spread: 0.16, elite: stage >= 3 });
+      for (let index = firstDungeonEnemy; index < this.minions.length; index++) {
+        const m = this.minions[index];
+        m.spriteKey = 'dungeon_void_raider';
+        m.isDungeonRaider = true;
+        m.renderHeight = 68;
+        m.maxHp = m.hp = m.type === 'ranged' ? 35 : 55;
+        m.damage = m.type === 'ranged' ? 12 : 10;
+      }
       // Every other room places a living prisoner on the forward route. A
       // player must reach the glow to turn it into a persistent ally.
       state.rescue = stage === 2 ? { x: 610, z: 0.44, rescued: false } : null;
@@ -1116,7 +1127,7 @@ export class GameWorld {
     }
     this.enemyChampion.x = 735; this.enemyChampion.z = 0.58;
     this.enemyChampion.heroKey = 'darklord';
-    this.enemyChampion.maxHp = this.enemyChampion.hp = 760;
+    this.enemyChampion.maxHp = this.enemyChampion.hp = 580;
     this.enemyChampion.lifeState = 'Alive';
     this.enemyChampion.respawnTimer = Infinity;
     this.battlefield.placeOnSurface(this.enemyChampion);
@@ -1132,6 +1143,8 @@ export class GameWorld {
     starter.damage = 8;
     starter.runXpValue = 30;
     starter.isDungeonStarter = true;
+    starter.spriteKey = 'dungeon_void_raider';
+    starter.renderHeight = 68;
     this.battlefield.placeOnSurface(starter);
     this.minions.push(starter);
     this.showAnnouncement('DUNGEON START — DEFEAT THE SCOUT', 1.8);
@@ -1206,9 +1219,60 @@ export class GameWorld {
     if (Math.hypot(this.player.x - rescue.x, (this.player.z - rescue.z) * 150) > 48) return;
     rescue.rescued = true; this.modeState.rescued++;
     const ally = new Minion(this.player.x - 24, this.player.z + .05, 'blue', 'melee', 1);
-    ally.isRescuedCompanion = true; ally.maxHp = ally.hp = 180; ally.damage = 24; ally.speed = 93;
+    ally.isRescuedCompanion = true; ally.maxHp = ally.hp = 220; ally.damage = 28; ally.speed = 105; ally.attackCooldown = 1.0;
+    ally.spriteKey = 'dungeon_dawn_guard'; ally.renderHeight = 78;
     this.battlefield.placeOnSurface(ally); this.minions.push(ally);
     this.showAnnouncement('COMPANION RESCUED — JOINS UNTIL DEFEATED', 2.2);
+  }
+
+  trySpawnPotion(x, z) {
+    const potions = this.modeState?.potions;
+    if (!potions) return;
+    const mode = this.activeMode?.id;
+    if (mode !== 'dungeon' && mode !== 'invasion') return;
+    if (Math.random() > 0.45) return;
+    const kind = Math.random() < 0.6 ? 'hp' : 'mana';
+    potions.push({ x: x + (Math.random() - 0.5) * 20, z, kind, life: 15 });
+  }
+
+  updatePotions(dt) {
+    const potions = this.modeState?.potions;
+    if (!potions?.length || !this.player.isAlive) return;
+    for (let i = potions.length - 1; i >= 0; i--) {
+      const p = potions[i];
+      p.life -= dt;
+      if (p.life <= 0) { potions.splice(i, 1); continue; }
+      if (Math.hypot(this.player.x - p.x, (this.player.z - p.z) * 150) > 38) continue;
+      if (p.kind === 'hp') {
+        const heal = Math.min(55, this.player.maxHp - this.player.hp);
+        this.player.hp += heal;
+        if (heal > 0) combat.spawnDamageText(this.player.x, this.player.y - 50, `+${heal}`, { color: '#66bb6a' });
+      } else {
+        const gain = Math.min(30, this.player.maxMp - this.player.mp);
+        this.player.mp += gain;
+        if (gain > 0) combat.spawnDamageText(this.player.x, this.player.y - 50, `+${gain}`, { color: '#42a5f5' });
+      }
+      potions.splice(i, 1);
+    }
+  }
+
+  renderPotions(ctx) {
+    const potions = this.modeState?.potions;
+    if (!potions?.length) return;
+    const time = performance.now() * 0.005;
+    ctx.save();
+    ctx.textAlign = 'center';
+    for (const p of potions) {
+      const y = groundYForDepth(p.z) - 12 + Math.sin(time + p.x * 0.1) * 3;
+      const fade = p.life < 3 ? p.life / 3 : 1;
+      ctx.globalAlpha = fade;
+      const color = p.kind === 'hp' ? '#66bb6a' : '#42a5f5';
+      ctx.fillStyle = color; ctx.shadowColor = color; ctx.shadowBlur = 14;
+      ctx.beginPath(); ctx.arc(p.x, y, 11, 0, Math.PI * 2); ctx.fill();
+      ctx.shadowBlur = 0; ctx.fillStyle = '#fff'; ctx.font = 'bold 13px sans-serif';
+      ctx.fillText(p.kind === 'hp' ? '♥' : '★', p.x, y + 5);
+    }
+    ctx.restore();
   }
 
   updateArenaRuneCollectibles() {
@@ -1289,7 +1353,7 @@ export class GameWorld {
       // Dungeon is presented as a forward-moving route. This only moves the
       // backdrop/parallax; it deliberately never changes authored combat
       // distances, collision, or melee reach.
-      state.routeScroll = Math.min(2.2, state.routeScroll + Math.max(0, this.player.vx) * dt * .012);
+      state.routeScroll = Math.min(3.5, state.routeScroll + Math.max(0, this.player.vx) * dt * .008);
       this.updateDungeonRescue();
       if (state.stage <= 3 && !this.minions.some((minion) => minion.team === 'red' && !minion.isDead)) this.spawnDungeonStage(state.stage + 1);
       else if (state.stage === 4 && this.enemyChampion.lifeState === 'Dead') this.finishMode('blue', 'VICTORY — DUNGEON CLEARED');
@@ -1382,7 +1446,10 @@ export class GameWorld {
       const wizardDistance = Math.hypot(wizard.x - minion.x, (wizard.z - minion.z) * 150);
       if (wizardDistance < 180 || this.activeMode?.objectives === false) return commit(wizard);
     }
-    if (this.activeMode?.objectives === false) return commit(null);
+    if (this.activeMode?.objectives === false) {
+      if (nearest) return commit(nearest);
+      return commit(null);
+    }
     const enemyTeam = minion.team === 'blue' ? 'red' : 'blue';
     const objectives = this.battlefield.getObjectivesForTeam(enemyTeam)
       .filter((objective) => !objective.isDestroyed && (objective.isVulnerable !== false));
@@ -1747,8 +1814,9 @@ export class GameWorld {
           const m = this.minions[i];
           m.update(scaledDt, this, this.battlefield);
           if (m.isDead) {
-            if (m.team === 'red' && !m.isRescuedCompanion && this.activeMode?.id === 'dungeon') {
-              this.awardRunXp(m.runXpValue ?? (m.type === 'ranged' ? 14 : 11));
+            if (m.team === 'red' && !m.isRescuedCompanion) {
+              if (this.activeMode?.id === 'dungeon') this.awardRunXp(m.runXpValue ?? (m.type === 'ranged' ? 14 : 11));
+              this.trySpawnPotion(m.x, m.z);
             }
             this.minions.splice(i, 1);
           }
@@ -1757,6 +1825,7 @@ export class GameWorld {
         this.updateProjectiles(scaledDt);
 
         spells.update(scaledDt, this);
+        this.updatePotions(scaledDt);
         this.updateMode(scaledDt);
       }
     }
@@ -1887,6 +1956,7 @@ export class GameWorld {
     // Foreground Crystal Glows on Beacons
     this.battlefield.renderForeground(ctx);
     this.renderDungeonRescue(ctx);
+    this.renderPotions(ctx);
     this.renderArenaRuneCollectibles(ctx);
     this.renderArenaTransformationRelic(ctx);
 
@@ -1929,9 +1999,15 @@ export class GameWorld {
     ctx.fillStyle = `rgba(70, 225, 255, ${pulse})`;
     ctx.beginPath(); ctx.arc(rescue.x, y - 32, 24, 0, Math.PI * 2); ctx.fill();
     ctx.globalCompositeOperation = 'source-over';
-    ctx.strokeStyle = '#8ff6ff'; ctx.lineWidth = 2;
-    ctx.strokeRect(rescue.x - 12, y - 47, 24, 32);
-    ctx.fillStyle = '#d6fbff'; ctx.fillRect(rescue.x - 4, y - 42, 8, 15);
+    // Show the same Dawn Guard sprite that will join the party when freed.
+    // This replaces the old anonymous stick-figure rescue marker while the
+    // interaction range remains intentionally unchanged.
+    sprites.renderEntity(ctx, 'dungeon_dawn_guard', rescue.x, y, {
+      facing: 1,
+      state: 'idle',
+      animTime: performance.now() * 0.001,
+      visualHeight: 78
+    });
     ctx.fillStyle = '#7eeeff'; ctx.font = '10px Georgia'; ctx.textAlign = 'center';
     ctx.fillText('RESCUE', rescue.x, y - 57);
     ctx.restore();

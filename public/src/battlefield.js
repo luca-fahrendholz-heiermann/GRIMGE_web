@@ -1,6 +1,7 @@
 // GRIMGE Prototype — authored 2.5D arena battlefield.
 import { Castle, Minion, Tower } from './entities.js';
 import { ARENA_LAYOUT, clampToArena, groundYForDepth, surfaceContains, surfaceHeight } from './world.js';
+import { ART_ASSETS } from './art_assets.js';
 
 export class Battlefield {
   constructor(mode = null) {
@@ -24,6 +25,29 @@ export class Battlefield {
     this.bgLoaded = false;
     this.bgImage.onload = () => { this.bgLoaded = true; };
     this.bgImage.onerror = () => console.error('Failed to load clean arena background.');
+
+    this.modeBackdropImages = {};
+    const modeBackdrops = ART_ASSETS.scenes;
+    Object.entries(modeBackdrops).forEach(([world, src]) => {
+      const image = new Image();
+      this.modeBackdropImages[world] = { image, loaded: false };
+      image.onload = () => { this.modeBackdropImages[world].loaded = true; };
+      image.onerror = () => console.error(`Failed to load ${world} scene backdrop.`);
+      image.src = src;
+    });
+
+    this.sceneLayers = {};
+    const layers = ART_ASSETS.sceneLayers;
+    if (layers) {
+      Object.entries(layers).forEach(([world, paths]) => {
+        const entry = { far: { image: new Image(), loaded: false }, floor: { image: new Image(), loaded: false } };
+        entry.far.image.onload = () => { entry.far.loaded = true; };
+        entry.floor.image.onload = () => { entry.floor.loaded = true; };
+        entry.far.image.src = paths.far;
+        entry.floor.image.src = paths.floor;
+        this.sceneLayers[world] = entry;
+      });
+    }
 
     const invasion = mode?.world === 'invasion';
     // Invasion is deliberately not a mirrored Siege map. The player holds the
@@ -197,55 +221,205 @@ export class Battlefield {
   }
 
   renderModeBackground(ctx, gameplayWidth, viewH, renderWidth, cameraOffsetX, modeState = null) {
-    const world = this.mode?.world;
-    const w = renderWidth; const h = viewH;
-    const horizon = Math.round(h * 0.42);
-    const sky = ctx.createLinearGradient(0, 0, 0, h);
-    sky.addColorStop(0, world === 'dungeon' ? '#07131e' : '#071021');
-    sky.addColorStop(.52, world === 'invasion' ? '#20314b' : '#172a4a');
-    sky.addColorStop(1, '#11141c');
-    ctx.fillStyle = sky; ctx.fillRect(0, 0, w, h);
-    // Code-native scenery intentionally avoids borrowed map art. It provides
-    // a readable world edge for Invasion and a castle-free 2.5D platform for
-    // Arena/Dungeon while preserving the combat coordinate system.
+    const w = renderWidth;
+    const h = viewH;
+    ctx.fillStyle = '#050a12';
+    ctx.fillRect(0, 0, w, h);
+    this.drawModeBackdrop(ctx, w, h, this.mode?.world, modeState);
+  }
+
+  drawModeBackdrop(ctx, w, h, world, modeState) {
+    const phase = world === 'dungeon'
+      ? (modeState?.scroll ?? 0) * 4 + (modeState?.routeScroll ?? 0)
+      : performance.now() * 0.000012;
+
+    if (world === 'dungeon') this._paintDungeonScene(ctx, w, h, phase);
+    else if (world === 'invasion') this._paintInvasionScene(ctx, w, h, phase);
+    else this._paintArenaScene(ctx, w, h, phase);
+  }
+
+  _paintSilhouetteRange(ctx, w, h, baseY, amp, seeds, offsetX, color) {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(0, h);
+    for (let x = 0; x <= w; x += 2) {
+      const n = x + offsetX;
+      let y = baseY;
+      for (const s of seeds) y -= amp * s.a * Math.sin(n / s.w + (s.p || 0));
+      ctx.lineTo(x, y);
+    }
+    ctx.lineTo(w, h);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  _overlayFloorTiles(ctx, w, h, world, phase) {
+    const layers = this.sceneLayers?.[world];
+    if (!layers?.floor?.loaded) return;
+    const floor = layers.floor.image;
+    const flw = floor.naturalWidth || floor.width;
+    const flh = floor.naturalHeight || floor.height;
+    if (!flw || !flh) return;
+    const floorY = Math.round(h * 0.54);
+    const floorAreaH = h - floorY;
+    const floorScale = floorAreaH / flh;
+    const floorDrawW = flw * floorScale;
+    const offset = -(phase * 0.8 * floorDrawW * 3) % floorDrawW;
     ctx.save();
-    // The Dungeon route advances with the player inside a room and then
-    // swaps to its next segment after a clear. Actors stay in their authored
-    // combat coordinate space; this is visual parallax, never a balance
-    // changing camera transform.
-    const routeOffset = world === 'dungeon'
-      ? ((modeState?.scroll ?? 0) * 73 + (modeState?.routeScroll ?? 0) * 73)
-      : 0;
-    for (let i = 0; i < 42; i++) {
-      const x = (i * 197 + 41 - routeOffset) % w; const y = 24 + ((i * 83) % Math.max(70, horizon - 20));
-      ctx.fillStyle = i % 5 === 0 ? 'rgba(129,198,255,.75)' : 'rgba(205,227,255,.36)';
-      ctx.fillRect(x, y, i % 5 === 0 ? 2 : 1, i % 5 === 0 ? 2 : 1);
-    }
-    ctx.fillStyle = 'rgba(17,31,52,.92)';
-    for (let x = -60 - routeOffset; x < w + 90; x += 115) {
-      const peak = horizon - 24 - ((x / 115) % 3) * 13;
-      ctx.beginPath(); ctx.moveTo(x, horizon + 55); ctx.lineTo(x + 65, peak); ctx.lineTo(x + 130, horizon + 55); ctx.closePath(); ctx.fill();
-    }
-    const floor = ctx.createLinearGradient(0, horizon, 0, h);
-    floor.addColorStop(0, world === 'dungeon' ? '#1b2733' : '#28334a'); floor.addColorStop(1, '#0c1018');
-    ctx.fillStyle = floor; ctx.beginPath(); ctx.moveTo(0, horizon + 38); ctx.lineTo(w, horizon + 38); ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = 'rgba(79,217,255,.26)'; ctx.lineWidth = 1;
-    for (let y = horizon + 58; y < h; y += 28) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y + 20); ctx.stroke(); }
-    for (let x = 0; x <= w; x += 70) { ctx.beginPath(); ctx.moveTo(w * .5, horizon + 36); ctx.lineTo(x, h); ctx.stroke(); }
-    if (world === 'invasion') {
-      const mist = ctx.createLinearGradient(w, 0, w * .45, 0); mist.addColorStop(0, 'rgba(4,10,17,.72)'); mist.addColorStop(1, 'rgba(19,35,49,.16)');
-      ctx.fillStyle = mist; ctx.fillRect(w * .48, 0, w * .52, h);
-      ctx.fillStyle = 'rgba(112,158,179,.18)'; ctx.fillRect(w * .56, horizon + 30, w * .44, 50);
-      ctx.fillStyle = '#101a21'; ctx.fillRect(0, horizon - 80, w * .19, h - horizon + 80);
-      ctx.fillStyle = '#334658'; ctx.fillRect(w * .02, horizon - 65, w * .15, 34);
-    }
-    if (world === 'dungeon') {
-      ctx.fillStyle = 'rgba(115,231,255,.38)';
-      ctx.fillRect(w * .72, horizon - 46, 3, 86);
-      ctx.fillStyle = 'rgba(9,20,30,.86)';
-      ctx.fillRect(w * .72 - 27, horizon - 43, 57, 5);
+    ctx.globalAlpha = 0.5;
+    for (let x = offset - floorDrawW; x < w; x += floorDrawW) {
+      ctx.drawImage(floor, x, floorY, floorDrawW, floorAreaH);
     }
     ctx.restore();
+  }
+
+  _paintDungeonScene(ctx, w, h, phase) {
+    const sky = ctx.createLinearGradient(0, 0, 0, h * 0.55);
+    sky.addColorStop(0, '#030810');
+    sky.addColorStop(0.35, '#0a1828');
+    sky.addColorStop(0.7, '#0c2218');
+    sky.addColorStop(1, '#081a10');
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, w, h * 0.55);
+
+    const mx = w * 0.72, my = h * 0.11;
+    const mg = ctx.createRadialGradient(mx, my, 4, mx, my, 90);
+    mg.addColorStop(0, 'rgba(160,190,210,.12)');
+    mg.addColorStop(1, 'rgba(160,190,210,0)');
+    ctx.fillStyle = mg;
+    ctx.beginPath(); ctx.arc(mx, my, 90, 0, Math.PI * 2); ctx.fill();
+
+    this._paintSilhouetteRange(ctx, w, h, h * 0.34, 42,
+      [{a:.5, w:280}, {a:.3, w:120, p:1.5}, {a:.2, w:400, p:0.8}],
+      phase * 120, '#0a1a28');
+
+    this._paintSilhouetteRange(ctx, w, h, h * 0.40, 50,
+      [{a:.5, w:180, p:0.4}, {a:.35, w:80, p:2.1}, {a:.15, w:320, p:1.3}],
+      phase * 280, '#071512');
+
+    this._paintSilhouetteRange(ctx, w, h, h * 0.47, 45,
+      [{a:.35, w:38}, {a:.3, w:16, p:1.8}, {a:.2, w:65, p:0.5}, {a:.15, w:9, p:3.0}],
+      phase * 500, '#050f0a');
+
+    const gnd = ctx.createLinearGradient(0, h * 0.47, 0, h);
+    gnd.addColorStop(0, '#081a10');
+    gnd.addColorStop(0.35, '#0a1e14');
+    gnd.addColorStop(1, '#040c06');
+    ctx.fillStyle = gnd;
+    ctx.fillRect(0, h * 0.47, w, h * 0.53);
+
+    this._overlayFloorTiles(ctx, w, h, 'dungeon', phase);
+
+    const fog = ctx.createLinearGradient(0, h * 0.44, 0, h * 0.58);
+    fog.addColorStop(0, 'rgba(20,40,30,0)');
+    fog.addColorStop(0.5, 'rgba(20,40,30,.18)');
+    fog.addColorStop(1, 'rgba(20,40,30,0)');
+    ctx.fillStyle = fog;
+    ctx.fillRect(0, h * 0.44, w, h * 0.14);
+
+    const tv = ctx.createLinearGradient(0, 0, 0, h * 0.14);
+    tv.addColorStop(0, 'rgba(2,5,3,.55)');
+    tv.addColorStop(1, 'rgba(2,5,3,0)');
+    ctx.fillStyle = tv;
+    ctx.fillRect(0, 0, w, h * 0.14);
+  }
+
+  _paintInvasionScene(ctx, w, h, phase) {
+    const sky = ctx.createLinearGradient(0, 0, 0, h * 0.55);
+    sky.addColorStop(0, '#140820');
+    sky.addColorStop(0.2, '#2a1040');
+    sky.addColorStop(0.5, '#4a1a28');
+    sky.addColorStop(0.8, '#3a1820');
+    sky.addColorStop(1, '#201018');
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, w, h * 0.55);
+
+    const sx = w * 0.55, sy = h * 0.40;
+    const sg = ctx.createRadialGradient(sx, sy, 15, sx, sy, 220);
+    sg.addColorStop(0, 'rgba(200,90,40,.14)');
+    sg.addColorStop(0.5, 'rgba(140,40,60,.06)');
+    sg.addColorStop(1, 'rgba(80,20,40,0)');
+    ctx.fillStyle = sg;
+    ctx.beginPath(); ctx.arc(sx, sy, 220, 0, Math.PI * 2); ctx.fill();
+
+    this._paintSilhouetteRange(ctx, w, h, h * 0.36, 48,
+      [{a:.5, w:300, p:0.2}, {a:.3, w:130, p:1.7}, {a:.2, w:450, p:0.5}],
+      phase * 100, '#1a0c22');
+
+    this._paintSilhouetteRange(ctx, w, h, h * 0.43, 38,
+      [{a:.5, w:200}, {a:.3, w:90, p:1.4}, {a:.2, w:50, p:2.5}],
+      phase * 250, '#150a18');
+
+    this._paintSilhouetteRange(ctx, w, h, h * 0.49, 22,
+      [{a:.4, w:28, p:0.8}, {a:.25, w:14, p:2.3}, {a:.2, w:55, p:1.0}, {a:.15, w:8}],
+      phase * 420, '#0e060e');
+
+    const gnd = ctx.createLinearGradient(0, h * 0.48, 0, h);
+    gnd.addColorStop(0, '#1a0e0a');
+    gnd.addColorStop(0.3, '#201210');
+    gnd.addColorStop(1, '#0c0806');
+    ctx.fillStyle = gnd;
+    ctx.fillRect(0, h * 0.48, w, h * 0.52);
+
+    this._overlayFloorTiles(ctx, w, h, 'invasion', phase);
+
+    const mist = ctx.createLinearGradient(w, 0, w * 0.4, 0);
+    mist.addColorStop(0, 'rgba(22,3,36,.25)');
+    mist.addColorStop(1, 'rgba(22,3,36,0)');
+    ctx.fillStyle = mist;
+    ctx.fillRect(0, 0, w, h);
+
+    const tv = ctx.createLinearGradient(0, 0, 0, h * 0.12);
+    tv.addColorStop(0, 'rgba(8,3,12,.5)');
+    tv.addColorStop(1, 'rgba(8,3,12,0)');
+    ctx.fillStyle = tv;
+    ctx.fillRect(0, 0, w, h * 0.12);
+  }
+
+  _paintArenaScene(ctx, w, h, phase) {
+    const sky = ctx.createLinearGradient(0, 0, 0, h * 0.55);
+    sky.addColorStop(0, '#04060c');
+    sky.addColorStop(0.35, '#0a0e1a');
+    sky.addColorStop(0.7, '#0c1020');
+    sky.addColorStop(1, '#0a0c16');
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, w, h * 0.55);
+
+    this._paintSilhouetteRange(ctx, w, h, h * 0.12, 35,
+      [{a:.6, w:55}, {a:.3, w:22, p:1.5}, {a:.1, w:95, p:0.8}],
+      phase * 50, '#06080f');
+
+    this._paintSilhouetteRange(ctx, w, h, h * 0.42, 30,
+      [{a:.5, w:140, p:0.3}, {a:.3, w:55, p:2.0}, {a:.2, w:28, p:1.1}],
+      phase * 130, '#080a14');
+
+    const torchT = performance.now() * 0.004;
+    for (let i = 0; i < 5; i++) {
+      const tx = w * (0.1 + i * 0.22);
+      const ty = h * 0.34;
+      const fl = 0.8 + 0.2 * Math.sin(torchT + i * 2.3);
+      const tg = ctx.createRadialGradient(tx, ty, 2, tx, ty, 55 * fl);
+      tg.addColorStop(0, `rgba(255,180,60,${(0.1 * fl).toFixed(3)})`);
+      tg.addColorStop(0.5, `rgba(200,100,20,${(0.04 * fl).toFixed(3)})`);
+      tg.addColorStop(1, 'rgba(100,50,10,0)');
+      ctx.fillStyle = tg;
+      ctx.beginPath(); ctx.arc(tx, ty, 55 * fl, 0, Math.PI * 2); ctx.fill();
+    }
+
+    const gnd = ctx.createLinearGradient(0, h * 0.48, 0, h);
+    gnd.addColorStop(0, '#0c0e18');
+    gnd.addColorStop(0.3, '#0e1020');
+    gnd.addColorStop(1, '#060810');
+    ctx.fillStyle = gnd;
+    ctx.fillRect(0, h * 0.48, w, h * 0.52);
+
+    this._overlayFloorTiles(ctx, w, h, 'arena', phase);
+
+    const tv = ctx.createLinearGradient(0, 0, 0, h * 0.15);
+    tv.addColorStop(0, 'rgba(2,3,6,.6)');
+    tv.addColorStop(1, 'rgba(2,3,6,0)');
+    ctx.fillStyle = tv;
+    ctx.fillRect(0, 0, w, h * 0.15);
   }
 
   renderForeground(ctx) {
