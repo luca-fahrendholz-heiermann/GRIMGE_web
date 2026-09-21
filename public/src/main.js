@@ -767,7 +767,7 @@ export class GameWorld {
         ui.showRecognitionBadge(result.rune, result.confidence, prepared.grade);
         combat.spawnShockwave(this.player.x, this.player.y - 30, 70, result.rune.color);
         combat.spawnElementalParticles(this.player.x, this.player.y - 30, result.rune.id, Math.round(14 * spells.qualityForRunes([prepared]).particles));
-        if (slot && !slot.definition.isComponent && this.activeMode?.id !== 'arena') {
+        if (slot && !slot.definition.isComponent && this.activeMode?.id === 'siege') {
           this.castSpellSlot(slot, true);
         }
       } else {

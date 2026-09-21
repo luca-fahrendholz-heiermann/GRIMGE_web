@@ -226,8 +226,8 @@ export class Battlefield {
   }
 
   _paintInvasionBridge(ctx, cameraOffsetX, gameplayWidth, viewH, renderWidth) {
-    const fadeStart = cameraOffsetX + gameplayWidth * 0.62;
-    const solidStart = cameraOffsetX + gameplayWidth * 0.66;
+    const fadeStart = cameraOffsetX + gameplayWidth * 0.48;
+    const solidStart = cameraOffsetX + gameplayWidth * 0.52;
     const endX = renderWidth;
 
     const fade = ctx.createLinearGradient(fadeStart, 0, solidStart, 0);
@@ -295,8 +295,7 @@ export class Battlefield {
       ? (modeState?.scroll ?? 0) * 4 + (modeState?.routeScroll ?? 0)
       : 0;
 
-    if (world === 'dungeon') this._paintDungeonScene(ctx, w, h, phase);
-    else if (world === 'invasion') this._paintInvasionScene(ctx, w, h, phase);
+    if (world === 'dungeon' || world === 'invasion') this._paintInvasionScene(ctx, w, h, phase, world);
     else this._paintArenaScene(ctx, w, h, phase);
   }
 
@@ -386,7 +385,7 @@ export class Battlefield {
     ctx.fillRect(0, 0, w, h * 0.14);
   }
 
-  _paintInvasionScene(ctx, w, h, phase) {
+  _paintInvasionScene(ctx, w, h, phase, world = 'invasion') {
     const sky = ctx.createLinearGradient(0, 0, 0, h * 0.55);
     sky.addColorStop(0, '#140820');
     sky.addColorStop(0.2, '#2a1040');
@@ -423,7 +422,7 @@ export class Battlefield {
     ctx.fillStyle = gnd;
     ctx.fillRect(0, h * 0.48, w, h * 0.52);
 
-    this._overlayFloorTiles(ctx, w, h, 'invasion', phase);
+    this._overlayFloorTiles(ctx, w, h, world, phase);
 
     const mist = ctx.createLinearGradient(w, 0, w * 0.4, 0);
     mist.addColorStop(0, 'rgba(22,3,36,.25)');
