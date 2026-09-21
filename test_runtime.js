@@ -430,7 +430,7 @@ game.player.takeDamage(60, 0, 0, 0.1);
 game.player.preparedRunes = [recognizer.runes.find((rune) => rune.id === 'aqua'), recognizer.runes.find((rune) => rune.id === 'terra')];
 assert(game.player.hp === shieldHp - 10 && game.player.arcaneShield === 0 && !game.castPreparedSpell(), 'Arcane Aegis breaks cleanly and its cooldown prevents immediate recast');
 
-game.player.arcaneShield = 0; game.player.hp = game.player.maxHp; game.player.sp = game.player.maxSp; game.player.facing = 1; game.player.state = 'idle'; game.player.grounded = true;
+game.player.arcaneShield = 0; game.player.hp = game.player.maxHp; game.player.sp = game.player.maxSp; game.player.facing = 1; game.player.state = 'idle'; game.player.grounded = true; game.player.invulnerableTimer = 0;
 game.input.keys.KeyF = true;
 game.player.update(1 / 60, game.input, game.battlefield, game);
 const guardedHp = game.player.hp;
@@ -569,10 +569,14 @@ assert(game.matchState === 'Menu', 'Return to Hub exits the match without reload
 game.setMatchMode('invasion'); game.startMatch();
 assert(game.matchState === 'Running' && game.activeMode.id === 'invasion' && game.minions.length > 0 && game.modeState.run === null && game.player.runeHand.length > 0, 'Invasion starts immediately with the persistent player deck and hostile defense wave');
 assert(game.battlefield.defenseTowers.length === 2 && game.battlefield.redCastle.isDestroyed && game.battlefield.objectivesActive && !game.battlefield.autoWaves && game.player.x < 300, 'Invasion has one left-side keep with two nearby defense towers, not an enemy Castle lane');
+game.player.x = 872; game.player.z = .48; game.player.elevation = 0; game.player.grounded = true; game.battlefield.resolveEntityCollision(game.player);
+assert(game.player.surfaceId === 'mainArena' && game.player.surfaceHeight === 0, 'Invasion has no inherited invisible right Castle battlement surface');
 game.returnToHub();
 
 game.setMatchMode('dungeon'); game.startMatch();
 assert(game.activeMode.id === 'dungeon' && !game.battlefield.objectivesActive && !game.modeState.run.pending && game.modeState.stage === 0 && game.minions.length === 1 && game.player.runeHand.length === 0, 'Dungeon starts with one melee scout and no opening Rune choice or inherited deck');
+game.player.x = 872; game.player.z = .48; game.player.elevation = 0; game.player.grounded = true; game.battlefield.resolveEntityCollision(game.player);
+assert(game.player.surfaceId === 'mainArena' && game.player.surfaceHeight === 0, 'Dungeon has no inherited invisible Castle plateau');
 const dungeonRouteBefore = game.modeState.routeScroll;
 game.player.vx = 140;
 game.updateMode(.2);
@@ -598,6 +602,16 @@ game.returnToHub();
 
 game.setMatchMode('arena'); game.startMatch();
 assert(game.activeMode.id === 'arena' && !game.battlefield.objectivesActive && game.minions.length === 0 && !game.canRespawn('blue') && game.enemyChampion.isAlive && game.modeState.runeCollectibles.length === 3 && game.player.runeHand.length === 0, 'Arena starts immediately as a melee duel with on-map Rune relics rather than a Rune-choice modal');
+const arenaPlatform = game.battlefield.surfaces.find((surface) => surface.id === 'arenaCenterPlatform');
+game.player.x = (arenaPlatform.xMin + arenaPlatform.xMax) * .5; game.player.z = (arenaPlatform.zMin + arenaPlatform.zMax) * .5; game.player.elevation = 0; game.player.vElevation = 0; game.player.grounded = true; game.player.surfaceId = 'mainArena'; game.player.surfaceHeight = 0;
+game.battlefield.resolveEntityCollision(game.player);
+assert(game.player.surfaceId === 'mainArena', 'Arena platforms cannot be walked up as invisible step-up ledges');
+game.player.elevation = arenaPlatform.baseHeight + 16; game.player.vElevation = -160; game.player.grounded = false;
+game.battlefield.resolveEntityCollision(game.player);
+assert(game.player.surfaceId === 'arenaCenterPlatform' && game.player.surfaceHeight === arenaPlatform.baseHeight, 'A falling fighter can land on a visible Arena intermediate platform');
+game.player.hp = game.player.maxHp;
+game.player.takeDamage(24, 120, 0, .2);
+assert(game.player.maxHp === 270 && game.player.hp === 246 && game.player.invulnerableTimer >= .18, 'Player durability supports brawler scrums with 270 HP and brief post-hit protection');
 game.player.x = game.modeState.runeCollectibles[0].x; game.player.z = game.modeState.runeCollectibles[0].z;
 game.updateArenaRuneCollectibles();
 assert(game.player.runeHand.length === 1 && game.modeState.runeCollectibles.length === 2, 'Walking onto an Arena relic adds that Rune to the temporary Arena hand');

@@ -67,7 +67,11 @@ export class Player extends GroundEntity {
     this.team = 'blue';
     this.isMobileCombatant = true;
     this.heroKey = 'paladin';
-    this.maxHp = 200; this.hp = 200;
+    // Player durability has to support fast brawler scrums. Enemy champions
+    // start at 280 HP and minion damage stacks quickly across three lanes, so
+    // this gives the player time to dash, block and reposition without
+    // changing attack cadence, enemy damage or movement speed.
+    this.maxHp = 270; this.hp = 270;
     this.maxMp = 100; this.mp = 100;
     this.maxSp = 100; this.sp = 100;
     this.moveSpeed = 340;
@@ -487,9 +491,14 @@ export class Player extends GroundEntity {
     // Passive build modifiers are applied after temporary forms/shields so
     // every incoming source shares the same final damage rule.
     amount *= this.buildModifiers?.damageTaken ?? 1;
+    const receivedWhileGuarding = this.isGuarding && incomingFromFront;
     this.hp = Math.max(0, this.hp - amount);
     this.hitFlash = 0.15; this.vx = kx; this.vElevation = lift;
     this.state = 'hurt'; this.stateTimer = stun; this.canAttack = false;
+    // A tiny post-hit grace window prevents an overlapping minion pack from
+    // deleting the player in one simulation tick. It is shorter than a combo
+    // beat and leaves aggression / chase gameplay intact.
+    if (!receivedWhileGuarding) this.invulnerableTimer = Math.max(this.invulnerableTimer, 0.18);
     audio.playImpact(isCrit);
     combat.spawnDamageText(this.x, this.y - 45, amount, { isCrit, color: '#ff5252' });
     combat.shakeCamera(isCrit ? 9 : 5, 0.25);

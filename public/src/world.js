@@ -52,6 +52,15 @@ export const ARENA_LAYOUT = Object.freeze({
     Object.freeze({ id: 'redCastleAccessRamp', label: 'Red battlement access', xMin: 732, xMax: 820, zMin: 0.30, zMax: 0.68, baseHeight: 0, heightAt: (x) => 145 * ((x - 732) / 88) }),
     Object.freeze({ id: 'redCastleUpperPlatform', label: 'Red upper battlement', xMin: 820, xMax: 930, zMin: 0.30, zMax: 0.68, baseHeight: 145 })
   ]),
+  // Arena Duel owns these authored, jump-landed surfaces. They are deliberately
+  // separate from Castle geometry so Invasion and Dungeon can stay entirely on
+  // a ground plane. `landingOnly` makes them brawler platforms: walk under or
+  // beside them freely, then land on their top while descending from a jump.
+  arenaPlatforms: Object.freeze([
+    Object.freeze({ id: 'arenaLeftPlatform', label: 'Arena left platform', xMin: 274, xMax: 408, zMin: 0.30, zMax: 0.57, baseHeight: 54, landingOnly: true }),
+    Object.freeze({ id: 'arenaCenterPlatform', label: 'Arena center platform', xMin: 452, xMax: 572, zMin: 0.43, zMax: 0.70, baseHeight: 88, landingOnly: true }),
+    Object.freeze({ id: 'arenaRightPlatform', label: 'Arena right platform', xMin: 616, xMax: 750, zMin: 0.30, zMax: 0.57, baseHeight: 54, landingOnly: true })
+  ]),
   // Battlements remain scenery for this brawler pass. They are intentionally
   // not classic platform colliders: the immediate playable space is one arena plane.
   decorativePlatforms: Object.freeze([

@@ -8,7 +8,16 @@ export class Battlefield {
     this.height = ARENA_LAYOUT.height;
     this.playableBounds = ARENA_LAYOUT.playableBounds;
     this.platforms = ARENA_LAYOUT.decorativePlatforms;
-    this.surfaces = ARENA_LAYOUT.surfaces;
+    // Castle battlements exist only in the Siege world. Invasion and Dungeon
+    // intentionally use one continuous ground plane; otherwise the invisible
+    // right Castle surface from Siege can make actors hover. Arena gets its
+    // own visible Smash-style, landing-only intermediate platforms.
+    const mainArena = ARENA_LAYOUT.surfaces[0];
+    this.surfaces = mode?.world === 'arena'
+      ? [mainArena, ...ARENA_LAYOUT.arenaPlatforms]
+      : (mode?.world === 'invasion' || mode?.world === 'dungeon')
+        ? [mainArena]
+        : ARENA_LAYOUT.surfaces;
 
     this.bgImage = new Image();
     this.bgImage.src = 'assets/arena_bg.jpg';
@@ -18,7 +27,7 @@ export class Battlefield {
 
     const invasion = mode?.world === 'invasion';
     // Invasion is deliberately not a mirrored Siege map. The player holds the
-    // right-hand keep while hostile waves enter from the open left world.
+    // left-hand keep while hostile waves enter from the open right world.
     const blueSpawn = ARENA_LAYOUT.spawns.blueCastle;
     const redSpawn = invasion ? { x: 1120, z: 0.58 } : ARENA_LAYOUT.spawns.redCastle;
     this.blueCastle = new Castle(blueSpawn.x, blueSpawn.z, 'blue', (castle) => this.onCastleDestroyed?.(castle), (castle) => this.onProtectedCastleHit?.(castle));
@@ -137,7 +146,17 @@ export class Battlefield {
     // separate rails or platformer physics for the rest of the arena.
     if (entity?.isMinion) return this.surfaces[0];
     // Main arena is the fallback; elevated authored surfaces take priority.
-    return [...this.surfaces].reverse().find((surface) => surfaceContains(surface, x, z)) ?? this.surfaces[0];
+    // A landing-only Arena platform is never a walk-up ledge. A character
+    // must be falling from at least its top height, or already stand on it.
+    const candidates = [...this.surfaces].reverse().filter((surface) => surfaceContains(surface, x, z));
+    for (const surface of candidates) {
+      if (!surface.landingOnly || !entity) return surface;
+      if (entity.surfaceId === surface.id) return surface;
+      const currentHeight = (entity.surfaceHeight ?? 0) + (entity.elevation ?? 0);
+      const canLand = !entity.grounded && entity.vElevation <= 0 && currentHeight >= surfaceHeight(surface, x) - 8;
+      if (canLand) return surface;
+    }
+    return this.surfaces[0];
   }
 
   placeOnSurface(entity) {
@@ -230,6 +249,7 @@ export class Battlefield {
   }
 
   renderForeground(ctx) {
+    this.renderArenaPlatforms(ctx);
     const time = performance.now() * 0.003;
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
@@ -254,6 +274,38 @@ export class Battlefield {
       this.blueCastle.render(ctx);
       if (this.mode?.world !== 'invasion') this.redCastle.render(ctx);
     }
+  }
+
+  renderArenaPlatforms(ctx) {
+    if (this.mode?.world !== 'arena') return;
+    ctx.save();
+    for (const platform of this.surfaces.filter((surface) => surface.landingOnly)) {
+      const h = surfaceHeight(platform, (platform.xMin + platform.xMax) * .5);
+      const topY = groundYForDepth(platform.zMin) - h;
+      const bottomY = groundYForDepth(platform.zMax) - h;
+      const thickness = 11;
+      const glow = ctx.createLinearGradient(0, topY, 0, bottomY + thickness);
+      glow.addColorStop(0, '#5bdfff');
+      glow.addColorStop(.13, '#274a73');
+      glow.addColorStop(.72, '#172339');
+      glow.addColorStop(1, '#0a101b');
+      ctx.fillStyle = glow;
+      ctx.strokeStyle = '#8af1ff';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(platform.xMin, topY);
+      ctx.lineTo(platform.xMax, topY);
+      ctx.lineTo(platform.xMax, bottomY + thickness);
+      ctx.lineTo(platform.xMin, bottomY + thickness);
+      ctx.closePath();
+      ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,255,255,.55)';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(platform.xMin + 8, topY + 4); ctx.lineTo(platform.xMax - 8, topY + 4); ctx.stroke();
+      ctx.fillStyle = 'rgba(74,226,255,.58)';
+      for (let x = platform.xMin + 18; x < platform.xMax - 8; x += 26) ctx.fillRect(x, topY + 7, 9, 2);
+    }
+    ctx.restore();
   }
 
   renderDebug(ctx, gameWorld) {
