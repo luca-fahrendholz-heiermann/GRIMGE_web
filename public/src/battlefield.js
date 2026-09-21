@@ -325,7 +325,7 @@ export class Battlefield {
     const floorAreaH = h - floorY;
     const floorScale = floorAreaH / flh;
     const floorDrawW = flw * floorScale;
-    const offset = -(phase * 0.8 * floorDrawW * 3) % floorDrawW;
+    const offset = -(phase * 0.04 * floorDrawW) % floorDrawW;
     ctx.save();
     ctx.globalAlpha = 0.5;
     for (let x = offset - floorDrawW; x < w; x += floorDrawW) {

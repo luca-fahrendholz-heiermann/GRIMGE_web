@@ -796,7 +796,39 @@ export class Minion extends GroundEntity {
   }
   performAttack(target, gameWorld) {
     if (this.special && this.specialTimer <= 0) { this.specialTimer = this.specialCd; this.performSpecial(target, gameWorld); return; }
-    audio.playSlash(1.4); if (this.type === 'melee') { combat.spawnSlashArc(this.x + this.facing * 14, this.y - 16, this.facing, { radius: 22, color: this.team === 'blue' ? '#42a5f5' : '#ef5350' }); target.takeDamage(this.damage, this.facing * 100, 50, .2); } else gameWorld.spawnMinionBolt(this.x + this.facing * 12, this.z, this.facing, this.team, this.damage, target.z, this.worldHeight + 18);
+    const arch = this.archetype;
+    if (arch === 'enemy_knight') {
+      audio.playSlash(1.0);
+      combat.spawnSlashArc(this.x + this.facing * 16, this.y - 18, this.facing, { radius: 28, color: '#78909c', glow: '#455a64' });
+      target.takeDamage(this.damage, this.facing * 140, 70, .3);
+    } else if (arch === 'enemy_bandit') {
+      audio.playSlash(1.8);
+      combat.spawnHitSparks(target.x, target.y - 14, this.facing, '#ce93d8', 5);
+      target.takeDamage(this.damage, this.facing * 60, 20, .12);
+    } else if (arch === 'enemy_sorcerer') {
+      audio.playSlash(0.7);
+      combat.spawnElementalParticles(this.x + this.facing * 14, this.y - 18, 'fulgur', 4);
+      gameWorld.spawnMinionBolt(this.x + this.facing * 12, this.z, this.facing, this.team, this.damage, target.z, this.worldHeight + 18);
+    } else if (arch === 'ally_fighter') {
+      audio.playSlash(1.3);
+      combat.spawnSlashArc(this.x + this.facing * 14, this.y - 16, this.facing, { radius: 24, color: '#42a5f5' });
+      combat.spawnHitSparks(target.x, target.y - 14, this.facing, '#42a5f5', 4);
+      target.takeDamage(this.damage, this.facing * 110, 55, .22);
+    } else if (arch === 'ally_blade') {
+      audio.playSlash(1.6);
+      combat.spawnSlashArc(this.x + this.facing * 18, this.y - 14, this.facing, { radius: 20, color: '#66bb6a' });
+      combat.spawnSlashArc(this.x + this.facing * 10, this.y - 20, this.facing, { radius: 16, color: '#a5d6a7' });
+      target.takeDamage(this.damage, this.facing * 80, 40, .18);
+    } else if (arch === 'boss_firelord') {
+      audio.playSlash(0.8);
+      combat.spawnSlashArc(this.x + this.facing * 20, this.y - 22, this.facing, { radius: 34, color: '#ff6d00', glow: '#bf360c' });
+      combat.spawnElementalParticles(this.x + this.facing * 16, this.y - 18, 'fire', 4);
+      target.takeDamage(this.damage, this.facing * 180, 90, .35);
+    } else {
+      audio.playSlash(1.4);
+      if (this.type === 'melee') { combat.spawnSlashArc(this.x + this.facing * 14, this.y - 16, this.facing, { radius: 22, color: this.team === 'blue' ? '#42a5f5' : '#ef5350' }); target.takeDamage(this.damage, this.facing * 100, 50, .2); }
+      else gameWorld.spawnMinionBolt(this.x + this.facing * 12, this.z, this.facing, this.team, this.damage, target.z, this.worldHeight + 18);
+    }
   }
   performSpecial(target, gameWorld) {
     const dir = Math.sign(target.x - this.x) || this.facing;
