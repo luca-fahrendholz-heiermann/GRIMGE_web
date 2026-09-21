@@ -76,6 +76,9 @@ export class Battlefield {
     [this.blueCastle, this.redCastle].forEach((castle) => { castle.surfaceId = 'mainArena'; castle.surfaceHeight = 0; });
     [this.blueTower, this.redTower, ...this.defenseTowers].forEach((tower) => this.placeOnSurface(tower));
     this.decorativeBeacons = ARENA_LAYOUT.decorativeBeacons;
+    this.boundsOverride = (mode?.world === 'dungeon')
+      ? { left: 104, right: 3200, farZ: 0.06, nearZ: 0.94 }
+      : null;
     this.waveInterval = 18;
     this.waveTimer = 18;
     this.waveNumber = 0;
@@ -146,7 +149,7 @@ export class Battlefield {
     const previousSurfaceHeight = entity.surfaceHeight ?? 0;
     const oldX = entity.x;
     const oldZ = entity.z;
-    clampToArena(entity);
+    clampToArena(entity, this.boundsOverride);
     if (entity.x !== oldX) entity.vx = 0;
     if (entity.z !== oldZ) entity.vz = 0;
     const surface = this.getSurfaceAt(entity.x, entity.z, entity);
@@ -292,7 +295,7 @@ export class Battlefield {
 
   drawModeBackdrop(ctx, w, h, world, modeState) {
     const phase = world === 'dungeon'
-      ? (modeState?.scroll ?? 0) * 4 + (modeState?.routeScroll ?? 0)
+      ? (modeState?.dungeonCameraX ?? 0) / 250
       : 0;
 
     if (world === 'dungeon' || world === 'invasion') this._paintInvasionScene(ctx, w, h, phase, world);

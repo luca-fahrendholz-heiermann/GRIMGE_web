@@ -763,6 +763,11 @@ export class GameWorld {
         const runeProgress = this.profile.awardRuneUse(added.id, grade);
         const prepared = { ...added, grade, quality: result.confidence, runeLevel: this.profile.runeLevel(added.id) };
         const slot = this.slotRuneSpell(prepared);
+        if (this.activeMode?.id === 'arena') {
+          const idx = this.player.runeDeck.findIndex(c => c.cardId === added.cardId);
+          if (idx !== -1) this.player.runeDeck.splice(idx, 1);
+          this.player.runeHand = this.player.runeHand.filter(c => c.cardId !== added.cardId);
+        }
         this.player.gainFocus({ C: 4, B: 6, A: 8, S: 10 }[grade] ?? 6, 'RUNE QUALITY');
         this.applyProfile();
         this.reportProfileProgress(runeProgress, prepared);
@@ -921,8 +926,34 @@ export class GameWorld {
       this.showAnnouncement(this.player?.focus >= this.player?.maxFocus ? 'FOCUS ALREADY ACTIVE' : `FOCUS ${Math.round(this.player?.focus ?? 0)}/${this.player?.maxFocus ?? 100}`);
       return false;
     }
+    if (this.activeMode?.id === 'arena') this.grantTransformationRune();
     this.showAnnouncement('FOCUS ASCENDANT — 8 SECONDS', 1.4);
     return true;
+  }
+
+  grantTransformationRune() {
+    if (this.player._transformRuneGranted) return;
+    this.player._transformRuneGranted = true;
+    const beamCard = {
+      id: 'transform_beam', cardId: `transform_beam_${Date.now()}`,
+      name: 'ANNIHILATION BEAM', color: '#ff4cff', symbol: '★', glyph: '★'
+    };
+    this.player.runeDeck.push(beamCard);
+    this.player.drawRunesToHand();
+    this.showAnnouncement('ANNIHILATION BEAM RUNE ACQUIRED', 1.0);
+  }
+
+  revokeTransformationRune() {
+    if (!this.player._transformRuneGranted) return;
+    this.player._transformRuneGranted = false;
+    this.player.runeDeck = this.player.runeDeck.filter(c => c.id !== 'transform_beam');
+    this.player.runeHand = this.player.runeHand.filter(c => c.id !== 'transform_beam');
+    const slots = this.player.slottedSpells;
+    for (let i = slots.length - 1; i >= 0; i--) {
+      if (slots[i].runes.some(r => r.id === 'transform_beam')) slots.splice(i, 1);
+    }
+    this.player.selectedSpellIndex = Math.max(0, Math.min(this.player.selectedSpellIndex, slots.length - 1));
+    this.player.preparedRunes = slots.flatMap(s => s.runes);
   }
 
   castGrimoireSpells() {
@@ -1055,7 +1086,7 @@ export class GameWorld {
     const mode = this.activeMode;
     this.modeState = {
       id: mode.id, wave: 0, intermission: 0, stage: 0, announced: false,
-      bossActive: false, scroll: 0, routeScroll: 0, rescued: 0, rescue: null, runeCollectibles: [],
+      bossActive: false, scroll: 0, routeScroll: 0, dungeonCameraX: 0, rescued: 0, rescue: null, runeCollectibles: [],
       // Arena is deliberately melee-first. Runes are discovered from the
       // floor and transformations arrive as a contested, temporary relic --
       // neither is inherited from the profile deck.
@@ -1124,30 +1155,22 @@ export class GameWorld {
     const state = this.modeState;
     if (!state || this.activeMode.id !== 'dungeon') return;
       state.stage = stage;
+    const stageOriginX = this.player.x + 350;
     if (stage <= 3) {
       this.enemyChampion.lifeState = 'Dead'; this.enemyChampion.respawnTimer = Infinity;
-      state.scroll = (stage - 1) * 1;
-      state.routeScroll = 0;
-      // Each cleared room advances the expedition into the next authored
-      // backdrop segment. Combat distances remain unchanged; only the route
-      // presentation moves forward.
-      this.player.x = 290; this.player.z = 0.58;
-      this.battlefield.placeOnSurface(this.player);
       const firstDungeonEnemy = this.minions.length;
-      this.spawnModeWave('red', 2 + stage, { x: 745, z: 0.58, spread: 0.16, elite: stage >= 3 });
+      this.spawnModeWave('red', 2 + stage, { x: stageOriginX, z: 0.58, spread: 0.16, elite: stage >= 3 });
       for (let index = firstDungeonEnemy; index < this.minions.length; index++) {
         const m = this.minions[index];
         m.isDungeonRaider = true;
         m.maxHp = m.hp = m.type === 'ranged' ? 35 : 55;
         m.damage = m.type === 'ranged' ? 12 : 10;
       }
-      // Every other room places a living prisoner on the forward route. A
-      // player must reach the glow to turn it into a persistent ally.
-      state.rescue = stage === 2 ? { x: 610, z: 0.44, rescued: false } : null;
+      state.rescue = stage === 2 ? { x: stageOriginX - 80, z: 0.44, rescued: false } : null;
       this.showAnnouncement(`DUNGEON ROOM ${stage} — PUSH FORWARD`, 1.7);
       return;
     }
-    this.enemyChampion.x = 735; this.enemyChampion.z = 0.58;
+    this.enemyChampion.x = stageOriginX; this.enemyChampion.z = 0.58;
     this.enemyChampion.heroKey = 'boss_firelord';
     this.enemyChampion.maxHp = this.enemyChampion.hp = 580;
     this.enemyChampion.lifeState = 'Alive';
@@ -1160,7 +1183,7 @@ export class GameWorld {
   spawnDungeonStarter() {
     const state = this.modeState;
     if (!state || this.activeMode.id !== 'dungeon') return;
-    const starter = new Minion(452, 0.58, 'red', 'melee', 1);
+    const starter = new Minion(550, 0.58, 'red', 'melee', 1);
     starter.maxHp = starter.hp = 42;
     starter.damage = 8;
     starter.runXpValue = 30;
@@ -1298,14 +1321,21 @@ export class GameWorld {
 
   updateArenaRuneCollectibles() {
     const relics = this.modeState?.runeCollectibles;
-    if (this.activeMode?.id !== 'arena' || !relics?.length || !this.player.isAlive) return;
+    if (this.activeMode?.id !== 'arena' || !relics?.length) return;
     for (let i = relics.length - 1; i >= 0; i--) {
       const relic = relics[i];
-      if (Math.hypot(this.player.x - relic.x, (this.player.z - relic.z) * 150) > 42) continue;
-      this.player.runeDeck.push(this.player.makeRuneCard(relic.rune));
-      this.player.drawRunesToHand();
-      relics.splice(i, 1);
-      this.showAnnouncement(`${relic.rune.name} RUNE RELIC ACQUIRED`, 1.2);
+      if (this.player.isAlive && Math.hypot(this.player.x - relic.x, (this.player.z - relic.z) * 150) <= 42) {
+        this.player.runeDeck.push(this.player.makeRuneCard(relic.rune));
+        this.player.drawRunesToHand();
+        relics.splice(i, 1);
+        this.showAnnouncement(`${relic.rune.name} RUNE RELIC ACQUIRED`, 1.2);
+        continue;
+      }
+      if (this.enemyChampion.isAlive && Math.hypot(this.enemyChampion.x - relic.x, (this.enemyChampion.z - relic.z) * 150) <= 42) {
+        relics.splice(i, 1);
+        this.showAnnouncement(`ENEMY SEIZED ${relic.rune.name} RUNE!`, 1.2);
+        this.enemyChampion.spellCooldown = Math.min(this.enemyChampion.spellCooldown, 0.5);
+      }
     }
   }
 
@@ -1332,19 +1362,24 @@ export class GameWorld {
       }
       return;
     }
-    if (Math.hypot(this.player.x - relic.x, (this.player.z - relic.z) * 150) > 44) return;
-    // The arena relic grants one complete short form directly. It reuses the
-    // same transformation implementations as normal combat, rather than
-    // becoming a fourth parallel transformation system.
-    if (relic.form === 'EIDOLON MANTLE') spells.castEidolonMantle(this.player, RUNE_GRADE_PROFILES.A);
-    else if (relic.form === 'NINEFOLD BEAST') spells.castNinefoldBeast(this.player, RUNE_GRADE_PROFILES.A);
-    else {
-      this.player.focus = this.player.maxFocus;
-      this.player.activateFocusTransformation();
+    const playerDist = this.player.isAlive ? Math.hypot(this.player.x - relic.x, (this.player.z - relic.z) * 150) : Infinity;
+    const enemyDist = this.enemyChampion.isAlive ? Math.hypot(this.enemyChampion.x - relic.x, (this.enemyChampion.z - relic.z) * 150) : Infinity;
+    if (playerDist <= 44) {
+      if (relic.form === 'EIDOLON MANTLE') spells.castEidolonMantle(this.player, RUNE_GRADE_PROFILES.A);
+      else if (relic.form === 'NINEFOLD BEAST') spells.castNinefoldBeast(this.player, RUNE_GRADE_PROFILES.A);
+      else { this.player.focus = this.player.maxFocus; this.player.activateFocusTransformation(); }
+      this.grantTransformationRune();
+      state.transformationRelic = null;
+      state.transformationRelicTimer = 17 + Math.random() * 7;
+      this.showAnnouncement(`${relic.form} RELIC CLAIMED`, 1.5);
+    } else if (enemyDist <= 44) {
+      if (relic.form === 'EIDOLON MANTLE') spells.castEidolonMantle(this.enemyChampion, RUNE_GRADE_PROFILES.A);
+      else if (relic.form === 'NINEFOLD BEAST') spells.castNinefoldBeast(this.enemyChampion, RUNE_GRADE_PROFILES.A);
+      else { this.enemyChampion.hp = Math.min(this.enemyChampion.maxHp, this.enemyChampion.hp + 120); }
+      state.transformationRelic = null;
+      state.transformationRelicTimer = 17 + Math.random() * 7;
+      this.showAnnouncement(`ENEMY CLAIMED ${relic.form}!`, 1.5);
     }
-    state.transformationRelic = null;
-    state.transformationRelicTimer = 17 + Math.random() * 7;
-    this.showAnnouncement(`${relic.form} RELIC CLAIMED`, 1.5);
   }
 
   updateMode(dt) {
@@ -1371,10 +1406,8 @@ export class GameWorld {
       return;
     }
     if (this.activeMode.id === 'dungeon') {
-      // Dungeon is presented as a forward-moving route. This only moves the
-      // backdrop/parallax; it deliberately never changes authored combat
-      // distances, collision, or melee reach.
-      state.routeScroll = Math.min(3.5, state.routeScroll + Math.max(0, this.player.vx) * dt * .008);
+      const targetCamX = Math.max(0, this.player.x - this.logicalWidth * 0.3);
+      state.dungeonCameraX += (targetCamX - state.dungeonCameraX) * Math.min(1, 3.5 * dt);
       this.updateDungeonRescue();
       if (state.stage <= 3 && !this.minions.some((minion) => minion.team === 'red' && !minion.isDead)) this.spawnDungeonStage(state.stage + 1);
       else if (state.stage === 4 && this.enemyChampion.lifeState === 'Dead') this.finishMode('blue', 'VICTORY — DUNGEON CLEARED');
@@ -1828,6 +1861,9 @@ export class GameWorld {
 
       this.player.update(scaledDt, this.input, this.battlefield, this);
       this.enemyChampion.update(scaledDt, this, this.battlefield);
+      if (this.player._transformRuneGranted && this.player.focusTransformTimer <= 0 && this.player.eidolonTimer <= 0 && this.player.ninefoldTimer <= 0) {
+        this.revokeTransformationRune();
+      }
       this.updateArenaRuneCollectibles();
 
       if (this.isMatchRunning()) {
@@ -1970,9 +2006,10 @@ export class GameWorld {
     // 1. Scene Backdrop (High-Def Waterfalls & Fortress Arena)
     this.battlefield.renderBackground(ctx, cam, this.logicalWidth, viewH, viewW, this.cameraOffsetX, this.modeState);
 
-    // 2. World Space Layer (with Camera Shake)
+    // 2. World Space Layer (with Camera Shake + Dungeon Scroll)
+    const dungeonCamX = this.modeState?.dungeonCameraX ?? 0;
     ctx.save();
-    ctx.translate(this.cameraOffsetX + cam.shakeX, cam.shakeY);
+    ctx.translate(this.cameraOffsetX + cam.shakeX - dungeonCamX, cam.shakeY);
 
     // Foreground Crystal Glows on Beacons
     this.battlefield.renderForeground(ctx);

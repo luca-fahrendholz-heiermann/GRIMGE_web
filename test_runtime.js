@@ -578,10 +578,11 @@ assert(game.activeMode.id === 'dungeon' && !game.battlefield.objectivesActive &&
 assert(game.sprites.sprites.enemy_knight && game.sprites.sprites.ally_fighter && ['enemy_knight', 'enemy_bandit', 'enemy_sorcerer'].includes(game.minions[0].spriteKey), 'Dungeon scout uses an LF2 sheet sprite from the enemy pool');
 game.player.x = 872; game.player.z = .48; game.player.elevation = 0; game.player.grounded = true; game.battlefield.resolveEntityCollision(game.player);
 assert(game.player.surfaceId === 'mainArena' && game.player.surfaceHeight === 0, 'Dungeon has no inherited invisible Castle plateau');
-const dungeonRouteBefore = game.modeState.routeScroll;
+const dungeonCamBefore = game.modeState.dungeonCameraX;
 game.player.vx = 140;
+game.player.x += 140 * 0.2;
 game.updateMode(.2);
-assert(game.modeState.routeScroll > dungeonRouteBefore, 'Dungeon forward movement advances only the route presentation, not the combat geometry');
+assert(game.modeState.dungeonCameraX > dungeonCamBefore, 'Dungeon forward movement advances only the route presentation, not the combat geometry');
 game.player.vx = 0;
 const dungeonStarter = game.minions[0];
 dungeonStarter.takeDamage(999);

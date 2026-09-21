@@ -95,10 +95,10 @@ export function groundDistance(a, b) {
   return Math.hypot(a.x - b.x, ((a.z ?? 0.65) - (b.z ?? 0.65)) * 150);
 }
 
-export function clampToArena(entity) {
-  const bounds = ARENA_LAYOUT.playableBounds;
+export function clampToArena(entity, boundsOverride = null) {
+  const bounds = boundsOverride ?? ARENA_LAYOUT.playableBounds;
   entity.x = Math.max(bounds.left, Math.min(bounds.right, entity.x));
-  entity.z = Math.max(bounds.farZ, Math.min(bounds.nearZ, entity.z));
+  entity.z = Math.max(bounds.farZ ?? ARENA_LAYOUT.playableBounds.farZ, Math.min(bounds.nearZ ?? ARENA_LAYOUT.playableBounds.nearZ, entity.z));
   return entity;
 }
 

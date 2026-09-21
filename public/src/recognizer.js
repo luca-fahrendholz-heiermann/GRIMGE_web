@@ -81,6 +81,16 @@ export class RuneRecognizer {
         glowColor: '#ea80fc',
         icon: '🕳️',
         desc: 'Open Spiral / Void Eye'
+      },
+      {
+        id: 'transform_beam',
+        name: 'ANNIHILATION BEAM',
+        element: 'Transformation',
+        glyph: '★',
+        color: '#ff4cff',
+        glowColor: '#ff99ff',
+        icon: '★',
+        desc: 'Any gesture while transformed'
       }
     ];
   }
@@ -279,6 +289,8 @@ export class RuneRecognizer {
     } else {
       scores.ignis = 0.1;
     }
+
+    if (allowedRuneIds?.includes('transform_beam')) scores.transform_beam = 0.92;
 
     let bestRune = null;
     let bestScore = 0.48;

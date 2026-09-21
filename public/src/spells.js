@@ -168,6 +168,8 @@ export class SpellSystem {
         return { id: 'construct_bulwark', name: 'CONSTRUCT BULWARK', tier: 1, manaCost: 16, color: '#b0bec5', desc: 'Raises a short physical barrier in front of the caster.' };
       case 'void':
         return { id: 'void_bolt', name: 'VOID BOLT', tier: 1, manaCost: 16, color: '#d500f9', desc: 'Fires a void projectile that slows the first target hit.' };
+      case 'transform_beam':
+        return { id: 'annihilation_beam', name: 'ANNIHILATION BEAM', tier: 3, manaCost: 0, color: '#ff4cff', desc: 'Charges a massive energy sphere then fires a devastating beam across half the lane.' };
     }
 
     return null;
@@ -369,6 +371,13 @@ export class SpellSystem {
 
       case 'construct_bulwark': {
         this.castConstructBulwark(caster, gameWorld, castQuality);
+        break;
+      }
+
+      case 'annihilation_beam': {
+        this.addSpell(new AnnihilationBeamSpell(startX, startZ, facing, caster.team, startHeight), castQuality);
+        audio.playSpell('focus_ascendant');
+        combat.shakeCamera(6, 0.3);
         break;
       }
 
@@ -913,6 +922,126 @@ class FrostNovaSpell {
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
     ctx.stroke();
+    ctx.restore();
+  }
+}
+
+// ----------------------------------------------------
+// TRANSFORMATION SPECIAL
+// ----------------------------------------------------
+
+class AnnihilationBeamSpell {
+  constructor(startX, z, facing, team, startHeight = 0) {
+    this.originX = startX;
+    this.x = startX + facing * 32;
+    this.z = z;
+    this.facing = facing;
+    this.team = team;
+    this.startHeight = startHeight;
+    this.chargeTime = 0;
+    this.chargeDuration = 1.2;
+    this.beamTime = 0;
+    this.beamDuration = 1.6;
+    this.phase = 'charge';
+    this.isFinished = false;
+    this.beamLength = 480;
+    this.damageTicked = 0;
+  }
+  get y() { return groundYForDepth(this.z); }
+
+  update(dt, gameWorld) {
+    if (this.phase === 'charge') {
+      this.chargeTime += dt;
+      const t = this.chargeTime / this.chargeDuration;
+      const radius = 6 + t * 28;
+      combat.spawnElementalParticles(this.x + (Math.random() - 0.5) * radius * 2, this.y - 28, 'ignis', 1);
+      combat.spawnElementalParticles(this.x + (Math.random() - 0.5) * radius * 2, this.y - 28, 'fulgur', 1);
+      if (this.chargeTime >= this.chargeDuration) {
+        this.phase = 'beam';
+        combat.shakeCamera(12, 0.5);
+        combat.spawnShockwave(this.x, this.y - 28, 60, '#ff4cff');
+        audio.playImpact(true);
+      }
+      return;
+    }
+    this.beamTime += dt;
+    this.damageTicked += dt;
+    if (this.damageTicked >= 0.2) {
+      this.damageTicked = 0;
+      const beamStartX = this.x;
+      const beamEndX = this.x + this.facing * this.beamLength * this.quality.area;
+      const minX = Math.min(beamStartX, beamEndX);
+      const maxX = Math.max(beamStartX, beamEndX);
+      const targets = gameWorld.getHostileTargets(this.team);
+      for (const t of targets) {
+        if (t.x >= minX && t.x <= maxX && Math.abs(t.z - this.z) < 0.25) {
+          t.takeDamage(22 * this.quality.power, this.facing * 80, 60, 0.15, false, 'spell');
+          combat.spawnHitSparks(t.x, t.y - 20, this.facing, '#ff4cff', 6);
+        }
+      }
+    }
+    combat.spawnElementalParticles(this.x + this.facing * Math.random() * this.beamLength * 0.8, this.y - 28, 'ignis', 2);
+    if (this.beamTime >= this.beamDuration) {
+      this.isFinished = true;
+      combat.spawnShockwave(this.x + this.facing * this.beamLength * 0.5, this.y - 28, 80, '#ff4cff');
+    }
+  }
+
+  render(ctx) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    const baseY = this.y - 28;
+    if (this.phase === 'charge') {
+      const t = this.chargeTime / this.chargeDuration;
+      const radius = 6 + t * 28;
+      const pulse = 1 + Math.sin(performance.now() * 0.02) * 0.15;
+      const g = ctx.createRadialGradient(this.x, baseY, 0, this.x, baseY, radius * pulse);
+      g.addColorStop(0, '#ffffff');
+      g.addColorStop(0.3, '#ff99ff');
+      g.addColorStop(0.6, '#ff4cff');
+      g.addColorStop(1, 'rgba(180,0,255,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(this.x, baseY, radius * pulse * 1.3, 0, Math.PI * 2);
+      ctx.fill();
+      for (let i = 0; i < 5; i++) {
+        const angle = performance.now() * 0.003 + i * Math.PI * 0.4;
+        const dist = radius * 1.5 + Math.sin(performance.now() * 0.01 + i) * 8;
+        const px = this.x + Math.cos(angle) * dist;
+        const py = baseY + Math.sin(angle) * dist * 0.6;
+        ctx.fillStyle = i % 2 === 0 ? '#ffaaff' : '#ffd54f';
+        ctx.beginPath();
+        ctx.arc(px, py, 3 + t * 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else {
+      const t = this.beamTime / this.beamDuration;
+      const beamW = this.beamLength * (this.quality?.area ?? 1);
+      const beamH = 24 + Math.sin(performance.now() * 0.015) * 6;
+      const fade = t > 0.7 ? 1 - (t - 0.7) / 0.3 : 1;
+      const bx = this.x;
+      const endX = bx + this.facing * beamW;
+      const lg = ctx.createLinearGradient(bx, baseY, endX, baseY);
+      lg.addColorStop(0, `rgba(255,255,255,${fade})`);
+      lg.addColorStop(0.15, `rgba(255,76,255,${fade * 0.9})`);
+      lg.addColorStop(0.5, `rgba(255,120,200,${fade * 0.7})`);
+      lg.addColorStop(1, `rgba(255,180,60,${fade * 0.3})`);
+      ctx.fillStyle = lg;
+      const left = Math.min(bx, endX);
+      ctx.fillRect(left, baseY - beamH / 2, Math.abs(beamW), beamH);
+      ctx.shadowColor = '#ff4cff';
+      ctx.shadowBlur = 20;
+      ctx.fillRect(left, baseY - beamH / 4, Math.abs(beamW), beamH / 2);
+      const sphereR = 18 + Math.sin(performance.now() * 0.012) * 4;
+      const sg = ctx.createRadialGradient(bx, baseY, 0, bx, baseY, sphereR);
+      sg.addColorStop(0, '#ffffff');
+      sg.addColorStop(0.4, '#ffaaff');
+      sg.addColorStop(1, 'rgba(255,76,255,0)');
+      ctx.fillStyle = sg;
+      ctx.beginPath();
+      ctx.arc(bx, baseY, sphereR, 0, Math.PI * 2);
+      ctx.fill();
+    }
     ctx.restore();
   }
 }
