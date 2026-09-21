@@ -896,7 +896,7 @@ class FrostNovaSpell {
         if (d < this.radius) {
           this.hitEntities.add(t);
           t.takeDamage(30 * this.quality.power, 0, 80, 0.4, false, 'spell');
-          t.freeze?.(2.5 * this.quality.duration); // Structures take damage but cannot be frozen.
+          t.freeze?.(1.2 * this.quality.duration); // Structures take damage but cannot be frozen.
           combat.spawnElementalParticles(t.x, t.y - 20, 'aqua', Math.round(12 * this.quality.particles));
         }
       }

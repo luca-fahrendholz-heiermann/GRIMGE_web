@@ -951,7 +951,7 @@ export class EnemyChampion extends GroundEntity {
       spells.cast(this, { id: 'arcane_aegis', tier: 2 }, gameWorld);
       return true;
     }
-    if (distance <= 105 && this.mp >= 18 && this.spellCooldown <= 0) return this.tryAICast('frost_nova', gameWorld, 18, 3.1);
+    if (distance <= 105 && this.mp >= 18 && this.spellCooldown <= 0) return this.tryAICast('frost_nova', gameWorld, 18, 9.0);
     if (objectiveThreat && distance < 230 && this.mp >= 22 && this.spellCooldown <= 0) return this.tryAICast('stone_wall', gameWorld, 22, 5.0);
     return false;
   }
