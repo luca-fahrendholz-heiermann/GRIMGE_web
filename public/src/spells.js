@@ -170,6 +170,10 @@ export class SpellSystem {
         return { id: 'void_bolt', name: 'VOID BOLT', tier: 1, manaCost: 16, color: '#d500f9', desc: 'Fires a void projectile that slows the first target hit.' };
       case 'transform_beam':
         return { id: 'annihilation_beam', name: 'ANNIHILATION BEAM', tier: 3, manaCost: 0, color: '#ff4cff', desc: 'Charges a massive energy sphere then fires a devastating beam across half the lane.' };
+      case 'transform_implode':
+        return { id: 'void_implosion', name: 'VOID IMPLOSION', tier: 3, manaCost: 0, color: '#b668ff', desc: 'Creates a void singularity that pulls enemies in and crushes them with dimensional collapse.' };
+      case 'transform_rampage':
+        return { id: 'inferno_rampage', name: 'INFERNO RAMPAGE', tier: 3, manaCost: 0, color: '#ff6f3b', desc: 'Blazing fire dash that scorches everything in its path across the lane.' };
     }
 
     return null;
@@ -378,6 +382,20 @@ export class SpellSystem {
         this.addSpell(new AnnihilationBeamSpell(startX, startZ, facing, caster.team, startHeight), castQuality);
         audio.playSpell('focus_ascendant');
         combat.shakeCamera(6, 0.3);
+        break;
+      }
+
+      case 'void_implosion': {
+        this.addSpell(new VoidImplosionSpell(startX + facing * 120, startZ, caster.team), castQuality);
+        audio.playSpell('eidolon_mantle');
+        combat.shakeCamera(8, 0.4);
+        break;
+      }
+
+      case 'inferno_rampage': {
+        this.addSpell(new InfernoRampageSpell(startX, startZ, facing, caster.team), castQuality);
+        audio.playSpell('ignis');
+        combat.shakeCamera(10, 0.5);
         break;
       }
 
@@ -1040,6 +1058,210 @@ class AnnihilationBeamSpell {
       ctx.fillStyle = sg;
       ctx.beginPath();
       ctx.arc(bx, baseY, sphereR, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
+class VoidImplosionSpell {
+  constructor(x, z, team) {
+    this.x = x;
+    this.z = z;
+    this.team = team;
+    this.life = 3.0;
+    this.phase = 'expand';
+    this.expandTime = 0;
+    this.expandDuration = 0.8;
+    this.collapseTime = 0;
+    this.collapseDuration = 0.5;
+    this.holdTime = 0;
+    this.holdDuration = 1.2;
+    this.radius = 0;
+    this.maxRadius = 120;
+    this.isFinished = false;
+    this.pullStrength = 450;
+    this.damageTicked = 0;
+  }
+  get y() { return groundYForDepth(this.z); }
+
+  update(dt, gameWorld) {
+    this.life -= dt;
+    if (this.phase === 'expand') {
+      this.expandTime += dt;
+      this.radius = (this.expandTime / this.expandDuration) * this.maxRadius * (this.quality?.area ?? 1);
+      combat.spawnElementalParticles(this.x + (Math.random() - 0.5) * this.radius, this.y - 20, 'void', 2);
+      if (this.expandTime >= this.expandDuration) { this.phase = 'hold'; combat.shakeCamera(6, 0.3); }
+    } else if (this.phase === 'hold') {
+      this.holdTime += dt;
+      this.damageTicked += dt;
+      const targets = gameWorld.getHostileTargets(this.team);
+      for (const t of targets) {
+        const dx = this.x - t.x;
+        const dz = (this.z - t.z) * 150;
+        const dist = Math.hypot(dx, dz);
+        if (dist < this.radius * 1.5) {
+          const pull = Math.min(1, this.radius / Math.max(1, dist)) * this.pullStrength * (this.quality?.power ?? 1);
+          t.vx += (dx / Math.max(1, dist)) * pull * dt;
+          if (this.damageTicked >= 0.25 && dist < this.radius) {
+            t.takeDamage(18 * (this.quality?.power ?? 1), 0, 40, 0.12, false, 'spell');
+            combat.spawnHitSparks(t.x, t.y - 20, 1, '#d596ff', 4);
+          }
+        }
+      }
+      if (this.damageTicked >= 0.25) this.damageTicked = 0;
+      if (this.holdTime >= this.holdDuration) {
+        this.phase = 'collapse';
+        const targets2 = gameWorld.getHostileTargets(this.team);
+        for (const t of targets2) {
+          const dist = Math.hypot(this.x - t.x, (this.z - t.z) * 150);
+          if (dist < this.radius * 1.2) {
+            t.takeDamage(35 * (this.quality?.power ?? 1), 0, 200, 0.4, true, 'spell');
+            combat.spawnHitSparks(t.x, t.y - 20, 1, '#b668ff', 10);
+          }
+        }
+        combat.shakeCamera(14, 0.6);
+        combat.spawnShockwave(this.x, this.y - 20, this.radius * 0.8, '#b668ff');
+        audio.playImpact(true);
+      }
+    } else {
+      this.collapseTime += dt;
+      this.radius = Math.max(0, this.maxRadius * (1 - this.collapseTime / this.collapseDuration));
+      if (this.collapseTime >= this.collapseDuration) this.isFinished = true;
+    }
+  }
+
+  render(ctx) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    const baseY = this.y - 20;
+    const t = performance.now() * 0.004;
+    if (this.phase === 'expand' || this.phase === 'hold') {
+      const pulseR = this.radius * (1 + Math.sin(t * 3) * 0.08);
+      const g = ctx.createRadialGradient(this.x, baseY, 0, this.x, baseY, pulseR);
+      g.addColorStop(0, 'rgba(0,0,0,0.7)');
+      g.addColorStop(0.4, 'rgba(100,30,180,0.5)');
+      g.addColorStop(0.7, 'rgba(182,104,255,0.3)');
+      g.addColorStop(1, 'rgba(182,104,255,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(this.x, baseY, pulseR, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#d596ff';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 4]);
+      for (let i = 0; i < 3; i++) {
+        const ringR = pulseR * (0.4 + i * 0.25);
+        ctx.beginPath();
+        ctx.arc(this.x, baseY, ringR, t + i * 2, t + i * 2 + Math.PI * 1.5);
+        ctx.stroke();
+      }
+      ctx.setLineDash([]);
+      for (let i = 0; i < 8; i++) {
+        const angle = t * 2 + i * Math.PI / 4;
+        const dist = pulseR * 0.9;
+        const px = this.x + Math.cos(angle) * dist;
+        const py = baseY + Math.sin(angle) * dist * 0.5;
+        ctx.fillStyle = '#e0b0ff';
+        ctx.beginPath();
+        ctx.arc(px, py, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else {
+      const fade = 1 - this.collapseTime / this.collapseDuration;
+      ctx.globalAlpha = fade;
+      ctx.fillStyle = '#b668ff';
+      ctx.shadowColor = '#8e24aa';
+      ctx.shadowBlur = 30 * fade;
+      ctx.beginPath();
+      ctx.arc(this.x, baseY, this.radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
+class InfernoRampageSpell {
+  constructor(startX, z, facing, team) {
+    this.x = startX;
+    this.z = z;
+    this.facing = facing;
+    this.team = team;
+    this.speed = 520;
+    this.life = 1.8;
+    this.isFinished = false;
+    this.trailTimer = 0;
+    this.damageTicked = 0;
+    this.width = 60;
+  }
+  get y() { return groundYForDepth(this.z); }
+
+  update(dt, gameWorld) {
+    this.x += this.facing * this.speed * dt;
+    this.life -= dt;
+    this.trailTimer += dt;
+    this.damageTicked += dt;
+    combat.spawnElementalParticles(this.x, this.y - 25, 'ignis', 3);
+    combat.spawnElementalParticles(this.x - this.facing * 20, this.y - 15, 'ignis', 2);
+    if (this.trailTimer >= 0.06) {
+      this.trailTimer = 0;
+      combat.spawnHitSparks(this.x - this.facing * 30, this.y - 20, this.facing, '#ff6f3b', 3);
+    }
+    if (this.damageTicked >= 0.12) {
+      this.damageTicked = 0;
+      const targets = gameWorld.getHostileTargets(this.team);
+      for (const t of targets) {
+        const dx = Math.abs(t.x - this.x);
+        const dz = Math.abs(t.z - this.z) * 150;
+        if (dx < this.width * (this.quality?.area ?? 1) && dz < 60) {
+          t.takeDamage(16 * (this.quality?.power ?? 1), this.facing * 200, 140, 0.2, false, 'spell');
+          combat.spawnHitSparks(t.x, t.y - 20, this.facing, '#ff9100', 6);
+          combat.spawnElementalParticles(t.x, t.y - 25, 'ignis', 4);
+        }
+      }
+    }
+    if (this.life <= 0) {
+      combat.spawnShockwave(this.x, this.y - 25, 70, '#ff6f3b');
+      combat.shakeCamera(8, 0.3);
+      this.isFinished = true;
+    }
+  }
+
+  render(ctx) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    const baseY = this.y - 25;
+    const t = performance.now() * 0.008;
+    const fade = Math.min(1, this.life * 2);
+    const headR = 28 + Math.sin(t * 4) * 6;
+    const hg = ctx.createRadialGradient(this.x, baseY, 0, this.x, baseY, headR);
+    hg.addColorStop(0, `rgba(255,255,200,${fade})`);
+    hg.addColorStop(0.3, `rgba(255,150,50,${fade * 0.9})`);
+    hg.addColorStop(0.7, `rgba(255,80,20,${fade * 0.6})`);
+    hg.addColorStop(1, 'rgba(255,40,0,0)');
+    ctx.fillStyle = hg;
+    ctx.beginPath();
+    ctx.arc(this.x, baseY, headR * 1.3, 0, Math.PI * 2);
+    ctx.fill();
+    const trailLen = 90;
+    for (let i = 0; i < 5; i++) {
+      const tx = this.x - this.facing * (20 + i * trailLen / 5);
+      const ty = baseY + Math.sin(t * 6 + i) * 8;
+      const tr = 18 - i * 3;
+      const alpha = fade * (1 - i * 0.18);
+      ctx.fillStyle = i % 2 === 0 ? `rgba(255,111,59,${alpha})` : `rgba(255,200,50,${alpha * 0.7})`;
+      ctx.beginPath();
+      ctx.arc(tx, ty, tr, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    for (let i = 0; i < 9; i++) {
+      const angle = t * 3 + i * 0.7;
+      const dist = headR + Math.sin(angle * 2) * 12;
+      const sx = this.x + Math.cos(angle) * dist * 0.8;
+      const sy = baseY + Math.sin(angle) * dist * 0.4;
+      ctx.fillStyle = `rgba(255,235,59,${fade * 0.6})`;
+      ctx.beginPath();
+      ctx.arc(sx, sy, 2 + Math.random() * 2, 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.restore();

@@ -90,7 +90,27 @@ export class RuneRecognizer {
         color: '#ff4cff',
         glowColor: '#ff99ff',
         icon: '★',
-        desc: 'Any gesture while transformed'
+        desc: 'Any gesture while Focus Ascendant'
+      },
+      {
+        id: 'transform_implode',
+        name: 'VOID IMPLOSION',
+        element: 'Transformation',
+        glyph: '◉',
+        color: '#b668ff',
+        glowColor: '#d596ff',
+        icon: '◉',
+        desc: 'Any gesture while Eidolon Mantle'
+      },
+      {
+        id: 'transform_rampage',
+        name: 'INFERNO RAMPAGE',
+        element: 'Transformation',
+        glyph: '⚡',
+        color: '#ff6f3b',
+        glowColor: '#ffab91',
+        icon: '⚡',
+        desc: 'Any gesture while Ninefold Beast'
       }
     ];
   }
@@ -291,6 +311,8 @@ export class RuneRecognizer {
     }
 
     if (allowedRuneIds?.includes('transform_beam')) scores.transform_beam = 0.92;
+    if (allowedRuneIds?.includes('transform_implode')) scores.transform_implode = 0.92;
+    if (allowedRuneIds?.includes('transform_rampage')) scores.transform_rampage = 0.92;
 
     let bestRune = null;
     let bestScore = 0.48;
