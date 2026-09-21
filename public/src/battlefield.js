@@ -222,6 +222,64 @@ export class Battlefield {
       }
     }
     ctx.drawImage(this.bgImage, cameraOffsetX, 0, gameplayWidth, viewH);
+    if (this.mode?.world === 'invasion') this._paintInvasionBridge(ctx, cameraOffsetX, gameplayWidth, viewH, renderWidth);
+  }
+
+  _paintInvasionBridge(ctx, cameraOffsetX, gameplayWidth, viewH, renderWidth) {
+    const fadeStart = cameraOffsetX + gameplayWidth * 0.62;
+    const solidStart = cameraOffsetX + gameplayWidth * 0.66;
+    const endX = renderWidth;
+
+    const fade = ctx.createLinearGradient(fadeStart, 0, solidStart, 0);
+    fade.addColorStop(0, 'rgba(18,12,10,0)');
+    fade.addColorStop(1, 'rgba(18,12,10,1)');
+    ctx.fillStyle = fade;
+    ctx.fillRect(fadeStart, 0, solidStart - fadeStart, viewH);
+
+    const sky = ctx.createLinearGradient(0, 0, 0, viewH * 0.55);
+    sky.addColorStop(0, '#0c0a14');
+    sky.addColorStop(0.4, '#1a1222');
+    sky.addColorStop(0.7, '#2a1620');
+    sky.addColorStop(1, '#201418');
+    ctx.fillStyle = sky;
+    ctx.fillRect(solidStart, 0, endX - solidStart, viewH * 0.55);
+
+    const glow = ctx.createRadialGradient(endX - 30, viewH * 0.38, 20, endX - 30, viewH * 0.38, 200);
+    glow.addColorStop(0, 'rgba(160,50,20,.12)');
+    glow.addColorStop(0.6, 'rgba(100,30,40,.05)');
+    glow.addColorStop(1, 'rgba(60,15,20,0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath(); ctx.arc(endX - 30, viewH * 0.38, 200, 0, Math.PI * 2); ctx.fill();
+
+    const wallTop = viewH * 0.37;
+    const wallH = viewH * 0.16;
+    ctx.fillStyle = '#3a2820';
+    ctx.fillRect(solidStart, wallTop, endX - solidStart, wallH);
+
+    ctx.strokeStyle = '#2a1a12';
+    ctx.lineWidth = 1;
+    for (let row = 0; row < Math.ceil(wallH / 16); row++) {
+      const y = wallTop + row * 16;
+      const off = (row % 2) * 20;
+      for (let x = solidStart + off; x < endX; x += 40) {
+        ctx.strokeRect(x, y, 40, 16);
+      }
+    }
+
+    ctx.fillStyle = '#4a3828';
+    ctx.fillRect(solidStart, wallTop - 6, endX - solidStart, 6);
+    ctx.fillStyle = '#544030';
+    for (let x = solidStart; x < endX; x += 28) {
+      ctx.fillRect(x + 8, wallTop - 14, 12, 14);
+    }
+
+    const groundY = wallTop + wallH;
+    const gnd = ctx.createLinearGradient(0, groundY, 0, viewH);
+    gnd.addColorStop(0, '#1a100c');
+    gnd.addColorStop(0.4, '#201410');
+    gnd.addColorStop(1, '#0e0a06');
+    ctx.fillStyle = gnd;
+    ctx.fillRect(solidStart, groundY, endX - solidStart, viewH - groundY);
   }
 
   renderModeBackground(ctx, gameplayWidth, viewH, renderWidth, cameraOffsetX, modeState = null) {

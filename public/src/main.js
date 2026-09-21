@@ -767,7 +767,7 @@ export class GameWorld {
         ui.showRecognitionBadge(result.rune, result.confidence, prepared.grade);
         combat.spawnShockwave(this.player.x, this.player.y - 30, 70, result.rune.color);
         combat.spawnElementalParticles(this.player.x, this.player.y - 30, result.rune.id, Math.round(14 * spells.qualityForRunes([prepared]).particles));
-        if (slot && !slot.definition.isComponent) {
+        if (slot && !slot.definition.isComponent && this.activeMode?.id !== 'arena') {
           this.castSpellSlot(slot, true);
         }
       } else {
@@ -892,6 +892,12 @@ export class GameWorld {
     this.showAnnouncement(`CAST: ${resolved.name}!`);
     this.noteSpellDiscovery(resolved);
     if (consumeSelected) {
+      if (this.activeMode?.id === 'arena') {
+        for (const rune of slot.runes) {
+          const idx = this.player.runeDeck.findIndex(c => c.cardId === rune.cardId);
+          if (idx !== -1) this.player.runeDeck.splice(idx, 1);
+        }
+      }
       this.player.slottedSpells.splice(this.player.selectedSpellIndex, 1);
       this.player.selectedSpellIndex = Math.max(0, Math.min(this.player.selectedSpellIndex, this.player.slottedSpells.length - 1));
       this.player.preparedRunes = this.player.slottedSpells.flatMap((entry) => entry.runes);
