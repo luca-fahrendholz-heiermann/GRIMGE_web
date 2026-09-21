@@ -138,10 +138,10 @@
                   <button class="hub-game-type-card is-coming" type="button" disabled aria-label="Ranked PvP — coming later"><img src="assets/ui/ui_hub_gametype_selection_screen_concept/ui_button_gametype_ranked.png" alt="Ranked PvP"></button>
                   <button class="hub-game-type-card is-coming" type="button" disabled aria-label="Co-op — coming later"><img src="assets/ui/ui_hub_gametype_selection_screen_concept/ui_button_gametype_coop.png" alt="Co-op"></button>
                   <button class="hub-game-type-card is-coming" type="button" disabled aria-label="Custom Match — coming later"><img src="assets/ui/ui_hub_gametype_selection_screen_concept/ui_button_gametype_custom_match.png" alt="Custom Match"></button>
-                  <div class="hub-game-type-bottom-actions" aria-label="Additional game options">
-                    <button id="hub-siege-mode-btn" class="hub-game-type-card hub-game-type-freeplay active" type="button" aria-label="Start Castle Siege free play"><img src="assets/ui/ui_hub_gametype_selection_screen_concept/ui_button_gametype_free_play.png" alt="Free Play"></button>
-                    <button class="hub-game-type-card hub-game-type-training is-coming" type="button" disabled aria-label="Training — coming later"><img src="assets/ui/ui_hub_gametype_selection_screen_concept/ui_button_gametype_training.png" alt="Training"></button>
-                  </div>
+                </div>
+                <div class="hub-game-type-bottom-actions" aria-label="Additional game options">
+                  <button id="hub-siege-mode-btn" class="hub-game-type-card hub-game-type-freeplay active" type="button" aria-label="Start Castle Siege free play"><img src="assets/ui/ui_hub_gametype_selection_screen_concept/ui_button_gametype_free_play.png" alt="Free Play"></button>
+                  <button id="hub-training-mode-btn" class="hub-game-type-card hub-game-type-training" type="button" aria-label="Open Training"><img src="assets/ui/ui_hub_gametype_selection_screen_concept/ui_button_gametype_training.png" alt="Training"></button>
                 </div>
                 <button id="hub-modes-back-btn" class="hub-game-types-back" type="button">← BACK</button>
               </div>
@@ -167,9 +167,9 @@
                 <img class="hub-free-play-banner" src="assets/ui/ui_hub_free_play_screen_concept/ui_free_play_banner.png" alt="Free Play — choose a mode, no rewards">
                 <div class="hub-free-play-cards" aria-label="Free Play modes">
                   <button id="hub-freeplay-siege-btn" class="hub-free-play-card active" type="button" aria-label="Start Castle Siege"><img src="assets/ui/ui_hub_free_play_screen_concept/ui_button_modus_castle_siege.png" alt="Castle Siege"></button>
-                  <button class="hub-free-play-card is-coming" type="button" disabled aria-label="Invasion — coming later"><img src="assets/ui/ui_hub_free_play_screen_concept/ui_button_modus_invasion.png" alt="Invasion"></button>
-                  <button class="hub-free-play-card is-coming" type="button" disabled aria-label="Dungeon — coming later"><img src="assets/ui/ui_hub_free_play_screen_concept/ui_button_modus_dungeon.png" alt="Dungeon"></button>
-                  <button class="hub-free-play-card is-coming" type="button" disabled aria-label="Arena — coming later"><img src="assets/ui/ui_hub_free_play_screen_concept/ui_button_modus_arena.png" alt="Arena"></button>
+                  <button id="hub-freeplay-invasion-btn" class="hub-free-play-card" type="button" aria-label="Start Invasion"><img src="assets/ui/ui_hub_free_play_screen_concept/ui_button_modus_invasion.png" alt="Invasion"></button>
+                  <button id="hub-freeplay-dungeon-btn" class="hub-free-play-card" type="button" aria-label="Start Dungeon"><img src="assets/ui/ui_hub_free_play_screen_concept/ui_button_modus_dungeon.png" alt="Dungeon"></button>
+                  <button id="hub-freeplay-arena-btn" class="hub-free-play-card" type="button" aria-label="Start Arena"><img src="assets/ui/ui_hub_free_play_screen_concept/ui_button_modus_arena.png" alt="Arena"></button>
                 </div>
                 <button id="hub-freeplay-back-btn" class="hub-free-play-back" type="button">← BACK</button>
               </div>
@@ -440,6 +440,17 @@
           <div id="drawing-prompt">ARCANE FOCUS — DRAW A HAND RUNE · TAP A RUNE CARD OR DOUBLE-TAP LEFT TO LOCK · AUTO-LOCK AFTER 2s · ESC CANCELS</div>
         <div id="recognition-result"></div>
       </div>
+
+      <!-- Temporary, per-run Archero-style rune draft. It is deliberately
+           separate from the persistent Grimoire deck used by Castle Siege. -->
+      <section id="run-rune-choice" class="run-rune-choice hidden" aria-live="polite">
+        <div class="run-rune-choice-panel">
+          <small>RUN LEVEL <span id="run-rune-level">0</span></small>
+          <h2>CHOOSE A RUNE</h2>
+          <p>Build this run from zero. Your permanent Grimoire is not used here.</p>
+          <div id="run-rune-options" class="run-rune-options"></div>
+        </div>
+      </section>
     </div>
   </div>
 

@@ -3,12 +3,13 @@ import { audio } from './audio.js';
 import { sprites } from './sprites.js';
 import { recognizer } from './recognizer.js';
 import { combat } from './combat.js';
-import { spells } from './spells.js';
-import { Player, EnemyChampion } from './entities.js';
+import { spells, RUNE_GRADE_PROFILES } from './spells.js';
+import { Player, EnemyChampion, Minion } from './entities.js';
 import { Battlefield } from './battlefield.js';
 import { ui } from './ui.js';
 import { VIEWPORT, ARENA_LAYOUT, groundDistance, groundYForDepth } from './world.js';
 import { MageProfile, MAGE_SKILL_TREE, applyMageProfile } from './progression.js';
+import { getGameMode } from './game_modes.js';
 
 export class GameWorld {
   constructor() {
@@ -200,6 +201,11 @@ export class GameWorld {
     window.gameWorld = this;
     this.resetMatch();
     this.matchState = 'Menu';
+    // A mode changes only match rules. It never forks input, combat or spell
+    // code into a separate minigame implementation.
+    this.matchMode = 'siege';
+    this.activeMode = getGameMode(this.matchMode);
+    this.modeState = null;
     ui.showHub(true);
 
     this.running = true;
@@ -992,6 +998,328 @@ export class GameWorld {
     return this.mountCandidate;
   }
 
+  setMatchMode(mode) {
+    if (this.matchState === 'Running' || this.matchState === 'Ending') return false;
+    this.matchMode = getGameMode(mode).id;
+    this.activeMode = getGameMode(this.matchMode);
+    return true;
+  }
+
+  getEnemyHome(team, battlefield = this.battlefield) {
+    if (team !== 'red') return battlefield.getSpawn(team);
+    if (this.activeMode?.enemyBehavior === 'duel' || this.modeState?.bossActive) return { x: 690, z: 0.58 };
+    return battlefield.getSpawn(team);
+  }
+
+  spawnModeWave(team, count, { x, z = 0.58, spread = 0.18, elite = false } = {}) {
+    const laneOffsets = [-1, 0, 1];
+    for (let i = 0; i < count; i++) {
+      const lane = laneOffsets[i % laneOffsets.length];
+      const type = i % 3 === 2 ? 'ranged' : 'melee';
+      const minion = new Minion(x + (team === 'red' ? i * 7 : -i * 7), z + lane * spread, team, type, i % 3);
+      if (elite) {
+        minion.maxHp = Math.round(minion.maxHp * 1.65);
+        minion.hp = minion.maxHp;
+        minion.damage = Math.round(minion.damage * 1.35);
+        minion.speed *= 1.08;
+      }
+      this.minions.push(minion);
+    }
+  }
+
+  setupModeMatch() {
+    const mode = this.activeMode;
+    this.modeState = {
+      id: mode.id, wave: 0, intermission: 0, stage: 0, announced: false,
+      bossActive: false, scroll: 0, routeScroll: 0, rescued: 0, rescue: null, runeCollectibles: [],
+      // Arena is deliberately melee-first. Runes are discovered from the
+      // floor and transformations arrive as a contested, temporary relic --
+      // neither is inherited from the profile deck.
+      transformationRelic: null, transformationRelicTimer: 8.5,
+      run: mode.progression === 'run' ? { level: 0, xp: 0, xpToNext: 30, deck: [], pending: false, options: [], awaitingFirstKill: true } : null
+    };
+    if (mode.id === 'siege') {
+      this.battlefield.spawnWave(this);
+      return;
+    }
+    if (mode.id === 'invasion') {
+      this.player.x = 146; this.player.z = 0.48;
+      this.battlefield.placeOnSurface(this.player);
+      this.enemyChampion.lifeState = 'Dead';
+      this.enemyChampion.respawnTimer = Infinity;
+      this.spawnInvasionWave();
+      return;
+    }
+    if (mode.id === 'dungeon') {
+      this.player.x = 290; this.player.z = 0.58;
+      this.enemyChampion.lifeState = 'Dead';
+      this.enemyChampion.respawnTimer = Infinity;
+      this.battlefield.placeOnSurface(this.player);
+      this.spawnDungeonStarter();
+      return;
+    }
+    if (mode.id === 'arena' || mode.id === 'training') {
+      this.player.x = 355; this.player.z = 0.58;
+      this.enemyChampion.x = 690; this.enemyChampion.z = 0.58;
+      this.enemyChampion.heroKey = mode.id === 'arena' ? 'darklord' : 'mage';
+      if (mode.id === 'arena') {
+        this.enemyChampion.maxHp = this.enemyChampion.hp = 430;
+      } else {
+        this.enemyChampion.maxHp = this.enemyChampion.hp = 900;
+      }
+      this.battlefield.placeOnSurface(this.player);
+      this.battlefield.placeOnSurface(this.enemyChampion);
+      if (mode.id === 'arena') {
+        this.enemyChampion.lifeState = 'Alive';
+        this.enemyChampion.respawnTimer = Infinity;
+        this.modeState.bossActive = true;
+        this.spawnArenaRuneCollectibles();
+      }
+    }
+  }
+
+  spawnInvasionWave() {
+    const state = this.modeState;
+    if (!state || this.activeMode.id !== 'invasion') return;
+    state.wave++;
+    const count = Math.min(14, 2 + state.wave * 2);
+    const scale = 1 + (state.wave - 1) * .15;
+    const firstNew = this.minions.length;
+    this.spawnModeWave('red', count, { x: 900, z: 0.58, spread: 0.17, elite: state.wave >= 3 });
+    for (const minion of this.minions.slice(firstNew)) {
+      minion.modeWave = state.wave;
+      minion.maxHp = Math.round(minion.maxHp * scale); minion.hp = minion.maxHp;
+      minion.damage = Math.round(minion.damage * scale); minion.speed *= 1 + (state.wave - 1) * .025;
+    }
+    this.showAnnouncement(`INVASION WAVE ${state.wave}/${this.activeMode.waveGoal}`, 1.4);
+  }
+
+  spawnDungeonStage(stage) {
+    const state = this.modeState;
+    if (!state || this.activeMode.id !== 'dungeon') return;
+      state.stage = stage;
+    if (stage <= 3) {
+      this.enemyChampion.lifeState = 'Dead'; this.enemyChampion.respawnTimer = Infinity;
+      state.scroll = (stage - 1) * 1;
+      state.routeScroll = 0;
+      // Each cleared room advances the expedition into the next authored
+      // backdrop segment. Combat distances remain unchanged; only the route
+      // presentation moves forward.
+      this.player.x = 290; this.player.z = 0.58;
+      this.battlefield.placeOnSurface(this.player);
+      this.spawnModeWave('red', 3 + stage * 2, { x: 745, z: 0.58, spread: 0.16, elite: stage >= 2 });
+      // Every other room places a living prisoner on the forward route. A
+      // player must reach the glow to turn it into a persistent ally.
+      state.rescue = stage === 2 ? { x: 610, z: 0.44, rescued: false } : null;
+      this.showAnnouncement(`DUNGEON ROOM ${stage} — PUSH FORWARD`, 1.7);
+      return;
+    }
+    this.enemyChampion.x = 735; this.enemyChampion.z = 0.58;
+    this.enemyChampion.heroKey = 'darklord';
+    this.enemyChampion.maxHp = this.enemyChampion.hp = 760;
+    this.enemyChampion.lifeState = 'Alive';
+    this.enemyChampion.respawnTimer = Infinity;
+    this.battlefield.placeOnSurface(this.enemyChampion);
+    state.bossActive = true;
+    this.showAnnouncement('DUNGEON BOSS — VOID WARDEN', 2.1);
+  }
+
+  spawnDungeonStarter() {
+    const state = this.modeState;
+    if (!state || this.activeMode.id !== 'dungeon') return;
+    const starter = new Minion(452, 0.58, 'red', 'melee', 1);
+    starter.maxHp = starter.hp = 42;
+    starter.damage = 8;
+    starter.runXpValue = 30;
+    starter.isDungeonStarter = true;
+    this.battlefield.placeOnSurface(starter);
+    this.minions.push(starter);
+    this.showAnnouncement('DUNGEON START — DEFEAT THE SCOUT', 1.8);
+  }
+
+  spawnArenaRuneCollectibles() {
+    const state = this.modeState;
+    if (!state || this.activeMode.id !== 'arena') return;
+    const pool = recognizer.runes.filter((rune) => rune.id !== 'special');
+    const positions = [{ x: 438, z: .27 }, { x: 535, z: .80 }, { x: 625, z: .48 }];
+    state.runeCollectibles = positions.map((position, index) => ({ ...position, rune: pool[(index * 3 + 1) % pool.length] }));
+    this.showAnnouncement('ARENA — FIGHT FOR RUNE RELICS', 1.7);
+  }
+
+  beginModeBoss(label, hp = 760) {
+    const state = this.modeState;
+    state.bossActive = true;
+    this.enemyChampion.x = 265; this.enemyChampion.z = 0.58;
+    this.enemyChampion.heroKey = 'darklord';
+    this.enemyChampion.maxHp = this.enemyChampion.hp = hp;
+    this.enemyChampion.lifeState = 'Alive'; this.enemyChampion.respawnTimer = Infinity;
+    this.battlefield.placeOnSurface(this.enemyChampion);
+    this.showAnnouncement(label, 2.1);
+  }
+
+  isRunChoicePending() { return !!this.modeState?.run?.pending; }
+
+  queueRunRuneChoice() {
+    const run = this.modeState?.run;
+    if (!run) return;
+    const pool = recognizer.runes.filter((rune) => rune.id !== 'special');
+    const preferred = pool.filter((rune) => !run.deck.includes(rune.id));
+    const source = preferred.length >= 2 ? preferred : pool;
+    const firstIndex = Math.floor(Math.random() * source.length);
+    let secondIndex = Math.floor(Math.random() * (source.length - 1));
+    if (secondIndex >= firstIndex) secondIndex++;
+    run.options = [source[firstIndex], source[secondIndex]].filter(Boolean);
+    run.pending = true;
+    this.input.gameplayBlocked = true;
+    ui.showRunRuneChoice?.(run.options, run.level);
+  }
+
+  chooseRunRune(id) {
+    const run = this.modeState?.run;
+    if (!run?.pending || !run.options.some((rune) => rune.id === id)) return false;
+    run.deck.push(id);
+    const deck = run.deck.map((runeId) => recognizer.runes.find((rune) => rune.id === runeId)).filter(Boolean);
+    this.player.configureRuneDeck(deck);
+    run.pending = false; run.options = [];
+    ui.hideRunRuneChoice?.();
+    this.input.gameplayBlocked = false;
+    this.showAnnouncement(`${recognizer.runes.find((rune) => rune.id === id)?.name ?? id} ACQUIRED`, 1.1);
+    if (this.activeMode.id === 'invasion' && this.modeState.wave === 0) this.spawnInvasionWave();
+    if (this.activeMode.id === 'dungeon' && this.modeState.stage === 0) this.spawnDungeonStage(1);
+    return true;
+  }
+
+  awardRunXp(amount) {
+    const run = this.modeState?.run;
+    if (!run || run.pending) return;
+    run.xp += amount;
+    if (run.xp >= run.xpToNext) {
+      run.xp -= run.xpToNext; run.level++;
+      run.xpToNext = Math.round(run.xpToNext * 1.28 + 5);
+      this.queueRunRuneChoice();
+    }
+  }
+
+  updateDungeonRescue() {
+    const rescue = this.modeState?.rescue;
+    if (!rescue || rescue.rescued || !this.player.isAlive) return;
+    if (Math.hypot(this.player.x - rescue.x, (this.player.z - rescue.z) * 150) > 48) return;
+    rescue.rescued = true; this.modeState.rescued++;
+    const ally = new Minion(this.player.x - 24, this.player.z + .05, 'blue', 'melee', 1);
+    ally.isRescuedCompanion = true; ally.maxHp = ally.hp = 180; ally.damage = 24; ally.speed = 93;
+    this.battlefield.placeOnSurface(ally); this.minions.push(ally);
+    this.showAnnouncement('COMPANION RESCUED — JOINS UNTIL DEFEATED', 2.2);
+  }
+
+  updateArenaRuneCollectibles() {
+    const relics = this.modeState?.runeCollectibles;
+    if (this.activeMode?.id !== 'arena' || !relics?.length || !this.player.isAlive) return;
+    for (let i = relics.length - 1; i >= 0; i--) {
+      const relic = relics[i];
+      if (Math.hypot(this.player.x - relic.x, (this.player.z - relic.z) * 150) > 42) continue;
+      this.player.runeDeck.push(this.player.makeRuneCard(relic.rune));
+      this.player.drawRunesToHand();
+      relics.splice(i, 1);
+      this.showAnnouncement(`${relic.rune.name} RUNE RELIC ACQUIRED`, 1.2);
+    }
+  }
+
+  spawnArenaTransformationRelic() {
+    const state = this.modeState;
+    if (!state || this.activeMode?.id !== 'arena' || state.transformationRelic) return false;
+    const positions = [{ x: 486, z: .45 }, { x: 570, z: .70 }, { x: 650, z: .31 }];
+    const position = positions[Math.floor(Math.random() * positions.length)];
+    const forms = ['FOCUS ASCENDANT', 'EIDOLON MANTLE', 'NINEFOLD BEAST'];
+    state.transformationRelic = { ...position, form: forms[Math.floor(Math.random() * forms.length)] };
+    this.showAnnouncement('A TRANSFORMATION RELIC HAS APPEARED', 1.45);
+    return true;
+  }
+
+  updateArenaTransformationRelic(dt) {
+    const state = this.modeState;
+    if (this.activeMode?.id !== 'arena' || !state || !this.player.isAlive) return;
+    const relic = state.transformationRelic;
+    if (!relic) {
+      state.transformationRelicTimer -= dt;
+      if (state.transformationRelicTimer <= 0) {
+        state.transformationRelicTimer = 15 + Math.random() * 7;
+        this.spawnArenaTransformationRelic();
+      }
+      return;
+    }
+    if (Math.hypot(this.player.x - relic.x, (this.player.z - relic.z) * 150) > 44) return;
+    // The arena relic grants one complete short form directly. It reuses the
+    // same transformation implementations as normal combat, rather than
+    // becoming a fourth parallel transformation system.
+    if (relic.form === 'EIDOLON MANTLE') spells.castEidolonMantle(this.player, RUNE_GRADE_PROFILES.A);
+    else if (relic.form === 'NINEFOLD BEAST') spells.castNinefoldBeast(this.player, RUNE_GRADE_PROFILES.A);
+    else {
+      this.player.focus = this.player.maxFocus;
+      this.player.activateFocusTransformation();
+    }
+    state.transformationRelic = null;
+    state.transformationRelicTimer = 17 + Math.random() * 7;
+    this.showAnnouncement(`${relic.form} RELIC CLAIMED`, 1.5);
+  }
+
+  updateMode(dt) {
+    const state = this.modeState;
+    if (!state || !this.isMatchRunning()) return;
+    if (this.isRunChoicePending()) return;
+    if (this.activeMode.id === 'invasion') {
+      if (this.battlefield.blueCastle.isDestroyed) {
+        this.finishMode('red', 'DEFEAT — YOUR CASTLE HAS FALLEN');
+        return;
+      }
+      if (state.bossActive) {
+        if (this.enemyChampion.lifeState === 'Dead') this.finishMode('blue', 'VICTORY — THE INVASION IS REPULSED');
+        return;
+      }
+      if (!this.minions.some((minion) => minion.team === 'red' && !minion.isDead)) {
+        if (state.wave >= this.activeMode.waveGoal) {
+          this.beginModeBoss('INVASION BOSS — RIFT TYRANT', 900);
+        } else {
+          state.intermission += dt;
+          if (state.intermission >= 2.1) { state.intermission = 0; this.spawnInvasionWave(); }
+        }
+      }
+      return;
+    }
+    if (this.activeMode.id === 'dungeon') {
+      // Dungeon is presented as a forward-moving route. This only moves the
+      // backdrop/parallax; it deliberately never changes authored combat
+      // distances, collision, or melee reach.
+      state.routeScroll = Math.min(2.2, state.routeScroll + Math.max(0, this.player.vx) * dt * .012);
+      this.updateDungeonRescue();
+      if (state.stage <= 3 && !this.minions.some((minion) => minion.team === 'red' && !minion.isDead)) this.spawnDungeonStage(state.stage + 1);
+      else if (state.stage === 4 && this.enemyChampion.lifeState === 'Dead') this.finishMode('blue', 'VICTORY — DUNGEON CLEARED');
+      return;
+    }
+    if (this.activeMode.id === 'arena' && state.bossActive && this.enemyChampion.lifeState === 'Dead') {
+      this.finishMode('blue', 'VICTORY — ARENA CHAMPION DEFEATED');
+      return;
+    }
+    if (this.activeMode.id === 'arena') this.updateArenaTransformationRelic(dt);
+    if (this.activeMode.id === 'training' && this.enemyChampion.lifeState === 'Dead') {
+      // A practice opponent returns without rewards or a match-ending flow.
+      this.enemyChampion.lifeState = 'Alive';
+      this.enemyChampion.hp = this.enemyChampion.maxHp;
+      this.enemyChampion.x = 690; this.enemyChampion.z = 0.58;
+      this.battlefield.placeOnSurface(this.enemyChampion);
+      this.showAnnouncement('TRAINING DUMMY RESET', 1);
+    }
+  }
+
+  finishMode(winner, message) {
+    if (!this.isMatchRunning()) return;
+    this.winnerTeam = winner;
+    this.matchState = 'Ending';
+    this.endingTimer = 0.9;
+    this.input.gameplayBlocked = true;
+    this.showAnnouncement(message, 1.3);
+    combat.shakeCamera(20, 1);
+  }
+
   getHostileTargets(myTeam, includeProtectedCastle = false) {
     const targets = [];
     for (const m of this.minions) {
@@ -1003,10 +1331,12 @@ export class GameWorld {
     if (myTeam === 'red' && this.player.isAlive) targets.push(this.player);
     if (myTeam === 'blue' && this.enemyChampion.isAlive) targets.push(this.enemyChampion);
 
-    const enemyTower = this.battlefield.getTower(myTeam === 'blue' ? 'red' : 'blue');
-    if (!enemyTower.isDead) targets.push(enemyTower);
-    const enemyCastle = this.battlefield.getCastle(myTeam === 'blue' ? 'red' : 'blue');
-    if (!enemyCastle.isDestroyed && (includeProtectedCastle || enemyCastle.isVulnerable)) targets.push(enemyCastle);
+    if (this.activeMode?.objectives !== false) {
+      const enemyTeam = myTeam === 'blue' ? 'red' : 'blue';
+      for (const objective of this.battlefield.getObjectivesForTeam(enemyTeam)) {
+        if (!objective.isDestroyed && (includeProtectedCastle || objective.isVulnerable !== false)) targets.push(objective);
+      }
+    }
 
     return targets;
   }
@@ -1050,13 +1380,13 @@ export class GameWorld {
     const wizard = minion.team === 'blue' ? this.enemyChampion : this.player;
     if (wizard.isAlive && wizard.surfaceId !== 'blueCastleUpperPlatform' && wizard.surfaceId !== 'redCastleUpperPlatform') {
       const wizardDistance = Math.hypot(wizard.x - minion.x, (wizard.z - minion.z) * 150);
-      if (wizardDistance < 180) return commit(wizard);
+      if (wizardDistance < 180 || this.activeMode?.objectives === false) return commit(wizard);
     }
+    if (this.activeMode?.objectives === false) return commit(null);
     const enemyTeam = minion.team === 'blue' ? 'red' : 'blue';
-    const tower = this.battlefield.getTower(enemyTeam);
-    if (!tower.isDead) return commit(tower);
-    const castle = this.battlefield.getCastle(enemyTeam);
-    return commit(castle.isVulnerable && !castle.isDestroyed ? castle : null);
+    const objectives = this.battlefield.getObjectivesForTeam(enemyTeam)
+      .filter((objective) => !objective.isDestroyed && (objective.isVulnerable !== false));
+    return commit(objectives[0] ?? null);
   }
 
   isMatchRunning() { return this.matchState === 'Running'; }
@@ -1066,7 +1396,12 @@ export class GameWorld {
     this.matchPhase = phase;
   }
 
-  canRespawn(team) { return this.isMatchRunning() && !this.battlefield.getCastle(team).isDestroyed; }
+  canRespawn(team) {
+    if (!this.isMatchRunning()) return false;
+    if (this.activeMode?.respawn === 'unlimited') return true;
+    if (this.activeMode?.respawn === 'none') return false;
+    return !this.battlefield.getCastle(team).isDestroyed;
+  }
 
   onTowerDestroyed(tower, castle) {
     this.showAnnouncement(`${tower.team.toUpperCase()} TOWER FALLEN — CASTLE VULNERABLE`, 2.5);
@@ -1075,6 +1410,11 @@ export class GameWorld {
   }
 
   onCastleDestroyed(castle) {
+    if (this.activeMode?.id === 'invasion' && castle.team === 'blue') {
+      this.finishMode('red', 'DEFEAT — YOUR CASTLE HAS FALLEN');
+      return;
+    }
+    if (this.activeMode?.objectives === false) return;
     this.setObjectivePhase('FinalWizardPhase');
     this.stats.castlesDestroyed[castle.team] = true;
     this.showAnnouncement(`${castle.team.toUpperCase()} CASTLE DESTROYED — DEFEAT THE WIZARD`, 3);
@@ -1082,6 +1422,12 @@ export class GameWorld {
 
   onFinalWizardDeath(team) {
     if (!this.isMatchRunning()) return;
+    if (this.activeMode?.id === 'training') return;
+    if (this.activeMode?.id === 'dungeon' && team === 'red') return;
+    if (this.activeMode?.id === 'invasion') {
+      if (team === 'blue') this.finishMode('red', 'DEFEAT — THE WIZARD HAS FALLEN');
+      return;
+    }
     this.winnerTeam = team === 'blue' ? 'red' : 'blue';
     this.matchState = 'Ending';
     this.endingTimer = 0.9;
@@ -1095,10 +1441,18 @@ export class GameWorld {
     const killer = team === 'blue' ? 'red' : 'blue';
     this.stats.wizardKills[killer]++;
     if (team === 'blue') this.stats.playerDeaths++;
+    if (team === 'red' && this.activeMode?.id === 'dungeon') this.awardRunXp(65);
   }
 
   getObjectiveStatus() {
     if (this.matchState === 'Ending' || this.matchState === 'Results') return this.winnerTeam === 'blue' ? 'VICTORY' : 'DEFEAT';
+    if (this.activeMode?.id === 'invasion') return this.modeState?.bossActive ? 'DEFEAT THE RIFT TYRANT' : `DEFEND LEFT KEEP — WAVE ${this.modeState?.wave ?? 1}/${this.activeMode.waveGoal}`;
+    if (this.activeMode?.id === 'dungeon') return this.isRunChoicePending() ? 'CHOOSE A FOUND RUNE' : this.modeState?.stage === 4 ? 'DEFEAT THE VOID WARDEN' : this.modeState?.stage === 0 ? 'DEFEAT THE SCOUT WITH MELEE' : `DUNGEON ROOM ${this.modeState?.stage} — PUSH FORWARD`;
+    if (this.activeMode?.id === 'arena') {
+      if (this.modeState?.transformationRelic) return 'CLAIM THE TRANSFORMATION RELIC — DEFEAT THE CHAMPION';
+      return this.modeState?.runeCollectibles?.length ? 'COLLECT RUNE RELICS — DEFEAT THE CHAMPION' : 'DEFEAT THE ARENA CHAMPION';
+    }
+    if (this.activeMode?.id === 'training') return 'PRACTICE — NO REWARDS';
     const tower = this.battlefield.redTower;
     const castle = this.battlefield.redCastle;
     if (!tower.isDead) return `DESTROY ENEMY TOWER ${Math.ceil(tower.hp)}/${tower.maxHp}`;
@@ -1113,8 +1467,11 @@ export class GameWorld {
   }
 
   prepareDefaultRunes() {
-    // The Hub-selected profile deck is the sole source for a match hand.
-    // A card always cycles hand -> deck back -> replacement within this list.
+    if (this.activeMode?.progression !== 'profile') {
+      this.player.configureRuneDeck([]);
+      return;
+    }
+    // Siege, Invasion and Training use the Hub-selected persistent Grimoire.
     const deck = this.profile.getMatchDeck()
       .map((id) => recognizer.runes.find((candidate) => candidate.id === id)).filter(Boolean);
     this.player.configureRuneDeck(deck);
@@ -1182,9 +1539,11 @@ export class GameWorld {
   resetMatch() {
     spells.clearRuntime();
     combat.resetEffects();
-    this.battlefield = new Battlefield();
+    this.activeMode = getGameMode(this.matchMode);
+    this.battlefield = new Battlefield(this.activeMode);
     this.attachBattlefieldCallbacks();
-    this.player = new Player(ARENA_LAYOUT.spawns.blueCastle.x, ARENA_LAYOUT.spawns.blueCastle.z);
+    const spawn = this.battlefield.getSpawn('blue');
+    this.player = new Player(spawn.x, spawn.z);
     this.player.heroKey = this.selectedHeroKey ?? ui.getSelectedHero?.() ?? 'paladin';
     this.enemyChampion = new EnemyChampion(ARENA_LAYOUT.spawns.redCastle.x, ARENA_LAYOUT.spawns.redCastle.z, 'warlord');
     this.battlefield.placeOnSurface(this.player);
@@ -1192,7 +1551,7 @@ export class GameWorld {
     this.battlefield.placeOnSurface(this.enemyChampion);
     this.minions = [];
     this.projectiles = [];
-    this.setObjectivePhase('LanePhase');
+    this.setObjectivePhase(this.activeMode.objectives ? 'LanePhase' : 'CombatPhase');
     this.winnerTeam = null;
     this.endingTimer = 0;
     this.matchTime = this.matchDuration;
@@ -1205,7 +1564,7 @@ export class GameWorld {
     this.input.gameplayBlocked = false;
     this.mountCandidate = null;
     this.prepareDefaultRunes();
-    this.battlefield.spawnWave(this);
+    this.setupModeMatch();
   }
 
   startMatch() {
@@ -1213,7 +1572,7 @@ export class GameWorld {
     // follow-up click rebuild a just-started match and do not restart an
     // already live game through an accidental overlay tap.
     if (this.matchState === 'Running' || this.matchState === 'Ending') return;
-    if (!this.profile.isDeckReady()) {
+    if (this.activeMode.progression === 'profile' && !this.profile.isDeckReady()) {
       this.showAnnouncement(`BUILD A ${10}-CARD RUNE DECK FIRST`, 1.8);
       ui.showHub(true);
       return;
@@ -1223,17 +1582,17 @@ export class GameWorld {
     this.syncOrientationState();
     ui.showHub(false);
     ui.showResults(false);
-    this.showAnnouncement('DESTROY ENEMY TOWER', 1.5);
+    this.showAnnouncement(this.activeMode.objective, 1.5);
   }
 
   restartMatch() {
-    if (!this.profile.isDeckReady()) return false;
+    if (this.activeMode.progression === 'profile' && !this.profile.isDeckReady()) return false;
     this.resetMatch();
     this.matchState = 'Running';
     this.syncOrientationState();
     ui.showHub(false);
     ui.showResults(false);
-    this.showAnnouncement('MATCH RESTARTED', 1.1);
+    this.showAnnouncement(`${this.activeMode.label} RESTARTED`, 1.1);
     return true;
   }
 
@@ -1249,9 +1608,12 @@ export class GameWorld {
     spells.clearRuntime();
     // A compact match reward gives the tree a real play loop without making
     // results depend on a server or a browser reload.
-    const reward = this.winnerTeam === 'blue' ? 60 : 25;
-    const progression = this.profile.awardXp(reward);
-    this.applyProfile();
+    let progression = null;
+    if (this.activeMode.progression === 'profile') {
+      const reward = this.winnerTeam === 'blue' ? 60 : 25;
+      progression = this.profile.awardXp(reward);
+      this.applyProfile();
+    }
     this.reportProfileProgress(progression);
     ui.showResults(true, { winner: this.winnerTeam, elapsed: this.matchDuration - this.matchTime, stats: this.stats });
   }
@@ -1268,6 +1630,7 @@ export class GameWorld {
     this.targetTimeScale = this.timeScale = 1;
     ui.setDrawingMode(false);
     ui.showResults(false);
+    ui.hideRunRuneChoice?.();
     ui.showHub(true);
   }
 
@@ -1346,6 +1709,16 @@ export class GameWorld {
       }
     }
 
+    // A rune pick is a true run-level pause: no AI, wave timer, projectiles
+    // or match clock advances while the player chooses one of two runes.
+    if (this.isRunChoicePending()) {
+      this.input.gameplayBlocked = true;
+      this.clearGameplayInput();
+      this.render();
+      requestAnimationFrame((t) => this.loop(t));
+      return;
+    }
+
     // 2. Match Timer — only active play contributes to the final result.
     if (this.isMatchRunning()) this.matchTime = Math.max(0, this.matchTime - dt);
 
@@ -1361,23 +1734,30 @@ export class GameWorld {
 
     if (normalFrame && this.isMatchRunning()) {
       this.battlefield.update(scaledDt, this);
-      this.input.gameplayBlocked = this.drawing.active;
+      this.input.gameplayBlocked = this.drawing.active || this.isRunChoicePending();
       this.refreshMovement();
       this.updateMountCandidate();
 
       this.player.update(scaledDt, this.input, this.battlefield, this);
       this.enemyChampion.update(scaledDt, this, this.battlefield);
+      this.updateArenaRuneCollectibles();
 
       if (this.isMatchRunning()) {
         for (let i = this.minions.length - 1; i >= 0; i--) {
           const m = this.minions[i];
           m.update(scaledDt, this, this.battlefield);
-          if (m.isDead) this.minions.splice(i, 1);
+          if (m.isDead) {
+            if (m.team === 'red' && !m.isRescuedCompanion && this.activeMode?.id === 'dungeon') {
+              this.awardRunXp(m.runXpValue ?? (m.type === 'ranged' ? 14 : 11));
+            }
+            this.minions.splice(i, 1);
+          }
         }
 
         this.updateProjectiles(scaledDt);
 
         spells.update(scaledDt, this);
+        this.updateMode(scaledDt);
       }
     }
 
@@ -1498,7 +1878,7 @@ export class GameWorld {
     ctx.clearRect(0, 0, viewW, viewH);
 
     // 1. Scene Backdrop (High-Def Waterfalls & Fortress Arena)
-    this.battlefield.renderBackground(ctx, cam, this.logicalWidth, viewH, viewW, this.cameraOffsetX);
+    this.battlefield.renderBackground(ctx, cam, this.logicalWidth, viewH, viewW, this.cameraOffsetX, this.modeState);
 
     // 2. World Space Layer (with Camera Shake)
     ctx.save();
@@ -1506,6 +1886,9 @@ export class GameWorld {
 
     // Foreground Crystal Glows on Beacons
     this.battlefield.renderForeground(ctx);
+    this.renderDungeonRescue(ctx);
+    this.renderArenaRuneCollectibles(ctx);
+    this.renderArenaTransformationRelic(ctx);
 
     const actors = [...this.minions];
     if (this.enemyChampion.lifeState !== 'Dead') actors.push(this.enemyChampion);
@@ -1534,6 +1917,56 @@ export class GameWorld {
     if (this.drawing.active) {
       this.renderRuneStrokes();
     }
+  }
+
+  renderDungeonRescue(ctx) {
+    const rescue = this.modeState?.rescue;
+    if (this.activeMode?.id !== 'dungeon' || !rescue || rescue.rescued) return;
+    const y = groundYForDepth(rescue.z);
+    const pulse = 0.5 + Math.sin(performance.now() * 0.007) * 0.18;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.fillStyle = `rgba(70, 225, 255, ${pulse})`;
+    ctx.beginPath(); ctx.arc(rescue.x, y - 32, 24, 0, Math.PI * 2); ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.strokeStyle = '#8ff6ff'; ctx.lineWidth = 2;
+    ctx.strokeRect(rescue.x - 12, y - 47, 24, 32);
+    ctx.fillStyle = '#d6fbff'; ctx.fillRect(rescue.x - 4, y - 42, 8, 15);
+    ctx.fillStyle = '#7eeeff'; ctx.font = '10px Georgia'; ctx.textAlign = 'center';
+    ctx.fillText('RESCUE', rescue.x, y - 57);
+    ctx.restore();
+  }
+
+  renderArenaRuneCollectibles(ctx) {
+    const relics = this.modeState?.runeCollectibles;
+    if (this.activeMode?.id !== 'arena' || !relics?.length) return;
+    const time = performance.now() * .005;
+    ctx.save();
+    ctx.textAlign = 'center';
+    for (const relic of relics) {
+      const y = groundYForDepth(relic.z) - 18 + Math.sin(time + relic.x) * 3;
+      ctx.fillStyle = relic.rune.color ?? '#8cf'; ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 14;
+      ctx.beginPath(); ctx.arc(relic.x, y, 13, 0, Math.PI * 2); ctx.fill();
+      ctx.shadowBlur = 0; ctx.fillStyle = '#07101c'; ctx.font = 'bold 14px sans-serif';
+      ctx.fillText(relic.rune.symbol ?? relic.rune.glyph ?? '✦', relic.x, y + 5);
+    }
+    ctx.restore();
+  }
+
+  renderArenaTransformationRelic(ctx) {
+    const relic = this.modeState?.transformationRelic;
+    if (this.activeMode?.id !== 'arena' || !relic) return;
+    const y = groundYForDepth(relic.z) - 29 + Math.sin(performance.now() * .006 + relic.x) * 4;
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.fillStyle = '#d596ff'; ctx.shadowColor = '#b668ff'; ctx.shadowBlur = 24;
+    ctx.beginPath(); ctx.arc(relic.x, y, 19, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#fff0af'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.globalCompositeOperation = 'source-over'; ctx.shadowBlur = 0;
+    ctx.fillStyle = '#170826'; ctx.font = 'bold 19px Georgia'; ctx.fillText('✦', relic.x, y + 7);
+    ctx.fillStyle = '#f2d6ff'; ctx.font = 'bold 9px Georgia'; ctx.fillText('TRANSFORM', relic.x, y - 27);
+    ctx.restore();
   }
 
   renderProjectiles(ctx) {

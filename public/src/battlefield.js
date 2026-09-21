@@ -3,7 +3,7 @@ import { Castle, Minion, Tower } from './entities.js';
 import { ARENA_LAYOUT, clampToArena, groundYForDepth, surfaceContains, surfaceHeight } from './world.js';
 
 export class Battlefield {
-  constructor() {
+  constructor(mode = null) {
     this.width = ARENA_LAYOUT.width;
     this.height = ARENA_LAYOUT.height;
     this.playableBounds = ARENA_LAYOUT.playableBounds;
@@ -16,29 +16,57 @@ export class Battlefield {
     this.bgImage.onload = () => { this.bgLoaded = true; };
     this.bgImage.onerror = () => console.error('Failed to load clean arena background.');
 
-    this.blueCastle = new Castle(ARENA_LAYOUT.spawns.blueCastle.x, ARENA_LAYOUT.spawns.blueCastle.z, 'blue', (castle) => this.onCastleDestroyed?.(castle), (castle) => this.onProtectedCastleHit?.(castle));
-    this.redCastle = new Castle(ARENA_LAYOUT.spawns.redCastle.x, ARENA_LAYOUT.spawns.redCastle.z, 'red', (castle) => this.onCastleDestroyed?.(castle), (castle) => this.onProtectedCastleHit?.(castle));
+    const invasion = mode?.world === 'invasion';
+    // Invasion is deliberately not a mirrored Siege map. The player holds the
+    // right-hand keep while hostile waves enter from the open left world.
+    const blueSpawn = ARENA_LAYOUT.spawns.blueCastle;
+    const redSpawn = invasion ? { x: 1120, z: 0.58 } : ARENA_LAYOUT.spawns.redCastle;
+    this.blueCastle = new Castle(blueSpawn.x, blueSpawn.z, 'blue', (castle) => this.onCastleDestroyed?.(castle), (castle) => this.onProtectedCastleHit?.(castle));
+    this.redCastle = new Castle(redSpawn.x, redSpawn.z, 'red', (castle) => this.onCastleDestroyed?.(castle), (castle) => this.onProtectedCastleHit?.(castle));
     this.blueTower = new Tower(ARENA_LAYOUT.towers.blue.x, ARENA_LAYOUT.towers.blue.z, 'blue', (tower) => this.unlockCastle(tower.team));
     this.redTower = new Tower(ARENA_LAYOUT.towers.red.x, ARENA_LAYOUT.towers.red.z, 'red', (tower) => this.unlockCastle(tower.team));
+    this.defenseTowers = invasion
+      ? [
+          new Tower(210, 0.27, 'blue'),
+          new Tower(210, 0.83, 'blue')
+        ]
+      : [];
+    if (invasion) {
+      this.blueCastle.isVulnerable = true;
+      this.redCastle.isDestroyed = true;
+      this.blueTower.isDead = true;
+      this.redTower.isDead = true;
+      this.defenseTowers.forEach((tower) => { tower.maxHp = tower.hp = 560; tower.range = 245; });
+    }
     // Castle objective cores sit at their lower gate/structure. They remain
     // distinct from the elevated battlement surfaces used by Wizard spawns.
     [this.blueCastle, this.redCastle].forEach((castle) => { castle.surfaceId = 'mainArena'; castle.surfaceHeight = 0; });
-    [this.blueTower, this.redTower].forEach((tower) => this.placeOnSurface(tower));
+    [this.blueTower, this.redTower, ...this.defenseTowers].forEach((tower) => this.placeOnSurface(tower));
     this.decorativeBeacons = ARENA_LAYOUT.decorativeBeacons;
     this.waveInterval = 18;
     this.waveTimer = 18;
     this.waveNumber = 0;
+    this.mode = mode;
+    this.objectivesActive = mode?.objectives !== false;
+    this.autoWaves = mode?.autoWaves !== false;
   }
 
   update(dt, gameWorld) {
-    this.blueTower.update(dt, gameWorld);
-    this.redTower.update(dt, gameWorld);
-    this.blueCastle.update(dt);
-    this.redCastle.update(dt);
-    this.waveTimer -= dt;
-    if (this.waveTimer <= 0) {
-      this.waveTimer = this.waveInterval;
-      this.spawnWave(gameWorld);
+    if (this.objectivesActive) {
+      if (this.mode?.world === 'invasion') this.defenseTowers.forEach((tower) => tower.update(dt, gameWorld));
+      else {
+        this.blueTower.update(dt, gameWorld);
+        this.redTower.update(dt, gameWorld);
+      }
+      this.blueCastle.update(dt);
+      if (this.mode?.world !== 'invasion') this.redCastle.update(dt);
+    }
+    if (this.autoWaves) {
+      this.waveTimer -= dt;
+      if (this.waveTimer <= 0) {
+        this.waveTimer = this.waveInterval;
+        this.spawnWave(gameWorld);
+      }
     }
   }
 
@@ -55,7 +83,19 @@ export class Battlefield {
 
   getTower(team) { return team === 'blue' ? this.blueTower : this.redTower; }
   getCastle(team) { return team === 'blue' ? this.blueCastle : this.redCastle; }
-  getSpawn(team) { return team === 'blue' ? ARENA_LAYOUT.spawns.blueCastle : ARENA_LAYOUT.spawns.redCastle; }
+  getSpawn(team) {
+    if (this.mode?.world === 'invasion') return team === 'blue' ? ARENA_LAYOUT.spawns.blueCastle : { x: 950, z: 0.58 };
+    return team === 'blue' ? ARENA_LAYOUT.spawns.blueCastle : ARENA_LAYOUT.spawns.redCastle;
+  }
+  getObjectivesForTeam(team) {
+    if (this.mode?.world === 'invasion') {
+      if (team !== 'blue') return [];
+      return [...this.defenseTowers.filter((tower) => !tower.isDead), ...(this.blueCastle.isDestroyed ? [] : [this.blueCastle])];
+    }
+    const tower = this.getTower(team);
+    const castle = this.getCastle(team);
+    return [...(!tower.isDead ? [tower] : []), ...(!castle.isDestroyed ? [castle] : [])];
+  }
   unlockCastle(team) {
     const castle = this.getCastle(team);
     if (!castle.isDestroyed && !castle.isVulnerable) {
@@ -107,7 +147,11 @@ export class Battlefield {
     entity.surfaceHeight = surfaceHeight(surface, entity.x);
   }
 
-  renderBackground(ctx, camera, gameplayWidth, viewH, renderWidth = gameplayWidth, cameraOffsetX = 0) {
+  renderBackground(ctx, camera, gameplayWidth, viewH, renderWidth = gameplayWidth, cameraOffsetX = 0, modeState = null) {
+    if (this.mode?.world === 'arena' || this.mode?.world === 'dungeon' || this.mode?.world === 'invasion') {
+      this.renderModeBackground(ctx, gameplayWidth, viewH, renderWidth, cameraOffsetX, modeState);
+      return;
+    }
     // The authored arena art remains at its intended 16:9 composition.
     // Wider displays reveal decorative edge continuation rather than
     // stretching the arena, changing combat coordinates, or adding black
@@ -133,6 +177,58 @@ export class Battlefield {
     ctx.drawImage(this.bgImage, cameraOffsetX, 0, gameplayWidth, viewH);
   }
 
+  renderModeBackground(ctx, gameplayWidth, viewH, renderWidth, cameraOffsetX, modeState = null) {
+    const world = this.mode?.world;
+    const w = renderWidth; const h = viewH;
+    const horizon = Math.round(h * 0.42);
+    const sky = ctx.createLinearGradient(0, 0, 0, h);
+    sky.addColorStop(0, world === 'dungeon' ? '#07131e' : '#071021');
+    sky.addColorStop(.52, world === 'invasion' ? '#20314b' : '#172a4a');
+    sky.addColorStop(1, '#11141c');
+    ctx.fillStyle = sky; ctx.fillRect(0, 0, w, h);
+    // Code-native scenery intentionally avoids borrowed map art. It provides
+    // a readable world edge for Invasion and a castle-free 2.5D platform for
+    // Arena/Dungeon while preserving the combat coordinate system.
+    ctx.save();
+    // The Dungeon route advances with the player inside a room and then
+    // swaps to its next segment after a clear. Actors stay in their authored
+    // combat coordinate space; this is visual parallax, never a balance
+    // changing camera transform.
+    const routeOffset = world === 'dungeon'
+      ? ((modeState?.scroll ?? 0) * 73 + (modeState?.routeScroll ?? 0) * 73)
+      : 0;
+    for (let i = 0; i < 42; i++) {
+      const x = (i * 197 + 41 - routeOffset) % w; const y = 24 + ((i * 83) % Math.max(70, horizon - 20));
+      ctx.fillStyle = i % 5 === 0 ? 'rgba(129,198,255,.75)' : 'rgba(205,227,255,.36)';
+      ctx.fillRect(x, y, i % 5 === 0 ? 2 : 1, i % 5 === 0 ? 2 : 1);
+    }
+    ctx.fillStyle = 'rgba(17,31,52,.92)';
+    for (let x = -60 - routeOffset; x < w + 90; x += 115) {
+      const peak = horizon - 24 - ((x / 115) % 3) * 13;
+      ctx.beginPath(); ctx.moveTo(x, horizon + 55); ctx.lineTo(x + 65, peak); ctx.lineTo(x + 130, horizon + 55); ctx.closePath(); ctx.fill();
+    }
+    const floor = ctx.createLinearGradient(0, horizon, 0, h);
+    floor.addColorStop(0, world === 'dungeon' ? '#1b2733' : '#28334a'); floor.addColorStop(1, '#0c1018');
+    ctx.fillStyle = floor; ctx.beginPath(); ctx.moveTo(0, horizon + 38); ctx.lineTo(w, horizon + 38); ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = 'rgba(79,217,255,.26)'; ctx.lineWidth = 1;
+    for (let y = horizon + 58; y < h; y += 28) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y + 20); ctx.stroke(); }
+    for (let x = 0; x <= w; x += 70) { ctx.beginPath(); ctx.moveTo(w * .5, horizon + 36); ctx.lineTo(x, h); ctx.stroke(); }
+    if (world === 'invasion') {
+      const mist = ctx.createLinearGradient(w, 0, w * .45, 0); mist.addColorStop(0, 'rgba(4,10,17,.72)'); mist.addColorStop(1, 'rgba(19,35,49,.16)');
+      ctx.fillStyle = mist; ctx.fillRect(w * .48, 0, w * .52, h);
+      ctx.fillStyle = 'rgba(112,158,179,.18)'; ctx.fillRect(w * .56, horizon + 30, w * .44, 50);
+      ctx.fillStyle = '#101a21'; ctx.fillRect(0, horizon - 80, w * .19, h - horizon + 80);
+      ctx.fillStyle = '#334658'; ctx.fillRect(w * .02, horizon - 65, w * .15, 34);
+    }
+    if (world === 'dungeon') {
+      ctx.fillStyle = 'rgba(115,231,255,.38)';
+      ctx.fillRect(w * .72, horizon - 46, 3, 86);
+      ctx.fillStyle = 'rgba(9,20,30,.86)';
+      ctx.fillRect(w * .72 - 27, horizon - 43, 57, 5);
+    }
+    ctx.restore();
+  }
+
   renderForeground(ctx) {
     const time = performance.now() * 0.003;
     ctx.save();
@@ -149,10 +245,15 @@ export class Battlefield {
       ctx.fill();
     });
     ctx.restore();
-    if (!this.blueTower.isDead) this.blueTower.render(ctx);
-    if (!this.redTower.isDead) this.redTower.render(ctx);
-    this.blueCastle.render(ctx);
-    this.redCastle.render(ctx);
+    if (this.objectivesActive) {
+      if (this.mode?.world === 'invasion') this.defenseTowers.filter((tower) => !tower.isDead).forEach((tower) => tower.render(ctx));
+      else {
+        if (!this.blueTower.isDead) this.blueTower.render(ctx);
+        if (!this.redTower.isDead) this.redTower.render(ctx);
+      }
+      this.blueCastle.render(ctx);
+      if (this.mode?.world !== 'invasion') this.redCastle.render(ctx);
+    }
   }
 
   renderDebug(ctx, gameWorld) {

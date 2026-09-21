@@ -562,8 +562,61 @@ game.startMatch();
 assert(game.matchState === 'Running' && game.winnerTeam === null && !game.battlefield.redTower.isDead && !game.battlefield.redCastle.isVulnerable && game.projectiles.length === 0 && game.player.surfaceId === 'blueCastleUpperPlatform', 'Rematch reconstructs a clean running match without a page refresh');
 game.returnToHub();
 assert(game.matchState === 'Menu', 'Return to Hub exits the match without reloading the page');
-game.startMatch();
-assert(game.matchState === 'Running' && game.objectivePhase === 'LanePhase', 'A new match can start cleanly after returning to Hub');
+
+// Invasion keeps the player Grimoire, while Dungeon alone starts as a
+// level-zero melee-first run. Arena uses on-map rune relics rather than a
+// start modal.
+game.setMatchMode('invasion'); game.startMatch();
+assert(game.matchState === 'Running' && game.activeMode.id === 'invasion' && game.minions.length > 0 && game.modeState.run === null && game.player.runeHand.length > 0, 'Invasion starts immediately with the persistent player deck and hostile defense wave');
+assert(game.battlefield.defenseTowers.length === 2 && game.battlefield.redCastle.isDestroyed && game.battlefield.objectivesActive && !game.battlefield.autoWaves && game.player.x < 300, 'Invasion has one left-side keep with two nearby defense towers, not an enemy Castle lane');
+game.returnToHub();
+
+game.setMatchMode('dungeon'); game.startMatch();
+assert(game.activeMode.id === 'dungeon' && !game.battlefield.objectivesActive && !game.modeState.run.pending && game.modeState.stage === 0 && game.minions.length === 1 && game.player.runeHand.length === 0, 'Dungeon starts with one melee scout and no opening Rune choice or inherited deck');
+const dungeonRouteBefore = game.modeState.routeScroll;
+game.player.vx = 140;
+game.updateMode(.2);
+assert(game.modeState.routeScroll > dungeonRouteBefore, 'Dungeon forward movement advances only the route presentation, not the combat geometry');
+game.player.vx = 0;
+const dungeonStarter = game.minions[0];
+dungeonStarter.takeDamage(999);
+game.awardRunXp(dungeonStarter.runXpValue);
+assert(game.modeState.run.pending && game.modeState.run.options.length === 2, 'The first defeated Dungeon scout grants the first two-Rune level-up choice');
+game.minions = []; // mirrors the runtime's dead-minion cleanup before the pick is chosen
+game.chooseRunRune(game.modeState.run.options[0].id);
+assert(game.modeState.stage === 1 && game.minions.length === 5 && game.enemyChampion.isDead, 'A first Rune choice launches the first forward Dungeon room');
+game.minions.forEach((minion) => { minion.isDead = true; });
+game.updateMode(0.1);
+assert(game.modeState.stage === 2 && game.modeState.rescue && game.enemyChampion.isDead, 'Clearing a room advances the Dungeon route and can place a rescue companion');
+game.player.x = game.modeState.rescue.x; game.player.z = game.modeState.rescue.z;
+game.updateDungeonRescue();
+assert(game.modeState.rescue.rescued && game.minions.some((minion) => minion.team === 'blue' && minion.isRescuedCompanion), 'A reached prisoner becomes a persistent allied companion until defeated');
+game.minions.filter((minion) => minion.team === 'red').forEach((minion) => { minion.isDead = true; });
+game.updateMode(0.1); game.minions.filter((minion) => minion.team === 'red').forEach((minion) => { minion.isDead = true; }); game.updateMode(0.1);
+assert(game.modeState.stage === 4 && game.enemyChampion.isAlive && game.enemyChampion.heroKey === 'darklord', 'The final Dungeon room escalates into a dedicated end boss');
+game.returnToHub();
+
+game.setMatchMode('arena'); game.startMatch();
+assert(game.activeMode.id === 'arena' && !game.battlefield.objectivesActive && game.minions.length === 0 && !game.canRespawn('blue') && game.enemyChampion.isAlive && game.modeState.runeCollectibles.length === 3 && game.player.runeHand.length === 0, 'Arena starts immediately as a melee duel with on-map Rune relics rather than a Rune-choice modal');
+game.player.x = game.modeState.runeCollectibles[0].x; game.player.z = game.modeState.runeCollectibles[0].z;
+game.updateArenaRuneCollectibles();
+assert(game.player.runeHand.length === 1 && game.modeState.runeCollectibles.length === 2, 'Walking onto an Arena relic adds that Rune to the temporary Arena hand');
+game.modeState.transformationRelicTimer = 0;
+game.updateArenaTransformationRelic(0.01);
+assert(game.modeState.transformationRelic, 'Arena spawns a contested transformation relic instead of granting a permanent form from the profile');
+game.modeState.transformationRelic.form = 'FOCUS ASCENDANT';
+game.player.x = game.modeState.transformationRelic.x; game.player.z = game.modeState.transformationRelic.z;
+game.updateArenaTransformationRelic(0);
+assert(!game.modeState.transformationRelic && game.player.focusTransformTimer > 0, 'Claiming an Arena transformation relic activates the existing temporary transformation implementation');
+game.enemyChampion.hp = 1; game.enemyChampion.takeDamage(2); game.enemyChampion.update(0.5, game, game.battlefield); game.updateMode(0.1);
+assert(game.matchState === 'Ending' && game.winnerTeam === 'blue', 'Arena Champion defeat resolves through the normal ending path');
+game.returnToHub();
+
+game.setMatchMode('training'); game.startMatch();
+assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive && game.canRespawn('blue') && game.getObjectiveStatus() === 'PRACTICE — NO REWARDS', 'Training keeps combat live without Siege objectives or permanent defeat');
+game.returnToHub();
+game.setMatchMode('siege'); game.startMatch();
+assert(game.matchState === 'Running' && game.objectivePhase === 'LanePhase', 'A new Siege match can start cleanly after alternate modes');
 
 const frameCallback = nextFrame;
 frameCallback(game.lastFrameTime + 16);

@@ -63,8 +63,12 @@ export class UIManager {
     this.hubEditDeckBtn = document.getElementById('hub-edit-deck-btn');
     this.hubOpenSkillsBtn = document.getElementById('hub-open-skills-btn');
     this.hubSiegeModeBtn = document.getElementById('hub-siege-mode-btn');
+    this.hubTrainingModeBtn = document.getElementById('hub-training-mode-btn');
     this.hubModesBackBtn = document.getElementById('hub-modes-back-btn');
     this.hubFreePlaySiegeBtn = document.getElementById('hub-freeplay-siege-btn');
+    this.hubFreePlayInvasionBtn = document.getElementById('hub-freeplay-invasion-btn');
+    this.hubFreePlayDungeonBtn = document.getElementById('hub-freeplay-dungeon-btn');
+    this.hubFreePlayArenaBtn = document.getElementById('hub-freeplay-arena-btn');
     this.hubFreePlayBackBtn = document.getElementById('hub-freeplay-back-btn');
     this.hubFullscreenBtn = document.getElementById('hub-fullscreen-btn');
     this.hubCustomizeBtn = document.getElementById('hub-customize-btn');
@@ -144,6 +148,9 @@ export class UIManager {
 
     this.drawingHud = document.getElementById('drawing-hud');
     this.recognitionResult = document.getElementById('recognition-result');
+    this.runRuneChoice = document.getElementById('run-rune-choice');
+    this.runRuneOptions = document.getElementById('run-rune-options');
+    this.runRuneLevel = document.getElementById('run-rune-level');
 
     this.heroChips = document.querySelectorAll('.hero-chip');
 
@@ -208,6 +215,14 @@ export class UIManager {
     this.closeGrimoireBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       this.toggleGrimoire(false);
+    });
+
+    this.runRuneOptions?.addEventListener('pointerdown', (e) => {
+      const option = e.target?.closest?.('[data-run-rune-id]');
+      const runeId = option?.getAttribute?.('data-run-rune-id');
+      if (!runeId) return;
+      e.preventDefault(); e.stopPropagation();
+      window.gameWorld?.chooseRunRune?.(runeId);
     });
 
     // Every long-form overlay has a true backdrop. A tap beside the panel is
@@ -370,6 +385,15 @@ export class UIManager {
       this.setHubMode('siege');
       startMatch(e);
     });
+    const startSelectedMode = (mode) => (e) => {
+      e.preventDefault();
+      this.setHubMode(mode);
+      startMatch(e);
+    };
+    this.hubTrainingModeBtn?.addEventListener('pointerdown', startSelectedMode('training'));
+    this.hubFreePlayInvasionBtn?.addEventListener('pointerdown', startSelectedMode('invasion'));
+    this.hubFreePlayDungeonBtn?.addEventListener('pointerdown', startSelectedMode('dungeon'));
+    this.hubFreePlayArenaBtn?.addEventListener('pointerdown', startSelectedMode('arena'));
     this.hubFreePlayBackBtn?.addEventListener('pointerdown', (e) => {
       e.preventDefault(); this.setHubPage('modes');
     });
@@ -439,9 +463,19 @@ export class UIManager {
   }
 
   setHubMode(mode) {
-    if (mode !== 'siege') return;
+    if (!['siege', 'invasion', 'dungeon', 'arena', 'training'].includes(mode)) return;
     this.selectedMode = mode;
-    this.hubSiegeModeBtn?.classList.add('active');
+    window.gameWorld?.setMatchMode?.(mode);
+    [this.hubSiegeModeBtn, this.hubFreePlaySiegeBtn, this.hubFreePlayInvasionBtn, this.hubFreePlayDungeonBtn, this.hubFreePlayArenaBtn, this.hubTrainingModeBtn]
+      .forEach((button) => button?.classList.remove('active'));
+    const selected = {
+      siege: [this.hubSiegeModeBtn, this.hubFreePlaySiegeBtn],
+      invasion: [this.hubFreePlayInvasionBtn],
+      dungeon: [this.hubFreePlayDungeonBtn],
+      arena: [this.hubFreePlayArenaBtn],
+      training: [this.hubTrainingModeBtn]
+    }[mode] ?? [];
+    selected.forEach((button) => button?.classList.add('active'));
   }
 
   setHubHero(hero) {
@@ -684,6 +718,19 @@ export class UIManager {
       this.setHubPage(this.hubPage);
     }
   }
+
+  showRunRuneChoice(options = [], level = 0) {
+    if (!this.runRuneChoice || !this.runRuneOptions) return;
+    this.runRuneLevel.textContent = String(level);
+    this.runRuneOptions.innerHTML = options.map((rune) => {
+      const color = rune.color || '#4ddfff';
+      const glyph = rune.symbol || rune.glyph || '✦';
+      return `<button type="button" class="run-rune-option" data-run-rune-id="${rune.id}" style="--rune-color:${color}"><b>${glyph} ${rune.name}</b><span>ADD TO THIS RUN</span></button>`;
+    }).join('');
+    this.runRuneChoice.classList.remove('hidden');
+  }
+
+  hideRunRuneChoice() { this.runRuneChoice?.classList.add('hidden'); }
 
   showResults(visible, result = null) {
     this.resultsOverlay.classList.toggle('hidden', !visible);
