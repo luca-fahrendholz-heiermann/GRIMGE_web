@@ -132,6 +132,9 @@ export class GameWorld {
       if (this.uiLayer.style.setProperty) this.uiLayer.style.setProperty('--hud-scale', scale);
       else this.uiLayer.style['--hud-scale'] = scale;
       this.uiLayer.style.width = `${this.renderWidth}px`;
+      const lw = String(this.renderWidth / 100);
+      if (this.uiLayer.style.setProperty) this.uiLayer.style.setProperty('--lw', `${lw}px`);
+      else this.uiLayer.style['--lw'] = `${lw}px`;
 
       // `env(safe-area-inset-*)` values are physical CSS pixels. The HUD is
       // transformed from a fixed 1024×576 logical surface, so convert the
