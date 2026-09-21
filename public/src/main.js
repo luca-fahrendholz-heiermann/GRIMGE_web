@@ -758,7 +758,7 @@ export class GameWorld {
         const grade = result.grade ?? recognizer.gradeForConfidence(result.confidence);
         const runeProgress = this.profile.awardRuneUse(added.id, grade);
         const prepared = { ...added, grade, quality: result.confidence, runeLevel: this.profile.runeLevel(added.id) };
-        this.slotRuneSpell(prepared);
+        const slot = this.slotRuneSpell(prepared);
         this.player.gainFocus({ C: 4, B: 6, A: 8, S: 10 }[grade] ?? 6, 'RUNE QUALITY');
         this.applyProfile();
         this.reportProfileProgress(runeProgress, prepared);
@@ -766,6 +766,9 @@ export class GameWorld {
         ui.showRecognitionBadge(result.rune, result.confidence, prepared.grade);
         combat.spawnShockwave(this.player.x, this.player.y - 30, 70, result.rune.color);
         combat.spawnElementalParticles(this.player.x, this.player.y - 30, result.rune.id, Math.round(14 * spells.qualityForRunes([prepared]).particles));
+        if (slot && !slot.definition.isComponent) {
+          this.castSpellSlot(slot, true);
+        }
       } else {
         ui.showAnnouncement(this.player.preparedRunes.length >= 3 ? 'SPELL SLOTS FULL — CAST OR CLEAR!' : 'DRAW A RUNE FROM YOUR HAND');
       }

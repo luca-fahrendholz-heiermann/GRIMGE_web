@@ -165,13 +165,11 @@ game.player.finishAction(); game.player.grounded = true; game.player.elevation =
 
 const ignisCard = game.player.runeHand.find((rune) => rune.id === 'ignis');
 const initialHand = game.player.runeHand.map((rune) => rune.id).join(',');
+const spellCountBeforeDraw = spells.activeSpells.length;
 game.startRuneDrawing(ignisCard.cardId);
 game.finishRuneDrawing({ rune: recognizer.runes.find((rune) => rune.id === 'ignis'), confidence: 0.99 });
-assert(!game.drawing.active && game.timeScale === 1 && game.player.preparedRunes.map((rune) => rune.id).join(',') === 'ignis' && game.player.runeHand.map((rune) => rune.id).join(',') === 'fulgur,terra,ventus' && game.player.runeDeck.map((rune) => rune.id).join(',') === 'aqua,fulgur,terra,ignis,ventus,aqua,ignis', 'Drawing a hand card slots its rune, returns the card to the deck back, and draws a replacement from the selected 10-card deck');
-assert(game.player.slottedSpells[0].quality.grade === 'S', 'Rune-recognition quality is retained by the concrete orbiting spell slot');
-const spellCount = spells.activeSpells.length;
-game.castPreparedSpell();
-assert(spells.activeSpells.length > spellCount && game.player.preparedRunes.length === 0 && game.player.runeHand.map((rune) => rune.id).join(',') === 'fulgur,terra,ventus' && initialHand === 'fulgur,terra,ignis', 'Casting consumes slotted spell components without cycling untouched hand cards');
+assert(!game.drawing.active && game.timeScale === 1 && game.player.preparedRunes.length === 0 && game.player.slottedSpells.length === 0 && spells.activeSpells.length > spellCountBeforeDraw && game.player.runeHand.map((rune) => rune.id).join(',') === 'fulgur,terra,ventus' && game.player.runeDeck.map((rune) => rune.id).join(',') === 'aqua,fulgur,terra,ignis,ventus,aqua,ignis', 'Drawing a hand card auto-casts the rune spell immediately and cycles the deck');
+assert(initialHand === 'fulgur,terra,ignis', 'Casting consumes slotted spell components without cycling untouched hand cards');
 const handBeforeMismatch = game.player.runeHand.map((rune) => rune.cardId).join(',');
 const fulgurCard = game.player.runeHand.find((rune) => rune.id === 'fulgur');
 game.startRuneDrawing(fulgurCard.cardId);
@@ -185,7 +183,7 @@ game.drawing.strokes = [[...Array.from({ length: 26 }, (_, index) => ({ x: 100 +
 game.drawing.lastStrokeTime = performance.now() - 2001;
 game.drawing.autoLockArmed = true;
 game.loop(game.lastFrameTime + 16);
-assert(!game.drawing.active && game.player.preparedRunes.length === 1 && game.player.preparedRunes[0].id === 'ventus', 'A paused rune stroke automatically locks in after two seconds');
+assert(!game.drawing.active && game.player.preparedRunes.length === 0, 'A paused rune stroke automatically locks in and auto-casts after two seconds');
 game.player.clearPreparedRunes();
 const slotIgnis = recognizer.runes.find((rune) => rune.id === 'ignis');
 const slotAqua = recognizer.runes.find((rune) => rune.id === 'aqua');
@@ -209,10 +207,10 @@ assert(game.castGrimoireSpells() && game.player.slottedSpells.length === 0 && sp
 const bestiaCardRune = recognizer.runes.find((rune) => rune.id === 'bestia');
 game.player.configureRuneDeck([bestiaCardRune, slotIgnis, slotAqua]);
 const bestiaCard = game.player.runeHand.find((rune) => rune.id === 'bestia');
+spells.clearRuntime();
 game.startRuneDrawing(bestiaCard.cardId);
 game.finishRuneDrawing({ rune: bestiaCardRune, confidence: .94, grade: 'S' });
-spells.clearRuntime();
-assert(!game.drawing.active && game.player.slottedSpells[0]?.definition?.id === 'summon_lesser_beast' && game.castPreparedSpell() && spells.getSummons('blue').some((summon) => summon.definition.id === 'lesser_beast'), 'Drawing and casting BESTIA creates a Beast Familiar instead of blocking or freezing');
+assert(!game.drawing.active && spells.getSummons('blue').some((summon) => summon.definition.id === 'lesser_beast'), 'Drawing and casting BESTIA creates a Beast Familiar instead of blocking or freezing');
 const battlementSummon = spells.getSummons('blue')[0];
 battlementSummon.x = 198; battlementSummon.z = game.player.z; battlementSummon.surfaceHeight = game.player.surfaceHeight; battlementSummon.grounded = true;
 game.enemyChampion.isDead = false; game.enemyChampion.x = 470; game.enemyChampion.z = game.player.z; game.enemyChampion.surfaceHeight = 0; game.enemyChampion.elevation = 0;

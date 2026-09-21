@@ -191,7 +191,7 @@ export class Battlefield {
   }
 
   renderBackground(ctx, camera, gameplayWidth, viewH, renderWidth = gameplayWidth, cameraOffsetX = 0, modeState = null) {
-    if (this.mode?.world === 'arena' || this.mode?.world === 'dungeon' || this.mode?.world === 'invasion') {
+    if (this.mode?.world === 'arena' || this.mode?.world === 'dungeon') {
       this.renderModeBackground(ctx, gameplayWidth, viewH, renderWidth, cameraOffsetX, modeState);
       return;
     }
@@ -231,7 +231,7 @@ export class Battlefield {
   drawModeBackdrop(ctx, w, h, world, modeState) {
     const phase = world === 'dungeon'
       ? (modeState?.scroll ?? 0) * 4 + (modeState?.routeScroll ?? 0)
-      : performance.now() * 0.000012;
+      : 0;
 
     if (world === 'dungeon') this._paintDungeonScene(ctx, w, h, phase);
     else if (world === 'invasion') this._paintInvasionScene(ctx, w, h, phase);
