@@ -122,6 +122,27 @@ export const ART_ASSETS = Object.freeze({
       }),
       role: 'boss',
       label: 'Flame Lord'
+    }),
+    hero_nyx: Object.freeze({
+      key: 'nyx',
+      sheets: ['assets/sprites/sheets/hero_nyx_sheet.png'],
+      grid: CELL,
+      anims: Object.freeze({
+        idle:     [[0,0], [1,0], [2,0]],
+        walk:     [[3,0], [4,0], [5,0], [6,0]],
+        jump:     [[7,0], [8,0]],
+        fall:     [[9,0]],
+        run:      [[0,1], [1,1], [2,1]],
+        attack:   [[3,1], [4,1], [5,1], [6,1]],
+        dash:     [[7,1], [8,1]],
+        guard:    [[9,1]],
+        uppercut: [[0,2], [1,2]],
+        dive:     [[2,2], [3,2]],
+        hurt:     [[0,3], [1,3]],
+        dead:     [[3,3], [4,3]]
+      }),
+      role: 'hero',
+      label: 'Nyx the Phantom'
     })
   }),
 

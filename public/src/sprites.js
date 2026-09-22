@@ -15,13 +15,15 @@ export class SpriteManager {
       fighter: { name: 'Kaen the Unbroken', file: 'char_fighter.png', weapon: 'Bare Fists & Ki', role: 'Martial Artist / Rapid Hits' },
       darklord: { name: 'The Dark Lord', file: 'char_dark_lord.png', weapon: 'Blood Crown & Blacksteel', role: 'Dark Vanguard / Control' },
       astral: { name: 'Astral', file: 'char_astral.png', weapon: 'Starbound Arcana', role: 'Starborn / Arcane Balance' },
-      astral_v2: { name: 'Astral Unhooded', file: 'char_astral_v2.png', weapon: 'Starbound Arcana', role: 'Starborn / Arcane Balance' }
+      astral_v2: { name: 'Astral Unhooded', file: 'char_astral_v2.png', weapon: 'Starbound Arcana', role: 'Starborn / Arcane Balance' },
+      nyx: { name: 'Nyx the Phantom', file: null, weapon: 'Dual Phantomblades', role: 'Phantom Rogue / Swift Assassin' }
     };
     this.shadowCanvas = this.createShadowCanvas();
   }
 
   async loadAll() {
     const promises = Object.entries(this.heroDefs).map(([key, def]) => {
+      if (!def.file) return Promise.resolve();
       return this.loadAndProcessSprite(key, `assets/sprites/${def.file}`);
     });
 
@@ -547,7 +549,7 @@ export class SpriteManager {
         anchorX: spr.anchorX, anchorY: spr.anchorY
       };
     }
-    const animKey = ART_ASSETS.stateToAnim?.[state] ?? 'idle';
+    const animKey = spr.frames[state] ? state : (ART_ASSETS.stateToAnim?.[state] ?? 'idle');
     const frames = spr.frames[animKey] ?? spr.frames.idle;
     if (!frames || frames.length === 0) {
       return {

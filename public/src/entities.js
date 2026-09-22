@@ -25,20 +25,20 @@ export const MELEE_BASELINE = Object.freeze({
 const DEPTH_SPEED = 1.15;
 
 // ── Movement Spec Constants ────────────────────────────────────────────
-const WALK_ACCEL_TIME = 0.12;
-const WALK_DECEL_TIME = 0.08;
-const TURN_TIME = 0.07;
+const WALK_ACCEL_TIME = 0.28;
+const WALK_DECEL_TIME = 0.18;
+const TURN_TIME = 0.05;
 
 const SPRINT_MULT = 1.65;
-const SPRINT_FLICK_WINDOW = 0.233;
+const SPRINT_FLICK_WINDOW = 0.35;
 const SPRINT_ACCEL_TIME = 0.06;
 
 const JUMP_BUFFER_TIME = 0.1;
 
-const BACKDASH_DISTANCE = 280;
+const BACKDASH_DISTANCE = 320;
 const BACKDASH_DURATION = 0.25;
 const BACKDASH_INVULN_TIME = 0.05;
-const BACKDASH_REVERSAL_WINDOW = 0.15;
+const BACKDASH_REVERSAL_WINDOW = 0.25;
 const BACKDASH_SUPPRESS_TIME = 0.133;
 
 const KB_DECAY_RATE = 450;
@@ -409,8 +409,8 @@ export class Player extends GroundEntity {
 
     const moving = Math.hypot(move.x, move.z) > 0.05;
     if (moving && this.grounded) {
-      this.state = this.sprintActive ? 'run' : 'run';
-      if (Math.random() < (this.sprintActive ? 0.35 : 0.18)) combat.spawnDust(this.x, this.y, 1);
+      this.state = 'run';
+      if (Math.random() < 0.12) combat.spawnDust(this.x, this.y, 1);
     } else if (this.grounded && (this.state === 'run' || this.state === 'guard')) {
       this.state = this.isGuarding ? 'guard' : 'idle';
     }
@@ -489,6 +489,9 @@ export class Player extends GroundEntity {
     if (this.isGuarding || this.backdashTimer > 0 || !this.grounded) return;
     this.sprintActive = true;
     this.sprintDir = dir;
+    audio.playDash();
+    combat.spawnDust(this.x, this.y, 5);
+    combat.spawnShockwave(this.x, this.y - 15, 18, '#80ffea');
   }
 
   cancelSprint() {
@@ -563,11 +566,18 @@ export class Player extends GroundEntity {
   }
 
   updateSprintVisuals(dt) {
-    const targetLean = this.sprintActive ? this.sprintDir * 12 : 0;
-    const leanRate = this.sprintActive ? (1 / 0.08) : (1 / 0.12);
-    this.sprintLean = moveTowards(this.sprintLean, targetLean, leanRate * Math.abs(targetLean || 12) * dt);
-    if (this.sprintActive) this.sprintBobPhase += dt * 8 * Math.PI * 2;
-    else this.sprintBobPhase = 0;
+    const targetLean = this.sprintActive ? this.sprintDir * 20 : 0;
+    const leanRate = this.sprintActive ? (1 / 0.06) : (1 / 0.10);
+    this.sprintLean = moveTowards(this.sprintLean, targetLean, leanRate * Math.abs(targetLean || 20) * dt);
+    if (this.sprintActive) {
+      this.sprintBobPhase += dt * 10 * Math.PI * 2;
+      if (Math.random() < 0.55) combat.spawnDust(this.x - this.sprintDir * 8, this.y, 1);
+      if (Math.random() < 0.3) {
+        this.ghosts.push({ x: this.x, y: this.y, z: this.z, elevation: this.elevation, facing: this.facing, alpha: 0.25, state: 'run', animTime: this.animTime });
+      }
+    } else {
+      this.sprintBobPhase = 0;
+    }
   }
 
   finishAction(input = null) {
@@ -849,8 +859,8 @@ export class Player extends GroundEntity {
     if (this.isAlive && this.ninefoldTimer > 0) this.renderNinefoldBeast(ctx, renderY);
     if (this.isAlive && this.eidolonTimer > 0) this.renderEidolonMantle(ctx, renderY);
     for (const g of this.ghosts) sprites.renderEntity(ctx, this.heroKey, g.x, g.y, { facing: g.facing, state: g.state, animTime: g.animTime, alpha: g.alpha, hitFlash: 1 });
-    const sprintBobY = this.sprintActive ? Math.sin(this.sprintBobPhase) * 0.8 : 0;
-    const sprintDip = this.sprintActive ? 1.5 : 0;
+    const sprintBobY = this.sprintActive ? Math.sin(this.sprintBobPhase) * 2.5 : 0;
+    const sprintDip = this.sprintActive ? 3 : 0;
     if (Math.abs(this.sprintLean) > 0.5) {
       ctx.save();
       ctx.translate(this.x, renderY);
