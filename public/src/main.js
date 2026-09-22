@@ -502,16 +502,7 @@ export class GameWorld {
       if (isDoubleTap) {
         lastLeftTap = null;
         if (this.drawing.active) this.lockOrExitRuneDrawing();
-        else {
-          this.startRuneDrawing();
-          // The second tap that opens Arcane Focus must not also become the
-          // first ink dot of the rune gesture.
-          controlTapPointerId = event.pointerId;
-          suppressControlTapRecord = true;
-          this.drawing.inputMode = 'left-control';
-          this.drawing.touchId = event.pointerId;
-          this.canvas.setPointerCapture?.(controlTapPointerId);
-        }
+        else this.castPreparedSpell();
         return true;
       }
       // While drawing, reserve the first left tap of the next double-tap so
@@ -581,7 +572,8 @@ export class GameWorld {
         const pt = this.getCanvasCoords(event.clientX, event.clientY);
         const dx = pt.x - attackStart.x;
         const elapsed = performance.now() - attackStartTime;
-        if (dx > 34 && Math.abs(dx) >= Math.abs(pt.y - attackStart.y) && elapsed > 180) {
+        const facingDx = dx * this.player.facing;
+        if (facingDx > 34 && Math.abs(dx) >= Math.abs(pt.y - attackStart.y) && elapsed > 180) {
           let dir = 'forward';
           if (pt.y - attackStart.y < -34) dir = 'up';
           else if (pt.y - attackStart.y > 34) dir = 'down';
@@ -635,9 +627,10 @@ export class GameWorld {
     let attackKind = 'normal';
     // Right-half up-swipe is an uppercut; a right-swipe is the compact heavy
     // lunge. In the air a down-swipe becomes the existing dive strike.
+    const facingDx = dx * (this.player.facing || 1);
     if (!this.player.grounded && dy > threshold && Math.abs(dy) > Math.abs(dx)) attackKind = 'dive';
     else if (dy < -threshold && Math.abs(dy) > Math.abs(dx)) attackKind = 'uppercut';
-    else if (dx > threshold && Math.abs(dx) >= Math.abs(dy)) attackKind = 'heavy';
+    else if (facingDx > threshold && Math.abs(dx) >= Math.abs(dy)) attackKind = 'heavy';
     else if (distance > threshold) return false;
     return this.player.executeAttack(this.input, attackKind);
   }

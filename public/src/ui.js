@@ -311,7 +311,7 @@ export class UIManager {
     this.castBtn.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      window.gameWorld?.castPreparedSpell();
+      window.gameWorld?.startRuneDrawing();
     });
     this.swapBtn.addEventListener('pointerdown', (e) => {
       e.preventDefault(); e.stopPropagation(); window.gameWorld?.swapSlottedSpell();

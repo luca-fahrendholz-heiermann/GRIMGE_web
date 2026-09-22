@@ -11,14 +11,14 @@ const ACTION_STATES = new Set(['attack1', 'attack2', 'attack3', 'uppercut', 'hea
 // input contract unless its own combo specification explicitly says otherwise.
 export const MELEE_BASELINE = Object.freeze({
   normal: Object.freeze([
-    Object.freeze({ state: 'attack1', time: .22, vx: 180, damage: 28, knockback: 220, lift: 100, radius: 40, color: '#fff', glow: '#ffd54f' }),
-    Object.freeze({ state: 'attack2', time: .24, vx: 220, damage: 34, knockback: 260, lift: 140, radius: 44, color: '#fff', glow: '#ff9800' }),
-    Object.freeze({ state: 'attack3', time: .35, vx: 320, damage: 52, knockback: 480, lift: 320, radius: 54, color: '#ffd700', glow: '#ff3d00', finisher: true })
+    Object.freeze({ state: 'attack1', time: .22, vx: 180, damage: 28, knockback: 220, lift: 100, radius: 40, color: '#fff', glow: '#ffd54f', hitstopTicks: 4, hitReaction: 'light' }),
+    Object.freeze({ state: 'attack2', time: .24, vx: 220, damage: 34, knockback: 260, lift: 140, radius: 44, color: '#fff', glow: '#ff9800', hitstopTicks: 5, hitReaction: 'strong' }),
+    Object.freeze({ state: 'attack3', time: .35, vx: 320, damage: 52, knockback: 480, lift: 320, radius: 54, color: '#ffd700', glow: '#ff3d00', finisher: true, hitstopTicks: 6, hitReaction: 'finisher' })
   ]),
   bufferWindow: .13,
-  uppercut: Object.freeze({ time: .28, damage: 40, knockback: 140, lift: 480 }),
-  heavy: Object.freeze({ time: .34, damage: 48, knockback: 620, lift: 170 }),
-  dive: Object.freeze({ time: .35, damage: 55, knockback: 200, lift: -300 })
+  uppercut: Object.freeze({ time: .28, damage: 40, knockback: 140, lift: 480, hitstopTicks: 5, hitReaction: 'strong' }),
+  heavy: Object.freeze({ time: .34, damage: 48, knockback: 620, lift: 170, hitstopTicks: 6, hitReaction: 'strong' }),
+  dive: Object.freeze({ time: .35, damage: 55, knockback: 200, lift: -300, hitstopTicks: 5, hitReaction: 'strong' })
 });
 // z is projected more strongly than x, but needs to stay quick enough for
 // brawler-style depth dodges and lane changes.
@@ -42,6 +42,23 @@ const BACKDASH_REVERSAL_WINDOW = 0.25;
 const BACKDASH_SUPPRESS_TIME = 0.133;
 
 const KB_DECAY_RATE = 450;
+
+// ── Hit Effect Constants ──────────────────────────────────────────────
+const HITSTOP_NORMAL = 4;
+const HITSTOP_CHARGED_MAX = 8;
+
+const FINISHER_RECOIL_TICKS = 12;
+const PERFECT_FINISHER_KB_MULT = 1.5;
+
+const CHARGED_LAUNCHER_MIN_VEL = 350;
+const CHARGED_LAUNCHER_MAX_VEL = 650;
+const LAUNCHER_LANDING_RECOVERY_TICKS = 18;
+
+const PERFECT_BLOCK_ATTACKER_RECOIL = 0.7;
+const PERFECT_BLOCK_ATTACKER_RECOIL_TICKS = 8;
+
+const GRAB_THROW_KB = 5.0;
+const GRAB_RANGE = 55;
 
 const AIR_STEER_ACCEL = 340;
 const LAUNCHER_GRAV_SCALE = 0.65;
@@ -183,6 +200,18 @@ export class Player extends GroundEntity {
     this._wasAirborne = false;
     this.perfectBlockFlash = 0;
     this.guardStaggerTimer = 0;
+    this.entityHitstop = 0;
+    this.hitRecoilTimer = 0;
+    this.hitRecoilDistance = 0;
+    this.hitRecoilDir = 0;
+    this.hitRecoilPhase = 'snap';
+    this.forcedRecoilTimer = 0;
+    this.forcedRecoilDistance = 0;
+    this.forcedRecoilDir = 0;
+    this.forcedRecoilTotalTicks = 0;
+    this.forcedRecoilTicksLeft = 0;
+    this.landingRecoveryTimer = 0;
+    this.grabCooldown = 0;
   }
 
   get isAlive() { return this.lifeState === 'Alive'; }
@@ -195,6 +224,9 @@ export class Player extends GroundEntity {
   }
 
   update(dt, input, battlefield, gameWorld = null) {
+    if (this.entityHitstop > 0) {
+      this.entityHitstop = Math.max(0, this.entityHitstop - dt * 60);
+    }
     this.animTime += dt;
     this.hitFlash = Math.max(0, this.hitFlash - dt);
     this.invulnerableTimer = Math.max(0, this.invulnerableTimer - dt);
@@ -241,6 +273,8 @@ export class Player extends GroundEntity {
     if (this.arcaneShieldTimer <= 0) this.arcaneShield = 0;
     this.freezeTimer = Math.max(0, this.freezeTimer - dt);
     this.slowTimer = Math.max(0, this.slowTimer - dt);
+    this.landingRecoveryTimer = Math.max(0, this.landingRecoveryTimer - dt);
+    this.grabCooldown = Math.max(0, this.grabCooldown - dt);
     if (this.slowTimer <= 0) this.slowFactor = 1;
     this.comboResetTimer = Math.max(0, this.comboResetTimer - dt);
     if (this.comboResetTimer <= 0) this.comboStep = 0;
@@ -311,7 +345,10 @@ export class Player extends GroundEntity {
       if (this.grounded) {
         if (this._wasAirborne) {
           combat.spawnDust(this.x, this.y, 6);
-          if (this.launcherMode) combat.spawnShockwave(this.x, this.y - 2, 28, '#b0bec5');
+          if (this.launcherMode) {
+            combat.spawnShockwave(this.x, this.y - 2, 28, '#b0bec5');
+            this.landingRecoveryTimer = LAUNCHER_LANDING_RECOVERY_TICKS / 60;
+          }
         }
         this.jumpsLeft = 1;
         if (this.isSprintJump) this.isSprintJump = false;
@@ -401,7 +438,13 @@ export class Player extends GroundEntity {
 
     if (this.backdashTimer > 0) return;
 
-    if (Math.abs(move.x) > 0.02 && !this.sprintActive) this.facing = Math.sign(move.x);
+    if (this.landingRecoveryTimer > 0) {
+      this.vx = moveTowards(this.vx, 0, this.moveSpeed / WALK_DECEL_TIME * dt);
+      this.vz = moveTowards(this.vz, 0, this.depthSpeed / WALK_DECEL_TIME * dt);
+      return;
+    }
+
+    if (Math.abs(move.x) > 0.02 && !this.sprintActive && !this.isGuarding) this.facing = Math.sign(move.x);
 
     const sprintMult = this.sprintActive ? SPRINT_MULT : 1;
     const guardMult = this.isGuarding ? BLOCK_MOVE_MULT : 1;
@@ -412,7 +455,7 @@ export class Player extends GroundEntity {
     const baseSpeed = this.moveSpeed;
     const baseDepth = this.depthSpeed;
     const targetX = move.x * baseSpeed * combinedMult;
-    const targetZ = move.z * baseDepth * combinedMult;
+    const targetZ = this.isGuarding ? 0 : move.z * baseDepth * combinedMult;
 
     const accelSpeed = this.sprintActive ? baseSpeed * SPRINT_MULT : baseSpeed;
     this.vx = this.accelerateAxis(this.vx, targetX, accelSpeed, dt);
@@ -439,6 +482,11 @@ export class Player extends GroundEntity {
     if (input.justPressed('KeyJ') || input.justPressed('Mouse0')) {
       this.cancelSprint();
       this.executeAttack(input);
+    }
+
+    if (this.isGuarding && (move.z > 0.55 || input.keys?.ArrowDown || input.keys?.KeyS)) {
+      const targets = window.gameWorld?.getHostileTargets(this.team, true) ?? [];
+      this.attemptGrab(targets);
     }
   }
 
@@ -543,7 +591,36 @@ export class Player extends GroundEntity {
     const radius = 58 + chargeRatio * 20;
     combat.spawnSlashArc(this.x + this.facing * 28, this.y - 25, this.facing, { radius, angleStart: -0.9, angleEnd: 0.9, color: chargeRatio > 0.5 ? '#ff6d00' : '#ffd54f', glow: '#ff3d00', width: 7 + chargeRatio * 5 });
     if (chargeRatio > 0.6) combat.spawnShockwave(this.x + this.facing * 30, this.y - 25, 35, '#ffab00');
-    this.triggerMeleeHitbox(heavy.damage * dmgMult, this.facing * heavy.knockback * kbMult, heavy.lift * (1 + chargeRatio * 0.4), 0.48 + chargeRatio * 0.2, chargeRatio > 0.7);
+    this.triggerMeleeHitbox(heavy.damage * dmgMult, this.facing * heavy.knockback * kbMult, heavy.lift * (1 + chargeRatio * 0.4), 0.48 + chargeRatio * 0.2, chargeRatio > 0.7, { hitstopTicks: Math.round(4 + chargeRatio * 4), hitReaction: chargeRatio > 0.7 ? 'finisher' : 'strong', isCharged: true, chargeRatio });
+    return true;
+  }
+
+  attemptGrab(targets) {
+    if (!this.isAlive || !this.isGuarding || this.grabCooldown > 0) return false;
+    let closest = null;
+    let closestDist = GRAB_RANGE;
+    for (const t of targets) {
+      if (!t.isAlive && !t.hp) continue;
+      const dx = Math.abs(t.x - this.x);
+      const dz = Math.abs((t.z ?? this.z) - this.z);
+      const dist = Math.hypot(dx, dz * 150);
+      if (dist < closestDist) { closest = t; closestDist = dist; }
+    }
+    if (!closest) return false;
+    this.grabCooldown = 1.5;
+    this.isGuarding = false;
+    this.state = 'attack1';
+    this.stateTimer = 0.3;
+    this.canAttack = false;
+    const throwDir = this.facing;
+    closest.kbVelX = throwDir * GRAB_THROW_KB * 60;
+    closest.vx = 0;
+    if (closest.takeDamage) {
+      closest.takeDamage(18, throwDir * 120, 60, 0.4, false, 'grab');
+    }
+    audio.playImpact(true);
+    combat.spawnShockwave(closest.x, closest.y - 25, 30, '#ffd740');
+    combat.spawnDamageText(this.x, this.y - 55, 'GRAB', { color: '#ffd740', isCrit: true });
     return true;
   }
 
@@ -656,21 +733,21 @@ export class Player extends GroundEntity {
       this.state = 'uppercut'; this.stateTimer = MELEE_BASELINE.uppercut.time; this.vElevation = 280;
       audio.playSlash(1.2);
       combat.spawnSlashArc(this.x, this.y - 25, this.facing, { radius: 46, angleStart: -1.2, angleEnd: 0.6, color: '#ffea00', glow: '#ff9800' });
-      this.triggerMeleeHitbox(MELEE_BASELINE.uppercut.damage, this.facing * MELEE_BASELINE.uppercut.knockback, MELEE_BASELINE.uppercut.lift, 0.5);
+      this.triggerMeleeHitbox(MELEE_BASELINE.uppercut.damage, this.facing * MELEE_BASELINE.uppercut.knockback, MELEE_BASELINE.uppercut.lift, 0.5, false, { hitstopTicks: MELEE_BASELINE.uppercut.hitstopTicks, hitReaction: MELEE_BASELINE.uppercut.hitReaction });
       return true;
     }
     if (!this.grounded && (attackKind === 'dive' || move.z > 0.55)) {
       this.state = 'dive'; this.stateTimer = MELEE_BASELINE.dive.time; this.vElevation = -850;
       audio.playSlash(0.9);
       combat.spawnSlashArc(this.x, this.y - 15, this.facing, { radius: 50, angleStart: 0.8, angleEnd: 2.2, color: '#ff5722', glow: '#d50000' });
-      this.triggerMeleeHitbox(MELEE_BASELINE.dive.damage, this.facing * MELEE_BASELINE.dive.knockback, MELEE_BASELINE.dive.lift, 0.6);
+      this.triggerMeleeHitbox(MELEE_BASELINE.dive.damage, this.facing * MELEE_BASELINE.dive.knockback, MELEE_BASELINE.dive.lift, 0.6, false, { hitstopTicks: MELEE_BASELINE.dive.hitstopTicks, hitReaction: MELEE_BASELINE.dive.hitReaction });
       return true;
     }
     if (attackKind === 'heavy') {
       this.state = 'heavyStrike'; this.stateTimer = MELEE_BASELINE.heavy.time; this.vx = this.facing * 360;
       audio.playSlash(0.78);
       combat.spawnSlashArc(this.x + this.facing * 28, this.y - 25, this.facing, { radius: 58, angleStart: -0.9, angleEnd: 0.9, color: '#ffd54f', glow: '#ff6d00', width: 7 });
-      this.triggerMeleeHitbox(MELEE_BASELINE.heavy.damage, this.facing * MELEE_BASELINE.heavy.knockback, MELEE_BASELINE.heavy.lift, 0.48, true);
+      this.triggerMeleeHitbox(MELEE_BASELINE.heavy.damage, this.facing * MELEE_BASELINE.heavy.knockback, MELEE_BASELINE.heavy.lift, 0.48, true, { hitstopTicks: MELEE_BASELINE.heavy.hitstopTicks, hitReaction: MELEE_BASELINE.heavy.hitReaction });
       return true;
     }
     this.comboStep = (this.comboStep % 3) + 1;
@@ -685,11 +762,11 @@ export class Player extends GroundEntity {
       combat.spawnHitSparks(this.x + this.facing * 20, this.y - 32, this.facing, '#ffd700', 14);
       combat.shakeCamera(6, 0.18);
     }
-    this.triggerMeleeHitbox(attack.damage, this.facing * attack.knockback, attack.lift, attack.finisher ? 0.6 : 0.4, !!attack.finisher);
+    this.triggerMeleeHitbox(attack.damage, this.facing * attack.knockback, attack.lift, attack.finisher ? 0.6 : 0.4, !!attack.finisher, { hitstopTicks: attack.hitstopTicks, hitReaction: attack.hitReaction });
     return true;
   }
 
-  triggerMeleeHitbox(dmg, kx, lift, stunDuration, isFinisher = false) {
+  triggerMeleeHitbox(dmg, kx, lift, stunDuration, isFinisher = false, hitMeta = {}) {
     if (this.eidolonTimer > 0) {
       dmg *= 1.30 * this.eidolonPower;
       kx *= 1.18;
@@ -714,7 +791,7 @@ export class Player extends GroundEntity {
       const heightDifference = Math.abs((target.worldHeight ?? target.elevation ?? 0) - this.worldHeight);
       const verticalReach = target.hitHeightTolerance ?? (target.isObjective ? 120 : 70);
       if (inFront && closeDepth && heightDifference <= verticalReach) {
-        target.takeDamage(dmg, kx, lift, stunDuration, isFinisher);
+        target.takeDamage(dmg, kx, lift, stunDuration, isFinisher, 'melee');
         combat.spawnHitSparks(target.x, target.y - 25, this.facing, isFinisher ? '#ffea00' : '#fff', isFinisher ? 16 : 8);
         hitAny = true; hitCount++;
       }
@@ -722,7 +799,9 @@ export class Player extends GroundEntity {
     if (hitAny) {
       this.gainFocus(Math.min(16, 5 + hitCount * (isFinisher ? 4 : 3)), isFinisher ? 'FINISHER' : 'MELEE');
       audio.playImpact(isFinisher);
-      combat.triggerHitstop(isFinisher ? 6 : 4);
+      const hsFrames = hitMeta.hitstopTicks ?? (isFinisher ? 6 : 4);
+      combat.triggerHitstop(hsFrames);
+      this.entityHitstop = hsFrames;
       combat.shakeCamera(isFinisher ? 8 : 4, 0.2);
     }
   }
@@ -741,7 +820,7 @@ export class Player extends GroundEntity {
       combat.spawnShockwave(this.x + this.facing * 20, this.y - 38, 24, '#80d8ff');
       this.perfectBlockFlash = 0.3;
       audio.playImpact(true);
-      return { blocked: true, perfect: true };
+      return { blocked: true, perfect: true, attackerRecoilDistance: PERFECT_BLOCK_ATTACKER_RECOIL, attackerRecoilTicks: PERFECT_BLOCK_ATTACKER_RECOIL_TICKS };
     }
     if (this.isGuarding && incomingFromFront) {
       if (hitKind === 'melee') {
@@ -757,7 +836,9 @@ export class Player extends GroundEntity {
           return { blocked: true, guardBroken: true };
         }
       }
-      const guardedAmount = Math.max(1, Math.ceil(amount * 0.22));
+      const isMovingWhileGuarding = Math.abs(this.vx) > 10;
+      const guardReduction = isMovingWhileGuarding ? 0.35 : 0.22;
+      const guardedAmount = Math.max(1, Math.ceil(amount * guardReduction));
       this.sp = Math.max(0, this.sp - (6 + amount * 0.25));
       amount = guardedAmount;
       kx *= 0.12; lift *= 0.12; stun *= 0.18;
@@ -803,6 +884,7 @@ export class Player extends GroundEntity {
     this.cancelSprint();
     this.backdashTimer = 0;
     this.state = 'hurt'; this.stateTimer = stun; this.canAttack = false;
+    this.entityHitstop = isCrit ? HITSTOP_CHARGED_MAX : HITSTOP_NORMAL;
     // A tiny post-hit grace window prevents an overlapping minion pack from
     // deleting the player in one simulation tick. It is shorter than a combo
     // beat and leaves aggression / chase gameplay intact.
@@ -838,6 +920,8 @@ export class Player extends GroundEntity {
     this.backdashTimer = 0; this.backdashSuppressTimer = 0; this.jumpBufferTimer = 0;
     this.isSprintJump = false; this.launcherMode = false; this.chargeTimer = 0;
     this._prevInputDir = 0; this._lastFlickDir = 0; this._lastFlickTime = 0;
+    this.entityHitstop = 0; this.hitRecoilTimer = 0; this.hitRecoilDistance = 0;
+    this.forcedRecoilTimer = 0; this.landingRecoveryTimer = 0; this.grabCooldown = 0;
     this.lifeState = 'Alive'; this.respawnTimer = 0; this.grounded = true;
     battlefield?.resolveEntityCollision(this);
     combat.spawnShockwave(this.x, this.y - 25, 55, '#80d8ff');
@@ -988,6 +1072,13 @@ export class Player extends GroundEntity {
       pOX += -this.facing * 7;
       pOY += 2;
       pRot += -this.facing * 9;
+    }
+
+    if (this.forcedRecoilTimer > 0 && this.forcedRecoilTotalTicks > 0) {
+      useProc = true;
+      const progress = 1 - (this.forcedRecoilTicksLeft / this.forcedRecoilTotalTicks);
+      const frontLoaded = 1 - Math.pow(progress, 0.4);
+      pOX += this.forcedRecoilDir * this.forcedRecoilDistance * frontLoaded;
     }
 
     const renderOpts = {
