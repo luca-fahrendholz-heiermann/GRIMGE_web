@@ -260,6 +260,7 @@ export class GameWorld {
       if (e.code === 'Digit4') { this.player.setHero('warlord'); ui.updateActiveHeroBtn('warlord'); }
       if (e.code === 'Digit5') { this.player.setHero('fighter'); ui.updateActiveHeroBtn('fighter'); }
       if (e.code === 'Digit6') { this.player.setHero('darklord'); ui.updateActiveHeroBtn('darklord'); }
+      if (e.code === 'Digit7') { this.player.setHero('nyx'); ui.updateActiveHeroBtn('nyx'); }
 
       // Cast Spell (E)
       if (e.code === 'KeyE') this.castPreparedSpell();

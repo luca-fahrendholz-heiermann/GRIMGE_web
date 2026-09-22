@@ -505,7 +505,8 @@ export class UIManager {
       darklord: { name: 'DARK LORD', title: 'VOID SOVEREIGN', attack: 132, health: 195 },
       berserker: { name: 'BERSERKER', title: 'BATTLE RUNE', attack: 138, health: 215 },
       warlord: { name: 'WARLORD', title: 'SIEGE COMMANDER', attack: 128, health: 210 },
-      fighter: { name: 'FIGHTER', title: 'ARCANE DUELIST', attack: 125, health: 190 }
+      fighter: { name: 'FIGHTER', title: 'ARCANE DUELIST', attack: 125, health: 190 },
+      nyx: { name: 'NYX', title: 'PHANTOM ROGUE', attack: 135, health: 175 }
     };
   }
 
@@ -702,7 +703,12 @@ export class UIManager {
       warlord: 'assets/ui/portrait_warlord.png',
       fighter: 'assets/ui/portrait_hero.png'
     };
-    if (portraitByHero[heroKey]) this.playerPortraitImg.src = portraitByHero[heroKey];
+    if (portraitByHero[heroKey]) {
+      this.playerPortraitImg.src = portraitByHero[heroKey];
+    } else {
+      const sprCanvas = sprites.sprites[heroKey]?.canvas;
+      if (sprCanvas?.toDataURL) this.playerPortraitImg.src = sprCanvas.toDataURL();
+    }
   }
 
   showAnnouncement(text, duration = 2.4) {
