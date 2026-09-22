@@ -402,7 +402,10 @@ export class GameWorld {
     let pointerId = null;
     let attackPointerId = null;
     let attackStart = null;
+    let attackStartTime = 0;
+    let chargeArmed = false;
     let joystickOrigin = null;
+    let joystickStartTime = 0;
     let joystickMoved = false;
     let lastLeftTap = null;
     let controlTapPointerId = null;
@@ -416,6 +419,7 @@ export class GameWorld {
       if (pt.x > this.renderWidth * 0.48 || this.drawing.active || !this.isMatchRunning()) return false;
       pointerId = event.pointerId;
       joystickOrigin = pt;
+      joystickStartTime = performance.now();
       joystickMoved = false;
       joystick.style.left = `${Math.max(0, Math.min(this.renderWidth - JOYSTICK_RADIUS * 2, pt.x - JOYSTICK_RADIUS))}px`;
       joystick.style.top = `${Math.max(0, Math.min(this.logicalHeight - JOYSTICK_RADIUS * 2, pt.y - JOYSTICK_RADIUS))}px`;
@@ -460,6 +464,17 @@ export class GameWorld {
         joystick.style.removeProperty?.('bottom');
       }
       const released = this.getCanvasCoords(event.clientX, event.clientY);
+      if (joystickOrigin && joystickMoved && this.player?.isAlive) {
+        const swipeDx = released.x - joystickOrigin.x;
+        const dist = Math.abs(swipeDx);
+        const elapsed = performance.now() - joystickStartTime;
+        const velocity = elapsed > 0 ? dist / elapsed : 0;
+        if (velocity > 0.8 && dist > 50) {
+          const swipeDir = Math.sign(swipeDx);
+          if (swipeDir === -this.player.facing) this.player.triggerBackdash();
+          else this.player.activateSprint(swipeDir);
+        }
+      }
       if (!joystickMoved) lastLeftTap = { x: released.x, y: released.y, time: performance.now() };
       else lastLeftTap = null;
       joystickOrigin = null;
@@ -471,6 +486,8 @@ export class GameWorld {
       if (pt.x < this.renderWidth * 0.48) return;
       attackPointerId = event.pointerId;
       attackStart = pt;
+      attackStartTime = performance.now();
+      chargeArmed = false;
       this.canvas.setPointerCapture?.(attackPointerId);
     };
     const handleLeftDoubleTap = (event) => {
@@ -527,6 +544,12 @@ export class GameWorld {
       const dy = end.y - attackStart.y;
       attackPointerId = null;
       attackStart = null;
+      if (chargeArmed && this.player?.chargeTimer > 0) {
+        chargeArmed = false;
+        this.player.releaseCharge();
+        return;
+      }
+      chargeArmed = false;
       this.performTouchAttackGesture(dx, dy);
     };
 
@@ -551,9 +574,22 @@ export class GameWorld {
       }
       beginAttackGesture(event);
     }, { passive: false });
-    window.addEventListener('pointermove', update, { passive: false });
+    window.addEventListener('pointermove', (event) => {
+      update(event);
+      if (attackPointerId === event.pointerId && attackStart && !chargeArmed && this.player?.isAlive) {
+        const pt = this.getCanvasCoords(event.clientX, event.clientY);
+        const dx = pt.x - attackStart.x;
+        const elapsed = performance.now() - attackStartTime;
+        if (dx > 34 && Math.abs(dx) >= Math.abs(pt.y - attackStart.y) && elapsed > 180) {
+          let dir = 'forward';
+          if (pt.y - attackStart.y < -34) dir = 'up';
+          else if (pt.y - attackStart.y > 34) dir = 'down';
+          if (this.player.beginCharge(dir)) chargeArmed = true;
+        }
+      }
+    }, { passive: false });
     window.addEventListener('pointerup', (event) => { clear(event); finishLeftControlTap(event); finishAttackGesture(event); }, { passive: false });
-    window.addEventListener('pointercancel', (event) => { clear(event); controlTapPointerId = null; attackPointerId = null; attackStart = null; }, { passive: false });
+    window.addEventListener('pointercancel', (event) => { clear(event); controlTapPointerId = null; attackPointerId = null; attackStart = null; chargeArmed = false; }, { passive: false });
   }
 
   setSelectedHero(heroKey) {

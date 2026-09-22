@@ -177,6 +177,12 @@ export class Player extends GroundEntity {
     this.launcherMode = false;
     this.sprintLean = 0;
     this.sprintBobPhase = 0;
+    this.chargeTimer = 0;
+    this.chargeDir = 'forward';
+    this.chargeMaxTime = 1.0;
+    this._wasAirborne = false;
+    this.perfectBlockFlash = 0;
+    this.guardStaggerTimer = 0;
   }
 
   get isAlive() { return this.lifeState === 'Alive'; }
@@ -192,6 +198,9 @@ export class Player extends GroundEntity {
     this.animTime += dt;
     this.hitFlash = Math.max(0, this.hitFlash - dt);
     this.invulnerableTimer = Math.max(0, this.invulnerableTimer - dt);
+    this.perfectBlockFlash = Math.max(0, this.perfectBlockFlash - dt);
+    this.guardStaggerTimer = Math.max(0, this.guardStaggerTimer - dt);
+    this._wasAirborne = !this.grounded;
     this.updateGhosts(dt);
 
     if (this.lifeState === 'Dying') {
@@ -235,6 +244,10 @@ export class Player extends GroundEntity {
     if (this.slowTimer <= 0) this.slowFactor = 1;
     this.comboResetTimer = Math.max(0, this.comboResetTimer - dt);
     if (this.comboResetTimer <= 0) this.comboStep = 0;
+    if (this.chargeTimer > 0) {
+      this.chargeTimer = Math.max(0, this.chargeTimer - dt);
+      if (this.chargeTimer <= 0) this.releaseCharge();
+    }
 
     if (ACTION_STATES.has(this.state)) {
       this.stateTimer -= dt;
@@ -296,6 +309,10 @@ export class Player extends GroundEntity {
       battlefield.resolveEntityCollision(this);
       gameWorld?.resolveSpellObstacles(this, previousX, previousZ);
       if (this.grounded) {
+        if (this._wasAirborne) {
+          combat.spawnDust(this.x, this.y, 6);
+          if (this.launcherMode) combat.spawnShockwave(this.x, this.y - 2, 28, '#b0bec5');
+        }
         this.jumpsLeft = 1;
         if (this.isSprintJump) this.isSprintJump = false;
         if (this.launcherMode) this.launcherMode = false;
@@ -500,6 +517,36 @@ export class Player extends GroundEntity {
     this.sprintDir = 0;
   }
 
+  beginCharge(direction = 'forward') {
+    if (!this.isAlive || this.isGuarding || !this.grounded || this.chargeTimer > 0) return false;
+    if (ACTION_STATES.has(this.state)) return false;
+    this.chargeTimer = this.chargeMaxTime;
+    this.chargeDir = direction;
+    this.state = 'guard';
+    this.cancelSprint();
+    audio.playImpact(false);
+    return true;
+  }
+
+  releaseCharge() {
+    const chargeRatio = 1 - (this.chargeTimer / this.chargeMaxTime);
+    this.chargeTimer = 0;
+    if (!this.isAlive || chargeRatio < 0.05) return false;
+    const heavy = MELEE_BASELINE.heavy;
+    const dmgMult = 1 + chargeRatio * 0.8;
+    const kbMult = 1 + chargeRatio * 0.6;
+    this.state = 'heavyStrike';
+    this.stateTimer = heavy.time;
+    this.vx = this.facing * 360 * (1 + chargeRatio * 0.3);
+    this.canAttack = false;
+    audio.playSlash(0.78 - chargeRatio * 0.15);
+    const radius = 58 + chargeRatio * 20;
+    combat.spawnSlashArc(this.x + this.facing * 28, this.y - 25, this.facing, { radius, angleStart: -0.9, angleEnd: 0.9, color: chargeRatio > 0.5 ? '#ff6d00' : '#ffd54f', glow: '#ff3d00', width: 7 + chargeRatio * 5 });
+    if (chargeRatio > 0.6) combat.spawnShockwave(this.x + this.facing * 30, this.y - 25, 35, '#ffab00');
+    this.triggerMeleeHitbox(heavy.damage * dmgMult, this.facing * heavy.knockback * kbMult, heavy.lift * (1 + chargeRatio * 0.4), 0.48 + chargeRatio * 0.2, chargeRatio > 0.7);
+    return true;
+  }
+
   triggerBackdash() {
     if (this.isGuarding || this.backdashTimer > 0 || !this.grounded || !this.isAlive) return;
     this.cancelSprint();
@@ -632,6 +679,12 @@ export class Player extends GroundEntity {
     this.state = attack.state; this.stateTimer = attack.time; this.vx = this.facing * attack.vx;
     audio.playSlash(this.comboStep === 3 ? 0.85 : 1 + this.comboStep * 0.1);
     combat.spawnSlashArc(this.x + this.facing * 22, this.y - 28, this.facing, { radius: attack.radius, color: attack.color, glow: attack.glow, width: attack.finisher ? 7 : 4 });
+    if (attack.finisher) {
+      combat.spawnShockwave(this.x + this.facing * 16, this.y - 30, 60, '#ff3d00');
+      combat.spawnShockwave(this.x + this.facing * 16, this.y - 30, 36, '#ffd740');
+      combat.spawnHitSparks(this.x + this.facing * 20, this.y - 32, this.facing, '#ffd700', 14);
+      combat.shakeCamera(6, 0.18);
+    }
     this.triggerMeleeHitbox(attack.damage, this.facing * attack.knockback, attack.lift, attack.finisher ? 0.6 : 0.4, !!attack.finisher);
     return true;
   }
@@ -683,8 +736,10 @@ export class Player extends GroundEntity {
     if (this.isGuarding && incomingFromFront && hitKind === 'spell' && this.guardHoldTime <= 0.18) {
       // The first fraction of a held guard is a precise parry moment.  The
       // caller receives this result and reverses a reflectable projectile.
-      combat.spawnHitSparks(this.x + this.facing * 26, this.y - 42, this.facing, '#e1f5fe', 14);
-      combat.spawnShockwave(this.x + this.facing * 24, this.y - 40, 32, '#80d8ff');
+      combat.spawnHitSparks(this.x + this.facing * 26, this.y - 42, this.facing, '#fff9c4', 18);
+      combat.spawnShockwave(this.x + this.facing * 24, this.y - 40, 44, '#ffd740');
+      combat.spawnShockwave(this.x + this.facing * 20, this.y - 38, 24, '#80d8ff');
+      this.perfectBlockFlash = 0.3;
       audio.playImpact(true);
       return { blocked: true, perfect: true };
     }
@@ -706,6 +761,7 @@ export class Player extends GroundEntity {
       this.sp = Math.max(0, this.sp - (6 + amount * 0.25));
       amount = guardedAmount;
       kx *= 0.12; lift *= 0.12; stun *= 0.18;
+      this.guardStaggerTimer = 0.15;
       combat.spawnHitSparks(this.x + this.facing * 24, this.y - 38, this.facing, '#7de8ff', 7);
       combat.spawnShockwave(this.x + this.facing * 22, this.y - 38, 18, '#4fc3f7');
     }
@@ -764,7 +820,7 @@ export class Player extends GroundEntity {
     this.lifeState = 'Dying';
     this.state = 'dead'; this.stateTimer = 0.45; this.canAttack = false; this.isGuarding = false;
     this.vx = 0; this.vz = 0; this.kbVelX = 0; this.kbVelZ = 0;
-    this.cancelSprint(); this.backdashTimer = 0;
+    this.cancelSprint(); this.backdashTimer = 0; this.chargeTimer = 0;
     this.clearPreparedRunes();
     combat.spawnShockwave(this.x, this.y - 25, 60, '#ff1744');
   }
@@ -780,7 +836,7 @@ export class Player extends GroundEntity {
     this.invulnerableTimer = 1.25; this.auraShockCooldown = 0; this.arcaneShield = 0; this.arcaneShieldTimer = 0; this.arcaneShieldCooldown = 0; this.eidolonTimer = 0; this.eidolonCooldown = 0; this.eidolonPower = 1; this.eidolonArmor = 0; this.ninefoldTimer = 0; this.ninefoldCooldown = 0; this.ninefoldPower = 1; this.focus = 0; this.focusTransformTimer = 0; this.focusTransformPower = 1; this.isGuarding = false; this.guardStability = 100; this.guardHoldTime = 0; this.guardBreakTimer = 0; this.jumpsLeft = 1; this.ghosts = [];
     this.sprintActive = false; this.sprintDir = 0; this.sprintLean = 0; this.sprintBobPhase = 0;
     this.backdashTimer = 0; this.backdashSuppressTimer = 0; this.jumpBufferTimer = 0;
-    this.isSprintJump = false; this.launcherMode = false;
+    this.isSprintJump = false; this.launcherMode = false; this.chargeTimer = 0;
     this._prevInputDir = 0; this._lastFlickDir = 0; this._lastFlickTime = 0;
     this.lifeState = 'Alive'; this.respawnTimer = 0; this.grounded = true;
     battlefield?.resolveEntityCollision(this);
@@ -858,19 +914,90 @@ export class Player extends GroundEntity {
     if (this.isAlive && this.focusTransformTimer > 0) this.renderFocusAscendant(ctx, renderY);
     if (this.isAlive && this.ninefoldTimer > 0) this.renderNinefoldBeast(ctx, renderY);
     if (this.isAlive && this.eidolonTimer > 0) this.renderEidolonMantle(ctx, renderY);
+    if (this.isAlive && this.chargeTimer > 0) this.renderChargeAura(ctx, renderY);
     for (const g of this.ghosts) sprites.renderEntity(ctx, this.heroKey, g.x, g.y, { facing: g.facing, state: g.state, animTime: g.animTime, alpha: g.alpha, hitFlash: 1 });
-    const sprintBobY = this.sprintActive ? Math.sin(this.sprintBobPhase) * 2.5 : 0;
-    const sprintDip = this.sprintActive ? 3 : 0;
-    if (Math.abs(this.sprintLean) > 0.5) {
-      ctx.save();
-      ctx.translate(this.x, renderY);
-      ctx.rotate(this.sprintLean * Math.PI / 180);
-      ctx.translate(-this.x, -renderY);
-      sprites.renderEntity(ctx, this.heroKey, this.x, renderY - sprintBobY + sprintDip, { facing: this.facing, state: this.state, animTime: this.animTime * (this.sprintActive ? 1.35 : 1), hitFlash: this.hitFlash > 0 ? 1 : 0, alpha: this.lifeState === 'Dead' ? 0 : 1 });
-      ctx.restore();
-    } else {
-      sprites.renderEntity(ctx, this.heroKey, this.x, renderY, { facing: this.facing, state: this.state, animTime: this.animTime, hitFlash: this.hitFlash > 0 ? 1 : 0, alpha: this.lifeState === 'Dead' ? 0 : 1 });
+
+    let useProc = false;
+    let pRot = 0, pOX = 0, pOY = 0, pSX = 1.0, pSY = 1.0;
+    let cadence = 1.0;
+    let reverse = false;
+
+    const shadowSc = this.elevation > 0 ? Math.max(0.4, 1.0 - this.elevation / 250) : 1.0;
+
+    if (this.state === 'run' && this.grounded) {
+      if (this.sprintActive) {
+        cadence = 1.35;
+      } else {
+        cadence = Math.max(0.3, Math.min(1.0, Math.hypot(this.vx, this.vz) / this.moveSpeed));
+      }
     }
+
+    if (this.state === 'heavyStrike') {
+      useProc = true;
+      pRot = -this.facing * 8; pOX = this.facing * 15;
+      pSX = 1.15; pSY = 1.05;
+    } else if (this.state === 'uppercut') {
+      useProc = true;
+      pRot = -this.facing * 45; pOX = this.facing * 5; pOY = -20;
+      pSX = 1.05; pSY = 1.10;
+    } else if (this.state === 'dive') {
+      useProc = true;
+      pRot = this.facing * 35; pOX = this.facing * 5; pOY = 15;
+      pSX = 1.05; pSY = 1.10;
+    } else if (this.state === 'hurt' && this.guardBreakTimer > 0) {
+      useProc = true;
+      pRot = -this.facing * 18; pOX = -this.facing * 6; pOY = -5;
+    } else if (this.state === 'hurt') {
+      useProc = true;
+      const kbMag = Math.abs(this.kbVelX);
+      pOX = -this.facing * (kbMag > 400 ? 20 : kbMag > 200 ? 12 : 6);
+    } else if (this.backdashTimer > 0) {
+      useProc = true;
+      pRot = this.facing * 20; pOY = -2;
+    } else if (this.isGuarding) {
+      useProc = true;
+      pOX = -this.facing * 4;
+      pRot = -this.facing * (1 - this.guardStability / 100) * 10;
+      if (this.guardStaggerTimer > 0) {
+        const staggerRatio = this.guardStaggerTimer / 0.15;
+        pOX += -this.facing * 7 * staggerRatio;
+        pOY += -2 * staggerRatio;
+        pRot += -this.facing * 12 * staggerRatio;
+      }
+    } else if (this.sprintActive && this.state === 'run') {
+      useProc = true;
+      pRot = this.facing * 12;
+      pOY = 3 + Math.sin(this.sprintBobPhase) * 1;
+    } else if (this.launcherMode && !this.grounded) {
+      useProc = true;
+      if (this.vElevation > LAUNCHER_APEX_VEL_THRESH) pRot = -this.facing * 14;
+      else if (this.vElevation > 0) pRot = -this.facing * 8;
+      else if (Math.abs(this.vElevation) < LAUNCHER_APEX_VEL_THRESH) pRot = this.facing * 11;
+      else pRot = this.facing * 7;
+    } else if (this.chargeTimer > 0) {
+      useProc = true;
+      if (this.chargeDir === 'up') { pRot = this.facing * 25; pOX = -this.facing * 4; pOY = -8; pSX = 1.04; pSY = 1.08; }
+      else if (this.chargeDir === 'down') { pRot = -this.facing * 20; pOX = -this.facing * 4; pOY = 13; pSX = 1.04; pSY = 1.08; }
+      else { pRot = this.facing * 10; pOX = -this.facing * 11; pOY = 2; pSX = 1.08; pSY = 1.03; }
+    }
+
+    if (this.state === 'attack2') reverse = true;
+
+    if (this.hitFlash > 0 && this.state !== 'dead') {
+      useProc = true;
+      pOX += -this.facing * 7;
+      pOY += 2;
+      pRot += -this.facing * 9;
+    }
+
+    const renderOpts = {
+      facing: this.facing, state: this.state, animTime: this.animTime,
+      hitFlash: this.hitFlash > 0 ? 1 : 0,
+      alpha: this.lifeState === 'Dead' ? 0 : 1,
+      cadence, reverse, procOffsetX: pOX, procOffsetY: pOY, shadowScale: shadowSc,
+    };
+    if (useProc) { renderOpts.procRot = pRot; renderOpts.procScaleX = pSX; renderOpts.procScaleY = pSY; }
+    sprites.renderEntity(ctx, this.heroKey, this.x, renderY, renderOpts);
     if (this.isAlive) {
       const ratio = Math.max(0, this.hp / this.maxHp);
       ctx.save();
@@ -881,15 +1008,16 @@ export class Player extends GroundEntity {
       ctx.restore();
     }
     if (this.isGuarding && this.isAlive) {
+      const isPerfect = this.perfectBlockFlash > 0;
       const shieldX = this.x + this.facing * 26;
       const shieldY = renderY - 40;
       ctx.save();
       ctx.translate(shieldX, shieldY);
       ctx.scale(this.facing, 1);
-      ctx.fillStyle = 'rgba(33, 104, 154, .78)';
-      ctx.strokeStyle = '#b9f4ff';
-      ctx.lineWidth = 2.5;
-      ctx.shadowColor = '#3ad8ff'; ctx.shadowBlur = 10;
+      ctx.fillStyle = isPerfect ? 'rgba(180, 160, 40, .85)' : 'rgba(33, 104, 154, .78)';
+      ctx.strokeStyle = isPerfect ? '#fff176' : '#b9f4ff';
+      ctx.lineWidth = isPerfect ? 3.5 : 2.5;
+      ctx.shadowColor = isPerfect ? '#ffd740' : '#3ad8ff'; ctx.shadowBlur = isPerfect ? 18 : 10;
       ctx.beginPath();
       ctx.moveTo(0, -25); ctx.lineTo(14, -16); ctx.lineTo(14, 14); ctx.lineTo(0, 25); ctx.lineTo(-14, 14); ctx.lineTo(-14, -16); ctx.closePath();
       ctx.fill(); ctx.stroke();
@@ -923,6 +1051,29 @@ export class Player extends GroundEntity {
     ctx.font = '9px Cinzel';
     ctx.textAlign = 'center';
     ctx.fillText('ASCENDANT', this.x, renderY - 78);
+    ctx.restore();
+  }
+
+  renderChargeAura(ctx, renderY) {
+    const t = this.chargeTimer;
+    const intensity = Math.min(1, t / 0.5);
+    const pulse = 1 + Math.sin(this.animTime * 10) * 0.12 * intensity;
+    ctx.save();
+    ctx.globalAlpha = 0.35 + intensity * 0.3;
+    ctx.strokeStyle = '#ff6d00';
+    ctx.shadowColor = '#ff9100';
+    ctx.shadowBlur = 14 + intensity * 12;
+    ctx.lineWidth = 2 + intensity * 2;
+    ctx.beginPath();
+    ctx.ellipse(this.x, renderY - 30, (22 + intensity * 10) * pulse, (34 + intensity * 14) * pulse, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    if (intensity > 0.5) {
+      ctx.globalAlpha = (intensity - 0.5) * 0.6;
+      ctx.fillStyle = 'rgba(255, 109, 0, .15)';
+      ctx.beginPath();
+      ctx.ellipse(this.x, renderY - 30, 18 * pulse, 28 * pulse, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
     ctx.restore();
   }
 

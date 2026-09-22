@@ -2,6 +2,12 @@
 import { ENTITY_VISUALS } from './world.js';
 import { ART_ASSETS } from './art_assets.js';
 
+const CLIP_TIMING = {
+  idle: 15, walk: 8, run: 6, jump: 10, fall: 10,
+  attack: 5, uppercut: 5, dive: 5, hurt: 8, dead: 12,
+  dash: 6, guard: 12, _default: 10
+};
+
 export class SpriteManager {
   constructor() {
     this.sprites = {};
@@ -541,7 +547,7 @@ export class SpriteManager {
     };
   }
 
-  resolveFrame(spr, state, animTime, hitFlash) {
+  resolveFrame(spr, state, animTime, hitFlash, opts = {}) {
     if (!spr.frames) {
       return {
         canvas: (hitFlash > 0) ? spr.flashCanvas : spr.canvas,
@@ -558,8 +564,22 @@ export class SpriteManager {
         anchorX: spr.anchorX, anchorY: spr.anchorY
       };
     }
-    const fps = (animKey === 'attack') ? 10 : (animKey === 'walk' || animKey === 'run') ? 8 : 4;
-    const idx = Math.floor(Math.abs(animTime) * fps) % frames.length;
+    const holdTicks = CLIP_TIMING[animKey] ?? CLIP_TIMING._default;
+    const loops = !(animKey === 'attack' || animKey === 'dead' || animKey === 'hurt'
+      || animKey === 'uppercut' || animKey === 'dive');
+    const cadence = opts.cadence || 1.0;
+    const frameDur = (holdTicks / 60) / cadence;
+    const rawIdx = Math.floor(Math.abs(animTime) / frameDur);
+    let idx;
+    if (opts.reverse) {
+      idx = loops
+        ? frames.length - 1 - (rawIdx % frames.length)
+        : Math.max(0, frames.length - 1 - rawIdx);
+    } else if (loops) {
+      idx = rawIdx % frames.length;
+    } else {
+      idx = Math.min(rawIdx, frames.length - 1);
+    }
     const f = frames[idx];
     return {
       canvas: (hitFlash > 0) ? (f.flashCanvas ?? f.canvas) : f.canvas,
@@ -568,7 +588,6 @@ export class SpriteManager {
     };
   }
 
-  // Draw character with full procedural animation state
   renderEntity(ctx, spriteKey, x, y, opt = {}) {
     const spr = this.sprites[spriteKey];
     if (!spr) return;
@@ -581,10 +600,18 @@ export class SpriteManager {
       alpha = 1.0,
       visualHeight = ENTITY_VISUALS.heroHeight,
       targetScale = null,
-      tint = null
+      tint = null,
+      cadence = 1.0,
+      reverse = false,
+      procRot = null,
+      procOffsetX = 0,
+      procOffsetY = 0,
+      procScaleX = null,
+      procScaleY = null,
+      shadowScale = 1.0
     } = opt;
 
-    const frame = this.resolveFrame(spr, state, animTime, hitFlash);
+    const frame = this.resolveFrame(spr, state, animTime, hitFlash, { cadence, reverse });
     const renderScale = targetScale ?? (visualHeight / frame.height);
 
     ctx.save();
@@ -592,120 +619,82 @@ export class SpriteManager {
     ctx.imageSmoothingEnabled = true;
     if ('imageSmoothingQuality' in ctx) ctx.imageSmoothingQuality = 'high';
 
-    // 1. Draw Ground Shadow
     if (state !== 'dive') {
-      const shadowW = 32;
-      const shadowH = 10;
-      ctx.drawImage(this.shadowCanvas, x - shadowW * 0.5, y - shadowH * 0.5, shadowW, shadowH);
+      const sw = 32 * shadowScale;
+      const sh = 10 * shadowScale;
+      ctx.drawImage(this.shadowCanvas, x - sw * 0.5, y - sh * 0.5, sw, sh);
     }
 
-    // 2. Procedural Animation Math
-    let sx = 1.0;
-    let sy = 1.0;
-    let rot = 0;
-    let offsetY = 0;
+    let sx = 1.0, sy = 1.0, rot = 0, offsetX = 0, offsetY = 0;
 
-    // Sheet sprites get reduced procedural transforms (frames carry the pose)
-    const proc = spr.frames ? 0.4 : 1.0;
-
-    switch (state) {
-      case 'idle':
-        sy = 1.0 + Math.sin(animTime * 3) * 0.025 * proc;
-        sx = 1.0 - Math.sin(animTime * 3) * 0.015 * proc;
-        offsetY = Math.sin(animTime * 3) * 2 * proc;
-        break;
-
-      case 'run':
-        sy = 1.0 + Math.abs(Math.sin(animTime * 14)) * 0.08 * proc;
-        sx = 1.0 - Math.abs(Math.sin(animTime * 14)) * 0.05 * proc;
-        rot = facing * 0.08 * proc;
-        offsetY = -Math.abs(Math.sin(animTime * 14)) * 6 * proc;
-        break;
-
-      case 'jump':
-        sy = 1.0 + 0.18 * proc;
-        sx = 1.0 - 0.14 * proc;
-        rot = facing * 0.05 * proc;
-        break;
-
-      case 'fall':
-        sy = 1.0 + 0.1 * proc;
-        sx = 1.0 - 0.08 * proc;
-        break;
-
-      case 'land':
-        sy = 1.0 - 0.2 * proc;
-        sx = 1.0 + 0.25 * proc;
-        break;
-
-      case 'dash':
-        sy = 1.0 - 0.25 * proc;
-        sx = 1.0 + 0.35 * proc;
-        rot = facing * 0.18 * proc;
-        offsetY = 4 * proc;
-        break;
-
-      case 'attack1':
-        sy = 1.0 - 0.05 * proc;
-        sx = 1.0 + 0.15 * proc;
-        rot = facing * -0.12 * proc;
-        break;
-
-      case 'attack2':
-        sy = 1.0 + 0.05 * proc;
-        sx = 1.0 + 0.1 * proc;
-        rot = facing * 0.15 * proc;
-        break;
-
-      case 'attack3':
-        sy = 1.0 + 0.2 * proc;
-        sx = 1.0 - 0.1 * proc;
-        rot = facing * -0.25 * proc;
-        offsetY = -8 * proc;
-        break;
-
-      case 'uppercut':
-        sy = 1.0 + 0.3 * proc;
-        sx = 1.0 - 0.2 * proc;
-        rot = facing * -0.1 * proc;
-        offsetY = -12 * proc;
-        break;
-
-      case 'dive':
-        sy = 1.0 + 0.25 * proc;
-        sx = 1.0 - 0.15 * proc;
-        rot = facing * 0.45 * proc;
-        break;
-
-      case 'hurt':
-        sy = 1.0 - 0.1 * proc;
-        sx = 1.0 + 0.1 * proc;
-        rot = -facing * 0.25 * proc;
-        offsetY = -Math.sin(animTime * 20) * 3 * proc;
-        break;
-
-      case 'dead':
-        sy = 1.0 - 0.5 * proc;
-        sx = 1.0 + 0.3 * proc;
-        rot = -facing * 1.4 * proc;
-        offsetY = 12 * proc;
-        break;
+    if (procRot !== null || procScaleX !== null || procScaleY !== null) {
+      rot = (procRot || 0) * Math.PI / 180;
+      offsetX = procOffsetX;
+      offsetY = procOffsetY;
+      sx = procScaleX ?? 1.0;
+      sy = procScaleY ?? 1.0;
+    } else {
+      const proc = spr.frames ? 0.4 : 1.0;
+      switch (state) {
+        case 'idle':
+          sy = 1.0 + Math.sin(animTime * 3) * 0.025 * proc;
+          sx = 1.0 - Math.sin(animTime * 3) * 0.015 * proc;
+          offsetY = Math.sin(animTime * 3) * 2 * proc;
+          break;
+        case 'run':
+          sy = 1.0 + Math.abs(Math.sin(animTime * 14)) * 0.08 * proc;
+          sx = 1.0 - Math.abs(Math.sin(animTime * 14)) * 0.05 * proc;
+          rot = facing * 0.08 * proc;
+          offsetY = -Math.abs(Math.sin(animTime * 14)) * 6 * proc;
+          break;
+        case 'jump':
+          sy = 1.0 + 0.18 * proc; sx = 1.0 - 0.14 * proc; rot = facing * 0.05 * proc;
+          break;
+        case 'fall':
+          sy = 1.0 + 0.1 * proc; sx = 1.0 - 0.08 * proc;
+          break;
+        case 'land':
+          sy = 1.0 - 0.2 * proc; sx = 1.0 + 0.25 * proc;
+          break;
+        case 'dash':
+          sy = 1.0 - 0.25 * proc; sx = 1.0 + 0.35 * proc;
+          rot = facing * 0.18 * proc; offsetY = 4 * proc;
+          break;
+        case 'attack1':
+          sy = 1.0 - 0.05 * proc; sx = 1.0 + 0.15 * proc; rot = facing * -0.12 * proc;
+          break;
+        case 'attack2':
+          sy = 1.0 + 0.05 * proc; sx = 1.0 + 0.1 * proc; rot = facing * 0.15 * proc;
+          break;
+        case 'attack3':
+          sy = 1.0 + 0.2 * proc; sx = 1.0 - 0.1 * proc;
+          rot = facing * -0.25 * proc; offsetY = -8 * proc;
+          break;
+        case 'uppercut':
+          sy = 1.0 + 0.3 * proc; sx = 1.0 - 0.2 * proc;
+          rot = facing * -0.1 * proc; offsetY = -12 * proc;
+          break;
+        case 'dive':
+          sy = 1.0 + 0.25 * proc; sx = 1.0 - 0.15 * proc; rot = facing * 0.45 * proc;
+          break;
+        case 'hurt':
+          sy = 1.0 - 0.1 * proc; sx = 1.0 + 0.1 * proc;
+          rot = -facing * 0.25 * proc; offsetY = -Math.sin(animTime * 20) * 3 * proc;
+          break;
+        case 'dead':
+          sy = 1.0 - 0.5 * proc; sx = 1.0 + 0.3 * proc;
+          rot = -facing * 1.4 * proc; offsetY = 12 * proc;
+          break;
+      }
+      offsetX += procOffsetX;
+      offsetY += procOffsetY;
     }
 
-    // 3. Apply Transformations
-    ctx.translate(x, y + offsetY);
+    ctx.translate(x + offsetX, y + offsetY);
     ctx.scale(facing * renderScale * sx, renderScale * sy);
     ctx.rotate(rot);
 
-    // 4. Draw Sprite or Hit Flash
-    ctx.drawImage(
-      frame.canvas,
-      -frame.anchorX,
-      -frame.anchorY,
-      frame.width,
-      frame.height
-    );
-
+    ctx.drawImage(frame.canvas, -frame.anchorX, -frame.anchorY, frame.width, frame.height);
     ctx.restore();
   }
 
