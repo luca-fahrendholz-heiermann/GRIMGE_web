@@ -508,7 +508,13 @@ export class UIManager {
       berserker: { name: 'BERSERKER', title: 'BATTLE RUNE', attack: 138, health: 215 },
       warlord: { name: 'WARLORD', title: 'SIEGE COMMANDER', attack: 128, health: 210 },
       fighter: { name: 'FIGHTER', title: 'ARCANE DUELIST', attack: 125, health: 190 },
-      nyx: { name: 'NYX', title: 'PHANTOM ROGUE', attack: 135, health: 175 }
+      nyx: { name: 'NYX', title: 'PHANTOM ROGUE', attack: 135, health: 175 },
+      deep: { name: 'DEEP', title: 'PHANTOM BLADE', attack: 140, health: 185 },
+      firen: { name: 'FIREN', title: 'PHANTOM FLAME', attack: 145, health: 170 },
+      freeze: { name: 'FREEZE', title: 'PHANTOM FROST', attack: 130, health: 195 },
+      john: { name: 'JOHN', title: 'PHANTOM KNIGHT', attack: 128, health: 200 },
+      woody: { name: 'WOODY', title: 'PHANTOM BRAWLER', attack: 142, health: 180 },
+      henry: { name: 'HENRY', title: 'PHANTOM ARCHER', attack: 136, health: 178 }
     };
   }
 

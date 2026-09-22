@@ -253,7 +253,7 @@ export class GameWorld {
       this.input.keys[e.code] = true;
       audio.ensureContext();
 
-      // Hero Swapping (Keys 1-6)
+      // Hero Swapping (Keys 1-0)
       if (e.code === 'Digit1') { this.player.setHero('paladin'); ui.updateActiveHeroBtn('paladin'); }
       if (e.code === 'Digit2') { this.player.setHero('berserker'); ui.updateActiveHeroBtn('berserker'); }
       if (e.code === 'Digit3') { this.player.setHero('mage'); ui.updateActiveHeroBtn('mage'); }
@@ -261,6 +261,9 @@ export class GameWorld {
       if (e.code === 'Digit5') { this.player.setHero('fighter'); ui.updateActiveHeroBtn('fighter'); }
       if (e.code === 'Digit6') { this.player.setHero('darklord'); ui.updateActiveHeroBtn('darklord'); }
       if (e.code === 'Digit7') { this.player.setHero('nyx'); ui.updateActiveHeroBtn('nyx'); }
+      if (e.code === 'Digit8') { this.player.setHero('deep'); ui.updateActiveHeroBtn('deep'); }
+      if (e.code === 'Digit9') { this.player.setHero('firen'); ui.updateActiveHeroBtn('firen'); }
+      if (e.code === 'Digit0') { this.player.setHero('freeze'); ui.updateActiveHeroBtn('freeze'); }
 
       // Cast Spell (E)
       if (e.code === 'KeyE') this.castPreparedSpell();

@@ -22,7 +22,13 @@ export class SpriteManager {
       darklord: { name: 'The Dark Lord', file: 'char_dark_lord.png', weapon: 'Blood Crown & Blacksteel', role: 'Dark Vanguard / Control' },
       astral: { name: 'Astral', file: 'char_astral.png', weapon: 'Starbound Arcana', role: 'Starborn / Arcane Balance' },
       astral_v2: { name: 'Astral Unhooded', file: 'char_astral_v2.png', weapon: 'Starbound Arcana', role: 'Starborn / Arcane Balance' },
-      nyx: { name: 'Nyx the Phantom', file: null, weapon: 'Dual Phantomblades', role: 'Phantom Rogue / Swift Assassin' }
+      nyx: { name: 'Nyx the Phantom', file: null, weapon: 'Dual Phantomblades', role: 'Phantom Rogue / Swift Assassin' },
+      deep: { name: 'Deep the Phantom Blade', file: null, weapon: 'Shadow Sword', role: 'Phantom Blade / Heavy Strikes' },
+      firen: { name: 'Firen the Phantom Flame', file: null, weapon: 'Blazing Fists', role: 'Phantom Flame / Fire Combat' },
+      freeze: { name: 'Freeze the Phantom Frost', file: null, weapon: 'Frost Claws', role: 'Phantom Frost / Ice Control' },
+      john: { name: 'John the Phantom Knight', file: null, weapon: 'Runic Staff', role: 'Phantom Knight / Arcane Strikes' },
+      woody: { name: 'Woody the Phantom Brawler', file: null, weapon: 'Iron Fists', role: 'Phantom Brawler / Raw Power' },
+      henry: { name: 'Henry the Phantom Archer', file: null, weapon: 'Shadow Bow', role: 'Phantom Archer / Precision' }
     };
     this.shadowCanvas = this.createShadowCanvas();
   }

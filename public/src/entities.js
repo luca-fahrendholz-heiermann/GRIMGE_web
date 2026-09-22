@@ -954,7 +954,7 @@ export class Player extends GroundEntity {
     if (!card || card.id !== runeId) return null;
     this.runeHand = this.runeHand.filter((handCard) => handCard.cardId !== card.cardId);
     this.preparedRunes.push(card);
-    this.runeDeck.push(card);
+    this.runeDeck.unshift(card);
     this.drawRunesToHand();
     return card;
   }

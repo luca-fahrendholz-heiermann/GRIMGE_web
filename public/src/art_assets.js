@@ -22,6 +22,16 @@ const STANDARD_ANIMS = Object.freeze({
   dead:   [[3,3], [4,3]]
 });
 
+const HERO_ANIMS = Object.freeze({
+  ...STANDARD_ANIMS,
+  jump:     [[0,2], [1,2]],
+  fall:     [[2,2]],
+  dash:     [[0,4], [1,4]],
+  guard:    [[0,5], [1,5]],
+  uppercut: [[7,1], [8,1]],
+  dive:     [[3,2], [4,2]]
+});
+
 export const ART_ASSETS = Object.freeze({
   scenes: Object.freeze({
     arena: 'assets/scenes/arena_bg.png',
@@ -127,22 +137,57 @@ export const ART_ASSETS = Object.freeze({
       key: 'nyx',
       sheets: ['assets/sprites/sheets/hero_nyx_sheet.png'],
       grid: CELL,
-      anims: Object.freeze({
-        idle:     [[0,0], [1,0], [2,0]],
-        walk:     [[3,0], [4,0], [5,0], [6,0]],
-        run:      [[0,1], [1,1], [2,1]],
-        attack:   [[3,1], [4,1], [5,1], [6,1]],
-        jump:     [[0,2], [1,2]],
-        fall:     [[2,2]],
-        dash:     [[0,4], [1,4]],
-        guard:    [[0,5], [1,5]],
-        uppercut: [[7,1], [8,1]],
-        dive:     [[3,2], [4,2]],
-        hurt:     [[0,3], [1,3]],
-        dead:     [[3,3], [4,3]]
-      }),
+      anims: HERO_ANIMS,
       role: 'hero',
       label: 'Nyx the Phantom'
+    }),
+    hero_deep: Object.freeze({
+      key: 'deep',
+      sheets: ['assets/sprites/sheets/hero_deep_sheet.png'],
+      grid: CELL,
+      anims: HERO_ANIMS,
+      role: 'hero',
+      label: 'Deep the Phantom Blade'
+    }),
+    hero_firen: Object.freeze({
+      key: 'firen',
+      sheets: ['assets/sprites/sheets/hero_firen_sheet.png'],
+      grid: CELL,
+      anims: HERO_ANIMS,
+      role: 'hero',
+      label: 'Firen the Phantom Flame'
+    }),
+    hero_freeze: Object.freeze({
+      key: 'freeze',
+      sheets: ['assets/sprites/sheets/hero_freeze_sheet.png'],
+      grid: CELL,
+      anims: HERO_ANIMS,
+      role: 'hero',
+      label: 'Freeze the Phantom Frost'
+    }),
+    hero_john: Object.freeze({
+      key: 'john',
+      sheets: ['assets/sprites/sheets/hero_john_sheet.png'],
+      grid: CELL,
+      anims: HERO_ANIMS,
+      role: 'hero',
+      label: 'John the Phantom Knight'
+    }),
+    hero_woody: Object.freeze({
+      key: 'woody',
+      sheets: ['assets/sprites/sheets/hero_woody_sheet.png'],
+      grid: CELL,
+      anims: HERO_ANIMS,
+      role: 'hero',
+      label: 'Woody the Phantom Brawler'
+    }),
+    hero_henry: Object.freeze({
+      key: 'henry',
+      sheets: ['assets/sprites/sheets/hero_henry_sheet.png'],
+      grid: CELL,
+      anims: HERO_ANIMS,
+      role: 'hero',
+      label: 'Henry the Phantom Archer'
     })
   }),
 
