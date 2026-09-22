@@ -10,5 +10,8 @@
     "test": "node test_recognizer.js && node test_world.js && node test_progression.js && node test_runtime.js && node test_pwa.js"
   },
   "author": "Antigravity Autonomous Prototype Experiment",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "pngjs": "^7.0.0"
+  }
 }
