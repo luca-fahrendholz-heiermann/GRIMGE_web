@@ -2,6 +2,10 @@
 import { audio } from './audio.js';
 import { combat } from './combat.js';
 import { GroundEntity, groundDistance, groundYForDepth } from './world.js';
+import { lookupRecipe } from './spell_catalog.js';
+import { BeamSpell, BeamClash, resolveBeamInteractions, MirrorWardSpell, GravityLiftSpell, TitanStompSpell, SoulSeekerBolt, SeismicSlamSpell } from './abilities.js';
+
+export { BeamClash };
 
 // Rune accuracy is intentionally a gameplay value instead of a pass/fail
 // gate.  C casts are still useful; S casts are cleaner, stronger versions of
@@ -41,142 +45,18 @@ export class SpellSystem {
   constructor() {
     this.activeSpells = [];
     this.activeSummons = [];
+    this.activeClashes = [];
   }
 
-  // Determine which spell is formed by a given set of prepared runes
+  getClashFor(caster) {
+    return this.activeClashes.find((clash) => !clash.isFinished && clash.sideOf(caster)) ?? null;
+  }
+
+  // Determine which spell is formed by a given set of prepared runes. The
+  // catalog is data-driven (spell_catalog.js); unknown combinations have no
+  // recipe and resolve to null instead of a generated random spell.
   resolveSpell(runes) {
-    if (!runes || runes.length === 0) return null;
-
-    const ids = runes.map(r => r.id).sort();
-    const key = ids.join('+');
-
-    // 1. Triple Rune Grand Combinations
-    if (ids.length === 3) {
-      if (key === 'bestia+terra+void') return { id: 'eidolon_mantle', name: 'EIDOLON MANTLE', tier: 3, manaCost: 45, cooldown: 18, color: '#b668ff', desc: 'Bestia, Earth and Void form a temporary spectral guardian around the Wizard: damage resistance, knockback resistance and empowered melee.' };
-      // An original GRIMGE feral transformation: its nine rune-flame tails
-      // evoke a legendary beast without borrowing a named character or form.
-      if (key === 'bestia+ignis+void') return { id: 'ninefold_beast_form', name: 'NINEFOLD BEAST FORM', tier: 3, manaCost: 55, cooldown: 22, color: '#ff7a2f', desc: 'Bestia, Fire and Void awaken a short feral rune form: faster movement, savage melee and light damage resistance.' };
-      if (key === 'bestia+ignis+ventus') return { id: 'dragon_invocation', name: 'INFERNO DRAGON INVOCATION', tier: 3, manaCost: 70, color: '#ff7043', desc: 'Bestia, Fire and Wind call a temporary fire dragon to scorch a battlefield zone.' };
-      if (key === 'bestia+terra+ventus') return { id: 'summon_rune_snake', name: 'WORLD RUNE SERPENT', tier: 3, manaCost: 48, color: '#b668ff', desc: 'A mountable lane-control serpent that slithers through the fight and launches enemies upward.' };
-      if (key === 'aqua+terra+ventus') return { id: 'summon_spirit_wolf', name: 'SPIRIT WOLF', tier: 3, manaCost: 32, color: '#80d8ff', desc: 'Summons a quick frost spirit that hunts nearby enemies.' };
-      if (key === 'fulgur+terra+terra') return { id: 'summon_siege_golem', name: 'SIEGE GOLEM', tier: 3, manaCost: 46, color: '#a1887f', desc: 'Summons a slow, durable golem that presses objectives.' };
-      if (key === 'fulgur+ignis+terra') return { id: 'dragon_invocation', name: 'DRAGON INVOCATION', tier: 3, manaCost: 70, color: '#ff7043', desc: 'Calls a temporary fire dragon to scorch a battlefield zone.' };
-      if (key === 'fulgur+ignis+ventus') {
-        return {
-          id: 'apocalyptic_heavensurge',
-          name: 'APOCALYPTIC HEAVENSURGE',
-          tier: 3,
-          color: '#ff3d00',
-          desc: 'Cataclysmic storm of Fire, Wind, and Thunder engulfing the battlefield!'
-        };
-      }
-      return {
-        id: 'tri_elemental_burst',
-        name: 'TRI-ELEMENTAL CONVERGENCE',
-        tier: 3,
-        color: '#e040fb',
-        desc: 'Overwhelming release of three converged elemental forces!'
-      };
-    }
-
-    // 2. Dual Rune Combinations
-    if (ids.length === 2) {
-      if (key === 'bestia+fulgur') return { id: 'summon_storm_wolf', name: 'STORM WOLF', tier: 2, manaCost: 26, color: '#ffd54f', desc: 'A lightning Hunter that bypasses the minion line to chase the Wizard.' };
-      if (key === 'bestia+void') return { id: 'summon_void_spider', name: 'VOID SPIDER', tier: 2, manaCost: 34, color: '#d500f9', desc: 'A Control summon that entangles nearby enemies in slowing void webs.' };
-      if (key === 'construct+terra') return { id: 'summon_rune_golem', name: 'RUNE GOLEM', tier: 2, manaCost: 38, color: '#b0bec5', desc: 'A durable Vanguard that binds defenders and marches on objectives.' };
-      if (key === 'ignis+ventus') {
-        return {
-          id: 'firestorm',
-          name: 'FIRESTORM VORTEX',
-          tier: 2,
-          color: '#ff6d00',
-          desc: 'Raging flame tornado that pulls enemies in, burns, and launches them!'
-        };
-      }
-      if (key === 'fulgur+ignis') {
-        return {
-          id: 'meteor_cataclysm',
-          name: 'METEOR CATACLYSM',
-          tier: 2,
-          color: '#d50000',
-          desc: 'Calls down a blazing meteor that creates an explosive magma crater!'
-        };
-      }
-      if (key === 'fulgur+ventus') {
-        return {
-          id: 'tempest_blitz',
-          name: 'TEMPEST BLITZ',
-          tier: 2,
-          color: '#00e5ff',
-          desc: 'Transforms into lightning, dashing forward and slashing all enemies!'
-        };
-      }
-      if (key === 'ignis+terra') {
-        return {
-          id: 'magma_fissure',
-          name: 'MAGMA FISSURE',
-          tier: 2,
-          color: '#ff3d00',
-          desc: 'Ruptures the earth with geysers of molten lava!'
-        };
-      }
-      if (key === 'terra+ventus') {
-        return {
-          id: 'sandstorm_bastion',
-          name: 'SANDSTORM BASTION',
-          tier: 2,
-          color: '#ffd600',
-          desc: 'Swirling wall of stone and wind deflecting enemy attacks.'
-        };
-      }
-      if (key === 'aqua+ventus') {
-        return {
-          id: 'blizzard_surge',
-          name: 'BLIZZARD SURGE',
-          tier: 2,
-          color: '#80d8ff',
-          desc: 'Freezing gale freezing minions and drastically slowing enemy lane push.'
-        };
-      }
-      if (key === 'aqua+fulgur') {
-        return { id: 'aura_shock', name: 'AURA SHOCK', tier: 2, manaCost: 20, cooldown: 3.5, color: '#b388ff', desc: 'Frost-lightning pulse blasting surrounding enemies away.' };
-      }
-      if (key === 'aqua+terra') {
-        return { id: 'arcane_aegis', name: 'ARCANE AEGIS', tier: 2, manaCost: 30, cooldown: 8, color: '#b388ff', desc: 'A temporary protective aura that absorbs incoming damage.' };
-      }
-      if (key === 'terra+terra') {
-        return { id: 'stone_wall', name: 'STONE WALL', tier: 2, manaCost: 25, color: '#8d6e63', desc: 'Raises a temporary earth wall that stops hostile movement and projectiles.' };
-      }
-    }
-
-    // 3. Single Rune Base Spells
-    const single = ids[0];
-    switch (single) {
-      case 'ignis':
-        return { id: 'fireball', name: 'IGNIS FIREBALL', tier: 1, color: '#ff5722', desc: 'Explosive projectile burning enemies.' };
-      case 'ventus':
-        return { id: 'gale_blast', name: 'GALE SHOCKWAVE', tier: 1, color: '#00bcd4', desc: 'High-velocity wind wave knocking enemies back.' };
-      case 'fulgur':
-        return { id: 'chain_lightning', name: 'ARC LIGHTNING', tier: 1, color: '#ffeb3b', desc: 'Crackling bolt leaping between targets.' };
-      case 'terra':
-        return { id: 'stone_spikes', name: 'STONE SPIKES', tier: 1, color: '#795548', desc: 'Erupts jagged stone spikes from the ground.' };
-      case 'aqua':
-        return { id: 'frost_nova', name: 'FROST NOVA', tier: 1, color: '#00e5ff', desc: 'Freezes surrounding foes solid.' };
-      case 'bestia':
-        return { id: 'summon_lesser_beast', name: 'BEAST FAMILIAR', tier: 1, manaCost: 18, color: '#b388ff', desc: 'Summons a short-lived hunter familiar.' };
-      case 'construct':
-        return { id: 'construct_bulwark', name: 'CONSTRUCT BULWARK', tier: 1, manaCost: 16, color: '#b0bec5', desc: 'Raises a short physical barrier in front of the caster.' };
-      case 'void':
-        return { id: 'void_bolt', name: 'VOID BOLT', tier: 1, manaCost: 16, color: '#d500f9', desc: 'Fires a void projectile that slows the first target hit.' };
-      case 'transform_beam':
-        return { id: 'annihilation_beam', name: 'ANNIHILATION BEAM', tier: 3, manaCost: 0, color: '#ff4cff', desc: 'Charges a massive energy sphere then fires a devastating beam across half the lane.' };
-      case 'transform_implode':
-        return { id: 'void_implosion', name: 'VOID IMPLOSION', tier: 3, manaCost: 0, color: '#b668ff', desc: 'Creates a void singularity that pulls enemies in and crushes them with dimensional collapse.' };
-      case 'transform_rampage':
-        return { id: 'inferno_rampage', name: 'INFERNO RAMPAGE', tier: 3, manaCost: 0, color: '#ff6f3b', desc: 'Blazing fire dash that scorches everything in its path across the lane.' };
-    }
-
-    return null;
+    return lookupRecipe(runes);
   }
 
   qualityForRunes(runes = []) {
@@ -244,6 +124,7 @@ export class SpellSystem {
     if (typeof spell.damage === 'number') spell.damage *= spell.quality.power;
     if (typeof spell.life === 'number') spell.life *= spell.quality.duration;
     if (typeof spell.craterLife === 'number') spell.craterLife *= spell.quality.duration;
+    spell.system = this;
     this.activeSpells.push(spell);
     return spell;
   }
@@ -253,8 +134,10 @@ export class SpellSystem {
   }
 
   clearRuntime() {
+    for (const clash of this.activeClashes) clash.finish({ type: 'cleared' });
     this.activeSpells = [];
     this.activeSummons = [];
+    this.activeClashes = [];
   }
 
   summon(caster, definition, gameWorld, quality) {
@@ -379,9 +262,54 @@ export class SpellSystem {
       }
 
       case 'annihilation_beam': {
-        this.addSpell(new AnnihilationBeamSpell(startX, startZ, facing, caster.team, startHeight), castQuality);
+        this.addSpell(new BeamSpell(caster, 'annihilation', 'annihilation_beam'), castQuality);
         audio.playSpell('focus_ascendant');
         combat.shakeCamera(6, 0.3);
+        break;
+      }
+
+      // One Beam controller, individual looks (concept doc §5).
+      case 'inferno_beam':
+      case 'glacial_ray':
+      case 'thunder_lance':
+      case 'null_ray': {
+        const profile = { inferno_beam: 'inferno', glacial_ray: 'glacial', thunder_lance: 'thunder', null_ray: 'null' }[spellDef.id];
+        this.addSpell(new BeamSpell(caster, profile, spellDef.id), castQuality);
+        break;
+      }
+
+      case 'mirror_ward': {
+        this.addSpell(new MirrorWardSpell(caster), castQuality);
+        break;
+      }
+
+      case 'gravity_lift': {
+        this.addSpell(new GravityLiftSpell(caster, gameWorld), castQuality);
+        break;
+      }
+
+      case 'titan_stomp': {
+        this.addSpell(new TitanStompSpell(caster), castQuality);
+        break;
+      }
+
+      case 'soul_seekers': {
+        // A three-shot homing salvo fanned around the facing direction.
+        const base = facing > 0 ? 0 : Math.PI;
+        [-.55, 0, .55].forEach((spread, index) => {
+          this.addSpell(new SoulSeekerBolt(startX, startZ, startHeight, base + spread, caster.team, index * .09), castQuality);
+        });
+        break;
+      }
+
+      case 'seismic_slam': {
+        // Terrain impact: short-lived rock pillars reuse the Stone Wall
+        // obstacle rules (movement + projectile blocking).
+        const spawnPillar = (x, z, surfaceHeight) => this.addSpell(new StoneWallSpell(x, z, caster.team, surfaceHeight, {
+          halfX: 10, halfZ: .08, wallHeight: 52, life: 2.2, color: '#8d6e63'
+        }), castQuality);
+        this.addSpell(new SeismicSlamSpell(caster, spawnPillar), castQuality);
+        combat.shakeCamera(8, .35);
         break;
       }
 
@@ -454,14 +382,6 @@ export class SpellSystem {
         this.addSpell(new MeteorSpell(targetX, startZ, caster.team), castQuality);
         this.addSpell(new BlizzardSurgeSpell(startX + facing * 50, startZ, facing, caster.team), castQuality);
         combat.shakeCamera(16, 0.8);
-        break;
-      }
-
-      case 'tri_elemental_burst': {
-        this.addSpell(new FireballSpell(startX, startZ, facing, caster.team, startHeight), castQuality);
-        this.addSpell(new FireballSpell(startX, startZ, facing, caster.team, startHeight), castQuality);
-        this.addSpell(new GaleBlastSpell(startX, startZ, facing, caster.team, startHeight), castQuality);
-        this.addSpell(new ChainLightningSpell(startX, startZ, facing, caster.team, gameWorld, startHeight, castQuality), castQuality);
         break;
       }
     }
@@ -576,6 +496,9 @@ export class SpellSystem {
       summon.update(dt, gameWorld);
       if (summon.isDead) this.activeSummons.splice(i, 1);
     }
+    this.activeClashes.push(...resolveBeamInteractions(this, gameWorld));
+    for (const clash of this.activeClashes) clash.update(dt);
+    this.activeClashes = this.activeClashes.filter((clash) => !clash.isFinished);
   }
 
   render(ctx) {
@@ -583,6 +506,7 @@ export class SpellSystem {
       spell.render(ctx);
     }
     for (const summon of this.activeSummons) summon.render(ctx);
+    for (const clash of this.activeClashes) clash.render(ctx);
   }
 }
 
@@ -612,6 +536,7 @@ class FireballSpell {
     this.edgeColor = options.edgeColor ?? '#ff3d00';
     this.slowDuration = options.slowDuration ?? 0;
     this.slowFactor = options.slowFactor ?? 1;
+    this.isCapturableProjectile = true;
   }
   get y() { return groundYForDepth(this.z) - this.height - 30; }
 
@@ -948,122 +873,6 @@ class FrostNovaSpell {
 // TRANSFORMATION SPECIAL
 // ----------------------------------------------------
 
-class AnnihilationBeamSpell {
-  constructor(startX, z, facing, team, startHeight = 0) {
-    this.originX = startX;
-    this.x = startX + facing * 32;
-    this.z = z;
-    this.facing = facing;
-    this.team = team;
-    this.startHeight = startHeight;
-    this.chargeTime = 0;
-    this.chargeDuration = 1.2;
-    this.beamTime = 0;
-    this.beamDuration = 1.6;
-    this.phase = 'charge';
-    this.isFinished = false;
-    this.beamLength = 480;
-    this.damageTicked = 0;
-  }
-  get y() { return groundYForDepth(this.z); }
-
-  update(dt, gameWorld) {
-    if (this.phase === 'charge') {
-      this.chargeTime += dt;
-      const t = this.chargeTime / this.chargeDuration;
-      const radius = 6 + t * 28;
-      combat.spawnElementalParticles(this.x + (Math.random() - 0.5) * radius * 2, this.y - 28, 'ignis', 1);
-      combat.spawnElementalParticles(this.x + (Math.random() - 0.5) * radius * 2, this.y - 28, 'fulgur', 1);
-      if (this.chargeTime >= this.chargeDuration) {
-        this.phase = 'beam';
-        combat.shakeCamera(12, 0.5);
-        combat.spawnShockwave(this.x, this.y - 28, 60, '#ff4cff');
-        audio.playImpact(true);
-      }
-      return;
-    }
-    this.beamTime += dt;
-    this.damageTicked += dt;
-    if (this.damageTicked >= 0.2) {
-      this.damageTicked = 0;
-      const beamStartX = this.x;
-      const beamEndX = this.x + this.facing * this.beamLength * this.quality.area;
-      const minX = Math.min(beamStartX, beamEndX);
-      const maxX = Math.max(beamStartX, beamEndX);
-      const targets = gameWorld.getHostileTargets(this.team);
-      for (const t of targets) {
-        if (t.x >= minX && t.x <= maxX && Math.abs(t.z - this.z) < 0.25) {
-          t.takeDamage(22 * this.quality.power, this.facing * 80, 60, 0.15, false, 'spell');
-          combat.spawnHitSparks(t.x, t.y - 20, this.facing, '#ff4cff', 6);
-        }
-      }
-    }
-    combat.spawnElementalParticles(this.x + this.facing * Math.random() * this.beamLength * 0.8, this.y - 28, 'ignis', 2);
-    if (this.beamTime >= this.beamDuration) {
-      this.isFinished = true;
-      combat.spawnShockwave(this.x + this.facing * this.beamLength * 0.5, this.y - 28, 80, '#ff4cff');
-    }
-  }
-
-  render(ctx) {
-    ctx.save();
-    ctx.globalCompositeOperation = 'lighter';
-    const baseY = this.y - 28;
-    if (this.phase === 'charge') {
-      const t = this.chargeTime / this.chargeDuration;
-      const radius = 6 + t * 28;
-      const pulse = 1 + Math.sin(performance.now() * 0.02) * 0.15;
-      const g = ctx.createRadialGradient(this.x, baseY, 0, this.x, baseY, radius * pulse);
-      g.addColorStop(0, '#ffffff');
-      g.addColorStop(0.3, '#ff99ff');
-      g.addColorStop(0.6, '#ff4cff');
-      g.addColorStop(1, 'rgba(180,0,255,0)');
-      ctx.fillStyle = g;
-      ctx.beginPath();
-      ctx.arc(this.x, baseY, radius * pulse * 1.3, 0, Math.PI * 2);
-      ctx.fill();
-      for (let i = 0; i < 5; i++) {
-        const angle = performance.now() * 0.003 + i * Math.PI * 0.4;
-        const dist = radius * 1.5 + Math.sin(performance.now() * 0.01 + i) * 8;
-        const px = this.x + Math.cos(angle) * dist;
-        const py = baseY + Math.sin(angle) * dist * 0.6;
-        ctx.fillStyle = i % 2 === 0 ? '#ffaaff' : '#ffd54f';
-        ctx.beginPath();
-        ctx.arc(px, py, 3 + t * 2, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    } else {
-      const t = this.beamTime / this.beamDuration;
-      const beamW = this.beamLength * (this.quality?.area ?? 1);
-      const beamH = 24 + Math.sin(performance.now() * 0.015) * 6;
-      const fade = t > 0.7 ? 1 - (t - 0.7) / 0.3 : 1;
-      const bx = this.x;
-      const endX = bx + this.facing * beamW;
-      const lg = ctx.createLinearGradient(bx, baseY, endX, baseY);
-      lg.addColorStop(0, `rgba(255,255,255,${fade})`);
-      lg.addColorStop(0.15, `rgba(255,76,255,${fade * 0.9})`);
-      lg.addColorStop(0.5, `rgba(255,120,200,${fade * 0.7})`);
-      lg.addColorStop(1, `rgba(255,180,60,${fade * 0.3})`);
-      ctx.fillStyle = lg;
-      const left = Math.min(bx, endX);
-      ctx.fillRect(left, baseY - beamH / 2, Math.abs(beamW), beamH);
-      ctx.shadowColor = '#ff4cff';
-      ctx.shadowBlur = 20;
-      ctx.fillRect(left, baseY - beamH / 4, Math.abs(beamW), beamH / 2);
-      const sphereR = 18 + Math.sin(performance.now() * 0.012) * 4;
-      const sg = ctx.createRadialGradient(bx, baseY, 0, bx, baseY, sphereR);
-      sg.addColorStop(0, '#ffffff');
-      sg.addColorStop(0.4, '#ffaaff');
-      sg.addColorStop(1, 'rgba(255,76,255,0)');
-      ctx.fillStyle = sg;
-      ctx.beginPath();
-      ctx.arc(bx, baseY, sphereR, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.restore();
-  }
-}
-
 class VoidImplosionSpell {
   constructor(x, z, team) {
     this.x = x;
@@ -1364,12 +1173,32 @@ class MeteorSpell {
     this.craterLife = 3.5;
     this.isFinished = false;
     this.damageDone = false;
+    // Heavy falling object (concept doc §7.1): beams block on it, slow it
+    // and chip its structure; only enough beam pressure shatters it.
+    this.isHeavyObject = true;
+    this.structureHp = 50;
+    this.beamSlow = 1;
+  }
+
+  get heightAboveGround() { return this.targetY - this.y; }
+
+  takeBeamDamage(amount) {
+    if (this.isLanded || this.isFinished) return;
+    this.beamSlow = .55;
+    this.structureHp -= amount;
+    if (this.structureHp > 0) return;
+    this.isFinished = true;
+    combat.shakeCamera(8, .3);
+    combat.spawnShockwave(this.x, this.y, 70, '#ffab40');
+    combat.spawnHitSparks(this.x, this.y, 1, '#ffd180', 22);
+    combat.spawnElementalParticles(this.x, this.y, 'ignis', 18);
   }
 
   update(dt, gameWorld) {
     if (!this.isLanded) {
-      this.x += this.vx * dt;
-      this.y += this.vy * dt;
+      this.x += this.vx * dt * this.beamSlow;
+      this.y += this.vy * dt * this.beamSlow;
+      this.beamSlow = 1;
       combat.spawnElementalParticles(this.x, this.y, 'ignis', 6);
 
       if (this.y >= this.targetY - 10) {
@@ -1432,7 +1261,8 @@ class TempestBlitzSpell {
     const facing = caster.facing;
     const startX = caster.x;
     const unclampedEndX = caster.x + facing * 420;
-    const bounds = gameWorld.battlefield.playableBounds;
+    // Dungeon rooms scroll far past the arena width: respect the room walls.
+    const bounds = gameWorld.battlefield.boundsOverride ?? gameWorld.battlefield.playableBounds;
     const endX = Math.max(bounds.left, Math.min(bounds.right, unclampedEndX));
 
     // Instant blink dash

@@ -3,6 +3,7 @@ import { spells } from './spells.js';
 import { MAGE_SKILL_TREE } from './progression.js';
 import { recognizer } from './recognizer.js';
 import { sprites } from './sprites.js';
+import { runeManaCost } from './spell_catalog.js';
 
 export class UIManager {
   constructor() {
@@ -114,11 +115,13 @@ export class UIManager {
     ];
     this.activeSpellPreview = document.getElementById('active-spell-preview');
     this.summonStatus = document.getElementById('summon-status');
-    this.preparedRunesEl = document.getElementById('prepared-runes');
-    this.manaBarFill = document.getElementById('mana-bar-fill');
-    this.manaBarText = document.getElementById('mana-bar-text');
-    this.focusReadout = document.getElementById('focus-readout');
     this.focusActivateBtn = document.getElementById('focus-activate-btn');
+    this.blueMpBound = document.getElementById('blue-mp-bound');
+    this.blueFocusFill = document.getElementById('blue-focus-fill');
+    this.blueFocusText = document.getElementById('blue-focus-text');
+    this.redFocusStrip = document.getElementById('red-focus-strip');
+    this.redFocusFill = document.getElementById('red-focus-fill');
+    this.redFocusText = document.getElementById('red-focus-text');
 
     this.grimoireBtn = document.getElementById('grimoire-btn');
     this.grimoireModal = document.getElementById('grimoire-modal');
@@ -131,8 +134,13 @@ export class UIManager {
     this.dashBtn = document.getElementById('action-dash-btn');
     this.shieldBtn = document.getElementById('action-shield-btn');
     this.castBtn = document.getElementById('action-cast-btn');
-    this.swapBtn = document.getElementById('action-swap-btn');
     this.mountBtn = document.getElementById('action-mount-btn');
+    // Spell triangle corners: 0 = top (SLOT 1), 1 = bottom-left, 2 = bottom-right.
+    this.bottomRightActions = document.getElementById('bottom-right-actions');
+    this.slotButtons = [0, 1, 2].map((position) => document.getElementById(`action-slot-${position}`));
+    this.slotGlyphs = this.slotButtons.map((button) => button?.querySelector?.('.slot-glyph') ?? null);
+    this.fusionPreviewLine = document.getElementById('fusion-preview-line');
+    this.fusionDrag = null;
     this.fullscreenBtn = document.getElementById('fullscreen-btn');
     this.gameMenuBtn = document.getElementById('game-menu-btn');
     this.gameMenuModal = document.getElementById('game-menu-modal');
@@ -206,10 +214,12 @@ export class UIManager {
       const id = button?.getAttribute?.('data-skill-id');
       if (id) window.gameWorld?.unlockMageSkill(id);
     });
+    // The Grimoire is the deck stack: it opens the deck / rune view. Spell
+    // fusion is done on the right-hand triangle, never here.
     this.grimoireBtn.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      window.gameWorld?.castGrimoireSpells();
+      this.toggleGrimoire();
     });
 
     this.closeGrimoireBtn.addEventListener('click', (e) => {
@@ -257,8 +267,7 @@ export class UIManager {
     });
     closeFromBackdrop(this.gameMenuModal, () => this.toggleIngameMenu(false));
 
-    // Classic UI retains the original explicit Draw button. The alternative
-    // touch layout hides this control and uses cards / left double-tap.
+    // Legacy central Draw button (hidden by CSS; DRAW is the triangle centre).
     this.arcaneCircle?.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -312,12 +321,12 @@ export class UIManager {
       e.preventDefault();
       e.stopPropagation();
       const gw = window.gameWorld;
-      if (gw?.drawing?.active) gw.lockOrExitRuneDrawing();
+      // DRAW doubles as the push / counter impulse inside a Beam Clash.
+      if (gw?.player?.activeClash) gw.clashAction();
+      else if (gw?.drawing?.active) gw.lockOrExitRuneDrawing();
       else gw?.startRuneDrawing();
     });
-    this.swapBtn.addEventListener('pointerdown', (e) => {
-      e.preventDefault(); e.stopPropagation(); window.gameWorld?.swapSlottedSpell();
-    });
+    this.setupSpellTriangle();
     this.mountBtn?.addEventListener('pointerdown', (e) => {
       e.preventDefault(); e.stopPropagation(); window.gameWorld?.toggleMount();
     });
@@ -611,17 +620,6 @@ export class UIManager {
     try { window.localStorage?.setItem?.('grimge-touch-layout', this.touchLayout); } catch { /* preference is optional */ }
   }
 
-  placeDrawNearJoystick() {
-    if (this.touchLayout !== 'alternate' || !this.arcaneCircle) return;
-    // Draw deliberately has a stable lower-left home. It must not jump under
-    // the player’s thumb just because the dynamic movement stick was spawned
-    // at a different left-side location.
-    this.arcaneCircle.style.removeProperty?.('left');
-    this.arcaneCircle.style.removeProperty?.('top');
-    this.arcaneCircle.style.removeProperty?.('right');
-    this.arcaneCircle.style.removeProperty?.('bottom');
-  }
-
   toggleGrimoire(forceState) {
     if (forceState !== undefined) {
       if (forceState) this.grimoireModal.classList.remove('hidden');
@@ -775,6 +773,101 @@ export class UIManager {
     }, 1200);
   }
 
+  // Each triangle slot owns the gesture that starts on it (per pointer id):
+  // a short tap casts on release, a drag across other filled slots fuses
+  // exactly those slots. A touch that starts on an EMPTY slot is passed
+  // through to melee, so empty slots never swallow attacks.
+  setupSpellTriangle() {
+    this.slotButtons.forEach((button, position) => {
+      if (!button) return;
+      button.addEventListener('pointerdown', (e) => {
+        e.preventDefault(); e.stopPropagation();
+        button.setPointerCapture?.(e.pointerId);
+        const filled = !!window.gameWorld?.slotAt?.(position);
+        this.fusionDrag = { pointerId: e.pointerId, visited: [position], startX: e.clientX, startY: e.clientY, moved: false, filled };
+        if (filled) this.updateFusionPreview(e.clientX, e.clientY);
+      });
+      button.addEventListener('pointermove', (e) => this.moveFusionDrag(e));
+      button.addEventListener('pointerup', (e) => this.endFusionDrag(e));
+      button.addEventListener('pointercancel', () => this.cancelFusionDrag());
+    });
+  }
+
+  slotCenter(position) {
+    const rect = this.slotButtons[position]?.getBoundingClientRect?.();
+    if (!rect) return null;
+    return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2, radius: rect.width * .55 };
+  }
+
+  updateFusionPreview(clientX, clientY) {
+    const drag = this.fusionDrag;
+    const box = this.bottomRightActions?.getBoundingClientRect?.();
+    if (!this.fusionPreviewLine || !box?.width || !drag?.filled) return;
+    const toLocal = (x, y) => `${((x - box.left) / box.width * 320).toFixed(1)},${((y - box.top) / box.height * 200).toFixed(1)}`;
+    const points = drag.visited.map((position) => this.slotCenter(position)).filter(Boolean).map((c) => toLocal(c.x, c.y));
+    if (drag.moved) points.push(toLocal(clientX, clientY));
+    this.fusionPreviewLine.setAttribute('points', points.length > 1 ? points.join(' ') : '');
+  }
+
+  moveFusionDrag(e) {
+    const drag = this.fusionDrag;
+    if (!drag || drag.pointerId !== e.pointerId) return;
+    if (Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY) > 14) drag.moved = true;
+    if (!drag.filled) return;
+    const game = window.gameWorld;
+    for (let position = 0; position < 3; position++) {
+      if (drag.visited.includes(position) || !game?.slotAt?.(position)) continue;
+      const center = this.slotCenter(position);
+      if (center && Math.hypot(e.clientX - center.x, e.clientY - center.y) <= center.radius) {
+        drag.visited.push(position);
+        this.slotButtons[position]?.classList.add('is-fusion-target');
+      }
+    }
+    this.updateFusionPreview(e.clientX, e.clientY);
+  }
+
+  endFusionDrag(e) {
+    const drag = this.fusionDrag;
+    if (!drag || drag.pointerId !== e.pointerId) return;
+    this.cancelFusionDrag();
+    const game = window.gameWorld;
+    if (!game) return;
+    if (drag.filled) {
+      if (!drag.moved) game.castSlotAt(drag.visited[0]);
+      else if (drag.visited.length >= 2) game.fuseSlots(drag.visited);
+      return;
+    }
+    // Empty slot: forward the gesture to melee (tap or swipe).
+    const start = game.getCanvasCoords?.(drag.startX, drag.startY) ?? { x: 0, y: 0 };
+    const end = game.getCanvasCoords?.(e.clientX, e.clientY) ?? start;
+    game.performTouchAttackGesture(drag.moved ? end.x - start.x : 0, drag.moved ? end.y - start.y : 0);
+  }
+
+  cancelFusionDrag() {
+    this.fusionDrag = null;
+    this.fusionPreviewLine?.setAttribute('points', '');
+    this.slotButtons.forEach((button) => button?.classList.remove('is-fusion-target'));
+  }
+
+  updateSpellTriangle(player) {
+    for (let position = 0; position < 3; position++) {
+      const button = this.slotButtons[position];
+      if (!button) continue;
+      const slot = player.slottedSpells.find((entry) => entry.position === position);
+      button.classList.toggle('is-empty', !slot);
+      button.classList.toggle('is-combo', !!slot?.isCombo);
+      button.style.setProperty?.('--slot-color', slot ? slot.definition.color : '#4d4260');
+      if (this.slotGlyphs[position]) this.slotGlyphs[position].textContent = slot ? (slot.isCombo ? '✦' : slot.runes[0].glyph) : '';
+      button.title = slot ? `${slot.definition.name} — tap to cast, swipe to another slot to fuse` : `Spell slot ${position + 1} (empty)`;
+    }
+    if (this.castBtn) {
+      const clash = !!player.activeClash;
+      const drawing = !!window.gameWorld?.drawing?.active;
+      this.castBtn.textContent = clash ? 'PUSH' : drawing ? 'LOCK' : 'DRAW';
+      this.castBtn.classList.toggle('is-clash', clash);
+    }
+  }
+
   update(dt, player, enemyChampion, battlefield) {
     if (this.announcementTimer > 0) {
       this.announcementTimer -= dt;
@@ -790,27 +883,37 @@ export class UIManager {
     this.blueHpFill.style.width = `${Math.max(0, blueHpRatio * 100)}%`;
     this.blueHpText.textContent = `${blueCurrentHp} / ${player.maxHp}`;
 
+    // Mana: the hatched segment is bound to prepared slots; only the solid
+    // part is free for new drawings.
     const blueMpMax = player.maxMp;
     const blueCurrentMp = Math.ceil(player.mp);
+    const bound = Math.min(player.mp, (player.boundMana ?? 0) + (player.reservedMana ?? 0));
     this.blueMpFill.style.width = `${Math.max(0, (player.mp / player.maxMp) * 100)}%`;
-    this.blueMpText.textContent = `${blueCurrentMp} / ${blueMpMax}`;
+    if (this.blueMpBound) {
+      this.blueMpBound.style.left = `${Math.max(0, (player.mp - bound) / player.maxMp * 100)}%`;
+      this.blueMpBound.style.width = `${Math.max(0, bound / player.maxMp * 100)}%`;
+    }
+    this.blueMpText.textContent = bound > 0
+      ? `${blueCurrentMp}/${blueMpMax} · ${Math.floor(player.freeMana ?? 0)} FREE`
+      : `${blueCurrentMp} / ${blueMpMax}`;
 
-    // Bottom Mana Bar
-    this.manaBarFill.style.width = `${Math.max(0, (player.mp / player.maxMp) * 100)}%`;
-    this.manaBarText.textContent = `${blueCurrentMp} / ${blueMpMax}`;
+    // Focus sits in the top HUD with a compact transformation icon.
+    const focusReady = player.focus >= player.maxFocus && player.focusTransformTimer <= 0;
+    if (this.blueFocusFill) {
+      this.blueFocusFill.style.width = `${Math.max(0, Math.min(100, player.focus / player.maxFocus * 100))}%`;
+      this.blueFocusFill.parentElement?.classList?.toggle('focus-ready', focusReady);
+    }
+    if (this.blueFocusText) {
+      this.blueFocusText.textContent = player.focusTransformTimer > 0
+        ? `ASCENDANT ${player.focusTransformTimer.toFixed(1)}s`
+        : `${Math.round(player.focus / player.maxFocus * 100)}%`;
+    }
     if (this.focusActivateBtn) {
-      const ready = player.focus >= player.maxFocus && player.focusTransformTimer <= 0;
-      this.focusActivateBtn.textContent = ready
-        ? 'ACTIVATE FOCUS'
-        : `FOCUS ${Math.round(player.focus)}/${player.maxFocus}`;
-      this.focusActivateBtn.classList.toggle('ready', ready);
-      this.focusActivateBtn.disabled = !ready;
+      this.focusActivateBtn.classList.toggle('ready', focusReady);
+      this.focusActivateBtn.disabled = !focusReady;
+      this.focusActivateBtn.title = focusReady ? 'Activate transformation (T)' : `Focus ${Math.round(player.focus)}/${player.maxFocus}`;
     }
-    if (this.focusReadout) {
-      this.focusReadout.textContent = player.focusTransformTimer > 0
-        ? `FOCUS ASCENDANT ${player.focusTransformTimer.toFixed(1)}s`
-        : `FOCUS ${Math.round(player.focus)}/${player.maxFocus}`;
-    }
+    this.updateSpellTriangle(player);
 
     // Red Team Bars
     const redHpRatio = enemyChampion ? enemyChampion.hp / enemyChampion.maxHp : 0;
@@ -821,6 +924,14 @@ export class UIManager {
     const redMpRatio = enemyChampion ? enemyChampion.mp / redMpMax : 0;
     this.redMpFill.style.width = `${Math.max(0, redMpRatio * 100)}%`;
     this.redMpText.textContent = `${Math.round(redMpRatio * redMpMax)} / ${redMpMax}`;
+    // Only fighters that actually have a focus resource show the bar.
+    const enemyHasFocus = Number.isFinite(enemyChampion?.focus);
+    this.redFocusStrip?.classList.toggle('hidden', !enemyHasFocus);
+    if (enemyHasFocus) {
+      const ratio = enemyChampion.focus / (enemyChampion.maxFocus ?? 100);
+      if (this.redFocusFill) this.redFocusFill.style.width = `${Math.max(0, ratio * 100)}%`;
+      if (this.redFocusText) this.redFocusText.textContent = `${Math.round(ratio * 100)}%`;
+    }
 
     if (window.gameWorld) {
       this.blueCrystalCount.textContent = window.gameWorld.blueCrystals;
@@ -858,7 +969,10 @@ export class UIManager {
         overlay.style.borderColor = rune.color;
         cardEl.style.background = `linear-gradient(145deg, ${rune.color}38, rgba(10, 8, 25, .96) 72%)`;
         const runeLevel = window.gameWorld?.profile?.runeLevel?.(rune.id) ?? 1;
-        overlay.innerHTML = `<span>${rune.glyph}</span><small>${rune.name} · LV.${runeLevel}</small><em>${rune.desc}</em>`;
+        const cost = runeManaCost(rune);
+        // Runes above the FREE mana are greyed out and cannot be drawn.
+        cardEl.classList.toggle('unaffordable', !window.gameWorld?.drawing?.active && cost > (player.freeMana ?? Infinity));
+        overlay.innerHTML = `<b class="card-cost">${cost}</b><span>${rune.glyph}</span><small>${rune.name} · LV.${runeLevel}</small><em>${rune.desc}</em>`;
       } else {
         cardEl.style.opacity = '0.55';
         cardEl.style.transform = 'none';
@@ -866,16 +980,9 @@ export class UIManager {
         cardEl.style.background = 'linear-gradient(145deg, rgba(38, 29, 70, .96), rgba(11, 9, 25, .96))';
         overlay.style.color = '#6f687a';
         overlay.style.borderColor = '#554d63';
+        cardEl.classList.remove('unaffordable');
         overlay.innerHTML = '<span>·</span><small>EMPTY</small>';
       }
-    }
-
-    // Prepared components are not cards in the hand. This makes the deck
-    // cycle legible: hand card -> drawn component -> spell -> cleared.
-    if (this.preparedRunesEl) {
-      this.preparedRunesEl.innerHTML = player.slottedSpells.length
-        ? `SLOTTED: ${player.slottedSpells.map((slot, index) => `<b style="color:${slot.definition.color};opacity:${index === player.selectedSpellIndex ? 1 : .45}">${slot.isCombo ? '✦' : slot.runes[0].glyph}</b>`).join(' ')}`
-        : 'SLOTTED: —';
     }
 
     // Active Spell Preview
@@ -883,7 +990,7 @@ export class UIManager {
     if (selectedSlot) {
       this.activeSpellPreview.textContent = selectedSlot.definition.isComponent
         ? `COMPONENT: ${selectedSlot.definition.name} — DRAW A MATCHING RUNE`
-        : `READY: ${selectedSlot.definition.name} [CAST · SWAP]`;
+        : `READY: ${selectedSlot.definition.name} — TAP SLOT ${(selectedSlot.position ?? 0) + 1}`;
       this.activeSpellPreview.style.color = selectedSlot.definition.color;
     } else {
       const hand = player.runeHand.map((rune) => rune.name).join(' · ');

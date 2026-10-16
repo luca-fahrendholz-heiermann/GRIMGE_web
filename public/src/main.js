@@ -11,6 +11,29 @@ import { VIEWPORT, ARENA_LAYOUT, groundDistance, groundYForDepth } from './world
 import { ART_ASSETS } from './art_assets.js';
 import { MageProfile, MAGE_SKILL_TREE, applyMageProfile } from './progression.js';
 import { getGameMode } from './game_modes.js';
+import { runeManaCost, isSpecialRune } from './spell_catalog.js';
+
+// LF2-style Dungeon rooms. Each room is a wide scrolling stretch: the camera
+// follows the player, enemy groups enter from the right screen edge once the
+// player advances past their trigger, and the player may walk back freely
+// (e.g. to free a prisoner). The right exit opens only after the room is
+// cleared; walking through it locks the previous room behind the player.
+// Index = dungeon stage; the stage-0 scout shares room 1.
+const DUNGEON_LEFT_EDGE = 104;
+const DUNGEON_ROOMS = Object.freeze([
+  null,
+  Object.freeze({ width: 2200, encounters: [{ at: 0, count: 2 }, { at: 800, count: 2 }] }),
+  Object.freeze({ width: 2400, encounters: [{ at: 0, count: 2 }, { at: 750, count: 2 }, { at: 1450, count: 2 }], rescueAt: 1150 }),
+  Object.freeze({ width: 2400, encounters: [{ at: 0, count: 2 }, { at: 750, count: 3 }, { at: 1450, count: 3 }], elite: true }),
+  Object.freeze({ width: 1400, boss: true })
+]);
+
+function dungeonRoomBounds(stage) {
+  const index = Math.max(1, Math.min(DUNGEON_ROOMS.length - 1, stage));
+  let left = DUNGEON_LEFT_EDGE;
+  for (let i = 1; i < index; i++) left += DUNGEON_ROOMS[i].width;
+  return { left, right: left + DUNGEON_ROOMS[index].width };
+}
 
 export class GameWorld {
   constructor() {
@@ -408,34 +431,80 @@ export class GameWorld {
     let attackStart = null;
     let attackStartTime = 0;
     let chargeArmed = false;
-    let joystickOrigin = null;
-    let joystickStartTime = 0;
-    let joystickMoved = false;
-    let lastLeftTap = null;
-    let controlTapPointerId = null;
-    let suppressControlTapRecord = false;
+    // One record per left finger (concept doc §4.5.4): every touch starts as
+    // PendingLeftGesture and is classified exactly once as JOYSTICK, BACKDASH
+    // or SPRINT. A finger already classified as joystick is never
+    // re-interpreted as a flick until it is released.
+    let leftGesture = null;
     const JOYSTICK_RADIUS = 66;
-    const beginJoystick = (event) => {
-      if (event.pointerType && event.pointerType !== 'touch') return false;
-      const pt = this.getCanvasCoords(event.clientX, event.clientY);
-      // A dynamic stick belongs to the left thumb.  The right half remains a
-      // combat gesture surface and is never stolen for movement.
-      if (pt.x > this.renderWidth * 0.48 || this.drawing.active || !this.isMatchRunning()) return false;
-      pointerId = event.pointerId;
-      joystickOrigin = pt;
-      joystickStartTime = performance.now();
-      joystickMoved = false;
+    const FLICK_WINDOW_MS = 200;
+    const FLICK_MIN_DISTANCE = 70;   // reference (logical) px
+    const FLICK_MIN_SPEED = 700;     // reference px / s
+    const FLICK_MAX_ANGLE = 25 * Math.PI / 180;
+    const placeStick = (pt) => {
       joystick.style.left = `${Math.max(0, Math.min(this.renderWidth - JOYSTICK_RADIUS * 2, pt.x - JOYSTICK_RADIUS))}px`;
       joystick.style.top = `${Math.max(0, Math.min(this.logicalHeight - JOYSTICK_RADIUS * 2, pt.y - JOYSTICK_RADIUS))}px`;
       joystick.style.bottom = 'auto';
+    };
+    const beginJoystick = (event, fromStickElement = false) => {
+      if (event.pointerType && event.pointerType !== 'touch') return false;
+      const pt = this.getCanvasCoords(event.clientX, event.clientY);
+      // The whole left half belongs to movement; the right half remains a
+      // combat gesture surface and is never stolen for movement.
+      if (!fromStickElement && pt.x > this.renderWidth * 0.48) return false;
+      if (this.drawing.active || !this.isMatchRunning() || pointerId !== null) return false;
+      pointerId = event.pointerId;
+      leftGesture = { start: pt, startTime: performance.now(), facing: this.player?.facing || 1, state: 'pending' };
+      // Freeze facing until the gesture is classified, so provisional stick
+      // input cannot turn the Wizard and flip the flick meaning.
+      if (this.player) this.player.touchFacingLock = true;
+      if (!fromStickElement) placeStick(pt);
       joystick.classList.add('is-active');
-      this.canvas.setPointerCapture?.(pointerId);
-      ui.placeDrawNearJoystick(pt.x, pt.y);
+      (fromStickElement ? joystick : this.canvas).setPointerCapture?.(pointerId);
       update(event);
       return true;
     };
+    const classifyFlick = (pt, now) => {
+      const g = leftGesture;
+      const dx = pt.x - g.start.x;
+      const dy = pt.y - g.start.y;
+      const elapsed = Math.max(1, now - g.startTime);
+      const distance = Math.hypot(dx, dy);
+      const isFlick = elapsed <= FLICK_WINDOW_MS
+        && Math.abs(dx) >= FLICK_MIN_DISTANCE
+        && Math.abs(dx) / elapsed * 1000 >= FLICK_MIN_SPEED
+        && Math.atan2(Math.abs(dy), Math.abs(dx)) <= FLICK_MAX_ANGLE;
+      if (isFlick) return Math.sign(dx) * g.facing > 0 ? 'sprint' : 'backdash';
+      // Too slow, too long or not horizontal enough: this finger is a stick.
+      if (elapsed > FLICK_WINDOW_MS || distance > FLICK_MIN_DISTANCE * 1.6) return 'joystick';
+      return 'pending';
+    };
+    const settleLeftGesture = (kind, pt) => {
+      const g = leftGesture;
+      if (this.player) this.player.touchFacingLock = false;
+      g.state = kind;
+      if (!this.player?.isAlive) return;
+      if (kind === 'sprint') {
+        const dir = Math.sign(pt.x - g.start.x) || g.facing;
+        if (this.player.startTouchSprint(dir)) {
+          // Offset the virtual stick centre behind the finger, so the held
+          // flick reads as a moderate forward steer, not a pinned stick.
+          placeStick({ x: pt.x - dir * JOYSTICK_RADIUS * .6, y: pt.y });
+        } else g.state = 'joystick';
+      } else if (kind === 'backdash') {
+        this.player.triggerBackdash({ source: 'touch' });
+        // After the short dodge the same finger steers normally again.
+        placeStick(pt);
+        g.state = 'joystick';
+      }
+    };
     const update = (event) => {
       if (pointerId !== event.pointerId) return;
+      if (leftGesture?.state === 'pending') {
+        const pt = this.getCanvasCoords(event.clientX, event.clientY);
+        const kind = classifyFlick(pt, performance.now());
+        if (kind !== 'pending') settleLeftGesture(kind, pt);
+      }
       const rect = joystick.getBoundingClientRect();
       const radius = rect.width * 0.5;
       let dx = event.clientX - (rect.left + radius);
@@ -443,10 +512,6 @@ export class GameWorld {
       const length = Math.hypot(dx, dy);
       if (length > radius) { dx = dx / length * radius; dy = dy / length * radius; }
       const deadzone = radius * 0.14;
-      if (joystickOrigin) {
-        const moved = this.getCanvasCoords(event.clientX, event.clientY);
-        if (Math.hypot(moved.x - joystickOrigin.x, moved.y - joystickOrigin.y) > 16) joystickMoved = true;
-      }
       const normX = Math.abs(dx) < deadzone ? 0 : dx / radius;
       const normZ = Math.abs(dy) < deadzone ? 0 : dy / radius;
       this.input.touchMove.x = normX;
@@ -455,6 +520,15 @@ export class GameWorld {
     };
     const clear = (event) => {
       if (pointerId !== event.pointerId) return;
+      const released = this.getCanvasCoords(event.clientX, event.clientY);
+      // A very fast flick can be released before a move event classified it.
+      if (leftGesture?.state === 'pending') {
+        const kind = classifyFlick(released, performance.now());
+        if (kind === 'sprint' || kind === 'backdash') settleLeftGesture(kind, released);
+      }
+      if (leftGesture?.state === 'sprint') this.player?.releaseTouchSprint?.();
+      if (this.player) this.player.touchFacingLock = false;
+      leftGesture = null;
       pointerId = null;
       this.input.touchMove.x = 0; this.input.touchMove.z = 0;
       knob.style.transform = 'translate(0, 0)';
@@ -467,21 +541,6 @@ export class GameWorld {
         joystick.style.removeProperty?.('top');
         joystick.style.removeProperty?.('bottom');
       }
-      const released = this.getCanvasCoords(event.clientX, event.clientY);
-      if (joystickOrigin && joystickMoved && this.player?.isAlive) {
-        const swipeDx = released.x - joystickOrigin.x;
-        const dist = Math.abs(swipeDx);
-        const elapsed = performance.now() - joystickStartTime;
-        const velocity = elapsed > 0 ? dist / elapsed : 0;
-        if (velocity > 0.8 && dist > 50) {
-          const swipeDir = Math.sign(swipeDx);
-          if (swipeDir === -this.player.facing) this.player.triggerBackdash();
-          else this.player.activateSprint(swipeDir);
-        }
-      }
-      if (!joystickMoved) lastLeftTap = { x: released.x, y: released.y, time: performance.now() };
-      else lastLeftTap = null;
-      joystickOrigin = null;
     };
     const beginAttackGesture = (event) => {
       if (event.pointerType && event.pointerType !== 'touch') return;
@@ -493,44 +552,6 @@ export class GameWorld {
       attackStartTime = performance.now();
       chargeArmed = false;
       this.canvas.setPointerCapture?.(attackPointerId);
-    };
-    const handleLeftDoubleTap = (event) => {
-      if (event.pointerType && event.pointerType !== 'touch') return false;
-      const pt = this.getCanvasCoords(event.clientX, event.clientY);
-      if (pt.x > this.renderWidth * 0.48 || !this.isMatchRunning()) return false;
-      const now = performance.now();
-      const isDoubleTap = lastLeftTap
-        && now - lastLeftTap.time <= 340
-        && Math.hypot(pt.x - lastLeftTap.x, pt.y - lastLeftTap.y) <= 30;
-      if (isDoubleTap) {
-        lastLeftTap = null;
-        if (this.drawing.active) this.lockOrExitRuneDrawing();
-        else this.castPreparedSpell();
-        return true;
-      }
-      // While drawing, reserve the first left tap of the next double-tap so
-      // it cannot be accidentally appended as an ink stroke.
-      if (this.drawing.active) {
-        controlTapPointerId = event.pointerId;
-        this.drawing.inputMode = 'left-control';
-        this.drawing.touchId = event.pointerId;
-        this.canvas.setPointerCapture?.(controlTapPointerId);
-        return true;
-      }
-      return false;
-    };
-    const finishLeftControlTap = (event) => {
-      if (controlTapPointerId !== event.pointerId) return;
-      const pt = this.getCanvasCoords(event.clientX, event.clientY);
-      controlTapPointerId = null;
-      if (this.drawing.inputMode === 'left-control') {
-        this.drawing.inputMode = null;
-        this.drawing.touchId = null;
-      }
-      if (suppressControlTapRecord) {
-        suppressControlTapRecord = false;
-        lastLeftTap = null;
-      } else lastLeftTap = { x: pt.x, y: pt.y, time: performance.now() };
     };
     const finishAttackGesture = (event) => {
       if (attackPointerId !== event.pointerId || !attackStart) return;
@@ -548,21 +569,15 @@ export class GameWorld {
       this.performTouchAttackGesture(dx, dy);
     };
 
-    // The old fixed joystick remains a valid direct target while visible,
+    // The fixed classic joystick remains a valid direct target while visible,
     // while the canvas itself creates it dynamically anywhere on the left.
     joystick.addEventListener('pointerdown', (event) => {
-      pointerId = event.pointerId;
-      joystick.setPointerCapture?.(pointerId);
-      update(event);
+      if (beginJoystick(event, true)) event.preventDefault?.();
     });
     joystick.addEventListener('pointermove', update);
     joystick.addEventListener('pointerup', clear);
     joystick.addEventListener('pointercancel', clear);
     this.canvas.addEventListener('pointerdown', (event) => {
-      if (handleLeftDoubleTap(event)) {
-        event.preventDefault?.();
-        return;
-      }
       if (beginJoystick(event)) {
         event.preventDefault?.();
         return;
@@ -571,7 +586,7 @@ export class GameWorld {
     }, { passive: false });
     window.addEventListener('pointermove', (event) => {
       update(event);
-      if (attackPointerId === event.pointerId && attackStart && !chargeArmed && this.player?.isAlive) {
+      if (attackPointerId === event.pointerId && attackStart && !chargeArmed && this.player?.isAlive && !this.player.activeClash) {
         const pt = this.getCanvasCoords(event.clientX, event.clientY);
         const dx = pt.x - attackStart.x;
         const elapsed = performance.now() - attackStartTime;
@@ -584,8 +599,10 @@ export class GameWorld {
         }
       }
     }, { passive: false });
-    window.addEventListener('pointerup', (event) => { clear(event); finishLeftControlTap(event); finishAttackGesture(event); }, { passive: false });
-    window.addEventListener('pointercancel', (event) => { clear(event); controlTapPointerId = null; attackPointerId = null; attackStart = null; chargeArmed = false; }, { passive: false });
+    window.addEventListener('pointerup', (event) => { clear(event); finishAttackGesture(event); }, { passive: false });
+    window.addEventListener('pointercancel', (event) => { clear(event); attackPointerId = null; attackStart = null; chargeArmed = false; }, { passive: false });
+    // Exposed for headless tests of the left-half classifier.
+    this.touchGestureDebug = { beginJoystick, update, clear, get leftGesture() { return leftGesture; } };
   }
 
   setSelectedHero(heroKey) {
@@ -625,6 +642,8 @@ export class GameWorld {
 
   performTouchAttackGesture(dx, dy) {
     if (!this.isMatchRunning() || !this.player?.isAlive || this.drawing.active) return false;
+    // During a Beam Clash a right-side tap is the push / counter impulse.
+    if (this.player.activeClash) return !!this.clashAction();
     const threshold = 34;
     const distance = Math.hypot(dx, dy);
     let attackKind = 'normal';
@@ -651,8 +670,32 @@ export class GameWorld {
     this.input.move.z = magnitude > 1 ? z / magnitude : z;
   }
 
+  // Hand runes the player can currently pay for with FREE mana (mana that
+  // is neither bound to a slot nor reserved by an open drawing).
+  affordableHandRuneIds(extraBudget = 0) {
+    const budget = this.player.freeMana + extraBudget;
+    return this.player.runeHand.filter((card) => runeManaCost(card) <= budget).map((card) => card.id);
+  }
+
   startRuneDrawing(expectedCardId = null) {
     if (!this.isMatchRunning() || this.drawing.active || !this.player.isAlive) return;
+    if (this.player.slottedSpells.length >= 3) {
+      this.showAnnouncement('SPELL SLOTS FULL — CAST OR FUSE!'); audio.playRuneFail(); return;
+    }
+    // Mana is reserved when drawing starts and becomes bound to the slot on
+    // success. A selected card must be affordable; free drawing (DRAW) is
+    // limited to affordable hand runes by the recognizer.
+    let reserved = 0;
+    if (expectedCardId) {
+      const card = this.player.runeHand.find((entry) => entry.cardId === expectedCardId);
+      reserved = card ? runeManaCost(card) : 0;
+      if (card && reserved > this.player.freeMana) {
+        this.showAnnouncement('NOT ENOUGH FREE MANA'); audio.playRuneFail(); return;
+      }
+    } else if (this.player.runeHand.length && !this.affordableHandRuneIds().length) {
+      this.showAnnouncement('NOT ENOUGH FREE MANA'); audio.playRuneFail(); return;
+    }
+    this.player.reservedMana = reserved;
     this.drawing.active = true;
     this.drawing.expectedCardId = expectedCardId;
     this.drawing.strokes = [];
@@ -717,7 +760,7 @@ export class GameWorld {
   confirmRuneDrawing(autoLock = false) {
     if (!this.drawing.active) return false;
     this.completeRuneStroke();
-    const result = recognizer.recognize(this.drawing.strokes, this.player.runeHand.map((card) => card.id));
+    const result = recognizer.recognize(this.drawing.strokes, this.affordableHandRuneIds(this.player.reservedMana));
     if (!result?.rune || result.confidence < 0.48) {
       this.resetRuneSketch();
       audio.playRuneFail();
@@ -760,6 +803,7 @@ export class GameWorld {
     this.drawing.inputMode = null;
     this.drawing.expectedCardId = null;
     this.drawing.autoLockArmed = false;
+    this.player.reservedMana = 0;
     this.targetTimeScale = this.timeScale = 1;
     this.clearRuneCanvas();
     ui.setDrawingMode(false);
@@ -774,6 +818,9 @@ export class GameWorld {
     }
 
     const expectedCardId = this.drawing.expectedCardId;
+    // The reservation ends here: success turns it into bound slot mana.
+    const reservedBudget = this.player.reservedMana;
+    this.player.reservedMana = 0;
     this.drawing.active = false;
     this.drawing.touchId = null;
     this.drawing.inputMode = null;
@@ -787,17 +834,22 @@ export class GameWorld {
       this.clearRuneCanvas();
       return;
     }
-    const result = recognizedResult ?? recognizer.recognize(this.drawing.strokes, this.player.runeHand.map((card) => card.id));
+    const result = recognizedResult ?? recognizer.recognize(this.drawing.strokes, this.affordableHandRuneIds(reservedBudget));
 
-    if (result && result.rune) {
+    if (result && result.rune && runeManaCost(result.rune) > this.player.freeMana) {
+      audio.playRuneFail();
+      this.showAnnouncement('NOT ENOUGH FREE MANA');
+    } else if (result && result.rune) {
       const added = this.player.playRuneCard(result.rune.id, expectedCardId);
       if (added) {
         // A card remains a reusable deck card.  Cast quality belongs to this
         // particular prepared instance, not to every future redraw of it.
         const grade = result.grade ?? recognizer.gradeForConfidence(result.confidence);
         const runeProgress = this.profile.awardRuneUse(added.id, grade);
-        const prepared = { ...added, grade, quality: result.confidence, runeLevel: this.profile.runeLevel(added.id) };
-        const slot = this.slotRuneSpell(prepared);
+        const prepared = { ...added, grade, quality: result.confidence, runeLevel: this.profile.runeLevel(added.id), manaCost: runeManaCost(added) };
+        // A recognized rune only goes into a spell slot in every mode; it is
+        // released later by tapping its slot (or E), never fired automatically.
+        this.slotRuneSpell(prepared);
         if (this.activeMode?.id === 'arena') {
           const idx = this.player.runeDeck.findIndex(c => c.cardId === added.cardId);
           if (idx !== -1) this.player.runeDeck.splice(idx, 1);
@@ -810,11 +862,8 @@ export class GameWorld {
         ui.showRecognitionBadge(result.rune, result.confidence, prepared.grade);
         combat.spawnShockwave(this.player.x, this.player.y - 30, 70, result.rune.color);
         combat.spawnElementalParticles(this.player.x, this.player.y - 30, result.rune.id, Math.round(14 * spells.qualityForRunes([prepared]).particles));
-        if (slot && !slot.definition.isComponent && this.activeMode?.id === 'siege') {
-          this.castSpellSlot(slot, true);
-        }
       } else {
-        ui.showAnnouncement(this.player.preparedRunes.length >= 3 ? 'SPELL SLOTS FULL — CAST OR CLEAR!' : 'DRAW A RUNE FROM YOUR HAND');
+        ui.showAnnouncement(this.player.slottedSpells.length >= 3 ? 'SPELL SLOTS FULL — CAST OR FUSE!' : 'DRAW A RUNE FROM YOUR HAND');
       }
     } else {
       audio.playRuneFail();
@@ -827,6 +876,8 @@ export class GameWorld {
 
   castPreparedSpell() {
     if (!this.isMatchRunning() || !this.player.isAlive) return false;
+    // Inside a Beam Clash the cast input becomes the push / counter impulse.
+    if (this.player.activeClash) return !!this.clashAction();
     const selectedSlot = this.player.slottedSpells[this.player.selectedSpellIndex];
     if (selectedSlot) return this.castSpellSlot(selectedSlot, true);
     if (this.player.preparedRunes.length === 0) {
@@ -880,11 +931,16 @@ export class GameWorld {
     return false;
   }
 
+  slotAt(position) {
+    return this.player.slottedSpells.find((slot) => slot.position === position) ?? null;
+  }
+
   slotRuneSpell(rune) {
     const slots = this.player.slottedSpells;
-    // A drawn rune is always visible as its own orbiting component. Combining
-    // is a conscious Grimoire action, never an implicit side effect of drawing
-    // the next card.
+    // A drawn rune is always visible as its own orbiting component in one of
+    // the three triangle slots (0 = top, 1 = bottom-left, 2 = bottom-right).
+    // Combining is a conscious slot-to-slot swipe, never an implicit side
+    // effect of drawing the next card.
     // Unknown future rune families still receive a safe component record, but
     // all currently draw-able runes resolve to a real standalone effect.
     const definition = spells.resolveSpell([rune]) ?? {
@@ -896,7 +952,9 @@ export class GameWorld {
       isComponent: true,
       desc: `${rune.name} must be fused with another rune in the Grimoire.`
     };
-    const slot = { runes: [rune], definition, isCombo: false, quality: spells.qualityForRunes([rune]) };
+    const taken = new Set(slots.map((entry) => entry.position));
+    const position = [0, 1, 2].find((index) => !taken.has(index)) ?? slots.length;
+    const slot = { runes: [rune], definition, isCombo: false, quality: spells.qualityForRunes([rune]), position, manaCost: rune.manaCost ?? runeManaCost(rune) };
     slots.push(slot);
     this.player.selectedSpellIndex = slots.length - 1;
     return slot;
@@ -922,10 +980,9 @@ export class GameWorld {
     if (resolved.id === 'ninefold_beast_form' && this.player.ninefoldCooldown > 0) {
       this.showAnnouncement('NINEFOLD FORM IS RECHARGING'); audio.playRuneFail(); return false;
     }
-    if (this.player.mp < (resolved.manaCost ?? 0)) {
-      this.showAnnouncement('NOT ENOUGH MANA'); audio.playRuneFail(); return false;
-    }
-    this.player.mp -= resolved.manaCost ?? 0;
+    // The slot was paid when it was drawn. Casting turns its bound mana into
+    // spent mana (it regenerates later) — there is no second payment gate.
+    this.player.mp = Math.max(0, this.player.mp - (slot.manaCost ?? 0));
     if (resolved.id === 'aura_shock') this.player.auraShockCooldown = resolved.cooldown;
     if (resolved.id === 'arcane_aegis') this.player.arcaneShieldCooldown = resolved.cooldown;
     if (resolved.id === 'eidolon_mantle') this.player.eidolonCooldown = resolved.cooldown;
@@ -941,22 +998,82 @@ export class GameWorld {
           if (idx !== -1) this.player.runeDeck.splice(idx, 1);
         }
       }
-      this.player.slottedSpells.splice(this.player.selectedSpellIndex, 1);
-      this.player.selectedSpellIndex = Math.max(0, Math.min(this.player.selectedSpellIndex, this.player.slottedSpells.length - 1));
-      this.player.preparedRunes = this.player.slottedSpells.flatMap((entry) => entry.runes);
+      this.removeSlots([slot]);
     }
     return true;
   }
 
-  swapSlottedSpell() {
+  removeSlots(removed) {
     const slots = this.player.slottedSpells;
-    if (slots.length < 2) return false;
-    this.player.selectedSpellIndex = (this.player.selectedSpellIndex + 1) % slots.length;
-    audio.playRuneChime(660);
-    return true;
+    for (const slot of removed) {
+      const index = slots.indexOf(slot);
+      if (index !== -1) slots.splice(index, 1);
+    }
+    this.player.selectedSpellIndex = Math.max(0, Math.min(this.player.selectedSpellIndex, slots.length - 1));
+    this.player.preparedRunes = slots.flatMap((entry) => entry.runes);
+  }
+
+  // Tap on a triangle slot: fire exactly that prepared spell.
+  castSlotAt(position) {
+    if (!this.isMatchRunning() || !this.player.isAlive) return false;
+    if (this.player.activeClash) return !!this.clashAction();
+    const slot = this.slotAt(position);
+    if (!slot) return false;
+    this.player.selectedSpellIndex = this.player.slottedSpells.indexOf(slot);
+    return this.castSpellSlot(slot, true);
+  }
+
+  // Swipe between two (or across all three) slots. Only the selected slots
+  // are ingredients; order is irrelevant. A valid recipe stays in the anchor
+  // (start) slot and frees the others. Without a recipe exactly one random
+  // ingredient survives, the others are lost (their bound mana is released)
+  // and nothing is cast. Training mode experiments without losses.
+  fuseSlots(positions) {
+    if (!this.isMatchRunning() || !this.player.isAlive) return { ok: false, reason: 'inactive' };
+    const unique = [...new Set(positions)];
+    const chosen = unique.map((position) => this.slotAt(position));
+    if (unique.length < 2 || chosen.some((slot) => !slot)) return { ok: false, reason: 'empty' };
+    if (chosen.some((slot) => slot.isCombo || slot.runes.some((rune) => isSpecialRune(rune)))) {
+      this.showAnnouncement('FUSED OR SPECIAL SPELLS CANNOT FUSE AGAIN'); audio.playRuneFail();
+      return { ok: false, reason: 'locked' };
+    }
+    const components = chosen.flatMap((slot) => slot.runes);
+    const recipe = spells.resolveSpell(components);
+    const anchor = chosen[0];
+    if (recipe) {
+      const comboSlot = {
+        runes: components, definition: recipe, isCombo: true, quality: spells.qualityForRunes(components),
+        position: anchor.position, manaCost: chosen.reduce((sum, slot) => sum + (slot.manaCost ?? 0), 0)
+      };
+      const slots = this.player.slottedSpells;
+      slots[slots.indexOf(anchor)] = comboSlot;
+      this.removeSlots(chosen.slice(1));
+      this.player.selectedSpellIndex = slots.indexOf(comboSlot);
+      combat.spawnShockwave(this.player.x, this.player.y - 36, 48, recipe.color);
+      audio.playRuneChime(720);
+      this.showAnnouncement(`FUSED: ${recipe.name}`);
+      return { ok: true, result: 'fused', slot: comboSlot };
+    }
+    audio.playRuneFail();
+    if (this.activeMode?.id === 'training') {
+      this.showAnnouncement('NO RECIPE — TRAINING: NOTHING LOST');
+      return { ok: false, reason: 'norecipe', lossless: true };
+    }
+    const survivor = chosen[Math.floor(Math.random() * chosen.length)];
+    this.removeSlots(chosen.filter((slot) => slot !== survivor));
+    this.showAnnouncement(`NO RECIPE — ONLY ${survivor.definition.name} REMAINS`);
+    return { ok: false, reason: 'norecipe', survivor };
+  }
+
+  clashAction() {
+    const clash = spells.getClashFor(this.player);
+    return clash ? clash.humanAction(this.player) : null;
   }
 
   activateFocusTransformation() {
+    if (this.player?.activeClash) {
+      this.showAnnouncement('TRANSFORMATION LOCKED DURING A CLASH'); return false;
+    }
     if (!this.isMatchRunning() || !this.player?.activateFocusTransformation?.()) {
       this.showAnnouncement(this.player?.focus >= this.player?.maxFocus ? 'FOCUS ALREADY ACTIVE' : `FOCUS ${Math.round(this.player?.focus ?? 0)}/${this.player?.maxFocus ?? 100}`);
       return false;
@@ -994,43 +1111,6 @@ export class GameWorld {
     }
     this.player.selectedSpellIndex = Math.max(0, Math.min(this.player.selectedSpellIndex, slots.length - 1));
     this.player.preparedRunes = slots.flatMap(s => s.runes);
-  }
-
-  castGrimoireSpells() {
-    const slots = this.player.slottedSpells;
-    if (!this.isMatchRunning() || !this.player.isAlive || !slots.length) {
-      this.showAnnouncement('NO SLOTTED SPELLS'); audio.playRuneFail(); return false;
-    }
-    const existingCombo = slots.find((slot) => slot.isCombo);
-    if (existingCombo) {
-      this.player.selectedSpellIndex = slots.indexOf(existingCombo);
-      // First Grimoire press fuses components. A second Grimoire press
-      // releases that fusion; CAST stays available as an alternate control.
-      return this.castSpellSlot(existingCombo, true);
-    }
-
-    const components = slots.flatMap((slot) => slot.runes);
-    const combined = components.length >= 2 ? spells.resolveSpell(components) : null;
-    if (combined?.tier > 1) {
-      const comboSlot = { runes: components, definition: combined, isCombo: true, quality: spells.qualityForRunes(components) };
-      slots.splice(0, slots.length, comboSlot);
-      this.player.selectedSpellIndex = 0;
-      this.player.preparedRunes = [...components];
-      combat.spawnShockwave(this.player.x, this.player.y - 36, 48, combined.color);
-      audio.playRuneChime(720);
-      this.showAnnouncement(`GRIMOIRE FUSED: ${combined.name} — PRESS GRIMOIRE TO CAST`);
-      return true;
-    }
-
-    // Without a valid combination the Grimoire remains a volatile release:
-    // it fires one random orbiting spell and clears the unresolved components.
-    const randomSlot = slots[Math.floor(Math.random() * slots.length)];
-    const castAny = this.castSpellSlot(randomSlot, false);
-    if (castAny) {
-      this.player.clearPreparedRunes();
-      this.showAnnouncement('GRIMOIRE: ARCANE RELEASE!');
-    }
-    return castAny;
   }
 
   setGuardHeld(held) {
@@ -1091,6 +1171,7 @@ export class GameWorld {
 
   getEnemyHome(team, battlefield = this.battlefield) {
     if (team !== 'red') return battlefield.getSpawn(team);
+    if (this.modeState?.bossHome) return this.modeState.bossHome;
     if (this.activeMode?.enemyBehavior === 'duel' || this.modeState?.bossActive) return { x: 690, z: 0.58 };
     return battlefield.getSpawn(team);
   }
@@ -1126,7 +1207,7 @@ export class GameWorld {
     const mode = this.activeMode;
     this.modeState = {
       id: mode.id, wave: 0, intermission: 0, stage: 0, announced: false,
-      bossActive: false, scroll: 0, routeScroll: 0, dungeonCameraX: 0, rescued: 0, rescue: null, runeCollectibles: [],
+      bossActive: false, scroll: 0, routeScroll: 0, dungeonCameraX: 0, dungeonRoom: null, bossHome: null, rescued: 0, rescue: null, runeCollectibles: [],
       // Arena is deliberately melee-first. Runes are discovered from the
       // floor and transformations arrive as a contested, temporary relic --
       // neither is inherited from the profile deck.
@@ -1151,6 +1232,7 @@ export class GameWorld {
       this.player.maxHp = this.player.hp = 300;
       this.enemyChampion.lifeState = 'Dead';
       this.enemyChampion.respawnTimer = Infinity;
+      Object.assign(this.battlefield.boundsOverride, dungeonRoomBounds(1));
       this.battlefield.placeOnSurface(this.player);
       this.spawnDungeonStarter();
       return;
@@ -1194,23 +1276,29 @@ export class GameWorld {
   spawnDungeonStage(stage) {
     const state = this.modeState;
     if (!state || this.activeMode.id !== 'dungeon') return;
-      state.stage = stage;
-    const stageOriginX = this.player.x + 350;
-    if (stage <= 3) {
+    state.stage = stage;
+    const config = DUNGEON_ROOMS[stage];
+    const bounds = dungeonRoomBounds(stage);
+    // Entering a room closes both walls around it. The previous room is gone
+    // for good, including a prisoner the player did not free in time.
+    Object.assign(this.battlefield.boundsOverride, bounds);
+    const prisonerLost = !!(state.rescue && !state.rescue.rescued);
+    state.rescue = config.rescueAt ? { x: bounds.left + config.rescueAt, z: 0.44, rescued: false } : null;
+    state.dungeonRoom = {
+      ...bounds, cleared: false,
+      encounters: (config.encounters ?? []).map((encounter) => ({ ...encounter, spawned: false }))
+    };
+    if (!config.boss) {
       this.enemyChampion.lifeState = 'Dead'; this.enemyChampion.respawnTimer = Infinity;
-      const firstDungeonEnemy = this.minions.length;
-      this.spawnModeWave('red', 2 + stage, { x: stageOriginX, z: 0.58, spread: 0.16, elite: stage >= 3 });
-      for (let index = firstDungeonEnemy; index < this.minions.length; index++) {
-        const m = this.minions[index];
-        m.isDungeonRaider = true;
-        m.maxHp = m.hp = m.type === 'ranged' ? 35 : 55;
-        m.damage = m.type === 'ranged' ? 12 : 10;
-      }
-      state.rescue = stage === 2 ? { x: stageOriginX - 80, z: 0.44, rescued: false } : null;
-      this.showAnnouncement(`DUNGEON ROOM ${stage} — PUSH FORWARD`, 1.7);
+      this.showAnnouncement(prisonerLost ? `DUNGEON ROOM ${stage} — THE PRISONER WAS LEFT BEHIND` : `DUNGEON ROOM ${stage} — PUSH FORWARD`, 1.9);
+      this.spawnDueDungeonEncounters();
       return;
     }
-    this.enemyChampion.x = stageOriginX; this.enemyChampion.z = 0.58;
+    // The Warden walks in from the right screen edge and holds the far side
+    // of its own room instead of the shared arena home position.
+    state.bossHome = { x: bounds.left + 820, z: 0.58 };
+    this.enemyChampion.x = Math.min(bounds.right - 40, this.dungeonOffscreenRightX());
+    this.enemyChampion.z = 0.58;
     this.enemyChampion.heroKey = 'boss_firelord';
     this.enemyChampion.maxHp = this.enemyChampion.hp = 580;
     this.enemyChampion.lifeState = 'Alive';
@@ -1218,6 +1306,61 @@ export class GameWorld {
     this.battlefield.placeOnSurface(this.enemyChampion);
     state.bossActive = true;
     this.showAnnouncement('DUNGEON BOSS — VOID WARDEN', 2.1);
+  }
+
+  dungeonCameraTarget() {
+    const bounds = this.battlefield.boundsOverride;
+    const target = this.player.x - this.logicalWidth * 0.3;
+    const min = Math.max(0, bounds.left - DUNGEON_LEFT_EDGE);
+    const max = Math.max(min, bounds.right + DUNGEON_LEFT_EDGE - this.logicalWidth);
+    return Math.max(min, Math.min(max, target));
+  }
+
+  dungeonOffscreenRightX() {
+    // World x just past the visible right edge (wide screens included), so
+    // new enemies walk into view instead of popping in on screen.
+    const camX = Math.max(this.modeState?.dungeonCameraX ?? 0, this.dungeonCameraTarget());
+    return camX - this.cameraOffsetX + this.renderWidth + 40;
+  }
+
+  spawnDueDungeonEncounters() {
+    const room = this.modeState?.dungeonRoom;
+    if (!room) return;
+    const elite = !!DUNGEON_ROOMS[this.modeState.stage]?.elite;
+    for (const encounter of room.encounters) {
+      if (encounter.spawned || this.player.x < room.left + encounter.at) continue;
+      encounter.spawned = true;
+      const firstDungeonEnemy = this.minions.length;
+      const spawnX = Math.min(room.right - 30, this.dungeonOffscreenRightX());
+      this.spawnModeWave('red', encounter.count, { x: spawnX, z: 0.58, spread: 0.16, elite });
+      for (let index = firstDungeonEnemy; index < this.minions.length; index++) {
+        const m = this.minions[index];
+        m.isDungeonRaider = true;
+        m.maxHp = m.hp = m.type === 'ranged' ? 35 : 55;
+        m.damage = m.type === 'ranged' ? 12 : 10;
+        this.battlefield.placeOnSurface(m);
+      }
+    }
+  }
+
+  updateDungeonRoom() {
+    const state = this.modeState;
+    const room = state.dungeonRoom;
+    if (!room) return;
+    this.spawnDueDungeonEncounters();
+    const hostilesLeft = this.minions.some((minion) => minion.team === 'red' && !minion.isDead);
+    if (!room.cleared && !hostilesLeft && room.encounters.every((encounter) => encounter.spawned)) {
+      room.cleared = true;
+      // Open the right wall into the next room; the arrow marks the exit.
+      this.battlefield.boundsOverride.right = dungeonRoomBounds(state.stage + 1).right;
+      this.showAnnouncement('ROOM CLEARED — GO RIGHT', 1.6);
+    }
+    if (room.cleared && this.player.isAlive && this.player.x > room.right + 24) this.spawnDungeonStage(state.stage + 1);
+  }
+
+  isDungeonExitOpen() {
+    const state = this.modeState;
+    return this.activeMode?.id === 'dungeon' && state?.stage >= 1 && state.stage < DUNGEON_ROOMS.length - 1 && !!state.dungeonRoom?.cleared;
   }
 
   spawnDungeonStarter() {
@@ -1303,7 +1446,7 @@ export class GameWorld {
     if (Math.hypot(this.player.x - rescue.x, (this.player.z - rescue.z) * 150) > 48) return;
     rescue.rescued = true; this.modeState.rescued++;
     const ally = new Minion(this.player.x - 24, this.player.z + .05, 'blue', 'melee', 1);
-    ally.isRescuedCompanion = true; ally.maxHp = ally.hp = 220; ally.damage = 28; ally.speed = 105; ally.attackCooldown = 1.0;
+    ally.isRescuedCompanion = true; ally.followLeader = this.player; ally.maxHp = ally.hp = 220; ally.damage = 28; ally.speed = 105; ally.attackCooldown = 1.0;
     this.enhanceMinionSprite(ally); ally.renderHeight = 78;
     this.battlefield.placeOnSurface(ally); this.minions.push(ally);
     this.showAnnouncement('COMPANION RESCUED — JOINS UNTIL DEFEATED', 2.2);
@@ -1447,11 +1590,15 @@ export class GameWorld {
       return;
     }
     if (this.activeMode.id === 'dungeon') {
-      const targetCamX = Math.max(0, this.player.x - this.logicalWidth * 0.3);
+      const targetCamX = this.dungeonCameraTarget();
       state.dungeonCameraX += (targetCamX - state.dungeonCameraX) * Math.min(1, 3.5 * dt);
       this.updateDungeonRescue();
-      if (state.stage <= 3 && !this.minions.some((minion) => minion.team === 'red' && !minion.isDead)) this.spawnDungeonStage(state.stage + 1);
-      else if (state.stage === 4 && this.enemyChampion.lifeState === 'Dead') this.finishMode('blue', 'VICTORY — DUNGEON CLEARED');
+      if (state.stage === 0) {
+        // The opening scout shares room 1; its encounters start right away.
+        if (!this.minions.some((minion) => minion.team === 'red' && !minion.isDead)) this.spawnDungeonStage(1);
+      } else if (DUNGEON_ROOMS[state.stage]?.boss) {
+        if (this.enemyChampion.lifeState === 'Dead') this.finishMode('blue', 'VICTORY — DUNGEON CLEARED');
+      } else this.updateDungeonRoom();
       return;
     }
     if (this.activeMode.id === 'arena' && state.bossActive && this.enemyChampion.lifeState === 'Dead') {
@@ -1609,7 +1756,7 @@ export class GameWorld {
   getObjectiveStatus() {
     if (this.matchState === 'Ending' || this.matchState === 'Results') return this.winnerTeam === 'blue' ? 'VICTORY' : 'DEFEAT';
     if (this.activeMode?.id === 'invasion') return this.modeState?.bossActive ? 'DEFEAT THE RIFT TYRANT' : `DEFEND LEFT KEEP — WAVE ${this.modeState?.wave ?? 1}/${this.activeMode.waveGoal}`;
-    if (this.activeMode?.id === 'dungeon') return this.isRunChoicePending() ? 'CHOOSE A FOUND RUNE' : this.modeState?.stage === 4 ? 'DEFEAT THE VOID WARDEN' : this.modeState?.stage === 0 ? 'DEFEAT THE SCOUT WITH MELEE' : `DUNGEON ROOM ${this.modeState?.stage} — PUSH FORWARD`;
+    if (this.activeMode?.id === 'dungeon') return this.isRunChoicePending() ? 'CHOOSE A FOUND RUNE' : this.modeState?.stage === 4 ? 'DEFEAT THE VOID WARDEN' : this.modeState?.stage === 0 ? 'DEFEAT THE SCOUT WITH MELEE' : this.isDungeonExitOpen() ? `DUNGEON ROOM ${this.modeState.stage} CLEARED — GO RIGHT` : `DUNGEON ROOM ${this.modeState?.stage} — PUSH FORWARD`;
     if (this.activeMode?.id === 'arena') {
       if (this.modeState?.transformationRelic) return 'CLAIM THE TRANSFORMATION RELIC — DEFEAT THE CHAMPION';
       return this.modeState?.runeCollectibles?.length ? 'COLLECT RUNE RELICS — DEFEAT THE CHAMPION' : 'DEFEAT THE ARENA CHAMPION';
@@ -2082,10 +2229,45 @@ export class GameWorld {
 
     ctx.restore();
 
+    this.renderDungeonExitArrow(ctx, viewW, viewH);
+
     // 3. Screen Space Rune Drawing
     if (this.drawing.active) {
       this.renderRuneStrokes();
     }
+  }
+
+  renderDungeonExitArrow(ctx, viewW, viewH) {
+    if (!this.isDungeonExitOpen()) return;
+    // Big pulsing LF2 "GO" arrow at the right screen edge: the room is
+    // cleared and walking right enters the next room (no way back).
+    const t = performance.now() * 0.001;
+    const pulse = 0.5 + 0.5 * Math.sin(t * 6);
+    const scale = 1 + pulse * 0.14;
+    const cx = viewW - 96 + pulse * 10;
+    const cy = viewH * 0.42;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(scale, scale);
+    ctx.beginPath();
+    ctx.moveTo(-58, -20); ctx.lineTo(4, -20); ctx.lineTo(4, -46);
+    ctx.lineTo(58, 0);
+    ctx.lineTo(4, 46); ctx.lineTo(4, 20); ctx.lineTo(-58, 20);
+    ctx.closePath();
+    ctx.shadowColor = '#ffd54f';
+    ctx.shadowBlur = 18 + pulse * 16;
+    ctx.fillStyle = `rgba(255, 213, 79, ${0.72 + pulse * 0.28})`;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = '#3a2400';
+    ctx.stroke();
+    ctx.fillStyle = '#3a2400';
+    ctx.font = 'bold 20px Georgia';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('GO', -14, 1);
+    ctx.restore();
   }
 
   renderDungeonRescue(ctx) {

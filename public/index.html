@@ -248,9 +248,19 @@
               <div id="blue-hp-fill" class="fill green-fill" style="width: 100%;"></div>
               <span id="blue-hp-text" class="bar-caption">3100 / 3100</span>
             </div>
-            <div class="bar-strip mp-strip">
+            <div class="bar-strip mp-strip" title="Mana: bound (hatched) is held by prepared slots; only free mana can draw a new rune">
               <div id="blue-mp-fill" class="fill blue-fill" style="width: 75%;"></div>
+              <div id="blue-mp-bound" class="mp-bound" style="left: 0; width: 0;"></div>
               <span id="blue-mp-text" class="bar-caption">450 / 600</span>
+            </div>
+            <div class="focus-row">
+              <div class="bar-strip focus-strip">
+                <div id="blue-focus-fill" class="fill focus-fill" style="width: 0%;"></div>
+                <span id="blue-focus-text" class="bar-caption">0%</span>
+              </div>
+              <!-- Compact transformation icon next to the focus bar (no
+                   central ACTIVATE FOCUS panel). Ready at 100 % focus. -->
+              <button id="focus-activate-btn" class="focus-activate" type="button" title="Activate Focus Ascendant (T)" aria-label="Activate transformation">✦</button>
             </div>
           </div>
           <div class="crystal-pill blue-pill">
@@ -278,6 +288,10 @@
             <div class="bar-strip mp-strip">
               <span id="red-mp-text" class="bar-caption">380 / 1000</span>
               <div id="red-mp-fill" class="fill cyan-fill" style="width: 38%;"></div>
+            </div>
+            <div id="red-focus-strip" class="bar-strip focus-strip red-focus-strip hidden">
+              <span id="red-focus-text" class="bar-caption">0%</span>
+              <div id="red-focus-fill" class="fill focus-fill" style="width: 0%;"></div>
             </div>
           </div>
           <div class="portraits-wrap">
@@ -332,25 +346,11 @@
               <div class="card-overlay" id="card-overlay-2"></div>
             </button>
 
-            <!-- Grimoire Button -->
-            <button id="grimoire-btn" class="grimoire-wrap" type="button" title="Fuse orbiting runes; press again to cast the fusion">
+            <!-- Grimoire = deck stack: opens the deck / rune view. Fusion
+                 happens on the right-hand spell triangle, not here. -->
+            <button id="grimoire-btn" class="grimoire-wrap" type="button" title="Open the Grimoire (deck)">
               <span class="grimoire-glyph">✦</span><span class="grimoire-pages"></span><small>GRIMOIRE</small>
             </button>
-          </div>
-
-          <!-- Drawn components are intentionally separate from the three
-               physical rune cards above. They form the next spell. -->
-          <div id="prepared-runes" aria-label="Prepared spell components"></div>
-          <div id="focus-readout" aria-live="polite">FOCUS 0/100</div>
-          <button id="focus-activate-btn" class="focus-activate" type="button" title="Activate Focus Ascendant (T)">FOCUS 0/100</button>
-
-          <!-- Bottom Mana Bar Frame -->
-          <div id="bottom-mana-container">
-            <div class="mana-frame-wrap">
-              <img src="assets/ui/mana_bar_frame.png" class="mana-frame-img" alt="Mana Bar">
-              <div id="mana-bar-fill" class="mana-live-fill" style="width: 75%;"></div>
-              <span id="mana-bar-text" class="mana-live-text">450 / 600</span>
-            </div>
           </div>
 
           <!-- Active Spell Name Preview -->
@@ -358,19 +358,26 @@
           <div id="summon-status" aria-live="polite"></div>
         </div>
 
-        <!-- Right: Action Buttons & Arcane Rune Circle -->
+        <!-- Right: spell triangle. The three spell slots are the corners,
+             DRAW sits in the geometric centre, BLOCK and JUMP flank the
+             triangle outside its corners. There is no SWAP button: every
+             slot is fired directly by a tap, a slot-to-slot swipe fuses. -->
         <div id="bottom-right-actions">
-          <button id="action-jump-btn" class="touch-action triangle-jump" title="Jump (Space)" aria-label="Jump">↑</button>
-          <button id="action-shield-btn" class="touch-action shield-action triangle-shield" title="Hold to block (F)">BLOCK</button>
-          <button id="action-cast-btn" class="touch-action cast-action triangle-cast" title="Draw rune glyph">DRAW</button>
-          <button id="action-swap-btn" class="touch-action swap-action" title="Swap selected spell">SWAP</button>
-          <button id="action-mount-btn" class="touch-action mount-action" title="Mount or dismount a nearby own Wolf, Golem, or Serpent (R); Jump dismounts">MOUNT</button>
-
+          <svg id="fusion-preview" class="fusion-preview" viewBox="0 0 320 200" aria-hidden="true">
+            <polyline id="fusion-preview-line" points="" />
+          </svg>
+          <button id="action-slot-0" class="touch-action spell-slot slot-top is-empty" data-slot-position="0" type="button" title="Spell slot 1: tap to cast, swipe to another slot to fuse"><span class="slot-glyph"></span><small>SLOT 1</small></button>
+          <button id="action-slot-1" class="touch-action spell-slot slot-left is-empty" data-slot-position="1" type="button" title="Spell slot 2: tap to cast, swipe to another slot to fuse"><span class="slot-glyph"></span><small>SLOT 2</small></button>
+          <button id="action-slot-2" class="touch-action spell-slot slot-right is-empty" data-slot-position="2" type="button" title="Spell slot 3: tap to cast, swipe to another slot to fuse"><span class="slot-glyph"></span><small>SLOT 3</small></button>
+          <button id="action-cast-btn" class="touch-action cast-action triangle-cast" type="button" title="Draw rune glyph (pushes during a Beam Clash)">DRAW</button>
+          <button id="action-shield-btn" class="touch-action shield-action triangle-shield" type="button" title="Hold to block (F)">BLOCK</button>
+          <button id="action-jump-btn" class="touch-action triangle-jump" type="button" title="Jump (Space)" aria-label="Jump">↑<small>JUMP</small></button>
+          <button id="action-mount-btn" class="touch-action mount-action" type="button" title="Mount or dismount a nearby own Wolf, Golem, or Serpent (R); Jump dismounts">MOUNT</button>
         </div>
       </div>
 
-      <!-- Classic UI keeps its explicit central Draw control. The alternate
-           touch layout hides this in favour of rune cards and left double-tap. -->
+      <!-- Legacy central Draw control. DRAW now lives in the centre of the
+           spell triangle, so this stays hidden in both touch layouts. -->
       <button id="arcane-circle-trigger" class="arcane-circle-wrap" type="button" title="Draw rune; tap again to lock">
         <span class="arcane-circle-glyph">✧</span><small>DRAW</small>
       </button>
@@ -398,7 +405,7 @@
           </div>
           <div class="modal-body">
           <div class="g-col">
-            <h3>✦ RUNE GESTURES (RUNE CARD / DOUBLE-TAP LEFT TO DRAW)</h3>
+            <h3>✦ RUNE GESTURES (RUNE CARD OR DRAW IN THE SPELL TRIANGLE)</h3>
             <div class="g-item"><span class="r-icon">🔥</span><strong>IGNIS (Fire)</strong>: Draw Triangle <code>▲</code></div>
             <div class="g-item"><span class="r-icon">💨</span><strong>VENTUS (Wind)</strong>: Draw Dash <code>—</code></div>
             <div class="g-item"><span class="r-icon">⚡</span><strong>FULGUR (Lightning)</strong>: Draw Zig-Zag <code>Z</code></div>
@@ -433,15 +440,17 @@
             <div class="g-item">❄️ + 🪨 + 💨 = <strong>SPIRIT WOLF</strong> (mountable frost hunter)</div>
             <div class="g-item">⚡ + 🪨 + 🪨 = <strong>SIEGE GOLEM</strong> (mountable objective tank)</div>
             <div class="g-item">🔥 + 🪨 + ⚡ = <strong>DRAGON INVOCATION</strong> (temporary fire-dragon strike)</div>
-            <div class="g-item"><strong>OTHER 3-RUNE SETS = TRI-ELEMENTAL CONVERGENCE</strong> (generic area burst)</div>
-            <div class="g-item"><small>Rune order never matters. Unlisted two-rune pairs do not form a special fusion.</small></div>
+            <div class="g-item">🔥 + 🔥 = <strong>INFERNO BEAM</strong> · ❄️ + ❄️ = <strong>GLACIAL RAY</strong> · ⚡ + ⚡ = <strong>THUNDER LANCE</strong> · ◉ + ◉ = <strong>NULL RAY</strong> (clashable beams)</div>
+            <div class="g-item">▥ + 💨 = <strong>MIRROR WARD</strong> · 💨 + ◉ = <strong>GRAVITY LIFT</strong> · ⚡ + 🪨 = <strong>SEISMIC SLAM</strong> · ᛗ + 🪨 = <strong>TITAN STOMP</strong> · 🔥 + ◉ = <strong>SOUL SEEKERS</strong></div>
+            <div class="g-item"><small>Rune order never matters. Only listed recipes fuse; a failed fusion keeps one random ingredient and loses the others (Training: nothing is lost).</small></div>
           </div>
           <div class="g-col">
             <h3>✦ CONTROLS</h3>
             <div><strong>A / D</strong>: Horizontal | <strong>W / S</strong>: Depth | <strong>Space</strong>: Jump (x2)</div>
             <div><strong>Left-Click / J</strong>: Melee Combo | <strong>U + Attack</strong>: Uppercut</div>
-            <div><strong>Shift</strong>: Dodge Roll | <strong>E</strong>: Cast Spell | <strong>Q</strong>: Discard</div>
-            <div><strong>Summon / Combo:</strong> Draw all 2–3 rune cards, press <strong>GRIMOIRE</strong> once to fuse them, then press <strong>GRIMOIRE</strong> again to cast. Rune order does not matter.</div>
+            <div><strong>E</strong>: Cast newest slot (Push in a Beam Clash) | <strong>Q</strong>: Discard slots | <strong>T</strong>: Transform</div>
+            <div><strong>Spell triangle:</strong> tap a slot to cast it, swipe from slot to slot (2 or all 3) to fuse. Drawing a rune binds its mana until the slot is cast.</div>
+            <div><strong>Touch left half:</strong> hold + drag = joystick · fast flick toward facing = sprint · fast flick away = backdash.</div>
               <div><strong>Keys 1-6</strong>: Switch Hero Character</div>
             <div><strong>F3</strong>: Toggle arena geometry debug overlay</div>
           </div>
@@ -451,7 +460,7 @@
 
       <!-- Drawing Feedback Overlay -->
       <div id="drawing-hud" class="hidden">
-          <div id="drawing-prompt">ARCANE FOCUS — DRAW A HAND RUNE · TAP A RUNE CARD OR DOUBLE-TAP LEFT TO LOCK · AUTO-LOCK AFTER 2s · ESC CANCELS</div>
+          <div id="drawing-prompt">ARCANE FOCUS — DRAW A HAND RUNE · TAP A RUNE CARD OR DRAW TO LOCK · AUTO-LOCK AFTER 2s · ESC CANCELS</div>
         <div id="recognition-result"></div>
       </div>
 

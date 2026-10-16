@@ -67,6 +67,22 @@ const LAUNCHER_APEX_VEL_THRESH = 75;
 
 const BLOCK_MOVE_MULT = 0.4;
 
+// ── Mobile movement (concept doc §4.5) — playtest start values ──────────
+const TOUCH_SPRINT_MIN_DISTANCE = 150; // guaranteed run after a sprint flick
+const TOUCH_SPRINT_MIN_TIME = 0.6;     // collisions may eat the distance
+const TOUCH_BACKDASH_COOLDOWN = 0.35;
+
+// ── Resources ───────────────────────────────────────────────────────────
+const MANA_REGEN = 9;            // spent mana regenerates; bound mana stays bound
+const FOCUS_DECAY_RATE = 1.5;    // per second, after a short grace period
+const FOCUS_DECAY_DELAY = 3;
+const CLASH_MOVE_MULT = 0.45;
+
+function keyboardMoveX(input) {
+  const keys = input?.keys ?? {};
+  return (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0);
+}
+
 function moveTowards(current, target, maxDelta) {
   const diff = target - current;
   if (Math.abs(diff) <= maxDelta) return target;
@@ -120,6 +136,10 @@ export class Player extends GroundEntity {
     // changing attack cadence, enemy damage or movement speed.
     this.maxHp = 320; this.hp = 320;
     this.maxMp = 100; this.mp = 100;
+    // Mana model: mp is current (unspent) mana. Part of it is bound to the
+    // prepared slots and part may be reserved by an open drawing; only the
+    // remaining FREE mana can start a new rune.
+    this.reservedMana = 0;
     this.maxSp = 100; this.sp = 100;
     this.moveSpeed = 340;
     this.depthSpeed = DEPTH_SPEED;
@@ -164,6 +184,8 @@ export class Player extends GroundEntity {
     this.maxFocus = 100;
     this.focusTransformTimer = 0;
     this.focusTransformPower = 1;
+    this.focusDecayDelay = FOCUS_DECAY_DELAY;
+    this.activeClash = null;
     this.isGuarding = false;
     // Physical guarding deliberately has a hidden stability meter.  It is
     // not another HUD resource: it only exists to prevent permanently
@@ -189,6 +211,9 @@ export class Player extends GroundEntity {
     this.backdashTotalTicks = 0;
     this.backdashTicksLeft = 0;
     this.backdashSuppressTimer = 0;
+    this.backdashCooldown = 0;
+    this.touchSprint = null;
+    this.touchFacingLock = false;
     this.jumpBufferTimer = 0;
     this.isSprintJump = false;
     this.launcherMode = false;
@@ -215,6 +240,8 @@ export class Player extends GroundEntity {
   }
 
   get isAlive() { return this.lifeState === 'Alive'; }
+  get boundMana() { return this.slottedSpells.reduce((sum, slot) => sum + (slot.manaCost ?? 0), 0); }
+  get freeMana() { return Math.max(0, this.mp - this.boundMana - (this.reservedMana ?? 0)); }
 
   setHero(heroKey) {
     if (!this.isAlive || !sprites.sprites[heroKey]) return;
@@ -254,7 +281,14 @@ export class Player extends GroundEntity {
 
     if (this.mountedSummon?.isDead || this.mountedSummon?.rider !== this) this.dismount();
 
-    this.mp = Math.min(this.maxMp, this.mp + dt * 14);
+    this.mp = Math.min(this.maxMp, this.mp + dt * MANA_REGEN);
+    // Focus drains after a short grace period without gains. A full meter
+    // holds while the transformation is ready to be activated.
+    if (this.focusTransformTimer <= 0 && this.focus < this.maxFocus) {
+      this.focusDecayDelay = Math.max(0, this.focusDecayDelay - dt);
+      if (this.focusDecayDelay <= 0) this.focus = Math.max(0, this.focus - FOCUS_DECAY_RATE * dt);
+    }
+    this.backdashCooldown = Math.max(0, this.backdashCooldown - dt);
     this.sp = Math.min(this.maxSp, this.sp + dt * 25);
     this.auraShockCooldown = Math.max(0, this.auraShockCooldown - dt);
     this.arcaneShieldTimer = Math.max(0, this.arcaneShieldTimer - dt);
@@ -432,9 +466,22 @@ export class Player extends GroundEntity {
   }
 
   handleMovementInput(dt, input) {
-    const move = normalizeMove(moveVector(input));
+    let move = normalizeMove(moveVector(input));
 
-    this.detectFlicks(move.x, input);
+    // Keyboard double-flicks keep their PC behaviour. Touch flicks are
+    // classified by the left-half gesture router instead, so an active
+    // joystick can never trigger a dash or sprint by itself.
+    this.detectFlicks(input?.touchMove?.x ? keyboardMoveX(input) : move.x, input);
+
+    if (this.touchSprint && this.sprintActive) {
+      this.touchSprint.time += dt;
+      // Guaranteed minimum run after a sprint flick, even if the finger was
+      // lifted. Strong counter-steering still cancels into a brake.
+      const along = move.x * this.sprintDir;
+      const minRunLeft = this.touchSprint.remaining > 0 && this.touchSprint.time < TOUCH_SPRINT_MIN_TIME;
+      if (minRunLeft && along < 0.3 && along > -0.5) move = { x: this.sprintDir, z: move.z };
+      else if (!minRunLeft && !this.touchSprint.held) this.cancelSprint();
+    }
 
     if (this.backdashTimer > 0) return;
 
@@ -444,13 +491,14 @@ export class Player extends GroundEntity {
       return;
     }
 
-    if (Math.abs(move.x) > 0.02 && !this.sprintActive && !this.isGuarding) this.facing = Math.sign(move.x);
+    if (Math.abs(move.x) > 0.02 && !this.sprintActive && !this.isGuarding && !this.touchFacingLock) this.facing = Math.sign(move.x);
 
     const sprintMult = this.sprintActive ? SPRINT_MULT : 1;
     const guardMult = this.isGuarding ? BLOCK_MOVE_MULT : 1;
     const beastMult = this.ninefoldTimer > 0 ? 1.23 : 1;
     const focusMult = this.focusTransformTimer > 0 ? 1.12 : 1;
-    const combinedMult = this.slowFactor * guardMult * beastMult * focusMult * sprintMult;
+    const clashMult = this.activeClash ? CLASH_MOVE_MULT : 1;
+    const combinedMult = this.slowFactor * guardMult * beastMult * focusMult * sprintMult * clashMult;
 
     const baseSpeed = this.moveSpeed;
     const baseDepth = this.depthSpeed;
@@ -460,6 +508,7 @@ export class Player extends GroundEntity {
     const accelSpeed = this.sprintActive ? baseSpeed * SPRINT_MULT : baseSpeed;
     this.vx = this.accelerateAxis(this.vx, targetX, accelSpeed, dt);
     this.vz = this.accelerateAxis(this.vz, targetZ, baseDepth * (combinedMult > 1 ? combinedMult : 1), dt);
+    if (this.touchSprint) this.touchSprint.remaining -= Math.abs(this.vx) * dt;
 
     if (this.sprintActive) {
       if (Math.abs(move.x) < 0.3 || Math.sign(move.x) !== this.sprintDir) {
@@ -551,7 +600,7 @@ export class Player extends GroundEntity {
   }
 
   activateSprint(dir) {
-    if (this.isGuarding || this.backdashTimer > 0 || !this.grounded) return;
+    if (this.isGuarding || this.backdashTimer > 0 || !this.grounded || this.activeClash) return;
     this.sprintActive = true;
     this.sprintDir = dir;
     audio.playDash();
@@ -560,9 +609,23 @@ export class Player extends GroundEntity {
   }
 
   cancelSprint() {
+    this.touchSprint = null;
     if (!this.sprintActive) return;
     this.sprintActive = false;
     this.sprintDir = 0;
+  }
+
+  // Mobile sprint flick: a movement state with a guaranteed minimum run,
+  // joystick steering while the finger stays down and a controlled end.
+  startTouchSprint(dir) {
+    this.activateSprint(dir);
+    if (!this.sprintActive) return false;
+    this.touchSprint = { remaining: TOUCH_SPRINT_MIN_DISTANCE, time: 0, held: true };
+    return true;
+  }
+
+  releaseTouchSprint() {
+    if (this.touchSprint) this.touchSprint.held = false;
   }
 
   beginCharge(direction = 'forward') {
@@ -624,8 +687,12 @@ export class Player extends GroundEntity {
     return true;
   }
 
-  triggerBackdash() {
-    if (this.isGuarding || this.backdashTimer > 0 || !this.grounded || !this.isAlive) return;
+  triggerBackdash(options = {}) {
+    if (this.isGuarding || this.backdashTimer > 0 || !this.grounded || !this.isAlive || this.activeClash) return false;
+    if (options.source === 'touch') {
+      if (this.backdashCooldown > 0) return false;
+      this.backdashCooldown = TOUCH_BACKDASH_COOLDOWN;
+    }
     this.cancelSprint();
     this.backdashDir = -this.facing;
     this.backdashTimer = BACKDASH_DURATION;
@@ -637,6 +704,7 @@ export class Player extends GroundEntity {
     this.vx = 0; this.vz = 0;
     audio.playDash();
     combat.spawnShockwave(this.x, this.y - 25, 24, '#80d8ff');
+    return true;
   }
 
   updateBackdash(dt) {
@@ -947,7 +1015,7 @@ export class Player extends GroundEntity {
     return this.runeHand.find((card) => card.id === runeId) ?? null;
   }
   playRuneCard(runeId, expectedCardId = null) {
-    if (!this.isAlive || this.preparedRunes.length >= 3) return null;
+    if (!this.isAlive || this.slottedSpells.length >= 3) return null;
     const card = this.getRuneCard(expectedCardId, runeId);
     // A selected card must be drawn as that exact rune; free drawing may
     // only recognise one of the current three hand cards.
@@ -1171,6 +1239,7 @@ export class Player extends GroundEntity {
   gainFocus(amount, source = 'COMBAT') {
     if (!this.isAlive || this.focusTransformTimer > 0) return false;
     const previous = this.focus;
+    this.focusDecayDelay = FOCUS_DECAY_DELAY;
     this.focus = Math.min(this.maxFocus, this.focus + Math.max(0, amount) * (this.buildModifiers?.focusGain ?? 1));
     if (previous < this.maxFocus && this.focus >= this.maxFocus) {
       window.gameWorld?.showAnnouncement?.('FOCUS FULL — TAP FOCUS OR PRESS T', 1.8);
@@ -1180,7 +1249,7 @@ export class Player extends GroundEntity {
   }
 
   activateFocusTransformation() {
-    if (!this.isAlive || this.focus < this.maxFocus || this.focusTransformTimer > 0) return false;
+    if (!this.isAlive || this.focus < this.maxFocus || this.focusTransformTimer > 0 || this.activeClash) return false;
     this.focus = 0;
     this.focusTransformTimer = 8;
     this.focusTransformPower = 1;
@@ -1276,6 +1345,16 @@ export class Minion extends GroundEntity {
     const distance = target ? groundDistance(this, target) : Infinity;
     if (this.freezeTimer > 0) { this.vx = this.vz = 0; }
     else if (this.hurtTimer > 0) { this.hurtTimer -= dt; this.state = 'hurt'; }
+    else if (!target && this.followLeader) {
+      // Companions without a target stay close to their leader instead of
+      // marching off through a long Dungeon room on their own.
+      const leader = this.followLeader;
+      if (!leader.isAlive || groundDistance(this, leader) < 90) { this.vx = this.vz = 0; this.state = 'idle'; }
+      else {
+        const desired = normalizeMove({ x: leader.x - this.x, z: (leader.z - this.z) * 150 });
+        this.facing = desired.x ? Math.sign(desired.x) : this.facing; this.vx = desired.x * this.speed * this.slowFactor; this.vz = desired.z * (this.speed / 150) * this.slowFactor; this.state = 'run';
+      }
+    }
     else if (target && distance <= (target.isObjective ? 70 : this.attackRange)) { this.vx = this.vz = 0; this.facing = Math.sign(target.x - this.x) || this.facing; if (this.attackTimer <= 0) { this.attackTimer = this.attackCooldown; this.state = 'attack'; this.performAttack(target, gameWorld); } else { this.state = this.attackTimer > this.attackCooldown - 0.35 ? 'attack' : 'idle'; } }
     else {
       // Structures are attacked from each lane; combat units may pull a minion
@@ -1437,7 +1516,7 @@ export class Castle extends GroundEntity {
 }
 
 export class EnemyChampion extends GroundEntity {
-  constructor(x, z, heroKey = 'warlord') { super(x, z); this.heroKey = heroKey; this.team = 'red'; this.isMobileCombatant = true; this.facing = -1; this.width = ENTITY_VISUALS.heroColliderWidth; this.height = ENTITY_VISUALS.heroColliderHeight; this.maxHp = this.hp = 280; this.maxMp = this.mp = 100; this.speed = 230; this.state = 'idle'; this.animTime = 0; this.hitFlash = 0; this.freezeTimer = 0; this.slowTimer = 0; this.slowFactor = 1; this.attackCooldown = 0; this.spellCooldown = 1.4; this.defensiveCooldown = 0; this.arcaneShield = 0; this.arcaneShieldTimer = 0; this.aiMode = 'DEFEND_CASTLE'; this.stateTimer = 0; this.lifeState = 'Alive'; this.respawnTimer = 0; this.respawnDuration = 3; }
+  constructor(x, z, heroKey = 'warlord') { super(x, z); this.heroKey = heroKey; this.team = 'red'; this.isMobileCombatant = true; this.facing = -1; this.width = ENTITY_VISUALS.heroColliderWidth; this.height = ENTITY_VISUALS.heroColliderHeight; this.maxHp = this.hp = 280; this.maxMp = this.mp = 100; this.speed = 230; this.state = 'idle'; this.animTime = 0; this.hitFlash = 0; this.freezeTimer = 0; this.slowTimer = 0; this.slowFactor = 1; this.attackCooldown = 0; this.spellCooldown = 1.4; this.defensiveCooldown = 0; this.arcaneShield = 0; this.arcaneShieldTimer = 0; this.aiMode = 'DEFEND_CASTLE'; this.stateTimer = 0; this.lifeState = 'Alive'; this.respawnTimer = 0; this.respawnDuration = 3; this.beamCooldown = 4; this.activeClash = null; }
   get isAlive() { return this.lifeState === 'Alive'; }
   get isDead() { return this.lifeState === 'Dead'; }
   set isDead(value) { this.lifeState = value ? 'Dead' : 'Alive'; }
@@ -1445,7 +1524,7 @@ export class EnemyChampion extends GroundEntity {
     this.animTime += dt; this.hitFlash = Math.max(0, this.hitFlash - dt);
     if (this.lifeState === 'Dying') { this.stateTimer -= dt; if (this.stateTimer <= 0) { this.lifeState = 'Dead'; this.respawnTimer = gameWorld.canRespawn(this.team) ? this.respawnDuration : Infinity; if (!Number.isFinite(this.respawnTimer)) gameWorld.onFinalWizardDeath(this.team); } return; }
     if (this.lifeState === 'Dead') { this.respawnTimer -= dt; if (this.respawnTimer <= 0) this.respawn(battlefield, gameWorld); return; }
-    this.attackCooldown -= dt; this.spellCooldown -= dt; this.defensiveCooldown -= dt; this.mp = Math.min(this.maxMp, this.mp + dt * 11); this.arcaneShieldTimer = Math.max(0, this.arcaneShieldTimer - dt); if (this.arcaneShieldTimer <= 0) this.arcaneShield = 0; this.freezeTimer = Math.max(0, this.freezeTimer - dt); this.slowTimer = Math.max(0, this.slowTimer - dt); if (!this.slowTimer) this.slowFactor = 1;
+    this.attackCooldown -= dt; this.spellCooldown -= dt; this.defensiveCooldown -= dt; this.beamCooldown -= dt; this.mp = Math.min(this.maxMp, this.mp + dt * 11); this.arcaneShieldTimer = Math.max(0, this.arcaneShieldTimer - dt); if (this.arcaneShieldTimer <= 0) this.arcaneShield = 0; this.freezeTimer = Math.max(0, this.freezeTimer - dt); this.slowTimer = Math.max(0, this.slowTimer - dt); if (!this.slowTimer) this.slowFactor = 1;
     if (this.stateTimer > 0) { this.stateTimer -= dt; if (this.stateTimer <= 0) this.state = this.grounded ? 'idle' : 'fall'; }
     const player = gameWorld.player; const distance = player.isAlive ? groundDistance(this, player) : Infinity;
     const home = gameWorld.getEnemyHome?.(this.team, battlefield) ?? battlefield.getSpawn(this.team);
@@ -1454,6 +1533,16 @@ export class EnemyChampion extends GroundEntity {
     const objectiveThreat = battlefield.objectivesActive && player.isAlive
       && [ownTower, ownCastle].some((objective) => !objective.isDead && !objective.isDestroyed && groundDistance(player, objective) < 245);
     if (this.freezeTimer > 0) { this.vx = this.vz = 0; }
+    else if (this.activeClash) {
+      // Locked in a Beam Clash: hold the beam; the clash coordinator drives
+      // push timing for the AI side.
+      this.aiMode = 'CLASH';
+      this.vx = this.vz = 0;
+      if (this.stateTimer <= 0) this.state = 'idle';
+    }
+    else if (player.isAlive && this.tryAICounterBeam(gameWorld)) {
+      this.vx = this.vz = 0;
+    }
     else if (player.isAlive && distance <= 70) {
       this.aiMode = 'DUEL';
       this.vx = this.vz = 0;
@@ -1476,7 +1565,7 @@ export class EnemyChampion extends GroundEntity {
       this.vx = move.x * this.speed * this.slowFactor * (retreating ? -.82 : 1);
       this.vz = move.z * this.speed / 150 * this.slowFactor * (retreating ? -.82 : 1);
       this.state = 'run';
-      if (!this.tryAIDefense(player, distance, objectiveThreat, gameWorld) && distance > 110) this.tryAICast('fireball', gameWorld, 12, objectiveThreat ? 2.1 : 3.1);
+      if (!this.tryAIDefense(player, distance, objectiveThreat, gameWorld) && distance > 110 && !this.tryAIBeam(player, distance, gameWorld)) this.tryAICast('fireball', gameWorld, 12, objectiveThreat ? 2.1 : 3.1);
     } else {
       this.aiMode = 'DEFEND_CASTLE';
       const move = normalizeMove({ x: home.x - this.x, z: (home.z - this.z) * 150 }); this.facing = Math.sign(move.x) || this.facing; this.vx = move.x * this.speed * .45; this.vz = move.z * this.speed / 150 * .45; this.state = 'run';
@@ -1487,8 +1576,35 @@ export class EnemyChampion extends GroundEntity {
   tryAICast(id, gameWorld, manaCost, cooldown) {
     if (this.spellCooldown > 0 || this.mp < manaCost) return false;
     this.mp -= manaCost; this.spellCooldown = cooldown;
-    spells.cast(this, { id, tier: id === 'stone_wall' || id === 'arcane_aegis' ? 2 : 1 }, gameWorld);
+    spells.cast(this, { id, tier: ['stone_wall', 'arcane_aegis', 'inferno_beam', 'glacial_ray', 'thunder_lance', 'null_ray'].includes(id) ? 2 : 1 }, gameWorld);
     return true;
+  }
+  aiBeamId() {
+    return { boss_firelord: 'inferno_beam', darklord: 'null_ray', mage: 'glacial_ray' }[this.heroKey] ?? 'thunder_lance';
+  }
+  // Beams stay rare in narrow Castle Siege lanes: only duel / boss fighters
+  // open with one, and only when lined up in the same depth lane.
+  tryAIBeam(player, distance, gameWorld) {
+    if (!(gameWorld.activeMode?.enemyBehavior === 'duel' || gameWorld.modeState?.bossActive)) return false;
+    if (this.beamCooldown > 0 || this.mp < 26 || this.spellCooldown > 0) return false;
+    if (Math.abs(player.z - this.z) > .12 || distance < 170 || distance > 420) return false;
+    this.facing = Math.sign(player.x - this.x) || this.facing;
+    this.vx = this.vz = 0;
+    this.beamCooldown = 8;
+    return this.tryAICast(this.aiBeamId(), gameWorld, 26, 1.6);
+  }
+  // Answer a hostile beam that is charging toward this fighter with a beam
+  // of its own — the frontal tip-to-tip meeting is what starts a clash.
+  tryAICounterBeam(gameWorld) {
+    const incoming = spells.activeSpells.find((spell) => spell.isBeam && !spell.aiConsidered && spell.team !== this.team
+      && spell.phase === 'charge' && Math.abs(spell.z - this.z) < .15 && Math.sign(this.x - spell.originX) === spell.facing);
+    if (!incoming) return false;
+    incoming.aiConsidered = true;
+    if (this.beamCooldown > 0 || this.mp < 26 || Math.random() > .6) return false;
+    this.facing = -incoming.facing;
+    this.beamCooldown = 8;
+    this.spellCooldown = 0;
+    return this.tryAICast(this.aiBeamId(), gameWorld, 26, 1.6);
   }
   tryAIDefense(player, distance, objectiveThreat, gameWorld) {
     if (this.hp / this.maxHp < .48 && this.defensiveCooldown <= 0 && this.mp >= 24) {

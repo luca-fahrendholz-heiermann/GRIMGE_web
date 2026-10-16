@@ -130,7 +130,7 @@ body.portrait-gameplay #game-container { visibility: hidden; pointer-events: non
 }
 
 #ui-layer.has-safe-area #hero-select-bar {
-  top: calc(9% + var(--safe-top));
+  top: calc(11.5% + var(--safe-top));
   left: calc(3% + var(--safe-left));
 }
 
@@ -534,8 +534,8 @@ body.portrait-gameplay #game-container { visibility: hidden; pointer-events: non
 .bars-wrap {
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  width: 155px;
+  gap: 2px;
+  width: 165px;
 }
 
 .red-bars-wrap {
@@ -577,11 +577,35 @@ body.portrait-gameplay #game-container { visibility: hidden; pointer-events: non
   box-shadow: 0 0 8px #26c6da;
 }
 
+/* Focus lives in the top HUD (no central focus panel). */
+.focus-row { display: flex; align-items: center; gap: 4px; width: 100%; }
+.bars-wrap .hp-strip, .bars-wrap .mp-strip { height: 13px; }
+.focus-strip { height: 11px; }
+.focus-strip .bar-caption, .mp-strip .bar-caption { font-size: 9px; }
+.focus-fill {
+  background: linear-gradient(90deg, #8e24aa, #ffb300);
+  box-shadow: 0 0 8px #ffb300;
+}
+.red-focus-strip.hidden { display: none; }
+.bar-strip.focus-ready { border-color: #ffd54f; box-shadow: 0 0 8px rgba(255, 213, 79, .65); }
+
+/* Mana bound to prepared slots is shown as a hatched segment at the end of
+   the current mana. Only the solid part left of it is free for drawing. */
+.mp-bound {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  background: repeating-linear-gradient(135deg, rgba(10, 30, 60, .78) 0 3px, rgba(120, 200, 255, .55) 3px 6px);
+  border-left: 1px solid #b3e5fc;
+  pointer-events: none;
+}
+
 .bar-caption {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
+  white-space: nowrap;
   font-size: 10px;
   font-weight: 700;
   color: #fff;
@@ -670,7 +694,7 @@ body.portrait-gameplay #game-container { visibility: hidden; pointer-events: non
 /* Quick Hero Swapper (Top Left) */
 #hero-select-bar {
   position: absolute;
-  top: 9%;
+  top: 11.5%; /* below the three-row (HP / mana / focus) top HUD */
   left: 3%;
   display: flex;
   align-items: center;
@@ -863,48 +887,6 @@ body.portrait-gameplay #game-container { visibility: hidden; pointer-events: non
   filter: drop-shadow(0 4px 12px rgba(202, 164, 76, 0.4));
 }
 
-/* Long Mana Bar */
-#bottom-mana-container {
-  width: 320px;
-  position: relative;
-}
-
-.mana-frame-wrap {
-  position: relative;
-  width: 100%;
-}
-
-.mana-frame-img {
-  width: 100%;
-  height: auto;
-  display: block;
-}
-
-.mana-live-fill {
-  position: absolute;
-  top: 14%;
-  left: 2%;
-  height: 72%;
-  background: linear-gradient(90deg, #0d47a1, #00b0ff);
-  box-shadow: 0 0 10px #00b0ff;
-  border-radius: 4px;
-  transition: width 0.15s ease-out;
-  pointer-events: none;
-}
-
-.mana-live-text {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 11px;
-  font-weight: 900;
-  color: #fff;
-  letter-spacing: 1px;
-  text-shadow: 0 0 4px #000;
-  pointer-events: none;
-}
-
 #active-spell-preview {
   font-size: 11px;
   font-weight: 700;
@@ -915,12 +897,12 @@ body.portrait-gameplay #game-container { visibility: hidden; pointer-events: non
 
 /* Right Actions */
 #bottom-right-actions {
-  pointer-events: auto;
+  pointer-events: none; /* only the buttons themselves catch touches */
   position: absolute;
   right: 2.5%;
-  bottom: 2%;
-  width: 300px;
-  height: 190px;
+  bottom: 3.5%;
+  width: 320px;
+  height: 200px;
 }
 
 .action-wrap {
@@ -961,49 +943,23 @@ body.portrait-gameplay #game-container { visibility: hidden; pointer-events: non
 
 #summon-status.visible { opacity: 1; }
 
-#prepared-runes {
-  min-height: 15px;
-  margin-top: 4px;
-  text-align: center;
-  color: #bdb6ca;
-  font-size: 9px;
-  letter-spacing: 1px;
-  text-shadow: 0 0 7px rgba(145, 109, 255, .42);
-}
-
-#prepared-runes b {
-  display: inline-block;
-  min-width: 12px;
-  font-size: 13px;
-  vertical-align: -1px;
-}
-
-#focus-readout {
-  min-height: 10px;
-  color: #d8b5ff;
-  font-size: 8px;
-  font-weight: 800;
-  letter-spacing: 1px;
-  text-align: center;
-  text-shadow: 0 0 8px rgba(196, 104, 255, .65);
-}
-
+/* Compact transformation icon next to the focus bar. */
 .focus-activate {
-  display: none;
-  min-width: 102px;
-  padding: 3px 9px;
-  border: 1px solid #f0a6ff;
-  border-radius: 999px;
-  background: linear-gradient(90deg, rgba(94, 46, 130, .94), rgba(30, 16, 54, .94));
-  color: #fff0ff;
-  font: 800 8px 'Cinzel', serif;
-  letter-spacing: .8px;
-  box-shadow: 0 0 12px rgba(197, 104, 255, .5);
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 1px solid #5d4a75;
+  border-radius: 50%;
+  background: radial-gradient(circle, #3a2852, #120c1e);
+  color: #8d7aa8;
+  font: 900 11px/1 'Cinzel', serif;
+  opacity: .7;
   touch-action: manipulation;
   pointer-events: auto;
 }
 
-.focus-activate.ready { display: block; animation: focusReadyPulse .8s ease-in-out infinite alternate; }
+.focus-activate.ready { border-color: #ffd54f; color: #fff3c4; opacity: 1; box-shadow: 0 0 12px rgba(255, 213, 79, .8); animation: focusReadyPulse .8s ease-in-out infinite alternate; }
 @keyframes focusReadyPulse { from { transform: scale(.96); } to { transform: scale(1.04); } }
 
 .card-overlay em {
@@ -1016,32 +972,31 @@ body.portrait-gameplay #game-container { visibility: hidden; pointer-events: non
 .shield-action { border-color: #8ea8ff; color: #e5eaff; box-shadow: 0 0 11px rgba(112, 143, 255, .34); }
 
 .cast-action { border-color: #00c8ff; color: #bdefff; }
+.cast-action.is-clash { border-color: #ffd54f; color: #fff3c4; box-shadow: 0 0 16px rgba(255, 213, 79, .8); animation: focusReadyPulse .35s ease-in-out infinite alternate; }
 
-/* A compact radial action cluster. Cast is the centre; Block and Swap sit
-   on its radius, while Mount appears only at the exact 12-o'clock position. */
-.triangle-cast { position: absolute; left: 150px; bottom: 12px; width: 84px; height: 84px; font-size: 14px; }
-.mount-action { position: absolute; left: 166px; bottom: 110px; width: 52px; height: 52px; font-size: 8px; border-color: #75e5c0; color: #d8fff1; opacity: 0; pointer-events: none; transform: scale(.85); transition: opacity .14s ease, transform .14s ease; }
+/* Spell triangle (320 x 200 box). The three spell slots are the corners:
+   slot 1 top (160, 34), slot 2 bottom-left (88, 160), slot 3 bottom-right
+   (232, 160). DRAW sits in the geometric centre (160, 118) with clear gaps
+   to all three corners. BLOCK and JUMP flank the triangle outside. */
+.spell-slot { position: absolute; width: 62px; height: 62px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; border-width: 2px; --slot-color: #6d5b83; border-color: var(--slot-color); box-shadow: 0 0 12px var(--slot-color), 0 3px 9px rgba(0, 0, 0, .65); }
+.spell-slot .slot-glyph { font-size: 22px; line-height: 1; color: var(--slot-color); text-shadow: 0 0 8px var(--slot-color); }
+.spell-slot small { font-size: 7px; letter-spacing: .6px; color: #f8e8bb; }
+.spell-slot.is-empty { opacity: .55; --slot-color: #4d4260; }
+.spell-slot.is-empty .slot-glyph { opacity: 0; }
+.spell-slot.is-combo { border-style: double; border-width: 4px; }
+.spell-slot.is-fusion-target { transform: scale(1.12); box-shadow: 0 0 20px #fff; }
+.slot-top { left: 129px; top: 3px; }
+.slot-left { left: 57px; top: 129px; }
+.slot-right { left: 201px; top: 129px; }
+.triangle-cast { position: absolute; left: 125px; top: 83px; width: 70px; height: 70px; font-size: 13px; }
+.triangle-shield { position: absolute; left: 2px; top: 72px; width: 56px; height: 56px; }
+.triangle-jump { position: absolute; left: 262px; top: 72px; width: 56px; height: 56px; border-color: #c5a6ff; color: #f0e8ff; font: 900 22px/1 'Rajdhani', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.triangle-jump small { font: 700 7px 'Rajdhani', sans-serif; letter-spacing: .6px; }
+.mount-action { position: absolute; left: 266px; top: 8px; width: 48px; height: 48px; font-size: 8px; border-color: #75e5c0; color: #d8fff1; opacity: 0; pointer-events: none; transform: scale(.85); transition: opacity .14s ease, transform .14s ease; }
 .mount-action.is-available { opacity: 1; pointer-events: auto; transform: scale(1); }
-.triangle-shield { position: absolute; left: 84px; bottom: 22px; }
-.swap-action { position: absolute; left: 107px; bottom: 91px; width: 50px; height: 50px; font-size: 8px; border-color: #d3a4ff; color: #f2dcff; }
-/* Jump deliberately reads as an upward swipe rail, not another action
-   circle. Its visible size stays vertical while the whole control remains
-   safely within the right-hand touch cluster. */
-.triangle-jump {
-  position: absolute;
-  right: 0;
-  bottom: 22px;
-  width: 54px;
-  min-width: 54px;
-  height: 132px;
-  aspect-ratio: auto;
-  border-radius: 27px;
-  border-color: #c5a6ff;
-  background: linear-gradient(180deg, rgba(69, 49, 104, .96), rgba(19, 13, 38, .98));
-  color: #f0e8ff;
-  font: 900 34px/1 'Rajdhani', sans-serif;
-  box-shadow: inset 0 0 16px rgba(146, 95, 255, .24), 0 3px 12px rgba(0, 0, 0, .65);
-}
+/* Visual drag preview for two- and three-slot fusions. */
+.fusion-preview { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+.fusion-preview polyline { fill: none; stroke: #fff3c4; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 6px #ffd54f); }
 
 .action-wrap:hover {
   transform: scale(1.08);
@@ -1083,30 +1038,20 @@ body.portrait-gameplay #game-container { visibility: hidden; pointer-events: non
 /* Alternate mobile layout: the player chooses it from the hub settings.
    It leaves the left side clear for a dynamic joystick and arranges the
    actions as a compact right-hand combat cluster. */
-#ui-layer.touch-layout-alt #bottom-right-actions {
-  right: 2.5%;
-  bottom: 2%;
-  width: 300px;
-  height: 190px;
-}
-
-/* A compact clock-face action group: central Cast, Block at roughly 7
-   o'clock and Swap around 10 o'clock. */
-#ui-layer.touch-layout-alt .triangle-shield { left: 84px; bottom: 22px; top: auto; }
-#ui-layer.touch-layout-alt .triangle-cast { left: 150px; bottom: 12px; top: auto; right: auto; width: 84px; height: 84px; }
-#ui-layer.touch-layout-alt .swap-action { left: 107px; bottom: 91px; top: auto; width: 50px; height: 50px; }
-#ui-layer.touch-layout-alt .mount-action { left: 166px; bottom: 110px; top: auto; width: 52px; height: 52px; }
-#ui-layer.touch-layout-alt .triangle-jump { right: 0; bottom: 22px; top: auto; left: auto; width: 54px; min-width: 54px; height: 132px; writing-mode: initial; }
-
-#ui-layer.touch-layout-alt .arcane-circle-wrap {
+/* Both touch layouts share the same spell triangle; they only differ in
+   the joystick (fixed vs. dynamic). DRAW lives in the triangle centre, so
+   the legacy central Draw circle is hidden everywhere. */
+.arcane-circle-wrap,
+#ui-layer.touch-layout-alt .arcane-circle-wrap,
+#ui-layer:not(.touch-layout-alt) .arcane-circle-wrap {
   display: none;
 }
 
 /* These come after the two chosen touch-layout definitions so an iPhone's
    safe space cannot be overwritten by the classic/alternate placement. */
-#ui-layer.has-safe-area.touch-layout-alt #bottom-right-actions {
+#ui-layer.has-safe-area #bottom-right-actions {
   right: calc(2% + var(--safe-right));
-  bottom: calc(2% + var(--safe-bottom));
+  bottom: calc(3.5% + var(--safe-bottom));
 }
 
 #ui-layer.has-safe-area:not(.touch-layout-alt) .arcane-circle-wrap {
@@ -1392,3 +1337,22 @@ code {
 .run-rune-choice-panel small { color: #7eeaff; font: 800 13px 'Rajdhani', sans-serif; letter-spacing: 2px; }.run-rune-choice-panel h2 { margin: 5px 0 3px; color: #ffe9a7; font: 900 28px 'Cinzel', serif; letter-spacing: 2px; }.run-rune-choice-panel p { margin: 0 0 18px; color: #d5d8ee; font: 600 13px 'Rajdhani', sans-serif; }
 .run-rune-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }.run-rune-option { min-height: 120px; padding: 14px 12px; border: 2px solid var(--rune-color, #4ddfff); border-radius: 12px; background: radial-gradient(circle at 50% 15%, color-mix(in srgb, var(--rune-color, #4ddfff) 25%, transparent), transparent 54%), rgba(8,16,38,.92); color: #fff; cursor: pointer; box-shadow: inset 0 0 18px rgba(0,0,0,.4); }.run-rune-option b { display: block; color: var(--rune-color, #4ddfff); font: 900 22px 'Cinzel', serif; }.run-rune-option span { display: block; margin-top: 8px; color: #cad4e9; font: 700 12px 'Rajdhani', sans-serif; letter-spacing: 1px; }.run-rune-option:hover { transform: translateY(-2px) scale(1.02); filter: brightness(1.16); }
 @media (max-width: 620px) { .run-rune-choice-panel { padding: 16px; }.run-rune-choice-panel h2 { font-size: 22px; }.run-rune-option { min-height: 100px; }.run-rune-option b { font-size: 18px; } }
+
+/* Hand rune cards show their mana cost; unaffordable runes (cost above the
+   currently FREE mana) are greyed out and cannot start a drawing. */
+.card-cost {
+  position: absolute;
+  top: 2px;
+  right: 3px;
+  min-width: 14px;
+  padding: 0 3px;
+  border-radius: 7px;
+  background: rgba(2, 40, 90, .9);
+  border: 1px solid #4fc3f7;
+  color: #e1f5fe;
+  font: 800 8px/12px 'Rajdhani', sans-serif;
+  text-align: center;
+  pointer-events: none;
+}
+.card-slot.unaffordable { filter: grayscale(.95) brightness(.55) !important; }
+.card-slot.unaffordable .card-cost { border-color: #ef5350; color: #ffcdd2; }

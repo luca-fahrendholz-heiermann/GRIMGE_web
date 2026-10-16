@@ -7,7 +7,7 @@ const elements = new Map();
 // The current triangular mobile HUD deliberately has no separate attack or
 // dash buttons. Model that real DOM shape so an obsolete listener cannot hide
 // behind an overly-permissive test stub and abort browser startup.
-const absentElementIds = new Set(['action-attack-btn', 'action-dash-btn']);
+const absentElementIds = new Set(['action-attack-btn', 'action-dash-btn', 'action-swap-btn']);
 const heroChips = ['paladin', 'berserker', 'mage', 'warlord', 'fighter'].map((hero) => { const chip = new ElementStub(); chip.setAttribute('data-hero', hero); return chip; });
 globalThis.document = { body: new ElementStub('body'), getElementById(id) { if (absentElementIds.has(id)) return null; if (!elements.has(id)) elements.set(id, id.includes('canvas') ? new CanvasStub(id) : new ElementStub(id)); return elements.get(id); }, querySelectorAll(selector) { return selector === '.hero-chip' ? heroChips : []; }, createElement(tag) { return tag === 'canvas' ? new CanvasStub() : new ElementStub(); } };
 const windowListeners = {};
@@ -175,7 +175,9 @@ const initialHand = game.player.runeHand.map((rune) => rune.id).join(',');
 const spellCountBeforeDraw = spells.activeSpells.length;
 game.startRuneDrawing(ignisCard.cardId);
 game.finishRuneDrawing({ rune: recognizer.runes.find((rune) => rune.id === 'ignis'), confidence: 0.99 });
-assert(!game.drawing.active && game.timeScale === 1 && game.player.preparedRunes.length === 0 && game.player.slottedSpells.length === 0 && spells.activeSpells.length > spellCountBeforeDraw && game.player.runeHand.map((rune) => rune.id).join(',') === 'fulgur,terra,ignis' && game.player.runeDeck.map((rune) => rune.id).join(',') === 'ventus,aqua,fulgur,terra,ignis,ventus,aqua', 'Drawing a hand card auto-casts the rune spell immediately and recycles card to front of deck');
+assert(!game.drawing.active && game.timeScale === 1 && game.player.preparedRunes.length === 1 && game.player.slottedSpells.length === 1 && game.player.slottedSpells[0].runes[0].id === 'ignis' && spells.activeSpells.length === spellCountBeforeDraw && game.player.runeHand.map((rune) => rune.id).join(',') === 'fulgur,terra,ignis' && game.player.runeDeck.map((rune) => rune.id).join(',') === 'ventus,aqua,fulgur,terra,ignis,ventus,aqua', 'Drawing a hand card only slots the rune spell (no auto-cast) and recycles card to front of deck');
+game.player.mp = game.player.maxMp;
+assert(game.castPreparedSpell() && game.player.slottedSpells.length === 0 && game.player.preparedRunes.length === 0 && spells.activeSpells.length > spellCountBeforeDraw, 'CAST releases the slotted rune spell drawn from the hand');
 assert(initialHand === 'fulgur,terra,ignis', 'Casting consumes slotted spell components without cycling untouched hand cards');
 const handBeforeMismatch = game.player.runeHand.map((rune) => rune.cardId).join(',');
 const fulgurCard = game.player.runeHand.find((rune) => rune.id === 'fulgur');
@@ -188,24 +190,56 @@ game.startRuneDrawing(ignisCard.cardId);
 game.drawing.strokes = [[...Array.from({ length: 26 }, (_, i) => ({ x: 100 + i * 10, y: i <= 12 ? 250 - i * 12 : 106 + (i - 12) * 12 }))]];
 game.drawing.lastStrokeTime = performance.now() - 2001;
 game.drawing.autoLockArmed = true;
+const spellCountBeforeAutoLock = spells.activeSpells.length;
 game.loop(game.lastFrameTime + 16);
-assert(!game.drawing.active && game.player.preparedRunes.length === 0, 'A paused rune stroke automatically locks in and auto-casts after two seconds');
+assert(!game.drawing.active && game.player.slottedSpells.length === game.player.preparedRunes.length && spells.activeSpells.length === spellCountBeforeAutoLock, 'A paused rune stroke automatically locks in after two seconds without auto-casting');
 game.player.clearPreparedRunes();
 const slotIgnis = recognizer.runes.find((rune) => rune.id === 'ignis');
 const slotAqua = recognizer.runes.find((rune) => rune.id === 'aqua');
+const runeById = (id) => recognizer.runes.find((rune) => rune.id === id);
+game.player.mp = game.player.maxMp;
 game.slotRuneSpell(slotIgnis); game.slotRuneSpell(slotAqua);
-assert(game.player.slottedSpells.length === 2 && game.player.selectedSpellIndex === 1 && game.swapSlottedSpell() && game.player.selectedSpellIndex === 0, 'Slotted spells retain an explicit selected slot and SWAP rotates it');
+assert(game.slotAt(0)?.runes[0].id === 'ignis' && game.slotAt(1)?.runes[0].id === 'aqua' && !game.slotAt(2), 'Drawn runes fill the triangle slots in order: top, bottom-left, bottom-right');
+assert(game.player.boundMana === 20 && game.player.freeMana === game.player.mp - 20, 'Prepared slots bind their rune mana; only the remainder is free for new drawings');
 const selectedSpellCount = spells.activeSpells.length;
-assert(game.castPreparedSpell() && game.player.slottedSpells.length === 1 && spells.activeSpells.length === selectedSpellCount + 1, 'CAST fires only the selected slotted spell and leaves other slots intact');
+const manaBeforeSlotCast = game.player.mp;
+assert(game.castSlotAt(0) && game.player.slottedSpells.length === 1 && game.slotAt(1)?.runes[0].id === 'aqua' && spells.activeSpells.length === selectedSpellCount + 1, 'Tapping a slot fires exactly that spell and leaves the other slots in place');
+assert(game.player.mp === manaBeforeSlotCast - 10 && game.player.boundMana === 10, 'Casting turns the slot\'s bound mana into spent mana without a second payment');
+game.slotRuneSpell(runeById('ventus'));
+assert(game.slotAt(0)?.runes[0].id === 'ventus', 'A freed slot is refilled by the next drawn rune');
+game.player.clearPreparedRunes();
+game.slotRuneSpell(slotIgnis); game.slotRuneSpell(runeById('ventus')); game.slotRuneSpell(slotAqua);
+const beforeSlotFusion = spells.activeSpells.length;
+assert(game.player.slottedSpells.every((slot) => !slot.isCombo), 'Compatible drawn runes remain separate slots until the player swipes them together');
+const fusion = game.fuseSlots([1, 0]);
+assert(fusion.ok && game.slotAt(1)?.isCombo && game.slotAt(1).definition.id === 'firestorm' && !game.slotAt(0) && spells.activeSpells.length === beforeSlotFusion, 'Swiping slot 2 onto slot 1 fuses into the start slot, frees the other and casts nothing');
+assert(game.slotAt(2)?.runes[0].id === 'aqua' && game.player.boundMana === 30, 'An unselected third rune is untouched and fusion merges bound mana without extra cost');
+assert(!game.fuseSlots([1, 2]).ok && game.slotAt(1)?.isCombo && game.slotAt(2), 'A fused spell cannot be fused again (no recursive fusion)');
+assert(game.castSlotAt(1) && spells.activeSpells.length > beforeSlotFusion && !game.slotAt(1), 'Tapping the fused slot casts the combination');
 game.player.clearPreparedRunes();
 game.slotRuneSpell(slotIgnis); game.slotRuneSpell(slotAqua);
-assert(game.castGrimoireSpells() && game.player.slottedSpells.length === 0, 'Grimoire releases one random non-combo slot then clears all remaining slots');
+const beforeFailedFusion = spells.activeSpells.length;
+const failedFusion = game.fuseSlots([0, 1]);
+assert(!failedFusion.ok && failedFusion.reason === 'norecipe' && game.player.slottedSpells.length === 1 && spells.activeSpells.length === beforeFailedFusion && game.player.boundMana === 10, 'A swipe without recipe keeps one random ingredient, drops the other, frees its mana and casts nothing');
 game.player.clearPreparedRunes();
-game.slotRuneSpell(slotIgnis); game.slotRuneSpell(recognizer.runes.find((rune) => rune.id === 'ventus'));
-const beforeGrimoireFusion = spells.activeSpells.length;
-assert(game.player.slottedSpells.length === 2 && game.player.slottedSpells.every((slot) => !slot.isCombo), 'Compatible drawn runes remain separate orbiting slots until Grimoire is used');
-assert(game.castGrimoireSpells() && game.player.slottedSpells.length === 1 && game.player.slottedSpells[0].isCombo && spells.activeSpells.length === beforeGrimoireFusion, 'Grimoire fuses compatible slots into a ready combo without firing it');
-assert(game.castGrimoireSpells() && game.player.slottedSpells.length === 0 && spells.activeSpells.length === beforeGrimoireFusion + 1, 'A second Grimoire press casts the Grimoire-fused combo slot');
+game.slotRuneSpell(runeById('aqua')); game.slotRuneSpell(runeById('terra')); game.slotRuneSpell(runeById('ventus'));
+assert(game.fuseSlots([2, 0, 1]).ok && game.slotAt(2)?.definition.id === 'summon_spirit_wolf' && game.player.slottedSpells.length === 1, 'A swipe across all three slots checks the triple recipe regardless of order');
+game.player.clearPreparedRunes();
+['ignis', 'ventus'].forEach((id) => game.slotRuneSpell(runeById(id)));
+game.fuseSlots([0, 1]);
+['ignis', 'ignis'].forEach((id) => game.slotRuneSpell(runeById(id)));
+assert(game.slotAt(0)?.isCombo && game.slotAt(1) && game.slotAt(2), 'Freed slots can be refilled right after a fusion');
+game.fuseSlots([1, 2]);
+assert(game.player.slottedSpells.filter((slot) => slot.isCombo).length === 2 && game.slotAt(1)?.definition.id === 'inferno_beam', 'Several fused spells (here Firestorm and an Inferno Beam) may coexist');
+game.player.clearPreparedRunes();
+game.player.mp = 4;
+game.startRuneDrawing(game.player.runeHand[0].cardId);
+assert(!game.drawing.active && game.player.reservedMana === 0, 'A hand rune that costs more than the free mana cannot start a drawing');
+game.player.mp = game.player.maxMp;
+game.startRuneDrawing(game.player.runeHand[0].cardId);
+assert(game.drawing.active && game.player.reservedMana > 0 && game.player.freeMana === game.player.maxMp - game.player.reservedMana, 'Starting a drawing reserves the rune mana against parallel use');
+game.cancelRuneDrawing();
+assert(game.player.reservedMana === 0, 'Cancelling a drawing releases the reservation');
 
 // Every rune is independently useful. BESTIA still participates in stronger
 // combinations, but a normal successful drawing must slot and cast its own
@@ -216,7 +250,8 @@ const bestiaCard = game.player.runeHand.find((rune) => rune.id === 'bestia');
 spells.clearRuntime();
 game.startRuneDrawing(bestiaCard.cardId);
 game.finishRuneDrawing({ rune: bestiaCardRune, confidence: .94, grade: 'S' });
-assert(!game.drawing.active && spells.getSummons('blue').some((summon) => summon.definition.id === 'lesser_beast'), 'Drawing and casting BESTIA creates a Beast Familiar instead of blocking or freezing');
+game.player.mp = game.player.maxMp;
+assert(!game.drawing.active && game.player.slottedSpells.length === 1 && game.castPreparedSpell() && spells.getSummons('blue').some((summon) => summon.definition.id === 'lesser_beast'), 'Drawing and casting BESTIA creates a Beast Familiar instead of blocking or freezing');
 const battlementSummon = spells.getSummons('blue')[0];
 battlementSummon.x = 198; battlementSummon.z = game.player.z; battlementSummon.surfaceHeight = game.player.surfaceHeight; battlementSummon.grounded = true;
 game.enemyChampion.isDead = false; game.enemyChampion.x = 470; game.enemyChampion.z = game.player.z; game.enemyChampion.surfaceHeight = 0; game.enemyChampion.elevation = 0;
@@ -596,18 +631,49 @@ game.awardRunXp(dungeonStarter.runXpValue);
 assert(game.modeState.run.pending && game.modeState.run.options.length === 2, 'The first defeated Dungeon scout grants the first two-Rune level-up choice');
 game.minions = []; // mirrors the runtime's dead-minion cleanup before the pick is chosen
 game.chooseRunRune(game.modeState.run.options[0].id);
-assert(game.modeState.stage === 1 && game.minions.length === 3 && game.enemyChampion.isDead, 'A first Rune choice launches the first forward Dungeon room');
+const dungeonHostiles = () => game.minions.filter((minion) => minion.team === 'red' && !minion.isDead);
+const killDungeonHostiles = () => dungeonHostiles().forEach((minion) => { minion.isDead = true; });
+const moveDungeonPlayer = (x) => { game.player.x = x; game.player.elevation = 0; game.player.grounded = true; game.battlefield.resolveEntityCollision(game.player); };
+const room1 = game.modeState.dungeonRoom;
+assert(game.modeState.stage === 1 && room1 && dungeonHostiles().length === 2 && game.enemyChampion.isDead && game.battlefield.boundsOverride.right === room1.right && room1.right - room1.left > game.logicalWidth * 2, 'A first Rune choice opens a wide LF2-style Dungeon room with its first enemy group');
+assert(dungeonHostiles().every((minion) => minion.x > game.modeState.dungeonCameraX - game.cameraOffsetX + game.renderWidth), 'Dungeon room enemies spawn beyond the right screen edge and walk into view');
 assert(game.minions.every((minion) => minion.team !== 'red' || ['enemy_knight', 'enemy_bandit', 'enemy_sorcerer'].includes(minion.spriteKey)), 'Dungeon room enemies use LF2 sheet sprites with distinct archetypes');
-game.minions.forEach((minion) => { minion.isDead = true; });
+killDungeonHostiles();
 game.updateMode(0.1);
-assert(game.modeState.stage === 2 && game.modeState.rescue && game.enemyChampion.isDead, 'Clearing a room advances the Dungeon route and can place a rescue companion');
+assert(game.modeState.stage === 1 && !room1.cleared && !game.isDungeonExitOpen(), 'Killing the visible group does not skip to the next phase while the room continues to the right');
+moveDungeonPlayer(room1.right + 300);
+assert(game.player.x === room1.right, 'The right room wall stays closed until the room is cleared');
+game.updateMode(0.1);
+assert(dungeonHostiles().length === 2, 'Walking further right triggers the next enemy group of the same room');
+killDungeonHostiles();
+game.updateMode(0.1);
+assert(room1.cleared && game.isDungeonExitOpen() && game.battlefield.boundsOverride.right > room1.right && game.getObjectiveStatus().includes('GO RIGHT'), 'Clearing every room group opens the right exit and shows the GO arrow');
+moveDungeonPlayer(300); game.updateMode(0.1);
+assert(game.modeState.stage === 1 && game.player.x === 300, 'A cleared room can still be walked back through before leaving it');
+moveDungeonPlayer(room1.right + 30); game.updateMode(0.1);
+const room2 = game.modeState.dungeonRoom;
+assert(game.modeState.stage === 2 && room2.left === room1.right && game.battlefield.boundsOverride.left === room1.right && game.modeState.rescue && game.modeState.rescue.x > room2.left && game.enemyChampion.isDead, 'Walking through the exit enters the next room, locks the previous one and can place a prisoner');
+moveDungeonPlayer(room2.right - 40); game.updateMode(0.1);
+killDungeonHostiles(); game.updateMode(0.1);
+assert(room2.cleared && game.modeState.rescue && !game.modeState.rescue.rescued, 'The prisoner stays in place while the player clears the rest of the room');
 game.player.x = game.modeState.rescue.x; game.player.z = game.modeState.rescue.z;
 game.updateDungeonRescue();
-assert(game.modeState.rescue.rescued && game.minions.some((minion) => minion.team === 'blue' && minion.isRescuedCompanion), 'A reached prisoner becomes a persistent allied companion until defeated');
+assert(game.modeState.rescue.rescued && game.minions.some((minion) => minion.team === 'blue' && minion.isRescuedCompanion), 'Walking back frees the prisoner, who becomes a persistent allied companion until defeated');
 assert(game.minions.some((minion) => minion.isRescuedCompanion && ['ally_fighter', 'ally_blade'].includes(minion.spriteKey)), 'A rescued Dungeon companion uses an LF2 ally sheet sprite');
-game.minions.filter((minion) => minion.team === 'red').forEach((minion) => { minion.isDead = true; });
-game.updateMode(0.1); game.minions.filter((minion) => minion.team === 'red').forEach((minion) => { minion.isDead = true; }); game.updateMode(0.1);
-assert(game.modeState.stage === 4 && game.enemyChampion.isAlive && game.enemyChampion.heroKey === 'boss_firelord', 'The final Dungeon room escalates into the Firelord boss using the LF2 Firen sheet');
+const dungeonCompanion = game.minions.find((minion) => minion.isRescuedCompanion);
+dungeonCompanion.x = game.player.x + 400; dungeonCompanion.z = game.player.z; dungeonCompanion.hurtTimer = 0; dungeonCompanion.freezeTimer = 0;
+dungeonCompanion.update(0.1, game, game.battlefield);
+assert(dungeonCompanion.vx < 0 && dungeonCompanion.state === 'run', 'An idle rescued companion follows the player instead of wandering off through the room');
+moveDungeonPlayer(room2.right + 30); game.updateMode(0.1);
+const room3 = game.modeState.dungeonRoom;
+moveDungeonPlayer(room3.right - 40); game.updateMode(0.1);
+killDungeonHostiles(); game.updateMode(0.1);
+game.modeState.rescue = { x: room3.left + 400, z: .44, rescued: false };
+moveDungeonPlayer(room3.right + 30); game.updateMode(0.1);
+assert(game.modeState.stage === 4 && game.modeState.rescue === null, 'An unfreed prisoner is lost once the player moves on to the next room');
+moveDungeonPlayer(room3.left);
+assert(game.player.x === room3.right, 'A left-behind room cannot be re-entered');
+assert(game.enemyChampion.isAlive && game.enemyChampion.heroKey === 'boss_firelord' && game.enemyChampion.x > room3.right && game.getEnemyHome('red').x > room3.right, 'The final Dungeon room escalates into the Firelord boss, who holds its own room');
 game.returnToHub();
 
 game.setMatchMode('arena'); game.startMatch();
@@ -638,6 +704,196 @@ game.returnToHub();
 
 game.setMatchMode('training'); game.startMatch();
 assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive && game.canRespawn('blue') && game.getObjectiveStatus() === 'PRACTICE — NO REWARDS', 'Training keeps combat live without Siege objectives or permanent defeat');
+// ── Combat / Rune Clash / Mobile concept (v0.2) ─────────────────────────
+// Training is a duel against a live champion and the place where fusion
+// experiments are lossless, so it hosts the deterministic concept checks.
+{
+  const realNow = performance.now.bind(performance);
+  let fakeNow = 50000;
+  const useFakeClock = () => Object.defineProperty(performance, 'now', { value: () => fakeNow, configurable: true, writable: true });
+  const useRealClock = () => Object.defineProperty(performance, 'now', { value: realNow, configurable: true, writable: true });
+  const realRandom = Math.random;
+  const P = game.player; const E = game.enemyChampion;
+  const rune = (id) => recognizer.runes.find((entry) => entry.id === id);
+  const stepSpells = (seconds) => { for (let t = 0; t < seconds; t += 1 / 60) spells.update(1 / 60, game); };
+  const resetDuel = (playerX = 300, enemyX = 700) => {
+    spells.clearRuntime();
+    game.minions = [];
+    for (const [actor, x, facing] of [[P, playerX, 1], [E, enemyX, -1]]) {
+      actor.x = x; actor.z = .58; actor.elevation = 0; actor.vElevation = 0; actor.grounded = true; actor.facing = facing;
+      actor.vx = actor.vz = 0; actor.kbVelX = 0; actor.freezeTimer = 0; actor.activeClash = null; actor.state = 'idle'; actor.stateTimer = 0;
+      actor.hp = actor.maxHp; actor.mp = actor.maxMp; actor.invulnerableTimer = 0; actor.arcaneShield = 0;
+      game.battlefield.placeOnSurface(actor);
+    }
+    E.lifeState = 'Alive'; E.beamCooldown = 99; E.spellCooldown = 99;
+    P.isGuarding = false; P.focusTransformTimer = 0; P.clearPreparedRunes();
+  };
+
+  // Training: a fusion without recipe loses nothing.
+  resetDuel();
+  game.slotRuneSpell(rune('ignis')); game.slotRuneSpell(rune('aqua'));
+  const trainingFusion = game.fuseSlots([0, 1]);
+  assert(!trainingFusion.ok && trainingFusion.lossless && P.slottedSpells.length === 2, 'Training mode allows lossless fusion experiments');
+
+  // Beam vs beam, tip to tip and frontal -> Beam Clash.
+  resetDuel();
+  spells.cast(P, spells.resolveSpell([rune('ignis'), rune('ignis')]), game);
+  spells.cast(E, { id: 'inferno_beam', tier: 2 }, game);
+  stepSpells(.7);
+  const clash = spells.activeClashes[0];
+  assert(clash && P.activeClash === clash && E.activeClash === clash, 'Two frontal beams meeting tip to tip start one shared Beam Clash');
+  assert(clash.contactX > P.x && clash.contactX < E.x && Math.abs(clash.pressure) < 25, 'The clash contact point sits between both casters with balanced starting pressure');
+  assert(spells.activeSpells.filter((s) => s.isBeam).every((beam) => beam.tipX === clash.contactX), 'Both straight beam segments end at the shared contact point');
+  clash.b.aiTimer = 99;
+  P.focus = 50;
+  const pressureBeforePush = clash.pressure;
+  Math.random = () => .99; // no AI counter on this push
+  assert(clash.humanAction(P) === 'push' && P.focus === 38 && clash.pressure === pressureBeforePush + 25, 'An active push costs 12 Focus (not mana) and adds 25 pressure');
+  Math.random = realRandom;
+  assert(clash.humanAction(P) === 'cooldown', 'Pushes share a cooldown against spamming');
+  clash.a.pushCooldown = 0;
+  clash.b.windup = { t: .1 };
+  const pressureBeforeCounter = clash.pressure;
+  assert(clash.humanAction(P) === 'perfect' && P.focus === 44 && clash.pressure === Math.min(100, pressureBeforeCounter + 30), 'A perfectly timed counter cancels the enemy push, shifts pressure and returns 6 Focus');
+  clash.b.windup = { t: .4 };
+  const pressureBeforeClose = clash.pressure;
+  assert(clash.humanAction(P) === 'close' && P.focus === 44 && clash.pressure === pressureBeforeClose - 15, 'A close counter only softens the enemy push and gives no Focus');
+  P.focus = 5; clash.a.pushCooldown = 0;
+  assert(clash.humanAction(P) === 'nofocus' && P.focus === 5, 'Without enough Focus the push is refused while the passive beam keeps holding');
+  assert(!P.triggerBackdash({ source: 'touch' }) && !P.startTouchSprint(1) && !P.activateFocusTransformation(), 'Dash, sprint and transformation are locked during a clash');
+  clash.pressure = 99; clash.addPressure(clash.a, 5); clash.update(1 / 60);
+  const playerBeam = spells.activeSpells.find((s) => s.isBeam && s.team === 'blue');
+  const enemyBeam = spells.activeSpells.find((s) => s.isBeam && s.team === 'red');
+  assert(clash.isFinished && clash.result.type === 'breakthrough' && clash.result.winner === 'blue' && playerBeam && !playerBeam.isFinished && !playerBeam.clash && (!enemyBeam || enemyBeam.isFinished), 'At 100 % the winning beam breaks through and keeps firing');
+  assert(!P.activeClash && !E.activeClash, 'Clash state is released from both casters afterwards');
+
+  // Timeout: no winner, a shared explosion at the current contact point.
+  resetDuel(300, 600);
+  spells.cast(P, spells.resolveSpell([rune('ignis'), rune('ignis')]), game);
+  spells.cast(E, { id: 'inferno_beam', tier: 2 }, game);
+  stepSpells(.7);
+  const timeoutClash = spells.activeClashes[0];
+  timeoutClash.b.aiTimer = 99;
+  timeoutClash.pressure = 50; timeoutClash.time = 5.99; timeoutClash.updateContact();
+  const hpBeforeCollapse = { p: P.hp, e: E.hp };
+  timeoutClash.update(.02);
+  assert(timeoutClash.result?.type === 'collapse' && E.hp < hpBeforeCollapse.e && P.hp === hpBeforeCollapse.p, 'A 75:25 timeout explodes near the losing caster instead of naming a winner');
+  assert(spells.activeSpells.filter((s) => s.isBeam).every((beam) => beam.isFinished), 'A collapse discharges both beams');
+
+  // A beam tip entering the body of an already running beam neutralises both.
+  resetDuel(300, 600);
+  spells.cast(E, { id: 'inferno_beam', tier: 2 }, game);
+  stepSpells(.8);
+  P.hp = P.maxHp;
+  spells.cast(P, spells.resolveSpell([rune('ignis'), rune('ignis')]), game);
+  stepSpells(.5);
+  assert(!spells.activeClashes.length && spells.activeSpells.filter((s) => s.isBeam).every((beam) => beam.isFinished && beam.endReason === 'neutralised'), 'Body contact with a running beam is no clash: both beams neutralise each other');
+
+  // Heavy object: a beam is blocked by a falling meteor and chips its structure.
+  resetDuel(300, 900);
+  spells.cast(P, spells.resolveSpell([rune('ignis'), rune('ignis')]), game);
+  stepSpells(.8);
+  spells.cast(E, { id: 'meteor_cataclysm', tier: 2 }, game);
+  const meteor = spells.activeSpells.find((s) => s.isHeavyObject);
+  meteor.x = 450; meteor.y = meteor.targetY - 120; meteor.vx = 0; meteor.vy = 0; meteor.targetZ = P.z;
+  stepSpells(.1);
+  const beamOnMeteor = spells.activeSpells.find((s) => s.isBeam && !s.isFinished);
+  assert(meteor.structureHp < 50 && beamOnMeteor?.tipX === 450, 'A beam does not erase a meteor: the object blocks the tip and loses structure HP');
+  meteor.takeBeamDamage(999);
+  assert(meteor.isFinished && !meteor.isLanded, 'Enough beam pressure shatters the meteor before it can impact');
+
+  // AI answers a charging hostile beam with its own counter-beam.
+  resetDuel(300, 650);
+  E.beamCooldown = 0; E.spellCooldown = 0;
+  Math.random = () => .1;
+  spells.cast(P, spells.resolveSpell([rune('fulgur'), rune('fulgur')]), game);
+  E.update(1 / 60, game, game.battlefield);
+  Math.random = realRandom;
+  assert(spells.activeSpells.some((s) => s.isBeam && s.team === 'red'), 'A duel champion can answer a charging beam with a counter-beam');
+
+  // Projectile capture + return volley.
+  resetDuel(300, 470);
+  spells.cast(P, spells.resolveSpell([rune('construct'), rune('ventus')]), game);
+  const ward = spells.activeSpells.find((s) => s.captured);
+  spells.cast(E, { id: 'fireball', tier: 1 }, game);
+  const hpBeforeCapture = P.hp;
+  stepSpells(.5);
+  assert(ward.captured.length === 1 && P.hp === hpBeforeCapture, 'Mirror Ward captures a hostile Fireball before it detonates');
+  ward.life = 0; stepSpells(.3);
+  assert(spells.activeSpells.some((s) => s.isCapturableProjectile && s.team === 'blue' && s.vx > 0) || E.hp < E.maxHp, 'The ward fires captured shots back as a return volley');
+
+  // Telekinesis: lift, hold, slam.
+  resetDuel(300, 430);
+  spells.cast(P, spells.resolveSpell([rune('ventus'), rune('void')]), game);
+  stepSpells(.6);
+  assert(E.elevation > 60 && E.freezeTimer > 0, 'Gravity Lift raises and holds nearby enemies');
+  stepSpells(1.2);
+  assert(E.hp < E.maxHp, 'Gravity Lift slams the lifted targets down for damage');
+
+  // Air stomp with a vertical hitbox.
+  resetDuel(300, 360);
+  spells.cast(P, spells.resolveSpell([rune('bestia'), rune('terra')]), game);
+  const neutralInput = { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, justPressed: () => false };
+  for (let t = 0; t < 1.6; t += 1 / 60) { P.update(1 / 60, neutralInput, game.battlefield, game); spells.update(1 / 60, game); }
+  assert(E.hp < E.maxHp && P.grounded, 'Titan Stomp leaps, lands and hits around the landing point');
+
+  // Homing salvo steers toward a target in another depth lane.
+  resetDuel(300, 520);
+  E.z = .78; game.battlefield.placeOnSurface(E);
+  spells.cast(P, spells.resolveSpell([rune('ignis'), rune('void')]), game);
+  stepSpells(2);
+  assert(E.hp < E.maxHp, 'Soul Seekers home in on an enemy outside the straight firing lane');
+
+  // Ground slam with temporary terrain objects.
+  resetDuel(300, 480);
+  spells.cast(P, spells.resolveSpell([rune('fulgur'), rune('terra')]), game);
+  stepSpells(.9);
+  assert(E.hp < E.maxHp && spells.activeSpells.some((s) => s.isStoneWall && s.team === 'blue'), 'Seismic Slam launches enemies along its path and leaves short-lived rock pillars');
+
+  // Focus drains after a grace period but holds while the transformation is ready.
+  resetDuel();
+  P.focus = 50; P.focusDecayDelay = 0;
+  P.update(1, neutralInput, game.battlefield, game);
+  assert(P.focus < 50 && P.focus > 47, 'Focus decays continuously after its grace period');
+  P.focus = P.maxFocus; P.focusDecayDelay = 0;
+  P.update(1, neutralInput, game.battlefield, game);
+  assert(P.focus === P.maxFocus, 'A full Focus meter holds until the transformation is activated');
+
+  // Mobile left half: flick vs. joystick classifier.
+  const touch = game.touchGestureDebug;
+  const ev = (x, y, id = 41) => ({ pointerId: id, pointerType: 'touch', clientX: x, clientY: y, preventDefault() {} });
+  useFakeClock();
+  resetDuel(); P.backdashCooldown = 0;
+  fakeNow = 60000; touch.beginJoystick(ev(200, 400));
+  assert(touch.leftGesture?.state === 'pending' && P.touchFacingLock, 'A left touch starts as a pending gesture with frozen facing');
+  fakeNow += 80; touch.update(ev(320, 404));
+  assert(P.sprintActive && P.touchSprint && touch.leftGesture.state === 'sprint' && !P.touchFacingLock, 'A fast horizontal flick toward the facing direction starts a sprint');
+  touch.clear(ev(320, 404));
+  P.update(.1, neutralInput, game.battlefield, game);
+  assert(P.sprintActive && P.vx > 0, 'Releasing right after the sprint flick still runs the guaranteed minimum distance');
+  for (let t = 0; t < 1.2; t += 1 / 60) P.update(1 / 60, neutralInput, game.battlefield, game);
+  assert(!P.sprintActive, 'After the minimum run a released sprint brakes to a stop instead of running forever');
+  resetDuel(); P.backdashCooldown = 0;
+  fakeNow += 1000; touch.beginJoystick(ev(300, 400));
+  fakeNow += 70; touch.update(ev(190, 398));
+  assert(P.state === 'dash' && P.backdashTimer > 0 && P.facing === 1, 'A fast flick against the facing direction triggers one backdash and keeps facing stable');
+  touch.clear(ev(190, 398));
+  P.backdashTimer = 0; P.state = 'idle';
+  assert(!P.triggerBackdash({ source: 'touch' }), 'Touch backdash has a short cooldown');
+  resetDuel(); P.backdashCooldown = 0;
+  fakeNow += 1000; touch.beginJoystick(ev(200, 400));
+  fakeNow += 320; touch.update(ev(310, 400));
+  assert(touch.leftGesture.state === 'joystick' && !P.sprintActive, 'A slow hold-and-drag stays joystick movement without sprinting');
+  fakeNow += 40; touch.update(ev(120, 400));
+  assert(touch.leftGesture.state === 'joystick' && P.state !== 'dash', 'A fast reversal inside an active joystick gesture does not trigger a dash');
+  touch.clear(ev(120, 400));
+  fakeNow += 1000; touch.beginJoystick(ev(200, 400));
+  fakeNow += 60; touch.update(ev(230, 520));
+  assert(touch.leftGesture.state === 'joystick' && !P.sprintActive && P.state !== 'dash', 'A fast vertical swipe is joystick input, not a flick');
+  touch.clear(ev(230, 520));
+  useRealClock();
+  resetDuel();
+}
 game.returnToHub();
 game.setMatchMode('siege'); game.startMatch();
 assert(game.matchState === 'Running' && game.objectivePhase === 'LanePhase', 'A new Siege match can start cleanly after alternate modes');
