@@ -62,6 +62,9 @@ export class FrostMirror {
     if ('kbVelZ' in actor) actor.kbVelZ = 0;
     actor.cancelSprint?.();
     actor._mirrorArrival = partner;
+    // A rider takes the mount along.
+    const mount = actor.mountedSummon;
+    if (mount && !mount.isDead) { mount.x = partner.x; mount.z = partner.z; mount.vx = 0; mount.vz = 0; mount._mirrorArrival = partner; }
     gameWorld.battlefield?.resolveEntityCollision?.(actor);
     combat.spawnShockwave(partner.x, partner.y - 30, 46, '#e0f7fa');
     combat.spawnElementalParticles(partner.x, partner.y - 34, 'aqua', 14);
