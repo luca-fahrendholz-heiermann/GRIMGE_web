@@ -1356,3 +1356,24 @@ code {
 }
 .card-slot.unaffordable { filter: grayscale(.95) brightness(.55) !important; }
 .card-slot.unaffordable .card-cost { border-color: #ef5350; color: #ffcdd2; }
+
+/* Automatic input mode (GameWorld.setInputMode): touch shows the virtual
+   joystick; mouse/keyboard hides it and reveals keyboard hints instead. */
+.key-hint {
+  display: none;
+  position: absolute;
+  bottom: -7px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0 4px;
+  border: 1px solid #8d7aa8;
+  border-radius: 3px;
+  background: #120c1e;
+  color: #f8e8bb;
+  font: 800 7px/11px 'Rajdhani', sans-serif;
+  letter-spacing: .5px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+#ui-layer.input-desktop .key-hint { display: block; }
+#ui-layer.input-desktop #touch-joystick { display: none; }

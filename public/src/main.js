@@ -55,6 +55,13 @@ export class GameWorld {
     // this never changes spawns, ranges, collision, or travel distance.
     this.renderWidth = this.logicalWidth;
     this.cameraOffsetX = 0;
+    // Displays narrower than 16:9 (iPad 4:3, 5:4 monitors) get the same
+    // treatment vertically: a taller camera that only adds sky above the
+    // authored battlefield. The world is drawn `worldOffsetY` lower, so the
+    // ground, actors and bottom controls sit identically on every screen.
+    this.renderHeight = this.logicalHeight;
+    this.worldOffsetY = 0;
+    this.inputMode = null;
     this.deviceScale = Math.min(2, window.devicePixelRatio || 1);
     this.configureCanvas(this.canvas, this.ctx);
     this.configureCanvas(this.runeCanvas, this.runeCtx);
@@ -127,7 +134,7 @@ export class GameWorld {
 
   configureCanvas(canvas, context) {
     canvas.width = Math.round(this.renderWidth * this.deviceScale);
-    canvas.height = Math.round(this.logicalHeight * this.deviceScale);
+    canvas.height = Math.round(this.renderHeight * this.deviceScale);
     context.setTransform?.(this.deviceScale, 0, 0, this.deviceScale, 0, 0);
     context.imageSmoothingEnabled = true;
     if ('imageSmoothingQuality' in context) context.imageSmoothingQuality = 'high';
@@ -147,7 +154,7 @@ export class GameWorld {
       // HUD scale follows the available height, not the width. This keeps the
       // perceived character/card size stable while an ultrawide viewport
       // exposes more horizontal world space.
-      const scale = String(height / this.logicalHeight);
+      const scale = String(height / this.renderHeight);
       // Custom CSS properties must be written through setProperty in a real
       // CSSStyleDeclaration. Bracket assignment happened to work in the test
       // stub but is ignored by browsers, leaving a 1024px HUD over a scaled
@@ -155,6 +162,7 @@ export class GameWorld {
       if (this.uiLayer.style.setProperty) this.uiLayer.style.setProperty('--hud-scale', scale);
       else this.uiLayer.style['--hud-scale'] = scale;
       this.uiLayer.style.width = `${this.renderWidth}px`;
+      this.uiLayer.style.height = `${this.renderHeight}px`;
       const lw = String(this.renderWidth / 100);
       if (this.uiLayer.style.setProperty) this.uiLayer.style.setProperty('--lw', `${lw}px`);
       else this.uiLayer.style['--lw'] = `${lw}px`;
@@ -197,9 +205,12 @@ export class GameWorld {
     // arena on narrow landscape displays, then add only visual overscan on
     // wider ones. Gameplay continues to use logicalWidth everywhere.
     const nextRenderWidth = Math.max(this.logicalWidth, Math.round(this.logicalHeight * (width / height)));
+    const nextRenderHeight = Math.max(this.logicalHeight, Math.round(this.logicalWidth * (height / width)));
     const nextDeviceScale = Math.min(2, globalThis.window?.devicePixelRatio || globalThis.devicePixelRatio || 1);
-    const changed = nextRenderWidth !== this.renderWidth || nextDeviceScale !== this.deviceScale;
+    const changed = nextRenderWidth !== this.renderWidth || nextRenderHeight !== this.renderHeight || nextDeviceScale !== this.deviceScale;
     this.renderWidth = nextRenderWidth;
+    this.renderHeight = nextRenderHeight;
+    this.worldOffsetY = this.renderHeight - this.logicalHeight;
     this.deviceScale = nextDeviceScale;
     this.cameraOffsetX = (this.renderWidth - this.logicalWidth) * 0.5;
     if (changed || this.canvas.width !== Math.round(this.renderWidth * this.deviceScale)) {
@@ -243,15 +254,38 @@ export class GameWorld {
   getCanvasCoords(clientX, clientY) {
     const rect = this.canvas.getBoundingClientRect();
     const scaleX = this.renderWidth / rect.width;
-    const scaleY = this.logicalHeight / rect.height;
+    const scaleY = this.renderHeight / rect.height;
     return {
       x: (clientX - rect.left) * scaleX,
       y: (clientY - rect.top) * scaleY
     };
   }
 
+  // Touch vs. mouse/keyboard is detected automatically and follows the input
+  // actually used, so hybrid devices (touch laptops, tablets with keyboards)
+  // switch on the fly. Touch shows the joystick; desktop hides it and shows
+  // keyboard hints on the action buttons instead.
+  detectInputMode() {
+    const media = (query) => !!globalThis.matchMedia?.(query)?.matches;
+    const touchFirst = media('(pointer: coarse)') || (!media('(pointer: fine)') && (globalThis.navigator?.maxTouchPoints || 0) > 0);
+    this.setInputMode(touchFirst ? 'touch' : 'desktop');
+  }
+
+  setInputMode(mode) {
+    if (mode === this.inputMode) return;
+    this.inputMode = mode;
+    this.uiLayer?.classList?.toggle?.('input-touch', mode === 'touch');
+    this.uiLayer?.classList?.toggle?.('input-desktop', mode === 'desktop');
+  }
+
   setupInputs() {
+    this.detectInputMode();
+    window.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'touch' || e.pointerType === 'pen') this.setInputMode('touch');
+      else if (e.pointerType === 'mouse') this.setInputMode('desktop');
+    }, { capture: true, passive: true });
     window.addEventListener('keydown', (e) => {
+      if (!e.repeat) this.setInputMode('desktop');
       if (this.matchState === 'Results') {
         if (e.code === 'Enter') this.startMatch();
         if (e.code === 'Escape') this.returnToHub();
@@ -443,7 +477,7 @@ export class GameWorld {
     const FLICK_MAX_ANGLE = 25 * Math.PI / 180;
     const placeStick = (pt) => {
       joystick.style.left = `${Math.max(0, Math.min(this.renderWidth - JOYSTICK_RADIUS * 2, pt.x - JOYSTICK_RADIUS))}px`;
-      joystick.style.top = `${Math.max(0, Math.min(this.logicalHeight - JOYSTICK_RADIUS * 2, pt.y - JOYSTICK_RADIUS))}px`;
+      joystick.style.top = `${Math.max(0, Math.min(this.renderHeight - JOYSTICK_RADIUS * 2, pt.y - JOYSTICK_RADIUS))}px`;
       joystick.style.bottom = 'auto';
     };
     const beginJoystick = (event, fromStickElement = false) => {
@@ -2186,18 +2220,28 @@ export class GameWorld {
   render() {
     const ctx = this.ctx;
     const viewW = this.renderWidth;
-    const viewH = this.logicalHeight;
+    const viewH = this.renderHeight;
+    const worldY = this.worldOffsetY;
     const cam = combat.camera;
 
     ctx.clearRect(0, 0, viewW, viewH);
 
-    // 1. Scene Backdrop (High-Def Waterfalls & Fortress Arena)
-    this.battlefield.renderBackground(ctx, cam, this.logicalWidth, viewH, viewW, this.cameraOffsetX, this.modeState);
+    // 1. Scene Backdrop (High-Def Waterfalls & Fortress Arena). On screens
+    // narrower than 16:9 the extra top band continues the backdrop's own top
+    // edge, so it reads as more sky rather than a letterbox bar.
+    ctx.save();
+    ctx.translate(0, worldY);
+    this.battlefield.renderBackground(ctx, cam, this.logicalWidth, this.logicalHeight, viewW, this.cameraOffsetX, this.modeState);
+    ctx.restore();
+    if (worldY > 0) {
+      const dpr = this.deviceScale;
+      ctx.drawImage?.(this.canvas, 0, Math.round(worldY * dpr), this.canvas.width, Math.max(1, Math.round(dpr)), 0, 0, viewW, worldY);
+    }
 
     // 2. World Space Layer (with Camera Shake + Dungeon Scroll)
     const dungeonCamX = this.modeState?.dungeonCameraX ?? 0;
     ctx.save();
-    ctx.translate(this.cameraOffsetX + cam.shakeX - dungeonCamX, cam.shakeY);
+    ctx.translate(this.cameraOffsetX + cam.shakeX - dungeonCamX, cam.shakeY + worldY);
 
     // Foreground Crystal Glows on Beacons
     this.battlefield.renderForeground(ctx);
@@ -2229,7 +2273,7 @@ export class GameWorld {
 
     ctx.restore();
 
-    this.renderDungeonExitArrow(ctx, viewW, viewH);
+    this.renderDungeonExitArrow(ctx, viewW);
 
     // 3. Screen Space Rune Drawing
     if (this.drawing.active) {
@@ -2237,7 +2281,7 @@ export class GameWorld {
     }
   }
 
-  renderDungeonExitArrow(ctx, viewW, viewH) {
+  renderDungeonExitArrow(ctx, viewW) {
     if (!this.isDungeonExitOpen()) return;
     // Big pulsing LF2 "GO" arrow at the right screen edge: the room is
     // cleared and walking right enters the next room (no way back).
@@ -2245,7 +2289,7 @@ export class GameWorld {
     const pulse = 0.5 + 0.5 * Math.sin(t * 6);
     const scale = 1 + pulse * 0.14;
     const cx = viewW - 96 + pulse * 10;
-    const cy = viewH * 0.42;
+    const cy = this.worldOffsetY + this.logicalHeight * 0.42;
     ctx.save();
     ctx.translate(cx, cy);
     ctx.scale(scale, scale);
@@ -2354,7 +2398,7 @@ export class GameWorld {
 
     rctx.save();
     rctx.fillStyle = 'rgba(8, 6, 18, 0.45)';
-    rctx.fillRect(0, 0, this.renderWidth, this.logicalHeight);
+    rctx.fillRect(0, 0, this.renderWidth, this.renderHeight);
 
     const allStrokes = [...this.drawing.strokes];
     if (this.drawing.currentStroke.length > 0) {

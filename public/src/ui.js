@@ -134,6 +134,7 @@ export class UIManager {
     this.dashBtn = document.getElementById('action-dash-btn');
     this.shieldBtn = document.getElementById('action-shield-btn');
     this.castBtn = document.getElementById('action-cast-btn');
+    this.castLabel = this.castBtn?.querySelector?.('.cast-label') ?? null;
     this.mountBtn = document.getElementById('action-mount-btn');
     // Spell triangle corners: 0 = top (SLOT 1), 1 = bottom-left, 2 = bottom-right.
     this.bottomRightActions = document.getElementById('bottom-right-actions');
@@ -863,7 +864,9 @@ export class UIManager {
     if (this.castBtn) {
       const clash = !!player.activeClash;
       const drawing = !!window.gameWorld?.drawing?.active;
-      this.castBtn.textContent = clash ? 'PUSH' : drawing ? 'LOCK' : 'DRAW';
+      const label = clash ? 'PUSH' : drawing ? 'LOCK' : 'DRAW';
+      if (this.castLabel) this.castLabel.textContent = label;
+      else this.castBtn.textContent = label;
       this.castBtn.classList.toggle('is-clash', clash);
     }
   }

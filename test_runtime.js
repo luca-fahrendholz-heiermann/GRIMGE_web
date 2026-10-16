@@ -898,6 +898,29 @@ game.returnToHub();
 game.setMatchMode('siege'); game.startMatch();
 assert(game.matchState === 'Running' && game.objectivePhase === 'LanePhase', 'A new Siege match can start cleanly after alternate modes');
 
+// Screens narrower than 16:9 get a taller camera (extra sky) instead of a
+// distorted canvas or a HUD that runs off the right edge.
+const canvasRect = game.canvas.getBoundingClientRect;
+game.canvas.getBoundingClientRect = () => ({ left: 0, top: 0, width: 1024, height: 768 });
+game.updateViewport();
+assert(game.renderWidth === 1024 && game.renderHeight === 768 && game.worldOffsetY === 192 && game.uiLayer.style.height === '768px', 'A 4:3 screen keeps the full width and adds 192 logical px of sky above the battlefield');
+assert(Math.round(game.getCanvasCoords(512, 768).y) === 768 && game.canvas.height === Math.round(768 * game.deviceScale), 'Pointer mapping and the canvas buffer follow the taller camera');
+game.render();
+game.canvas.getBoundingClientRect = () => ({ left: 0, top: 0, width: 2560, height: 1080 });
+game.updateViewport();
+assert(game.renderHeight === 576 && game.worldOffsetY === 0 && game.renderWidth > 1024, 'Ultrawide screens still widen the camera instead of adding height');
+game.canvas.getBoundingClientRect = canvasRect;
+game.updateViewport();
+assert(game.renderWidth === 1024 && game.renderHeight === 576, 'A 16:9 screen uses the authored 1024×576 view');
+// Touch vs. mouse/keyboard is detected from the input actually used.
+windowListeners.pointerdown?.({ pointerType: 'touch' });
+assert(game.inputMode === 'touch' && game.uiLayer.classList.values.has('input-touch') && !game.uiLayer.classList.values.has('input-desktop'), 'A touch shows the touch layout (joystick)');
+windowListeners.pointerdown?.({ pointerType: 'mouse' });
+assert(game.inputMode === 'desktop' && game.uiLayer.classList.values.has('input-desktop'), 'Mouse input switches to the desktop layout with keyboard hints');
+windowListeners.pointerdown?.({ pointerType: 'touch' });
+windowListeners.keydown?.({ code: 'KeyD', repeat: false, preventDefault() {} });
+assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device back to the desktop layout');
+
 const frameCallback = nextFrame;
 frameCallback(game.lastFrameTime + 16);
 game.debugVisible = true;
