@@ -175,7 +175,7 @@ const initialHand = game.player.runeHand.map((rune) => rune.id).join(',');
 const spellCountBeforeDraw = spells.activeSpells.length;
 game.startRuneDrawing(ignisCard.cardId);
 game.finishRuneDrawing({ rune: recognizer.runes.find((rune) => rune.id === 'ignis'), confidence: 0.99 });
-assert(!game.drawing.active && game.timeScale === 1 && game.player.preparedRunes.length === 1 && game.player.slottedSpells.length === 1 && game.player.slottedSpells[0].runes[0].id === 'ignis' && spells.activeSpells.length === spellCountBeforeDraw && game.player.runeHand.map((rune) => rune.id).join(',') === 'fulgur,terra,ignis' && game.player.runeDeck.map((rune) => rune.id).join(',') === 'ventus,aqua,fulgur,terra,ignis,ventus,aqua', 'Drawing a hand card only slots the rune spell (no auto-cast) and recycles card to front of deck');
+assert(!game.drawing.active && game.timeScale === 1 && game.player.preparedRunes.length === 1 && game.player.slottedSpells.length === 1 && game.player.slottedSpells[0].runes[0].id === 'ignis' && spells.activeSpells.length === spellCountBeforeDraw && game.player.runeHand.map((rune) => rune.id).join(',') === 'fulgur,terra,ventus' && game.player.runeDeck.map((rune) => rune.id).join(',') === 'aqua,fulgur,terra,ignis,ventus,aqua,ignis', 'Drawing a hand card only slots the rune spell (no auto-cast); the used card goes to the bottom of the deck and the next one is drawn');
 game.player.mp = game.player.maxMp;
 assert(game.castPreparedSpell() && game.player.slottedSpells.length === 0 && game.player.preparedRunes.length === 0 && spells.activeSpells.length > spellCountBeforeDraw, 'CAST releases the slotted rune spell drawn from the hand');
 assert(initialHand === 'fulgur,terra,ignis', 'Casting consumes slotted spell components without cycling untouched hand cards');
@@ -186,8 +186,10 @@ game.drawing.strokes = [[...Array.from({ length: 26 }, (_, index) => ({ x: 100 +
 game.confirmRuneDrawing();
 assert(game.drawing.active && game.player.runeHand.map((rune) => rune.cardId).join(',') === handBeforeMismatch, 'Recognized gestures are rejected when they do not match the selected hand card');
 game.cancelRuneDrawing();
-game.startRuneDrawing(ignisCard.cardId);
-game.drawing.strokes = [[...Array.from({ length: 26 }, (_, i) => ({ x: 100 + i * 10, y: i <= 12 ? 250 - i * 12 : 106 + (i - 12) * 12 }))]];
+// The played IGNIS went to the bottom of the deck; VENTUS was drawn.
+const ventusCard = game.player.runeHand.find((rune) => rune.id === 'ventus');
+game.startRuneDrawing(ventusCard.cardId);
+game.drawing.strokes = [[...Array.from({ length: 26 }, (_, i) => ({ x: 100 + i * 10, y: 200 + Math.sin(i) * 2 }))]];
 game.drawing.lastStrokeTime = performance.now() - 2001;
 game.drawing.autoLockArmed = true;
 const spellCountBeforeAutoLock = spells.activeSpells.length;
