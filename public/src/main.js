@@ -9,8 +9,8 @@ import { Battlefield } from './battlefield.js';
 import { ui } from './ui.js';
 import { VIEWPORT, ARENA_LAYOUT, groundDistance, groundYForDepth } from './world.js';
 import { ART_ASSETS } from './art_assets.js';
-import { MageProfile, MAGE_SKILL_TREE, applyMageProfile } from './progression.js';
-import { getGameMode } from './game_modes.js';
+import { MageProfile, MAGE_SKILL_TREE, applyMageProfile, DEFAULT_MATCH_DECK, MATCH_DECK_SIZE, MAX_RUNE_COPIES, ALL_RUNE_IDS } from './progression.js';
+import { getGameMode, DEBUG_BUILD } from './game_modes.js';
 import { runeManaCost, isSpecialRune, TARGETING } from './spell_catalog.js';
 import { SpellTargeting, SlotChord, needsTarget } from './targeting.js';
 import { GamepadController } from './gamepad.js';
@@ -66,6 +66,10 @@ export class GameWorld {
     this.renderHeight = this.logicalHeight;
     this.worldOffsetY = 0;
     this.inputMode = null;
+    // Training keeps its own decks (player + sparring partner) so quick
+    // experiments never change the persistent profile Grimoire.
+    this.trainingDecks = null;
+    this.deckEditTarget = null;
     // One targeting model for touch, mouse/keyboard and gamepad.
     this.targeting = new SpellTargeting(this);
     this.gamepad = new GamepadController(this);
@@ -304,6 +308,12 @@ export class GameWorld {
       }
       if (this.matchState === 'Menu') {
         if (e.code === 'Enter' || e.code === 'Space') this.startMatch();
+        return;
+      }
+      // Esc closes the training deck editor first (and resumes the training).
+      if (e.code === 'Escape' && this.deckEditTarget) {
+        ui.toggleDeckBuilder?.(false);
+        e.preventDefault();
         return;
       }
       if (e.code === 'Escape' && this.targeting.isActive) {
@@ -732,6 +742,8 @@ export class GameWorld {
     if (!this.isMatchRunning() || !this.player?.isAlive || this.drawing.active) return false;
     // During a Beam Clash a right-side tap is the push / counter impulse.
     if (this.player.activeClash) return !!this.clashAction();
+    // Gravity Lift hold: a swipe away from the facing side pulls the targets in.
+    if (this.player.activeTelekinesis && dx * (this.player.facing || 1) < -34 && Math.abs(dx) >= Math.abs(dy)) return this.player.activeTelekinesis.release('pull');
     const threshold = 34;
     const distance = Math.hypot(dx, dy);
     let attackKind = 'normal';
@@ -1359,6 +1371,8 @@ export class GameWorld {
       // A few breakable crates and an oil barrel around the yard.
       environment.addProp('crate', 380, .22); environment.addProp('crate', 650, .84);
       environment.addProp('crate', 700, .2); environment.addProp('barrel', 340, .84);
+      this.trainingDecks ??= { player: this.profile.getMatchDeck(), opponent: [...DEFAULT_MATCH_DECK] };
+      this.applyTrainingDecks();
       this.trainingDummy = new TrainingDummy(512, 0.5);
       this.battlefield.placeOnSurface(this.trainingDummy);
       this.minions.push(this.trainingDummy);
@@ -1414,6 +1428,66 @@ export class GameWorld {
       this.showAnnouncement('SPARRING PARTNER LEFT', 1.2);
     }
     return state.sparring;
+  }
+
+  runesForIds(ids) {
+    return ids.map((id) => recognizer.runes.find((rune) => rune.id === id)).filter(Boolean);
+  }
+
+  applyTrainingDecks() {
+    if (!this.trainingDecks) return;
+    this.player.configureRuneDeck(this.runesForIds(this.trainingDecks.player));
+    this.enemyChampion.setDeck?.(this.trainingDecks.opponent);
+  }
+
+  // Deck-builder view of a training deck. In the debug build (until the
+  // game is public) every rune is available here.
+  trainingDeckSource(target = this.deckEditTarget ?? 'player') {
+    const deck = this.trainingDecks?.[target] ?? [];
+    return {
+      target, matchDeck: deck, trainingSparring: !!this.modeState?.sparring,
+      isRuneUnlocked: (id) => DEBUG_BUILD || this.profile.isRuneUnlocked(id),
+      getRuneCopies: (id) => deck.filter((entry) => entry === id).length,
+      runeLevel: (id) => this.profile.runeLevel(id)
+    };
+  }
+
+  openTrainingDeck(target = 'player') {
+    if (this.activeMode?.id !== 'training' || !this.isMatchRunning()) return false;
+    if (target === 'opponent' && !this.modeState?.sparring) target = 'player';
+    this.deckEditTarget = target;
+    this.targeting.cancel();
+    this.setMenuPaused(true);
+    ui.toggleDeckBuilder?.(true);
+    ui.renderDeckBuilder?.(this.trainingDeckSource());
+    return true;
+  }
+
+  closeTrainingDeck() {
+    if (!this.deckEditTarget) return false;
+    this.deckEditTarget = null;
+    this.applyTrainingDecks();
+    this.setMenuPaused(false);
+    this.showAnnouncement('TRAINING DECKS UPDATED', 1);
+    return true;
+  }
+
+  editTrainingDeck(action, runeId) {
+    const target = this.deckEditTarget;
+    const deck = this.trainingDecks?.[target];
+    if (!deck) return false;
+    if (action === 'reset') deck.splice(0, deck.length, ...(target === 'player' ? this.profile.getMatchDeck() : DEFAULT_MATCH_DECK));
+    else if (action === 'add') {
+      if (!ALL_RUNE_IDS.includes(runeId) || !this.trainingDeckSource().isRuneUnlocked(runeId)) return false;
+      if (deck.length >= MATCH_DECK_SIZE || deck.filter((id) => id === runeId).length >= MAX_RUNE_COPIES) return false;
+      deck.push(runeId);
+    } else if (action === 'remove') {
+      const index = deck.lastIndexOf(runeId);
+      if (index < 0) return false;
+      deck.splice(index, 1);
+    } else return false;
+    ui.renderDeckBuilder?.(this.trainingDeckSource());
+    return true;
   }
 
   // The red HUD side mirrors whoever the player is actually fighting.
@@ -1815,6 +1889,10 @@ export class GameWorld {
       }
     }
 
+    // Hostile walls can be worn down by melee, spells and projectiles.
+    for (const spell of spells.activeSpells) {
+      if (spell.isStoneWall && !spell.isDead && spell.team !== myTeam) targets.push(spell);
+    }
     // Breakable crates / barrels are neutral: every team can hit them.
     for (const prop of environment.livingProps()) targets.push(prop);
     return targets;
@@ -1849,6 +1927,22 @@ export class GameWorld {
       if (minion.target.isObjective || retainedDistance < 225) return minion.target;
     }
     const commit = (target) => { minion.target = target; minion.targetLockTimer = target ? 0.55 : 0; return target; };
+    // A hostile wall right in front of a minion is attacked instead of
+    // pushing into it forever. The proxy's position is the wall's nearest
+    // point, so lateral walls are reachable from any side.
+    const blockingWall = spells.activeSpells.find((spell) => spell.isStoneWall && !spell.isDead && spell.team !== minion.team
+      && Math.abs(spell.x - minion.x) <= spell.halfX + 34 && Math.abs(spell.z - minion.z) <= spell.halfZ + .1);
+    if (blockingWall) {
+      const wall = blockingWall;
+      return commit({
+        team: wall.team, isWallProxy: true,
+        x: Math.max(wall.x - wall.halfX, Math.min(wall.x + wall.halfX, minion.x)),
+        z: Math.max(wall.z - wall.halfZ, Math.min(wall.z + wall.halfZ, minion.z)),
+        get y() { return wall.y; }, worldHeight: wall.surfaceHeight, radius: 6,
+        get isDead() { return wall.isDead; },
+        takeDamage: (amount) => wall.takeDamage(amount)
+      });
+    }
     const enemies = this.minions.filter((candidate) => candidate.team !== minion.team && !candidate.isDead);
     let nearest = null; let nearestDistance = Infinity;
     for (const enemy of enemies) {
@@ -1984,6 +2078,7 @@ export class GameWorld {
   }
 
   updateMatchDeck(action, runeId = null) {
+    if (this.deckEditTarget) return this.editTrainingDeck(action, runeId);
     let result;
     if (action === 'reset') {
       this.profile.resetMatchDeck();
@@ -2403,14 +2498,23 @@ export class GameWorld {
     const actors = [...this.minions, ...environment.livingProps().map((prop) => ({ y: prop.y, render: (c) => renderProp(c, prop) }))];
     if (this.enemyChampion.lifeState !== 'Dead') actors.push(this.enemyChampion);
     if (this.player.lifeState !== 'Dead' && !this.player.isMounted) actors.push(this.player);
+    // Spells with a ground position and summons share the painter's order
+    // with the actors, so a spike behind the dummy is hidden by the dummy.
+    actors.push(...spells.depthEntries());
     actors.sort((a, b) => a.y - b.y);
-    for (const actor of actors) actor.render(ctx);
+    let spellBatch = [];
+    for (const actor of actors) {
+      if (actor.spell) { spellBatch.push(actor.spell); continue; }
+      spells.renderBatch(ctx, spellBatch); spellBatch = [];
+      actor.render(ctx);
+    }
+    spells.renderBatch(ctx, spellBatch);
 
     // Projectiles
     this.renderProjectiles(ctx);
 
     // Spells
-    spells.render(ctx);
+    spells.render(ctx, { depthSorted: true });
     environment.renderAir(ctx);
     this.targeting.render(ctx);
 

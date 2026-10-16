@@ -264,7 +264,7 @@ game.player.clearPreparedRunes();
 const constructBaseRune = recognizer.runes.find((rune) => rune.id === 'construct');
 game.player.mp = game.player.maxMp;
 game.slotRuneSpell(constructBaseRune);
-assert(game.castPreparedSpell() && game.targeting.active?.mode === 'placement' && game.castPreparedSpell() && spells.activeSpells.some((spell) => spell.isStoneWall && spell.wallHeight === 66 && spell.life < 3), 'Single KONSTRUKT asks for its placement and E confirms a short Construct Bulwark');
+assert(game.castPreparedSpell() && game.targeting.active?.mode === 'placement' && game.castPreparedSpell() && spells.activeSpells.some((spell) => spell.isStoneWall && spell.wallHeight === 66 && spell.maxHp === 80), 'Single KONSTRUKT asks for its placement and E confirms a short Construct Bulwark');
 spells.clearRuntime();
 const voidBaseRune = recognizer.runes.find((rune) => rune.id === 'void');
 game.enemyChampion.isDead = false; game.enemyChampion.hp = game.enemyChampion.maxHp; game.enemyChampion.slowTimer = 0;
@@ -847,8 +847,8 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
   spells.cast(P, spells.resolveSpell([rune('ventus'), rune('void')]), game);
   stepSpells(.6);
   assert(E.elevation > 60 && E.freezeTimer > 0, 'Gravity Lift raises and holds nearby enemies');
-  stepSpells(1.2);
-  assert(E.hp < E.maxHp, 'Gravity Lift slams the lifted targets down for damage');
+  stepSpells(1.8);
+  assert(E.hp < E.maxHp && !P.activeTelekinesis, 'Without a release input Gravity Lift slams the targets down after the hold');
 
   // Air stomp with a vertical hitbox.
   resetDuel(300, 360);
@@ -1134,13 +1134,121 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
 
   reset();
   spells.cast(P, spells.resolveSpell([recognizer.runes.find((r) => r.id === 'terra'), recognizer.runes.find((r) => r.id === 'terra')]), game);
-  stepWorld(4.2);
-  assert(environment.effects.some((e) => e.type === 'rubble'), 'An expiring Stone Wall crumbles into rubble');
+  spells.activeSpells.find((s) => s.isStoneWall).takeDamage(999);
+  stepWorld(.1);
+  assert(environment.effects.some((e) => e.type === 'rubble') && !spells.activeSpells.some((s) => s.isStoneWall), 'A destroyed Stone Wall crumbles into rubble');
+  reset();
+}
+// Improvements: dash cooldown, training depth, depth sorting, training decks,
+// multiple walls / summons via passives, telekinesis release choices.
+{
+  const { environment } = await import('./public/src/environment.js');
+  const P = game.player; const E = game.enemyChampion;
+  const rune = (id) => recognizer.runes.find((entry) => entry.id === id);
+  const neutral = { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false };
+  const stepSpells = (seconds) => { for (let t = 0; t < seconds; t += 1 / 60) spells.update(1 / 60, game); };
+  const savedMods = { ...P.buildModifiers };
+  const reset = () => {
+    spells.clearRuntime(); environment.clear(); game.minions = []; game.targeting.cancel(); P.clearPreparedRunes();
+    P.buildModifiers = { ...savedMods };
+    P.x = 300; P.z = .58; P.facing = 1; P.mp = P.maxMp; P.hp = P.maxHp; P.state = 'idle'; P.stateTimer = 0; P.grounded = true; P.elevation = 0;
+    P.backdashTimer = 0; P.backdashCooldown = 0; P.backdashSuppressTimer = 0; P.sprintActive = false; P.invulnerableTimer = 0; P.activeTelekinesis = null;
+    game.battlefield.placeOnSurface(P);
+    E.lifeState = 'Alive'; E.x = 420; E.z = .58; E.hp = E.maxHp; E.state = 'idle'; E.stateTimer = 0; E.freezeTimer = 0; E.kbVelX = 0; E.elevation = 0; E.arcaneShield = 0;
+    game.battlefield.placeOnSurface(E);
+  };
+
+  // 1. A dash never chains into a sprint and has a cooldown.
+  reset();
+  assert(P.triggerBackdash(), 'A backdash starts');
+  for (let t = 0; t < .3; t += 1 / 60) P.update(1 / 60, neutral, game.battlefield, game);
+  P.activateSprint(1);
+  assert(!P.sprintActive && !P.triggerBackdash(), 'Right after a dash there is no sprint and the dash is on cooldown');
+  for (let t = 0; t < .7; t += 1 / 60) P.update(1 / 60, neutral, game.battlefield, game);
+  P.activateSprint(1);
+  assert(P.sprintActive && (P.cancelSprint(), P.triggerBackdash()), 'After the cooldown sprint and dash are available again');
+
+  // 2. The whole painted training floor is walkable.
+  reset();
+  assert(groundYForDepth(0) === 212 && game.battlefield.boundsOverride.farZ <= .02, 'Training projects the combat plane over the whole painted floor');
+  P.z = .01; P.x = 60; game.battlefield.resolveEntityCollision(P);
+  assert(P.z === .02 && P.x === 70, 'The player can walk to the rear and side edges of the training yard');
+
+  // 3. Spells are depth-sorted with actors.
+  reset();
+  P.z = .4; game.battlefield.placeOnSurface(P);
+  spells.cast(P, spells.resolveSpell([rune('terra')]), game);
+  const spikes = spells.activeSpells.find((s) => Number.isFinite(spells.spellDepth(s)));
+  const dummyY = groundYForDepth(.5);
+  assert(spikes && spells.spellDepth(spikes) < dummyY && spells.depthEntries().some((entry) => entry.spell === spikes), 'Spikes behind the dummy sort behind it (painter order)');
+
+  // 4. Training deck editor: debug build unlocks every rune, player and partner decks.
+  reset();
+  game.profile.unlockedRunes.delete('void');
+  assert(game.openTrainingDeck('player') && game.menuPaused && game.deckEditTarget === 'player', 'The training DECK button opens the editor and pauses the training');
+  game.trainingDecks.player.splice(0, game.trainingDecks.player.length, 'ignis');
+  assert(game.updateMatchDeck('add', 'void') && game.trainingDecks.player.includes('void'), 'In the debug build every rune can be slotted into the training deck');
+  assert(game.openTrainingDeck('opponent') && game.deckEditTarget === 'player', 'The partner deck is only editable while the partner is active');
+  game.toggleSparringPartner();
+  game.openTrainingDeck('opponent');
+  assert(!game.updateMatchDeck('add', 'bestia'), 'A full 10-card training deck needs a free card slot first');
+  game.updateMatchDeck('remove', 'aqua');
+  game.updateMatchDeck('add', 'bestia');
+  assert(game.deckEditTarget === 'opponent' && game.trainingDecks.opponent.includes('bestia'), 'With the partner active its deck can be edited');
+  ui.toggleDeckBuilder(false);
+  assert(!game.menuPaused && !game.deckEditTarget, 'Closing the editor resumes the training');
+  assert([...P.runeDeck, ...P.runeHand].some((card) => card.id === 'void') && E.deckSpells.some((option) => option.def.id === 'summon_lesser_beast'), 'Both edited decks are applied (partner AI casts from its deck)');
+  game.toggleSparringPartner();
+  game.profile.unlockedRunes.add('void');
+
+  // 5. Walls: base limit 1, Rampart Mason keeps several; walls stand until broken.
+  reset();
+  const wallSpell = spells.resolveSpell([rune('terra'), rune('terra')]);
+  spells.cast(P, wallSpell, game, null, { x: 400, z: .3 });
+  spells.cast(P, wallSpell, game, null, { x: 500, z: .5 });
+  stepSpells(.05);
+  assert(spells.activeSpells.filter((s) => s.isStoneWall).length === 1, 'Without the passive only one wall stands at a time');
+  reset();
+  P.buildModifiers = { ...savedMods, maxWalls: 3 };
+  for (const x of [380, 460, 540]) spells.cast(P, wallSpell, game, null, { x, z: .5 });
+  stepSpells(5);
+  assert(spells.activeSpells.filter((s) => s.isStoneWall).length === 3, 'With Rampart Mason several walls stay on the field (long-lasting until destroyed)');
+  const { Minion } = await import('./public/src/entities.js');
+  const raider = new Minion(560, .5, 'red', 'melee', 0);
+  game.battlefield.placeOnSurface(raider); game.minions.push(raider);
+  const wallTarget = game.findMinionTarget(raider);
+  assert(wallTarget?.isWallProxy && game.getHostileTargets('red').some((t) => t.isStoneWall), 'Enemies attack a wall that blocks them; hostile walls are valid targets');
+
+  // 6. Summons: one per kind, Pack Leader allows more.
+  reset();
+  const beast = spells.resolveSpell([rune('bestia')]);
+  spells.cast(P, beast, game); spells.cast(P, beast, game);
+  assert(spells.getSummons('blue').length === 1, 'One summon of each kind by default');
+  P.buildModifiers = { ...savedMods, extraSummons: 1 };
+  spells.cast(P, beast, game);
+  assert(spells.getSummons('blue').length === 2, 'Pack Leader keeps two of the same kind');
+
+  // 7. Telekinesis: hold, then throw away or pull in.
+  reset();
+  P.buildModifiers = { ...savedMods, liftTargets: 3 };
+  spells.cast(P, { id: 'gravity_lift', tier: 2 }, game, null, { x: 420, z: .58 });
+  const lift = spells.activeSpells.find((s) => s.maxTargets);
+  assert(lift.maxTargets === 7 && P.activeTelekinesis === lift, 'Telekinetic Grip raises the target count; the caster holds the lift');
+  stepSpells(.6);
+  assert(E.elevation > 60 && P.executeAttack(neutral, 'heavy') && E.kbVelX > 0 && !P.activeTelekinesis, 'A forward attack throws the held targets away');
+  reset();
+  E.x = 460; game.battlefield.placeOnSurface(E);
+  spells.cast(P, { id: 'gravity_lift', tier: 2 }, game, null, { x: 460, z: .58 });
+  stepSpells(.6);
+  const pullInput = { ...neutral, move: { x: -1, z: 0 } };
+  assert(P.executeAttack(pullInput, 'normal') && E.kbVelX < 0, 'Attacking while holding back pulls the targets toward the caster');
+  P.buildModifiers = { ...savedMods };
   reset();
 }
 game.returnToHub();
 game.setMatchMode('siege'); game.startMatch();
 assert(game.matchState === 'Running' && game.objectivePhase === 'LanePhase', 'A new Siege match can start cleanly after alternate modes');
+assert(groundYForDepth(0) === 306, 'Leaving Training restores the Siege ground projection');
 
 // Screens narrower than 16:9 get a taller camera (extra sky) instead of a
 // distorted canvas or a HUD that runs off the right edge.

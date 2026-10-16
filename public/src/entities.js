@@ -4,6 +4,25 @@ import { combat } from './combat.js';
 import { audio } from './audio.js';
 import { spells } from './spells.js';
 import { ARENA_LAYOUT, ENTITY_VISUALS, GroundEntity, groundDistance } from './world.js';
+import { lookupRecipe, runeManaCost } from './spell_catalog.js';
+
+// Every spell a rune deck can produce: single runes plus every valid two-
+// and three-rune recipe that its cards allow (copies respected).
+export function deckSpellOptions(ids = []) {
+  const options = new Map();
+  const addRecipe = (combo) => {
+    const def = lookupRecipe(combo.map((id) => ({ id })));
+    if (def && !options.has(def.id)) options.set(def.id, { def, cost: combo.reduce((sum, id) => sum + runeManaCost(id), 0) });
+  };
+  for (let i = 0; i < ids.length; i++) {
+    addRecipe([ids[i]]);
+    for (let j = i + 1; j < ids.length; j++) {
+      addRecipe([ids[i], ids[j]]);
+      for (let k = j + 1; k < ids.length; k++) addRecipe([ids[i], ids[j], ids[k]]);
+    }
+  }
+  return [...options.values()];
+}
 
 const ACTION_STATES = new Set(['attack1', 'attack2', 'attack3', 'uppercut', 'heavyStrike', 'dive', 'dash', 'hurt']);
 // Deliberately the shared prototype baseline, not the future weapon system.
@@ -39,7 +58,10 @@ const BACKDASH_DISTANCE = 320;
 const BACKDASH_DURATION = 0.25;
 const BACKDASH_INVULN_TIME = 0.05;
 const BACKDASH_REVERSAL_WINDOW = 0.25;
-const BACKDASH_SUPPRESS_TIME = 0.133;
+// After a backdash the dodge has a cooldown and no sprint can start right
+// away (a dash never chains into a sprint).
+const BACKDASH_SUPPRESS_TIME = 0.45;
+const BACKDASH_COOLDOWN = 0.5;
 
 const KB_DECAY_RATE = 450;
 
@@ -70,7 +92,6 @@ const BLOCK_MOVE_MULT = 0.4;
 // ── Mobile movement (concept doc §4.5) — playtest start values ──────────
 const TOUCH_SPRINT_MIN_DISTANCE = 150; // guaranteed run after a sprint flick
 const TOUCH_SPRINT_MIN_TIME = 0.6;     // collisions may eat the distance
-const TOUCH_BACKDASH_COOLDOWN = 0.35;
 
 // ── Resources ───────────────────────────────────────────────────────────
 const MANA_REGEN = 9;            // spent mana regenerates; bound mana stays bound
@@ -603,7 +624,7 @@ export class Player extends GroundEntity {
   }
 
   activateSprint(dir) {
-    if (this.isGuarding || this.backdashTimer > 0 || !this.grounded || this.activeClash) return;
+    if (this.isGuarding || this.backdashTimer > 0 || this.backdashSuppressTimer > 0 || !this.grounded || this.activeClash) return;
     this.sprintActive = true;
     this.sprintDir = dir;
     audio.playDash();
@@ -691,11 +712,10 @@ export class Player extends GroundEntity {
   }
 
   triggerBackdash(options = {}) {
-    if (this.isGuarding || this.backdashTimer > 0 || !this.grounded || !this.isAlive || this.activeClash) return false;
-    if (options.source === 'touch') {
-      if (this.backdashCooldown > 0) return false;
-      this.backdashCooldown = TOUCH_BACKDASH_COOLDOWN;
-    }
+    if (this.isGuarding || this.backdashTimer > 0 || this.backdashCooldown > 0 || !this.grounded || !this.isAlive || this.activeClash) return false;
+    this.backdashCooldown = BACKDASH_COOLDOWN + BACKDASH_DURATION;
+    // Forget pending direction flicks so the dodge cannot turn into a sprint.
+    this._lastFlickDir = 0; this._lastFlickTime = 0;
     this.cancelSprint();
     this.backdashDir = -this.facing;
     this.backdashTimer = BACKDASH_DURATION;
@@ -790,6 +810,11 @@ export class Player extends GroundEntity {
 
   executeAttack(input, attackKind = 'normal') {
     if (!this.isAlive || this.isGuarding || this.burrowed || !window.gameWorld?.isMatchRunning?.()) return false;
+    // Holding targets with Gravity Lift: the attack releases them instead.
+    if (this.activeTelekinesis && !this.activeTelekinesis.isFinished) {
+      const back = attackKind === 'normal' && normalizeMove(moveVector(input)).x * (this.facing || 1) < -.5;
+      return this.activeTelekinesis.release(back ? 'pull' : attackKind);
+    }
     if (ACTION_STATES.has(this.state) || !this.canAttack) {
       const canBuffer = attackKind === 'normal' && /^attack[123]$/.test(this.state) && this.stateTimer <= MELEE_BASELINE.bufferWindow;
       if (canBuffer) {
@@ -1586,7 +1611,10 @@ export class EnemyChampion extends GroundEntity {
       this.vx = move.x * this.speed * this.slowFactor * (retreating ? -.82 : 1);
       this.vz = move.z * this.speed / 150 * this.slowFactor * (retreating ? -.82 : 1);
       this.state = 'run';
-      if (!this.tryAIDefense(player, distance, objectiveThreat, gameWorld) && distance > 110 && !this.tryAIBeam(player, distance, gameWorld)) this.tryAICast('fireball', gameWorld, 12, objectiveThreat ? 2.1 : 3.1);
+      if (!this.tryAIDefense(player, distance, objectiveThreat, gameWorld) && distance > 110 && !this.tryAIBeam(player, distance, gameWorld)) {
+        if (this.deckSpells) this.tryAIDeckSpell(player, distance, gameWorld);
+        else this.tryAICast('fireball', gameWorld, 12, objectiveThreat ? 2.1 : 3.1);
+      }
     } else {
       this.aiMode = 'DEFEND_CASTLE';
       const move = normalizeMove({ x: home.x - this.x, z: (home.z - this.z) * 150 }); this.facing = Math.sign(move.x) || this.facing; this.vx = move.x * this.speed * .45; this.vz = move.z * this.speed / 150 * .45; this.state = 'run';
@@ -1600,14 +1628,41 @@ export class EnemyChampion extends GroundEntity {
     spells.cast(this, { id, tier: ['stone_wall', 'arcane_aegis', 'inferno_beam', 'glacial_ray', 'thunder_lance', 'null_ray'].includes(id) ? 2 : 1 }, gameWorld);
     return true;
   }
+  // Training: the sparring partner fights with an editable rune deck.
+  setDeck(ids = []) {
+    this.deckIds = [...ids];
+    this.deckSpells = deckSpellOptions(this.deckIds);
+  }
   aiBeamId() {
+    const deckBeam = this.deckSpells?.find((option) => option.def.deliveryType === 'beam');
+    if (this.deckSpells) return deckBeam?.def.id ?? null;
     return { boss_firelord: 'inferno_beam', darklord: 'null_ray', mage: 'glacial_ray' }[this.heroKey] ?? 'thunder_lance';
+  }
+  // Pick a spell from the deck that suits the moment and give it a target.
+  tryAIDeckSpell(player, distance, gameWorld) {
+    if (!this.deckSpells) return this.tryAICast('fireball', gameWorld, 12, 3.1);
+    if (this.spellCooldown > 0 || !this.deckSpells.length) return false;
+    const hurt = this.hp / this.maxHp < .6;
+    const usable = this.deckSpells.filter(({ def, cost }) => {
+      if (cost > this.mp || def.deliveryType === 'beam') return false;
+      if (def.targetingMode === 'self' || def.targetingMode === 'ally') return hurt && ['arcane_aegis', 'sandstorm_bastion', 'mirror_ward', 'eidolon_mantle'].includes(def.id);
+      return true;
+    });
+    if (!usable.length) return false;
+    const { def, cost } = usable[Math.floor(Math.random() * usable.length)];
+    this.facing = Math.sign(player.x - this.x) || this.facing;
+    const target = def.targetingMode === 'ground' ? { x: player.x, z: player.z }
+      : def.targetingMode === 'placement' ? { x: this.x + this.facing * 80, z: this.z }
+      : def.targetingMode === 'ally' ? { entity: this } : null;
+    this.mp -= cost; this.spellCooldown = 2.4;
+    spells.cast(this, def, gameWorld, null, target);
+    return true;
   }
   // Beams stay rare in narrow Castle Siege lanes: only duel / boss fighters
   // open with one, and only when lined up in the same depth lane.
   tryAIBeam(player, distance, gameWorld) {
     if (!(gameWorld.activeMode?.enemyBehavior === 'duel' || gameWorld.modeState?.bossActive)) return false;
-    if (this.beamCooldown > 0 || this.mp < 26 || this.spellCooldown > 0) return false;
+    if (this.beamCooldown > 0 || this.mp < 26 || this.spellCooldown > 0 || !this.aiBeamId()) return false;
     if (Math.abs(player.z - this.z) > .12 || distance < 170 || distance > 420) return false;
     this.facing = Math.sign(player.x - this.x) || this.facing;
     this.vx = this.vz = 0;
@@ -1621,7 +1676,7 @@ export class EnemyChampion extends GroundEntity {
       && spell.phase === 'charge' && Math.abs(spell.z - this.z) < .15 && Math.sign(this.x - spell.originX) === spell.facing);
     if (!incoming) return false;
     incoming.aiConsidered = true;
-    if (this.beamCooldown > 0 || this.mp < 26 || Math.random() > .6) return false;
+    if (this.beamCooldown > 0 || this.mp < 26 || !this.aiBeamId() || Math.random() > .6) return false;
     this.facing = -incoming.facing;
     this.beamCooldown = 8;
     this.spellCooldown = 0;

@@ -640,11 +640,27 @@ export class GravityLiftSpell {
     this.caster = caster; this.team = caster.team;
     this.centerX = target?.x ?? caster.x + (caster.facing || 1) * 90;
     this.z = target?.z ?? caster.z;
-    this.radius = 170; this.maxTargets = 4;
+    const mods = caster.buildModifiers ?? {};
+    this.radius = 170; this.maxTargets = 4 + Math.max(0, mods.liftTargets ?? 0);
+    this.holdTime = 1.6 * (mods.liftHold ?? 1);
     this.phase = 'lift'; this.timer = 0; this.isFinished = false;
     this.damage = 30;
     this.targets = [];
     this.gameWorld = gameWorld;
+    this.releaseKind = null;
+    // While held, the caster's attack input decides the release.
+    caster.activeTelekinesis = this;
+    if (caster === gameWorld?.player) gameWorld.showAnnouncement?.('HOLDING — ATTACK: SLAM · FORWARD: THROW · BACK: PULL · UP: TOSS', 1.6);
+  }
+
+  // Release choices: slam (attack / down), throw (forward), pull (back),
+  // toss (up). Without input the hold ends in a slam.
+  release(kind = 'slam') {
+    if (this.phase !== 'lift' && this.phase !== 'hold') return false;
+    this.releaseKind = { normal: 'slam', dive: 'slam', heavy: 'throw', uppercut: 'toss', pull: 'pull' }[kind] ?? kind;
+    this.phase = 'slam'; this.timer = 0;
+    this.slam();
+    return true;
   }
   get x() { return this.centerX; }
   get y() { return groundYForDepth(this.z) - 30; }
@@ -676,17 +692,31 @@ export class GravityLiftSpell {
       if (this.timer >= .45) { this.phase = 'hold'; this.timer = 0; }
     } else if (this.phase === 'hold') {
       hold(90);
-      if (this.timer >= .85 * (this.quality?.duration ?? 1)) { this.phase = 'slam'; this.timer = 0; this.slam(); }
-    } else if (this.timer >= .35) this.isFinished = true;
+      if (this.timer >= this.holdTime * (this.quality?.duration ?? 1)) this.release('slam');
+    } else if (this.timer >= .35) this.finish();
+  }
+
+  finish() {
+    this.isFinished = true;
+    if (this.caster.activeTelekinesis === this) this.caster.activeTelekinesis = null;
   }
 
   slam() {
+    const kind = this.releaseKind ?? 'slam';
+    const facing = this.caster.facing || 1;
     for (const { t } of this.targets) {
       if (!isCombatant(t)) continue;
       t.freezeTimer = 0;
-      t.takeDamage(this.damage, 0, -420, .4, false, 'spell');
+      if (kind === 'throw') t.takeDamage(this.damage * .8, facing * 620, 240, .5, false, 'spell');
+      else if (kind === 'pull') t.takeDamage(this.damage * .5, Math.sign(this.caster.x - t.x || -facing) * 520, 140, .45, false, 'spell');
+      else if (kind === 'toss') t.takeDamage(this.damage * .6, 0, 760, .6, false, 'spell');
+      else {
+        t.takeDamage(this.damage, 0, -420, .4, false, 'spell');
+        environment.add('crack', t.x, t.z, { radius: 30 });
+      }
       combat.spawnShockwave(t.x, groundYForDepth(t.z), 36, '#ce93d8');
     }
+    if (this.caster.activeTelekinesis === this) this.caster.activeTelekinesis = null;
     combat.shakeCamera(9, .3);
     audio.playImpact(true);
   }

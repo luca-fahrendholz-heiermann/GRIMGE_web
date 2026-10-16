@@ -13,7 +13,7 @@
 // Mouse: the reticle follows the cursor, LMB confirms / drags walls,
 //        RMB or Esc cancels.
 // Gamepad: right stick moves the reticle, A confirms, B cancels, X turns walls.
-import { ARENA_LAYOUT, groundYForDepth } from './world.js';
+import { ARENA_LAYOUT, getGroundProjection, groundYForDepth } from './world.js';
 import { TARGETING, TARGET_RANGE } from './spell_catalog.js';
 import { spells } from './spells.js';
 
@@ -34,7 +34,7 @@ export class SpellTargeting {
   // ── coordinate helpers ───────────────────────────────────────────────
   screenToWorld(pt) {
     const game = this.game;
-    const { farY, nearY } = ARENA_LAYOUT.groundProjection;
+    const { farY, nearY } = getGroundProjection();
     const x = pt.x - (game.cameraOffsetX ?? 0) + (game.modeState?.dungeonCameraX ?? 0);
     const groundY = pt.y - (game.worldOffsetY ?? 0);
     const bounds = game.battlefield?.boundsOverride ?? ARENA_LAYOUT.playableBounds;

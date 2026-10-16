@@ -8,12 +8,15 @@ export const MAGE_SKILL_TREE = Object.freeze([
   { id: 'resonance', branch: 'ELEMENTAL', title: 'Rune Resonance', desc: '+15% combined-spell power.', cost: 1, prerequisites: ['elemental_reach'], modifiers: { comboPower: 1.15 } },
   { id: 'arcane_skin', branch: 'DEFENSE', title: 'Arcane Skin', desc: 'Take 10% less damage.', cost: 1, modifiers: { damageTaken: .90 } },
   { id: 'barrier_mastery', branch: 'DEFENSE', title: 'Barrier Mastery', desc: 'Walls last 30% longer and cover more ground.', cost: 1, prerequisites: ['arcane_skin'], modifiers: { wallDuration: 1.30, wallHp: 1.25 } },
+  { id: 'rampart_mason', branch: 'DEFENSE', title: 'Rampart Mason', desc: 'Keep up to 3 walls on the field at once; older walls only fall when destroyed or expired.', cost: 1, prerequisites: ['barrier_mastery'], modifiers: { maxWalls: 2 } },
   { id: 'aura_shock_mastery', branch: 'DEFENSE', title: 'Aura Shock Mastery', desc: '+18% Aura Shock radius and knockback.', cost: 1, prerequisites: ['barrier_mastery'], modifiers: { auraArea: 1.18, auraPush: 1.18 } },
   { id: 'spirit_bond', branch: 'SUMMONING', title: 'Spirit Bond', desc: '+25% summon health and +10% mount speed.', cost: 1, modifiers: { summonHp: 1.25, mountSpeed: 1.10 } },
   { id: 'empowered_summons', branch: 'SUMMONING', title: 'Empowered Summons', desc: '+18% summon damage.', cost: 1, prerequisites: ['spirit_bond'], modifiers: { summonDamage: 1.18 } },
+  { id: 'pack_leader', branch: 'SUMMONING', title: 'Pack Leader', desc: 'Command one more summon of each kind at the same time.', cost: 1, prerequisites: ['empowered_summons'], modifiers: { extraSummons: 1 } },
   { id: 'dragon_heart', branch: 'SUMMONING', title: 'Dragon Heart', desc: '+25% Dragon Invocation coverage.', cost: 1, prerequisites: ['empowered_summons'], modifiers: { dragonArea: 1.25 } },
   { id: 'quick_draw', branch: 'RUNE MASTERY', title: 'Quick Draw', desc: 'C-grade runes become B-grade for spell scaling.', cost: 1, modifiers: { qualityFloor: 'B' } },
   { id: 'focused_casting', branch: 'RUNE MASTERY', title: 'Focused Casting', desc: '+12% duration and +15% Focus gain.', cost: 1, prerequisites: ['quick_draw'], modifiers: { spellDuration: 1.12, focusGain: 1.15 } },
+  { id: 'telekinetic_grip', branch: 'RUNE MASTERY', title: 'Telekinetic Grip', desc: 'Gravity Lift grabs 3 more targets and holds them 60% longer.', cost: 1, prerequisites: ['focused_casting'], modifiers: { liftTargets: 3, liftHold: 1.6 } },
   { id: 'combination_scholar', branch: 'RUNE MASTERY', title: 'Combination Scholar', desc: '+12% combined-spell power.', cost: 1, prerequisites: ['focused_casting'], modifiers: { comboPower: 1.12 } }
 ]);
 
@@ -32,8 +35,15 @@ const BASE_MODIFIERS = Object.freeze({
   mountSpeed: 1,
   dragonArea: 1,
   focusGain: 1,
-  qualityFloor: null
+  qualityFloor: null,
+  // Counts (added, not multiplied): walls on the field, extra summons of
+  // each kind, extra Gravity Lift targets.
+  maxWalls: 1,
+  extraSummons: 0,
+  liftTargets: 0,
+  liftHold: 1
 });
+const ADDITIVE_MODIFIERS = new Set(['maxWalls', 'extraSummons', 'liftTargets']);
 
 export const RUNE_XP_BY_GRADE = Object.freeze({ C: 6, B: 10, A: 14, S: 18 });
 export const STARTER_RUNES = Object.freeze(['ignis', 'ventus', 'fulgur', 'terra', 'aqua']);
@@ -179,6 +189,7 @@ export class MageProfile {
       if (!this.unlockedSkills.has(node.id)) continue;
       for (const [key, value] of Object.entries(node.modifiers ?? {})) {
         if (key === 'qualityFloor') modifiers[key] = value;
+        else if (ADDITIVE_MODIFIERS.has(key)) modifiers[key] += value;
         else modifiers[key] *= value;
       }
     }

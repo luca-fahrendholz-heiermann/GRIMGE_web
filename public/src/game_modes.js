@@ -31,6 +31,9 @@ export const GAME_MODES = Object.freeze({
   })
 });
 
+// Debug build (until the game is public): Training decks may use every rune.
+export const DEBUG_BUILD = true;
+
 export function getGameMode(id) {
   return GAME_MODES[id] ?? GAME_MODES.siege;
 }

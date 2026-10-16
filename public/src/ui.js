@@ -1,6 +1,6 @@
 // GRIMGE Prototype — UI & HUD Controller matching Setup Mockup Exactly
 import { spells } from './spells.js';
-import { MAGE_SKILL_TREE } from './progression.js';
+import { MAGE_SKILL_TREE, ALL_RUNE_IDS } from './progression.js';
 import { recognizer } from './recognizer.js';
 import { sprites } from './sprites.js';
 import { runeManaCost } from './spell_catalog.js';
@@ -117,6 +117,8 @@ export class UIManager {
     this.summonStatus = document.getElementById('summon-status');
     this.focusActivateBtn = document.getElementById('focus-activate-btn');
     this.trainingSparringBtn = document.getElementById('training-sparring-btn');
+    this.trainingDeckBtn = document.getElementById('training-deck-btn');
+    this.deckTargetTabs = document.getElementById('deck-target-tabs');
     this.blueMpBound = document.getElementById('blue-mp-bound');
     this.blueFocusFill = document.getElementById('blue-focus-fill');
     this.blueFocusText = document.getElementById('blue-focus-text');
@@ -331,6 +333,15 @@ export class UIManager {
     this.setupSpellTriangle();
     this.trainingSparringBtn?.addEventListener('pointerdown', (e) => {
       e.preventDefault(); e.stopPropagation(); window.gameWorld?.toggleSparringPartner();
+    });
+    this.trainingDeckBtn?.addEventListener('pointerdown', (e) => {
+      e.preventDefault(); e.stopPropagation(); window.gameWorld?.openTrainingDeck('player');
+    });
+    this.deckTargetTabs?.addEventListener('pointerdown', (e) => {
+      const target = e.target?.closest?.('[data-deck-target]')?.getAttribute?.('data-deck-target');
+      if (!target) return;
+      e.preventDefault(); e.stopPropagation();
+      window.gameWorld?.openTrainingDeck(target);
     });
     this.mountBtn?.addEventListener('pointerdown', (e) => {
       e.preventDefault(); e.stopPropagation(); window.gameWorld?.toggleMount();
@@ -645,6 +656,10 @@ export class UIManager {
     if (!this.deckBuilderModal) return;
     if (forceState === undefined) this.deckBuilderModal.classList.toggle('hidden');
     else this.deckBuilderModal.classList.toggle('hidden', !forceState);
+    // Closing the training editor resumes the training with the new decks.
+    const classes = this.deckBuilderModal.classList;
+    const hidden = typeof classes.contains === 'function' ? classes.contains('hidden') : !!classes.values?.has?.('hidden');
+    if (hidden) window.gameWorld?.closeTrainingDeck?.();
   }
 
   toggleIngameMenu(forceState = true) {
@@ -663,8 +678,21 @@ export class UIManager {
 
   renderDeckBuilder(profile) {
     if (!profile || !this.deckBuilderContent || !this.deckBuilderSummary) return;
-    this.deckBuilderSummary.textContent = `MATCH DECK ${profile.matchDeck.length}/10 · MAX 2 COPIES PER RUNE`;
-    this.deckBuilderContent.innerHTML = recognizer.runes.map((rune) => {
+    // Training passes a deck source with a target (player / opponent).
+    const training = !!profile.target;
+    this.deckTargetTabs?.classList.toggle('hidden', !training);
+    if (training) {
+      for (const tab of this.deckTargetTabs?.querySelectorAll?.('[data-deck-target]') ?? []) {
+        const target = tab.getAttribute('data-deck-target');
+        tab.classList.toggle('active', target === profile.target);
+        tab.disabled = target === 'opponent' && !profile.trainingSparring;
+      }
+    }
+    this.deckBuilderSummary.textContent = training
+      ? `${profile.target === 'player' ? 'YOUR' : 'SPARRING PARTNER'} TRAINING DECK ${profile.matchDeck.length}/10 · DEBUG: ALL RUNES AVAILABLE`
+      : `MATCH DECK ${profile.matchDeck.length}/10 · MAX 2 COPIES PER RUNE`;
+    // Only real deck runes; transformation runes are granted in battle.
+    this.deckBuilderContent.innerHTML = recognizer.runes.filter((rune) => ALL_RUNE_IDS.includes(rune.id)).map((rune) => {
       const unlocked = profile.isRuneUnlocked(rune.id);
       const copies = profile.getRuneCopies(rune.id);
       const lockedText = rune.id === 'bestia' ? 'MAGE LV.2' : rune.id === 'construct' ? 'MAGE LV.3' : rune.id === 'void' ? 'MAGE LV.4' : 'STARTER';

@@ -145,8 +145,11 @@ export class SpellSystem {
   }
 
   summon(caster, definition, gameWorld, quality) {
-    const existing = this.activeSummons.find((summon) => summon.team === caster.team && summon.definition.role === definition.role);
-    if (existing) existing.isDead = true;
+    // One summon per kind (role) and caster by default; Pack Leader adds
+    // more. Beyond the limit the oldest of that kind is dismissed.
+    const limit = 1 + Math.max(0, caster.buildModifiers?.extraSummons ?? 0);
+    const sameKind = this.activeSummons.filter((summon) => !summon.isDead && summon.team === caster.team && summon.definition.role === definition.role);
+    while (sameKind.length >= limit) sameKind.shift().isDead = true;
     const summon = new SummonedCreature(caster.x + caster.facing * 34, caster.z, caster.team, caster.surfaceHeight ?? 0, definition, quality, gameWorld.sprites);
     const mods = caster.buildModifiers ?? {};
     summon.maxHp = Math.round(summon.maxHp * (mods.summonHp ?? 1));
@@ -337,7 +340,7 @@ export class SpellSystem {
         // Terrain impact: short-lived rock pillars reuse the Stone Wall
         // obstacle rules (movement + projectile blocking).
         const spawnPillar = (x, z, surfaceHeight) => this.addSpell(new StoneWallSpell(x, z, caster.team, surfaceHeight, {
-          halfX: 10, halfZ: .08, wallHeight: 52, life: 2.2, color: '#8d6e63'
+          halfX: 10, halfZ: .08, wallHeight: 52, life: 2.2, color: '#8d6e63', hp: 40, isPillar: true
         }), castQuality);
         this.addSpell(new SeismicSlamSpell(caster, spawnPillar), castQuality);
         combat.shakeCamera(8, .35);
@@ -492,17 +495,23 @@ export class SpellSystem {
     return { halfX, halfZ: .06 };
   }
 
+  // Walls on the field are limited per caster (base 1; the Rampart Mason
+  // passive raises it). Only when the limit is exceeded does the oldest wall
+  // crumble — quickly casting more walls never silently deletes the newest.
+  makeRoomForWall(caster) {
+    const limit = Math.max(1, caster.buildModifiers?.maxWalls ?? 1);
+    const own = this.activeSpells.filter((spell) => spell.isStoneWall && !spell.isPillar && !spell.isFinished && spell.team === caster.team && spell.owner === caster);
+    while (own.length >= limit) own.shift().life = 0;
+  }
+
   castStoneWall(caster, gameWorld, quality = RUNE_GRADE_PROFILES.B, target = null) {
-    // One wall per Wizard keeps the arena readable and prevents a deck cycle
-    // from turning the brawler plane into a permanent maze.
-    for (const spell of this.activeSpells) {
-      if (spell.isStoneWall && spell.team === caster.team) spell.isFinished = true;
-    }
+    this.makeRoomForWall(caster);
     const offset = caster.facing * 78;
     const mods = caster.buildModifiers ?? {};
     const wall = this.addSpell(new StoneWallSpell(target?.x ?? caster.x + offset, target?.z ?? caster.z, caster.team, caster.surfaceHeight ?? 0, {
-      ...this.wallShape(target, .24 * (mods.wallHp ?? 1), 110), life: 3.8 * (mods.wallDuration ?? 1)
+      ...this.wallShape(target, .24 * (mods.wallHp ?? 1), 110), life: 16 * (mods.wallDuration ?? 1), hp: Math.round(140 * (mods.wallHp ?? 1))
     }), quality);
+    wall.owner = caster;
     audio.playSpell('stone_spikes');
     combat.shakeCamera(5, 0.2);
     combat.spawnShockwave(wall.x, wall.y, 48 * quality.area, '#8d6e63');
@@ -511,13 +520,13 @@ export class SpellSystem {
   }
 
   castConstructBulwark(caster, gameWorld, quality = RUNE_GRADE_PROFILES.B, target = null) {
-    for (const spell of this.activeSpells) {
-      if (spell.isStoneWall && spell.team === caster.team) spell.isFinished = true;
-    }
+    this.makeRoomForWall(caster);
     const offset = caster.facing * 64;
+    const mods = caster.buildModifiers ?? {};
     const wall = this.addSpell(new StoneWallSpell(target?.x ?? caster.x + offset, target?.z ?? caster.z, caster.team, caster.surfaceHeight ?? 0, {
-      halfX: 12, halfZ: .18, ...this.wallShape(target, .18, 70), wallHeight: 66, life: 2.25, color: '#90a4ae'
+      halfX: 12, halfZ: .18, ...this.wallShape(target, .18, 70), wallHeight: 66, life: 9 * (mods.wallDuration ?? 1), hp: Math.round(80 * (mods.wallHp ?? 1)), color: '#90a4ae'
     }), quality);
+    wall.owner = caster;
     audio.playSpell('stone_spikes');
     combat.spawnShockwave(wall.x, wall.y, 38 * quality.area, '#b0bec5');
     combat.spawnElementalParticles(wall.x, wall.y, 'construct', Math.round(12 * quality.particles));
@@ -557,12 +566,39 @@ export class SpellSystem {
     this.activeClashes = this.activeClashes.filter((clash) => !clash.isFinished);
   }
 
-  render(ctx) {
-    const pixelSize = Math.max(1, Math.round(this.pixelVfx * (ctx.getTransform?.()?.a || 1)));
-    renderPixelated(ctx, pixelSize, (layer) => {
-      for (const spell of this.activeSpells) spell.render(layer);
-    });
-    for (const summon of this.activeSummons) summon.render(ctx);
+  // Ground depth of a spell for painter's-order sorting with the actors, or
+  // null for effects without a ground position (drawn on top).
+  spellDepth(spell) {
+    const z = Number.isFinite(spell.z) ? spell.z : Number.isFinite(spell.targetZ) ? spell.targetZ : null;
+    return z === null ? null : groundYForDepth(z) - (spell.surfaceHeight ?? 0);
+  }
+
+  pixelSizeFor(ctx) {
+    return Math.max(1, Math.round(this.pixelVfx * (ctx.getTransform?.()?.a || 1)));
+  }
+
+  renderBatch(ctx, batch) {
+    if (!batch.length) return;
+    renderPixelated(ctx, this.pixelSizeFor(ctx), (layer) => { for (const spell of batch) spell.render(layer); });
+  }
+
+  // Sortable entries ({ y, spell } / { y, render }) for the actor pass.
+  depthEntries() {
+    const entries = [];
+    for (const spell of this.activeSpells) {
+      const y = this.spellDepth(spell);
+      if (y !== null) entries.push({ y, spell });
+    }
+    for (const summon of this.activeSummons) entries.push({ y: summon.y, render: (c) => summon.render(c) });
+    return entries;
+  }
+
+  // Spells without a ground depth (and the clash UI) stay on top. Pass
+  // { depthSorted: true } when the actor pass already drew the rest.
+  render(ctx, { depthSorted = false } = {}) {
+    const topLayer = depthSorted ? this.activeSpells.filter((spell) => this.spellDepth(spell) === null) : this.activeSpells;
+    this.renderBatch(ctx, topLayer);
+    if (!depthSorted) for (const summon of this.activeSummons) summon.render(ctx);
     for (const clash of this.activeClashes) clash.render(ctx);
   }
 }
@@ -1531,9 +1567,27 @@ class StoneWallSpell {
     this.life = options.life ?? 3.8;
     this.color = options.color ?? '#4e342e';
     this.isStoneWall = true;
+    this.isPillar = !!options.isPillar;
     this.blocksMovement = true;
     this.blocksProjectiles = true;
     this.isFinished = false;
+    // Walls are destructible: hostile melee, spells and projectiles wear
+    // them down; they stand until broken (or their long lifetime ends).
+    this.maxHp = this.hp = options.hp ?? 140;
+    this.hitFlash = 0;
+    this.hitRadiusX = this.halfX;
+    this.hitHeightTolerance = this.wallHeight + 40;
+    this.worldHeight = this.surfaceHeight;
+  }
+
+  get isDead() { return this.isFinished || this.hp <= 0; }
+
+  takeDamage(amount) {
+    if (this.isDead || !(amount > 0)) return;
+    this.hp -= amount;
+    this.hitFlash = .1;
+    combat.spawnHitSparks(this.x, this.y - this.wallHeight * .5, 1, '#c7b299', 4);
+    if (this.hp <= 0) this.life = 0;
   }
   get y() { return groundYForDepth(this.z) - this.surfaceHeight; }
 
@@ -1546,6 +1600,7 @@ class StoneWallSpell {
 
   update(dt, gameWorld) {
     this.life -= dt;
+    this.hitFlash = Math.max(0, this.hitFlash - dt);
     for (const projectile of gameWorld.projectiles) {
       if (!this.blocksProjectile(projectile)) continue;
       projectile.life = 0;
@@ -1563,7 +1618,7 @@ class StoneWallSpell {
     const fade = Math.min(1, this.life / .45);
     ctx.save();
     ctx.globalAlpha = Math.max(.18, fade);
-    ctx.fillStyle = this.color;
+    ctx.fillStyle = this.hitFlash > 0 ? '#d7ccc8' : this.color;
     ctx.strokeStyle = '#bcaaa4';
     ctx.lineWidth = 2;
     const depthPixels = this.halfZ * 150;

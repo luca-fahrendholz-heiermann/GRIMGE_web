@@ -1,10 +1,16 @@
 // GRIMGE Prototype — authored 2.5D arena battlefield.
 import { Castle, Minion, Tower } from './entities.js';
-import { ARENA_LAYOUT, clampToArena, groundYForDepth, surfaceContains, surfaceHeight } from './world.js';
+import { ARENA_LAYOUT, clampToArena, groundYForDepth, setGroundProjection, surfaceContains, surfaceHeight } from './world.js';
+
+// The training yard paints a much deeper floor than the Siege arena: its
+// whole field (rear wall to front parapet) is walkable.
+const TRAINING_PROJECTION = Object.freeze({ farY: 212, nearY: 455 });
+const TRAINING_BOUNDS = Object.freeze({ left: 70, right: 955, farZ: 0.02, nearZ: 0.98 });
 import { ART_ASSETS } from './art_assets.js';
 
 export class Battlefield {
   constructor(mode = null) {
+    setGroundProjection(mode?.world === 'training' ? TRAINING_PROJECTION : null);
     this.width = ARENA_LAYOUT.width;
     this.height = ARENA_LAYOUT.height;
     this.playableBounds = ARENA_LAYOUT.playableBounds;
@@ -79,7 +85,7 @@ export class Battlefield {
     this.decorativeBeacons = mode?.world === 'training' ? [] : ARENA_LAYOUT.decorativeBeacons;
     this.boundsOverride = (mode?.world === 'dungeon')
       ? { left: 104, right: 3200, farZ: 0.06, nearZ: 0.94 }
-      : null;
+      : mode?.world === 'training' ? { ...TRAINING_BOUNDS } : null;
     this.waveInterval = 18;
     this.waveTimer = 18;
     this.waveNumber = 0;
@@ -214,7 +220,7 @@ export class Battlefield {
     const scale = Math.max(.65 * iw / 1672, renderWidth / iw);
     const drawW = iw * scale; const drawH = ih * scale;
     const x = cameraOffsetX + gameplayWidth / 2 - drawW / 2;
-    const y = ARENA_LAYOUT.groundProjection.nearY + 8 - FLOOR_FRONT_V * drawH;
+    const y = TRAINING_PROJECTION.nearY + 8 - FLOOR_FRONT_V * drawH;
     ctx.drawImage(image, x, y, drawW, drawH);
   }
 

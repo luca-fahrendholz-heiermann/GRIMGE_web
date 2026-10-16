@@ -225,6 +225,11 @@
         <div class="skill-tree-panel deck-builder-panel">
           <div class="modal-header"><span>✦ RUNE DECK</span><button id="close-deck-builder-btn" type="button">✕</button></div>
           <p>Build exactly 10 cards. Each unlocked rune may appear at most twice. Your three-card hand is drawn only from this deck.</p>
+          <!-- Training only: choose whose deck to edit. -->
+          <div id="deck-target-tabs" class="deck-target-tabs hidden">
+            <button type="button" data-deck-target="player">YOUR DECK</button>
+            <button type="button" data-deck-target="opponent">SPARRING PARTNER</button>
+          </div>
           <div id="deck-builder-summary" class="deck-builder-summary"></div>
           <div id="deck-builder-content" class="deck-builder-content"></div>
           <div class="deck-builder-actions"><button id="reset-deck-btn" class="match-button" type="button">RESTORE STARTER DECK</button></div>
@@ -304,8 +309,11 @@
       <!-- Center Announcement Toast -->
       <div id="announcement-banner"></div>
       <div id="objective-hud">DESTROY ENEMY TOWER</div>
-      <!-- Training only: adds / removes the attacking sparring partner (P). -->
-      <button id="training-sparring-btn" class="training-sparring-btn" type="button" title="Add or remove an attacking sparring partner (P)">⚔ SPARRING PARTNER: OFF</button>
+      <!-- Training only: sparring partner toggle (P) and the training deck editor. -->
+      <div id="training-controls" class="training-controls">
+        <button id="training-sparring-btn" class="training-sparring-btn" type="button" title="Add or remove an attacking sparring partner (P)">⚔ SPARRING PARTNER: OFF</button>
+        <button id="training-deck-btn" class="training-sparring-btn" type="button" title="Edit your training deck and the sparring partner's deck">🂠 DECK</button>
+      </div>
 
       <!-- Quick Hero Swapper (Top Left) -->
       <div id="hero-select-bar">

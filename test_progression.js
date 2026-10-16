@@ -82,8 +82,15 @@ test('Rune Mastery produces a distinct live Focus-oriented Mage identity', () =>
   assert.equal(profile.getBuildIdentity().label, 'RUNE MASTER');
 });
 
-test('Skill tree remains a compact 12-node Mage vertical slice', () => {
-  assert.equal(MAGE_SKILL_TREE.length, 12);
+test('Skill tree is a compact 15-node Mage vertical slice (incl. multi-instance passives)', () => {
+  assert.equal(MAGE_SKILL_TREE.length, 15);
+  const profile = new MageProfile({ level: 9, skillPoints: 9, matchDeck: [...DEFAULT_MATCH_DECK] });
+  assert.equal(profile.getModifiers().maxWalls, 1);
+  for (const id of ['arcane_skin', 'barrier_mastery', 'rampart_mason', 'spirit_bond', 'empowered_summons', 'pack_leader', 'quick_draw', 'focused_casting', 'telekinetic_grip']) assert.ok(profile.unlock(id), id);
+  const modifiers = profile.getModifiers();
+  assert.equal(modifiers.maxWalls, 3);
+  assert.equal(modifiers.extraSummons, 1);
+  assert.equal(modifiers.liftTargets, 3);
   assert.deepEqual(new Set(MAGE_SKILL_TREE.map((node) => node.branch)), new Set(['ELEMENTAL', 'DEFENSE', 'SUMMONING', 'RUNE MASTERY']));
 });
 

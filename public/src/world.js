@@ -73,8 +73,17 @@ export const ARENA_LAYOUT = Object.freeze({
   ])
 });
 
+// Worlds may paint a deeper or shallower floor than the Siege arena. The
+// battlefield sets the active projection when a match world is built, so
+// z = 0..1 always spans the whole painted floor of the current scene.
+let activeGroundProjection = ARENA_LAYOUT.groundProjection;
+export function setGroundProjection(projection = null) {
+  activeGroundProjection = projection ?? ARENA_LAYOUT.groundProjection;
+}
+export function getGroundProjection() { return activeGroundProjection; }
+
 export function groundYForDepth(z) {
-  const { farY, nearY } = ARENA_LAYOUT.groundProjection;
+  const { farY, nearY } = activeGroundProjection;
   return farY + (nearY - farY) * z;
 }
 
