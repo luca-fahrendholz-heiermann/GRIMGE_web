@@ -328,6 +328,7 @@ export class Player extends GroundEntity {
     if (this.arcaneShieldTimer <= 0) this.arcaneShield = 0;
     this.freezeTimer = Math.max(0, this.freezeTimer - dt);
     this.slowTimer = Math.max(0, this.slowTimer - dt);
+    this.rootTimer = Math.max(0, (this.rootTimer ?? 0) - dt);
     this.landingRecoveryTimer = Math.max(0, this.landingRecoveryTimer - dt);
     this.grabCooldown = Math.max(0, this.grabCooldown - dt);
     if (this.slowTimer <= 0) this.slowFactor = 1;
@@ -487,6 +488,13 @@ export class Player extends GroundEntity {
   }
 
   handleMovementInput(dt, input) {
+    // A held shadow (Shadow Stomper): no walking, sprinting or jumping.
+    if (this.rootTimer > 0) {
+      this.vx = 0; this.vz = 0;
+      this.cancelSprint();
+      if (!ACTION_STATES.has(this.state) && !this.isGuarding) this.state = 'idle';
+      return;
+    }
     let move = normalizeMove(moveVector(input));
 
     // Keyboard double-flicks keep their PC behaviour. Touch flicks are
@@ -611,7 +619,7 @@ export class Player extends GroundEntity {
   }
 
   performJump() {
-    if (this.jumpsLeft <= 0) return;
+    if (this.jumpsLeft <= 0 || this.rootTimer > 0) return;
     const wasSprinting = this.sprintActive;
     this.cancelSprint();
     this.jumpsLeft--;
@@ -624,7 +632,7 @@ export class Player extends GroundEntity {
   }
 
   activateSprint(dir) {
-    if (this.isGuarding || this.backdashTimer > 0 || this.backdashSuppressTimer > 0 || !this.grounded || this.activeClash) return;
+    if (this.rootTimer > 0 || this.isGuarding || this.backdashTimer > 0 || this.backdashSuppressTimer > 0 || !this.grounded || this.activeClash) return;
     this.sprintActive = true;
     this.sprintDir = dir;
     audio.playDash();
@@ -712,7 +720,7 @@ export class Player extends GroundEntity {
   }
 
   triggerBackdash(options = {}) {
-    if (this.isGuarding || this.backdashTimer > 0 || this.backdashCooldown > 0 || !this.grounded || !this.isAlive || this.activeClash) return false;
+    if (this.rootTimer > 0 || this.isGuarding || this.backdashTimer > 0 || this.backdashCooldown > 0 || !this.grounded || !this.isAlive || this.activeClash) return false;
     this.backdashCooldown = BACKDASH_COOLDOWN + BACKDASH_DURATION;
     // Forget pending direction flicks so the dodge cannot turn into a sprint.
     this._lastFlickDir = 0; this._lastFlickTime = 0;
@@ -1120,8 +1128,6 @@ export class Player extends GroundEntity {
     let cadence = 1.0;
     let reverse = false;
 
-    const shadowSc = this.elevation > 0 ? Math.max(0.4, 1.0 - this.elevation / 250) : 1.0;
-
     if (this.state === 'run' && this.grounded) {
       if (this.sprintActive) {
         cadence = 1.35;
@@ -1199,7 +1205,7 @@ export class Player extends GroundEntity {
       facing: this.facing, state: this.state, animTime: this.animTime,
       hitFlash: this.hitFlash > 0 ? 1 : 0,
       alpha: this.lifeState === 'Dead' ? 0 : 1,
-      cadence, reverse, procOffsetX: pOX, procOffsetY: pOY, shadowScale: shadowSc,
+      cadence, reverse, procOffsetX: pOX, procOffsetY: pOY,
     };
     if (useProc) { renderOpts.procRot = pRot; renderOpts.procScaleX = pSX; renderOpts.procScaleY = pSY; }
     sprites.renderEntity(ctx, this.heroKey, this.x, renderY, renderOpts);
@@ -1754,8 +1760,7 @@ export class TrainingDummy extends GroundEntity {
     const x = Math.round(this.x); const y = Math.round(this.y);
     const px = (rx, ry, w, h, fill) => { ctx.fillStyle = fill; ctx.fillRect(x + rx, y + ry, w, h); };
     ctx.save();
-    // Shadow and wooden stand stay planted; the body sways from the base.
-    ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(x, y, 20, 6, 0, 0, Math.PI * 2); ctx.fill();
+    // The wooden stand stays planted; the body sways from the base.
     px(-15, -4, 30, 4, '#3e2723'); px(-14, -5, 28, 3, '#6d4c41');
     ctx.translate(x, y); ctx.rotate(this.wobble * .2); ctx.translate(-x, -y);
     px(-4, -66, 8, 62, '#3e2723'); px(-3, -66, 6, 62, '#795548');

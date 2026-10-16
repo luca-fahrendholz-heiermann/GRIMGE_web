@@ -17,7 +17,14 @@ export const MAGE_SKILL_TREE = Object.freeze([
   { id: 'quick_draw', branch: 'RUNE MASTERY', title: 'Quick Draw', desc: 'C-grade runes become B-grade for spell scaling.', cost: 1, modifiers: { qualityFloor: 'B' } },
   { id: 'focused_casting', branch: 'RUNE MASTERY', title: 'Focused Casting', desc: '+12% duration and +15% Focus gain.', cost: 1, prerequisites: ['quick_draw'], modifiers: { spellDuration: 1.12, focusGain: 1.15 } },
   { id: 'telekinetic_grip', branch: 'RUNE MASTERY', title: 'Telekinetic Grip', desc: 'Gravity Lift grabs 3 more targets and holds them 60% longer.', cost: 1, prerequisites: ['focused_casting'], modifiers: { liftTargets: 3, liftHold: 1.6 } },
-  { id: 'combination_scholar', branch: 'RUNE MASTERY', title: 'Combination Scholar', desc: '+12% combined-spell power.', cost: 1, prerequisites: ['focused_casting'], modifiers: { comboPower: 1.12 } }
+  { id: 'combination_scholar', branch: 'RUNE MASTERY', title: 'Combination Scholar', desc: '+12% combined-spell power.', cost: 1, prerequisites: ['focused_casting'], modifiers: { comboPower: 1.12 } },
+  { id: 'shadow_weaver', branch: 'SHADOW', title: 'Shadow Weaver', desc: 'Shadow Stomper holds one more target at once.', cost: 1, modifiers: { bindTargets: 1 } },
+  { id: 'umbral_grip', branch: 'SHADOW', title: 'Umbral Grip', desc: 'Shadow Stomper holds one more target and 30% longer.', cost: 1, prerequisites: ['shadow_weaver'], modifiers: { bindTargets: 1, bindHold: 1.3 } },
+  { id: 'mirror_legion', branch: 'SHADOW', title: 'Mirror Legion', desc: 'Keep one more Shadow Doppelganger on the field (cast again for each).', cost: 1, modifiers: { extraDoppels: 1 } },
+  { id: 'shadow_army', branch: 'SHADOW', title: 'Shadow Army', desc: 'Keep yet another Doppelganger; doubles gain +20% health.', cost: 1, prerequisites: ['mirror_legion'], modifiers: { extraDoppels: 1, doppelHp: 1.2 } },
+  { id: 'grave_caller', branch: 'SHADOW', title: 'Grave Caller', desc: 'Keep one more Revenant bound at once (cast again for each).', cost: 1, modifiers: { extraRevenants: 1 } },
+  { id: 'forbidden_covenant', branch: 'SHADOW', title: 'Forbidden Covenant', desc: 'Keep yet another Revenant; their death bursts hit 30% harder.', cost: 1, prerequisites: ['grave_caller'], modifiers: { extraRevenants: 1, revenantBurst: 1.3 } },
+  { id: 'celestial_attunement', branch: 'SHADOW', title: 'Celestial Attunement', desc: 'Your sky spheres stay 35% longer.', cost: 1, modifiers: { skyDuration: 1.35 } }
 ]);
 
 const BASE_MODIFIERS = Object.freeze({
@@ -41,15 +48,23 @@ const BASE_MODIFIERS = Object.freeze({
   maxWalls: 1,
   extraSummons: 0,
   liftTargets: 0,
-  liftHold: 1
+  liftHold: 1,
+  // Shadow: extra Shadow Stomper targets, doubles and revenants (counts).
+  bindTargets: 0,
+  bindHold: 1,
+  extraDoppels: 0,
+  doppelHp: 1,
+  extraRevenants: 0,
+  revenantBurst: 1,
+  skyDuration: 1
 });
-const ADDITIVE_MODIFIERS = new Set(['maxWalls', 'extraSummons', 'liftTargets']);
+const ADDITIVE_MODIFIERS = new Set(['maxWalls', 'extraSummons', 'liftTargets', 'bindTargets', 'extraDoppels', 'extraRevenants']);
 
 export const RUNE_XP_BY_GRADE = Object.freeze({ C: 6, B: 10, A: 14, S: 18 });
 export const STARTER_RUNES = Object.freeze(['ignis', 'ventus', 'fulgur', 'terra', 'aqua']);
 export const MATCH_DECK_SIZE = 10;
 export const MAX_RUNE_COPIES = 2;
-export const ALL_RUNE_IDS = Object.freeze(['ignis', 'ventus', 'fulgur', 'terra', 'aqua', 'bestia', 'construct', 'void']);
+export const ALL_RUNE_IDS = Object.freeze(['ignis', 'ventus', 'fulgur', 'terra', 'aqua', 'bestia', 'construct', 'void', 'lux', 'umbra', 'doppel', 'mortis']);
 // The first deck deliberately contains two copies of every starter rune.
 // It is a legal 10-card deck and guarantees a varied initial three-card hand.
 export const DEFAULT_MATCH_DECK = Object.freeze(['fulgur', 'terra', 'ignis', 'ventus', 'aqua', 'fulgur', 'terra', 'ignis', 'ventus', 'aqua']);
@@ -58,8 +73,16 @@ export const DEFAULT_MATCH_DECK = Object.freeze(['fulgur', 'terra', 'ignis', 've
 export const MAGE_LEVEL_RUNE_UNLOCKS = Object.freeze([
   { level: 2, runeId: 'bestia', title: 'BESTIA RUNE UNLOCKED' },
   { level: 3, runeId: 'construct', title: 'KONSTRUKT RUNE UNLOCKED' },
-  { level: 4, runeId: 'void', title: 'VOID RUNE UNLOCKED' }
+  { level: 4, runeId: 'void', title: 'VOID RUNE UNLOCKED' },
+  { level: 5, runeId: 'lux', title: 'LUX RUNE UNLOCKED' },
+  { level: 6, runeId: 'umbra', title: 'UMBRA RUNE UNLOCKED' },
+  { level: 8, runeId: 'doppel', title: 'DOPPEL SPECIAL RUNE UNLOCKED' },
+  { level: 10, runeId: 'mortis', title: 'MORTIS SPECIAL RUNE UNLOCKED' }
 ]);
+export function runeUnlockLabel(runeId) {
+  const entry = MAGE_LEVEL_RUNE_UNLOCKS.find((unlock) => unlock.runeId === runeId);
+  return entry ? `MAGE LV.${entry.level}` : 'STARTER';
+}
 
 function clone(value) { return JSON.parse(JSON.stringify(value)); }
 
@@ -202,7 +225,7 @@ export class MageProfile {
       if (this.unlockedSkills.has(node.id)) counts.set(node.branch, (counts.get(node.branch) ?? 0) + 1);
     }
     const [branch, count] = [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0] ?? ['UNBOUND', 0];
-    const labels = { ELEMENTAL: 'ELEMENTAL MAGE', DEFENSE: 'DEFENSIVE MAGE', SUMMONING: 'SUMMONER MAGE', 'RUNE MASTERY': 'RUNE MASTER' };
+    const labels = { ELEMENTAL: 'ELEMENTAL MAGE', DEFENSE: 'DEFENSIVE MAGE', SUMMONING: 'SUMMONER MAGE', 'RUNE MASTERY': 'RUNE MASTER', SHADOW: 'SHADOW MAGE' };
     return { branch, count, label: labels[branch] ?? 'UNBOUND MAGE' };
   }
 

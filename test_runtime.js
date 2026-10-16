@@ -1326,6 +1326,177 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
   game.selectTrainingMap('waterfalls');
   assert(environment.terrain.length === 0 && game.trainingMapId === 'waterfalls', 'The classic map has no special terrain');
 }
+// Light & shadow: Shadow Stomper, sky spheres, shadow doubles, revenants
+// and the round ground shadows under every actor.
+{
+  const { environment } = await import('./public/src/environment.js');
+  const { sky } = await import('./public/src/sky.js');
+  const { shadowFor } = await import('./public/src/shadows.js');
+  const { Minion } = await import('./public/src/entities.js');
+  const { needsTarget } = await import('./public/src/targeting.js');
+  const { isSpecialRune } = await import('./public/src/spell_catalog.js');
+  game.selectTrainingMap('waterfalls');
+  const P = game.player; const E = game.enemyChampion;
+  const neutral = { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false };
+  const stepSpells = (seconds) => { for (let t = 0; t < seconds; t += 1 / 60) spells.update(1 / 60, game); };
+  const savedMods = { ...P.buildModifiers };
+  const reset = () => {
+    spells.clearRuntime(); environment.clear(); game.minions = []; game.targeting.cancel();
+    P.buildModifiers = { ...savedMods };
+    P.x = 300; P.z = .5; P.facing = 1; P.mp = P.maxMp; P.hp = P.maxHp; P.state = 'idle'; P.stateTimer = 0; P.grounded = true; P.elevation = 0; P.vElevation = 0;
+    P.rootTimer = 0; P.backdashTimer = 0; P.backdashCooldown = 0; P.sprintActive = false; P.isGuarding = false;
+    game.battlefield.placeOnSurface(P);
+    E.lifeState = 'Alive'; E.x = 900; E.z = .5; E.hp = E.maxHp; E.state = 'idle'; E.isGuarding = false; E.rootTimer = 0; E.elevation = 0; E.facing = -1;
+    game.battlefield.placeOnSurface(E);
+  };
+  const foe = (x, z) => { const m = new Minion(x, z, 'red', 'melee', 0); game.battlefield.placeOnSurface(m); game.minions.push(m); return m; };
+  const stomper = spells.resolveSpell([{ id: 'terra' }, { id: 'umbra' }]);
+  const holdOf = () => spells.activeSpells.find((spell) => spell.heldTargets);
+
+  // 1. The stomp sends the shadow to the nearest enemy inside the aimed cone.
+  reset();
+  assert(stomper.targetingMode === 'aim' && needsTarget(stomper), 'Shadow Stomper asks for an aim direction (cone) before it is cast');
+  const behind = foe(170, .5); const ahead = foe(400, .5); foe(470, .5);
+  spells.cast(P, stomper, game, null, { x: 520, z: .5, aim: true });
+  assert(P.vElevation > 0, 'The caster hops for the stomp');
+  stepSpells(1);
+  assert(holdOf()?.heldTargets.length === 1 && holdOf().heldTargets[0] === ahead && ahead.rootTimer > 0 && behind.rootTimer !== ahead.rootTimer, 'The shadow grabs the nearest enemy in the aimed cone, not one behind the caster');
+  const heldX = ahead.x; ahead.x += 60; ahead.z += .1; stepSpells(1 / 60);
+  assert(ahead.x === heldX && Math.abs(ahead.z - .5) < 1e-9, 'A held enemy cannot move away from its shadow');
+  stepSpells(3.2);
+  assert(ahead.rootTimer === 0 && !holdOf(), 'The hold ends after its duration and releases the target');
+
+  // 2. The aim includes depth.
+  reset();
+  const rear = foe(340, .1); const front = foe(340, .9);
+  spells.cast(P, stomper, game, null, { x: 330, z: .95, aim: true });
+  stepSpells(1);
+  assert(holdOf()?.heldTargets[0] === front && !rear.rootTimer, 'Aiming toward the near lane grabs the enemy there (depth-aware cone)');
+
+  // 3. A guarding enemy slips free; the next one in the cone is taken instead.
+  reset();
+  E.x = 390; E.isGuarding = true; game.battlefield.placeOnSurface(E);
+  const second = foe(450, .5);
+  spells.cast(P, stomper, game, null, { x: 600, z: .5, aim: true });
+  stepSpells(1);
+  assert(holdOf()?.heldTargets[0] === second && !E.rootTimer, 'A guarding enemy is not grabbed; the shadow takes the next target');
+  E.isGuarding = false;
+
+  // 4. Held player: no walking, jumping or dashing.
+  reset();
+  E.x = 420; game.battlefield.placeOnSurface(E);
+  spells.cast(E, stomper, game, null, { x: P.x, z: P.z, aim: true });
+  stepSpells(1);
+  const startX = P.x;
+  const walkRight = { ...neutral, move: { x: 1, z: 0 } };
+  for (let i = 0; i < 20; i++) { P.update(1 / 60, walkRight, game.battlefield, game); spells.update(1 / 60, game); }
+  P.performJump();
+  assert(P.rootTimer > 0 && Math.abs(P.x - startX) < 1 && P.vElevation <= 0 && !P.triggerBackdash(), 'A held player can neither walk, jump nor dash');
+
+  // 5. Shadow Weaver holds more targets; a Lunar Orb adds one more.
+  reset();
+  P.buildModifiers = { ...savedMods, bindTargets: 1 };
+  for (const x of [380, 430, 480]) foe(x, .5);
+  spells.cast(P, stomper, game, null, { x: 600, z: .5, aim: true });
+  stepSpells(1);
+  assert(holdOf()?.heldTargets.length === 2, 'Shadow Weaver: the stomp holds two enemies at once');
+  for (const spell of spells.activeSpells) for (const t of spell.tendrils ?? []) spell.release?.(t);
+  stepSpells(.5);
+  sky.cast(P, 'lunar_orb', { duration: 1 }, game);
+  spells.cast(P, stomper, game, null, { x: 600, z: .5, aim: true });
+  stepSpells(1);
+  assert(holdOf()?.heldTargets.length === 3, 'Under a Lunar Orb the long shadows hold one more target');
+
+  // 6. Sky spheres: one at a time, they strengthen / weaken elements and fade.
+  reset();
+  const fireball = spells.resolveSpell([{ id: 'ignis' }]);
+  const nova = spells.resolveSpell([{ id: 'aqua' }]);
+  const plainFire = spells.applyCasterModifiers(P, fireball, 'B').power;
+  sky.cast(P, 'solar_orb', { duration: 1 }, game);
+  assert(sky.active?.id === 'solar_orb' && spells.applyCasterModifiers(P, fireball, 'B').power > plainFire && sky.powerMultiplier(nova) < 1 && sky.powerMultiplier(stomper) < 1, 'A Solar Orb strengthens fire, weakens ice and shadow magic');
+  sky.cast(P, 'lunar_orb', { duration: 1 }, game);
+  assert(sky.active?.id === 'lunar_orb' && sky.powerMultiplier(nova) > 1 && sky.powerMultiplier(fireball) < 1 && environment.skyMods?.waterSlow < 1, 'A new sphere replaces the old one (Lunar Orb: water and ice stronger, the tide slows waders)');
+  stepSpells(1);
+  assert(sky.shadowStyle().scale > 1.3, 'Under the moon every shadow grows');
+  stepSpells(17);
+  assert(!sky.active && !environment.skyMods, 'The sphere fades after its duration and its effects end');
+  sky.cast(P, 'blood_moon', { duration: 1 }, game);
+  assert(sky.healMultiplier() === .5 && spells.applyCasterModifiers(P, fireball, 'B').power > plainFire, 'Blood Moon: every spell hits harder, healing is halved');
+  // The only enemy on the field (the champion is down) must be struck.
+  E.lifeState = 'Dead';
+  const struck = foe(420, .5); const struckHp = struck.hp;
+  sky.cast(P, 'thunderhead', { duration: 1 }, game);
+  stepSpells(3);
+  assert(struck.hp < struckHp || struck.isDead, 'Thunderhead strikes enemies with lightning');
+  E.lifeState = 'Alive';
+  sky.clear();
+
+  // 7. Ground shadows: on the ground at the real depth, smaller when jumping.
+  reset();
+  const grounded = shadowFor(P);
+  P.elevation = 160;
+  const airborne = shadowFor(P);
+  assert(airborne.rx < grounded.rx * .6 && airborne.alpha < grounded.alpha && airborne.y === grounded.y, 'A jumping fighter\'s shadow stays on the ground at its depth, smaller and lighter');
+  P.elevation = 0;
+  assert(shadowFor(P, { scale: 1.45, stretch: 1.35 }).rx > grounded.rx && shadowFor(P, { scale: .62 }).rx < grounded.rx, 'The sky scales shadows (moon longer, sun shorter)');
+  foe(500, .5);
+  spells.cast(P, spells.resolveSpell([{ id: 'bestia' }]), game);
+  const casters = game.shadowCasters();
+  assert(casters.includes(P) && casters.some((a) => a.isMinion) && casters.some((a) => a.isSummon), 'Player, minions and summons all cast a round shadow');
+
+  // 8. Shadow Doppelganger: own (lower) health, recast replaces, passive keeps more.
+  reset();
+  const doppel = spells.resolveSpell([{ id: 'doppel' }]);
+  assert(isSpecialRune('doppel') && isSpecialRune('mortis') && doppel.isSpecial, 'DOPPEL and MORTIS are special runes that never fuse');
+  spells.cast(P, doppel, game);
+  const doubles = () => spells.getSummons('blue').filter((s) => s.definition.role === 'doppel');
+  const first = doubles()[0];
+  assert(doubles().length === 1 && first.mimicKey === P.heroKey && first.maxHp < P.maxHp * .6 && first.maxHp >= P.maxHp * .3, 'A shadow double copies the caster with its own, lower health');
+  spells.cast(P, doppel, game);
+  assert(doubles().length === 1 && doubles()[0] !== first && first.dismissed, 'Casting again makes the old double vanish and a new one appear');
+  P.buildModifiers = { ...savedMods, extraDoppels: 2 };
+  spells.cast(P, doppel, game); spells.cast(P, doppel, game); spells.cast(P, doppel, game);
+  assert(doubles().length === 3, 'Mirror Legion + Shadow Army keep three doubles (one cast each)');
+  game.render();
+
+  // 9. Revenant Call: raises the nearest fallen body; it bursts when it breaks.
+  reset();
+  const revenantDef = spells.resolveSpell([{ id: 'mortis' }]);
+  const fallen = foe(360, .5); game.minions = [];
+  spells.recordGrave(fallen);
+  spells.cast(P, revenantDef, game);
+  const revenants = () => spells.getSummons('blue').filter((s) => s.definition.role === 'revenant');
+  const rev = revenants()[0];
+  assert(rev?.bodyKey === fallen.spriteKey && rev.x === 360 && rev.riseTimer > 0 && spells.graves.length === 0, 'Revenant Call raises the nearest fallen fighter in its own body (the grave is used up)');
+  const victim = foe(400, .5); const victimHp = victim.hp;
+  rev.riseTimer = 0; rev.takeDamage(9999); stepSpells(1 / 60);
+  assert(victim.hp < victimHp && rev.burstDone && !revenants().length, 'A broken revenant bursts and damages nearby enemies');
+  spells.cast(P, revenantDef, game);
+  assert(revenants()[0]?.bodyKey === 'minion_red_melee', 'Without a grave a nameless fallen soldier rises');
+  spells.cast(P, revenantDef, game);
+  assert(revenants().length === 1 && revenants()[0].riseTimer > 0, 'Casting again replaces the revenant');
+  P.buildModifiers = { ...savedMods, extraRevenants: 1 };
+  spells.cast(P, revenantDef, game);
+  assert(revenants().length === 2, 'Grave Caller keeps a second revenant bound');
+  E.lifeState = 'Dying'; game.noteFallenWizards(); game.noteFallenWizards();
+  assert(spells.graves.filter((g) => g.spriteKey === E.heroKey).length === 1, 'A fallen Wizard leaves exactly one grave');
+  E.lifeState = 'Alive';
+
+  // 10. Aiming through the slot: the cone preview marks the auto-target.
+  reset();
+  const marked = foe(420, .5);
+  const slot = { runes: [{ id: 'terra' }, { id: 'umbra' }], definition: stomper, isCombo: true, quality: 'B', manaCost: 0 };
+  game.targeting.begin(slot, 'tap');
+  game.targeting.setPoint({ x: 560, z: .5 });
+  assert(game.targeting.active.mode === 'aim' && game.targeting.aimPreview().targets[0] === marked, 'The aim cone highlights the enemy the shadow will grab');
+  game.render();
+  assert(game.targeting.confirm() && holdOf(), 'Confirming the aim casts Shadow Stomper');
+  stepSpells(1);
+  assert(marked.rootTimer > 0, 'The previewed enemy is the one held');
+  P.buildModifiers = { ...savedMods };
+  reset();
+}
+
 game.returnToHub();
 game.setMatchMode('siege'); game.startMatch();
 assert(game.matchState === 'Running' && game.objectivePhase === 'LanePhase', 'A new Siege match can start cleanly after alternate modes');

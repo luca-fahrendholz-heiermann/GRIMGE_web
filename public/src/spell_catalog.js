@@ -21,24 +21,31 @@ export const DELIVERY = Object.freeze({
 // §7.2 targetingMode). The same rules serve touch, mouse/keyboard and
 // gamepad: DIRECTION fires at once (aim = facing / drag / cursor side),
 // GROUND asks for an impact point, PLACEMENT for a swiped line (walls),
-// ALLY for a friendly unit (player, minion, companion, summon), SELF never
-// asks for anything.
-export const TARGETING = Object.freeze({ DIRECTION: 'direction', GROUND: 'ground', PLACEMENT: 'placement', ALLY: 'ally', SELF: 'self' });
+// ALLY for a friendly unit (player, minion, companion, summon), AIM for a
+// free direction including depth (shown as a cone), SELF never asks.
+export const TARGETING = Object.freeze({ DIRECTION: 'direction', GROUND: 'ground', PLACEMENT: 'placement', ALLY: 'ally', AIM: 'aim', SELF: 'self' });
 const TARGETING_BY_SPELL = Object.freeze({
   meteor_cataclysm: TARGETING.GROUND, magma_fissure: TARGETING.GROUND, gravity_lift: TARGETING.GROUND,
   void_implosion: TARGETING.GROUND, firestorm: TARGETING.GROUND,
   stone_wall: TARGETING.PLACEMENT, construct_bulwark: TARGETING.PLACEMENT,
   arcane_aegis: TARGETING.ALLY,
   frost_nova: TARGETING.SELF, aura_shock: TARGETING.SELF, eidolon_mantle: TARGETING.SELF, ninefold_beast_form: TARGETING.SELF,
-  sandstorm_bastion: TARGETING.SELF, mirror_ward: TARGETING.SELF, burrow_strike: TARGETING.SELF
+  sandstorm_bastion: TARGETING.SELF, mirror_ward: TARGETING.SELF, burrow_strike: TARGETING.SELF,
+  shadow_stomper: TARGETING.AIM, halo_pulse: TARGETING.SELF, shadow_doppelganger: TARGETING.SELF, revenant_call: TARGETING.SELF,
+  solar_orb: TARGETING.SELF, lunar_orb: TARGETING.SELF, eclipse: TARGETING.SELF, thunderhead: TARGETING.SELF,
+  blood_moon: TARGETING.SELF, starfall: TARGETING.SELF, aurora_veil: TARGETING.SELF
 });
-export const TARGET_RANGE = Object.freeze({ ground: 460, placement: 300, ally: 380 });
+export const TARGET_RANGE = Object.freeze({ ground: 460, placement: 300, ally: 380, aim: 320 });
+// Shadow Stomper: the reach and half-angle of its search cone.
+export const SHADOW_STOMP = Object.freeze({ range: 320, halfAngle: .62 });
 
 // Mana is paid (bound) when a rune is drawn into a slot, never again at cast.
 // Values are first playtest numbers (concept doc §11 keeps them open).
 export const RUNE_MANA_COSTS = Object.freeze({
   ignis: 10, ventus: 10, fulgur: 12, terra: 10, aqua: 10,
-  bestia: 18, construct: 16, void: 16,
+  bestia: 18, construct: 16, void: 16, lux: 12, umbra: 12,
+  // Solo special runes: one hard glyph, a full spell on its own, never fused.
+  doppel: 22, mortis: 26,
   // Transformation runes are granted by an active transformation.
   transform_beam: 0, transform_implode: 0, transform_rampage: 0
 });
@@ -60,6 +67,12 @@ export const SPELL_DEFINITIONS = Object.freeze({
   summon_lesser_beast: def('summon_lesser_beast', { name: 'BEAST FAMILIAR', manaCost: 18, color: '#b388ff', deliveryType: DELIVERY.SUMMON, desc: 'Summons a short-lived hunter familiar.' }),
   construct_bulwark: def('construct_bulwark', { name: 'CONSTRUCT BULWARK', manaCost: 16, color: '#b0bec5', deliveryType: DELIVERY.WALL, desc: 'Raises a short physical barrier in front of the caster.' }),
   void_bolt: def('void_bolt', { name: 'VOID BOLT', manaCost: 16, color: '#d500f9', deliveryType: DELIVERY.PROJECTILE, interactionTags: ['reflectable', 'capturable', 'blockable'], desc: 'Fires a void projectile that slows the first target hit.' }),
+  halo_pulse: def('halo_pulse', { name: 'HALO PULSE', color: '#ffe082', deliveryType: DELIVERY.AREA, desc: 'A ring of sunlight: heals you and nearby allies, sears and dazzles nearby enemies.' }),
+  shadow_step: def('shadow_step', { name: 'SHADOW STEP', color: '#7e57c2', deliveryType: DELIVERY.DASH, desc: 'Sink into your shadow and rise behind the nearest enemy ahead and strike it from its shadow.' }),
+
+  // ── Solo special runes: hard glyph, no combination needed ─────────────
+  shadow_doppelganger: def('shadow_doppelganger', { name: 'SHADOW DOPPELGANGER', tier: 2, manaCost: 22, color: '#5e35b1', deliveryType: DELIVERY.SUMMON, isSpecial: true, desc: 'Your shadow rises as a weaker double with its own health and fights beside you. Casting again replaces the oldest double (Shadow passives keep more at once).' }),
+  revenant_call: def('revenant_call', { name: 'REVENANT CALL', tier: 2, manaCost: 26, color: '#9ccc65', deliveryType: DELIVERY.SUMMON, isSpecial: true, desc: 'A forbidden seal raises the nearest fallen fighter as a bound revenant; when its borrowed body breaks it bursts. Casting again replaces the oldest revenant.' }),
 
   // ── Special (transformation) runes: standalone, never fusable ─────────
   annihilation_beam: def('annihilation_beam', { name: 'ANNIHILATION BEAM', tier: 3, manaCost: 0, color: '#ff4cff', deliveryType: DELIVERY.BEAM, interactionTags: ['clashable', 'blockable'], beamProfile: 'annihilation', isSpecial: true, desc: 'Charges a massive energy sphere then fires a devastating beam across half the lane.' }),
@@ -91,6 +104,17 @@ export const SPELL_DEFINITIONS = Object.freeze({
   titan_stomp: def('titan_stomp', { name: 'TITAN STOMP', tier: 2, color: '#8d6e63', deliveryType: DELIVERY.STOMP, desc: 'Leap up and crash down: hits grounded and airborne enemies around the landing point.' }),
   dragon_breath: def('dragon_breath', { name: 'DRAGON BREATH', tier: 2, color: '#ff8f00', deliveryType: DELIVERY.CONE, interactionTags: ['blockable'], desc: 'A wide cone of chunky flame that widens with distance and burns everything inside.' }),
   burrow_strike: def('burrow_strike', { name: 'BURROW STRIKE', tier: 2, color: '#a1887f', deliveryType: DELIVERY.BURROW, desc: 'Dig underground: untouchable and fast for a moment, then erupt and launch everything around you.' }),
+  // Light & shadow (concept: sun / moon runes).
+  shadow_stomper: def('shadow_stomper', { name: 'SHADOW STOMPER', tier: 2, color: '#7e57c2', deliveryType: DELIVERY.STOMP, desc: 'Aim, then stomp: your shadow races to the nearest enemy in that cone and holds its shadow — the target cannot move. Guarding targets slip free.' }),
+  radiant_lance: def('radiant_lance', { name: 'RADIANT LANCE', tier: 2, color: '#ffe082', deliveryType: DELIVERY.BEAM, interactionTags: ['clashable', 'blockable'], beamProfile: 'radiant', desc: 'A blinding beam of light that dazzles what it touches. Clashable.' }),
+  // Sky spheres: one field rules the sky at a time (a new one replaces it).
+  solar_orb: def('solar_orb', { name: 'SOLAR ORB', tier: 2, manaCost: 24, color: '#ffca28', deliveryType: DELIVERY.SELF, isSkyField: true, desc: 'Summons a sun: bright light, short shadows. Fire and light grow stronger, ice melts fast, shadow magic weakens.' }),
+  lunar_orb: def('lunar_orb', { name: 'LUNAR ORB', tier: 2, manaCost: 24, color: '#b3c7ff', deliveryType: DELIVERY.SELF, isSkyField: true, desc: 'Summons a moon: long shadows and a rising tide. Water, ice and shadow grow stronger, puddles slow and conduct harder, fire weakens.' }),
+  eclipse: def('eclipse', { name: 'ECLIPSE', tier: 2, manaCost: 28, color: '#ffd54f', deliveryType: DELIVERY.SELF, isSkyField: true, desc: 'Sun and moon meet: light and shadow magic surge, every other element dims, shadows grow huge.' }),
+  thunderhead: def('thunderhead', { name: 'THUNDERHEAD', tier: 2, manaCost: 26, color: '#90a4ae', deliveryType: DELIVERY.SELF, isSkyField: true, desc: 'A black storm cloud strikes your enemies and their puddles with lightning. Fire burns out quickly.' }),
+  blood_moon: def('blood_moon', { name: 'BLOOD MOON', tier: 2, manaCost: 26, color: '#e53935', deliveryType: DELIVERY.SELF, isSkyField: true, desc: 'A red moon: all spells hit harder, healing is halved, shadows turn red. Your doubles and revenants grow savage.' }),
+  starfall: def('starfall', { name: 'STARFALL', tier: 2, manaCost: 26, color: '#e1f5fe', deliveryType: DELIVERY.SELF, isSkyField: true, desc: 'A night sky of falling stars that rain down on your enemies.' }),
+  aurora_veil: def('aurora_veil', { name: 'AURORA VEIL', tier: 2, manaCost: 24, color: '#69f0ae', deliveryType: DELIVERY.SELF, isSkyField: true, desc: 'Northern lights: your side slowly regenerates health and mana, ice grows stronger.' }),
   soul_seekers: def('soul_seekers', { name: 'SOUL SEEKERS', tier: 2, color: '#ea80fc', deliveryType: DELIVERY.HOMING, interactionTags: ['reflectable', 'capturable', 'blockable'], desc: 'A salvo of three homing void flames that steer toward enemies within a turn limit.' }),
 
   // ── Advanced (three runes) ─────────────────────────────────────────────
@@ -109,6 +133,7 @@ export const SPELL_DEFINITIONS = Object.freeze({
 export const SPELL_RECIPES = Object.freeze({
   ignis: 'fireball', ventus: 'gale_blast', fulgur: 'chain_lightning', terra: 'stone_spikes',
   aqua: 'frost_nova', bestia: 'summon_lesser_beast', construct: 'construct_bulwark', void: 'void_bolt',
+  lux: 'halo_pulse', umbra: 'shadow_step', doppel: 'shadow_doppelganger', mortis: 'revenant_call',
   transform_beam: 'annihilation_beam', transform_implode: 'void_implosion', transform_rampage: 'inferno_rampage',
 
   'bestia+fulgur': 'summon_storm_wolf', 'bestia+void': 'summon_void_spider', 'construct+terra': 'summon_rune_golem',
@@ -119,6 +144,9 @@ export const SPELL_RECIPES = Object.freeze({
   'construct+ventus': 'mirror_ward', 'ventus+void': 'gravity_lift', 'fulgur+terra': 'seismic_slam',
   'bestia+terra': 'titan_stomp', 'ignis+void': 'soul_seekers',
   'bestia+ignis': 'dragon_breath', 'terra+void': 'burrow_strike',
+  'terra+umbra': 'shadow_stomper', 'lux+lux': 'radiant_lance',
+  'ignis+lux': 'solar_orb', 'aqua+umbra': 'lunar_orb', 'lux+umbra': 'eclipse', 'fulgur+umbra': 'thunderhead',
+  'ignis+umbra': 'blood_moon', 'lux+ventus': 'starfall', 'aqua+lux': 'aurora_veil',
 
   'bestia+terra+void': 'eidolon_mantle', 'bestia+ignis+void': 'ninefold_beast_form',
   'bestia+ignis+ventus': 'dragon_invocation', 'bestia+terra+ventus': 'summon_rune_snake',
@@ -142,6 +170,20 @@ export function lookupRecipe(runes) {
   return RECIPE_NAMES[key] ? { ...definition, name: RECIPE_NAMES[key] } : { ...definition };
 }
 
+// Solo special runes are ordinary deck cards with a harder glyph; like the
+// transformation runes they are a complete spell and never fuse.
+export const SOLO_RUNES = Object.freeze(['doppel', 'mortis']);
+
 export function isSpecialRune(rune) {
-  return String(typeof rune === 'string' ? rune : rune?.id).startsWith('transform_');
+  const id = String(typeof rune === 'string' ? rune : rune?.id);
+  return id.startsWith('transform_') || SOLO_RUNES.includes(id);
 }
+
+// The runes a spell is made of (first recipe that forms it). Sky fields use
+// this to strengthen or weaken whole elements.
+const SPELL_RUNES = (() => {
+  const map = {};
+  for (const [key, spellId] of Object.entries(SPELL_RECIPES)) if (!map[spellId]) map[spellId] = Object.freeze(key.split('+'));
+  return Object.freeze(map);
+})();
+export function spellRunes(spellId) { return SPELL_RUNES[spellId] ?? []; }

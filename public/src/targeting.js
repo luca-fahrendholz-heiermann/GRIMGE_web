@@ -6,6 +6,8 @@
 //   ground     asks for an impact point (Meteor, Magma Fissure, Gravity Lift…)
 //   placement  asks for a swiped line (walls snap to the two collision axes)
 //   ally       asks for a friendly unit (player, minion, companion, summon)
+//   aim        asks for a free direction including depth (cone preview;
+//              Shadow Stomper highlights the enemy it will grab)
 //   self       never asks
 //
 // Touch: tap the battlefield (or drag straight out of the slot and release),
@@ -14,10 +16,12 @@
 //        RMB or Esc cancels.
 // Gamepad: right stick moves the reticle, A confirms, B cancels, X turns walls.
 import { ARENA_LAYOUT, getGroundProjection, groundYForDepth } from './world.js';
-import { TARGETING, TARGET_RANGE } from './spell_catalog.js';
+import { TARGETING, TARGET_RANGE, SHADOW_STOMP } from './spell_catalog.js';
 import { spells } from './spells.js';
+import { sky } from './sky.js';
+import { aimDirection, pickShadowTargets } from './light_shadow.js';
 
-const NEEDS_TARGET = new Set([TARGETING.GROUND, TARGETING.PLACEMENT, TARGETING.ALLY]);
+const NEEDS_TARGET = new Set([TARGETING.GROUND, TARGETING.PLACEMENT, TARGETING.ALLY, TARGETING.AIM]);
 
 export function needsTarget(definition) {
   return NEEDS_TARGET.has(definition?.targetingMode);
@@ -91,7 +95,7 @@ export class SpellTargeting {
       lineStart: null, orientation: 'depth', length: 0, entity: mode === TARGETING.ALLY ? player : null
     };
     const hints = {
-      ground: 'CHOOSE THE IMPACT POINT', placement: 'SWIPE TO PLACE THE WALL', ally: 'TAP AN ALLY TO SHIELD',
+      ground: 'CHOOSE THE IMPACT POINT', placement: 'SWIPE TO PLACE THE WALL', ally: 'TAP AN ALLY TO SHIELD', aim: 'AIM THE DIRECTION',
       direction: 'RELEASE TO AIM', self: 'RELEASE TO CAST'
     };
     if (source !== 'drag') this.game.showAnnouncement?.(`${definition.name}: ${hints[mode] ?? ''}`, 1.4);
@@ -181,6 +185,7 @@ export class SpellTargeting {
       case TARGETING.GROUND: return { x: a.point.x, z: a.point.z };
       case TARGETING.PLACEMENT: return { x: a.point.x, z: a.point.z, orientation: a.orientation, length: a.length };
       case TARGETING.ALLY: return a.entity ? { entity: a.entity } : null;
+      case TARGETING.AIM: return { x: a.point.x, z: a.point.z, aim: true };
       default: return { x: a.point.x, z: a.point.z, aimOnly: true };
     }
   }
@@ -195,6 +200,18 @@ export class SpellTargeting {
     // Direction / self spells released from a drag or cursor face that side.
     if (target?.aimOnly && Math.abs(target.x - player.x) > 8) player.facing = Math.sign(target.x - player.x);
     return this.game.castSpellSlot(a.slot, true, target?.aimOnly ? null : target);
+  }
+
+  // Shadow Stomper preview: the cone and the enemies it would grab now.
+  aimPreview() {
+    const a = this.active;
+    const player = this.game.player;
+    const dir = aimDirection(player, a.point);
+    const range = SHADOW_STOMP.range * sky.bindRange();
+    const max = 1 + (player.buildModifiers?.bindTargets ?? 0) + sky.bindBonus();
+    const targets = a.definition.id === 'shadow_stomper' && this.game.getHostileTargets
+      ? pickShadowTargets(player, this.game.getHostileTargets(player.team), dir, range, SHADOW_STOMP.halfAngle, max) : [];
+    return { dir, range, targets };
   }
 
   // ── world-space preview ──────────────────────────────────────────────
@@ -229,6 +246,28 @@ export class SpellTargeting {
       ctx.lineTo(a.point.x + halfX, y - 60);
       ctx.lineTo(a.point.x + halfX, y + halfZ * 150 * .5);
       ctx.closePath(); ctx.fill(); ctx.stroke();
+    } else if (a.mode === TARGETING.AIM) {
+      ctx.setLineDash?.([]);
+      const { dir, range, targets } = this.aimPreview();
+      const baseAngle = Math.atan2(dir.z, dir.x);
+      const half = SHADOW_STOMP.halfAngle;
+      const py = groundY(player.z) - (player.surfaceHeight ?? 0);
+      // The cone is drawn in gameplay space, clipped to the walkable floor.
+      const bounds = this.game.battlefield?.boundsOverride ?? ARENA_LAYOUT.playableBounds;
+      const clampZ = (z) => Math.max(bounds.farZ ?? .06, Math.min(bounds.nearZ ?? .94, z));
+      const at = (angle, r) => ({ x: player.x + Math.cos(angle) * r, y: groundY(clampZ(player.z + Math.sin(angle) * r / 150)) - (player.surfaceHeight ?? 0) });
+      ctx.fillStyle = `${color}2e`; ctx.strokeStyle = color; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(player.x, py);
+      for (let i = 0; i <= 16; i++) { const p = at(baseAngle - half + (i / 16) * half * 2, range); ctx.lineTo(p.x, p.y); }
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      const tip = at(baseAngle, range);
+      ctx.strokeStyle = `rgba(255,255,255,${pulse})`;
+      ctx.beginPath(); ctx.moveTo(player.x, py); ctx.lineTo(tip.x, tip.y); ctx.stroke();
+      for (const target of targets) {
+        const ty = groundY(target.z) - (target.surfaceHeight ?? 0);
+        ctx.strokeStyle = '#d1c4e9'; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.ellipse(target.x, ty, 26, 8, 0, 0, Math.PI * 2); ctx.stroke();
+      }
     } else if (a.mode === TARGETING.ALLY) {
       ctx.setLineDash?.([]);
       for (const ally of this.allies()) {

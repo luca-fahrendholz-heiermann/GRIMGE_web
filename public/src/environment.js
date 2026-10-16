@@ -123,6 +123,8 @@ export class EnvironmentSystem {
     this.gustTimer = 11;
     this.strike = null;
     this.time = 0;
+    // Set by the active sky sphere (sky.js): { fireLife, iceLife, shockMult, waterSlow }.
+    this.skyMods = null;
   }
 
   clear() {
@@ -154,6 +156,9 @@ export class EnvironmentSystem {
     if (!GROUND_EFFECTS[type]) return null;
     const effect = new GroundEffect(type, x, z, options);
     if (effect.rules.fire && this.map?.fireLifeMult) effect.maxLife = effect.life = effect.life * this.map.fireLifeMult;
+    const sky = this.skyMods;
+    if (sky?.fireLife && effect.rules.fire) effect.maxLife = effect.life = effect.life * sky.fireLife;
+    if (sky?.iceLife && type === 'ice') effect.maxLife = effect.life = effect.life * sky.iceLife;
     if (!this.react(effect)) return null;
     // Same-type overlaps refresh instead of stacking endlessly.
     const twin = this.effects.find((other) => other.type === type && other.shape === 'circle' && effect.shape === 'circle' && other.overlaps(effect, .45));
@@ -231,6 +236,7 @@ export class EnvironmentSystem {
   // in it is shocked (team = the caster's team; null = neutral storm).
   electrify(x, z, radius, team, damage, gameWorld) {
     let shocked = false;
+    damage *= this.skyMods?.shockMult ?? 1;
     const pools = [
       ...this.effects.filter((e) => e.type === 'water' && (e.shape !== 'circle' ? e.contains(x, z, radius) : Math.hypot(x - e.x, (z - e.z) * 150) <= e.radius + radius)),
       ...this.terrain.filter((zone) => zone.rules.conducts && zone.contains(x, z, radius) && !this.isFrozen(zone))
@@ -364,6 +370,8 @@ export class EnvironmentSystem {
         if (rules.manaRegen && Number.isFinite(actor.mp)) actor.mp = Math.min(actor.maxMp ?? 100, actor.mp + rules.manaRegen * dt);
         if (tick && rules.dps && !covered(['ice', 'crater', 'water'])) this.hazard(actor, rules.dps * TICK);
       }
+      // A lunar tide makes every pool heavy to wade through.
+      if (wet && this.skyMods?.waterSlow) actor.slow?.(.15, this.skyMods.waterSlow);
       // Splash when stepping into water, and while wading.
       actor._wadeTimer = Math.max(0, (actor._wadeTimer ?? 0) - dt);
       const moving = Math.abs(actor.vx ?? 0) + Math.abs((actor.vz ?? 0) * 150) > 40;

@@ -27,6 +27,7 @@ export const BEAM_PROFILES = Object.freeze({
   glacial: Object.freeze({ vfx: 'ice', element: 'aqua', color: '#80deea', core: '#e0f7fa', glow: '#00bcd4', length: 400, width: 18, extendSpeed: 1400, chargeTime: .35, sustainTime: 1.4, tick: .2, damage: 10, knockback: 30, slow: Object.freeze({ duration: .7, factor: .5 }), clashPower: 1.0 }),
   thunder: Object.freeze({ vfx: 'lightning', element: 'fulgur', color: '#ffeb3b', core: '#fffde7', glow: '#ffd600', length: 470, width: 14, extendSpeed: 2400, chargeTime: .2, sustainTime: 1.0, tick: .15, damage: 12, knockback: 50, clashPower: .95 }),
   null: Object.freeze({ vfx: 'void', element: 'void', color: '#d500f9', core: '#f3e5f5', glow: '#6a1b9a', length: 420, width: 20, extendSpeed: 1300, chargeTime: .4, sustainTime: 1.5, tick: .2, damage: 12, knockback: -70, clashPower: 1.05 }),
+  radiant: Object.freeze({ vfx: 'light', element: 'lux', color: '#ffe082', core: '#ffffff', glow: '#ffca28', length: 450, width: 16, extendSpeed: 2000, chargeTime: .3, sustainTime: 1.2, tick: .18, damage: 12, knockback: 40, slow: Object.freeze({ duration: .5, factor: .6 }), clashPower: 1.0 }),
   annihilation: Object.freeze({ vfx: 'arcane', element: 'ignis', color: '#ff4cff', core: '#ffffff', glow: '#ff4cff', length: 480, width: 26, extendSpeed: 1600, chargeTime: 1.2, sustainTime: 1.6, tick: .2, damage: 22, knockback: 80, clashPower: 1.5 })
 });
 
@@ -92,6 +93,20 @@ const BEAM_VFX = {
     for (let i = 0; i < 8; i++) {
       const f = 1 - ((t + i / 8) % 1);
       ctx.beginPath(); ctx.arc(x0 + (x1 - x0) * f, y0 + (y1 - y0) * f + Math.sin(t * 6 + i) * beam.width * .6, 2.5, 0, Math.PI * 2); ctx.fill();
+    }
+  },
+  light(ctx, beam, x0, y0, x1, y1, k) {
+    const p = beam.profile;
+    const t = performance.now() * 0.01;
+    drawBeamBody(ctx, x0, y0, x1, y1, beam.width * (1.6 + Math.sin(t) * .15), p.glow, .4 * k);
+    drawBeamBody(ctx, x0, y0, x1, y1, beam.width * .7, p.color, .85 * k);
+    drawBeamBody(ctx, x0, y0, x1, y1, beam.width * .25, p.core, k);
+    // Glinting motes drift along the ray.
+    ctx.fillStyle = `rgba(255,253,231,${.9 * k})`;
+    const len = Math.hypot(x1 - x0, y1 - y0) || 1;
+    for (let d = (t * 40) % 30; d < len; d += 30) {
+      const f = d / len;
+      ctx.fillRect(x0 + (x1 - x0) * f - 1.5, y0 + (y1 - y0) * f - beam.width * .6 + Math.sin(d + t) * 4, 3, 3);
     }
   },
   arcane(ctx, beam, x0, y0, x1, y1, k) {

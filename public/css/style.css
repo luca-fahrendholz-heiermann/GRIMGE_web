@@ -138,7 +138,7 @@ body.portrait-gameplay #game-container { visibility: hidden; pointer-events: non
   bottom: calc(4px + var(--safe-bottom));
 }
 
-#ui-layer.has-safe-area:not(.touch-layout-alt) #touch-joystick {
+#ui-layer.has-safe-area #touch-joystick {
   left: calc(4% + var(--safe-left));
   bottom: calc(5% + var(--safe-bottom));
 }
@@ -427,7 +427,7 @@ body.portrait-gameplay #game-container { visibility: hidden; pointer-events: non
 
 /* Classic is intentionally kept as the former fixed control layout. The
    alternate layout alone owns the dynamic left-thumb stick. */
-#ui-layer:not(.touch-layout-alt) #touch-joystick {
+#ui-layer #touch-joystick {
   left: 4%;
   top: auto;
   bottom: 5%;
@@ -1026,37 +1026,19 @@ body.portrait-gameplay #game-container { visibility: hidden; pointer-events: non
   animation: pulseAura 3s ease-in-out infinite alternate;
 }
 
-/* Original classic placement: center of the former right-side triangle. */
-#ui-layer:not(.touch-layout-alt) .arcane-circle-wrap {
-  /* Keep Draw distinct from the Cast clock-face cluster in classic mode. */
-  left: 66.5%;
-  top: auto;
-  right: auto;
-  bottom: 5%;
-}
+/* There is one touch UI. DRAW lives in the centre of the spell triangle,
+   so the legacy central Draw circle is always hidden. */
+.arcane-circle-wrap { display: none; }
 
-/* Alternate mobile layout: the player chooses it from the hub settings.
-   It leaves the left side clear for a dynamic joystick and arranges the
-   actions as a compact right-hand combat cluster. */
-/* Both touch layouts share the same spell triangle; they only differ in
-   the joystick (fixed vs. dynamic). DRAW lives in the triangle centre, so
-   the legacy central Draw circle is hidden everywhere. */
-.arcane-circle-wrap,
-#ui-layer.touch-layout-alt .arcane-circle-wrap,
-#ui-layer:not(.touch-layout-alt) .arcane-circle-wrap {
-  display: none;
-}
+/* Fullscreen is a desktop convenience; touch devices (installed PWA /
+   mobile browsers) do not show it. */
+#ui-layer.input-touch .desktop-only { display: none; }
 
-/* These come after the two chosen touch-layout definitions so an iPhone's
-   safe space cannot be overwritten by the classic/alternate placement. */
+/* These come after the control placement so an iPhone's safe space cannot
+   be overwritten. */
 #ui-layer.has-safe-area #bottom-right-actions {
   right: calc(2% + var(--safe-right));
   bottom: calc(3.5% + var(--safe-bottom));
-}
-
-#ui-layer.has-safe-area:not(.touch-layout-alt) .arcane-circle-wrap {
-  top: auto;
-  bottom: calc(5% + var(--safe-bottom));
 }
 
 .arcane-circle-wrap:hover {

@@ -170,6 +170,36 @@ assert(sRuneSnake?.id === 'summon_rune_snake', 'Spell: Bestia + Terra + Ventus -
 const sGrand = spells.resolveSpell([rIgnis, rVentus, rFulgur]);
 assert(sGrand && sGrand.id === 'apocalyptic_heavensurge', 'Spell: Grand 3-Rune -> APOCALYPTIC HEAVENSURGE');
 
+// ── Light / shadow runes and the solo special runes ─────────────────────
+const vStroke = Array.from({ length: 30 }, (_, i) => ({ x: 100 + i * 4, y: i < 15 ? 100 + i * 9 : 100 + (29 - i) * 9 }));
+const resV = recognizer.recognize([vStroke]);
+assert(resV?.rune.id === 'lux' && resV.confidence >= .9, 'Recognize: downward V -> LUX');
+const crescent = Array.from({ length: 30 }, (_, i) => { const a = Math.PI * .3 + i / 29 * Math.PI * 1.4; return { x: 150 + Math.cos(a) * 60, y: 150 + Math.sin(a) * 60 }; });
+const resC = recognizer.recognize([crescent]);
+assert(resC?.rune.id === 'umbra' && resC.confidence >= .9, 'Recognize: open crescent (C) -> UMBRA');
+assert(recognizer.recognize([circleStroke])?.rune.id === 'aqua', 'Recognize: a closed circle stays AQUA next to UMBRA');
+assert(recognizer.recognize([triStroke])?.rune.id === 'ignis', 'Recognize: the upward triangle stays IGNIS next to LUX');
+const fig8 = Array.from({ length: 60 }, (_, i) => { const t = i / 59 * Math.PI * 2; return { x: 200 + Math.sin(t) * 90 + Math.sin(i * 1.7) * 3, y: 150 + Math.sin(t) * Math.cos(t) * 90 + Math.cos(i * 2.3) * 3 }; });
+const resFig8 = recognizer.recognize([fig8]);
+assert(resFig8?.rune.id === 'doppel' && resFig8.grade === 'S', 'Recognize: closed figure-eight (∞) -> DOPPEL special rune');
+const star = [];
+for (let k = 0; k < 5; k++) {
+  const a = -Math.PI / 2 + k * Math.PI * 4 / 5; const b = -Math.PI / 2 + (k + 1) * Math.PI * 4 / 5;
+  for (let s = 0; s < 10; s++) { const f = s / 10; star.push({ x: 200 + Math.cos(a) * 80 * (1 - f) + Math.cos(b) * 80 * f + Math.sin(star.length) * 4, y: 200 + Math.sin(a) * 80 * (1 - f) + Math.sin(b) * 80 * f }); }
+}
+star.push({ ...star[0] });
+const resStar = recognizer.recognize([star]);
+assert(resStar?.rune.id === 'mortis' && resStar.grade === 'S', 'Recognize: one-stroke pentagram -> MORTIS special rune');
+const doubleCircle = Array.from({ length: 60 }, (_, i) => { const a = i / 59 * Math.PI * 4; return { x: 150 + Math.cos(a) * 60, y: 150 + Math.sin(a) * 60 }; });
+assert(recognizer.recognize([doubleCircle])?.rune.id === 'aqua', 'Recognize: a circle drawn twice is not mistaken for MORTIS');
+
+const rLux = { id: 'lux' }; const rUmbra = { id: 'umbra' };
+assert(spells.resolveSpell([rTerra, rUmbra])?.id === 'shadow_stomper', 'Spell: Umbra + Terra -> SHADOW STOMPER');
+assert(spells.resolveSpell([rUmbra, rAqua])?.id === 'lunar_orb', 'Spell: Umbra + Aqua -> LUNAR ORB');
+assert(spells.resolveSpell([rLux, rIgnis])?.id === 'solar_orb', 'Spell: Lux + Ignis -> SOLAR ORB');
+assert(spells.resolveSpell([rLux, rUmbra])?.id === 'eclipse', 'Spell: Lux + Umbra -> ECLIPSE');
+assert(spells.resolveSpell([{ id: 'doppel' }])?.id === 'shadow_doppelganger' && spells.resolveSpell([{ id: 'mortis' }])?.id === 'revenant_call', 'Spell: DOPPEL / MORTIS are complete solo spells');
+
 const cQuality = spells.qualityForRunes([{ id: 'ignis', grade: 'C' }]);
 const sQuality = spells.qualityForRunes([{ id: 'ignis', grade: 'S' }]);
 assert(cQuality.power < 1 && cQuality.area < 1 && cQuality.duration < 1, 'C-grade rune casts intentionally trade power, area, and duration for leniency');

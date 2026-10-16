@@ -83,6 +83,46 @@ export class RuneRecognizer {
         desc: 'Open Spiral / Void Eye'
       },
       {
+        id: 'lux',
+        name: 'LUX',
+        element: 'Light',
+        glyph: '✧',
+        color: '#ffe082',
+        glowColor: '#fff8e1',
+        icon: '☀',
+        desc: 'Downward V — a falling sun ray'
+      },
+      {
+        id: 'umbra',
+        name: 'UMBRA',
+        element: 'Shadow',
+        glyph: '☾',
+        color: '#7e57c2',
+        glowColor: '#b39ddb',
+        icon: '☾',
+        desc: 'Open crescent arc (C shape)'
+      },
+      {
+        id: 'doppel',
+        name: 'DOPPEL',
+        element: 'Shadow',
+        glyph: '∞',
+        color: '#5e35b1',
+        glowColor: '#9575cd',
+        icon: '♊',
+        desc: 'Special: one closed figure-eight (∞) — your shadow double'
+      },
+      {
+        id: 'mortis',
+        name: 'MORTIS',
+        element: 'Death',
+        glyph: '⛤',
+        color: '#9ccc65',
+        glowColor: '#dcedc8',
+        icon: '☠',
+        desc: 'Special: a five-pointed star in one stroke — raise the fallen'
+      },
+      {
         id: 'transform_beam',
         name: 'ANNIHILATION BEAM',
         element: 'Transformation',
@@ -204,6 +244,36 @@ export class RuneRecognizer {
       if (points[i].y < points[minYIdx].y) minYIdx = i;
     }
     const apexIsMid = (minYIdx >= 5 && minYIdx <= 27);
+    // Lowest point (maximum Y) for the downward LUX chevron.
+    let maxYIdx = 0;
+    for (let i = 1; i < points.length; i++) {
+      if (points[i].y > points[maxYIdx].y) maxYIdx = i;
+    }
+    const valleyIsMid = (maxYIdx >= 5 && maxYIdx <= 27);
+
+    // 8. Turning: summed signed heading change along the stroke. A circle
+    // turns once (±2π), a figure-eight's two lobes cancel out (~0) and a
+    // one-stroke pentagram turns twice (±4π) with sharp corners.
+    let netTurn = 0; let absTurn = 0;
+    for (let i = 2; i < points.length; i++) {
+      const a1 = Math.atan2(points[i - 1].y - points[i - 2].y, points[i - 1].x - points[i - 2].x);
+      const a2 = Math.atan2(points[i].y - points[i - 1].y, points[i].x - points[i - 1].x);
+      let d = a2 - a1;
+      while (d > Math.PI) d -= Math.PI * 2;
+      while (d < -Math.PI) d += Math.PI * 2;
+      netTurn += d; absTurn += Math.abs(d);
+    }
+    const loopClosed = (closureDist / Math.max(bbWidth, bbHeight)) < 0.42;
+    if (loopClosed) {
+      // Include the corner where the stroke closes (end heading → start heading).
+      const n = points.length;
+      const aEnd = Math.atan2(points[n - 1].y - points[n - 2].y, points[n - 1].x - points[n - 2].x);
+      const aStart = Math.atan2(points[1].y - points[0].y, points[1].x - points[0].x);
+      let d = aStart - aEnd;
+      while (d > Math.PI) d -= Math.PI * 2;
+      while (d < -Math.PI) d += Math.PI * 2;
+      netTurn += d; absTurn += Math.abs(d);
+    }
 
     // Scoring
     const scores = {};
@@ -308,6 +378,50 @@ export class RuneRecognizer {
       scores.ignis = 0.55;
     } else {
       scores.ignis = 0.1;
+    }
+
+    // LUX: a downward V (sun ray) — the mirror image of the IGNIS triangle.
+    const valleyDepth = points[maxYIdx].y - Math.max(startPt.y, endPt.y);
+    if (valleyIsMid && !isClosed && xReversals === 0 && valleyDepth > bbHeight * 0.55 && aspectRatio >= 0.45 && aspectRatio <= 2.4) {
+      scores.lux = 0.94;
+    } else if (valleyIsMid && !isClosed && xReversals <= 1 && valleyDepth > bbHeight * 0.35 && aspectRatio >= 0.35 && aspectRatio <= 2.8) {
+      scores.lux = 0.76;
+    } else if (valleyIsMid && !isClosed && valleyDepth > bbHeight * 0.2) {
+      scores.lux = 0.52;
+    } else {
+      scores.lux = 0.1;
+    }
+
+    // UMBRA: an open crescent / C arc — round like AQUA but clearly open,
+    // with both ends on the same side of the centre.
+    const closureRatio = closureDist / Math.max(bbWidth, bbHeight);
+    const endsSameSide = Math.sign(startPt.x - cx) === Math.sign(endPt.x - cx) && Math.abs(startPt.x - cx) > bbWidth * .12 && Math.abs(endPt.x - cx) > bbWidth * .12;
+    if (closureRatio >= 0.5 && closureRatio <= 1.25 && endsSameSide && rStd < 0.24 && aspectRatio >= 0.35 && aspectRatio <= 1.3) {
+      scores.umbra = 0.93;
+    } else if (closureRatio >= 0.4 && closureRatio <= 1.4 && endsSameSide && rStd < 0.32) {
+      scores.umbra = 0.74;
+    } else if (closureRatio >= 0.35 && endsSameSide && yReversals <= 1) {
+      scores.umbra = 0.52;
+    } else {
+      scores.umbra = 0.1;
+    }
+
+    // DOPPEL (special, hard): a closed horizontal figure-eight.
+    if (loopClosed && Math.abs(netTurn) < Math.PI * .75 && absTurn > Math.PI * 2.5 && aspectRatio >= 1.3 && aspectRatio <= 4.2 && rStd > .22) {
+      scores.doppel = 0.97;
+    } else if (closureDist / Math.max(bbWidth, bbHeight) < 0.6 && Math.abs(netTurn) < Math.PI && absTurn > Math.PI * 2.2 && aspectRatio >= 1.1 && aspectRatio <= 4.8 && rStd > .18) {
+      scores.doppel = 0.7;
+    } else {
+      scores.doppel = 0.1;
+    }
+
+    // MORTIS (special, hard): a closed one-stroke five-pointed star.
+    if (loopClosed && Math.abs(netTurn) > Math.PI * 3.2 && rStd > .15 && aspectRatio >= .6 && aspectRatio <= 1.6) {
+      scores.mortis = 0.97;
+    } else if (closureDist / Math.max(bbWidth, bbHeight) < 0.6 && Math.abs(netTurn) > Math.PI * 2.8 && rStd > .13 && aspectRatio >= .5 && aspectRatio <= 1.9) {
+      scores.mortis = 0.7;
+    } else {
+      scores.mortis = 0.1;
     }
 
     if (allowedRuneIds?.includes('transform_beam')) scores.transform_beam = 0.92;

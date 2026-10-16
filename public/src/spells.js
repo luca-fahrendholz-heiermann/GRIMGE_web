@@ -1,9 +1,11 @@
 // GRIMGE Prototype — Composable Spell System & Elemental Combinations
 import { audio } from './audio.js';
 import { combat } from './combat.js';
-import { GroundEntity, groundDistance, groundYForDepth } from './world.js';
-import { lookupRecipe } from './spell_catalog.js';
+import { GroundEntity, groundDistance, groundYForDepth, ENTITY_VISUALS } from './world.js';
+import { lookupRecipe, SHADOW_STOMP } from './spell_catalog.js';
 import { environment } from './environment.js';
+import { sky, isSkyField } from './sky.js';
+import { ShadowStomperSpell, HaloPulseSpell, castShadowStep, alliesOf } from './light_shadow.js';
 import { BeamSpell, BeamClash, resolveBeamInteractions, MirrorWardSpell, GravityLiftSpell, TitanStompSpell, SoulSeekerBolt, SeismicSlamSpell, ConeBreathSpell, BurrowStrikeSpell, ShieldBubbleSpell, renderPixelated } from './abilities.js';
 
 export { BeamClash };
@@ -28,6 +30,10 @@ export const SUMMON_DEFINITIONS = Object.freeze({
   siege_golem: Object.freeze({ id: 'siege_golem', name: 'SIEGE GOLEM', hp: 260, duration: 16, speed: 105, attackRange: 48, damage: 38, attackCooldown: 1.15, radius: 25, color: '#a1887f', role: 'vanguard', mountable: true, mountSpeed: 245, riderOffsetY: 64 }),
   rune_golem: Object.freeze({ id: 'rune_golem', spriteKey: 'siege_golem', name: 'RUNE GOLEM', hp: 235, duration: 15, speed: 120, attackRange: 48, damage: 32, attackCooldown: 1.0, radius: 24, color: '#b0bec5', role: 'vanguard', mountable: true, mountSpeed: 260, riderOffsetY: 64 }),
   void_spider: Object.freeze({ id: 'void_spider', spriteKey: 'void_spider', name: 'VOID SPIDER', hp: 125, duration: 14, speed: 178, attackRange: 54, damage: 14, attackCooldown: .9, radius: 22, color: '#d500f9', role: 'control', particleElement: 'void', slowDuration: 1.35, slowFactor: .45 }),
+  // Solo special runes. A shadow double copies its caster's look; a revenant
+  // borrows the body of a fallen fighter and bursts when it breaks.
+  shadow_double: Object.freeze({ id: 'shadow_double', name: 'SHADOW DOUBLE', hp: 120, duration: 28, speed: 300, attackRange: 40, damage: 16, attackCooldown: .7, radius: 16, color: '#5e35b1', role: 'doppel', particleElement: 'void', limitKey: 'extraDoppels' }),
+  revenant: Object.freeze({ id: 'revenant', name: 'REVENANT', hp: 130, duration: 24, speed: 205, attackRange: 42, damage: 22, attackCooldown: .9, radius: 16, color: '#9ccc65', role: 'revenant', particleElement: 'terra', limitKey: 'extraRevenants', rise: .8, burst: Object.freeze({ radius: 95, damage: 48 }) }),
   rune_snake: Object.freeze({ id: 'rune_snake', spriteKey: 'rune_snake', name: 'WORLD RUNE SERPENT', hp: 180, duration: 15, speed: 205, attackRange: 58, damage: 25, attackCooldown: .95, radius: 27, color: '#b668ff', role: 'lane_control', particleElement: 'void', mountable: true, mountSpeed: 355, riderOffsetY: 54, launch: 175 })
 });
 
@@ -47,6 +53,8 @@ export class SpellSystem {
     this.activeSpells = [];
     this.activeSummons = [];
     this.activeClashes = [];
+    // Fallen fighters a Revenant Call can raise ({ x, z, spriteKey, … }).
+    this.graves = [];
     // Spell VFX are rendered through a low-resolution layer for a pixel-art
     // look that matches the sprites (logical pixels per VFX pixel).
     this.pixelVfx = 2.5;
@@ -115,6 +123,8 @@ export class SpellSystem {
     adjusted.power *= (isSummon ? 1 : (mods.spellPower ?? 1)) * (spellDef?.tier > 1 ? (mods.comboPower ?? 1) : 1);
     adjusted.area *= (mods.spellArea ?? 1) * (spellDef?.id === 'dragon_invocation' ? (mods.dragonArea ?? 1) : 1);
     adjusted.duration *= (mods.spellDuration ?? 1);
+    // The active sky sphere strengthens or weakens whole elements.
+    adjusted.power *= sky.powerMultiplier(spellDef);
     return adjusted;
   }
 
@@ -142,16 +152,49 @@ export class SpellSystem {
     this.activeSpells = [];
     this.activeSummons = [];
     this.activeClashes = [];
+    this.graves = [];
+    sky.clear();
   }
 
-  summon(caster, definition, gameWorld, quality) {
+  // A fallen fighter leaves a grave a Revenant Call can raise for a while.
+  recordGrave(actor) {
+    const spriteKey = actor?.heroKey ?? actor?.spriteKey;
+    if (!spriteKey || actor.isTrainingDummy || actor.isSummon || !Number.isFinite(actor.x)) return null;
+    const grave = {
+      x: actor.x, z: actor.z ?? .5, spriteKey, team: actor.team, age: 0, isHero: !!actor.heroKey,
+      visualHeight: actor.heroKey ? ENTITY_VISUALS.heroHeight : (actor.renderHeight ?? ENTITY_VISUALS.minionHeight),
+      maxHp: actor.maxHp ?? 60
+    };
+    this.graves.push(grave);
+    if (this.graves.length > 12) this.graves.shift();
+    return grave;
+  }
+
+  takeGrave(caster, range = 460) {
+    let best = -1; let bestD = Infinity;
+    this.graves.forEach((grave, index) => {
+      const d = Math.hypot(grave.x - caster.x, (grave.z - caster.z) * 150);
+      if (d <= range && d < bestD) { best = index; bestD = d; }
+    });
+    return best >= 0 ? this.graves.splice(best, 1)[0] : null;
+  }
+
+  summon(caster, definition, gameWorld, quality, options = {}) {
     // One summon per kind (role) and caster by default; Pack Leader adds
-    // more. Beyond the limit the oldest of that kind is dismissed.
-    const limit = 1 + Math.max(0, caster.buildModifiers?.extraSummons ?? 0);
-    const sameKind = this.activeSummons.filter((summon) => !summon.isDead && summon.team === caster.team && summon.definition.role === definition.role);
-    while (sameKind.length >= limit) sameKind.shift().isDead = true;
-    const summon = new SummonedCreature(caster.x + caster.facing * 34, caster.z, caster.team, caster.surfaceHeight ?? 0, definition, quality, gameWorld.sprites);
+    // more (shadow doubles / revenants use their own Shadow passives).
+    // Beyond the limit the oldest of that kind is dismissed.
     const mods = caster.buildModifiers ?? {};
+    const extra = definition.limitKey ? (mods[definition.limitKey] ?? 0) : (mods.extraSummons ?? 0);
+    const limit = 1 + Math.max(0, extra);
+    const sameKind = this.activeSummons.filter((summon) => !summon.isDead && summon.team === caster.team && summon.definition.role === definition.role);
+    while (sameKind.length >= limit) sameKind.shift().dismiss();
+    const summon = new SummonedCreature(options.x ?? caster.x + caster.facing * 34, options.z ?? caster.z, caster.team, caster.surfaceHeight ?? 0, definition, quality, gameWorld.sprites);
+    summon.owner = caster;
+    if (options.mimicKey) summon.mimicKey = options.mimicKey;
+    if (options.bodyKey) { summon.bodyKey = options.bodyKey; summon.bodyHeight = options.bodyHeight ?? ENTITY_VISUALS.minionHeight; }
+    if (options.maxHp) summon.maxHp = options.maxHp;
+    if (options.damageScale) summon.damage *= options.damageScale;
+    if (definition.rise) summon.riseTimer = summon.riseDuration = definition.rise;
     summon.maxHp = Math.round(summon.maxHp * (mods.summonHp ?? 1));
     summon.hp = summon.maxHp;
     summon.damage *= mods.summonDamage ?? 1;
@@ -282,6 +325,65 @@ export class SpellSystem {
 
       case 'construct_bulwark': {
         this.castConstructBulwark(caster, gameWorld, castQuality, target);
+        break;
+      }
+
+      case 'halo_pulse': {
+        this.addSpell(new HaloPulseSpell(caster, gameWorld, { healMultiplier: sky.healMultiplier(), allies: alliesOf(gameWorld, caster.team, this.getSummons(caster.team)) }), castQuality);
+        break;
+      }
+
+      case 'shadow_step': {
+        castShadowStep(caster, gameWorld, castQuality);
+        break;
+      }
+
+      case 'shadow_stomper': {
+        const mods = caster.buildModifiers ?? {};
+        this.addSpell(new ShadowStomperSpell(caster, gameWorld, target, {
+          maxTargets: 1 + (mods.bindTargets ?? 0) + sky.bindBonus(),
+          hold: 2.6 * (mods.bindHold ?? 1) * castQuality.duration,
+          range: SHADOW_STOMP.range * castQuality.area * sky.bindRange()
+        }), castQuality);
+        break;
+      }
+
+      case 'shadow_doppelganger': {
+        const mods = caster.buildModifiers ?? {};
+        // The double rises from the caster's shadow, just behind them.
+        this.summon(caster, SUMMON_DEFINITIONS.shadow_double, gameWorld, castQuality, {
+          x: caster.x - caster.facing * 38, z: Math.min(.95, caster.z + .05),
+          mimicKey: caster.heroKey ?? 'paladin',
+          maxHp: Math.round((caster.maxHp ?? 300) * .4 * (mods.doppelHp ?? 1) * castQuality.power)
+        });
+        break;
+      }
+
+      case 'revenant_call': {
+        // Raise the nearest fallen fighter; without one a nameless fallen
+        // soldier of the other side claws its way up.
+        const grave = this.takeGrave(caster);
+        const foe = caster.team === 'blue' ? 'red' : 'blue';
+        const options = grave
+          ? { x: grave.x, z: grave.z, bodyKey: grave.spriteKey, bodyHeight: grave.visualHeight, maxHp: Math.round(Math.min(260, Math.max(90, grave.maxHp * .7)) * castQuality.power), damageScale: grave.isHero ? 1.35 : 1 }
+          : { x: caster.x + caster.facing * 60, z: caster.z, bodyKey: `minion_${foe}_melee`, bodyHeight: ENTITY_VISUALS.minionHeight * 1.25 };
+        this.summon(caster, SUMMON_DEFINITIONS.revenant, gameWorld, castQuality, options);
+        break;
+      }
+
+      case 'radiant_lance': {
+        this.addSpell(new BeamSpell(caster, 'radiant', 'radiant_lance'), castQuality);
+        break;
+      }
+
+      case 'solar_orb':
+      case 'lunar_orb':
+      case 'eclipse':
+      case 'thunderhead':
+      case 'blood_moon':
+      case 'starfall':
+      case 'aurora_veil': {
+        if (isSkyField(spellDef.id)) sky.cast(caster, spellDef.id, castQuality, gameWorld);
         break;
       }
 
@@ -559,8 +661,15 @@ export class SpellSystem {
     for (let i = this.activeSummons.length - 1; i >= 0; i--) {
       const summon = this.activeSummons[i];
       summon.update(dt, gameWorld);
-      if (summon.isDead) this.activeSummons.splice(i, 1);
+      if (summon.isDead) {
+        // A revenant's borrowed body bursts when it breaks or its time ends.
+        if (summon.definition.burst && !summon.dismissed && !summon.burstDone) summon.burst(gameWorld);
+        this.activeSummons.splice(i, 1);
+      }
     }
+    for (const grave of this.graves) grave.age += dt;
+    this.graves = this.graves.filter((grave) => grave.age < 45);
+    sky.update(dt, gameWorld);
     this.activeClashes.push(...resolveBeamInteractions(this, gameWorld));
     for (const clash of this.activeClashes) clash.update(dt);
     this.activeClashes = this.activeClashes.filter((clash) => !clash.isFinished);
@@ -586,6 +695,7 @@ export class SpellSystem {
   depthEntries() {
     const entries = [];
     for (const spell of this.activeSpells) {
+      if (spell.isGroundDecal) continue;
       const y = this.spellDepth(spell);
       if (y !== null) entries.push({ y, spell });
     }
@@ -593,10 +703,30 @@ export class SpellSystem {
     return entries;
   }
 
+  // Ground decals (shadow tethers) and graves lie under every actor.
+  renderGroundDecals(ctx) {
+    this.renderBatch(ctx, this.activeSpells.filter((spell) => spell.isGroundDecal));
+    const t = performance.now() * .001;
+    ctx.save();
+    for (const grave of this.graves) {
+      // A faint soul wisp marks a body a Revenant Call can raise.
+      const fade = Math.min(1, (45 - grave.age) / 6) * .7;
+      const y = groundYForDepth(grave.z);
+      const bob = Math.sin(t * 3 + grave.x) * 3;
+      ctx.fillStyle = `rgba(20,30,20,${fade * .5})`;
+      ctx.beginPath(); ctx.ellipse(grave.x, y, 16, 5, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = `rgba(156,204,101,${fade})`;
+      ctx.fillRect(Math.round(grave.x - 2), Math.round(y - 20 + bob), 4, 8);
+      ctx.fillStyle = `rgba(220,237,200,${fade})`;
+      ctx.fillRect(Math.round(grave.x - 1), Math.round(y - 24 + bob), 2, 5);
+    }
+    ctx.restore();
+  }
+
   // Spells without a ground depth (and the clash UI) stay on top. Pass
   // { depthSorted: true } when the actor pass already drew the rest.
   render(ctx, { depthSorted = false } = {}) {
-    const topLayer = depthSorted ? this.activeSpells.filter((spell) => this.spellDepth(spell) === null) : this.activeSpells;
+    const topLayer = depthSorted ? this.activeSpells.filter((spell) => !spell.isGroundDecal && this.spellDepth(spell) === null) : this.activeSpells;
     this.renderBatch(ctx, topLayer);
     if (!depthSorted) for (const summon of this.activeSummons) summon.render(ctx);
     for (const clash of this.activeClashes) clash.render(ctx);
@@ -1651,6 +1781,35 @@ class SummonedCreature extends GroundEntity {
     this.target = null;
     this.animTime = 0; this.state = 'idle'; this.facing = team === 'blue' ? 1 : -1;
     this.spriteManager = spriteManager;
+    this.riseTimer = 0; this.riseDuration = 0; this.hitFlash = 0;
+    this.dismissed = false; this.burstDone = false;
+  }
+
+  // Replaced by a newer cast of the same kind: vanish without a burst.
+  dismiss() {
+    if (this.isDead) return;
+    this.dismissed = true;
+    this.rider?.dismount?.();
+    this.rider = null;
+    this.isDead = true;
+    combat.spawnShockwave(this.x, this.y - 18, 34, this.definition.color);
+    combat.spawnElementalParticles(this.x, this.y - 25, this.definition.particleElement ?? 'void', 10);
+  }
+
+  burst(gameWorld) {
+    const burst = this.definition.burst;
+    if (!burst || this.burstDone) return;
+    this.burstDone = true;
+    const scale = this.owner?.buildModifiers?.revenantBurst ?? 1;
+    const radius = burst.radius * (this.quality?.area ?? 1);
+    combat.spawnShockwave(this.x, this.y - 10, radius, '#9ccc65');
+    combat.spawnElementalParticles(this.x, this.y - 20, 'terra', 16);
+    combat.shakeCamera(8, .3);
+    for (const target of gameWorld.getHostileTargets(this.team)) {
+      if (target.isDead || target.lifeState === 'Dead' || target.isObjective) continue;
+      if (groundDistance(this, target) > radius) continue;
+      target.takeDamage(burst.damage * (this.quality?.power ?? 1) * scale, Math.sign(target.x - this.x || 1) * 260, 160, .4, false, 'spell');
+    }
   }
   chooseTarget(gameWorld) {
     const candidates = gameWorld.getHostileTargets(this.team).filter((target) => !target.isDead && !target.isDestroyed);
@@ -1694,6 +1853,15 @@ class SummonedCreature extends GroundEntity {
 
   update(dt, gameWorld) {
     this.duration -= dt; this.attackTimer -= dt; this.animTime += dt;
+    this.hitFlash = Math.max(0, this.hitFlash - dt);
+    // A revenant first claws its way out of the ground.
+    if (this.riseTimer > 0) {
+      this.riseTimer = Math.max(0, this.riseTimer - dt);
+      this.state = 'idle';
+      if (Math.random() < .5) combat.spawnDust(this.x, this.y, 1);
+      return;
+    }
+    if (this.mimicKey && Math.random() < dt * 6) combat.spawnElementalParticles(this.x + (Math.random() - .5) * 20, this.y - 30 - Math.random() * 40, 'void', 1);
     if (this.duration <= 0) {
       this.rider?.dismount?.();
       this.rider = null;
@@ -1724,7 +1892,8 @@ class SummonedCreature extends GroundEntity {
         const direction = Math.sign(this.target.x - this.x) || 1;
         this.facing = direction; this.state = 'attack';
         const isLaneControl = this.definition.role === 'lane_control';
-        this.target.takeDamage(this.damage, direction * (this.definition.role === 'siege' ? 250 : isLaneControl ? 210 : 180), isLaneControl ? (this.definition.launch ?? 160) : 80, .22, false, 'summon');
+        const savage = (this.mimicKey || this.bodyKey) ? sky.summonPower(this.team) : 1;
+        this.target.takeDamage(this.damage * savage, direction * (this.definition.role === 'siege' ? 250 : isLaneControl ? 210 : 180), isLaneControl ? (this.definition.launch ?? 160) : 80, .22, false, 'summon');
         if (this.definition.role === 'control') {
           this.target.slow?.(this.definition.slowDuration * this.quality.duration, this.definition.slowFactor);
           combat.spawnShockwave(this.target.x, this.target.y - 18, 24, this.definition.color);
@@ -1757,6 +1926,7 @@ class SummonedCreature extends GroundEntity {
       if (amount <= 0) return;
     }
     this.hp = Math.max(0, this.hp - amount);
+    this.hitFlash = .12;
     if (this.hp <= 0) {
       this.rider?.dismount?.();
       this.rider = null;
@@ -1764,7 +1934,34 @@ class SummonedCreature extends GroundEntity {
     }
   }
 
+  // Doubles and revenants reuse a fighter's sprite: a doppelganger is the
+  // caster's own silhouette in living shadow, a revenant a pale borrowed body.
+  renderBorrowedBody(ctx) {
+    const key = this.mimicKey ?? this.bodyKey;
+    const manager = this.spriteManager;
+    if (!key || !manager?.renderEntity || !manager.sprites?.[key]) return false;
+    const height = this.mimicKey ? ENTITY_VISUALS.heroHeight : (this.bodyHeight ?? ENTITY_VISUALS.minionHeight);
+    const rise = this.riseDuration > 0 ? 1 - this.riseTimer / this.riseDuration : 1;
+    const state = this.state === 'attack' ? 'attack1' : this.state;
+    ctx.save();
+    if (rise < 1) {
+      // Seal circle and a ground clip while the body rises.
+      ctx.strokeStyle = `rgba(156,204,101,${.9 - rise * .5})`; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.ellipse(this.x, this.y, 30, 9, 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.rect(this.x - 120, this.y - 400, 240, 400); ctx.clip();
+    }
+    manager.renderEntity(ctx, key, this.x, this.y + (1 - rise) * height, {
+      facing: this.facing, state, animTime: this.animTime, visualHeight: height, hitFlash: this.hitFlash > 0,
+      tint: this.mimicKey ? 'rgba(28,6,54,.8)' : 'rgba(170,205,150,.55)', alpha: this.mimicKey ? .9 : 1
+    });
+    ctx.restore();
+    const barY = this.y - height - 8;
+    ctx.save(); ctx.fillStyle = 'rgba(0,0,0,.75)'; ctx.fillRect(this.x - 18, barY, 36, 4); ctx.fillStyle = this.definition.color; ctx.fillRect(this.x - 18, barY, 36 * (this.hp / this.maxHp), 4); ctx.restore();
+    return true;
+  }
+
   render(ctx) {
+    if (this.renderBorrowedBody(ctx)) return;
     const color = this.definition.color;
     const spriteKey = this.definition.spriteKey ?? this.definition.id;
     if (this.spriteManager?.renderSummon(ctx, spriteKey, this.x, this.y, { facing: this.facing, state: this.state, animTime: this.animTime, visualHeight: spriteKey === 'siege_golem' ? 84 : spriteKey === 'rune_snake' ? 90 : 58 })) {

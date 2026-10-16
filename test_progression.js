@@ -82,8 +82,8 @@ test('Rune Mastery produces a distinct live Focus-oriented Mage identity', () =>
   assert.equal(profile.getBuildIdentity().label, 'RUNE MASTER');
 });
 
-test('Skill tree is a compact 15-node Mage vertical slice (incl. multi-instance passives)', () => {
-  assert.equal(MAGE_SKILL_TREE.length, 15);
+test('Skill tree is a compact 22-node Mage vertical slice (incl. multi-instance passives)', () => {
+  assert.equal(MAGE_SKILL_TREE.length, 22);
   const profile = new MageProfile({ level: 9, skillPoints: 9, matchDeck: [...DEFAULT_MATCH_DECK] });
   assert.equal(profile.getModifiers().maxWalls, 1);
   for (const id of ['arcane_skin', 'barrier_mastery', 'rampart_mason', 'spirit_bond', 'empowered_summons', 'pack_leader', 'quick_draw', 'focused_casting', 'telekinetic_grip']) assert.ok(profile.unlock(id), id);
@@ -91,7 +91,24 @@ test('Skill tree is a compact 15-node Mage vertical slice (incl. multi-instance 
   assert.equal(modifiers.maxWalls, 3);
   assert.equal(modifiers.extraSummons, 1);
   assert.equal(modifiers.liftTargets, 3);
-  assert.deepEqual(new Set(MAGE_SKILL_TREE.map((node) => node.branch)), new Set(['ELEMENTAL', 'DEFENSE', 'SUMMONING', 'RUNE MASTERY']));
+  assert.deepEqual(new Set(MAGE_SKILL_TREE.map((node) => node.branch)), new Set(['ELEMENTAL', 'DEFENSE', 'SUMMONING', 'RUNE MASTERY', 'SHADOW']));
+});
+
+test('SHADOW passives add Shadow Stomper targets, doubles and revenants; light/shadow runes unlock by level', () => {
+  const profile = new MageProfile({ level: 12, skillPoints: 9, matchDeck: [...DEFAULT_MATCH_DECK] });
+  const base = profile.getModifiers();
+  assert.equal(base.bindTargets, 0); assert.equal(base.extraDoppels, 0); assert.equal(base.extraRevenants, 0);
+  for (const id of ['shadow_weaver', 'umbral_grip', 'mirror_legion', 'shadow_army', 'grave_caller', 'forbidden_covenant', 'celestial_attunement']) assert.ok(profile.unlock(id), id);
+  const modifiers = profile.getModifiers();
+  assert.equal(modifiers.bindTargets, 2);
+  assert.equal(modifiers.extraDoppels, 2);
+  assert.equal(modifiers.extraRevenants, 2);
+  assert.ok(Math.abs(modifiers.bindHold - 1.3) < 1e-9);
+  assert.ok(Math.abs(modifiers.skyDuration - 1.35) < 1e-9);
+  assert.equal(profile.getBuildIdentity().label, 'SHADOW MAGE');
+  for (const id of ['lux', 'umbra', 'doppel', 'mortis']) assert.ok(profile.isRuneUnlocked(id), id);
+  const fresh = new MageProfile({ level: 5, matchDeck: [...DEFAULT_MATCH_DECK] });
+  assert.ok(fresh.isRuneUnlocked('lux') && !fresh.isRuneUnlocked('umbra') && !fresh.isRuneUnlocked('mortis'));
 });
 
 console.log(`\nProgression results: ${passed} passed, ${process.exitCode ? 1 : 0} failed.`);

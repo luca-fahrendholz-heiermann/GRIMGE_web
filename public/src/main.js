@@ -18,6 +18,8 @@ import { environment, renderProp } from './environment.js';
 import { TRAINING_MAPS, getTrainingMap, zoneToWorld } from './training_maps.js';
 import { loadFxSprites } from './fx_sprites.js';
 import { renderPixelated } from './abilities.js';
+import { sky } from './sky.js';
+import { renderGroundShadows } from './shadows.js';
 
 // LF2-style Dungeon rooms. Each room is a wide scrolling stretch: the camera
 // follows the player, enemy groups enter from the right screen edge once the
@@ -625,14 +627,10 @@ export class GameWorld {
       this.input.touchMove.x = 0; this.input.touchMove.z = 0;
       knob.style.transform = 'translate(0, 0)';
       joystick.classList.remove('is-active');
-      // Restoring classic after a touch is important: it is the original
-      // fixed joystick layout, whereas only the alternate setting is meant
-      // to leave the stick at a dynamic touch origin.
-      if (ui.touchLayout !== 'alternate') {
-        joystick.style.removeProperty?.('left');
-        joystick.style.removeProperty?.('top');
-        joystick.style.removeProperty?.('bottom');
-      }
+      // The stick spawns under the thumb and returns to its resting spot.
+      joystick.style.removeProperty?.('left');
+      joystick.style.removeProperty?.('top');
+      joystick.style.removeProperty?.('bottom');
     };
     const beginAttackGesture = (event) => {
       if (event.pointerType && event.pointerType !== 'touch') return;
@@ -2347,6 +2345,7 @@ export class GameWorld {
 
       this.player.update(scaledDt, this.input, this.battlefield, this);
       this.enemyChampion.update(scaledDt, this, this.battlefield);
+      this.noteFallenWizards();
       if (this.player._transformRuneGranted && this.player.focusTransformTimer <= 0 && this.player.eidolonTimer <= 0 && this.player.ninefoldTimer <= 0) {
         this.revokeTransformationRune();
       }
@@ -2357,6 +2356,7 @@ export class GameWorld {
           const m = this.minions[i];
           m.update(scaledDt, this, this.battlefield);
           if (m.isDead) {
+            if (!m.isTrainingDummy) spells.recordGrave(m);
             if (m.team === 'red' && !m.isRescuedCompanion) {
               if (this.activeMode?.id === 'dungeon') this.awardRunXp(m.runXpValue ?? (m.type === 'ranged' ? 14 : 11));
               this.trySpawnPotion(m.x, m.z);
@@ -2391,6 +2391,23 @@ export class GameWorld {
     this.render();
 
     requestAnimationFrame((t) => this.loop(t));
+  }
+
+  // A fallen Wizard leaves a grave once per death (Revenant Call).
+  noteFallenWizards() {
+    for (const wizard of [this.player, this.enemyChampion]) {
+      if (!wizard) continue;
+      if (wizard.lifeState === 'Alive') { wizard._graveNoted = false; continue; }
+      if (!wizard._graveNoted) { wizard._graveNoted = true; spells.recordGrave(wizard); }
+    }
+  }
+
+  // Everyone who casts a round shadow on the ground this frame.
+  shadowCasters() {
+    const list = [...this.minions, ...spells.activeSummons.filter((summon) => !summon.isDead && !summon.isFlying)];
+    if (this.enemyChampion.lifeState !== 'Dead') list.push(this.enemyChampion);
+    if (this.player.lifeState !== 'Dead' && !this.player.isMounted) list.push(this.player);
+    return list;
   }
 
   resolveSpellObstacles(entity, previousX, previousZ) {
@@ -2519,6 +2536,10 @@ export class GameWorld {
     const groundPixel = Math.max(1, Math.round(spells.pixelVfx * (ctx.getTransform?.()?.a || 1)));
     renderPixelated(ctx, groundPixel, (layer) => environment.renderGround(layer));
     environment.renderGroundDetails(ctx, this.debugVisible);
+    // Round ground shadows at every actor's real depth (smaller when high),
+    // then ground decals such as Shadow Stomper tethers and graves.
+    renderPixelated(ctx, groundPixel, (layer) => renderGroundShadows(layer, this.shadowCasters(), sky.shadowStyle()));
+    spells.renderGroundDecals(ctx);
     this.renderDungeonRescue(ctx);
     this.renderPotions(ctx);
     this.renderArenaRuneCollectibles(ctx);
@@ -2544,6 +2565,7 @@ export class GameWorld {
 
     // Spells
     spells.render(ctx, { depthSorted: true });
+    sky.renderWorld(ctx);
     environment.renderAir(ctx);
     this.targeting.render(ctx);
 
@@ -2558,6 +2580,8 @@ export class GameWorld {
 
     ctx.restore();
 
+    // The sky sphere tints the battlefield and hangs in the sky.
+    sky.renderScreen(ctx, viewW, viewH, worldY);
     // Map weather (snow, rain, embers, leaves, dust, mana motes) in screen space.
     environment.renderWeather(ctx, viewW, viewH);
     this.renderDungeonExitArrow(ctx, viewW);

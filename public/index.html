@@ -184,7 +184,7 @@
 
             <section class="hub-page" data-hub-page="settings">
               <div class="hub-page-heading"><small>CONTROL & DISPLAY</small><h2>SETTINGS</h2><p>Choose the touch arrangement that feels fastest on your device.</p></div>
-              <div class="hub-settings-list"><button id="ui-layout-btn" class="hub-mode-card active" type="button">SETTINGS: CLASSIC UI</button><button id="hub-fullscreen-btn" class="hub-mode-card" type="button">⛶ FULLSCREEN</button></div>
+              <div class="hub-settings-list"><button id="hub-fullscreen-btn" class="hub-mode-card desktop-only" type="button">⛶ FULLSCREEN</button></div>
             </section>
           </main>
 
@@ -246,7 +246,7 @@
         <div id="touch-joystick-knob"></div>
       </div>
       <button id="game-menu-btn" class="hud-menu-btn" type="button" title="Match menu" aria-label="Match menu">☰</button>
-      <button id="fullscreen-btn" class="fullscreen-btn" type="button" title="Fullscreen landscape">⛶</button>
+      <button id="fullscreen-btn" class="fullscreen-btn desktop-only" type="button" title="Fullscreen landscape">⛶</button>
       <!-- TOP HUD BAR -->
       <div id="top-hud-bar">
         <!-- Blue Team (Left) -->
@@ -406,8 +406,6 @@
           <div class="game-menu-actions">
             <button id="resume-match-btn" class="match-button primary" type="button">RESUME</button>
             <button id="restart-match-btn" class="match-button" type="button">RESTART MATCH</button>
-            <button id="menu-layout-btn" class="match-button" type="button">TOUCH UI: CLASSIC</button>
-            <button id="menu-fullscreen-btn" class="match-button" type="button">FULLSCREEN</button>
             <button id="menu-hub-btn" class="match-button" type="button">RETURN TO HUB</button>
           </div>
           <small>Tap outside this panel to resume.</small>

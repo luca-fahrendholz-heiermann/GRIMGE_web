@@ -1,6 +1,6 @@
 // GRIMGE Prototype — UI & HUD Controller matching Setup Mockup Exactly
 import { spells } from './spells.js';
-import { MAGE_SKILL_TREE, ALL_RUNE_IDS } from './progression.js';
+import { MAGE_SKILL_TREE, ALL_RUNE_IDS, runeUnlockLabel } from './progression.js';
 import { recognizer } from './recognizer.js';
 import { sprites } from './sprites.js';
 import { runeManaCost } from './spell_catalog.js';
@@ -156,12 +156,8 @@ export class UIManager {
     this.closeGameMenuBtn = document.getElementById('close-game-menu-btn');
     this.resumeMatchBtn = document.getElementById('resume-match-btn');
     this.restartMatchBtn = document.getElementById('restart-match-btn');
-    this.menuLayoutBtn = document.getElementById('menu-layout-btn');
-    this.menuFullscreenBtn = document.getElementById('menu-fullscreen-btn');
     this.menuHubBtn = document.getElementById('menu-hub-btn');
-    this.uiLayoutBtn = document.getElementById('ui-layout-btn');
     this.uiLayer = document.getElementById('ui-layer');
-    this.touchLayout = 'classic';
 
     this.drawingHud = document.getElementById('drawing-hud');
     this.recognitionResult = document.getElementById('recognition-result');
@@ -172,11 +168,6 @@ export class UIManager {
     this.heroChips = document.querySelectorAll('.hero-chip');
 
     this.setupListeners();
-    // Keep a deliberately small local UI preference; match state remains
-    // entirely transient and is never stored here.
-    let savedLayout = null;
-    try { savedLayout = window.localStorage?.getItem?.('grimge-touch-layout'); } catch { /* storage may be disabled */ }
-    this.setTouchLayout(savedLayout === 'alternate' ? 'alternate' : 'classic');
   }
 
   setupListeners() {
@@ -264,12 +255,6 @@ export class UIManager {
     });
     this.restartMatchBtn?.addEventListener('pointerdown', (e) => {
       e.preventDefault(); e.stopPropagation(); this.toggleIngameMenu(false); window.gameWorld?.restartMatch();
-    });
-    this.menuLayoutBtn?.addEventListener('pointerdown', (e) => {
-      e.preventDefault(); e.stopPropagation(); this.setTouchLayout(this.touchLayout === 'classic' ? 'alternate' : 'classic');
-    });
-    this.menuFullscreenBtn?.addEventListener('pointerdown', (e) => {
-      e.preventDefault(); e.stopPropagation(); window.gameWorld?.enterFullscreen();
     });
     this.menuHubBtn?.addEventListener('pointerdown', (e) => {
       e.preventDefault(); e.stopPropagation(); this.toggleIngameMenu(false); window.gameWorld?.returnToHub();
@@ -371,11 +356,6 @@ export class UIManager {
       e.preventDefault();
       e.stopPropagation();
       window.gameWorld?.enterFullscreen();
-    });
-    this.uiLayoutBtn?.addEventListener('pointerdown', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      this.setTouchLayout(this.touchLayout === 'classic' ? 'alternate' : 'classic');
     });
 
     this.heroChips.forEach(chip => {
@@ -635,25 +615,6 @@ export class UIManager {
     }
   }
 
-  setTouchLayout(layout) {
-    this.touchLayout = layout === 'alternate' ? 'alternate' : 'classic';
-    this.uiLayer?.classList.toggle('touch-layout-alt', this.touchLayout === 'alternate');
-    if (this.touchLayout === 'classic') {
-      this.arcaneCircle?.style.removeProperty?.('left');
-      this.arcaneCircle?.style.removeProperty?.('top');
-      this.arcaneCircle?.style.removeProperty?.('right');
-      this.arcaneCircle?.style.removeProperty?.('bottom');
-      const joystick = document.getElementById('touch-joystick');
-      joystick?.classList.remove('is-active');
-      joystick?.style.removeProperty?.('left');
-      joystick?.style.removeProperty?.('top');
-      joystick?.style.removeProperty?.('bottom');
-    }
-    if (this.uiLayoutBtn) this.uiLayoutBtn.textContent = this.touchLayout === 'alternate' ? 'SETTINGS: ALT TOUCH UI' : 'SETTINGS: CLASSIC UI';
-    if (this.menuLayoutBtn) this.menuLayoutBtn.textContent = this.touchLayout === 'alternate' ? 'TOUCH UI: ALT' : 'TOUCH UI: CLASSIC';
-    try { window.localStorage?.setItem?.('grimge-touch-layout', this.touchLayout); } catch { /* preference is optional */ }
-  }
-
   toggleGrimoire(forceState) {
     if (forceState !== undefined) {
       if (forceState) this.grimoireModal.classList.remove('hidden');
@@ -723,7 +684,7 @@ export class UIManager {
     this.deckBuilderContent.innerHTML = recognizer.runes.filter((rune) => ALL_RUNE_IDS.includes(rune.id)).map((rune) => {
       const unlocked = profile.isRuneUnlocked(rune.id);
       const copies = profile.getRuneCopies(rune.id);
-      const lockedText = rune.id === 'bestia' ? 'MAGE LV.2' : rune.id === 'construct' ? 'MAGE LV.3' : rune.id === 'void' ? 'MAGE LV.4' : 'STARTER';
+      const lockedText = runeUnlockLabel(rune.id);
       return `<article class="deck-rune ${unlocked ? '' : 'locked'}" style="--rune-color:${rune.color}"><b>${rune.glyph} ${rune.name}</b><span>${unlocked ? `${copies}/2 IN DECK · RUNE LV.${profile.runeLevel(rune.id)}` : `LOCKED · ${lockedText}`}</span><div><button data-deck-action="remove" data-rune-id="${rune.id}" ${copies ? '' : 'disabled'}>−</button><button data-deck-action="add" data-rune-id="${rune.id}" ${(!unlocked || copies >= 2 || profile.matchDeck.length >= 10) ? 'disabled' : ''}>+</button></div></article>`;
     }).join('');
   }
@@ -734,7 +695,7 @@ export class UIManager {
       const unlocked = profile.isRuneUnlocked(rune.id);
       const level = profile.runeLevel(rune.id);
       const xp = profile.runeXpIntoLevel(rune.id);
-      const requirement = rune.id === 'bestia' ? 'MAGE LV.2' : rune.id === 'construct' ? 'MAGE LV.3' : rune.id === 'void' ? 'MAGE LV.4' : 'STARTER';
+      const requirement = runeUnlockLabel(rune.id);
       return `<div class="rune-progress ${unlocked ? '' : 'locked'}"><b style="color:${rune.color}">${rune.glyph} ${rune.name}</b><span>${unlocked ? `RUNE LV.${level} · ${xp}/60 XP` : `LOCKED · ${requirement}`}</span></div>`;
     }).join('');
   }

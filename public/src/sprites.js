@@ -30,7 +30,6 @@ export class SpriteManager {
       woody: { name: 'Woody the Phantom Brawler', file: null, weapon: 'Iron Fists', role: 'Phantom Brawler / Raw Power' },
       henry: { name: 'Henry the Phantom Archer', file: null, weapon: 'Shadow Bow', role: 'Phantom Archer / Precision' }
     };
-    this.shadowCanvas = this.createShadowCanvas();
   }
 
   async loadAll() {
@@ -190,21 +189,6 @@ export class SpriteManager {
       anchorX: croppedCanvas.width * 0.5,
       anchorY: croppedCanvas.height - pad // Feet level
     };
-  }
-
-  createShadowCanvas() {
-    const c = document.createElement('canvas');
-    c.width = 48;
-    c.height = 18;
-    const ctx = c.getContext('2d');
-    const grad = ctx.createRadialGradient(24, 9, 2, 24, 9, 22);
-    grad.addColorStop(0, 'rgba(0, 0, 0, 0.55)');
-    grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.ellipse(24, 9, 22, 7, 0, 0, Math.PI * 2);
-    ctx.fill();
-    return c;
   }
 
   // Retained for a future true animated wolf-sheet export. The current wolf
@@ -613,11 +597,11 @@ export class SpriteManager {
       procOffsetX = 0,
       procOffsetY = 0,
       procScaleX = null,
-      procScaleY = null,
-      shadowScale = 1.0
+      procScaleY = null
     } = opt;
 
     const frame = this.resolveFrame(spr, state, animTime, hitFlash, { cadence, reverse });
+    if (tint && !hitFlash) frame.canvas = this.tintedCanvas(frame.canvas, tint);
     const renderScale = targetScale ?? (visualHeight / frame.height);
 
     ctx.save();
@@ -625,11 +609,7 @@ export class SpriteManager {
     ctx.imageSmoothingEnabled = true;
     if ('imageSmoothingQuality' in ctx) ctx.imageSmoothingQuality = 'high';
 
-    if (state !== 'dive') {
-      const sw = 32 * shadowScale;
-      const sh = 10 * shadowScale;
-      ctx.drawImage(this.shadowCanvas, x - sw * 0.5, y - sh * 0.5, sw, sh);
-    }
+    // The round ground shadow is drawn for every actor by shadows.js.
 
     let sx = 1.0, sy = 1.0, rot = 0, offsetX = 0, offsetY = 0;
 
@@ -702,6 +682,27 @@ export class SpriteManager {
 
     ctx.drawImage(frame.canvas, -frame.anchorX, -frame.anchorY, frame.width, frame.height);
     ctx.restore();
+  }
+
+  // A frame recoloured toward `tint` (any CSS colour; its alpha is the
+  // strength), cached per source canvas.
+  tintedCanvas(source, tint) {
+    const doc = globalThis.document;
+    if (!source || typeof doc?.createElement !== 'function') return source;
+    this._tintCache ??= new WeakMap();
+    let byTint = this._tintCache.get(source);
+    if (!byTint) { byTint = new Map(); this._tintCache.set(source, byTint); }
+    if (byTint.has(tint)) return byTint.get(tint);
+    const canvas = doc.createElement('canvas');
+    canvas.width = source.width; canvas.height = source.height;
+    const c = canvas.getContext?.('2d');
+    if (!c) { byTint.set(tint, source); return source; }
+    c.drawImage(source, 0, 0);
+    c.globalCompositeOperation = 'source-atop';
+    c.fillStyle = tint;
+    c.fillRect(0, 0, canvas.width, canvas.height);
+    byTint.set(tint, canvas);
+    return canvas;
   }
 
   renderSummon(ctx, summonKey, x, y, opt = {}) {
