@@ -4,13 +4,14 @@ import { ARENA_LAYOUT, clampToArena, groundYForDepth, setGroundProjection, surfa
 
 // The training yard paints a much deeper floor than the Siege arena: its
 // whole field (rear wall to front parapet) is walkable.
-const TRAINING_PROJECTION = Object.freeze({ farY: 212, nearY: 455 });
 const TRAINING_BOUNDS = Object.freeze({ left: 70, right: 955, farZ: 0.02, nearZ: 0.98 });
 import { ART_ASSETS } from './art_assets.js';
+import { TRAINING_IMAGE, TRAINING_PROJECTION, getTrainingMap, trainingMapScene } from './training_maps.js';
 
 export class Battlefield {
-  constructor(mode = null) {
+  constructor(mode = null, options = {}) {
     setGroundProjection(mode?.world === 'training' ? TRAINING_PROJECTION : null);
+    this.trainingMap = mode?.world === 'training' ? getTrainingMap(options.trainingMapId) : null;
     this.width = ARENA_LAYOUT.width;
     this.height = ARENA_LAYOUT.height;
     this.playableBounds = ARENA_LAYOUT.playableBounds;
@@ -33,7 +34,10 @@ export class Battlefield {
     this.bgImage.onerror = () => console.error('Failed to load clean arena background.');
 
     this.modeBackdropImages = {};
-    const modeBackdrops = ART_ASSETS.scenes;
+    // Training uses only the map chosen by the player (8 large scenes are
+    // never preloaded together).
+    const modeBackdrops = { ...ART_ASSETS.scenes };
+    if (this.trainingMap) modeBackdrops.training = trainingMapScene(this.trainingMap);
     Object.entries(modeBackdrops).forEach(([world, src]) => {
       const image = new Image();
       this.modeBackdropImages[world] = { image, loaded: false };
@@ -204,10 +208,10 @@ export class Battlefield {
     entity.surfaceHeight = surfaceHeight(surface, entity.x);
   }
 
-  // Training: the castle-free walled arena. The image is scaled uniformly
-  // (never stretched) to cover the camera, with its painted front floor edge
-  // anchored just below the combat plane's near edge, so the stationary
-  // dummy and fighters stand on the painted field.
+  // Training: a castle-free walled arena scene. The image always uses the
+  // same fixed scale and anchor (never stretched, never rescaled per screen)
+  // so its painted terrain zones line up exactly with the gameplay zones.
+  // Wider screens repeat the outermost image columns as edge continuation.
   renderTrainingBackground(ctx, gameplayWidth, viewH, renderWidth, cameraOffsetX) {
     const scene = this.modeBackdropImages.training;
     ctx.fillStyle = '#0b1a2b';
@@ -216,12 +220,14 @@ export class Battlefield {
     const image = scene.image;
     const iw = image.naturalWidth || image.width; const ih = image.naturalHeight || image.height;
     if (!iw || !ih) return;
-    const FLOOR_FRONT_V = 712 / 941; // painted front floor edge in the source
-    const scale = Math.max(.65 * iw / 1672, renderWidth / iw);
-    const drawW = iw * scale; const drawH = ih * scale;
+    const drawW = TRAINING_IMAGE.width * TRAINING_IMAGE.scale; const drawH = TRAINING_IMAGE.height * TRAINING_IMAGE.scale;
     const x = cameraOffsetX + gameplayWidth / 2 - drawW / 2;
-    const y = TRAINING_PROJECTION.nearY + 8 - FLOOR_FRONT_V * drawH;
+    const y = TRAINING_IMAGE.anchorY - TRAINING_IMAGE.floorFrontV * drawH;
     ctx.drawImage(image, x, y, drawW, drawH);
+    const band = Math.max(4, Math.round(iw * .03));
+    const bandW = band * drawW / iw;
+    for (let left = x - bandW; left > -bandW; left -= bandW) ctx.drawImage(image, 0, 0, band, ih, left, y, bandW + 1, drawH);
+    for (let right = x + drawW; right < renderWidth; right += bandW) ctx.drawImage(image, iw - band, 0, band, ih, right - 1, y, bandW + 1, drawH);
   }
 
   renderBackground(ctx, camera, gameplayWidth, viewH, renderWidth = gameplayWidth, cameraOffsetX = 0, modeState = null) {

@@ -4,6 +4,7 @@ import { MAGE_SKILL_TREE, ALL_RUNE_IDS } from './progression.js';
 import { recognizer } from './recognizer.js';
 import { sprites } from './sprites.js';
 import { runeManaCost } from './spell_catalog.js';
+import { TRAINING_MAPS, trainingMapThumb } from './training_maps.js';
 
 export class UIManager {
   constructor() {
@@ -118,6 +119,10 @@ export class UIManager {
     this.focusActivateBtn = document.getElementById('focus-activate-btn');
     this.trainingSparringBtn = document.getElementById('training-sparring-btn');
     this.trainingDeckBtn = document.getElementById('training-deck-btn');
+    this.trainingMapBtn = document.getElementById('training-map-btn');
+    this.trainingMapModal = document.getElementById('training-map-modal');
+    this.trainingMapGrid = document.getElementById('training-map-grid');
+    this.closeTrainingMapBtn = document.getElementById('close-training-map-btn');
     this.deckTargetTabs = document.getElementById('deck-target-tabs');
     this.blueMpBound = document.getElementById('blue-mp-bound');
     this.blueFocusFill = document.getElementById('blue-focus-fill');
@@ -336,6 +341,19 @@ export class UIManager {
     });
     this.trainingDeckBtn?.addEventListener('pointerdown', (e) => {
       e.preventDefault(); e.stopPropagation(); window.gameWorld?.openTrainingDeck('player');
+    });
+    this.trainingMapBtn?.addEventListener('pointerdown', (e) => {
+      e.preventDefault(); e.stopPropagation(); this.toggleTrainingMaps(true);
+    });
+    this.closeTrainingMapBtn?.addEventListener('pointerdown', (e) => {
+      e.preventDefault(); e.stopPropagation(); this.toggleTrainingMaps(false);
+    });
+    this.trainingMapGrid?.addEventListener('pointerdown', (e) => {
+      const id = e.target?.closest?.('[data-map-id]')?.getAttribute?.('data-map-id');
+      if (!id) return;
+      e.preventDefault(); e.stopPropagation();
+      this.toggleTrainingMaps(false);
+      window.gameWorld?.selectTrainingMap(id);
     });
     this.deckTargetTabs?.addEventListener('pointerdown', (e) => {
       const target = e.target?.closest?.('[data-deck-target]')?.getAttribute?.('data-deck-target');
@@ -660,6 +678,16 @@ export class UIManager {
     const classes = this.deckBuilderModal.classList;
     const hidden = typeof classes.contains === 'function' ? classes.contains('hidden') : !!classes.values?.has?.('hidden');
     if (hidden) window.gameWorld?.closeTrainingDeck?.();
+  }
+
+  toggleTrainingMaps(open) {
+    if (!this.trainingMapModal) return;
+    this.trainingMapModal.classList.toggle('hidden', !open);
+    this.trainingMapsOpen = !!open;
+    window.gameWorld?.setMenuPaused?.(!!open);
+    if (!open || !this.trainingMapGrid) return;
+    const current = window.gameWorld?.trainingMapId;
+    this.trainingMapGrid.innerHTML = TRAINING_MAPS.map((map) => `<button type="button" class="training-map-card ${map.id === current ? 'active' : ''}" data-map-id="${map.id}"><img src="${trainingMapThumb(map)}" alt="${map.name}" loading="lazy"><b>${map.name}</b><span>${map.desc}</span></button>`).join('');
   }
 
   toggleIngameMenu(forceState = true) {

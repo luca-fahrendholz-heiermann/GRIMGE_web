@@ -221,6 +221,13 @@
           <div id="skill-tree-content" class="skill-tree-content"></div>
         </div>
       </section>
+      <!-- Training map picker: every map has its own terrain, weather and props. -->
+      <section id="training-map-modal" class="skill-tree-modal hidden" aria-live="polite">
+        <div class="skill-tree-panel training-map-panel">
+          <div class="modal-header"><span>✦ TRAINING MAPS</span><button id="close-training-map-btn" type="button">✕</button></div>
+          <div id="training-map-grid" class="training-map-grid"></div>
+        </div>
+      </section>
       <section id="deck-builder-modal" class="skill-tree-modal hidden" aria-live="polite">
         <div class="skill-tree-panel deck-builder-panel">
           <div class="modal-header"><span>✦ RUNE DECK</span><button id="close-deck-builder-btn" type="button">✕</button></div>
@@ -313,6 +320,7 @@
       <div id="training-controls" class="training-controls">
         <button id="training-sparring-btn" class="training-sparring-btn" type="button" title="Add or remove an attacking sparring partner (P)">⚔ SPARRING PARTNER: OFF</button>
         <button id="training-deck-btn" class="training-sparring-btn" type="button" title="Edit your training deck and the sparring partner's deck">🂠 DECK</button>
+        <button id="training-map-btn" class="training-sparring-btn" type="button" title="Choose the training map">🗺 MAP</button>
       </div>
 
       <!-- Quick Hero Swapper (Top Left) -->

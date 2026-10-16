@@ -1245,6 +1245,87 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
   P.buildModifiers = { ...savedMods };
   reset();
 }
+// Selectable training maps: painted terrain becomes real gameplay terrain.
+{
+  const { environment } = await import('./public/src/environment.js');
+  const { TRAINING_MAPS, zoneToWorld } = await import('./public/src/training_maps.js');
+  let P = game.player; let E = game.enemyChampion;
+  const rune = (id) => recognizer.runes.find((entry) => entry.id === id);
+  const stepWorld = (seconds) => { for (let t = 0; t < seconds; t += 1 / 60) { spells.update(1 / 60, game); environment.update(1 / 60, game, spells.getSummons()); } };
+  const place = (actor, x, z) => { actor.x = x; actor.z = z; actor.elevation = 0; actor.grounded = true; actor.vx = 0; game.battlefield.placeOnSurface(actor); };
+  const prepare = (mapId) => {
+    game.selectTrainingMap(mapId);
+    P = game.player; E = game.enemyChampion;
+    spells.clearRuntime(); game.minions = [];
+    for (const effect of [...environment.effects]) effect.life = 0;
+    environment.effects = [];
+    P.hp = P.maxHp; P.mp = P.maxMp; P.invulnerableTimer = 0; P.state = 'idle'; P.slowFactor = 1; P.slowTimer = 0;
+    E.lifeState = 'Alive'; E.hp = E.maxHp; E.state = 'idle'; E.slowFactor = 1; E.slowTimer = 0; E.invulnerableTimer = 0; E.arcaneShield = 0; E.beamCooldown = 99; E.spellCooldown = 99;
+    return environment.terrain;
+  };
+
+  assert(TRAINING_MAPS.length === 8 && TRAINING_MAPS.every((map) => map.props.length >= 2), 'Eight selectable training maps with their own props');
+  let terrain = prepare('rain');
+  assert(game.trainingMapId === 'rain' && game.battlefield.trainingMap.id === 'rain' && terrain.length === 2 && terrain.every((zone) => zone.type === 'water'), 'Selecting a map restarts Training on it with its painted terrain');
+  const leftPool = zoneToWorld(TRAINING_MAPS.find((m) => m.id === 'rain').zones[0]);
+  assert(Math.abs(leftPool.x - 259) < 3 && leftPool.shape === 'rect', 'Painted zones convert from image percentages into world space');
+  const pool = terrain[0];
+  place(E, pool.x, pool.z);
+  assert(environment.electrify(pool.x, pool.z, 20, 'blue', 16, game) && E.hp < E.maxHp, 'Lightning into a painted water basin shocks whoever stands in it');
+  spells.cast(P, spells.resolveSpell([rune('aqua')]), game);
+  environment.add('ice', pool.x, pool.z, { radius: 40, team: 'blue' });
+  assert(environment.isFrozen(pool) && !environment.electrify(pool.x, pool.z, 20, 'blue', 16, game), 'An ice spell freezes the whole basin; frozen water no longer conducts');
+
+  terrain = prepare('frozen');
+  const field = terrain[0];
+  place(P, field.x, field.z);
+  environment.update(1 / 60, game, []);
+  assert(P.onIce, 'Painted ice fields are slippery');
+  environment.add('scorch', field.x, field.z, { radius: 40, team: 'red' });
+  environment.update(1 / 60, game, []);
+  assert(environment.effects.some((e) => e.type === 'water') && !P.onIce, 'Fire melts a painted ice field into a puddle where it lands');
+
+  terrain = prepare('volcano');
+  const lava = terrain.find((zone) => zone.type === 'lava');
+  place(E, lava.x, lava.z); place(P, 160, .9);
+  stepWorld(1.1);
+  assert(E.hp < E.maxHp, 'Painted lava burns anyone standing in it');
+  E.hp = E.maxHp;
+  environment.add('ice', lava.x, lava.z, { radius: 60, team: 'blue' });
+  stepWorld(1.1);
+  assert(E.hp === E.maxHp && environment.effects.some((e) => e.type === 'crater'), 'Ice cools the lava into a safe crater');
+
+  terrain = prepare('ruins');
+  const hay = terrain[0];
+  environment.add('scorch', hay.x, hay.z, { radius: 30, team: 'blue' });
+  assert(hay.burning > 0, 'Fire sets a dry hay field ablaze');
+  stepWorld(1);
+  assert(environment.effects.filter((e) => e.type === 'scorch').length > 2, 'The hay fire spreads across the field');
+
+  terrain = prepare('arcane');
+  const manaPool = terrain[0];
+  place(P, manaPool.x, manaPool.z); P.mp = 20;
+  stepWorld(1);
+  assert(P.mp > 25, 'Mana pools restore mana while standing in them');
+
+  terrain = prepare('canyon');
+  place(E, terrain[0].x, terrain[0].z);
+  environment.update(1 / 60, game, []);
+  assert(E.slowFactor < 1, 'The sand pit slows movement');
+
+  terrain = prepare('storm');
+  const puddle = terrain[1];
+  place(E, puddle.x, puddle.z); place(P, 512, .1);
+  environment.ambientTimer = 0;
+  const realRandom = Math.random; Math.random = () => .3;
+  stepWorld(1.2);
+  Math.random = realRandom;
+  assert(environment.strike?.zone === puddle || E.hp < E.maxHp, 'Storm lightning strikes a puddle after a telegraph');
+  assert(E.hp < E.maxHp, 'The storm strike shocks everyone standing in that puddle');
+
+  game.selectTrainingMap('waterfalls');
+  assert(environment.terrain.length === 0 && game.trainingMapId === 'waterfalls', 'The classic map has no special terrain');
+}
 game.returnToHub();
 game.setMatchMode('siege'); game.startMatch();
 assert(game.matchState === 'Running' && game.objectivePhase === 'LanePhase', 'A new Siege match can start cleanly after alternate modes');

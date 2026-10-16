@@ -64,3 +64,33 @@ the bottom third cropped.
 - Preserve the source file and overwrite only its matching PNG export.
 - Use only GRIMGE-original or assets licensed for this project for final art.
   The current LF2-derived placeholders must be replaced before distribution.
+
+## Pixel-art FX and props (original GRIMGE art)
+
+Generated deterministically by `generate_fx_sprites.cjs` (fixed palettes,
+cluster shading, 1px outlines). Each runtime PNG is a horizontal strip of
+equal frames in `public/assets/sprites/fx/`; the editable Aseprite sources
+are in `art/authoring/fx/` (one strip layer — slice by the frame width below).
+Re-run `node art/authoring/generate_fx_sprites.cjs` after changing the
+generator, or edit the `.aseprite` and export over the PNG.
+
+| Sheet | Frame (w×h) | Frames | Used for |
+| --- | --- | --- | --- |
+| `fx_flame` | 16×24 | 6 | burning ground, burning hay, burning props |
+| `fx_lightning` | 32×128 | 5 | storm strikes into puddles |
+| `fx_spark` | 16×16 | 4 | electrified water / mana pools |
+| `fx_splash` | 40×24 | 6 | stepping / wading into water |
+| `fx_ice` | 32×32 | 5 | freezing (growth) and ice crystals |
+| `fx_lava_bubble` | 12×12 | 6 | lava pools (terrain and spells) |
+| `fx_smoke` | 32×32 | 6 | doused fire, steam, barrel bursts |
+| `prop_crate` | 32×32 | 3 | intact / damaged / charred crate |
+| `prop_barrel` | 24×32 | 3 | intact / dented / about-to-burst oil barrel |
+| `fx_weather` | 8×8 | 8 | snow, rain, ember, leaf ×2, sand, mana mote ×2 |
+| `fx_rubble` | 12×10 | 4 | rubble / splinter variants |
+
+## Training map scenes
+
+Runtime scenes `public/assets/scenes/training/<id>.jpg` (+ `_thumb.jpg`) are
+converted from `C:\Dev\GRIMGE\Docs\References\02_levels\scenes\*.png`. Their
+painted terrain zones are registered in `public/src/training_maps.js` (image
+percentages); press F3 in Training to see the gameplay zone outlines.

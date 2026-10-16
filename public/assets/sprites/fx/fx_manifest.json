@@ -1,0 +1,68 @@
+[
+  {
+    "name": "fx_flame",
+    "frameWidth": 16,
+    "frameHeight": 24,
+    "frames": 6
+  },
+  {
+    "name": "fx_lightning",
+    "frameWidth": 32,
+    "frameHeight": 128,
+    "frames": 5
+  },
+  {
+    "name": "fx_spark",
+    "frameWidth": 16,
+    "frameHeight": 16,
+    "frames": 4
+  },
+  {
+    "name": "fx_splash",
+    "frameWidth": 40,
+    "frameHeight": 24,
+    "frames": 6
+  },
+  {
+    "name": "fx_ice",
+    "frameWidth": 32,
+    "frameHeight": 32,
+    "frames": 5
+  },
+  {
+    "name": "fx_lava_bubble",
+    "frameWidth": 12,
+    "frameHeight": 12,
+    "frames": 6
+  },
+  {
+    "name": "fx_smoke",
+    "frameWidth": 32,
+    "frameHeight": 32,
+    "frames": 6
+  },
+  {
+    "name": "prop_crate",
+    "frameWidth": 32,
+    "frameHeight": 32,
+    "frames": 3
+  },
+  {
+    "name": "prop_barrel",
+    "frameWidth": 24,
+    "frameHeight": 32,
+    "frames": 3
+  },
+  {
+    "name": "fx_weather",
+    "frameWidth": 8,
+    "frameHeight": 8,
+    "frames": 8
+  },
+  {
+    "name": "fx_rubble",
+    "frameWidth": 12,
+    "frameHeight": 10,
+    "frames": 4
+  }
+]

@@ -1427,3 +1427,16 @@ code {
 }
 #ui-layer.input-gamepad .pad-hint { display: block; }
 #ui-layer.input-gamepad #touch-joystick { display: none; }
+
+/* Training map picker. */
+.training-map-panel { max-width: 900px; }
+.training-map-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 10px 2px 4px; }
+.training-map-card {
+  display: flex; flex-direction: column; gap: 3px; padding: 6px;
+  border: 1px solid #5d4a75; border-radius: 8px; background: #160f22;
+  color: #f8e8bb; text-align: left; cursor: pointer; touch-action: manipulation;
+}
+.training-map-card img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 5px; image-rendering: auto; }
+.training-map-card b { font: 800 10px 'Rajdhani', sans-serif; letter-spacing: 1px; }
+.training-map-card span { font: 600 8px/1.25 'Rajdhani', sans-serif; color: #c9b8e0; }
+.training-map-card.active { border-color: #ffd54f; box-shadow: 0 0 10px rgba(255, 213, 79, .5); }

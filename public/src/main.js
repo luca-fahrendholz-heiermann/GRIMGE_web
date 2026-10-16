@@ -15,6 +15,8 @@ import { runeManaCost, isSpecialRune, TARGETING } from './spell_catalog.js';
 import { SpellTargeting, SlotChord, needsTarget } from './targeting.js';
 import { GamepadController } from './gamepad.js';
 import { environment, renderProp } from './environment.js';
+import { TRAINING_MAPS, getTrainingMap, zoneToWorld } from './training_maps.js';
+import { loadFxSprites } from './fx_sprites.js';
 import { renderPixelated } from './abilities.js';
 
 // LF2-style Dungeon rooms. Each room is a wide scrolling stretch: the camera
@@ -70,6 +72,10 @@ export class GameWorld {
     // experiments never change the persistent profile Grimoire.
     this.trainingDecks = null;
     this.deckEditTarget = null;
+    // Selected Training map (persisted).
+    let savedMap = null;
+    try { savedMap = globalThis.localStorage?.getItem?.('grimge-training-map'); } catch { /* optional */ }
+    this.trainingMapId = getTrainingMap(savedMap).id;
     // One targeting model for touch, mouse/keyboard and gamepad.
     this.targeting = new SpellTargeting(this);
     this.gamepad = new GamepadController(this);
@@ -248,7 +254,7 @@ export class GameWorld {
     window.visualViewport?.addEventListener?.('resize', syncViewport);
 
     // Load character sprites
-    await sprites.loadAll();
+    await Promise.all([sprites.loadAll(), loadFxSprites()]);
 
     window.gameWorld = this;
     this.resetMatch();
@@ -308,6 +314,12 @@ export class GameWorld {
       }
       if (this.matchState === 'Menu') {
         if (e.code === 'Enter' || e.code === 'Space') this.startMatch();
+        return;
+      }
+      // Esc closes the training map picker first (and resumes the training).
+      if (e.code === 'Escape' && ui.trainingMapsOpen) {
+        ui.toggleTrainingMaps?.(false);
+        e.preventDefault();
         return;
       }
       // Esc closes the training deck editor first (and resumes the training).
@@ -1368,9 +1380,10 @@ export class GameWorld {
       // the HUD (or P).
       this.player.x = 300; this.player.z = 0.58;
       this.battlefield.placeOnSurface(this.player);
-      // A few breakable crates and an oil barrel around the yard.
-      environment.addProp('crate', 380, .22); environment.addProp('crate', 650, .84);
-      environment.addProp('crate', 700, .2); environment.addProp('barrel', 340, .84);
+      // The chosen map brings its painted terrain, weather and props.
+      const map = getTrainingMap(this.trainingMapId);
+      environment.setMap(map, map.zones.map(zoneToWorld));
+      for (const [kind, x, z] of map.props) environment.addProp(kind, x, z);
       this.trainingDecks ??= { player: this.profile.getMatchDeck(), opponent: [...DEFAULT_MATCH_DECK] };
       this.applyTrainingDecks();
       this.trainingDummy = new TrainingDummy(512, 0.5);
@@ -1404,6 +1417,21 @@ export class GameWorld {
         this.spawnArenaRuneCollectibles();
       }
     }
+  }
+
+  // Switch the Training map; a running Training restarts on the new map
+  // (decks are kept, the sparring partner starts switched off).
+  selectTrainingMap(id) {
+    const map = TRAINING_MAPS.find((entry) => entry.id === id);
+    if (!map) return false;
+    this.trainingMapId = map.id;
+    try { globalThis.localStorage?.setItem?.('grimge-training-map', map.id); } catch { /* optional */ }
+    if (this.activeMode?.id === 'training' && this.isMatchRunning()) {
+      this.setMenuPaused(false);
+      this.restartMatch();
+      this.showAnnouncement(`TRAINING MAP: ${map.name}`, 1.4);
+    }
+    return true;
   }
 
   toggleSparringPartner() {
@@ -2117,7 +2145,7 @@ export class GameWorld {
     spells.clearRuntime(); environment.clear();
     combat.resetEffects();
     this.activeMode = getGameMode(this.matchMode);
-    this.battlefield = new Battlefield(this.activeMode);
+    this.battlefield = new Battlefield(this.activeMode, { trainingMapId: this.trainingMapId });
     this.attachBattlefieldCallbacks();
     const spawn = this.battlefield.getSpawn('blue');
     this.player = new Player(spawn.x, spawn.z);
@@ -2490,6 +2518,7 @@ export class GameWorld {
     // Ground effects (ice, fire, lava, craters…) lie under every actor.
     const groundPixel = Math.max(1, Math.round(spells.pixelVfx * (ctx.getTransform?.()?.a || 1)));
     renderPixelated(ctx, groundPixel, (layer) => environment.renderGround(layer));
+    environment.renderGroundDetails(ctx, this.debugVisible);
     this.renderDungeonRescue(ctx);
     this.renderPotions(ctx);
     this.renderArenaRuneCollectibles(ctx);
@@ -2529,6 +2558,8 @@ export class GameWorld {
 
     ctx.restore();
 
+    // Map weather (snow, rain, embers, leaves, dust, mana motes) in screen space.
+    environment.renderWeather(ctx, viewW, viewH);
     this.renderDungeonExitArrow(ctx, viewW);
 
     // 3. Screen Space Rune Drawing
