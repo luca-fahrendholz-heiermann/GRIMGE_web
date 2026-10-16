@@ -116,6 +116,7 @@ export class UIManager {
     this.activeSpellPreview = document.getElementById('active-spell-preview');
     this.summonStatus = document.getElementById('summon-status');
     this.focusActivateBtn = document.getElementById('focus-activate-btn');
+    this.trainingSparringBtn = document.getElementById('training-sparring-btn');
     this.blueMpBound = document.getElementById('blue-mp-bound');
     this.blueFocusFill = document.getElementById('blue-focus-fill');
     this.blueFocusText = document.getElementById('blue-focus-text');
@@ -328,6 +329,9 @@ export class UIManager {
       else gw?.startRuneDrawing();
     });
     this.setupSpellTriangle();
+    this.trainingSparringBtn?.addEventListener('pointerdown', (e) => {
+      e.preventDefault(); e.stopPropagation(); window.gameWorld?.toggleSparringPartner();
+    });
     this.mountBtn?.addEventListener('pointerdown', (e) => {
       e.preventDefault(); e.stopPropagation(); window.gameWorld?.toggleMount();
     });
@@ -810,12 +814,27 @@ export class UIManager {
     this.fusionPreviewLine.setAttribute('points', points.length > 1 ? points.join(' ') : '');
   }
 
+  insideTriangle(clientX, clientY) {
+    const box = this.bottomRightActions?.getBoundingClientRect?.();
+    return !!box && clientX >= box.left && clientX <= box.left + box.width && clientY >= box.top && clientY <= box.top + box.height;
+  }
+
   moveFusionDrag(e) {
     const drag = this.fusionDrag;
     if (!drag || drag.pointerId !== e.pointerId) return;
     if (Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY) > 14) drag.moved = true;
     if (!drag.filled) return;
     const game = window.gameWorld;
+    // Dragged out of the triangle (no fusion partner yet): aim the spell.
+    if (drag.moved && drag.visited.length === 1 && !this.insideTriangle(e.clientX, e.clientY)) {
+      if (!drag.aiming) drag.aiming = !!game?.beginSlotAim?.(drag.visited[0]);
+      if (drag.aiming) {
+        game.targeting.setPointFromScreen(game.getCanvasCoords(e.clientX, e.clientY));
+        this.fusionPreviewLine?.setAttribute('points', '');
+        return;
+      }
+    }
+    if (drag.aiming) return;
     for (let position = 0; position < 3; position++) {
       if (drag.visited.includes(position) || !game?.slotAt?.(position)) continue;
       const center = this.slotCenter(position);
@@ -833,6 +852,15 @@ export class UIManager {
     this.cancelFusionDrag();
     const game = window.gameWorld;
     if (!game) return;
+    if (drag.aiming) {
+      // Released on the battlefield: cast there. Back over the triangle: cancel.
+      if (this.insideTriangle(e.clientX, e.clientY)) game.targeting.cancel();
+      else {
+        game.targeting.setPointFromScreen(game.getCanvasCoords(e.clientX, e.clientY));
+        if (!game.targeting.confirm()) game.targeting.cancel();
+      }
+      return;
+    }
     if (drag.filled) {
       if (!drag.moved) game.castSlotAt(drag.visited[0]);
       else if (drag.visited.length >= 2) game.fuseSlots(drag.visited);
@@ -917,6 +945,11 @@ export class UIManager {
       this.focusActivateBtn.title = focusReady ? 'Activate transformation (T)' : `Focus ${Math.round(player.focus)}/${player.maxFocus}`;
     }
     this.updateSpellTriangle(player);
+    if (this.trainingSparringBtn) {
+      const sparring = !!window.gameWorld?.modeState?.sparring;
+      this.trainingSparringBtn.textContent = sparring ? '⚔ SPARRING PARTNER: ON' : '⚔ SPARRING PARTNER: OFF';
+      this.trainingSparringBtn.classList.toggle('is-on', sparring);
+    }
 
     // Red Team Bars
     const redHpRatio = enemyChampion ? enemyChampion.hp / enemyChampion.maxHp : 0;

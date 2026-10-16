@@ -24,8 +24,10 @@ export const GAME_MODES = Object.freeze({
     objectives: false, autoWaves: false, respawn: 'none', enemyBehavior: 'duel', world: 'arena', progression: 'arenaCollect'
   }),
   training: Object.freeze({
+    // A castle-free practice yard: a stationary straw dummy in the centre and
+    // an optional sparring partner toggled from the HUD.
     id: 'training', label: 'TRAINING', objective: 'PRACTICE — NO REWARDS',
-    objectives: false, autoWaves: false, respawn: 'unlimited', enemyBehavior: 'duel', world: 'arena', progression: 'profile'
+    objectives: false, autoWaves: false, respawn: 'unlimited', enemyBehavior: 'duel', world: 'training', progression: 'profile'
   })
 });
 

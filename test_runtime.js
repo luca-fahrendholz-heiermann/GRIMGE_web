@@ -215,7 +215,9 @@ const fusion = game.fuseSlots([1, 0]);
 assert(fusion.ok && game.slotAt(1)?.isCombo && game.slotAt(1).definition.id === 'firestorm' && !game.slotAt(0) && spells.activeSpells.length === beforeSlotFusion, 'Swiping slot 2 onto slot 1 fuses into the start slot, frees the other and casts nothing');
 assert(game.slotAt(2)?.runes[0].id === 'aqua' && game.player.boundMana === 30, 'An unselected third rune is untouched and fusion merges bound mana without extra cost');
 assert(!game.fuseSlots([1, 2]).ok && game.slotAt(1)?.isCombo && game.slotAt(2), 'A fused spell cannot be fused again (no recursive fusion)');
-assert(game.castSlotAt(1) && spells.activeSpells.length > beforeSlotFusion && !game.slotAt(1), 'Tapping the fused slot casts the combination');
+assert(game.castSlotAt(1) && game.targeting.isActive && game.targeting.active.mode === 'ground' && spells.activeSpells.length === beforeSlotFusion, 'Tapping a ground-target slot (Firestorm) first asks for the impact point');
+game.targeting.setPoint({ x: game.player.x + 150, z: game.player.z });
+assert(game.targeting.confirm() && spells.activeSpells.length > beforeSlotFusion && !game.slotAt(1) && !game.targeting.isActive, 'Confirming the target casts the fused combination there');
 game.player.clearPreparedRunes();
 game.slotRuneSpell(slotIgnis); game.slotRuneSpell(slotAqua);
 const beforeFailedFusion = spells.activeSpells.length;
@@ -262,7 +264,7 @@ game.player.clearPreparedRunes();
 const constructBaseRune = recognizer.runes.find((rune) => rune.id === 'construct');
 game.player.mp = game.player.maxMp;
 game.slotRuneSpell(constructBaseRune);
-assert(game.castPreparedSpell() && spells.activeSpells.some((spell) => spell.isStoneWall && spell.wallHeight === 66 && spell.life < 3), 'Single KONSTRUKT casts a short Construct Bulwark through the selected-slot cast path');
+assert(game.castPreparedSpell() && game.targeting.active?.mode === 'placement' && game.castPreparedSpell() && spells.activeSpells.some((spell) => spell.isStoneWall && spell.wallHeight === 66 && spell.life < 3), 'Single KONSTRUKT asks for its placement and E confirms a short Construct Bulwark');
 spells.clearRuntime();
 const voidBaseRune = recognizer.runes.find((rune) => rune.id === 'void');
 game.enemyChampion.isDead = false; game.enemyChampion.hp = game.enemyChampion.maxHp; game.enemyChampion.slowTimer = 0;
@@ -704,6 +706,24 @@ game.returnToHub();
 
 game.setMatchMode('training'); game.startMatch();
 assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive && game.canRespawn('blue') && game.getObjectiveStatus() === 'PRACTICE — NO REWARDS', 'Training keeps combat live without Siege objectives or permanent defeat');
+// Training yard: stationary straw dummy + toggleable sparring partner.
+{
+  const dummy = game.trainingDummy;
+  assert(dummy && game.minions.includes(dummy) && dummy.x === 512 && game.enemyChampion.lifeState === 'Dead' && !game.modeState.sparring && game.hudOpponent() === dummy, 'Training starts with a straw dummy in the centre and no attacking partner');
+  assert(game.battlefield.mode.world === 'training' && game.battlefield.surfaces.length === 1 && !game.battlefield.objectivesActive, 'Training uses its own castle-free yard with one ground plane');
+  dummy.takeDamage(50, 400); dummy.vx = 300; dummy.z = .9; dummy.update(1 / 60);
+  assert(dummy.x === 512 && dummy.z === .5 && dummy.hp === dummy.maxHp - 50, 'The dummy takes damage but never moves');
+  dummy.takeDamage(5000, 0); dummy.update(1 / 60);
+  assert(!dummy.isDead && dummy.hp > 0, 'The dummy cannot be destroyed');
+  dummy.update(3);
+  assert(dummy.hp === dummy.maxHp, 'The dummy refills after a short pause');
+  assert(game.toggleSparringPartner() === true && game.enemyChampion.isAlive && game.hudOpponent() === game.enemyChampion, 'The sparring button adds an attacking partner');
+  game.enemyChampion.lifeState = 'Dead'; game.updateMode(.1);
+  assert(game.enemyChampion.isAlive, 'A defeated sparring partner comes back while sparring is on');
+  assert(game.toggleSparringPartner() === false && game.enemyChampion.lifeState === 'Dead' && game.hudOpponent() === dummy, 'The same button removes the partner again');
+  game.updateMode(.1);
+  assert(game.enemyChampion.lifeState === 'Dead', 'Without sparring the partner stays away');
+}
 // ── Combat / Rune Clash / Mobile concept (v0.2) ─────────────────────────
 // Training is a duel against a live champion and the place where fusion
 // experiments are lossless, so it hosts the deterministic concept checks.
@@ -893,6 +913,230 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
   touch.clear(ev(230, 520));
   useRealClock();
   resetDuel();
+}
+// Spell targeting, input devices and the Cone / Burrow archetypes.
+{
+  const P = game.player; const E = game.enemyChampion;
+  const rune = (id) => recognizer.runes.find((entry) => entry.id === id);
+  const stepSpells = (seconds) => { for (let t = 0; t < seconds; t += 1 / 60) spells.update(1 / 60, game); };
+  const reset = () => {
+    spells.clearRuntime(); game.minions = []; game.targeting.cancel(); P.clearPreparedRunes();
+    P.x = 300; P.z = .58; P.facing = 1; P.mp = P.maxMp; P.isGuarding = false; P.burrowed = false; P.invulnerableTimer = 0;
+    P.state = 'idle'; P.stateTimer = 0; P.grounded = true; P.elevation = 0; game.battlefield.placeOnSurface(P);
+    E.lifeState = 'Alive'; E.x = 520; E.z = .58; E.hp = E.maxHp; E.beamCooldown = 99; E.spellCooldown = 99; E.arcaneShield = 0; E.invulnerableTimer = 0; game.battlefield.placeOnSurface(E);
+  };
+  const slotFused = (ids) => { ids.forEach((id) => game.slotRuneSpell(rune(id))); game.fuseSlots(ids.map((_, i) => i)); return game.slotAt(0); };
+  const screenOf = (x, z) => game.targeting.worldToScreen(x, z);
+
+  reset();
+  slotFused(['fulgur', 'ignis']);
+  assert(game.castSlotAt(0) && game.targeting.active?.mode === 'ground', 'Meteor asks for an impact point after its slot is tapped');
+  game.targeting.setPointFromScreen(screenOf(470, .4));
+  assert(game.targeting.confirm() && spells.activeSpells.some((s) => s.isHeavyObject && s.targetX === 470 && Math.abs(s.targetZ - .4) < .01), 'The meteor lands exactly on the chosen point');
+  reset();
+  slotFused(['fulgur', 'ignis']);
+  game.castSlotAt(0); game.targeting.setPoint({ x: 2000, z: .58 });
+  assert(game.targeting.active.point.x <= P.x + 460, 'Ground targets are clamped to the spell range');
+  const manaBeforeCancel = P.mp;
+  game.targeting.cancel();
+  assert(game.slotAt(0) && P.mp === manaBeforeCancel, 'Cancelling a target keeps the prepared slot and its mana');
+  game.castSlotAt(0);
+  windowListeners.keydown?.({ code: 'Escape', repeat: false, preventDefault() {} });
+  assert(!game.targeting.isActive && game.slotAt(0) && !game.menuPaused, 'Esc cancels targeting before opening the menu');
+
+  // Placement: the swipe decides orientation and length of the wall.
+  reset();
+  slotFused(['terra', 'terra']);
+  game.castSlotAt(0);
+  const a = screenOf(420, .5); const b = screenOf(560, .52);
+  game.targeting.pointerDown(a, 'mouse'); game.targeting.pointerMove(b, 'mouse'); game.targeting.pointerUp(b, 'mouse');
+  const lateralWall = spells.activeSpells.find((s) => s.isStoneWall);
+  assert(lateralWall && lateralWall.halfX > 50 && lateralWall.halfZ < .1 && Math.abs(lateralWall.x - 490) < 4, 'A horizontal swipe places a lateral wall along the swiped line');
+  reset();
+  slotFused(['terra', 'terra']);
+  game.castSlotAt(0);
+  const c = screenOf(450, .25); const d = screenOf(452, .8);
+  game.targeting.pointerDown(c, 7); game.targeting.pointerMove(d, 7); game.targeting.pointerUp(d, 7);
+  const depthWall = spells.activeSpells.find((s) => s.isStoneWall);
+  assert(depthWall && depthWall.halfZ > .2 && depthWall.halfX < 20, 'A vertical swipe places a depth wall across the lane');
+
+  // Ally targeting: shield a friendly minion.
+  reset();
+  const { Minion } = await import('./public/src/entities.js');
+  const ally = new Minion(380, .5, 'blue', 'melee', 0);
+  game.battlefield.placeOnSurface(ally); game.minions.push(ally);
+  slotFused(['aqua', 'terra']);
+  game.castSlotAt(0);
+  assert(game.targeting.active?.mode === 'ally' && game.targeting.active.entity === P, 'Arcane Aegis defaults to the caster and waits for an ally');
+  const allyScreen = screenOf(ally.x, ally.z);
+  game.targeting.pointerDown(allyScreen, 9); game.targeting.pointerUp(allyScreen, 9);
+  const allyHp = ally.hp;
+  ally.takeDamage(30);
+  assert(ally.arcaneShield > 0 && ally.hp === allyHp, 'Tapping an ally shields that minion instead of the caster');
+
+  // Touch: a touch on the battlefield aims an open target (canvas routing).
+  reset();
+  slotFused(['fulgur', 'ignis']);
+  game.castSlotAt(0);
+  const tap = screenOf(500, .5);
+  game.canvas.listeners.pointerdown?.({ pointerType: 'touch', pointerId: 31, clientX: tap.x, clientY: tap.y, preventDefault() {} });
+  assert(game.targeting.active?.pointerId === 31, 'A battlefield touch takes over an open target');
+  game.targeting.pointerUp(tap, 31);
+  assert(spells.activeSpells.some((s) => s.isHeavyObject && Math.abs(s.targetX - 500) < 2), 'Releasing the touch casts at that point');
+
+  // Keyboard Z / X / C: tap casts, chord fuses.
+  reset();
+  game.slotRuneSpell(rune('ignis')); game.slotRuneSpell(rune('ventus'));
+  windowListeners.keydown?.({ code: 'KeyZ', repeat: false, preventDefault() {} });
+  windowListeners.keydown?.({ code: 'KeyX', repeat: false, preventDefault() {} });
+  windowListeners.keyup?.({ code: 'KeyZ' }); windowListeners.keyup?.({ code: 'KeyX' });
+  assert(game.slotAt(0)?.definition.id === 'firestorm' && !game.slotAt(1), 'Holding Z and X together fuses slots 1 and 2');
+  game.slotRuneSpell(rune('ignis'));
+  const spellsBeforeKey = spells.activeSpells.length;
+  windowListeners.keydown?.({ code: 'KeyX', repeat: false, preventDefault() {} }); windowListeners.keyup?.({ code: 'KeyX' });
+  assert(spells.activeSpells.length > spellsBeforeKey && !game.slotAt(1), 'A single X press casts slot 2');
+
+  // Gamepad (standard mapping) through a stubbed Gamepad API.
+  reset();
+  const pad = { connected: true, axes: [0, 0, 0, 0], buttons: Array.from({ length: 17 }, () => ({ pressed: false, value: 0 })) };
+  const press = (index, on) => { pad.buttons[index] = { pressed: on, value: on ? 1 : 0 }; game.gamepad.poll(1 / 60); };
+  const nav = globalThis.navigator;
+  const hadGetGamepads = Object.getOwnPropertyDescriptor(nav, 'getGamepads');
+  Object.defineProperty(nav, 'getGamepads', { value: () => [pad], configurable: true, writable: true });
+  game.slotRuneSpell(rune('ignis')); game.slotRuneSpell(rune('ventus'));
+  press(4, true); press(5, true); press(4, false); press(5, false);
+  assert(game.inputMode === 'gamepad' && game.slotAt(0)?.definition.id === 'firestorm', 'LB + RB together fuse slots 1 and 2 on a gamepad');
+  press(4, true); press(4, false);
+  assert(game.targeting.active?.mode === 'ground', 'LB opens the targeting of the fused ground spell');
+  pad.axes = [0, 0, 1, 0]; game.gamepad.poll(.5); pad.axes = [0, 0, 0, 0];
+  const aimed = game.targeting.active.point.x;
+  press(0, true); press(0, false);
+  assert(aimed > P.x + 200 && !game.targeting.isActive && spells.activeSpells.length > 0, 'The right stick moves the reticle and A confirms the cast');
+  pad.axes = [1, 0, 0, 0]; game.gamepad.poll(1 / 60); game.refreshMovement();
+  assert(game.input.move.x > .5, 'The left stick moves the Wizard');
+  pad.axes = [0, 0, 0, 0]; game.gamepad.poll(1 / 60);
+  press(1, true);
+  assert(game.input.guardHeld, 'Holding B blocks');
+  press(1, false);
+  if (hadGetGamepads) Object.defineProperty(nav, 'getGamepads', hadGetGamepads); else delete nav.getGamepads;
+  game.setInputMode('desktop');
+
+  // Wide beam / cone: hits inside the widening cone, not behind the caster.
+  reset();
+  E.x = 480; E.z = .74; game.battlefield.placeOnSurface(E);
+  game.slotRuneSpell(rune('bestia')); game.slotRuneSpell(rune('ignis')); game.fuseSlots([0, 1]);
+  game.castSlotAt(0);
+  stepSpells(.5);
+  assert(E.hp < E.maxHp, 'Dragon Breath hits an enemy off-lane at range inside its widening cone');
+  reset();
+  E.x = 200; game.battlefield.placeOnSurface(E);
+  game.slotRuneSpell(rune('bestia')); game.slotRuneSpell(rune('ignis')); game.fuseSlots([0, 1]);
+  game.castSlotAt(0); stepSpells(.5);
+  assert(E.hp === E.maxHp, 'The cone does not hit behind the caster');
+
+  // Underground / burrow: untouchable travel, then an eruption.
+  reset();
+  E.x = 350; game.battlefield.placeOnSurface(E);
+  game.slotRuneSpell(rune('terra')); game.slotRuneSpell(rune('void')); game.fuseSlots([0, 1]);
+  game.castSlotAt(0);
+  const hpBurrowed = P.hp;
+  P.takeDamage(40, 100);
+  assert(P.burrowed && P.hp === hpBurrowed && !P.executeAttack(game.input), 'A burrowed Wizard is untouchable and cannot attack');
+  stepSpells(1.6);
+  assert(!P.burrowed && E.hp < E.maxHp, 'Burrow Strike erupts and launches nearby enemies');
+  reset();
+}
+// Environment layer: ground effects, element reactions and breakable props.
+{
+  const { environment } = await import('./public/src/environment.js');
+  const P = game.player; const E = game.enemyChampion;
+  const realRandom = Math.random;
+  const stepWorld = (seconds) => { for (let t = 0; t < seconds; t += 1 / 60) { spells.update(1 / 60, game); environment.update(1 / 60, game, spells.getSummons()); } };
+  const reset = () => {
+    spells.clearRuntime(); environment.clear(); game.minions = []; game.targeting.cancel(); P.clearPreparedRunes();
+    P.x = 300; P.z = .58; P.facing = 1; P.mp = P.maxMp; P.hp = P.maxHp; P.burrowed = false; P.invulnerableTimer = 0; P.state = 'idle'; P.stateTimer = 0;
+    P.grounded = true; P.elevation = 0; P.vx = 0; P.onIce = false; game.battlefield.placeOnSurface(P);
+    E.lifeState = 'Alive'; E.x = 520; E.z = .58; E.hp = E.maxHp; E.state = 'idle'; E.stateTimer = 0; E.arcaneShield = 0; E.slowTimer = 0; E.slowFactor = 1; E.elevation = 0; game.battlefield.placeOnSurface(E);
+  };
+
+  reset();
+  spells.cast(P, spells.resolveSpell([recognizer.runes.find((r) => r.id === 'ignis')]), game);
+  stepWorld(.6);
+  const scorch = environment.effects.find((e) => e.type === 'scorch');
+  assert(scorch && scorch.team === 'blue', 'A Fireball leaves burning ground at its impact');
+  E.x = scorch.x; E.z = scorch.z; E.hp = E.maxHp; E.state = 'idle';
+  stepWorld(1.1);
+  assert(E.hp < E.maxHp && E.state !== 'hurt', 'Burning ground damages the other team over time without a hit stun');
+  const playerHpOnOwnFire = P.hp;
+  P.x = scorch.x; P.z = scorch.z; stepWorld(.6);
+  assert(P.hp === playerHpOnOwnFire, 'Own burning ground does not hurt its caster team');
+
+  reset();
+  environment.add('ice', 300, .58, { radius: 90, team: 'blue' });
+  environment.update(1 / 60, game, []);
+  assert(P.onIce, 'Standing on ice marks the Wizard as on ice');
+  P.vx = 300;
+  const iceVx = P.accelerateAxis(P.vx, 0, P.moveSpeed, .1);
+  P.onIce = false;
+  const groundVx = P.accelerateAxis(300, 0, P.moveSpeed, .1);
+  assert(iceVx > groundVx + 50, 'Ice makes the Wizard slide: braking takes much longer');
+
+  reset();
+  environment.add('ice', 400, .5, { radius: 60 });
+  environment.add('scorch', 400, .5, { radius: 50, team: 'blue' });
+  assert(environment.effects.some((e) => e.type === 'water') && !environment.effects.some((e) => e.type === 'ice'), 'Fire melts ice into a water puddle');
+  assert(!environment.effects.some((e) => e.type === 'scorch' && e.life > .5), 'The puddle douses the new fire');
+  E.x = 400; E.z = .5; E.hp = E.maxHp;
+  assert(environment.electrify(400, .5, 40, 'blue', 15, game) && E.hp < E.maxHp, 'Lightning electrifies the puddle and shocks whoever stands in it');
+  reset();
+  environment.add('scorch', 450, .5, { radius: 50, team: 'blue' });
+  environment.add('ice', 450, .5, { radius: 60 });
+  assert(!environment.effects.some((e) => e.type === 'scorch' && e.life > 0) && environment.effects.some((e) => e.type === 'smoke'), 'Ice douses burning ground with a puff of smoke');
+  reset();
+  environment.add('lava', 450, .5, { radius: 45, team: 'blue' });
+  environment.add('ice', 450, .5, { radius: 60 });
+  assert(environment.effects.some((e) => e.type === 'crater') && !environment.effects.some((e) => e.type === 'lava'), 'Ice cools lava into a crater');
+  reset();
+  environment.add('scorch', 450, .5, { radius: 40, team: 'blue' });
+  environment.add('smoke', 470, .5, { radius: 40 });
+  environment.wind(450, .5, 120, 1);
+  assert(environment.effects.filter((e) => e.type === 'scorch').length === 2 && environment.effects.find((e) => e.type === 'smoke').life <= .25, 'Wind clears smoke and spreads burning ground downwind');
+
+  reset();
+  environment.add('crater', 520, .58, { radius: 70 });
+  environment.update(1 / 60, game, []);
+  assert(E.slowFactor < 1, 'Craters and rough ground slow actors');
+
+  reset();
+  spells.cast(P, { id: 'meteor_cataclysm', tier: 2 }, game, null, { x: 500, z: .5 });
+  stepWorld(1.2);
+  assert(environment.effects.some((e) => e.type === 'crater') && environment.effects.some((e) => e.type === 'lava'), 'A meteor impact leaves a crater with a lava pool');
+
+  // Breakable props.
+  reset();
+  const crate = environment.addProp('crate', 360, .58);
+  assert(game.getHostileTargets('blue').includes(crate) && game.getHostileTargets('red').includes(crate), 'Crates are neutral targets for both teams');
+  P.x = 300; P.z = .58;
+  const before = P.x;
+  P.x = 350; game.resolveSpellObstacles(P, before, P.z);
+  assert(P.x === before, 'Crates block movement like a small wall');
+  Math.random = () => .1;
+  crate.takeDamage(999, 100, 0, 0, false, 'melee');
+  environment.update(1 / 60, game, []);
+  Math.random = realRandom;
+  assert(!environment.livingProps().includes(crate) && environment.effects.some((e) => e.type === 'rubble') && game.modeState.potions.length > 0, 'A broken crate leaves splinters and can drop a potion');
+  reset();
+  const barrel = environment.addProp('barrel', 500, .58);
+  E.x = 540; E.z = .58;
+  barrel.takeDamage(5, 0, 0, 0, false, 'spell');
+  stepWorld(1.1);
+  assert(!environment.livingProps().includes(barrel) && E.hp < E.maxHp && environment.effects.some((e) => e.type === 'scorch'), 'A spell-lit oil barrel bursts into flame and hurts everyone nearby');
+
+  reset();
+  spells.cast(P, spells.resolveSpell([recognizer.runes.find((r) => r.id === 'terra'), recognizer.runes.find((r) => r.id === 'terra')]), game);
+  stepWorld(4.2);
+  assert(environment.effects.some((e) => e.type === 'rubble'), 'An expiring Stone Wall crumbles into rubble');
+  reset();
 }
 game.returnToHub();
 game.setMatchMode('siege'); game.startMatch();

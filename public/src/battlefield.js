@@ -16,7 +16,7 @@ export class Battlefield {
     const mainArena = ARENA_LAYOUT.surfaces[0];
     this.surfaces = mode?.world === 'arena'
       ? [mainArena, ...ARENA_LAYOUT.arenaPlatforms]
-      : (mode?.world === 'invasion' || mode?.world === 'dungeon')
+      : (mode?.world === 'invasion' || mode?.world === 'dungeon' || mode?.world === 'training')
         ? [mainArena]
         : ARENA_LAYOUT.surfaces;
 
@@ -75,7 +75,8 @@ export class Battlefield {
     // distinct from the elevated battlement surfaces used by Wizard spawns.
     [this.blueCastle, this.redCastle].forEach((castle) => { castle.surfaceId = 'mainArena'; castle.surfaceHeight = 0; });
     [this.blueTower, this.redTower, ...this.defenseTowers].forEach((tower) => this.placeOnSurface(tower));
-    this.decorativeBeacons = ARENA_LAYOUT.decorativeBeacons;
+    // The Siege beacon glows belong to arena_bg.jpg; other worlds paint their own scene.
+    this.decorativeBeacons = mode?.world === 'training' ? [] : ARENA_LAYOUT.decorativeBeacons;
     this.boundsOverride = (mode?.world === 'dungeon')
       ? { left: 104, right: 3200, farZ: 0.06, nearZ: 0.94 }
       : null;
@@ -197,7 +198,31 @@ export class Battlefield {
     entity.surfaceHeight = surfaceHeight(surface, entity.x);
   }
 
+  // Training: the castle-free walled arena. The image is scaled uniformly
+  // (never stretched) to cover the camera, with its painted front floor edge
+  // anchored just below the combat plane's near edge, so the stationary
+  // dummy and fighters stand on the painted field.
+  renderTrainingBackground(ctx, gameplayWidth, viewH, renderWidth, cameraOffsetX) {
+    const scene = this.modeBackdropImages.training;
+    ctx.fillStyle = '#0b1a2b';
+    ctx.fillRect(0, 0, renderWidth, viewH);
+    if (!scene?.loaded) return;
+    const image = scene.image;
+    const iw = image.naturalWidth || image.width; const ih = image.naturalHeight || image.height;
+    if (!iw || !ih) return;
+    const FLOOR_FRONT_V = 712 / 941; // painted front floor edge in the source
+    const scale = Math.max(.65 * iw / 1672, renderWidth / iw);
+    const drawW = iw * scale; const drawH = ih * scale;
+    const x = cameraOffsetX + gameplayWidth / 2 - drawW / 2;
+    const y = ARENA_LAYOUT.groundProjection.nearY + 8 - FLOOR_FRONT_V * drawH;
+    ctx.drawImage(image, x, y, drawW, drawH);
+  }
+
   renderBackground(ctx, camera, gameplayWidth, viewH, renderWidth = gameplayWidth, cameraOffsetX = 0, modeState = null) {
+    if (this.mode?.world === 'training') {
+      this.renderTrainingBackground(ctx, gameplayWidth, viewH, renderWidth, cameraOffsetX);
+      return;
+    }
     if (this.mode?.world === 'arena' || this.mode?.world === 'dungeon') {
       this.renderModeBackground(ctx, gameplayWidth, viewH, renderWidth, cameraOffsetX, modeState);
       return;

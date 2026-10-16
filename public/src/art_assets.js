@@ -36,7 +36,8 @@ export const ART_ASSETS = Object.freeze({
   scenes: Object.freeze({
     arena: 'assets/scenes/arena_bg.png',
     dungeon: 'assets/scenes/dungeon_bg.png',
-    invasion: 'assets/scenes/invasion_bg.png'
+    invasion: 'assets/scenes/invasion_bg.png',
+    training: 'assets/scenes/training_bg.jpg'
   }),
   sceneLayers: Object.freeze({
     dungeon: Object.freeze({ far: 'assets/scenes/dungeon_far.png', floor: 'assets/scenes/dungeon_floor.png' }),

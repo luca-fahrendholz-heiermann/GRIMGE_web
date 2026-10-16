@@ -498,7 +498,8 @@ export class Player extends GroundEntity {
     const beastMult = this.ninefoldTimer > 0 ? 1.23 : 1;
     const focusMult = this.focusTransformTimer > 0 ? 1.12 : 1;
     const clashMult = this.activeClash ? CLASH_MOVE_MULT : 1;
-    const combinedMult = this.slowFactor * guardMult * beastMult * focusMult * sprintMult * clashMult;
+    const burrowMult = this.burrowed ? 1.35 : 1;
+    const combinedMult = this.slowFactor * guardMult * beastMult * focusMult * sprintMult * clashMult * burrowMult;
 
     const baseSpeed = this.moveSpeed;
     const baseDepth = this.depthSpeed;
@@ -541,15 +542,17 @@ export class Player extends GroundEntity {
 
   accelerateAxis(current, target, refSpeed, dt) {
     if (Math.abs(target) < 0.01 && Math.abs(current) < 0.01) return 0;
+    // Ice (environment layer): slow to brake and to turn, a bit slow to start.
+    const grip = this.onIce ? .22 : 1;
     const isReversing = current !== 0 && target !== 0 && Math.sign(target) !== Math.sign(current);
     let rate;
     if (isReversing) {
-      rate = 2 * refSpeed / TURN_TIME;
+      rate = 2 * refSpeed / TURN_TIME * grip;
     } else if (Math.abs(target) >= Math.abs(current)) {
       const accelTime = this.sprintActive ? SPRINT_ACCEL_TIME : WALK_ACCEL_TIME;
-      rate = refSpeed / accelTime;
+      rate = refSpeed / accelTime * (this.onIce ? .55 : 1);
     } else {
-      rate = refSpeed / WALK_DECEL_TIME;
+      rate = refSpeed / WALK_DECEL_TIME * grip;
     }
     return moveTowards(current, target, rate * dt);
   }
@@ -786,7 +789,7 @@ export class Player extends GroundEntity {
   }
 
   executeAttack(input, attackKind = 'normal') {
-    if (!this.isAlive || this.isGuarding || !window.gameWorld?.isMatchRunning?.()) return false;
+    if (!this.isAlive || this.isGuarding || this.burrowed || !window.gameWorld?.isMatchRunning?.()) return false;
     if (ACTION_STATES.has(this.state) || !this.canAttack) {
       const canBuffer = attackKind === 'normal' && /^attack[123]$/.test(this.state) && this.stateTimer <= MELEE_BASELINE.bufferWindow;
       if (canBuffer) {
@@ -964,6 +967,22 @@ export class Player extends GroundEntity {
     return { blocked: false };
   }
 
+  // Ground hazards (burning ground, lava) chip HP without a hit reaction,
+  // stagger or invulnerability window, so standing in fire is a cost, not a stun.
+  takeHazardDamage(amount) {
+    if (!this.isAlive || this.burrowed || this.invulnerableTimer > 0 || !(amount > 0)) return;
+    if (this.arcaneShield > 0) {
+      const absorbed = Math.min(amount, this.arcaneShield);
+      this.arcaneShield -= absorbed; amount -= absorbed;
+      if (amount <= 0) return;
+    }
+    amount *= this.buildModifiers?.damageTaken ?? 1;
+    this.hp = Math.max(0, this.hp - amount);
+    this.hitFlash = Math.max(this.hitFlash, .08);
+    combat.spawnDamageText(this.x, this.y - 45, Math.round(amount), { color: '#ff8a65' });
+    if (this.hp <= 0) this.beginDeath();
+  }
+
   beginDeath() {
     this.dismount();
     window.gameWorld?.recordWizardDeath?.(this.team);
@@ -1032,6 +1051,8 @@ export class Player extends GroundEntity {
   updateGhosts(dt) { this.ghosts = this.ghosts.filter(g => (g.alpha -= dt * 3.5) > 0); }
 
   render(ctx) {
+    // Burrowed: only the travelling dirt mound (drawn by the spell) is visible.
+    if (this.burrowed) return;
     const renderY = this.y - (this.isMounted ? (this.mountedSummon.definition.riderOffsetY ?? 42) : 0);
     // Prepared spell components trail behind the Wizard in world space. They
     // are a gameplay indicator, not a DOM overlay or a baked reference image.
@@ -1475,7 +1496,7 @@ export class Minion extends GroundEntity {
       }
     }
   }
-  takeDamage(amount, kx = 0, lift = 0, stun = .25) { this.hp = Math.max(0, this.hp - amount); this.hitFlash = .15; this.kbVelX = kx; this.vx = 0; this.vElevation = lift; this.hurtTimer = Math.max(this.hurtTimer, stun); combat.spawnDamageText(this.x, this.y - 25, amount, { color: this.team === 'blue' ? '#90caf9' : '#ffab91' }); if (!this.hp) { this.isDead = true; combat.spawnHitSparks(this.x, this.y - 16, this.facing, '#fff', 8); } }
+  takeDamage(amount, kx = 0, lift = 0, stun = .25) { if (this.arcaneShield > 0) { const absorbed = Math.min(amount, this.arcaneShield); this.arcaneShield -= absorbed; amount -= absorbed; if (amount <= 0) return; } this.hp = Math.max(0, this.hp - amount); this.hitFlash = .15; this.kbVelX = kx; this.vx = 0; this.vElevation = lift; this.hurtTimer = Math.max(this.hurtTimer, stun); combat.spawnDamageText(this.x, this.y - 25, amount, { color: this.team === 'blue' ? '#90caf9' : '#ffab91' }); if (!this.hp) { this.isDead = true; combat.spawnHitSparks(this.x, this.y - 16, this.facing, '#fff', 8); } }
   freeze(duration) { this.freezeTimer = duration; } slow(duration, factor) { this.slowTimer = duration; this.slowFactor = factor; }
   render(ctx) { const vh = this.renderHeight ?? ENTITY_VISUALS.minionHeight; sprites.renderEntity(ctx, this.spriteKey, this.x, this.y, { facing: this.facing, state: this.state, animTime: this.animTime, hitFlash: this.hitFlash > 0, visualHeight: vh }); if (this.hp < this.maxHp) { const barY = this.y - vh - 4; ctx.fillStyle = 'rgba(0,0,0,.7)'; ctx.fillRect(this.x - 11, barY, 22, 3); ctx.fillStyle = this.team === 'blue' ? '#42a5f5' : '#e53935'; ctx.fillRect(this.x - 11, barY, 22 * this.hp / this.maxHp, 3); } }
 }
@@ -1618,7 +1639,90 @@ export class EnemyChampion extends GroundEntity {
   }
   executeAIAttack(target) { this.attackCooldown = 1.1; this.state = 'attack1'; this.stateTimer = .28; audio.playSlash(1.1); combat.spawnSlashArc(this.x + this.facing * 20, this.y - 28, this.facing, { radius: 42, color: '#f44336', glow: '#b71c1c' }); if (!(isUpperCastleBattlement(this) && isUpperCastleBattlement(target)) && Math.abs(target.z - this.z) <= .22 && Math.abs((target.worldHeight ?? 0) - this.worldHeight) <= 70) target.takeDamage(24, this.facing * 240, 100, .3); }
   takeDamage(amount, kx = 0, lift = 0, stun = .35, isCrit = false) { if (!this.isAlive) return; if (this.arcaneShield > 0) { const absorbed = Math.min(amount, this.arcaneShield); this.arcaneShield -= absorbed; amount -= absorbed; if (amount <= 0) { combat.spawnElementalParticles(this.x, this.y - 35, 'fulgur', 5); return; } } this.hp = Math.max(0, this.hp - amount); this.hitFlash = .15; this.kbVelX = kx; this.vx = 0; this.vElevation = lift; this.state = 'hurt'; this.stateTimer = stun; combat.spawnDamageText(this.x, this.y - 45, amount, { isCrit, color: '#ff7043' }); if (!this.hp) { window.gameWorld?.recordWizardDeath?.(this.team); this.lifeState = 'Dying'; this.state = 'dead'; this.stateTimer = .45; combat.spawnShockwave(this.x, this.y - 30, 80, '#ff5252'); } }
+  takeHazardDamage(amount) {
+    if (!this.isAlive || !(amount > 0)) return;
+    if (this.arcaneShield > 0) { const absorbed = Math.min(amount, this.arcaneShield); this.arcaneShield -= absorbed; amount -= absorbed; if (amount <= 0) return; }
+    if (this.hp - amount <= 0) { this.takeDamage(amount, 0, 0, 0); return; }
+    this.hp -= amount; this.hitFlash = .08;
+    combat.spawnDamageText(this.x, this.y - 45, Math.round(amount), { color: '#ff8a65' });
+  }
   respawn(battlefield, gameWorld = null) { const spawn = gameWorld?.getEnemyHome?.(this.team, battlefield) ?? battlefield.getSpawn(this.team); this.x = spawn.x; this.z = spawn.z; this.elevation = 0; this.vx = this.vz = this.vElevation = 0; this.hp = this.maxHp; this.mp = this.maxMp; this.arcaneShield = 0; this.arcaneShieldTimer = 0; this.state = 'idle'; this.lifeState = 'Alive'; this.respawnTimer = 0; this.attackCooldown = 0; this.spellCooldown = 1; this.defensiveCooldown = 0; battlefield.resolveEntityCollision(this); combat.spawnShockwave(this.x, this.y - 28, 50, '#ff5252'); }
   freeze(duration) { this.freezeTimer = duration; } slow(duration, factor) { this.slowTimer = duration; this.slowFactor = factor; }
   render(ctx) { sprites.renderEntity(ctx, this.heroKey, this.x, this.y, { facing: this.facing, state: this.state, animTime: this.animTime, hitFlash: this.hitFlash > 0, alpha: this.lifeState === 'Dead' ? 0 : 1 }); if (this.lifeState !== 'Dead') { const healthBarY = this.y - ENTITY_VISUALS.heroHeight - 8; ctx.fillStyle = 'rgba(0,0,0,.8)'; ctx.fillRect(this.x - 27, healthBarY, 54, 6); ctx.fillStyle = '#f44336'; ctx.fillRect(this.x - 27, healthBarY, 54 * this.hp / this.maxHp, 6); } }
+}
+
+// Training yard straw dummy: a stationary, unkillable hostile target. It is
+// listed with the minions so every melee hit, projectile, beam and area
+// spell interacts with it through the normal hostile-target path, but it
+// never moves, never attacks and refills its HP after a short pause.
+export class TrainingDummy extends GroundEntity {
+  constructor(x, z) {
+    super(x, z);
+    this.homeX = x; this.homeZ = z;
+    this.team = 'red'; this.type = 'dummy'; this.isTrainingDummy = true;
+    this.maxHp = this.hp = 1000; this.mp = 0; this.maxMp = 100;
+    this.radius = 18; this.hitRadiusX = 18; this.hitHeightTolerance = 120;
+    this.isDead = false; this.hitFlash = 0; this.wobble = 0; this.idleTimer = 0;
+    this.damageWindow = []; this.facing = -1; this.state = 'idle'; this.animTime = 0;
+  }
+
+  get dps() {
+    const now = performance.now();
+    this.damageWindow = this.damageWindow.filter((entry) => now - entry.t < 3000);
+    return Math.round(this.damageWindow.reduce((sum, entry) => sum + entry.amount, 0) / 3);
+  }
+
+  update(dt) {
+    this.animTime += dt;
+    this.hitFlash = Math.max(0, this.hitFlash - dt);
+    this.wobble *= Math.max(0, 1 - dt * 6);
+    this.idleTimer += dt;
+    if (this.idleTimer > 2.5 && this.hp < this.maxHp) this.hp = this.maxHp;
+    // Unmovable: knockback, pulls and launches never displace the dummy.
+    this.x = this.homeX; this.z = this.homeZ;
+    this.vx = this.vz = 0; this.kbVelX = 0; this.vElevation = 0; this.elevation = 0; this.grounded = true;
+  }
+
+  takeDamage(amount, kx = 0) {
+    if (!(amount > 0)) return;
+    this.hp -= amount;
+    if (this.hp <= 0) this.hp = this.maxHp;
+    this.hitFlash = .12; this.idleTimer = 0;
+    this.wobble = Math.max(-1, Math.min(1, this.wobble + (Math.sign(kx) || 1) * .6));
+    this.damageWindow.push({ t: performance.now(), amount });
+    combat.spawnDamageText(this.x, this.y - 70, Math.round(amount), { color: '#ffe082' });
+  }
+
+  slow() {}
+
+  render(ctx) {
+    const x = Math.round(this.x); const y = Math.round(this.y);
+    const px = (rx, ry, w, h, fill) => { ctx.fillStyle = fill; ctx.fillRect(x + rx, y + ry, w, h); };
+    ctx.save();
+    // Shadow and wooden stand stay planted; the body sways from the base.
+    ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(x, y, 20, 6, 0, 0, Math.PI * 2); ctx.fill();
+    px(-15, -4, 30, 4, '#3e2723'); px(-14, -5, 28, 3, '#6d4c41');
+    ctx.translate(x, y); ctx.rotate(this.wobble * .2); ctx.translate(-x, -y);
+    px(-4, -66, 8, 62, '#3e2723'); px(-3, -66, 6, 62, '#795548');
+    // Cross bar arms with straw tufts.
+    px(-27, -51, 54, 8, '#3e2723'); px(-26, -50, 52, 6, '#8d6e63');
+    px(-33, -53, 7, 12, '#e6c35c'); px(26, -53, 7, 12, '#e6c35c');
+    // Burlap body with stitching and a target emblem.
+    px(-15, -60, 30, 40, '#4e342e'); px(-14, -59, 28, 38, '#c8a165');
+    px(-14, -46, 28, 2, '#a1804a'); px(-14, -32, 28, 2, '#a1804a');
+    px(-7, -47, 14, 14, '#b71c1c'); px(-5, -45, 10, 10, '#f5f5f5'); px(-3, -43, 6, 6, '#b71c1c');
+    px(-10, -22, 6, 6, '#e6c35c'); px(4, -22, 6, 6, '#e6c35c');
+    // Sack head with stitched X eyes and a rope collar.
+    px(-12, -80, 24, 21, '#4e342e'); px(-11, -79, 22, 19, '#d7b98a');
+    px(-7, -74, 2, 2, '#4e342e'); px(-5, -72, 2, 2, '#4e342e'); px(-7, -70, 2, 2, '#4e342e'); px(-3, -74, 2, 2, '#4e342e'); px(-3, -70, 2, 2, '#4e342e');
+    px(3, -74, 2, 2, '#4e342e'); px(5, -72, 2, 2, '#4e342e'); px(3, -70, 2, 2, '#4e342e'); px(7, -74, 2, 2, '#4e342e'); px(7, -70, 2, 2, '#4e342e');
+    px(-12, -61, 24, 3, '#8d6e63');
+    px(-6, -84, 12, 5, '#e6c35c');
+    if (this.hitFlash > 0) { ctx.globalAlpha = .6; px(-15, -84, 30, 64, '#ffffff'); }
+    ctx.restore();
+    if (this.hp < this.maxHp) {
+      ctx.fillStyle = 'rgba(0,0,0,.75)'; ctx.fillRect(x - 24, y - 94, 48, 5);
+      ctx.fillStyle = '#ffb300'; ctx.fillRect(x - 24, y - 94, 48 * this.hp / this.maxHp, 5);
+    }
+  }
 }

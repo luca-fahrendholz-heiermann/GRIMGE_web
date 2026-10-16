@@ -11,11 +11,28 @@
 // rules in main.js, never by inventing a random spell).
 
 export const DELIVERY = Object.freeze({
-  PROJECTILE: 'projectile', SALVO: 'salvo', HOMING: 'homing', BEAM: 'beam',
+  PROJECTILE: 'projectile', SALVO: 'salvo', HOMING: 'homing', BEAM: 'beam', CONE: 'cone', BURROW: 'burrow',
   AREA: 'area', ZONE: 'zone', WALL: 'wall', TELEKINESIS: 'telekinesis',
   CAPTURE: 'capture', SLAM: 'slam', STOMP: 'stomp', SUMMON: 'summon',
   DASH: 'dash', HEAVY_OBJECT: 'heavy_object', SELF: 'self'
 });
+
+// How a prepared spell is aimed after its slot is triggered (concept doc
+// §7.2 targetingMode). The same rules serve touch, mouse/keyboard and
+// gamepad: DIRECTION fires at once (aim = facing / drag / cursor side),
+// GROUND asks for an impact point, PLACEMENT for a swiped line (walls),
+// ALLY for a friendly unit (player, minion, companion, summon), SELF never
+// asks for anything.
+export const TARGETING = Object.freeze({ DIRECTION: 'direction', GROUND: 'ground', PLACEMENT: 'placement', ALLY: 'ally', SELF: 'self' });
+const TARGETING_BY_SPELL = Object.freeze({
+  meteor_cataclysm: TARGETING.GROUND, magma_fissure: TARGETING.GROUND, gravity_lift: TARGETING.GROUND,
+  void_implosion: TARGETING.GROUND, firestorm: TARGETING.GROUND,
+  stone_wall: TARGETING.PLACEMENT, construct_bulwark: TARGETING.PLACEMENT,
+  arcane_aegis: TARGETING.ALLY,
+  frost_nova: TARGETING.SELF, aura_shock: TARGETING.SELF, eidolon_mantle: TARGETING.SELF, ninefold_beast_form: TARGETING.SELF,
+  sandstorm_bastion: TARGETING.SELF, mirror_ward: TARGETING.SELF, burrow_strike: TARGETING.SELF
+});
+export const TARGET_RANGE = Object.freeze({ ground: 460, placement: 300, ally: 380 });
 
 // Mana is paid (bound) when a rune is drawn into a slot, never again at cast.
 // Values are first playtest numbers (concept doc §11 keeps them open).
@@ -31,7 +48,7 @@ export function runeManaCost(runeOrId) {
   return RUNE_MANA_COSTS[id] ?? 10;
 }
 
-const def = (id, fields) => Object.freeze({ id, tier: 1, interactionTags: Object.freeze([]), ...fields });
+const def = (id, fields) => Object.freeze({ id, tier: 1, interactionTags: Object.freeze([]), targetingMode: TARGETING_BY_SPELL[id] ?? TARGETING.DIRECTION, ...fields });
 
 export const SPELL_DEFINITIONS = Object.freeze({
   // ── Fundamental (one rune) ─────────────────────────────────────────────
@@ -72,6 +89,8 @@ export const SPELL_DEFINITIONS = Object.freeze({
   gravity_lift: def('gravity_lift', { name: 'GRAVITY LIFT', tier: 2, color: '#ce93d8', deliveryType: DELIVERY.TELEKINESIS, desc: 'Telekinesis: lifts up to four nearby enemies, holds them in the air, then slams them down.' }),
   seismic_slam: def('seismic_slam', { name: 'SEISMIC SLAM', tier: 2, color: '#a1887f', deliveryType: DELIVERY.SLAM, desc: 'A travelling ground shockwave that launches enemies and leaves short-lived rock pillars.' }),
   titan_stomp: def('titan_stomp', { name: 'TITAN STOMP', tier: 2, color: '#8d6e63', deliveryType: DELIVERY.STOMP, desc: 'Leap up and crash down: hits grounded and airborne enemies around the landing point.' }),
+  dragon_breath: def('dragon_breath', { name: 'DRAGON BREATH', tier: 2, color: '#ff8f00', deliveryType: DELIVERY.CONE, interactionTags: ['blockable'], desc: 'A wide cone of chunky flame that widens with distance and burns everything inside.' }),
+  burrow_strike: def('burrow_strike', { name: 'BURROW STRIKE', tier: 2, color: '#a1887f', deliveryType: DELIVERY.BURROW, desc: 'Dig underground: untouchable and fast for a moment, then erupt and launch everything around you.' }),
   soul_seekers: def('soul_seekers', { name: 'SOUL SEEKERS', tier: 2, color: '#ea80fc', deliveryType: DELIVERY.HOMING, interactionTags: ['reflectable', 'capturable', 'blockable'], desc: 'A salvo of three homing void flames that steer toward enemies within a turn limit.' }),
 
   // ── Advanced (three runes) ─────────────────────────────────────────────
@@ -99,6 +118,7 @@ export const SPELL_RECIPES = Object.freeze({
   'ignis+ignis': 'inferno_beam', 'aqua+aqua': 'glacial_ray', 'fulgur+fulgur': 'thunder_lance', 'void+void': 'null_ray',
   'construct+ventus': 'mirror_ward', 'ventus+void': 'gravity_lift', 'fulgur+terra': 'seismic_slam',
   'bestia+terra': 'titan_stomp', 'ignis+void': 'soul_seekers',
+  'bestia+ignis': 'dragon_breath', 'terra+void': 'burrow_strike',
 
   'bestia+terra+void': 'eidolon_mantle', 'bestia+ignis+void': 'ninefold_beast_form',
   'bestia+ignis+ventus': 'dragon_invocation', 'bestia+terra+ventus': 'summon_rune_snake',

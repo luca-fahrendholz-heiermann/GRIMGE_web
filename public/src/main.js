@@ -4,14 +4,18 @@ import { sprites } from './sprites.js';
 import { recognizer } from './recognizer.js';
 import { combat } from './combat.js';
 import { spells, RUNE_GRADE_PROFILES } from './spells.js';
-import { Player, EnemyChampion, Minion } from './entities.js';
+import { Player, EnemyChampion, Minion, TrainingDummy } from './entities.js';
 import { Battlefield } from './battlefield.js';
 import { ui } from './ui.js';
 import { VIEWPORT, ARENA_LAYOUT, groundDistance, groundYForDepth } from './world.js';
 import { ART_ASSETS } from './art_assets.js';
 import { MageProfile, MAGE_SKILL_TREE, applyMageProfile } from './progression.js';
 import { getGameMode } from './game_modes.js';
-import { runeManaCost, isSpecialRune } from './spell_catalog.js';
+import { runeManaCost, isSpecialRune, TARGETING } from './spell_catalog.js';
+import { SpellTargeting, SlotChord, needsTarget } from './targeting.js';
+import { GamepadController } from './gamepad.js';
+import { environment, renderProp } from './environment.js';
+import { renderPixelated } from './abilities.js';
 
 // LF2-style Dungeon rooms. Each room is a wide scrolling stretch: the camera
 // follows the player, enemy groups enter from the right screen edge once the
@@ -62,6 +66,11 @@ export class GameWorld {
     this.renderHeight = this.logicalHeight;
     this.worldOffsetY = 0;
     this.inputMode = null;
+    // One targeting model for touch, mouse/keyboard and gamepad.
+    this.targeting = new SpellTargeting(this);
+    this.gamepad = new GamepadController(this);
+    // Keyboard slot keys Z / X / C: tap casts, hold two or three to fuse.
+    this.keySlotChord = new SlotChord((position) => this.castSlotAt(position), (positions) => this.fuseSlots(positions));
     this.deviceScale = Math.min(2, window.devicePixelRatio || 1);
     this.configureCanvas(this.canvas, this.ctx);
     this.configureCanvas(this.runeCanvas, this.runeCtx);
@@ -97,6 +106,7 @@ export class GameWorld {
       guardHeld: false,
       move: { x: 0, z: 0 },
       touchMove: { x: 0, z: 0 },
+      padMove: { x: 0, z: 0 },
       justPressed: (code) => {
         if (code === 'Mouse0') return !!this.input.justPressedMouse[0];
         if (code === 'Mouse2') return !!this.input.justPressedMouse[2];
@@ -276,6 +286,7 @@ export class GameWorld {
     this.inputMode = mode;
     this.uiLayer?.classList?.toggle?.('input-touch', mode === 'touch');
     this.uiLayer?.classList?.toggle?.('input-desktop', mode === 'desktop');
+    this.uiLayer?.classList?.toggle?.('input-gamepad', mode === 'gamepad');
   }
 
   setupInputs() {
@@ -293,6 +304,11 @@ export class GameWorld {
       }
       if (this.matchState === 'Menu') {
         if (e.code === 'Enter' || e.code === 'Space') this.startMatch();
+        return;
+      }
+      if (e.code === 'Escape' && this.targeting.isActive) {
+        this.targeting.cancel();
+        e.preventDefault();
         return;
       }
       if (e.code === 'Escape' && this.isMatchRunning()) {
@@ -322,12 +338,18 @@ export class GameWorld {
       if (e.code === 'Digit9') { this.player.setHero('firen'); ui.updateActiveHeroBtn('firen'); }
       if (e.code === 'Digit0') { this.player.setHero('freeze'); ui.updateActiveHeroBtn('freeze'); }
 
-      // Cast Spell (E)
+      // Cast Spell (E) — confirms an open targeting at the cursor.
       if (e.code === 'KeyE') this.castPreparedSpell();
+      // Spell slots Z / X / C (chord = fusion).
+      const slotKey = { KeyZ: 0, KeyX: 1, KeyC: 2 }[e.code];
+      if (slotKey !== undefined && !e.repeat) this.keySlotChord.press(slotKey);
 
       // Earned Focus is a match-only transformation resource. It deliberately
       // stays off the rune deck so a full meter remains a fast tactical choice.
       if (e.code === 'KeyT') this.activateFocusTransformation();
+
+      // Training: P toggles the sparring partner.
+      if (e.code === 'KeyP') this.toggleSparringPartner();
 
       // Own Wolves and Golems can be ridden. Mounting is deliberately a
       // proximity action, not another spell slot: R toggles on/off.
@@ -360,6 +382,8 @@ export class GameWorld {
 
     window.addEventListener('keyup', (e) => {
       this.input.keys[e.code] = false;
+      const slotKey = { KeyZ: 0, KeyX: 1, KeyC: 2 }[e.code];
+      if (slotKey !== undefined) this.keySlotChord.release(slotKey);
     });
 
     window.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -375,6 +399,12 @@ export class GameWorld {
       this.input.mouse.x = pt.x;
       this.input.mouse.y = pt.y;
 
+      // Targeting owns the mouse: LMB confirms / drags a wall, RMB cancels.
+      if (this.targeting.isActive && !this.drawing.active) {
+        if (e.button === 0) this.targeting.pointerDown(pt, 'mouse');
+        else if (e.button === 2) { e.preventDefault(); this.targeting.cancel(); }
+        return;
+      }
       if (e.button === 0) {
         this.input.mouse.isDown = true;
         if (this.drawing.active) {
@@ -393,13 +423,19 @@ export class GameWorld {
       const pt = this.getCanvasCoords(e.clientX, e.clientY);
       this.input.mouse.x = pt.x;
       this.input.mouse.y = pt.y;
+      this.input.mouse.hasMoved = true;
 
       if (this.drawing.active && (this.input.mouse.isDown || this.input.mouse.rightDown)) {
         this.addRunePoint(pt.x, pt.y);
       }
+      if (this.targeting.isActive && this.inputMode !== 'touch') this.targeting.pointerMove(pt, 'mouse');
     });
 
     window.addEventListener('mouseup', (e) => {
+      if (e.button === 0 && this.targeting.active?.pointerId === 'mouse') {
+        this.targeting.pointerUp(this.getCanvasCoords(e.clientX, e.clientY), 'mouse');
+        return;
+      }
       if (e.button === 0) {
         this.input.mouse.isDown = false;
         if (this.drawing.active && !this.input.mouse.rightDown) {
@@ -612,6 +648,14 @@ export class GameWorld {
     joystick.addEventListener('pointerup', clear);
     joystick.addEventListener('pointercancel', clear);
     this.canvas.addEventListener('pointerdown', (event) => {
+      // While a spell waits for its target, a new touch anywhere on the
+      // battlefield aims it (an already held joystick finger keeps moving).
+      if (event.pointerType === 'touch' && this.targeting.isActive && this.targeting.active.pointerId === null && !this.drawing.active) {
+        this.targeting.pointerDown(this.getCanvasCoords(event.clientX, event.clientY), event.pointerId);
+        this.canvas.setPointerCapture?.(event.pointerId);
+        event.preventDefault?.();
+        return;
+      }
       if (beginJoystick(event)) {
         event.preventDefault?.();
         return;
@@ -619,6 +663,10 @@ export class GameWorld {
       beginAttackGesture(event);
     }, { passive: false });
     window.addEventListener('pointermove', (event) => {
+      if (event.pointerType === 'touch' && this.targeting.active?.pointerId === event.pointerId) {
+        this.targeting.pointerMove(this.getCanvasCoords(event.clientX, event.clientY), event.pointerId);
+        return;
+      }
       update(event);
       if (attackPointerId === event.pointerId && attackStart && !chargeArmed && this.player?.isAlive && !this.player.activeClash) {
         const pt = this.getCanvasCoords(event.clientX, event.clientY);
@@ -633,7 +681,13 @@ export class GameWorld {
         }
       }
     }, { passive: false });
-    window.addEventListener('pointerup', (event) => { clear(event); finishAttackGesture(event); }, { passive: false });
+    window.addEventListener('pointerup', (event) => {
+      if (event.pointerType === 'touch' && this.targeting.active?.pointerId === event.pointerId) {
+        this.targeting.pointerUp(this.getCanvasCoords(event.clientX, event.clientY), event.pointerId);
+        return;
+      }
+      clear(event); finishAttackGesture(event);
+    }, { passive: false });
     window.addEventListener('pointercancel', (event) => { clear(event); attackPointerId = null; attackStart = null; chargeArmed = false; }, { passive: false });
     // Exposed for headless tests of the left-half classifier.
     this.touchGestureDebug = { beginJoystick, update, clear, get leftGesture() { return leftGesture; } };
@@ -697,8 +751,9 @@ export class GameWorld {
       x: (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0),
       z: (keys.KeyS || keys.ArrowDown ? 1 : 0) - (keys.KeyW || keys.ArrowUp ? 1 : 0)
     };
-    const x = keyboard.x || this.input.touchMove.x;
-    const z = keyboard.z || this.input.touchMove.z;
+    const pad = this.input.padMove ?? { x: 0, z: 0 };
+    const x = keyboard.x || this.input.touchMove.x || pad.x;
+    const z = keyboard.z || this.input.touchMove.z || pad.z;
     const magnitude = Math.hypot(x, z);
     this.input.move.x = magnitude > 1 ? x / magnitude : x;
     this.input.move.z = magnitude > 1 ? z / magnitude : z;
@@ -713,6 +768,7 @@ export class GameWorld {
 
   startRuneDrawing(expectedCardId = null) {
     if (!this.isMatchRunning() || this.drawing.active || !this.player.isAlive) return;
+    this.targeting.cancel();
     if (this.player.slottedSpells.length >= 3) {
       this.showAnnouncement('SPELL SLOTS FULL — CAST OR FUSE!'); audio.playRuneFail(); return;
     }
@@ -912,8 +968,9 @@ export class GameWorld {
     if (!this.isMatchRunning() || !this.player.isAlive) return false;
     // Inside a Beam Clash the cast input becomes the push / counter impulse.
     if (this.player.activeClash) return !!this.clashAction();
+    if (this.targeting.isActive) return this.targeting.confirm();
     const selectedSlot = this.player.slottedSpells[this.player.selectedSpellIndex];
-    if (selectedSlot) return this.castSpellSlot(selectedSlot, true);
+    if (selectedSlot) return this.castSlotAt(selectedSlot.position);
     if (this.player.preparedRunes.length === 0) {
       this.showAnnouncement('NO RUNES PREPARED! DRAW RUNES FIRST');
       audio.playRuneFail();
@@ -994,7 +1051,7 @@ export class GameWorld {
     return slot;
   }
 
-  castSpellSlot(slot, consumeSelected = false) {
+  castSpellSlot(slot, consumeSelected = false, target = null) {
     const resolved = slot?.definition;
     if (!resolved) return false;
     if (resolved.isComponent) {
@@ -1021,7 +1078,7 @@ export class GameWorld {
     if (resolved.id === 'arcane_aegis') this.player.arcaneShieldCooldown = resolved.cooldown;
     if (resolved.id === 'eidolon_mantle') this.player.eidolonCooldown = resolved.cooldown;
     if (resolved.id === 'ninefold_beast_form') this.player.ninefoldCooldown = resolved.cooldown;
-    spells.cast(this.player, resolved, this, slot.quality);
+    spells.cast(this.player, resolved, this, slot.quality, target);
     this.player.gainFocus(resolved.tier > 1 ? 8 : 4, 'SPELL CAST');
     this.showAnnouncement(`CAST: ${resolved.name}!`);
     this.noteSpellDiscovery(resolved);
@@ -1054,7 +1111,26 @@ export class GameWorld {
     const slot = this.slotAt(position);
     if (!slot) return false;
     this.player.selectedSpellIndex = this.player.slottedSpells.indexOf(slot);
+    // Ground / placement / ally spells first ask for their target.
+    if (needsTarget(slot.definition)) {
+      this.targeting.begin(slot, 'tap');
+      if (this.inputMode === 'desktop' && this.input.mouse.hasMoved) this.targeting.setPointFromScreen(this.input.mouse);
+      return true;
+    }
+    // Mouse users aim direction spells toward the cursor side.
+    if (this.inputMode === 'desktop' && this.input.mouse.hasMoved && slot.definition.targetingMode === TARGETING.DIRECTION) {
+      const aimX = this.targeting.screenToWorld(this.input.mouse).x;
+      if (Math.abs(aimX - this.player.x) > 12) this.player.facing = Math.sign(aimX - this.player.x);
+    }
     return this.castSpellSlot(slot, true);
+  }
+
+  // Touch: a slot dragged straight out onto the battlefield aims with the
+  // same finger (preview while dragging, cast on release).
+  beginSlotAim(position) {
+    if (!this.isMatchRunning() || !this.player.isAlive || this.player.activeClash) return false;
+    const slot = this.slotAt(position);
+    return slot ? this.targeting.begin(slot, 'drag') : false;
   }
 
   // Swipe between two (or across all three) slots. Only the selected slots
@@ -1239,6 +1315,8 @@ export class GameWorld {
 
   setupModeMatch() {
     const mode = this.activeMode;
+    this.trainingDummy = null;
+    this.uiLayer?.classList?.toggle?.('mode-training', mode.id === 'training');
     this.modeState = {
       id: mode.id, wave: 0, intermission: 0, stage: 0, announced: false,
       bossActive: false, scroll: 0, routeScroll: 0, dungeonCameraX: 0, dungeonRoom: null, bossHome: null, rescued: 0, rescue: null, runeCollectibles: [],
@@ -1254,6 +1332,7 @@ export class GameWorld {
       return;
     }
     if (mode.id === 'invasion') {
+      environment.addProp('crate', 470, .2); environment.addProp('crate', 520, .86); environment.addProp('barrel', 640, .5);
       this.player.x = 146; this.player.z = 0.48;
       this.battlefield.placeOnSurface(this.player);
       this.enemyChampion.lifeState = 'Dead';
@@ -1271,7 +1350,29 @@ export class GameWorld {
       this.spawnDungeonStarter();
       return;
     }
-    if (mode.id === 'arena' || mode.id === 'training') {
+    if (mode.id === 'training') {
+      // Practice yard: a stationary straw dummy in the centre. The sparring
+      // partner (the Champion AI) starts switched off and is toggled from
+      // the HUD (or P).
+      this.player.x = 300; this.player.z = 0.58;
+      this.battlefield.placeOnSurface(this.player);
+      // A few breakable crates and an oil barrel around the yard.
+      environment.addProp('crate', 380, .22); environment.addProp('crate', 650, .84);
+      environment.addProp('crate', 700, .2); environment.addProp('barrel', 340, .84);
+      this.trainingDummy = new TrainingDummy(512, 0.5);
+      this.battlefield.placeOnSurface(this.trainingDummy);
+      this.minions.push(this.trainingDummy);
+      this.modeState.sparring = false;
+      this.enemyChampion.heroKey = 'mage';
+      this.enemyChampion.maxHp = this.enemyChampion.hp = 900;
+      this.enemyChampion.x = 840; this.enemyChampion.z = 0.58;
+      this.battlefield.placeOnSurface(this.enemyChampion);
+      this.enemyChampion.lifeState = 'Dead';
+      this.enemyChampion.respawnTimer = Infinity;
+      return;
+    }
+    if (mode.id === 'arena') {
+      environment.addProp('crate', 230, .86); environment.addProp('crate', 800, .18); environment.addProp('barrel', 512, .9);
       this.player.x = 355; this.player.z = 0.58;
       this.enemyChampion.x = 690; this.enemyChampion.z = 0.58;
       this.enemyChampion.heroKey = mode.id === 'arena' ? 'darklord' : 'mage';
@@ -1289,6 +1390,36 @@ export class GameWorld {
         this.spawnArenaRuneCollectibles();
       }
     }
+  }
+
+  toggleSparringPartner() {
+    if (this.activeMode?.id !== 'training' || !this.isMatchRunning()) return false;
+    const state = this.modeState;
+    state.sparring = !state.sparring;
+    const champion = this.enemyChampion;
+    if (state.sparring) {
+      champion.x = 840; champion.z = 0.58;
+      champion.hp = champion.maxHp; champion.mp = champion.maxMp;
+      champion.vx = champion.vz = 0; champion.state = 'idle';
+      champion.lifeState = 'Alive';
+      champion.respawnTimer = Infinity;
+      this.battlefield.placeOnSurface(champion);
+      combat.spawnShockwave(champion.x, champion.y - 28, 50, '#ff5252');
+      this.showAnnouncement('SPARRING PARTNER JOINS', 1.2);
+    } else {
+      // Leaving also ends any clash or attack in progress with the partner.
+      champion.lifeState = 'Dead';
+      champion.respawnTimer = Infinity;
+      champion.activeClash = null;
+      this.showAnnouncement('SPARRING PARTNER LEFT', 1.2);
+    }
+    return state.sparring;
+  }
+
+  // The red HUD side mirrors whoever the player is actually fighting.
+  hudOpponent() {
+    if (this.activeMode?.id === 'training' && !this.modeState?.sparring && this.trainingDummy) return this.trainingDummy;
+    return this.enemyChampion;
   }
 
   spawnInvasionWave() {
@@ -1318,6 +1449,12 @@ export class GameWorld {
     Object.assign(this.battlefield.boundsOverride, bounds);
     const prisonerLost = !!(state.rescue && !state.rescue.rescued);
     state.rescue = config.rescueAt ? { x: bounds.left + config.rescueAt, z: 0.44, rescued: false } : null;
+    // Every regular room hides a couple of crates and an oil barrel.
+    if (!config.boss) {
+      environment.addProp('crate', bounds.left + 520, .24);
+      environment.addProp('barrel', bounds.left + 980, .82);
+      environment.addProp('crate', bounds.left + 1500, .5);
+    }
     state.dungeonRoom = {
       ...bounds, cleared: false,
       encounters: (config.encounters ?? []).map((encounter) => ({ ...encounter, spawned: false }))
@@ -1640,7 +1777,7 @@ export class GameWorld {
       return;
     }
     if (this.activeMode.id === 'arena') this.updateArenaTransformationRelic(dt);
-    if (this.activeMode.id === 'training' && this.enemyChampion.lifeState === 'Dead') {
+    if (this.activeMode.id === 'training' && state.sparring && this.enemyChampion.lifeState === 'Dead') {
       // A practice opponent returns without rewards or a match-ending flow.
       this.enemyChampion.lifeState = 'Alive';
       this.enemyChampion.hp = this.enemyChampion.maxHp;
@@ -1678,6 +1815,8 @@ export class GameWorld {
       }
     }
 
+    // Breakable crates / barrels are neutral: every team can hit them.
+    for (const prop of environment.livingProps()) targets.push(prop);
     return targets;
   }
 
@@ -1880,7 +2019,7 @@ export class GameWorld {
   }
 
   resetMatch() {
-    spells.clearRuntime();
+    spells.clearRuntime(); environment.clear();
     combat.resetEffects();
     this.activeMode = getGameMode(this.matchMode);
     this.battlefield = new Battlefield(this.activeMode);
@@ -1948,7 +2087,7 @@ export class GameWorld {
     if (this.matchState !== 'Ending') return;
     this.matchState = 'Results';
     this.projectiles = [];
-    spells.clearRuntime();
+    spells.clearRuntime(); environment.clear();
     // A compact match reward gives the tree a real play loop without making
     // results depend on a server or a browser reload.
     let progression = null;
@@ -1968,7 +2107,7 @@ export class GameWorld {
     document.body?.classList?.remove?.('portrait-gameplay');
     this.input.gameplayBlocked = true;
     this.projectiles = [];
-    spells.clearRuntime();
+    spells.clearRuntime(); environment.clear();
     this.drawing.active = false;
     this.targetTimeScale = this.timeScale = 1;
     ui.setDrawingMode(false);
@@ -2018,6 +2157,8 @@ export class GameWorld {
     let dt = (currentTime - this.lastFrameTime) * 0.001;
     this.lastFrameTime = currentTime;
     if (dt > 0.1) dt = 0.1;
+    this.gamepad.poll(dt);
+    if (this.targeting.isActive && (!this.isMatchRunning() || !this.player.isAlive)) this.targeting.cancel();
 
     this.syncOrientationState();
     // A portrait device gets a full rotate screen rather than a tiny live
@@ -2104,6 +2245,7 @@ export class GameWorld {
         this.updateProjectiles(scaledDt);
 
         spells.update(scaledDt, this);
+        environment.update(scaledDt, this, spells.getSummons());
         this.updatePotions(scaledDt);
         this.updateMode(scaledDt);
       }
@@ -2118,7 +2260,7 @@ export class GameWorld {
     }
 
     this.updateMountCandidate();
-    ui.update(dt, this.player, this.enemyChampion, this.battlefield);
+    ui.update(dt, this.player, this.hudOpponent(), this.battlefield);
 
     this.input.justPressedKeys = {};
     this.input.justPressedMouse = {};
@@ -2130,6 +2272,11 @@ export class GameWorld {
 
   resolveSpellObstacles(entity, previousX, previousZ) {
     if (!entity?.isMobileCombatant) return false;
+    if (environment.blocks(entity) && !environment.blocksAt(entity, previousX, previousZ)) {
+      entity.x = previousX; entity.z = previousZ;
+      entity.vx *= .15; entity.vz *= .15;
+      return true;
+    }
     for (const spell of spells.activeSpells) {
       if (!spell.isStoneWall || spell.isFinished || spell.team === entity.team) continue;
       if ((entity.worldHeight ?? 0) > spell.surfaceHeight + spell.wallHeight + 18) continue;
@@ -2245,12 +2392,15 @@ export class GameWorld {
 
     // Foreground Crystal Glows on Beacons
     this.battlefield.renderForeground(ctx);
+    // Ground effects (ice, fire, lava, craters…) lie under every actor.
+    const groundPixel = Math.max(1, Math.round(spells.pixelVfx * (ctx.getTransform?.()?.a || 1)));
+    renderPixelated(ctx, groundPixel, (layer) => environment.renderGround(layer));
     this.renderDungeonRescue(ctx);
     this.renderPotions(ctx);
     this.renderArenaRuneCollectibles(ctx);
     this.renderArenaTransformationRelic(ctx);
 
-    const actors = [...this.minions];
+    const actors = [...this.minions, ...environment.livingProps().map((prop) => ({ y: prop.y, render: (c) => renderProp(c, prop) }))];
     if (this.enemyChampion.lifeState !== 'Dead') actors.push(this.enemyChampion);
     if (this.player.lifeState !== 'Dead' && !this.player.isMounted) actors.push(this.player);
     actors.sort((a, b) => a.y - b.y);
@@ -2261,6 +2411,8 @@ export class GameWorld {
 
     // Spells
     spells.render(ctx);
+    environment.renderAir(ctx);
+    this.targeting.render(ctx);
 
     // Summons render with the spell layer. Draw the mounted wizard afterward
     // so they visibly sit on the creature instead of being hidden behind it.
@@ -2407,6 +2559,12 @@ export class GameWorld {
 
     rctx.lineCap = 'round';
     rctx.lineJoin = 'round';
+    // Gamepad pen cursor (right stick; hold RT to ink).
+    const pen = this.drawing.gamepadPen;
+    if (pen) {
+      rctx.strokeStyle = '#fff59d'; rctx.lineWidth = 2;
+      rctx.beginPath(); rctx.arc(pen.x, pen.y, 9, 0, Math.PI * 2); rctx.stroke();
+    }
 
     for (const stroke of allStrokes) {
       if (stroke.length < 2) continue;

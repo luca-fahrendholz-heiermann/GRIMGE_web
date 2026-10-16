@@ -1377,3 +1377,44 @@ code {
 }
 #ui-layer.input-desktop .key-hint { display: block; }
 #ui-layer.input-desktop #touch-joystick { display: none; }
+
+/* Training: toggle for the attacking sparring partner (only in Training). */
+.training-sparring-btn {
+  display: none;
+  position: absolute;
+  top: 25%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 12px;
+  border: 1px solid #8d7aa8;
+  border-radius: 999px;
+  background: rgba(18, 12, 30, .88);
+  color: #f8e8bb;
+  font: 800 9px 'Rajdhani', sans-serif;
+  letter-spacing: 1px;
+  pointer-events: auto;
+  touch-action: manipulation;
+  cursor: pointer;
+}
+#ui-layer.mode-training .training-sparring-btn { display: block; }
+.training-sparring-btn.is-on { border-color: #ff5252; color: #ffcdd2; box-shadow: 0 0 10px rgba(255, 82, 82, .55); }
+
+/* Gamepad mode: no joystick, controller button hints instead of keys. */
+.pad-hint {
+  display: none;
+  position: absolute;
+  bottom: -7px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0 4px;
+  border: 1px solid #66bb6a;
+  border-radius: 6px;
+  background: #0d1f10;
+  color: #e8f5e9;
+  font: 800 7px/11px 'Rajdhani', sans-serif;
+  letter-spacing: .5px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+#ui-layer.input-gamepad .pad-hint { display: block; }
+#ui-layer.input-gamepad #touch-joystick { display: none; }

@@ -3,7 +3,8 @@ import { audio } from './audio.js';
 import { combat } from './combat.js';
 import { GroundEntity, groundDistance, groundYForDepth } from './world.js';
 import { lookupRecipe } from './spell_catalog.js';
-import { BeamSpell, BeamClash, resolveBeamInteractions, MirrorWardSpell, GravityLiftSpell, TitanStompSpell, SoulSeekerBolt, SeismicSlamSpell } from './abilities.js';
+import { environment } from './environment.js';
+import { BeamSpell, BeamClash, resolveBeamInteractions, MirrorWardSpell, GravityLiftSpell, TitanStompSpell, SoulSeekerBolt, SeismicSlamSpell, ConeBreathSpell, BurrowStrikeSpell, ShieldBubbleSpell, renderPixelated } from './abilities.js';
 
 export { BeamClash };
 
@@ -46,6 +47,9 @@ export class SpellSystem {
     this.activeSpells = [];
     this.activeSummons = [];
     this.activeClashes = [];
+    // Spell VFX are rendered through a low-resolution layer for a pixel-art
+    // look that matches the sprites (logical pixels per VFX pixel).
+    this.pixelVfx = 2.5;
   }
 
   getClashFor(caster) {
@@ -158,8 +162,11 @@ export class SpellSystem {
     return summon;
   }
 
-  // Cast the resolved spell into the game world
-  cast(caster, spellDef, gameWorld, quality = null) {
+  // Cast the resolved spell into the game world. `target` comes from the
+  // targeting step: { x, z } for ground spells, { x, z, orientation, length }
+  // for placed walls and { entity } for ally spells. Without a target every
+  // spell falls back to its classic in-front-of-the-caster behaviour.
+  cast(caster, spellDef, gameWorld, quality = null, target = null) {
     if (!spellDef) return;
     const castQuality = this.applyCasterModifiers(caster, spellDef, quality);
 
@@ -178,66 +185,80 @@ export class SpellSystem {
       }
 
       case 'gale_blast': {
-        this.addSpell(new GaleBlastSpell(startX, startZ, facing, caster.team, startHeight), castQuality);
+        // Wind: clears smoke and drags burning ground along its path.
+        this.addSpell(new GaleBlastSpell(startX, startZ, facing, caster.team, startHeight), castQuality).trail = { type: 'wind', interval: .08, radius: 70, dir: facing };
         break;
       }
 
       case 'chain_lightning': {
         this.addSpell(new ChainLightningSpell(startX, startZ, facing, caster.team, gameWorld, startHeight, castQuality), castQuality);
+        environment.electrify(startX + facing * 120, startZ, 140, caster.team, 14 * castQuality.power, gameWorld);
         break;
       }
 
       case 'stone_spikes': {
         this.addSpell(new StoneSpikesSpell(startX, startZ, facing, caster.team), castQuality);
+        environment.add('crack', startX + facing * 70, startZ, { radius: 70, angle: facing > 0 ? 0 : Math.PI });
         break;
       }
 
       case 'frost_nova': {
         this.addSpell(new FrostNovaSpell(caster.x, startZ, caster.team), castQuality);
+        environment.add('ice', caster.x, startZ, { radius: 120 * castQuality.area, team: caster.team });
         break;
       }
 
       case 'firestorm': {
-        // High-value combo: fire tornado
-        this.addSpell(new FirestormSpell(startX, startZ, facing, caster.team), castQuality);
+        // High-value combo: fire tornado — burns a trail and fans the flames.
+        this.addSpell(new FirestormSpell(target?.x ?? startX, target?.z ?? startZ, facing, caster.team), castQuality).trail = { type: 'scorch', interval: .3, radius: 42, wind: facing };
         break;
       }
 
       case 'meteor_cataclysm': {
-        // High-value combo: blazing meteor
-        const targetX = caster.x + facing * 240;
-        this.addSpell(new MeteorSpell(targetX, startZ, caster.team), castQuality);
+        // High-value combo: blazing meteor on the chosen impact point.
+        this.addSpell(new MeteorSpell(target?.x ?? caster.x + facing * 240, target?.z ?? startZ, caster.team), castQuality);
         break;
       }
 
       case 'tempest_blitz': {
-        // High-value combo: lightning dash
+        // High-value combo: lightning dash (a gust along the dash line).
+        const dashStart = caster.x;
         this.addSpell(new TempestBlitzSpell(caster, gameWorld, castQuality), castQuality);
+        environment.wind((dashStart + caster.x) / 2, caster.z, Math.abs(caster.x - dashStart) / 2 + 40, facing);
+        environment.electrify((dashStart + caster.x) / 2, caster.z, Math.abs(caster.x - dashStart) / 2, caster.team, 12, gameWorld);
         break;
       }
 
       case 'magma_fissure': {
-        this.addSpell(new MagmaFissureSpell(startX, startZ, facing, caster.team), castQuality);
+        // The fissure opens 80px in front of its start; a chosen point is the centre.
+        // The fissure leaves a molten pool for its whole lifetime (once, on its first tick).
+        this.addSpell(new MagmaFissureSpell(target ? target.x - facing * 80 : startX, target?.z ?? startZ, facing, caster.team), castQuality).trail = { type: 'lava', interval: 99, radius: 70 };
         break;
       }
 
       case 'sandstorm_bastion': {
-        this.addSpell(new SandstormBastionSpell(caster), castQuality);
+        this.addSpell(new SandstormBastionSpell(caster), castQuality).trail = { type: 'wind', interval: .3, radius: 105, dir: facing };
         break;
       }
 
       case 'blizzard_surge': {
-        this.addSpell(new BlizzardSurgeSpell(startX, startZ, facing, caster.team), castQuality);
+        this.addSpell(new BlizzardSurgeSpell(startX, startZ, facing, caster.team), castQuality).trail = { type: 'ice', interval: .22, radius: 55 };
         break;
       }
 
       case 'aura_shock': {
         this.castAuraShock(caster, gameWorld, castQuality);
+        environment.electrify(caster.x, caster.z, 112, caster.team, 10, gameWorld);
         break;
       }
 
       case 'arcane_aegis': {
-        this.castArcaneShield(caster, castQuality);
+        const ally = target?.entity;
+        if (ally && ally !== caster) {
+          this.addSpell(new ShieldBubbleSpell(ally, Math.round(90 * castQuality.power), 5 * castQuality.duration), castQuality);
+          audio.playSpell('arcane_shield');
+          combat.spawnShockwave(ally.x, (ally.y ?? groundYForDepth(ally.z)) - 30, 46, '#b388ff');
+        } else this.castArcaneShield(caster, castQuality);
         break;
       }
 
@@ -252,12 +273,22 @@ export class SpellSystem {
       }
 
       case 'stone_wall': {
-        this.castStoneWall(caster, gameWorld, castQuality);
+        this.castStoneWall(caster, gameWorld, castQuality, target);
         break;
       }
 
       case 'construct_bulwark': {
-        this.castConstructBulwark(caster, gameWorld, castQuality);
+        this.castConstructBulwark(caster, gameWorld, castQuality, target);
+        break;
+      }
+
+      case 'dragon_breath': {
+        this.addSpell(new ConeBreathSpell(caster), castQuality);
+        break;
+      }
+
+      case 'burrow_strike': {
+        this.addSpell(new BurrowStrikeSpell(caster), castQuality);
         break;
       }
 
@@ -284,7 +315,7 @@ export class SpellSystem {
       }
 
       case 'gravity_lift': {
-        this.addSpell(new GravityLiftSpell(caster, gameWorld), castQuality);
+        this.addSpell(new GravityLiftSpell(caster, gameWorld, target), castQuality);
         break;
       }
 
@@ -314,14 +345,15 @@ export class SpellSystem {
       }
 
       case 'void_implosion': {
-        this.addSpell(new VoidImplosionSpell(startX + facing * 120, startZ, caster.team), castQuality);
+        environment.add('crack', target?.x ?? startX + facing * 120, target?.z ?? startZ, { radius: 90, angle: 0 });
+        this.addSpell(new VoidImplosionSpell(target?.x ?? startX + facing * 120, target?.z ?? startZ, caster.team), castQuality);
         audio.playSpell('eidolon_mantle');
         combat.shakeCamera(8, 0.4);
         break;
       }
 
       case 'inferno_rampage': {
-        this.addSpell(new InfernoRampageSpell(startX, startZ, facing, caster.team), castQuality);
+        this.addSpell(new InfernoRampageSpell(startX, startZ, facing, caster.team), castQuality).trail = { type: 'scorch', interval: .15, radius: 38 };
         audio.playSpell('ignis');
         combat.shakeCamera(10, 0.5);
         break;
@@ -451,7 +483,16 @@ export class SpellSystem {
     audio.playSpell('ignis');
   }
 
-  castStoneWall(caster, gameWorld, quality = RUNE_GRADE_PROFILES.B) {
+  // A placed wall follows the swiped line, snapped to the two collision axes:
+  // a "depth" wall spans the lane (blocks horizontal approach), a "lateral"
+  // wall runs along x (blocks depth movement).
+  wallShape(target, depthHalfZ, lateralHalfX) {
+    if (target?.orientation !== 'lateral') return { halfZ: depthHalfZ };
+    const halfX = Math.max(30, Math.min(lateralHalfX, (target.length || lateralHalfX * 2) / 2));
+    return { halfX, halfZ: .06 };
+  }
+
+  castStoneWall(caster, gameWorld, quality = RUNE_GRADE_PROFILES.B, target = null) {
     // One wall per Wizard keeps the arena readable and prevents a deck cycle
     // from turning the brawler plane into a permanent maze.
     for (const spell of this.activeSpells) {
@@ -459,8 +500,8 @@ export class SpellSystem {
     }
     const offset = caster.facing * 78;
     const mods = caster.buildModifiers ?? {};
-    const wall = this.addSpell(new StoneWallSpell(caster.x + offset, caster.z, caster.team, caster.surfaceHeight ?? 0, {
-      halfZ: .24 * (mods.wallHp ?? 1), life: 3.8 * (mods.wallDuration ?? 1)
+    const wall = this.addSpell(new StoneWallSpell(target?.x ?? caster.x + offset, target?.z ?? caster.z, caster.team, caster.surfaceHeight ?? 0, {
+      ...this.wallShape(target, .24 * (mods.wallHp ?? 1), 110), life: 3.8 * (mods.wallDuration ?? 1)
     }), quality);
     audio.playSpell('stone_spikes');
     combat.shakeCamera(5, 0.2);
@@ -469,13 +510,13 @@ export class SpellSystem {
     return wall;
   }
 
-  castConstructBulwark(caster, gameWorld, quality = RUNE_GRADE_PROFILES.B) {
+  castConstructBulwark(caster, gameWorld, quality = RUNE_GRADE_PROFILES.B, target = null) {
     for (const spell of this.activeSpells) {
       if (spell.isStoneWall && spell.team === caster.team) spell.isFinished = true;
     }
     const offset = caster.facing * 64;
-    const wall = this.addSpell(new StoneWallSpell(caster.x + offset, caster.z, caster.team, caster.surfaceHeight ?? 0, {
-      halfX: 12, halfZ: .18, wallHeight: 66, life: 2.25, color: '#90a4ae'
+    const wall = this.addSpell(new StoneWallSpell(target?.x ?? caster.x + offset, target?.z ?? caster.z, caster.team, caster.surfaceHeight ?? 0, {
+      halfX: 12, halfZ: .18, ...this.wallShape(target, .18, 70), wallHeight: 66, life: 2.25, color: '#90a4ae'
     }), quality);
     audio.playSpell('stone_spikes');
     combat.spawnShockwave(wall.x, wall.y, 38 * quality.area, '#b0bec5');
@@ -483,10 +524,25 @@ export class SpellSystem {
     return wall;
   }
 
+  // Moving spells can leave a trail on the environment layer.
+  updateTrail(spell, dt) {
+    const trail = spell.trail;
+    if (!trail || spell.isFinished) return;
+    spell.trailTimer = (spell.trailTimer ?? 0) - dt;
+    if (spell.trailTimer > 0) return;
+    spell.trailTimer = trail.interval;
+    const x = spell.x ?? spell.caster?.x; const z = spell.z ?? spell.caster?.z;
+    if (!Number.isFinite(x) || !Number.isFinite(z)) return;
+    if (trail.type === 'wind') { environment.wind(x, z, trail.radius, trail.dir ?? spell.facing ?? 1); return; }
+    environment.add(trail.type, x, z, { radius: trail.radius * (spell.quality?.area ?? 1), team: spell.team });
+    if (trail.wind) environment.wind(x, z, trail.radius + 30, trail.wind);
+  }
+
   update(dt, gameWorld) {
     for (let i = this.activeSpells.length - 1; i >= 0; i--) {
       const spell = this.activeSpells[i];
       spell.update(dt, gameWorld);
+      this.updateTrail(spell, dt);
       if (spell.isFinished) {
         this.activeSpells.splice(i, 1);
       }
@@ -502,9 +558,10 @@ export class SpellSystem {
   }
 
   render(ctx) {
-    for (const spell of this.activeSpells) {
-      spell.render(ctx);
-    }
+    const pixelSize = Math.max(1, Math.round(this.pixelVfx * (ctx.getTransform?.()?.a || 1)));
+    renderPixelated(ctx, pixelSize, (layer) => {
+      for (const spell of this.activeSpells) spell.render(layer);
+    });
     for (const summon of this.activeSummons) summon.render(ctx);
     for (const clash of this.activeClashes) clash.render(ctx);
   }
@@ -591,6 +648,7 @@ class FireballSpell {
     combat.shakeCamera(6, 0.2);
     combat.spawnShockwave(this.x, this.y, 65, this.midColor);
     combat.spawnHitSparks(this.x, this.y, this.facing, this.midColor, 16);
+    if (this.element === 'ignis') environment.add('scorch', this.x, this.z, { radius: 44 * (this.quality?.area ?? 1), team: this.team });
 
     // AoE Damage
     const targets = gameWorld.getHostileTargets(this.team);
@@ -1204,6 +1262,8 @@ class MeteorSpell {
       if (this.y >= this.targetY - 10) {
         this.isLanded = true;
         this.y = this.targetY;
+        environment.add('crater', this.targetX, this.targetZ, { radius: 72 * (this.quality?.area ?? 1) });
+        environment.add('lava', this.targetX, this.targetZ, { radius: 42 * (this.quality?.area ?? 1), team: this.team });
         audio.playSpell('meteor');
         combat.shakeCamera(14, 0.6);
         combat.spawnShockwave(this.x, this.y, 140, '#ff3d00');
@@ -1495,6 +1555,7 @@ class StoneWallSpell {
     if (this.life <= 0) {
       this.isFinished = true;
       combat.spawnDust(this.x, this.y, 10);
+      environment.add('rubble', this.x, this.z, { radius: Math.max(24, this.halfX + 10), life: 4 });
     }
   }
 
@@ -1635,6 +1696,11 @@ class SummonedCreature extends GroundEntity {
   }
 
   takeDamage(amount) {
+    if (this.arcaneShield > 0) {
+      const absorbed = Math.min(amount, this.arcaneShield);
+      this.arcaneShield -= absorbed; amount -= absorbed;
+      if (amount <= 0) return;
+    }
     this.hp = Math.max(0, this.hp - amount);
     if (this.hp <= 0) {
       this.rider?.dismount?.();

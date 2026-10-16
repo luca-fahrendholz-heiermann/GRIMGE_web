@@ -8,6 +8,7 @@
 import { audio } from './audio.js';
 import { combat } from './combat.js';
 import { groundDistance, groundYForDepth } from './world.js';
+import { environment } from './environment.js';
 
 function withinHeight(target, sourceHeight, tolerance = 110) {
   return Math.abs((target.worldHeight ?? 0) - sourceHeight) < (target.hitHeightTolerance ?? tolerance);
@@ -189,7 +190,19 @@ export class BeamSpell {
     return { min: Math.min(a, b), max: Math.max(a, b) };
   }
 
+  // Beams mark the ground under their body: fire scorches, frost freezes,
+  // lightning electrifies puddles. The look stays per element.
+  markGround(gameWorld) {
+    const { min, max } = this.segmentBounds();
+    const x = min + Math.random() * (max - min);
+    const element = this.profile.vfx;
+    if (element === 'fire' || element === 'arcane') environment.add('scorch', x, this.z, { radius: 30, team: this.team });
+    else if (element === 'ice') environment.add('ice', x, this.z, { radius: 40, team: this.team });
+    else if (element === 'lightning') environment.electrify((min + max) / 2, this.z, (max - min) / 2, this.team, 8, gameWorld);
+  }
+
   applyTick(gameWorld) {
+    this.markGround(gameWorld);
     const { min, max } = this.segmentBounds();
     for (const t of gameWorld.getHostileTargets(this.team)) {
       if (t.x < min || t.x > max) continue;
@@ -623,10 +636,10 @@ export class MirrorWardSpell {
 // ─────────────────────────────────────────────────────────────────────────
 
 export class GravityLiftSpell {
-  constructor(caster, gameWorld) {
+  constructor(caster, gameWorld, target = null) {
     this.caster = caster; this.team = caster.team;
-    this.centerX = caster.x + (caster.facing || 1) * 90;
-    this.z = caster.z;
+    this.centerX = target?.x ?? caster.x + (caster.facing || 1) * 90;
+    this.z = target?.z ?? caster.z;
     this.radius = 170; this.maxTargets = 4;
     this.phase = 'lift'; this.timer = 0; this.isFinished = false;
     this.damage = 30;
@@ -736,6 +749,7 @@ export class TitanStompSpell {
       t.takeDamage(this.damage, Math.sign(dx || 1) * 260, 380, .45, false, 'spell');
     }
     combat.shakeCamera(13, .45);
+    environment.add('crater', this.x, this.z, { radius: radius * .6 });
     combat.spawnShockwave(this.x, this.y, radius, '#8d6e63');
     combat.spawnElementalParticles(this.x, this.y, 'terra', 22);
     audio.playSpell('stone_spikes');
@@ -838,6 +852,7 @@ export class SeismicSlamSpell {
   burst(x, gameWorld) {
     this.burstIndex++;
     this.trail.push({ x, t: performance.now() });
+    environment.add('crack', x, this.z, { radius: 38, angle: this.facing > 0 ? 0 : Math.PI });
     combat.spawnElementalParticles(x, this.y, 'terra', 6);
     for (const t of gameWorld.getHostileTargets(this.team)) {
       if (this.hit.has(t) || t.isDead || t.lifeState === 'Dead') continue;
@@ -860,4 +875,196 @@ export class SeismicSlamSpell {
     }
     ctx.restore();
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// WIDE BEAM / CONE (DRAGON BREATH) — a flame stream that widens with range.
+// ─────────────────────────────────────────────────────────────────────────
+
+export class ConeBreathSpell {
+  constructor(caster) {
+    this.caster = caster; this.team = caster.team;
+    this.facing = caster.facing || 1;
+    this.life = 1.2; this.tick = 0; this.damage = 9;
+    this.length = 260; this.blobs = []; this.isFinished = false;
+  }
+  get z() { return this.caster.z; }
+  get originX() { return this.caster.x + this.facing * 28; }
+  get y() { return groundYForDepth(this.z) - (this.caster.worldHeight ?? 0) - 30; }
+  get reach() { return this.length * (this.quality?.area ?? 1); }
+
+  // Cone test in ground space: the allowed depth band grows with distance.
+  contains(t) {
+    const along = (t.x - this.originX) * this.facing;
+    if (along < -10 || along > this.reach) return false;
+    return Math.abs((t.z ?? this.z) - this.z) <= .05 + .22 * Math.max(0, along) / this.reach;
+  }
+
+  update(dt, gameWorld) {
+    if (this.caster.isAlive === false || this.caster.isDead) { this.isFinished = true; return; }
+    this.life -= dt;
+    this.tick -= dt;
+    if (this.tick <= 0 && this.life > 0) {
+      this.tick = .15;
+      for (const t of gameWorld.getHostileTargets(this.team)) {
+        if (t.isDead || t.lifeState === 'Dead' || !this.contains(t)) continue;
+        if (!t.isObjective && !withinHeight(t, this.caster.worldHeight ?? 0, 100)) continue;
+        t.takeDamage(this.damage, this.facing * 40, 20, .1, false, 'spell');
+      }
+      // The flame stream scorches the ground inside the cone.
+      const along = Math.random() * this.reach;
+      environment.add('scorch', this.originX + this.facing * along, this.z + (Math.random() - .5) * .3 * along / this.reach, { radius: 28 + along * .08, team: this.team });
+    }
+    if (this.life > .15) for (let i = 0; i < 3; i++) this.blobs.push({ d: 0, spread: (Math.random() - .5) * 2, size: 5 + Math.random() * 4 });
+    for (const blob of this.blobs) blob.d += 520 * dt;
+    this.blobs = this.blobs.filter((blob) => blob.d < this.reach);
+    if (this.life <= 0 && !this.blobs.length) this.isFinished = true;
+  }
+
+  render(ctx) {
+    ctx.save();
+    // Chunky flame blobs with a dark outline: yellow core -> orange -> red -> smoke.
+    for (const blob of this.blobs) {
+      const f = blob.d / this.reach;
+      const x = this.originX + this.facing * blob.d;
+      const y = this.y + blob.spread * (6 + f * 46);
+      const r = blob.size * (1 + f * 2.2);
+      ctx.fillStyle = f < .2 ? '#fff59d' : f < .5 ? '#ffb300' : f < .8 ? '#f4511e' : 'rgba(80,60,55,.75)';
+      ctx.strokeStyle = 'rgba(62,26,0,.85)'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    }
+    ctx.restore();
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// UNDERGROUND / BURROW (BURROW STRIKE) — untouchable travel, then eruption.
+// ─────────────────────────────────────────────────────────────────────────
+
+export class BurrowStrikeSpell {
+  constructor(caster) {
+    this.caster = caster; this.team = caster.team;
+    this.duration = 1.4; this.timer = 0; this.radius = 95; this.damage = 38;
+    this.erupted = false; this.eruptTimer = 0; this.isFinished = false;
+    caster.cancelSprint?.();
+    caster.burrowed = true;
+    caster.invulnerableTimer = Math.max(caster.invulnerableTimer ?? 0, this.duration * 1.25 + .1);
+    environment.add('hole', caster.x, caster.z, { radius: 26 });
+    combat.spawnDust(caster.x, groundYForDepth(caster.z), 10);
+  }
+  get x() { return this.caster.x; }
+  get z() { return this.caster.z; }
+  get y() { return groundYForDepth(this.z); }
+
+  update(dt, gameWorld) {
+    if (this.erupted) { this.eruptTimer += dt; if (this.eruptTimer > .35) this.isFinished = true; return; }
+    this.timer += dt;
+    if (Math.random() < .5) combat.spawnDust(this.x, this.y, 1);
+    if (this.timer >= this.duration * (this.quality?.duration ?? 1) || this.caster.isAlive === false) this.erupt(gameWorld);
+  }
+
+  erupt(gameWorld) {
+    this.erupted = true;
+    this.caster.burrowed = false;
+    this.caster.invulnerableTimer = Math.min(this.caster.invulnerableTimer ?? 0, .15);
+    const radius = this.radius * (this.quality?.area ?? 1);
+    for (const t of gameWorld.getHostileTargets(this.team)) {
+      if (t.isDead || t.lifeState === 'Dead') continue;
+      const dx = t.x - this.x;
+      if (Math.hypot(dx, ((t.z ?? this.z) - this.z) * 150) > radius) continue;
+      t.takeDamage(this.damage, Math.sign(dx || 1) * 220, 420, .45, false, 'spell');
+    }
+    combat.shakeCamera(11, .4);
+    environment.add('crater', this.x, this.z, { radius: radius * .55 });
+    combat.spawnShockwave(this.x, this.y, radius, '#a1887f');
+    combat.spawnElementalParticles(this.x, this.y, 'terra', 24);
+    audio.playSpell('stone_spikes');
+  }
+
+  render(ctx) {
+    ctx.save();
+    ctx.fillStyle = '#8d6e63'; ctx.strokeStyle = '#3e2723'; ctx.lineWidth = 2;
+    if (!this.erupted) {
+      // A travelling dirt mound marks the buried caster.
+      const wobble = Math.sin(performance.now() * .02) * 2;
+      ctx.fillStyle = '#6d4c41';
+      ctx.beginPath(); ctx.ellipse(this.x, this.y - 4 + wobble, 26, 10, 0, Math.PI, 0); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#8d6e63';
+      for (let i = -2; i <= 2; i++) { ctx.beginPath(); ctx.arc(this.x + i * 9, this.y - 8 + Math.abs(i) * 2 + wobble, 3, 0, Math.PI * 2); ctx.fill(); }
+    } else {
+      const k = this.eruptTimer / .35;
+      for (let i = 0; i < 6; i++) {
+        const a = -Math.PI * (i + .5) / 6;
+        const px = this.x + Math.cos(a) * 40 * k; const py = this.y + Math.sin(a) * 50 * k;
+        ctx.beginPath(); ctx.moveTo(px - 5, py + 6); ctx.lineTo(px, py - 8); ctx.lineTo(px + 5, py + 6); ctx.closePath(); ctx.fill(); ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// ALLY SHIELD — Arcane Aegis on a chosen friendly unit.
+// ─────────────────────────────────────────────────────────────────────────
+
+export class ShieldBubbleSpell {
+  constructor(target, amount, duration) {
+    this.target = target; this.team = target.team;
+    this.life = duration; this.isFinished = false;
+    target.arcaneShield = amount;
+    if ('arcaneShieldTimer' in target) target.arcaneShieldTimer = duration;
+  }
+  get x() { return this.target.x; }
+  get z() { return this.target.z; }
+  get y() { return this.target.y ?? groundYForDepth(this.z); }
+  update(dt) {
+    this.life -= dt;
+    const gone = this.target.isDead || this.target.lifeState === 'Dead' || (this.target.arcaneShield ?? 0) <= 0;
+    if (this.life <= 0 || gone) {
+      if (!('arcaneShieldTimer' in this.target)) this.target.arcaneShield = 0;
+      this.isFinished = true;
+    }
+  }
+  render(ctx) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.strokeStyle = 'rgba(179,136,255,.85)'; ctx.lineWidth = 2;
+    ctx.fillStyle = 'rgba(179,136,255,.14)';
+    const r = 24 + Math.sin(performance.now() * .008) * 2;
+    ctx.beginPath(); ctx.arc(this.x, this.y - 26, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.restore();
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// PIXEL VFX LAYER — spell effects are drawn at a reduced resolution and
+// scaled up without smoothing, so procedural VFX match the pixel-art
+// characters (chunky, hard-edged effects as in the reference videos).
+// ─────────────────────────────────────────────────────────────────────────
+
+let pixelLayer = null;
+export function renderPixelated(ctx, pixelSize, draw) {
+  const target = ctx.canvas;
+  const transform = typeof ctx.getTransform === 'function' ? ctx.getTransform() : null;
+  const doc = globalThis.document;
+  if (!(target?.width > 0) || !(transform && 'a' in transform) || typeof doc?.createElement !== 'function' || pixelSize <= 1) { draw(ctx); return false; }
+  const w = Math.ceil(target.width / pixelSize); const h = Math.ceil(target.height / pixelSize);
+  if (!pixelLayer || pixelLayer.canvas.width !== w || pixelLayer.canvas.height !== h) {
+    const canvas = doc.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+    const layerCtx = canvas.getContext?.('2d');
+    if (!layerCtx) { draw(ctx); return false; }
+    pixelLayer = { canvas, ctx: layerCtx };
+  }
+  const lctx = pixelLayer.ctx;
+  lctx.setTransform(1, 0, 0, 1, 0, 0);
+  lctx.clearRect(0, 0, w, h);
+  lctx.setTransform(transform.a / pixelSize, transform.b / pixelSize, transform.c / pixelSize, transform.d / pixelSize, transform.e / pixelSize, transform.f / pixelSize);
+  draw(lctx);
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(pixelLayer.canvas, 0, 0, w * pixelSize, h * pixelSize);
+  ctx.restore();
+  return true;
 }
