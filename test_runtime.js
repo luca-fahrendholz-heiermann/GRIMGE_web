@@ -333,7 +333,7 @@ spells.cast(game.player, spells.resolveSpell([ignis]), game);
 spells.update(0.05, game);
 assert(game.enemyChampion.hp === crossLaneHp, 'Ground projectile ignores an enemy on a different depth lane');
 spells.activeSpells = [];
-game.enemyChampion.z = game.player.z;
+game.enemyChampion.z = game.player.z; game.enemyChampion.elevation = 0; game.battlefield.placeOnSurface(game.enemyChampion);
 spells.cast(game.player, spells.resolveSpell([ignis]), game);
 spells.update(0.05, game);
 assert(game.enemyChampion.hp < crossLaneHp, 'Ground projectile hits an enemy on the same depth lane');
@@ -952,15 +952,30 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
   game.castSlotAt(0);
   const a = screenOf(420, .5); const b = screenOf(560, .52);
   game.targeting.pointerDown(a, 'mouse'); game.targeting.pointerMove(b, 'mouse'); game.targeting.pointerUp(b, 'mouse');
-  const lateralWall = spells.activeSpells.find((s) => s.isStoneWall);
-  assert(lateralWall && lateralWall.halfX > 50 && lateralWall.halfZ < .1 && Math.abs(lateralWall.x - 490) < 4, 'A horizontal swipe places a lateral wall along the swiped line');
+  const lateralBlocks = spells.activeSpells.filter((s) => s.isStoneWall);
+  const lateralXs = lateralBlocks.map((s) => s.x);
+  assert(lateralBlocks.length >= 3 && Math.abs(Math.min(...lateralXs) - 420) < 4 && Math.max(...lateralXs) - Math.min(...lateralXs) > 60 && lateralBlocks.every((s) => Math.abs(s.z - .5) < .03), 'A horizontal swipe places a row of wall blocks exactly along the swiped line');
   reset();
   slotFused(['terra', 'terra']);
   game.castSlotAt(0);
   const c = screenOf(450, .25); const d = screenOf(452, .8);
   game.targeting.pointerDown(c, 7); game.targeting.pointerMove(d, 7); game.targeting.pointerUp(d, 7);
-  const depthWall = spells.activeSpells.find((s) => s.isStoneWall);
-  assert(depthWall && depthWall.halfZ > .2 && depthWall.halfX < 20, 'A vertical swipe places a depth wall across the lane');
+  const depthBlocks = spells.activeSpells.filter((s) => s.isStoneWall);
+  const depthZs = depthBlocks.map((s) => s.z);
+  assert(depthBlocks.length >= 3 && Math.max(...depthZs) - Math.min(...depthZs) > .3 && depthBlocks.every((s) => Math.abs(s.x - 450) < 6), 'A downward swipe places the wall into the depth (across the lane)');
+  // A diagonal swipe follows the line; the drawing grade sets the length.
+  reset();
+  spells.cast(P, spells.resolveSpell([{ id: 'terra' }, { id: 'terra' }]), game, 'S', { x: 0, z: 0, start: { x: 400, z: .3 }, end: { x: 700, z: .8 } });
+  const diagonal = spells.activeSpells.filter((s) => s.isStoneWall);
+  assert(diagonal.length === spells.wallSegmentLimit('stone_wall', 'S') && diagonal.every((s, i) => i === 0 || (s.x > diagonal[i - 1].x && s.z > diagonal[i - 1].z)), 'A diagonal swipe builds a diagonal wall; an S-grade rune gives the most blocks');
+  assert(spells.wallSegmentLimit('stone_wall', 'S') > spells.wallSegmentLimit('stone_wall', 'B') && spells.wallSegmentLimit('stone_wall', 'B') > spells.wallSegmentLimit('stone_wall', 'C'), 'Cleaner drawings allow longer walls (more segments)');
+  // Nobody walks through a placed wall — the caster included.
+  const block = diagonal[0];
+  const fromX = block.x - 40;
+  P.x = block.x; P.z = block.z;
+  assert(game.resolveSpellObstacles(P, fromX, block.z) && P.x === fromX, 'The caster cannot walk through their own wall');
+  P.x = block.x; P.z = block.z;
+  assert(!game.resolveSpellObstacles(P, block.x + 2, block.z), 'Someone a wall rose on top of can still walk out of it');
 
   // Ally targeting: shield a friendly minion.
   reset();
@@ -1136,9 +1151,13 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
 
   reset();
   spells.cast(P, spells.resolveSpell([recognizer.runes.find((r) => r.id === 'terra'), recognizer.runes.find((r) => r.id === 'terra')]), game);
-  spells.activeSpells.find((s) => s.isStoneWall).takeDamage(999);
+  const blocks = spells.activeSpells.filter((s) => s.isStoneWall);
+  blocks[0].takeDamage(999);
   stepWorld(.1);
-  assert(environment.effects.some((e) => e.type === 'rubble') && !spells.activeSpells.some((s) => s.isStoneWall), 'A destroyed Stone Wall crumbles into rubble');
+  assert(environment.effects.some((e) => e.type === 'rubble') && spells.activeSpells.filter((s) => s.isStoneWall).length === blocks.length - 1, 'A destroyed wall block crumbles into rubble and leaves a gap');
+  for (const rest of spells.activeSpells.filter((s) => s.isStoneWall)) rest.takeDamage(999);
+  stepWorld(.1);
+  assert(!spells.activeSpells.some((s) => s.isStoneWall), 'Breaking every block removes the wall');
   reset();
 }
 // Improvements: dash cooldown, training depth, depth sorting, training decks,
@@ -1209,12 +1228,12 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
   spells.cast(P, wallSpell, game, null, { x: 400, z: .3 });
   spells.cast(P, wallSpell, game, null, { x: 500, z: .5 });
   stepSpells(.05);
-  assert(spells.activeSpells.filter((s) => s.isStoneWall).length === 1, 'Without the passive only one wall stands at a time');
+  assert(new Set(spells.activeSpells.filter((s) => s.isStoneWall).map((s) => s.wallGroup)).size === 1, 'Without the passive only one wall stands at a time');
   reset();
   P.buildModifiers = { ...savedMods, maxWalls: 3 };
   for (const x of [380, 460, 540]) spells.cast(P, wallSpell, game, null, { x, z: .5 });
   stepSpells(5);
-  assert(spells.activeSpells.filter((s) => s.isStoneWall).length === 3, 'With Rampart Mason several walls stay on the field (long-lasting until destroyed)');
+  assert(new Set(spells.activeSpells.filter((s) => s.isStoneWall).map((s) => s.wallGroup)).size === 3, 'With Rampart Mason several walls stay on the field (long-lasting until destroyed)');
   const { Minion } = await import('./public/src/entities.js');
   const raider = new Minion(560, .5, 'red', 'melee', 0);
   game.battlefield.placeOnSurface(raider); game.minions.push(raider);
@@ -1483,6 +1502,46 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
   E.lifeState = 'Dying'; game.noteFallenWizards(); game.noteFallenWizards();
   assert(spells.graves.filter((g) => g.spriteKey === E.heroKey).length === 1, 'A fallen Wizard leaves exactly one grave');
   E.lifeState = 'Alive';
+
+  // 10b. Frost Mirror Gate: two points, step in one, come out of the other.
+  reset();
+  const gate = spells.resolveSpell([{ id: 'aqua' }, { id: 'void' }]);
+  assert(gate?.id === 'mirror_gate' && gate.targetingMode === 'dual' && needsTarget(gate), 'AQUA + VOID forms the Frost Mirror Gate, which asks for two points');
+  const gateSlot = { runes: [{ id: 'aqua' }, { id: 'void' }], definition: gate, isCombo: true, quality: 'B', manaCost: 0 };
+  game.targeting.begin(gateSlot, 'tap');
+  game.targeting.setPoint({ x: 360, z: .5 });
+  assert(game.targeting.confirm() && game.targeting.isActive && game.targeting.active.points.length === 1, 'The first confirm only sets the first mirror');
+  game.targeting.setPoint({ x: 760, z: .3 });
+  game.render();
+  assert(game.targeting.confirm() && !game.targeting.isActive, 'The second confirm raises the gate');
+  const mirrors = spells.activeSpells.filter((s) => s.isFrostMirror);
+  assert(mirrors.length === 2 && Math.abs(mirrors[1].x - 760) < 1 && Math.abs(mirrors[1].z - .3) < .01, 'Two ice mirrors stand at the chosen points');
+  P.x = mirrors[0].x - 60; P.z = mirrors[0].z; P._mirrorArrival = null;
+  stepSpells(1 / 60);
+  assert(Math.abs(P.x - (mirrors[0].x - 60)) < 1, 'Standing next to a mirror does nothing');
+  P.x = mirrors[0].x; P.z = mirrors[0].z;
+  stepSpells(1 / 60);
+  assert(Math.abs(P.x - 760) < 1 && Math.abs(P.z - .3) < .01, 'Stepping into a mirror brings the Wizard out of the other one');
+  stepSpells(.5);
+  assert(Math.abs(P.x - 760) < 1, 'The arrival mirror does not send the traveller straight back');
+  P.x += 80; stepSpells(1 / 60); P.x = mirrors[1].x; P.z = mirrors[1].z; stepSpells(1 / 60);
+  assert(Math.abs(P.x - mirrors[0].x) < 1, 'After stepping off, the gate works the other way too');
+  const foeTraveller = foe(mirrors[0].x, mirrors[0].z); const foeX = foeTraveller.x;
+  stepSpells(1 / 60);
+  assert(foeTraveller.x === foeX, 'Enemies cannot use the gate');
+  stepSpells(31);
+  assert(!spells.activeSpells.some((s) => s.isFrostMirror), 'The gate closes after its duration');
+
+  // 10c. Training: a tapped hand rune is pre-drawn as a template; DRAW is free.
+  reset();
+  P.configureRuneDeck(['lux', 'mortis', 'ignis'].map((id) => recognizer.runes.find((r) => r.id === id)));
+  game.startRuneDrawing(P.runeHand[0].cardId);
+  assert(game.runeGuide()?.id === 'lux', 'Training: tapping a hand rune shows it as a template to trace');
+  game.renderRuneStrokes();
+  game.cancelRuneDrawing();
+  game.startRuneDrawing();
+  assert(game.runeGuide() === null, 'Training: free drawing (DRAW) shows no template');
+  game.cancelRuneDrawing();
 
   // 10. Aiming through the slot: the cone preview marks the auto-target.
   reset();

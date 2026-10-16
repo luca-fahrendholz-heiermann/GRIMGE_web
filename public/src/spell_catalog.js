@@ -22,8 +22,9 @@ export const DELIVERY = Object.freeze({
 // gamepad: DIRECTION fires at once (aim = facing / drag / cursor side),
 // GROUND asks for an impact point, PLACEMENT for a swiped line (walls),
 // ALLY for a friendly unit (player, minion, companion, summon), AIM for a
-// free direction including depth (shown as a cone), SELF never asks.
-export const TARGETING = Object.freeze({ DIRECTION: 'direction', GROUND: 'ground', PLACEMENT: 'placement', ALLY: 'ally', AIM: 'aim', SELF: 'self' });
+// free direction including depth (shown as a cone), DUAL for two points
+// (Frost Mirror Gate), SELF never asks.
+export const TARGETING = Object.freeze({ DIRECTION: 'direction', GROUND: 'ground', PLACEMENT: 'placement', ALLY: 'ally', AIM: 'aim', DUAL: 'dual', SELF: 'self' });
 const TARGETING_BY_SPELL = Object.freeze({
   meteor_cataclysm: TARGETING.GROUND, magma_fissure: TARGETING.GROUND, gravity_lift: TARGETING.GROUND,
   void_implosion: TARGETING.GROUND, firestorm: TARGETING.GROUND,
@@ -31,11 +32,11 @@ const TARGETING_BY_SPELL = Object.freeze({
   arcane_aegis: TARGETING.ALLY,
   frost_nova: TARGETING.SELF, aura_shock: TARGETING.SELF, eidolon_mantle: TARGETING.SELF, ninefold_beast_form: TARGETING.SELF,
   sandstorm_bastion: TARGETING.SELF, mirror_ward: TARGETING.SELF, burrow_strike: TARGETING.SELF,
-  shadow_stomper: TARGETING.AIM, halo_pulse: TARGETING.SELF, shadow_doppelganger: TARGETING.SELF, revenant_call: TARGETING.SELF,
+  shadow_stomper: TARGETING.AIM, mirror_gate: TARGETING.DUAL, halo_pulse: TARGETING.SELF, shadow_doppelganger: TARGETING.SELF, revenant_call: TARGETING.SELF,
   solar_orb: TARGETING.SELF, lunar_orb: TARGETING.SELF, eclipse: TARGETING.SELF, thunderhead: TARGETING.SELF,
   blood_moon: TARGETING.SELF, starfall: TARGETING.SELF, aurora_veil: TARGETING.SELF
 });
-export const TARGET_RANGE = Object.freeze({ ground: 460, placement: 300, ally: 380, aim: 320 });
+export const TARGET_RANGE = Object.freeze({ ground: 460, placement: 300, ally: 380, aim: 320, dual: 900 });
 // Shadow Stomper: the reach and half-angle of its search cone.
 export const SHADOW_STOMP = Object.freeze({ range: 320, halfAngle: .62 });
 
@@ -115,6 +116,7 @@ export const SPELL_DEFINITIONS = Object.freeze({
   blood_moon: def('blood_moon', { name: 'BLOOD MOON', tier: 2, manaCost: 26, color: '#e53935', deliveryType: DELIVERY.SELF, isSkyField: true, desc: 'A red moon: all spells hit harder, healing is halved, shadows turn red. Your doubles and revenants grow savage.' }),
   starfall: def('starfall', { name: 'STARFALL', tier: 2, manaCost: 26, color: '#e1f5fe', deliveryType: DELIVERY.SELF, isSkyField: true, desc: 'A night sky of falling stars that rain down on your enemies.' }),
   aurora_veil: def('aurora_veil', { name: 'AURORA VEIL', tier: 2, manaCost: 24, color: '#69f0ae', deliveryType: DELIVERY.SELF, isSkyField: true, desc: 'Northern lights: your side slowly regenerates health and mana, ice grows stronger.' }),
+  mirror_gate: def('mirror_gate', { name: 'FROST MIRROR GATE', tier: 2, color: '#80deea', deliveryType: DELIVERY.ZONE, desc: 'Set two points: an ice mirror rises at each. Step into one to come out of the other — an escape route back to the entrance of a long Dungeon room, or a sudden flank.' }),
   soul_seekers: def('soul_seekers', { name: 'SOUL SEEKERS', tier: 2, color: '#ea80fc', deliveryType: DELIVERY.HOMING, interactionTags: ['reflectable', 'capturable', 'blockable'], desc: 'A salvo of three homing void flames that steer toward enemies within a turn limit.' }),
 
   // ── Advanced (three runes) ─────────────────────────────────────────────
@@ -144,7 +146,7 @@ export const SPELL_RECIPES = Object.freeze({
   'construct+ventus': 'mirror_ward', 'ventus+void': 'gravity_lift', 'fulgur+terra': 'seismic_slam',
   'bestia+terra': 'titan_stomp', 'ignis+void': 'soul_seekers',
   'bestia+ignis': 'dragon_breath', 'terra+void': 'burrow_strike',
-  'terra+umbra': 'shadow_stomper', 'lux+lux': 'radiant_lance',
+  'aqua+void': 'mirror_gate', 'terra+umbra': 'shadow_stomper', 'lux+lux': 'radiant_lance',
   'ignis+lux': 'solar_orb', 'aqua+umbra': 'lunar_orb', 'lux+umbra': 'eclipse', 'fulgur+umbra': 'thunderhead',
   'ignis+umbra': 'blood_moon', 'lux+ventus': 'starfall', 'aqua+lux': 'aurora_veil',
 

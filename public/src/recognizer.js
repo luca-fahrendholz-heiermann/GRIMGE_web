@@ -90,7 +90,7 @@ export class RuneRecognizer {
         color: '#ffe082',
         glowColor: '#fff8e1',
         icon: '☀',
-        desc: 'Downward V — a falling sun ray'
+        desc: 'Star: four crossing lines (+ then ×)'
       },
       {
         id: 'umbra',
@@ -158,6 +158,7 @@ export class RuneRecognizer {
   recognize(strokes, allowedRuneIds = null) {
     if (!strokes || strokes.length === 0) return null;
 
+    const starScore = this.crossingStarScore(strokes);
     const rawPoints = [];
     for (const stroke of strokes) {
       for (const pt of stroke) rawPoints.push({ x: pt.x, y: pt.y });
@@ -391,6 +392,8 @@ export class RuneRecognizer {
     } else {
       scores.lux = 0.1;
     }
+    // The LUX star: separate straight strokes crossing at one centre.
+    scores.lux = Math.max(scores.lux, starScore);
 
     // UMBRA: an open crescent / C arc — round like AQUA but clearly open,
     // with both ends on the same side of the centre.
@@ -418,8 +421,9 @@ export class RuneRecognizer {
     // MORTIS (special, hard): a closed one-stroke five-pointed star.
     if (loopClosed && Math.abs(netTurn) > Math.PI * 3.2 && rStd > .15 && aspectRatio >= .6 && aspectRatio <= 1.6) {
       scores.mortis = 0.97;
-    } else if (closureDist / Math.max(bbWidth, bbHeight) < 0.6 && Math.abs(netTurn) > Math.PI * 2.8 && rStd > .13 && aspectRatio >= .5 && aspectRatio <= 1.9) {
-      scores.mortis = 0.7;
+    } else if (closureDist / Math.max(bbWidth, bbHeight) < 0.85 && Math.abs(netTurn) > Math.PI * 2.5 && rStd > .18 && aspectRatio >= .45 && aspectRatio <= 2.1) {
+      // A wobbly or not quite closed star still counts (lower grade).
+      scores.mortis = 0.74;
     } else {
       scores.mortis = 0.1;
     }
@@ -450,6 +454,36 @@ export class RuneRecognizer {
     }
 
     return null;
+  }
+
+  // LUX star: 2+ separate, fairly straight strokes that all cross near one
+  // centre at clearly different angles. Four lines (+ and ×) are ideal.
+  crossingStarScore(strokes) {
+    const lines = strokes.filter((stroke) => stroke.length >= 2).map((stroke) => {
+      let length = 0;
+      for (let i = 1; i < stroke.length; i++) length += Math.hypot(stroke[i].x - stroke[i - 1].x, stroke[i].y - stroke[i - 1].y);
+      const a = stroke[0]; const b = stroke[stroke.length - 1];
+      const chord = Math.hypot(b.x - a.x, b.y - a.y);
+      return { a, b, length, chord, angle: ((Math.atan2(b.y - a.y, b.x - a.x) % Math.PI) + Math.PI) % Math.PI };
+    });
+    if (lines.length < 2 || lines.some((line) => line.chord < 18 || line.chord / Math.max(1, line.length) < .8)) return 0;
+    const size = lines.reduce((sum, line) => sum + line.chord, 0) / lines.length;
+    const cx = lines.reduce((sum, line) => sum + (line.a.x + line.b.x) / 2, 0) / lines.length;
+    const cy = lines.reduce((sum, line) => sum + (line.a.y + line.b.y) / 2, 0) / lines.length;
+    // Every line must pass close to the common centre.
+    const distanceToSegment = (line) => {
+      const dx = line.b.x - line.a.x; const dy = line.b.y - line.a.y;
+      const t = Math.max(0, Math.min(1, ((cx - line.a.x) * dx + (cy - line.a.y) * dy) / Math.max(1, dx * dx + dy * dy)));
+      return Math.hypot(line.a.x + dx * t - cx, line.a.y + dy * t - cy);
+    };
+    if (lines.some((line) => distanceToSegment(line) > size * .28)) return 0;
+    // Angles must differ clearly (no two parallel strokes).
+    const angles = lines.map((line) => line.angle).sort((p, q) => p - q);
+    let minGap = Math.PI - angles[angles.length - 1] + angles[0];
+    for (let i = 1; i < angles.length; i++) minGap = Math.min(minGap, angles[i] - angles[i - 1]);
+    if (lines.length >= 4) return minGap > .3 ? 0.99 : 0;
+    if (lines.length === 3) return minGap > .4 ? 0.97 : 0;
+    return minGap > .9 ? 0.78 : 0;
   }
 
   gradeForConfidence(confidence) {

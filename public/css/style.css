@@ -990,7 +990,8 @@ body.portrait-gameplay #game-container { visibility: hidden; pointer-events: non
 .slot-right { left: 201px; top: 129px; }
 .triangle-cast { position: absolute; left: 125px; top: 83px; width: 70px; height: 70px; font-size: 13px; }
 .triangle-shield { position: absolute; left: 2px; top: 72px; width: 56px; height: 56px; }
-.triangle-jump { position: absolute; left: 262px; top: 72px; width: 56px; height: 56px; border-color: #c5a6ff; color: #f0e8ff; font: 900 22px/1 'Rajdhani', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+/* Tall pill: easier to hit with the right thumb. */
+.triangle-jump { position: absolute; left: 262px; top: 58px; width: 56px; height: 98px; border-radius: 30px; border-color: #c5a6ff; color: #f0e8ff; font: 900 22px/1 'Rajdhani', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; }
 .triangle-jump small { font: 700 7px 'Rajdhani', sans-serif; letter-spacing: .6px; }
 .mount-action { position: absolute; left: 266px; top: 8px; width: 48px; height: 48px; font-size: 8px; border-color: #75e5c0; color: #d8fff1; opacity: 0; pointer-events: none; transform: scale(.85); transition: opacity .14s ease, transform .14s ease; }
 .mount-action.is-available { opacity: 1; pointer-events: auto; transform: scale(1); }

@@ -20,6 +20,7 @@ import { loadFxSprites } from './fx_sprites.js';
 import { renderPixelated } from './abilities.js';
 import { sky } from './sky.js';
 import { renderGroundShadows } from './shadows.js';
+import { renderRuneGuide } from './rune_guides.js';
 
 // LF2-style Dungeon rooms. Each room is a wide scrolling stretch: the camera
 // follows the player, enemy groups enter from the right screen edge once the
@@ -2418,11 +2419,16 @@ export class GameWorld {
       return true;
     }
     for (const spell of spells.activeSpells) {
-      if (!spell.isStoneWall || spell.isFinished || spell.team === entity.team) continue;
+      if (!spell.isStoneWall || spell.isFinished) continue;
+      // Walls are solid for every Wizard — the caster included — and for
+      // hostile units. Allied minions and summons slip through their own
+      // side's walls so they never get stuck behind them.
+      if (spell.team === entity.team && !entity.heroKey) continue;
       if ((entity.worldHeight ?? 0) > spell.surfaceHeight + spell.wallHeight + 18) continue;
-      const hitX = Math.abs(entity.x - spell.x) <= spell.halfX + (entity.width ?? 24) * .5;
-      const hitZ = Math.abs(entity.z - spell.z) <= spell.halfZ + .05;
-      if (!hitX || !hitZ) continue;
+      const inside = (x, z) => Math.abs(x - spell.x) <= spell.halfX + (entity.width ?? 24) * .5 && Math.abs(z - spell.z) <= spell.halfZ + .05;
+      if (!inside(entity.x, entity.z)) continue;
+      // A wall raised on top of someone never traps them: they can walk out.
+      if (inside(previousX, previousZ)) continue;
       entity.x = previousX;
       entity.z = previousZ;
       entity.vx *= .15;
@@ -2703,6 +2709,14 @@ export class GameWorld {
     ctx.restore();
   }
 
+  // The rune to pre-draw: only in Training and only for a tapped hand card
+  // (free drawing via DRAW never shows a template).
+  runeGuide() {
+    if (this.activeMode?.id !== 'training' || !this.drawing.active || this.drawing.expectedCardId == null) return null;
+    const card = this.player.getRuneCard(this.drawing.expectedCardId);
+    return card ? { id: card.id, color: card.color ?? '#ffffff' } : null;
+  }
+
   renderRuneStrokes() {
     const rctx = this.runeCtx;
     this.clearRuneCanvas();
@@ -2715,6 +2729,10 @@ export class GameWorld {
     if (this.drawing.currentStroke.length > 0) {
       allStrokes.push(this.drawing.currentStroke);
     }
+
+    // Training: a tapped hand rune is pre-drawn as a template to trace.
+    const guide = this.runeGuide();
+    if (guide) renderRuneGuide(rctx, guide.id, this.renderWidth / 2, this.renderHeight * .56, Math.min(this.renderWidth, this.renderHeight) * .24, guide.color);
 
     rctx.lineCap = 'round';
     rctx.lineJoin = 'round';

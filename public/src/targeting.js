@@ -8,6 +8,7 @@
 //   ally       asks for a friendly unit (player, minion, companion, summon)
 //   aim        asks for a free direction including depth (cone preview;
 //              Shadow Stomper highlights the enemy it will grab)
+//   dual       asks for two points, one after the other (Frost Mirror Gate)
 //   self       never asks
 //
 // Touch: tap the battlefield (or drag straight out of the slot and release),
@@ -21,7 +22,7 @@ import { spells } from './spells.js';
 import { sky } from './sky.js';
 import { aimDirection, pickShadowTargets } from './light_shadow.js';
 
-const NEEDS_TARGET = new Set([TARGETING.GROUND, TARGETING.PLACEMENT, TARGETING.ALLY, TARGETING.AIM]);
+const NEEDS_TARGET = new Set([TARGETING.GROUND, TARGETING.PLACEMENT, TARGETING.ALLY, TARGETING.AIM, TARGETING.DUAL]);
 
 export function needsTarget(definition) {
   return NEEDS_TARGET.has(definition?.targetingMode);
@@ -92,10 +93,10 @@ export class SpellTargeting {
     this.active = {
       slot, definition, mode, source, pointerId: null,
       point: mode === TARGETING.ALLY ? { x: player.x, z: player.z } : this.clampToRange(start, TARGET_RANGE[mode] ?? 460),
-      lineStart: null, orientation: 'depth', length: 0, entity: mode === TARGETING.ALLY ? player : null
+      lineStart: null, orientation: 'depth', length: 0, entity: mode === TARGETING.ALLY ? player : null, points: []
     };
     const hints = {
-      ground: 'CHOOSE THE IMPACT POINT', placement: 'SWIPE TO PLACE THE WALL', ally: 'TAP AN ALLY TO SHIELD', aim: 'AIM THE DIRECTION',
+      ground: 'CHOOSE THE IMPACT POINT', placement: 'SWIPE TO PLACE THE WALL', ally: 'TAP AN ALLY TO SHIELD', aim: 'AIM THE DIRECTION', dual: 'SET THE FIRST MIRROR',
       direction: 'RELEASE TO AIM', self: 'RELEASE TO CAST'
     };
     if (source !== 'drag') this.game.showAnnouncement?.(`${definition.name}: ${hints[mode] ?? ''}`, 1.4);
@@ -117,11 +118,13 @@ export class SpellTargeting {
     const a = this.active;
     if (!a) return;
     if (a.mode === TARGETING.PLACEMENT && a.lineStart) {
-      const dxPx = world.x - a.lineStart.x;
-      const dzPx = (world.z - a.lineStart.z) * 150;
+      // The wall follows the swipe exactly: any direction, including depth.
+      a.lineEnd = this.clampToRange(world, TARGET_RANGE.placement);
+      const dxPx = a.lineEnd.x - a.lineStart.x;
+      const dzPx = (a.lineEnd.z - a.lineStart.z) * 150;
       a.orientation = Math.abs(dxPx) > Math.abs(dzPx) ? 'lateral' : 'depth';
       a.length = Math.hypot(dxPx, dzPx);
-      a.point = this.clampToRange({ x: (world.x + a.lineStart.x) / 2, z: (world.z + a.lineStart.z) / 2 }, TARGET_RANGE.placement);
+      a.point = { x: (a.lineEnd.x + a.lineStart.x) / 2, z: (a.lineEnd.z + a.lineStart.z) / 2 };
       return;
     }
     if (a.mode === TARGETING.ALLY) {
@@ -154,6 +157,7 @@ export class SpellTargeting {
     const world = this.screenToWorld(pt);
     if (a.mode === TARGETING.PLACEMENT) {
       a.lineStart = this.clampToRange(world, TARGET_RANGE.placement);
+      a.lineEnd = a.lineStart;
       a.point = a.lineStart; a.length = 0;
     } else this.setPoint(world);
     return true;
@@ -183,9 +187,13 @@ export class SpellTargeting {
     if (!a) return null;
     switch (a.mode) {
       case TARGETING.GROUND: return { x: a.point.x, z: a.point.z };
-      case TARGETING.PLACEMENT: return { x: a.point.x, z: a.point.z, orientation: a.orientation, length: a.length };
+      case TARGETING.PLACEMENT: return {
+        x: a.point.x, z: a.point.z, orientation: a.orientation, length: a.length,
+        ...(a.lineStart && a.lineEnd && a.length > 8 ? { start: { ...a.lineStart }, end: { ...a.lineEnd } } : {})
+      };
       case TARGETING.ALLY: return a.entity ? { entity: a.entity } : null;
       case TARGETING.AIM: return { x: a.point.x, z: a.point.z, aim: true };
+      case TARGETING.DUAL: return a.points.length >= 2 ? { a: { ...a.points[0] }, b: { ...a.points[1] } } : null;
       default: return { x: a.point.x, z: a.point.z, aimOnly: true };
     }
   }
@@ -193,8 +201,16 @@ export class SpellTargeting {
   confirm() {
     const a = this.active;
     if (!a) return false;
+    // Two-point spells: the first confirm sets the first point.
+    if (a.mode === TARGETING.DUAL) {
+      a.points.push({ ...a.point });
+      if (a.points.length < 2) {
+        this.game.showAnnouncement?.(`${a.definition.name}: SET THE SECOND MIRROR`, 1.4);
+        return true;
+      }
+    }
     const target = this.buildTarget();
-    if (a.mode === TARGETING.ALLY && !target) return false;
+    if ((a.mode === TARGETING.ALLY || a.mode === TARGETING.DUAL) && !target) return false;
     this.active = null;
     const player = this.game.player;
     // Direction / self spells released from a drag or cursor face that side.
@@ -226,7 +242,19 @@ export class SpellTargeting {
     ctx.setLineDash?.([6, 5]);
     ctx.strokeStyle = `rgba(255,255,255,${pulse})`;
     const groundY = (z) => groundYForDepth(z);
-    if (a.mode === TARGETING.GROUND || a.mode === TARGETING.DIRECTION || a.mode === TARGETING.SELF) {
+    if (a.mode === TARGETING.DUAL) {
+      ctx.setLineDash?.([]);
+      const marks = [...a.points, a.point];
+      ctx.strokeStyle = `rgba(255,255,255,${pulse})`;
+      if (marks.length > 1) { ctx.beginPath(); ctx.moveTo(marks[0].x, groundY(marks[0].z) - 30); ctx.lineTo(marks[1].x, groundY(marks[1].z) - 30); ctx.stroke(); }
+      marks.forEach((mark, index) => {
+        const y = groundY(mark.z);
+        const placed = index < a.points.length;
+        ctx.fillStyle = placed ? 'rgba(178,235,242,.7)' : `${color}44`; ctx.strokeStyle = color; ctx.lineWidth = 2;
+        ctx.fillRect(mark.x - 15, y - 70, 30, 62); ctx.strokeRect(mark.x - 15, y - 70, 30, 62);
+        ctx.beginPath(); ctx.ellipse(mark.x, y, 30, 9, 0, 0, Math.PI * 2); ctx.stroke();
+      });
+    } else if (a.mode === TARGETING.GROUND || a.mode === TARGETING.DIRECTION || a.mode === TARGETING.SELF) {
       const radius = a.mode === TARGETING.GROUND ? 70 : 18;
       ctx.beginPath(); ctx.moveTo(player.x, groundY(player.z)); ctx.lineTo(a.point.x, groundY(a.point.z)); ctx.stroke();
       ctx.setLineDash?.([]);
@@ -235,17 +263,19 @@ export class SpellTargeting {
       ctx.beginPath(); ctx.moveTo(a.point.x - 8, groundY(a.point.z)); ctx.lineTo(a.point.x + 8, groundY(a.point.z)); ctx.moveTo(a.point.x, groundY(a.point.z) - 6); ctx.lineTo(a.point.x, groundY(a.point.z) + 6); ctx.stroke();
     } else if (a.mode === TARGETING.PLACEMENT) {
       ctx.setLineDash?.([]);
-      const lateral = a.orientation === 'lateral';
-      const halfX = lateral ? Math.max(30, Math.min(110, (a.length || 120) / 2)) : 16;
-      const halfZ = lateral ? .06 : .24;
-      const y = groundY(a.point.z);
+      // Preview exactly the blocks the wall will have (count = drawing grade).
+      const max = spells.wallSegmentLimit(a.definition.id, a.slot.quality, player);
+      const blocks = spells.wallLine(player, this.buildTarget(), max, undefined, this.game.battlefield?.boundsOverride);
+      if (a.lineStart && a.lineEnd) {
+        ctx.strokeStyle = `rgba(255,255,255,${pulse})`;
+        ctx.beginPath(); ctx.moveTo(a.lineStart.x, groundY(a.lineStart.z)); ctx.lineTo(a.lineEnd.x, groundY(a.lineEnd.z)); ctx.stroke();
+      }
       ctx.fillStyle = `${color}55`; ctx.strokeStyle = color; ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(a.point.x - halfX, y + halfZ * 150 * .5);
-      ctx.lineTo(a.point.x - halfX, y - 60);
-      ctx.lineTo(a.point.x + halfX, y - 60);
-      ctx.lineTo(a.point.x + halfX, y + halfZ * 150 * .5);
-      ctx.closePath(); ctx.fill(); ctx.stroke();
+      for (const block of [...blocks].sort((p, q) => p.z - q.z)) {
+        const y = groundY(block.z);
+        ctx.fillRect(block.x - 13, y - 56, 26, 56);
+        ctx.strokeRect(block.x - 13, y - 56, 26, 56);
+      }
     } else if (a.mode === TARGETING.AIM) {
       ctx.setLineDash?.([]);
       const { dir, range, targets } = this.aimPreview();

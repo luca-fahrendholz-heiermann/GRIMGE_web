@@ -1,11 +1,12 @@
 // GRIMGE Prototype — Composable Spell System & Elemental Combinations
 import { audio } from './audio.js';
 import { combat } from './combat.js';
-import { GroundEntity, groundDistance, groundYForDepth, ENTITY_VISUALS } from './world.js';
+import { GroundEntity, groundDistance, groundYForDepth, ENTITY_VISUALS, ARENA_LAYOUT } from './world.js';
 import { lookupRecipe, SHADOW_STOMP } from './spell_catalog.js';
 import { environment } from './environment.js';
 import { sky, isSkyField } from './sky.js';
 import { ShadowStomperSpell, HaloPulseSpell, castShadowStep, alliesOf } from './light_shadow.js';
+import { raiseMirrorGate } from './portal.js';
 import { BeamSpell, BeamClash, resolveBeamInteractions, MirrorWardSpell, GravityLiftSpell, TitanStompSpell, SoulSeekerBolt, SeismicSlamSpell, ConeBreathSpell, BurrowStrikeSpell, ShieldBubbleSpell, renderPixelated } from './abilities.js';
 
 export { BeamClash };
@@ -48,6 +49,13 @@ function withinHeight(target, sourceHeight, fallback = 110) {
   return Math.abs((target.worldHeight ?? 0) - sourceHeight) < (target.hitHeightTolerance ?? fallback);
 }
 
+// Placed walls are chains of blocks; the drawing grade sets the length.
+export const WALL_SEGMENT_SPACING = 24;
+const WALL_SEGMENTS = Object.freeze({
+  stone: Object.freeze({ C: 3, B: 4, A: 5, S: 6 }),
+  bulwark: Object.freeze({ C: 2, B: 2, A: 3, S: 3 })
+});
+
 export class SpellSystem {
   constructor() {
     this.activeSpells = [];
@@ -55,6 +63,7 @@ export class SpellSystem {
     this.activeClashes = [];
     // Fallen fighters a Revenant Call can raise ({ x, z, spriteKey, … }).
     this.graves = [];
+    this.wallGroupCounter = 0;
     // Spell VFX are rendered through a low-resolution layer for a pixel-art
     // look that matches the sprites (logical pixels per VFX pixel).
     this.pixelVfx = 2.5;
@@ -371,6 +380,11 @@ export class SpellSystem {
         break;
       }
 
+      case 'mirror_gate': {
+        raiseMirrorGate(this, caster, target, castQuality, gameWorld);
+        break;
+      }
+
       case 'radiant_lance': {
         this.addSpell(new BeamSpell(caster, 'radiant', 'radiant_lance'), castQuality);
         break;
@@ -591,48 +605,96 @@ export class SpellSystem {
   // A placed wall follows the swiped line, snapped to the two collision axes:
   // a "depth" wall spans the lane (blocks horizontal approach), a "lateral"
   // wall runs along x (blocks depth movement).
-  wallShape(target, depthHalfZ, lateralHalfX) {
-    if (target?.orientation !== 'lateral') return { halfZ: depthHalfZ };
-    const halfX = Math.max(30, Math.min(lateralHalfX, (target.length || lateralHalfX * 2) / 2));
-    return { halfX, halfZ: .06 };
+  // How many stone blocks a placed wall may have: the drawing grade sets the
+  // maximum (a cleaner rune builds a longer wall), Barrier Mastery adds one.
+  wallSegmentLimit(spellId, quality, caster = null) {
+    const grade = this.normalizeQuality(quality).grade ?? 'B';
+    const table = spellId === 'construct_bulwark' ? WALL_SEGMENTS.bulwark : WALL_SEGMENTS.stone;
+    return (table[grade] ?? table.B) + ((caster?.buildModifiers?.wallHp ?? 1) > 1 ? 1 : 0);
+  }
+
+  // Block centres along the placed line. A swipe ({ start, end }) places the
+  // wall exactly there in any direction — across, along or diagonal to the
+  // lane — starting where the swipe began. Without a swipe (tap, gamepad,
+  // AI) a full-length wall is centred on the point, across the lane unless
+  // `orientation: 'lateral'`.
+  wallLine(caster, target, maxSegments, spacing = WALL_SEGMENT_SPACING, bounds = null) {
+    const depth = 150;
+    let sx; let sz; let ex; let ez;
+    const swiped = target?.start && target?.end && Math.hypot(target.end.x - target.start.x, (target.end.z - target.start.z) * depth) >= spacing * .75;
+    if (swiped) {
+      ({ x: sx, z: sz } = target.start); ({ x: ex, z: ez } = target.end);
+    } else {
+      const cx = target?.x ?? caster.x + (caster.facing || 1) * 78;
+      const cz = target?.z ?? caster.z;
+      const half = (maxSegments - 1) * spacing / 2;
+      const lateral = target?.orientation === 'lateral';
+      sx = cx - (lateral ? half : 0); ex = cx + (lateral ? half : 0);
+      sz = cz - (lateral ? 0 : half / depth); ez = cz + (lateral ? 0 : half / depth);
+    }
+    const total = Math.hypot(ex - sx, (ez - sz) * depth);
+    const count = Math.max(1, Math.min(maxSegments, Math.floor(total / spacing + 1e-6) + 1));
+    const ux = total > 0 ? (ex - sx) / total : 0; const uz = total > 0 ? (ez - sz) / total : 0;
+    const area = bounds ?? ARENA_LAYOUT.playableBounds;
+    const points = [];
+    for (let i = 0; i < count; i++) {
+      const z = sz + uz * spacing * i;
+      points.push({ x: sx + ux * spacing * i, z: Math.max(area.farZ ?? .06, Math.min(area.nearZ ?? .94, z)) });
+    }
+    return points;
   }
 
   // Walls on the field are limited per caster (base 1; the Rampart Mason
-  // passive raises it). Only when the limit is exceeded does the oldest wall
-  // crumble — quickly casting more walls never silently deletes the newest.
+  // passive raises it). A wall is one group of blocks. Only when the limit
+  // is exceeded does the oldest wall crumble.
   makeRoomForWall(caster) {
     const limit = Math.max(1, caster.buildModifiers?.maxWalls ?? 1);
-    const own = this.activeSpells.filter((spell) => spell.isStoneWall && !spell.isPillar && !spell.isFinished && spell.team === caster.team && spell.owner === caster);
-    while (own.length >= limit) own.shift().life = 0;
+    const groups = [];
+    for (const spell of this.activeSpells) {
+      if (!spell.isStoneWall || spell.isPillar || spell.isFinished || spell.team !== caster.team || spell.owner !== caster) continue;
+      if (!groups.includes(spell.wallGroup)) groups.push(spell.wallGroup);
+    }
+    while (groups.length >= limit) {
+      const oldest = groups.shift();
+      for (const spell of this.activeSpells) if (spell.wallGroup === oldest) spell.life = 0;
+    }
+  }
+
+  placeWall(caster, gameWorld, quality, target, spellId, block) {
+    this.makeRoomForWall(caster);
+    const max = this.wallSegmentLimit(spellId, quality, caster);
+    const points = this.wallLine(caster, target, max, WALL_SEGMENT_SPACING, gameWorld?.battlefield?.boundsOverride);
+    const group = ++this.wallGroupCounter;
+    const blocks = points.map((point) => {
+      const wall = this.addSpell(new StoneWallSpell(point.x, point.z, caster.team, caster.surfaceHeight ?? 0, block), quality);
+      wall.owner = caster; wall.wallGroup = group;
+      return wall;
+    });
+    return blocks;
   }
 
   castStoneWall(caster, gameWorld, quality = RUNE_GRADE_PROFILES.B, target = null) {
-    this.makeRoomForWall(caster);
-    const offset = caster.facing * 78;
     const mods = caster.buildModifiers ?? {};
-    const wall = this.addSpell(new StoneWallSpell(target?.x ?? caster.x + offset, target?.z ?? caster.z, caster.team, caster.surfaceHeight ?? 0, {
-      ...this.wallShape(target, .24 * (mods.wallHp ?? 1), 110), life: 16 * (mods.wallDuration ?? 1), hp: Math.round(140 * (mods.wallHp ?? 1))
-    }), quality);
-    wall.owner = caster;
+    const blocks = this.placeWall(caster, gameWorld, quality, target, 'stone_wall', {
+      halfX: 13, halfZ: .075, wallHeight: 72, life: 16 * (mods.wallDuration ?? 1), hp: Math.round(110 * (mods.wallHp ?? 1))
+    });
     audio.playSpell('stone_spikes');
     combat.shakeCamera(5, 0.2);
-    combat.spawnShockwave(wall.x, wall.y, 48 * quality.area, '#8d6e63');
-    combat.spawnElementalParticles(wall.x, wall.y, 'terra', Math.round(18 * quality.particles));
-    return wall;
+    for (const wall of blocks) {
+      combat.spawnDust(wall.x, wall.y, 3);
+      combat.spawnElementalParticles(wall.x, wall.y, 'terra', Math.round(5 * quality.particles));
+    }
+    return blocks[0];
   }
 
   castConstructBulwark(caster, gameWorld, quality = RUNE_GRADE_PROFILES.B, target = null) {
-    this.makeRoomForWall(caster);
-    const offset = caster.facing * 64;
     const mods = caster.buildModifiers ?? {};
-    const wall = this.addSpell(new StoneWallSpell(target?.x ?? caster.x + offset, target?.z ?? caster.z, caster.team, caster.surfaceHeight ?? 0, {
-      halfX: 12, halfZ: .18, ...this.wallShape(target, .18, 70), wallHeight: 66, life: 9 * (mods.wallDuration ?? 1), hp: Math.round(80 * (mods.wallHp ?? 1)), color: '#90a4ae'
-    }), quality);
-    wall.owner = caster;
+    const blocks = this.placeWall(caster, gameWorld, quality, target, 'construct_bulwark', {
+      halfX: 12, halfZ: .07, wallHeight: 66, life: 9 * (mods.wallDuration ?? 1), hp: Math.round(80 * (mods.wallHp ?? 1)), color: '#90a4ae'
+    });
     audio.playSpell('stone_spikes');
-    combat.spawnShockwave(wall.x, wall.y, 38 * quality.area, '#b0bec5');
-    combat.spawnElementalParticles(wall.x, wall.y, 'construct', Math.round(12 * quality.particles));
-    return wall;
+    for (const wall of blocks) combat.spawnElementalParticles(wall.x, wall.y, 'construct', Math.round(5 * quality.particles));
+    return blocks[0];
   }
 
   // Moving spells can leave a trail on the environment layer.
@@ -1685,6 +1747,12 @@ class BlizzardSurgeSpell {
 // A compact authored barrier rather than a generic physics framework.  It is
 // deliberately wide across depth and narrow across x so it reads as a wall
 // laid across the 2.5D battlefield.
+function shade(hex, k) {
+  const n = parseInt(String(hex).replace('#', ''), 16);
+  const c = (v) => Math.max(0, Math.min(255, Math.round(v * k)));
+  return `rgb(${c((n >> 16) & 255)},${c((n >> 8) & 255)},${c(n & 255)})`;
+}
+
 class StoneWallSpell {
   constructor(x, z, team, surfaceHeight = 0, options = {}) {
     this.x = x;
@@ -1746,21 +1814,29 @@ class StoneWallSpell {
 
   render(ctx) {
     const fade = Math.min(1, this.life / .45);
+    // A stone block: front face at the near edge, a lit top face behind it.
+    const front = groundYForDepth(this.z + this.halfZ) - this.surfaceHeight;
+    const back = groundYForDepth(this.z - this.halfZ) - this.surfaceHeight;
+    const h = this.wallHeight;
+    const left = this.x - this.halfX; const width = this.halfX * 2;
     ctx.save();
     ctx.globalAlpha = Math.max(.18, fade);
-    ctx.fillStyle = this.hitFlash > 0 ? '#d7ccc8' : this.color;
-    ctx.strokeStyle = '#bcaaa4';
     ctx.lineWidth = 2;
-    const depthPixels = this.halfZ * 150;
-    ctx.beginPath();
-    ctx.moveTo(this.x - this.halfX, this.y + depthPixels * .18);
-    ctx.lineTo(this.x - this.halfX + 5, this.y - this.wallHeight);
-    ctx.lineTo(this.x + this.halfX - 5, this.y - this.wallHeight);
-    ctx.lineTo(this.x + this.halfX, this.y + depthPixels * .18);
-    ctx.closePath();
-    ctx.fill(); ctx.stroke();
-    ctx.strokeStyle = 'rgba(215, 204, 200, .65)';
-    ctx.beginPath(); ctx.moveTo(this.x - this.halfX + 6, this.y - this.wallHeight * .55); ctx.lineTo(this.x + this.halfX - 6, this.y - this.wallHeight * .55); ctx.stroke();
+    ctx.strokeStyle = '#3e2723';
+    ctx.fillStyle = this.hitFlash > 0 ? '#efebe9' : shade(this.color, 1.35);
+    ctx.fillRect(left, back - h, width, front - back);
+    ctx.strokeRect(left, back - h, width, front - back);
+    ctx.fillStyle = this.hitFlash > 0 ? '#d7ccc8' : this.color;
+    ctx.fillRect(left, front - h, width, h);
+    ctx.strokeRect(left, front - h, width, h);
+    // Masonry lines and cracks that grow with damage.
+    ctx.strokeStyle = 'rgba(215, 204, 200, .55)'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(left + 3, front - h * .55); ctx.lineTo(left + width - 3, front - h * .55); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(this.x, front - h * .55); ctx.lineTo(this.x, front - h * .2); ctx.stroke();
+    if (this.hp < this.maxHp * .6) {
+      ctx.strokeStyle = 'rgba(20, 10, 5, .7)';
+      ctx.beginPath(); ctx.moveTo(left + 4, front - h * .9); ctx.lineTo(this.x - 2, front - h * .62); ctx.lineTo(this.x + 4, front - h * .35); ctx.stroke();
+    }
     ctx.restore();
   }
 }

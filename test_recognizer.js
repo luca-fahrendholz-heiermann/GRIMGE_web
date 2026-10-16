@@ -193,6 +193,23 @@ assert(resStar?.rune.id === 'mortis' && resStar.grade === 'S', 'Recognize: one-s
 const doubleCircle = Array.from({ length: 60 }, (_, i) => { const a = i / 59 * Math.PI * 4; return { x: 150 + Math.cos(a) * 60, y: 150 + Math.sin(a) * 60 }; });
 assert(recognizer.recognize([doubleCircle])?.rune.id === 'aqua', 'Recognize: a circle drawn twice is not mistaken for MORTIS');
 
+// LUX is now a star of four crossing lines (+ then ×).
+const lineStroke = (x0, y0, x1, y1) => Array.from({ length: 12 }, (_, i) => ({ x: x0 + (x1 - x0) * i / 11 + Math.sin(i * 2.1) * 1.5, y: y0 + (y1 - y0) * i / 11 + Math.cos(i * 1.3) * 1.5 }));
+const starLines = [lineStroke(100, 200, 300, 200), lineStroke(200, 100, 200, 300), lineStroke(130, 130, 270, 270), lineStroke(270, 130, 130, 270)];
+const resStar4 = recognizer.recognize(starLines);
+assert(resStar4?.rune.id === 'lux' && resStar4.grade === 'S', 'Recognize: four crossing lines (+ and ×) -> LUX');
+assert(recognizer.recognize(starLines.slice(0, 3))?.rune.id === 'lux', 'Recognize: three crossing lines also count as LUX');
+assert(recognizer.recognize([lineStroke(100, 150, 300, 150), lineStroke(100, 250, 300, 250)], ['lux', 'ventus'])?.rune.id !== 'lux', 'Recognize: two parallel lines are not a LUX star');
+const { RUNE_GUIDES, guideStrokes } = await import('./public/src/rune_guides.js');
+const guideMisses = Object.keys(RUNE_GUIDES).filter((id) => {
+  const free = recognizer.recognize(guideStrokes(id, 400, 300, 150));
+  const own = recognizer.recognize(guideStrokes(id, 400, 300, 110), [id]);
+  return free?.rune.id !== id || own?.grade !== 'S';
+});
+assert(!guideMisses.length && ['lux', 'mortis', 'doppel', 'void'].every((id) => RUNE_GUIDES[id]), `Every tracing guide is itself an S-grade drawing of its rune${guideMisses.length ? ' (misses: ' + guideMisses.join(',') + ')' : ''}`);
+const wobblyStar = guideStrokes('mortis', 300, 300, 100)[0].map((p, i) => ({ x: p.x + Math.sin(i * .9) * 7, y: p.y + Math.cos(i * 1.1) * 7 })).slice(0, -6);
+assert(recognizer.recognize([wobblyStar], ['mortis', 'aqua', 'terra'])?.rune.id === 'mortis', 'Recognize: a wobbly, not quite closed pentagram still counts as MORTIS');
+
 const rLux = { id: 'lux' }; const rUmbra = { id: 'umbra' };
 assert(spells.resolveSpell([rTerra, rUmbra])?.id === 'shadow_stomper', 'Spell: Umbra + Terra -> SHADOW STOMPER');
 assert(spells.resolveSpell([rUmbra, rAqua])?.id === 'lunar_orb', 'Spell: Umbra + Aqua -> LUNAR ORB');
