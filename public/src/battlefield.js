@@ -235,7 +235,8 @@ export class Battlefield {
     // A castle rampart reaches beyond the arena's side edges.
     const onDeck = !!this.trainingMap && String(entity.surfaceId).endsWith('CastleDeck');
     const bounds = this.boundsOverride ?? this.playableBounds;
-    clampToArena(entity, onDeck ? { ...bounds, left: 0, right: this.width } : this.boundsOverride);
+    // Siege: a Wizard is confined to its platform or to the lane (siege_match.js).
+    clampToArena(entity, entity.confineBounds ?? (onDeck ? { ...bounds, left: 0, right: this.width } : this.boundsOverride));
     if (entity.x !== oldX) entity.vx = 0;
     if (entity.z !== oldZ) entity.vz = 0;
     let surface = this.getSurfaceAt(entity.x, entity.z, entity);

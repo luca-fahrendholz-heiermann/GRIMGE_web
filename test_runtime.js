@@ -25,6 +25,9 @@ function assert(condition, name) { if (condition) { console.log(`  ✅ PASS: ${n
 console.log('\n🎮 Starting GRIMGE 2.5D runtime smoke test...\n');
 const game = new GameWorld();
 await game.init();
+// Most tests place the Wizard freely on the Siege lane; the platform ↔ lane
+// match rules get their own block (they are on by default in the game).
+game.siegeDeployRules = false;
 assert(game.matchState === 'Menu', 'Boot enters the playable Hub state');
 ui.setHubHero('astral');
 assert(ui.getSelectedHero() === 'astral' && game.player.heroKey === 'astral' && game.sprites.sprites.astral && game.sprites.sprites.astral_v2, 'Astral hooded and unhooded variants are loaded selectable gameplay heroes');
@@ -1979,6 +1982,49 @@ assert(game.inputMode === 'desktop' && game.uiLayer.classList.values.has('input-
 windowListeners.pointerdown?.({ pointerType: 'touch' });
 windowListeners.keydown?.({ code: 'KeyD', repeat: false, preventDefault() {} });
 assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device back to the desktop layout');
+
+// Castle Siege match rules (Unity MatchRunner): platform ↔ timed lane deploys.
+{
+  const { SIEGE_RULES, SIEGE_ZONES } = await import('./public/src/siege_match.js');
+  game.returnToHub(); game.siegeDeployRules = true; game.setMatchMode('siege'); game.startMatch();
+  const M = game.siegeMatch; const P = game.player; const E = game.enemyChampion;
+  const neutral = { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false };
+  const step = (seconds, input = neutral) => { for (let t = 0; t < seconds; t += 1 / 60) { P.update(1 / 60, input, game.battlefield, game); E.update(1 / 60, game, game.battlefield); M.tick(1 / 60); } };
+  const walkRight = { ...neutral, move: { x: 1, z: 0 } }; const walkLeft = { ...neutral, move: { x: -1, z: 0 } };
+  E.update = () => {}; // keep the bot still; its own deploys are checked below
+  assert(M && M.side('blue').presence === 'OnPlatform' && P.surfaceId === 'blueCastleUpperPlatform', 'Siege starts with the Wizard on its castle platform');
+  step(2, walkRight);
+  assert(P.x <= SIEGE_ZONES.platform.blue.right + .5 && M.side('blue').presence === 'OnPlatform', 'Platform and lane are not connected: no walking down to the lane');
+  assert(M.isSheltered(P) && !game.getHostileMobileTargets('red').includes(P), 'On the platform the Wizard is sheltered: defence towers (and minions) skip it');
+  assert(M.canPrepare('blue'), 'Runes can be drawn on the platform');
+  assert(game.requestDeploy() && M.side('blue').presence === 'Deployed' && Math.abs(P.x - SIEGE_ZONES.deploy.blue.x) < 1 && M.side('blue').laneTimeLeft === SIEGE_RULES.laneDuration, 'G deploys the Wizard to the lane deploy point for 15 s');
+  assert(!M.isSheltered(P) && game.getHostileMobileTargets('red').includes(P), 'On the lane the Wizard is exposed again');
+  game.startRuneDrawing();
+  assert(!game.drawing.active && !M.canPrepare('blue'), 'On the lane runes cannot be drawn (slotted spells still cast)');
+  step(2, walkLeft);
+  assert(P.x >= SIEGE_ZONES.lane.left - .5, 'A deployed Wizard cannot walk back up to the castle');
+  step(13.2);
+  assert(M.side('blue').presence === 'OnPlatform' && P.surfaceId === 'blueCastleUpperPlatform' && Math.abs(M.side('blue').cooldown - SIEGE_RULES.deployCooldown) < .3, 'After 15 s the Wizard is recalled to the platform and Deploy cools down for 12 s');
+  assert(!game.requestDeploy() && M.deployLabel('blue').state === 'cooldown', 'Deploy is blocked during its cooldown');
+  step(12.1);
+  assert(game.requestDeploy(), 'After 12 s the Wizard can deploy again');
+  // Death on the lane: respawn after 2.5 s on the platform, Focus 0, slots cleared, full cooldown.
+  P.focus = 70; P.beginDeath();
+  step(.45 + SIEGE_RULES.respawnDelay + .2);
+  assert(P.isAlive && M.side('blue').presence === 'OnPlatform' && P.surfaceId === 'blueCastleUpperPlatform' && P.focus === 0 && P.slottedSpells.length === 0 && M.side('blue').cooldown > SIEGE_RULES.deployCooldown - .5, `Respawn: on the platform after 2.5 s with Focus 0, empty slots and the full deploy cooldown (${P.respawnDuration} s)`);
+  // The bot deploys on its own.
+  M.side('red').cooldown = 0; M.side('red').botWait = SIEGE_RULES.botDeployDelay;
+  step(SIEGE_RULES.botDeployDelay + .1);
+  assert(M.side('red').presence === 'Deployed' && Math.abs(E.x - SIEGE_ZONES.deploy.red.x) < 1, 'The enemy Wizard deploys to its lane point by itself');
+  // A fallen castle: last stand on the lane, runes may be prepared there.
+  game.battlefield.blueCastle.isDestroyed = true;
+  step(.1);
+  assert(M.side('blue').presence === 'Deployed' && P.x >= SIEGE_ZONES.lane.left - .5 && M.canPrepare('blue') && M.deployLabel('blue').state === 'laststand', 'When the castle falls the Wizard drops to the lane for a last stand');
+  assert(!game.canRespawn('blue'), 'Without a castle there is no respawn — the next death ends the match');
+  game.render();
+  game.returnToHub(); game.siegeDeployRules = false; game.setMatchMode('siege'); game.startMatch();
+  assert(!game.siegeMatch && !game.player.confineBounds, 'With the rules switched off, Siege runs without platform confinement');
+}
 
 const frameCallback = nextFrame;
 frameCallback(game.lastFrameTime + 16);

@@ -23,6 +23,7 @@ import { renderGroundShadows } from './shadows.js';
 import { renderRuneGuide } from './rune_guides.js';
 import { castleBlocksAt, castleGateDoor, castleDeckEntry, castleDeckHeight } from './castles.js';
 import { WeaponArmory, WEAPONS } from './weapons.js';
+import { SiegeMatch } from './siege_match.js';
 
 // LF2-style Dungeon rooms. Each room is a wide scrolling stretch: the camera
 // follows the player, enemy groups enter from the right screen edge once the
@@ -329,6 +330,8 @@ export class GameWorld {
     await Promise.all([sprites.loadAll(), loadFxSprites()]);
 
     window.gameWorld = this;
+    // Castle Siege runs the Unity platform ↔ lane match rules (siege_match.js).
+    this.siegeDeployRules = true;
     ui.syncScreenFitLabel(this.screenFit);
     this.resetMatch();
     this.matchState = 'Menu';
@@ -454,6 +457,8 @@ export class GameWorld {
 
       // Training: P toggles the sparring partner.
       if (e.code === 'KeyP') this.toggleSparringPartner();
+      // Castle Siege: G deploys from the castle onto the lane.
+      if (e.code === 'KeyG') this.requestDeploy();
       // Training: M switches minion waves, N the lane towers.
       if (e.code === 'KeyM') this.toggleTrainingMinions();
       if (e.code === 'KeyN') this.toggleTrainingTowers();
@@ -883,6 +888,10 @@ export class GameWorld {
 
   startRuneDrawing(expectedCardId = null) {
     if (!this.isMatchRunning() || this.drawing.active || !this.player.isAlive) return;
+    // Siege: runes are drawn on the castle platform (casting works everywhere).
+    if (this.siegeMatch && !this.siegeMatch.canPrepare('blue')) {
+      this.showAnnouncement('DRAW RUNES ON YOUR CASTLE — CAST SLOTTED SPELLS HERE', 1.3); audio.playRuneFail(); return;
+    }
     this.targeting.cancel();
     if (this.player.slottedSpells.length >= 3) {
       this.showAnnouncement('SPELL SLOTS FULL — CAST OR FUSE!'); audio.playRuneFail(); return;
@@ -1425,6 +1434,9 @@ export class GameWorld {
   setupModeMatch() {
     const mode = this.activeMode;
     this.trainingDummy = null;
+    this.siegeMatch = null;
+    this.player.confineBounds = null;
+    this.enemyChampion.confineBounds = null;
     this.uiLayer?.classList?.toggle?.('mode-training', mode.id === 'training');
     this.modeState = {
       id: mode.id, wave: 0, intermission: 0, stage: 0, announced: false,
@@ -1437,6 +1449,7 @@ export class GameWorld {
       run: mode.progression === 'run' ? { level: 0, xp: 0, xpToNext: 30, deck: [], pending: false, options: [], awaitingFirstKill: true } : null
     };
     if (mode.id === 'siege') {
+      if (this.siegeDeployRules) this.siegeMatch = new SiegeMatch(this);
       this.battlefield.spawnWave(this);
       return;
     }
@@ -1524,6 +1537,18 @@ export class GameWorld {
   // A present partner can be switched between ACTIVE (fights back) and
   // PASSIVE (no actions; can be launched, lifted, pushed and frozen — for
   // testing spells on a movable target, which the anchored dummy is not).
+  // Castle Siege: from the castle platform onto the lane (timed).
+  requestDeploy() {
+    const match = this.siegeMatch;
+    if (!match || !this.isMatchRunning()) return false;
+    if (match.deploy('blue')) return true;
+    const side = match.side('blue');
+    if (!match.castleStands('blue')) this.showAnnouncement('LAST STAND — NO MORE DEPLOYS', 1.1);
+    else if (side.presence === 'Deployed') this.showAnnouncement(`ALREADY ON THE LANE — ${Math.ceil(side.laneTimeLeft)} S LEFT`, 1);
+    else if (side.cooldown > 0) this.showAnnouncement(`DEPLOY READY IN ${Math.ceil(side.cooldown)} S`, 1);
+    return false;
+  }
+
   // Training castles: a Wizard walking into a gate comes out on top.
   enterCastleGate(entity, mapId) {
     if (entity !== this.player && entity !== this.enemyChampion) return false;
@@ -2069,14 +2094,16 @@ export class GameWorld {
   // player/minion/spell targets, but are never valid Tower targets.
   getHostileMobileTargets(myTeam) {
     const targets = [];
+    // A Wizard sheltered on its castle platform is skipped by defence towers.
+    const sheltered = (unit) => !!this.siegeMatch?.isSheltered(unit);
     for (const minion of this.minions) {
       if (minion.team !== myTeam && !minion.isDead && minion.isMobileCombatant) targets.push(minion);
     }
     for (const summon of spells.getSummons()) {
       if (summon.team !== myTeam && summon.isMobileCombatant) targets.push(summon);
     }
-    if (myTeam === 'red' && this.player.isAlive && this.player.isMobileCombatant) targets.push(this.player);
-    if (myTeam === 'blue' && this.enemyChampion.isAlive && this.enemyChampion.isMobileCombatant) targets.push(this.enemyChampion);
+    if (myTeam === 'red' && this.player.isAlive && this.player.isMobileCombatant && !sheltered(this.player)) targets.push(this.player);
+    if (myTeam === 'blue' && this.enemyChampion.isAlive && this.enemyChampion.isMobileCombatant && !sheltered(this.enemyChampion)) targets.push(this.enemyChampion);
     return targets;
   }
 
@@ -2086,6 +2113,7 @@ export class GameWorld {
       if (target.isObjective && target.isVulnerable === false) return false;
       if (target.heroKey && (target.surfaceId === 'blueCastleUpperPlatform' || target.surfaceId === 'redCastleUpperPlatform')) return false;
       if (String(target.surfaceId).endsWith('CastleDeck')) return false;
+      if (this.siegeMatch?.isSheltered(target)) return false;
       return true;
     };
     // A brief lock stops the crowd from frame-by-frame target thrashing while
@@ -2489,6 +2517,7 @@ export class GameWorld {
 
       this.player.update(scaledDt, this.input, this.battlefield, this);
       this.enemyChampion.update(scaledDt, this, this.battlefield);
+      this.siegeMatch?.tick(scaledDt);
       this.noteFallenWizards();
       this.updateArenaRuneCollectibles();
 

@@ -5,7 +5,7 @@
 //   X            melee (stick up = uppercut, forward = heavy, air+down = dive)
 //   Y            DRAW / lock rune
 //   LB / RB / RT spell slot 1 / 2 / 3  — tap casts, hold two or three = fuse
-//   LT           transformation            D-pad down  mount
+//   LT           transformation            D-pad down  mount   D-pad up  deploy (Siege)
 //   Back/View    Grimoire                  Start/Menu  match menu
 // Targeting:  right stick moves the reticle, A confirms, B cancels, X turns walls.
 // Drawing:    right stick moves the pen, hold RT to ink, Y locks, B cancels.
@@ -13,7 +13,7 @@
 import { SlotChord } from './targeting.js';
 import { ui } from './ui.js';
 
-const BUTTON = Object.freeze({ A: 0, B: 1, X: 2, Y: 3, LB: 4, RB: 5, LT: 6, RT: 7, BACK: 8, START: 9, DOWN: 13 });
+const BUTTON = Object.freeze({ A: 0, B: 1, X: 2, Y: 3, LB: 4, RB: 5, LT: 6, RT: 7, BACK: 8, START: 9, UP: 12, DOWN: 13 });
 const SLOT_BUTTONS = Object.freeze([[BUTTON.LB, 0], [BUTTON.RB, 1], [BUTTON.RT, 2]]);
 const DEADZONE = .22;
 const RETICLE_SPEED = 560; // ground px per second at full tilt
@@ -102,6 +102,7 @@ export class GamepadController {
     if (down(BUTTON.Y)) game.startRuneDrawing();
     if (down(BUTTON.LT)) game.activateFocusTransformation();
     if (down(BUTTON.DOWN)) game.toggleMount();
+    if (down(BUTTON.UP)) game.requestDeploy?.();
     if (down(BUTTON.BACK)) ui.toggleGrimoire?.();
     for (const [button, position] of SLOT_BUTTONS) {
       if (down(button)) this.chord.press(position);

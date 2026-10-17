@@ -1449,3 +1449,12 @@ code {
 .training-map-card b { font: 800 10px 'Rajdhani', sans-serif; letter-spacing: 1px; }
 .training-map-card span { font: 600 8px/1.25 'Rajdhani', sans-serif; color: #c9b8e0; }
 .training-map-card.active { border-color: #ffd54f; box-shadow: 0 0 10px rgba(255, 213, 79, .5); }
+
+/* Castle Siege: deploy from the castle platform onto the lane. */
+.siege-deploy-btn { position: absolute; top: 152px; left: 50%; transform: translateX(-50%); z-index: 30; padding: 6px 16px; border-radius: 16px; border: 2px solid #64b5f6; background: rgba(10, 22, 44, .82); color: #e3f2fd; font: 800 13px/1 'Rajdhani', sans-serif; letter-spacing: 1px; cursor: pointer; pointer-events: auto; display: flex; gap: 8px; align-items: center; }
+.siege-deploy-btn.hidden { display: none; }
+.siege-deploy-btn[data-state="ready"] { box-shadow: 0 0 12px rgba(100, 181, 246, .8); animation: deploy-pulse 1.2s ease-in-out infinite; }
+.siege-deploy-btn[data-state="cooldown"] { border-color: #607d8b; color: #b0bec5; }
+.siege-deploy-btn[data-state="deployed"] { border-color: #ffd54f; color: #fff8e1; }
+.siege-deploy-btn[data-state="laststand"] { border-color: #ef5350; color: #ffcdd2; }
+@keyframes deploy-pulse { 50% { box-shadow: 0 0 22px rgba(100, 181, 246, 1); } }

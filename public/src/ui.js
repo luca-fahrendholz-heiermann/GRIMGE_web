@@ -120,6 +120,7 @@ export class UIManager {
     // The own profile bar (portrait + bars) also triggers the transformation.
     this.blueSidePanel = document.querySelector?.('#top-hud-bar .blue-side') ?? null;
     this.trainingSparringBtn = document.getElementById('training-sparring-btn');
+    this.siegeDeployBtn = document.getElementById('siege-deploy-btn');
     this.trainingPassiveBtn = document.getElementById('training-passive-btn');
     this.trainingMinionsBtn = document.getElementById('training-minions-btn');
     this.trainingTowersBtn = document.getElementById('training-towers-btn');
@@ -335,6 +336,9 @@ export class UIManager {
       else gw?.startRuneDrawing();
     });
     this.setupSpellTriangle();
+    this.siegeDeployBtn?.addEventListener('pointerdown', (e) => {
+      e.preventDefault(); e.stopPropagation(); window.gameWorld?.requestDeploy();
+    });
     this.trainingSparringBtn?.addEventListener('pointerdown', (e) => {
       e.preventDefault(); e.stopPropagation(); window.gameWorld?.toggleSparringPartner();
     });
@@ -1065,6 +1069,18 @@ export class UIManager {
         this.trainingPassiveBtn.textContent = passive ? '◎ PARTNER: PASSIVE' : '◉ PARTNER: ACTIVE';
       }
       this.trainingSparringBtn.classList.toggle('is-on', sparring);
+    }
+    const siege = window.gameWorld?.siegeMatch;
+    if (this.siegeDeployBtn) {
+      this.siegeDeployBtn.classList.toggle('hidden', !siege);
+      if (siege) {
+        const label = siege.deployLabel('blue');
+        if (this.siegeDeployBtn.firstChild?.nodeValue !== label.text) {
+          if (this.siegeDeployBtn.firstChild?.nodeType === 3) this.siegeDeployBtn.firstChild.nodeValue = label.text;
+          else this.siegeDeployBtn.prepend?.(label.text);
+        }
+        this.siegeDeployBtn.dataset.state = label.state;
+      }
     }
     const field = window.gameWorld?.battlefield;
     if (this.trainingMinionsBtn) {
