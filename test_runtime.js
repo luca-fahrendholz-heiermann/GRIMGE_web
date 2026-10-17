@@ -2080,6 +2080,22 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   P.focus = P.maxFocus; W.place(game, P.x + 300, P.z);
   assert(!game.activateFocusTransformation() && !P.primalBond, 'The bond needs the Primal within 3.5 u');
   // Turtle: shell guard, Fortified after a block, Shell Rush.
+  // Focus target: tapping an enemy sends the Primal after it; armed spell targeting keeps priority.
+  {
+    const E = game.enemyChampion;
+    game.toggleSparringPartner(); game.toggleSparringPassive();
+    P.x = 300; P.z = .5; game.battlefield.placeOnSurface(P); W.place(game, 280, .5);
+    E.x = 640; E.z = .5; E.hp = E.maxHp; E.state = 'idle'; game.battlefield.placeOnSurface(E);
+    game.targeting.active = { pointerId: null }; const armed = game.targeting.isActive;
+    if (armed) assert(!game.tryTransformByTap({ x: E.x, y: E.y - 40 }) && !W.focusTarget, 'While a spell is being aimed, a tap does not retarget the Primal');
+    game.targeting.cancel?.(); game.targeting.active = null;
+    assert(game.tryTransformByTap({ x: E.x, y: E.y - 40 }) && W.focusTarget === E, 'Tapping an enemy marks it as the Primal focus target');
+    for (let t = 0; t < 5; t += 1 / 60) { P.update(1 / 60, neutral, game.battlefield, game); W.update(1 / 60, game); E.update(1 / 60, game, game.battlefield); }
+    assert(E.hp < E.maxHp, 'The Primal hunts its focus target even beyond its usual search radius');
+    game.render();
+    game.toggleSparringPartner();
+    W.focusTarget = null;
+  }
   assert(game.cyclePrimal() === 'wolf:2' && game.primal.stage === 2, 'B / the PRIMAL button cycles the Primal and its stage');
   game.cyclePrimal(); game.cyclePrimal();
   W = game.primal;

@@ -95,6 +95,33 @@ export class PrimalCompanion extends GroundEntity {
     this.onLane = false; this.laneTime = 0; this.autonomous = false;
     this.hitRadiusX = 30; this.hitRadiusZ = .12;
     this.lastOwnerPresence = null;
+    this.focusTarget = null;
+  }
+
+  // Sticky focus target: overrides the search until it falls.
+  setFocusTarget(target) {
+    this.focusTarget = target;
+    this.interceptEnemy = null;
+    combat.spawnShockwave(target.x, (target.y ?? this.y) - 4, 22, this.info.variant);
+  }
+
+  validFocus() {
+    const t = this.focusTarget;
+    if (!t || t.isDead || t.isDestroyed || t.lifeState === 'Dead' || (t.hp ?? 1) <= 0) { this.focusTarget = null; return null; }
+    return t;
+  }
+
+  // Diamond marker over the focus target.
+  renderFocusMarker(ctx) {
+    const t = this.isTargetable ? this.validFocus() : null;
+    if (!t) return;
+    const y = (t.y ?? 0) - (t.heroKey ? 100 : 66) + Math.sin(this.animTime * 4) * 2;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.strokeStyle = this.info.variant; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(t.x, y - 7); ctx.lineTo(t.x + 6, y); ctx.lineTo(t.x, y + 7); ctx.lineTo(t.x - 6, y); ctx.closePath(); ctx.stroke();
+    ctx.fillStyle = this.info.aura + '.5)'; ctx.fill();
+    ctx.restore();
   }
 
   get isAlive() { return this.hp > 0 && this.recoveryTimer <= 0; }
@@ -221,7 +248,7 @@ export class PrimalCompanion extends GroundEntity {
       const center = this.mode === 'owner' ? owner : this;
       const foes = this.hostiles(game);
       // Intercept an enemy closing in on the Wizard.
-      if (this.mode === 'owner' && this.interceptCooldown <= 0 && !this.interceptEnemy) {
+      if (this.mode === 'owner' && this.interceptCooldown <= 0 && !this.interceptEnemy && !this.validFocus()) {
         const threat = foes.filter((t) => t.isMobileCombatant && groundDistance(t, owner) <= PRIMAL_STATS.searchRadius)
           .sort((a, b) => groundDistance(a, owner) - groundDistance(b, owner))[0];
         if (threat) this.interceptEnemy = threat;
@@ -244,7 +271,7 @@ export class PrimalCompanion extends GroundEntity {
         }
       }
       if (!goal) {
-        const target = foes.filter((t) => groundDistance(t, center) <= PRIMAL_STATS.searchRadius)
+        const target = this.validFocus() ?? foes.filter((t) => groundDistance(t, center) <= PRIMAL_STATS.searchRadius)
           .sort((a, b) => groundDistance(a, this) - groundDistance(b, this))[0] ?? null;
         this.target = target;
         if (target) {

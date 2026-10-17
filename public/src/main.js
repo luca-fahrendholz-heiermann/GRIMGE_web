@@ -1326,6 +1326,9 @@ export class GameWorld {
     if (!pt || !this.isMatchRunning() || !p?.isAlive || this.drawing.active || this.targeting.isActive) return false;
     // Siege: a tap on the waiting Primal sends it to the lane alone.
     if (this.primal?.tryTapDeploy(pt, this)) return true;
+    // A tap on an enemy marks it as the Primal's focus target (an armed
+    // spell's targeting is handled before this and keeps priority).
+    if (this.tryPrimalFocus(pt)) return true;
     if (p.focus < p.maxFocus || p.focusTransformTimer > 0) return false;
     const height = ENTITY_VISUALS.heroHeight;
     const inside = Math.abs(pt.x - p.x) <= 30 && pt.y <= p.y + 10 && pt.y >= p.y - height - 12;
@@ -1543,6 +1546,19 @@ export class GameWorld {
   // A present partner can be switched between ACTIVE (fights back) and
   // PASSIVE (no actions; can be launched, lifted, pushed and frozen — for
   // testing spells on a movable target, which the anchored dummy is not).
+  // Primal focus target (Unity: TrySetFocusTarget): the tapped enemy is
+  // hunted until it falls or another one is tapped.
+  tryPrimalFocus(pt) {
+    const primal = this.primal;
+    if (!primal?.isTargetable || !pt) return false;
+    const height = ENTITY_VISUALS.heroHeight;
+    const hit = this.getHostileTargets(primal.team, true).find((t) => !t.isProp && !t.isStoneWall && !t.isDead && t.lifeState !== 'Dead'
+      && Math.abs(pt.x - t.x) <= (t.isObjective ? 40 : 28) && pt.y <= (t.y ?? 0) + 10 && pt.y >= (t.y ?? 0) - (t.heroKey ? height : 70) - 10);
+    if (!hit) return false;
+    primal.setFocusTarget(hit);
+    return true;
+  }
+
   // Primal Bond (Unity PrimalBondRuntime): full Focus, grounded, Primal alive
   // and within 3.5 u → 0.5 s wind-up, then merged. T again releases it.
   togglePrimalBond() {
@@ -2801,6 +2817,7 @@ export class GameWorld {
       actor.render(ctx);
     }
     spells.renderBatch(ctx, spellBatch);
+    this.primal?.renderFocusMarker(ctx);
 
     // Projectiles
     this.renderProjectiles(ctx);
