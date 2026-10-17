@@ -7,7 +7,7 @@ import { ARENA_LAYOUT, clampToArena, groundYForDepth, setGroundProjection, surfa
 const TRAINING_BOUNDS = Object.freeze({ left: TRAINING_FIELD.left, right: TRAINING_FIELD.right, farZ: 0.02, nearZ: 0.98 });
 import { ART_ASSETS } from './art_assets.js';
 import { TRAINING_IMAGE, TRAINING_PROJECTION, TRAINING_FIELD, getTrainingMap, trainingMapScene } from './training_maps.js';
-import { renderCastles, preloadCastles } from './castles.js';
+import { renderCastles, preloadCastles, castleDeckAt, castleArenaSide, castleGatePoint, castleDeckCenter } from './castles.js';
 
 export class Battlefield {
   constructor(mode = null, options = {}) {
@@ -92,6 +92,15 @@ export class Battlefield {
     this.boundsOverride = (mode?.world === 'dungeon')
       ? { left: 104, right: 3200, farZ: 0.06, nearZ: 0.94 }
       : mode?.world === 'training' ? { ...TRAINING_BOUNDS } : null;
+    // Training extras (switched from the HUD): minion waves leaving the
+    // castle gates and defence towers on the lane. A training rampart may
+    // always be left by jumping down on the arena side.
+    this.allowDeckDrop = mode?.world === 'training';
+    this.trainingTowers = this.trainingMap ? this.buildTrainingTowers() : [];
+    this.trainingTowersOn = false;
+    this.trainingWavesOn = false;
+    this.trainingWaveClock = 0;
+    this.trainingWaveQueue = [];
     this.waveInterval = 18;
     this.waveTimer = 18;
     this.waveNumber = 0;
@@ -100,7 +109,67 @@ export class Battlefield {
     this.autoWaves = mode?.autoWaves !== false;
   }
 
+  // Unity lane: 2 defence towers per side — at ±1.7 u (depth −0.32) and
+  // ±8.4 u (depth −3.32) on the 23.4 u × 6 u lane; HP 260, range 5 u,
+  // 1.25 s cooldown, 18 damage (tower_defence.asset).
+  buildTrainingTowers() {
+    const mid = (TRAINING_FIELD.left + TRAINING_FIELD.right) / 2;
+    const unit = (TRAINING_FIELD.right - TRAINING_FIELD.left) / 2 / 11.7;
+    const depthZ = (y) => (1 - y) / 6;
+    const towers = [];
+    for (const [ux, uy] of [[1.7, -.32], [8.4, -3.32]]) {
+      for (const team of ['blue', 'red']) {
+        const tower = new Tower(mid + (team === 'blue' ? -ux : ux) * unit, depthZ(uy), team);
+        tower.maxHp = tower.hp = 260; tower.range = 5 * unit; tower.shootCooldown = 1.25; tower.damage = 18;
+        tower.topHeight = 74; tower.hitRadiusX = 26; tower.hitRadiusZ = .12; tower.isLaneTower = true;
+        towers.push(tower);
+      }
+    }
+    return towers;
+  }
+
+  setTrainingTowers(on) {
+    this.trainingTowersOn = !!on && this.trainingTowers.length > 0;
+    // Switching them on again rebuilds destroyed towers.
+    if (this.trainingTowersOn) this.trainingTowers.forEach((t) => { t.isDead = false; t.hp = t.maxHp; t.shootTimer = 1; });
+    return this.trainingTowersOn;
+  }
+
+  setTrainingWaves(on) {
+    this.trainingWavesOn = !!on && !!this.trainingMap;
+    // Unity lane_wave_opening: first wave after 6 s, then every 20 s.
+    this.trainingWaveClock = this.trainingWavesOn ? 20 - 6 : 0;
+    this.trainingWaveQueue = [];
+    return this.trainingWavesOn;
+  }
+
+  // Unity wave: 3 melee + 2 ranged per gate, 0.45 s apart.
+  updateTrainingWaves(dt, gameWorld) {
+    if (!this.trainingWavesOn) return;
+    this.trainingWaveClock += dt;
+    if (this.trainingWaveClock >= 20) {
+      this.trainingWaveClock -= 20;
+      this.waveNumber++;
+      const lanes = [.32, .5, .68, .41, .59];
+      ['melee', 'melee', 'melee', 'ranged', 'ranged'].forEach((type, i) => this.trainingWaveQueue.push({ at: i * .45, type, laneZ: lanes[i], lane: i % 3 }));
+      gameWorld.showAnnouncement?.(`WAVE ${this.waveNumber} LEAVES THE GATES`, 1.2);
+    }
+    for (const unit of this.trainingWaveQueue) unit.at -= dt;
+    while (this.trainingWaveQueue.length && this.trainingWaveQueue[0].at <= 0) {
+      const unit = this.trainingWaveQueue.shift();
+      for (const team of ['blue', 'red']) {
+        const gate = castleGatePoint(this.trainingMap.id, team);
+        const minion = new Minion(gate.x, gate.z, team, unit.type, unit.lane);
+        minion.preferredZ = unit.laneZ;
+        gameWorld.enhanceMinionSprite?.(minion);
+        gameWorld.minions.push(minion);
+      }
+    }
+  }
+
   update(dt, gameWorld) {
+    if (this.trainingTowersOn) this.trainingTowers.forEach((tower) => tower.update(dt, gameWorld));
+    this.updateTrainingWaves(dt, gameWorld);
     if (this.objectivesActive) {
       if (this.mode?.world === 'invasion') this.defenseTowers.forEach((tower) => tower.update(dt, gameWorld));
       else {
@@ -141,6 +210,7 @@ export class Battlefield {
     return team === 'blue' ? ARENA_LAYOUT.spawns.blueCastle : ARENA_LAYOUT.spawns.redCastle;
   }
   getObjectivesForTeam(team) {
+    if (this.trainingMap) return this.trainingTowersOn ? this.trainingTowers.filter((t) => t.team === team && !t.isDead) : [];
     if (this.mode?.world === 'invasion') {
       if (team !== 'blue') return [];
       return [...this.defenseTowers.filter((tower) => !tower.isDead), ...(this.blueCastle.isDestroyed ? [] : [this.blueCastle])];
@@ -162,10 +232,38 @@ export class Battlefield {
     const previousSurfaceHeight = entity.surfaceHeight ?? 0;
     const oldX = entity.x;
     const oldZ = entity.z;
-    clampToArena(entity, this.boundsOverride);
+    // A castle rampart reaches beyond the arena's side edges.
+    const onDeck = !!this.trainingMap && String(entity.surfaceId).endsWith('CastleDeck');
+    const bounds = this.boundsOverride ?? this.playableBounds;
+    clampToArena(entity, onDeck ? { ...bounds, left: 0, right: this.width } : this.boundsOverride);
     if (entity.x !== oldX) entity.vx = 0;
     if (entity.z !== oldZ) entity.vz = 0;
-    const surface = this.getSurfaceAt(entity.x, entity.z, entity);
+    let surface = this.getSurfaceAt(entity.x, entity.z, entity);
+    if (onDeck && !surface.isCastleDeck) {
+      const team = entity.surfaceId.startsWith('red') ? 'red' : 'blue';
+      // Only the gate side over the arena is open — and only where a drop is
+      // allowed (training). Every other rampart edge holds like a wall.
+      if (this.allowDeckDrop && castleArenaSide(this.trainingMap.id, team, entity.x, entity.z)) {
+        clampToArena(entity, this.boundsOverride);
+      } else if (entity._deckSafe) {
+        // Slide along the rampart wall: keep whichever axis stays on the deck.
+        const safe = entity._deckSafe;
+        const stays = (x, z) => castleDeckAt(this.trainingMap.id, x, z)?.id === entity.surfaceId;
+        if (entity.x !== safe.x && stays(entity.x, safe.z)) { entity.z = safe.z; entity.vz = 0; }
+        else if (entity.z !== safe.z && stays(safe.x, entity.z)) { entity.x = safe.x; entity.vx = 0; }
+        else {
+          // A slanted edge: nudge the step toward the deck's middle so the
+          // Wizard glides along it instead of sticking.
+          const c = castleDeckCenter(this.trainingMap.id, team);
+          const dx = c.x - entity.x; const dz = (c.z - entity.z) * 150; const len = Math.hypot(dx, dz) || 1;
+          const nx = entity.x + dx / len * 3; const nz = entity.z + dz / len * 3 / 150;
+          if (stays(nx, nz)) { entity.x = nx; entity.z = nz; }
+          else { entity.x = safe.x; entity.z = safe.z; entity.vx = 0; entity.vz = 0; }
+        }
+        surface = this.getSurfaceAt(entity.x, entity.z, entity);
+      }
+    }
+    if (surface.isCastleDeck) entity._deckSafe = { x: entity.x, z: entity.z };
     const nextSurfaceHeight = surfaceHeight(surface, entity.x);
     // Ramps are continuous ground. Leaving the side/front of a raised Castle
     // platform is a meaningful drop: preserve that height as elevation so an
@@ -189,6 +287,12 @@ export class Battlefield {
     // Castle battlements a Wizard-only spell-duel zone without reintroducing
     // separate rails or platformer physics for the rest of the arena.
     if (entity?.isMinion) return this.surfaces[0];
+    // Training castle ramparts: stood on (or landed on from above), never
+    // walked up onto from the ground — the gate leads up there.
+    if (this.trainingMap) {
+      const deck = castleDeckAt(this.trainingMap.id, x, z);
+      if (deck && (!entity || entity.surfaceId === deck.id || (entity.worldHeight ?? 0) >= deck.baseHeight - 8)) return deck;
+    }
     // Main arena is the fallback; elevated authored surfaces take priority.
     // A landing-only Arena platform is never a walk-up ledge. A character
     // must be falling from at least its top height, or already stand on it.
@@ -524,6 +628,7 @@ export class Battlefield {
       ctx.fill();
     });
     ctx.restore();
+    if (this.trainingTowersOn) this.trainingTowers.filter((tower) => !tower.isDead).forEach((tower) => tower.render(ctx));
     if (this.objectivesActive) {
       if (this.mode?.world === 'invasion') this.defenseTowers.filter((tower) => !tower.isDead).forEach((tower) => tower.render(ctx));
       else {

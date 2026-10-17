@@ -21,7 +21,7 @@ import { renderPixelated } from './abilities.js';
 import { sky } from './sky.js';
 import { renderGroundShadows } from './shadows.js';
 import { renderRuneGuide } from './rune_guides.js';
-import { castleBlocksAt } from './castles.js';
+import { castleBlocksAt, castleGateDoor, castleDeckEntry, castleDeckHeight } from './castles.js';
 import { WeaponArmory, WEAPONS } from './weapons.js';
 
 // LF2-style Dungeon rooms. Each room is a wide scrolling stretch: the camera
@@ -454,6 +454,9 @@ export class GameWorld {
 
       // Training: P toggles the sparring partner.
       if (e.code === 'KeyP') this.toggleSparringPartner();
+      // Training: M switches minion waves, N the lane towers.
+      if (e.code === 'KeyM') this.toggleTrainingMinions();
+      if (e.code === 'KeyN') this.toggleTrainingTowers();
       // Training: O switches the present partner between active and passive.
       if (e.code === 'KeyO') this.toggleSparringPassive();
 
@@ -1521,6 +1524,45 @@ export class GameWorld {
   // A present partner can be switched between ACTIVE (fights back) and
   // PASSIVE (no actions; can be launched, lifted, pushed and frozen — for
   // testing spells on a movable target, which the anchored dummy is not).
+  // Training castles: a Wizard walking into a gate comes out on top.
+  enterCastleGate(entity, mapId) {
+    if (entity !== this.player && entity !== this.enemyChampion) return false;
+    if (!entity.grounded || entity.isMounted) return false;
+    for (const team of ['blue', 'red']) {
+      const door = castleGateDoor(mapId, team);
+      if (Math.abs(entity.x - door.x) > 22 || Math.abs((entity.z - door.z) * 150) > 18) continue;
+      const entry = castleDeckEntry(mapId, team);
+      const color = team === 'blue' ? '#64b5f6' : '#ef5350';
+      combat.spawnShockwave(entity.x, entity.y - 30, 34, color);
+      entity.x = entry.x; entity.z = entry.z; entity.vx = 0; entity.vz = 0;
+      entity.cancelSprint?.();
+      entity.surfaceId = team + 'CastleDeck';
+      this.battlefield.placeOnSurface(entity);
+      entity._deckSafe = { x: entity.x, z: entity.z };
+      combat.spawnShockwave(entity.x, entity.y - 4, 44, color);
+      combat.spawnDust(entity.x, entity.y, 5);
+      if (entity === this.player) this.showAnnouncement('ON THE RAMPARTS — JUMP DOWN ON THE ARENA SIDE', 1.4);
+      return true;
+    }
+    return false;
+  }
+
+  // Training: minion waves from the castle gates (M) and lane towers (N).
+  toggleTrainingMinions() {
+    if (this.activeMode?.id !== 'training' || !this.isMatchRunning()) return false;
+    const on = this.battlefield.setTrainingWaves(!this.battlefield.trainingWavesOn);
+    if (!on) this.minions = this.minions.filter((m) => !m.isMinion || m.followLeader);
+    this.showAnnouncement(on ? 'MINIONS ON — FIRST WAVE IN 6 S' : 'MINIONS OFF', 1.2);
+    return on;
+  }
+
+  toggleTrainingTowers() {
+    if (this.activeMode?.id !== 'training' || !this.isMatchRunning()) return false;
+    const on = this.battlefield.setTrainingTowers(!this.battlefield.trainingTowersOn);
+    this.showAnnouncement(on ? 'LANE TOWERS ON' : 'LANE TOWERS OFF', 1.2);
+    return on;
+  }
+
   toggleSparringPassive() {
     if (this.activeMode?.id !== 'training' || !this.isMatchRunning() || !this.modeState.sparring) return false;
     const state = this.modeState;
@@ -2007,7 +2049,7 @@ export class GameWorld {
     if (myTeam === 'red' && this.player.isAlive) targets.push(this.player);
     if (myTeam === 'blue' && this.enemyChampion.isAlive) targets.push(this.enemyChampion);
 
-    if (this.activeMode?.objectives !== false) {
+    if (this.activeMode?.objectives !== false || this.battlefield.trainingTowersOn) {
       const enemyTeam = myTeam === 'blue' ? 'red' : 'blue';
       for (const objective of this.battlefield.getObjectivesForTeam(enemyTeam)) {
         if (!objective.isDestroyed && (includeProtectedCastle || objective.isVulnerable !== false)) targets.push(objective);
@@ -2043,6 +2085,7 @@ export class GameWorld {
       if (!target || target.team === minion.team || target.isDead || target.isDestroyed) return false;
       if (target.isObjective && target.isVulnerable === false) return false;
       if (target.heroKey && (target.surfaceId === 'blueCastleUpperPlatform' || target.surfaceId === 'redCastleUpperPlatform')) return false;
+      if (String(target.surfaceId).endsWith('CastleDeck')) return false;
       return true;
     };
     // A brief lock stops the crowd from frame-by-frame target thrashing while
@@ -2513,7 +2556,11 @@ export class GameWorld {
     if (!entity?.isMobileCombatant) return false;
     // Training castles are solid (their footprint reaches into the arena edge).
     const castleMap = this.activeMode?.id === 'training' ? this.battlefield?.trainingMap?.id : null;
-    if (castleMap && castleBlocksAt(castleMap, entity.x, entity.z) && !castleBlocksAt(castleMap, previousX, previousZ)) {
+    // On (or above) a rampart the castle is the floor, not a wall.
+    const onRampart = castleMap && (String(entity.surfaceId).endsWith('CastleDeck') || (entity.worldHeight ?? 0) >= castleDeckHeight(castleMap, 'blue') - 8);
+    if (castleMap && !onRampart && castleBlocksAt(castleMap, entity.x, entity.z) && !castleBlocksAt(castleMap, previousX, previousZ)) {
+      // Walking into a gate leads up onto that castle's rampart.
+      if (this.enterCastleGate(entity, castleMap)) return true;
       entity.x = previousX; entity.z = previousZ;
       entity.vx *= .15; entity.vz *= .15;
       return true;

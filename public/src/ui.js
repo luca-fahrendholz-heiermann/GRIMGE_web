@@ -121,6 +121,8 @@ export class UIManager {
     this.blueSidePanel = document.querySelector?.('#top-hud-bar .blue-side') ?? null;
     this.trainingSparringBtn = document.getElementById('training-sparring-btn');
     this.trainingPassiveBtn = document.getElementById('training-passive-btn');
+    this.trainingMinionsBtn = document.getElementById('training-minions-btn');
+    this.trainingTowersBtn = document.getElementById('training-towers-btn');
     this.trainingDeckBtn = document.getElementById('training-deck-btn');
     this.trainingMapBtn = document.getElementById('training-map-btn');
     this.trainingMapModal = document.getElementById('training-map-modal');
@@ -335,6 +337,12 @@ export class UIManager {
     this.setupSpellTriangle();
     this.trainingSparringBtn?.addEventListener('pointerdown', (e) => {
       e.preventDefault(); e.stopPropagation(); window.gameWorld?.toggleSparringPartner();
+    });
+    this.trainingMinionsBtn?.addEventListener('pointerdown', (e) => {
+      e.preventDefault(); e.stopPropagation(); window.gameWorld?.toggleTrainingMinions();
+    });
+    this.trainingTowersBtn?.addEventListener('pointerdown', (e) => {
+      e.preventDefault(); e.stopPropagation(); window.gameWorld?.toggleTrainingTowers();
     });
     this.trainingPassiveBtn?.addEventListener('pointerdown', (e) => {
       e.preventDefault(); e.stopPropagation(); window.gameWorld?.toggleSparringPassive();
@@ -1057,6 +1065,17 @@ export class UIManager {
         this.trainingPassiveBtn.textContent = passive ? '◎ PARTNER: PASSIVE' : '◉ PARTNER: ACTIVE';
       }
       this.trainingSparringBtn.classList.toggle('is-on', sparring);
+    }
+    const field = window.gameWorld?.battlefield;
+    if (this.trainingMinionsBtn) {
+      const on = !!field?.trainingWavesOn;
+      this.trainingMinionsBtn.textContent = on ? '⚑ MINIONS: ON' : '⚑ MINIONS: OFF';
+      this.trainingMinionsBtn.classList.toggle('is-on', on);
+    }
+    if (this.trainingTowersBtn) {
+      const on = !!field?.trainingTowersOn;
+      this.trainingTowersBtn.textContent = on ? '♜ TOWERS: ON' : '♜ TOWERS: OFF';
+      this.trainingTowersBtn.classList.toggle('is-on', on);
     }
 
     // Red Team Bars

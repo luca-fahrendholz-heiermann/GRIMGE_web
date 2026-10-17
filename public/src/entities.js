@@ -1817,9 +1817,25 @@ export class Minion extends GroundEntity {
 export class Tower extends GroundEntity {
   constructor(x, z, team, onDestroyed = null) { super(x, z); this.team = team; this.isObjective = true; this.maxHp = this.hp = 800; this.range = 280; this.hitRadiusX = 68; this.hitRadiusZ = 0.46; this.shootCooldown = 1.8; this.shootTimer = 0; this.isDead = false; this.corePulse = 0; this.hitFlash = 0; this.topHeight = 125; this.currentTarget = null; this.onDestroyed = onDestroyed; }
   get crystalY() { return this.y - this.topHeight; }
-  update(dt, gameWorld) { if (this.isDead) { this.currentTarget = null; return; } this.corePulse += dt * 3; this.hitFlash = Math.max(0, this.hitFlash - dt); this.shootTimer -= dt; let target = null; let distance = this.range; for (const candidate of gameWorld.getHostileMobileTargets(this.team)) { const d = groundDistance(this, candidate); if (d < distance) { target = candidate; distance = d; } } this.currentTarget = target; if (target && this.shootTimer <= 0) { this.shootTimer = this.shootCooldown; audio.playTowerShot(); combat.spawnShockwave(this.x, this.crystalY, 20, this.team === 'blue' ? '#00e5ff' : '#ff1744'); gameWorld.spawnTowerOrb(this.x, this.z, target, this.team, 42, this.worldHeight + this.topHeight); } }
+  update(dt, gameWorld) { if (this.isDead) { this.currentTarget = null; return; } this.corePulse += dt * 3; this.hitFlash = Math.max(0, this.hitFlash - dt); this.shootTimer -= dt; let target = null; let distance = this.range; for (const candidate of gameWorld.getHostileMobileTargets(this.team)) { const d = groundDistance(this, candidate); if (d < distance) { target = candidate; distance = d; } } this.currentTarget = target; if (target && this.shootTimer <= 0) { this.shootTimer = this.shootCooldown; audio.playTowerShot(); combat.spawnShockwave(this.x, this.crystalY, 20, this.team === 'blue' ? '#00e5ff' : '#ff1744'); gameWorld.spawnTowerOrb(this.x, this.z, target, this.team, this.damage ?? 42, this.worldHeight + this.topHeight); } }
   takeDamage(amount) { if (this.isDead) return; this.hp = Math.max(0, this.hp - amount); this.hitFlash = .15; combat.spawnDamageText(this.x, this.crystalY - 15, amount, { isCrit: true, color: this.team === 'blue' ? '#4fc3f7' : '#e57373' }); if (!this.hp) { this.isDead = true; audio.playImpact(true); combat.shakeCamera(15, .8); combat.spawnShockwave(this.x, this.crystalY, 80, '#ff9100'); combat.spawnHitSparks(this.x, this.crystalY, 1, '#ffcc80', 24); this.onDestroyed?.(this); } }
-  render(ctx) { const y = this.crystalY + Math.sin(this.corePulse) * 5; const color = this.team === 'blue' ? '#00e5ff' : '#ff1744'; ctx.save(); ctx.fillStyle = this.team === 'blue' ? 'rgba(0,229,255,.35)' : 'rgba(255,23,68,.35)'; ctx.beginPath(); ctx.arc(this.x, y, 20, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = this.hitFlash ? '#fff' : color; ctx.shadowColor = color; ctx.shadowBlur = 12; ctx.beginPath(); ctx.moveTo(this.x, y - 15); ctx.lineTo(this.x + 9, y); ctx.lineTo(this.x, y + 15); ctx.lineTo(this.x - 9, y); ctx.closePath(); ctx.fill(); if (!this.isDead && this.hp < this.maxHp) { ctx.shadowBlur = 0; ctx.fillStyle = 'rgba(0,0,0,.78)'; ctx.fillRect(this.x - 30, y - 31, 60, 5); ctx.fillStyle = color; ctx.fillRect(this.x - 30, y - 31, 60 * this.hp / this.maxHp, 5); } ctx.restore(); }
+  render(ctx) { const y = this.crystalY + Math.sin(this.corePulse) * 5; const color = this.team === 'blue' ? '#00e5ff' : '#ff1744'; if (this.isLaneTower) this.renderLaneBody(ctx, color); ctx.save(); ctx.fillStyle = this.team === 'blue' ? 'rgba(0,229,255,.35)' : 'rgba(255,23,68,.35)'; ctx.beginPath(); ctx.arc(this.x, y, 20, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = this.hitFlash ? '#fff' : color; ctx.shadowColor = color; ctx.shadowBlur = 12; ctx.beginPath(); ctx.moveTo(this.x, y - 15); ctx.lineTo(this.x + 9, y); ctx.lineTo(this.x, y + 15); ctx.lineTo(this.x - 9, y); ctx.closePath(); ctx.fill(); if (!this.isDead && this.hp < this.maxHp) { ctx.shadowBlur = 0; ctx.fillStyle = 'rgba(0,0,0,.78)'; ctx.fillRect(this.x - 30, y - 31, 60, 5); ctx.fillStyle = color; ctx.fillRect(this.x - 30, y - 31, 60 * this.hp / this.maxHp, 5); } ctx.restore(); }
+  // Lane towers stand on the open field (Siege towers are painted into the
+  // scene): a stone obelisk with a glowing rune band under the crystal.
+  renderLaneBody(ctx, color) {
+    const base = this.y; const top = this.crystalY + 16;
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(this.x, base, 20, 6, 0, 0, Math.PI * 2); ctx.fill();
+    const g = ctx.createLinearGradient(this.x - 12, 0, this.x + 12, 0);
+    g.addColorStop(0, '#4a5262'); g.addColorStop(.5, '#7d8696'); g.addColorStop(1, '#3a4150');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.moveTo(this.x - 14, base); ctx.lineTo(this.x - 8, top); ctx.lineTo(this.x + 8, top); ctx.lineTo(this.x + 14, base); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = 'rgba(20,24,32,.8)'; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.fillStyle = '#5c6575'; ctx.fillRect(this.x - 17, base - 6, 34, 6); ctx.fillRect(this.x - 11, top - 4, 22, 5);
+    ctx.globalAlpha = .55 + .35 * Math.sin(this.corePulse * 1.3); ctx.fillStyle = color;
+    ctx.fillRect(this.x - 9, (base + top) / 2 - 2, 18, 3);
+    ctx.restore();
+  }
   renderRange(ctx) { ctx.save(); ctx.setLineDash([6,6]); ctx.strokeStyle = this.team === 'blue' ? 'rgba(33,190,255,.55)' : 'rgba(255,82,82,.55)'; ctx.beginPath(); ctx.arc(this.x, this.y, this.range, 0, Math.PI * 2); ctx.stroke(); ctx.restore(); }
 }
 

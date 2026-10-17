@@ -26,8 +26,13 @@ export const CASTLE_GEOMETRY = Object.freeze({
   frontRight: Object.freeze({ u: 528 / 793, v: 1932 / 1983 }),
   rearRight: Object.freeze({ u: 750 / 793, v: 1150 / 1983 }),
   // Ground point under the middle of the gate (inner side face).
-  gate: Object.freeze({ u: .80, v: .785 })
+  gate: Object.freeze({ u: .80, v: .785 }),
+  // The rampart walkway on top is the footprint raised by the wall height:
+  // its corners sit ≈ 52 % of the image height above the base corners.
+  deckRise: .52
 });
+// The walkway lies a little inside the crenellations.
+const DECK_INSET = 7;
 
 // Placement of the LEFT castle on the scene image (percent of the image).
 // Based on the pptx composition (11.81 × 52.49 %): raised so the middle of
@@ -143,6 +148,76 @@ export function castleBlocksAt(mapId, x, z, pad = 10) {
     for (let i = 0; i < poly.length; i++) if (distanceToSegment(pt, poly[i], poly[(i + 1) % poly.length]) < pad) return true;
   }
   return false;
+}
+
+// ── Rampart deck ────────────────────────────────────────────────────────
+// A walkable plane on top of each castle reaching back into the depth.
+// Standing on it, an actor never falls through; its edges are walls except
+// the gate side facing the arena, where one may drop down (if allowed).
+export function castleDeckHeight(mapId, team) {
+  return castleBox(mapId, team).h * CASTLE_GEOMETRY.deckRise;
+}
+
+const deckSurfaces = new Map();
+function deckSurface(mapId, team) {
+  const key = mapId + team;
+  if (!deckSurfaces.has(key)) {
+    deckSurfaces.set(key, Object.freeze({
+      id: team + 'CastleDeck', label: (team === 'blue' ? 'Blue' : 'Red') + ' castle rampart',
+      team, isCastleDeck: true, baseHeight: castleDeckHeight(mapId, team),
+      xMin: -Infinity, xMax: Infinity, zMin: -Infinity, zMax: Infinity
+    }));
+  }
+  return deckSurfaces.get(key);
+}
+
+// The deck surface over this ground point (world x / z), or null.
+export function castleDeckAt(mapId, x, z) {
+  if (!mapId) return null;
+  const pt = { x, y: groundY(z) };
+  for (const team of ['blue', 'red']) {
+    const poly = castleFootprint(mapId, team);
+    if (!insidePolygon(pt, poly)) continue;
+    let edge = Infinity;
+    for (let i = 0; i < poly.length; i++) edge = Math.min(edge, distanceToSegment(pt, poly[i], poly[(i + 1) % poly.length]));
+    if (edge >= DECK_INSET) return deckSurface(mapId, team);
+  }
+  return null;
+}
+
+// x of the castle's gate-side edge (front-right → rear-right) at a depth.
+function gateEdgeX(mapId, team, z) {
+  const [, fr, rr] = castleFootprint(mapId, team);
+  const y = groundY(z);
+  const t = (y - fr.y) / ((rr.y - fr.y) || 1);
+  return fr.x + (rr.x - fr.x) * t;
+}
+
+// Is a ground point beyond the deck's gate side, i.e. over the arena?
+export function castleArenaSide(mapId, team, x, z) {
+  const dir = team === 'red' ? -1 : 1;
+  const deckEdge = gateEdgeX(mapId, team, z) - dir * DECK_INSET;
+  return (x - deckEdge) * dir > 0;
+}
+
+// Middle of a castle's rampart (world).
+export function castleDeckCenter(mapId, team) {
+  const poly = castleFootprint(mapId, team);
+  const y = poly.reduce((sum, p) => sum + p.y, 0) / poly.length;
+  return { x: poly.reduce((sum, p) => sum + p.x, 0) / poly.length, z: depthOf(y) };
+}
+
+// Where someone walking in through the gate comes out on the rampart.
+export function castleDeckEntry(mapId, team) {
+  const gate = castleGatePoint(mapId, team);
+  const edge = gateEdgeX(mapId, team, gate.z);
+  return { x: edge + (team === 'red' ? 1 : -1) * (DECK_INSET + 12), z: gate.z };
+}
+
+// The doorway on the gate side face (world), for walking in.
+export function castleGateDoor(mapId, team) {
+  const gate = castleGatePoint(mapId, team);
+  return { x: gateEdgeX(mapId, team, gate.z), z: gate.z };
 }
 
 // The wall piece in front of a castle (screen polygon), from just above the

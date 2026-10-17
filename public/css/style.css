@@ -1415,6 +1415,7 @@ code {
   cursor: pointer;
 }
 .training-sparring-btn.is-on { border-color: #ff5252; color: #ffcdd2; box-shadow: 0 0 10px rgba(255, 82, 82, .55); }
+.training-sparring-btn.hidden { display: none; }
 
 /* Gamepad mode: no joystick, controller button hints instead of keys. */
 .pad-hint {

@@ -1375,9 +1375,9 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
   assert(gate.x > 96 && gate.z > .3 && gate.z < .8 && !castles.castleBlocksAt('frozen', gate.x, gate.z), 'The gate point lies just inside the arena in front of the castle');
   assert(castles.castleBlocksAt('frozen', 60, .55) && !castles.castleBlocksAt('frozen', 512, .5), 'The castle footprint is solid, the arena centre is free');
   P.x = 140; P.z = .5; P.elevation = 0; game.battlefield.placeOnSurface(P);
-  const intoCastle = { x: 100, z: .5 };
-  const fromX = P.x; P.x = intoCastle.x; P.z = intoCastle.z;
-  assert(game.resolveSpellObstacles(P, fromX, .5) && P.x === fromX, 'The player cannot walk into a castle');
+  P.z = .7; game.battlefield.placeOnSurface(P);
+  const fromX = P.x; P.x = 90; P.z = .7;
+  assert(game.resolveSpellObstacles(P, fromX, .7) && P.x === fromX, 'The player cannot walk into a castle wall');
   castles.setCastleSkin('red', 'volcano');
   assert(castles.castleSkinFor('red', 'frozen') === 'volcano' && castles.castleSkinFor('blue', 'frozen') === 'frozen', 'Each team can choose its own castle skin');
   castles.setCastleSkin('red', null);
@@ -1387,6 +1387,45 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
   const overlay = castles.castleWallOverlay('frozen', 'blue');
   const blueBase = castles.castleFootprint('frozen', 'blue')[0].y;
   assert(overlay.length === 4 && Math.min(...overlay.map((p) => p.y)) < blueBase && Math.max(...overlay.map((p) => p.y)) > blueBase, 'The painted wall in front is redrawn over the castle base (wall butts against the castle)');
+
+  // Rampart deck: walk in through the gate, stand on top, drop down on the arena side.
+  const neutral = { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false };
+  const walk = (mx, mz, frames) => { const input = { ...neutral, move: { x: mx, z: mz } }; for (let i = 0; i < frames; i++) P.update(1 / 60, input, game.battlefield, game); };
+  const door = castles.castleGateDoor('frozen', 'blue');
+  P.state = 'idle'; P.stateTimer = 0; P.sprintActive = false; P.x = door.x + 30; P.z = door.z; P.vx = 0; P.vz = 0; game.battlefield.placeOnSurface(P);
+  walk(-1, 0, 40);
+  const deckH = castles.castleDeckHeight('frozen', 'blue');
+  assert(P.surfaceId === 'blueCastleDeck' && Math.abs(P.surfaceHeight - deckH) < .5 && deckH > 120, `Walking into the gate leads up onto the castle rampart (${Math.round(deckH)} px high)`);
+  walk(0, -1, 70);
+  assert(P.surfaceId === 'blueCastleDeck' && P.grounded && P.z < door.z - .1, `The rampart reaches back into the depth and holds the Wizard (no falling through) [${P.surfaceId} x${P.x.toFixed(0)} z${P.z.toFixed(2)} g${P.grounded}]`);
+  walk(-1, 0, 60);
+  assert(P.surfaceId === 'blueCastleDeck' && P.grounded, 'The outer rampart edge holds like a wall');
+  walk(0, 1, 120);
+  assert(P.surfaceId === 'blueCastleDeck' && P.grounded, 'The front rampart edge holds like a wall');
+  walk(1, 0, 90);
+  assert(P.surfaceId !== 'blueCastleDeck' && P.x >= 96, `On the arena side the Wizard can drop down from the rampart (training) [${P.surfaceId} x${P.x.toFixed(0)} z${P.z.toFixed(2)}]`);
+  walk(0, 0, 60);
+  assert(P.grounded && P.surfaceHeight === 0 && P.elevation === 0, 'After the drop the Wizard lands on the arena floor');
+  // Ground units never step up onto a rampart.
+  const deckPoint = castles.castleDeckEntry('frozen', 'blue');
+  assert(castles.castleDeckAt('frozen', deckPoint.x, deckPoint.z) && game.battlefield.getSurfaceAt(deckPoint.x, deckPoint.z, { surfaceId: 'mainArena', worldHeight: 0 }).id === 'mainArena', 'The rampart is only reached through the gate (or from above), not by walking against the wall');
+
+  // Training extras: minion waves leave the gates; lane towers can be switched on.
+  game.minions = [];
+  assert(game.toggleTrainingMinions() && game.battlefield.trainingWavesOn, 'M / the MINIONS button switches minion waves on');
+  for (let i = 0; i < 5.5 * 60; i++) game.battlefield.update(1 / 60, game);
+  assert(game.minions.length === 0, 'The first wave waits 6 s (Unity lane wave)');
+  for (let i = 0; i < 2.5 * 60; i++) game.battlefield.update(1 / 60, game);
+  const blueGate = castles.castleGatePoint('frozen', 'blue'); const redGate = castles.castleGatePoint('frozen', 'red');
+  const blues = game.minions.filter((m) => m.team === 'blue'); const reds = game.minions.filter((m) => m.team === 'red');
+  assert(blues.length === 5 && reds.length === 5 && blues.filter((m) => m.type === 'ranged').length === 2, 'Each gate sends 3 melee and 2 ranged minions');
+  assert(Math.min(...blues.map((m) => Math.abs(m.x - blueGate.x))) < 30 && Math.min(...reds.map((m) => Math.abs(m.x - redGate.x))) < 30, 'The minions come out of the castle gates');
+  assert(!game.toggleTrainingMinions() && game.minions.length === 0, 'Switching minions off clears them');
+  assert(game.toggleTrainingTowers() && game.battlefield.trainingTowers.length === 4, 'N / the TOWERS button puts two defence towers per side on the lane');
+  const redTower = game.battlefield.trainingTowers.find((t) => t.team === 'red');
+  assert(redTower.maxHp === 260 && redTower.shootCooldown === 1.25 && redTower.damage === 18 && game.getHostileTargets('blue').includes(redTower), 'Lane towers use the Unity values and can be attacked');
+  game.render();
+  assert(!game.toggleTrainingTowers() && !game.getHostileTargets('blue').includes(redTower), 'Switching towers off removes them');
 }
 
 // Focus: a rising aura while charging; tapping the own Wizard or profile bar transforms.
