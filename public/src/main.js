@@ -224,16 +224,25 @@ export class GameWorld {
     const height = rect.height || globalThis.innerHeight || this.logicalHeight;
     if (width <= 0 || height <= 0) return;
 
-    // Constant logical height, variable camera width. Keep the full authored
-    // arena on narrow landscape displays, then add only visual overscan on
-    // wider ones. Gameplay continues to use logicalWidth everywhere.
-    const nextRenderWidth = Math.max(this.logicalWidth, Math.round(this.logicalHeight * (width / height)));
-    const nextRenderHeight = Math.max(this.logicalHeight, Math.round(this.logicalWidth * (height / width)));
+    // Constant logical height, variable camera width. Narrow screens add sky
+    // above the arena. Wide screens (e.g. 19.5:9 phones) may reveal more of
+    // the scene only as far as it is painted; beyond that the camera zooms
+    // in and crops a little sky / foreground instead of repeating edge
+    // strips. Gameplay continues to use logicalWidth everywhere.
+    const aspect = width / height;
+    const limits = this.battlefield?.viewLimits?.() ?? { maxWidth: Infinity, topShare: .5 };
+    let nextRenderWidth = Math.max(this.logicalWidth, Math.round(this.logicalHeight * aspect));
+    let nextRenderHeight = Math.max(this.logicalHeight, Math.round(this.logicalWidth / aspect));
+    if (nextRenderWidth > limits.maxWidth) {
+      nextRenderWidth = Math.max(this.logicalWidth, limits.maxWidth);
+      nextRenderHeight = Math.round(nextRenderWidth / aspect);
+    }
     const nextDeviceScale = Math.min(2, globalThis.window?.devicePixelRatio || globalThis.devicePixelRatio || 1);
     const changed = nextRenderWidth !== this.renderWidth || nextRenderHeight !== this.renderHeight || nextDeviceScale !== this.deviceScale;
     this.renderWidth = nextRenderWidth;
     this.renderHeight = nextRenderHeight;
-    this.worldOffsetY = this.renderHeight - this.logicalHeight;
+    const crop = Math.max(0, this.logicalHeight - this.renderHeight);
+    this.worldOffsetY = crop > 0 ? -Math.round(crop * limits.topShare) : this.renderHeight - this.logicalHeight;
     this.deviceScale = nextDeviceScale;
     this.cameraOffsetX = (this.renderWidth - this.logicalWidth) * 0.5;
     if (changed || this.canvas.width !== Math.round(this.renderWidth * this.deviceScale)) {
@@ -2145,6 +2154,8 @@ export class GameWorld {
     combat.resetEffects();
     this.activeMode = getGameMode(this.matchMode);
     this.battlefield = new Battlefield(this.activeMode, { trainingMapId: this.trainingMapId });
+    // Each world has its own painted width (wide-screen zoom / crop).
+    this.updateViewport();
     this.attachBattlefieldCallbacks();
     const spawn = this.battlefield.getSpawn('blue');
     this.player = new Player(spawn.x, spawn.z);

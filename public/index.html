@@ -422,42 +422,14 @@
           <div class="modal-body">
           <div class="g-col">
             <h3>✦ RUNE GESTURES (RUNE CARD OR DRAW IN THE SPELL TRIANGLE)</h3>
-            <div class="g-item"><span class="r-icon">🔥</span><strong>IGNIS (Fire)</strong>: Draw Triangle <code>▲</code></div>
-            <div class="g-item"><span class="r-icon">💨</span><strong>VENTUS (Wind)</strong>: Draw Dash <code>—</code></div>
-            <div class="g-item"><span class="r-icon">⚡</span><strong>FULGUR (Lightning)</strong>: Draw Zig-Zag <code>Z</code></div>
-            <div class="g-item"><span class="r-icon">🪨</span><strong>TERRA (Earth)</strong>: Draw Square <code>□</code></div>
-            <div class="g-item"><span class="r-icon">❄️</span><strong>AQUA (Frost)</strong>: Draw Circle <code>○</code></div>
-            <div class="g-item"><span class="r-icon">🐺</span><strong>BESTIA (Beast)</strong>: Draw three-peaked Claw <code>M</code></div>
-            <div class="g-item"><span class="r-icon">⚙️</span><strong>KONSTRUKT (Construct)</strong>: Draw tall Pillar <code>|</code></div>
-            <div class="g-item"><span class="r-icon">🕳️</span><strong>VOID</strong>: Draw open Spiral / Eye <code>◉</code></div>
+            <!-- Filled from the recognizer rune list (ui.js renderGrimoireGuides). -->
+            <div id="rune-glyph-guide"></div>
             <div id="rune-progression-list" class="rune-progression-list"></div>
           </div>
           <div class="g-col">
             <h3>✦ ALL RUNE FUSIONS</h3>
-            <h4>DUAL FUSIONS</h4>
-            <div class="g-item">🔥 + 💨 = <strong>FIRESTORM VORTEX</strong> (pulls, burns, launches)</div>
-            <div class="g-item">🔥 + ⚡ = <strong>METEOR CATACLYSM</strong> (meteor + magma crater)</div>
-            <div class="g-item">💨 + ⚡ = <strong>TEMPEST BLITZ</strong> (lightning dash)</div>
-            <div class="g-item">🔥 + 🪨 = <strong>MAGMA FISSURE</strong> (lava floor trap)</div>
-            <div class="g-item">🪨 + 💨 = <strong>SANDSTORM BASTION</strong> (deflects lane shots)</div>
-            <div class="g-item">❄️ + 💨 = <strong>BLIZZARD SURGE</strong> (freeze and slow)</div>
-            <div class="g-item">❄️ + ⚡ = <strong>AURA SHOCK</strong> (radial knockback)</div>
-            <div class="g-item">❄️ + 🪨 = <strong>ARCANE AEGIS</strong> (temporary magic shield)</div>
-            <div class="g-item">🪨 + 🪨 = <strong>STONE WALL</strong> (blocks foes and projectiles)</div>
-            <div class="g-item">🐺 + ⚡ = <strong>STORM WOLF</strong> (mountable Wizard hunter)</div>
-            <div class="g-item">🐺 + 🕳️ = <strong>VOID SPIDER</strong> (web slow control summon)</div>
-            <div class="g-item">⚙️ + 🪨 = <strong>RUNE GOLEM</strong> (mountable vanguard)</div>
-            <h4>TRIPLE FUSIONS</h4>
-            <div class="g-item">🔥 + 💨 + ⚡ = <strong>APOCALYPTIC HEAVENSURGE</strong> (grand storm)</div>
-            <div class="g-item">🐺 + 🪨 + 🕳️ = <strong>EIDOLON MANTLE</strong> (guardian combat form)</div>
-            <div class="g-item">🐺 + 🔥 + 🕳️ = <strong>NINEFOLD BEAST FORM</strong> (feral combat form)</div>
-            <div class="g-item">🐺 + 🔥 + 💨 = <strong>INFERNO DRAGON INVOCATION</strong> (siege fire strike)</div>
-            <div class="g-item">🐺 + 🪨 + 💨 = <strong>WORLD RUNE SERPENT</strong> (mountable lane control, launches)</div>
-            <div class="g-item">❄️ + 🪨 + 💨 = <strong>SPIRIT WOLF</strong> (mountable frost hunter)</div>
-            <div class="g-item">⚡ + 🪨 + 🪨 = <strong>SIEGE GOLEM</strong> (mountable objective tank)</div>
-            <div class="g-item">🔥 + 🪨 + ⚡ = <strong>DRAGON INVOCATION</strong> (temporary fire-dragon strike)</div>
-            <div class="g-item">🔥 + 🔥 = <strong>INFERNO BEAM</strong> · ❄️ + ❄️ = <strong>GLACIAL RAY</strong> · ⚡ + ⚡ = <strong>THUNDER LANCE</strong> · ◉ + ◉ = <strong>NULL RAY</strong> (clashable beams)</div>
-            <div class="g-item">▥ + 💨 = <strong>MIRROR WARD</strong> · 💨 + ◉ = <strong>GRAVITY LIFT</strong> · ⚡ + 🪨 = <strong>SEISMIC SLAM</strong> · ᛗ + 🪨 = <strong>TITAN STOMP</strong> · 🔥 + ◉ = <strong>SOUL SEEKERS</strong></div>
+            <!-- Filled from the spell recipes (ui.js renderGrimoireGuides). -->
+            <div id="fusion-guide"></div>
             <div class="g-item"><small>Rune order never matters. Only listed recipes fuse; a failed fusion keeps one random ingredient and loses the others (Training: nothing is lost).</small></div>
           </div>
           <div class="g-col">

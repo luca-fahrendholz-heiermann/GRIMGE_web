@@ -1217,6 +1217,11 @@ body.portrait-gameplay #game-container { visibility: hidden; pointer-events: non
   margin-bottom: 5px;
 }
 
+.g-item.is-recipe { flex-wrap: wrap; gap: 3px; }
+.g-item .g-rune { color: var(--rune-color); font-weight: 700; white-space: nowrap; }
+.g-item .g-note { color: #b8aecf; font-size: 10px; }
+.g-col h4 { margin: 8px 0 4px; color: #e8d9ff; font-size: 10px; letter-spacing: .5px; }
+
 .rune-progression-list {
   margin-top: 10px;
   border-top: 1px solid #443c5e;

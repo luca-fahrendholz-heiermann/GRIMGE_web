@@ -212,6 +212,17 @@ export class Battlefield {
   // same fixed scale and anchor (never stretched, never rescaled per screen)
   // so its painted terrain zones line up exactly with the gameplay zones.
   // Wider screens repeat the outermost image columns as edge continuation.
+  // How wide the painted scene really is (logical px) and how a too-wide
+  // screen is cropped instead: the camera zooms in until the art fills the
+  // width and cuts the surplus height (`topShare` of it from the sky, the
+  // rest from the foreground). Procedural backdrops can widen freely.
+  viewLimits() {
+    const world = this.mode?.world;
+    if (world === 'training') return { maxWidth: Math.floor(TRAINING_IMAGE.width * TRAINING_IMAGE.scale), topShare: .5 };
+    if (world === 'arena' || world === 'dungeon') return { maxWidth: Infinity, topShare: .5 };
+    return { maxWidth: ARENA_LAYOUT.width, topShare: .65 };
+  }
+
   renderTrainingBackground(ctx, gameplayWidth, viewH, renderWidth, cameraOffsetX) {
     const scene = this.modeBackdropImages.training;
     ctx.fillStyle = '#0b1a2b';
@@ -223,11 +234,9 @@ export class Battlefield {
     const drawW = TRAINING_IMAGE.width * TRAINING_IMAGE.scale; const drawH = TRAINING_IMAGE.height * TRAINING_IMAGE.scale;
     const x = cameraOffsetX + gameplayWidth / 2 - drawW / 2;
     const y = TRAINING_IMAGE.anchorY - TRAINING_IMAGE.floorFrontV * drawH;
+    // The camera never shows more than the painted width (see viewLimits),
+    // so no copied edge strips are needed.
     ctx.drawImage(image, x, y, drawW, drawH);
-    const band = Math.max(4, Math.round(iw * .03));
-    const bandW = band * drawW / iw;
-    for (let left = x - bandW; left > -bandW; left -= bandW) ctx.drawImage(image, 0, 0, band, ih, left, y, bandW + 1, drawH);
-    for (let right = x + drawW; right < renderWidth; right += bandW) ctx.drawImage(image, iw - band, 0, band, ih, right - 1, y, bandW + 1, drawH);
   }
 
   renderBackground(ctx, camera, gameplayWidth, viewH, renderWidth = gameplayWidth, cameraOffsetX = 0, modeState = null) {
@@ -248,19 +257,9 @@ export class Battlefield {
     ctx.fillRect(0, 0, renderWidth, viewH);
     if (!this.bgLoaded) return;
 
-    if (overflow > 0 && this.bgImage.naturalWidth) {
-      const band = Math.max(24, Math.min(96, Math.floor(this.bgImage.naturalWidth * 0.12)));
-      const leftDest = cameraOffsetX;
-      const rightDest = cameraOffsetX + gameplayWidth;
-      // Repeating narrow edge strips creates a decorative stone/sky
-      // continuation with no anisotropic scaling of the central pixel art.
-      for (let x = leftDest - band; x >= -band; x -= band) {
-        ctx.drawImage(this.bgImage, 0, 0, band, this.bgImage.naturalHeight, x, 0, band, viewH);
-      }
-      for (let x = rightDest; x < renderWidth; x += band) {
-        ctx.drawImage(this.bgImage, this.bgImage.naturalWidth - band, 0, band, this.bgImage.naturalHeight, x, 0, band, viewH);
-      }
-    }
+    // Wider screens zoom in (viewLimits) instead of showing copied edge
+    // strips; `overflow` only remains for safety against rounding.
+    void overflow;
     ctx.drawImage(this.bgImage, cameraOffsetX, 0, gameplayWidth, viewH);
     if (this.mode?.world === 'invasion') this._paintInvasionBridge(ctx, cameraOffsetX, gameplayWidth, viewH, renderWidth);
   }

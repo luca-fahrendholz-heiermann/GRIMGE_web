@@ -55,8 +55,10 @@ game.syncHudScale();
 assert(game.uiLayer.style['--hud-scale'] === '0.5', 'HUD scales as one 1024×576 composition with a resized Canvas');
 game.canvas.getBoundingClientRect = () => ({ left: 0, top: 0, width: 1248, height: 576 });
 game.updateViewport();
-assert(game.renderWidth === 1248 && game.cameraOffsetX === 112 && game.canvas.width === 2496, 'Ultrawide viewport widens only the visual camera while preserving DPR rendering');
-assert(game.uiLayer.style.width === '1248px' && game.getCanvasCoords(624, 288).x === 624, 'HUD and rune/input coordinates use the real wide screen instead of a hidden 16:9 stage');
+// A 19.5:9 phone is wider than the painted Siege scene: the camera zooms in
+// to fill the width and crops a little sky / foreground (no copied strips).
+assert(game.renderWidth === 1024 && game.renderHeight === 473 && game.worldOffsetY < 0 && game.worldOffsetY > -80 && game.canvas.width === 2048, 'A 19.5:9 screen zooms the painted scene to full width and crops sky/foreground instead of repeating edge strips');
+assert(game.uiLayer.style.width === '1024px' && game.getCanvasCoords(624, 288).x === 512 && Math.abs(game.getCanvasCoords(624, 288).y - 236.5) < .01, 'HUD and rune/input coordinates follow the zoomed camera');
 game.canvas.getBoundingClientRect = fullViewportRect;
 game.updateViewport();
 assert(game.minions.length === 6 && game.battlefield.waveNumber === 1, 'Initial lane wave spawns coherently');
@@ -1543,6 +1545,24 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
   assert(game.runeGuide() === null, 'Training: free drawing (DRAW) shows no template');
   game.cancelRuneDrawing();
 
+  // 10d. Regression: casting LUX (Halo Pulse) must not throw while rendering
+  // (a negative ring radius froze the whole game loop).
+  reset();
+  const strictCtx = new Proxy({}, { get: (t, p) => (p === 'ellipse' || p === 'arc') ? (x, y, rx, ry) => { if (rx < 0 || (p === 'ellipse' && ry < 0)) throw new Error('IndexSizeError'); } : (p === 'canvas' ? undefined : () => {}), set: () => true });
+  spells.cast(P, spells.resolveSpell([{ id: 'lux' }]), game, 'S');
+  const halo = spells.activeSpells.find((s) => s.constructor.name === 'HaloPulseSpell');
+  let haloThrew = false;
+  try { halo.render(strictCtx); stepSpells(1 / 60); halo.render(strictCtx); } catch { haloThrew = true; }
+  assert(halo && !haloThrew, 'Casting LUX (Halo Pulse) renders without errors at any rune grade');
+  const broken = { z: .5, render() { throw new Error('boom'); }, update() {}, isFinished: false };
+  const silence = console.error; console.error = () => {};
+  spells.renderBatch(strictCtx, [broken]);
+  console.error = silence;
+  assert(broken.isFinished, 'A spell whose drawing fails is removed instead of freezing the game loop');
+  const guideHtml = document.getElementById('fusion-guide').innerHTML;
+  assert(guideHtml.includes('🕳️ VOID</span> + <span class="g-rune" style="--rune-color:#8e24aa">🕳️ VOID</span> = <strong>NULL RAY') && guideHtml.includes('FROST MIRROR GATE') && guideHtml.includes('SHADOW STOMPER') && guideHtml.includes('☀ LUX') && !guideHtml.includes('ANNIHILATION'), 'The grimoire lists every fusion from the recipes with rune icon and name (incl. NULL RAY = VOID + VOID)');
+  assert(document.getElementById('rune-glyph-guide').innerHTML.includes('MORTIS') && document.getElementById('rune-glyph-guide').innerHTML.includes('special rune'), 'The grimoire lists every rune gesture, special runes marked');
+
   // 10. Aiming through the slot: the cone preview marks the auto-target.
   reset();
   const marked = foe(420, .5);
@@ -1573,7 +1593,12 @@ assert(Math.round(game.getCanvasCoords(512, 768).y) === 768 && game.canvas.heigh
 game.render();
 game.canvas.getBoundingClientRect = () => ({ left: 0, top: 0, width: 2560, height: 1080 });
 game.updateViewport();
-assert(game.renderHeight === 576 && game.worldOffsetY === 0 && game.renderWidth > 1024, 'Ultrawide screens still widen the camera instead of adding height');
+assert(game.renderWidth === 1024 && game.renderHeight === 432 && game.worldOffsetY === -94, 'Ultrawide screens zoom in on the painted Siege scene (sky cropped) instead of copying its edges');
+game.returnToHub(); game.setMatchMode('training'); game.startMatch();
+assert(game.renderWidth === 1086 && game.renderHeight === Math.round(1086 / (2560 / 1080)) && game.worldOffsetY < 0, 'Training reveals the painted margin of its scene, then zooms (no copied strips)');
+game.returnToHub(); game.setMatchMode('arena'); game.startMatch();
+assert(game.renderWidth > 1300 && game.worldOffsetY === 0, 'Procedural backdrops (Arena) still widen freely');
+game.returnToHub(); game.setMatchMode('siege'); game.startMatch();
 game.canvas.getBoundingClientRect = canvasRect;
 game.updateViewport();
 assert(game.renderWidth === 1024 && game.renderHeight === 576, 'A 16:9 screen uses the authored 1024×576 view');

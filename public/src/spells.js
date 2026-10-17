@@ -750,7 +750,21 @@ export class SpellSystem {
 
   renderBatch(ctx, batch) {
     if (!batch.length) return;
-    renderPixelated(ctx, this.pixelSizeFor(ctx), (layer) => { for (const spell of batch) spell.render(layer); });
+    renderPixelated(ctx, this.pixelSizeFor(ctx), (layer) => { for (const spell of batch) this.renderSafely(layer, spell); });
+  }
+
+  // One broken effect must never freeze the game loop: it is logged once
+  // and removed instead of throwing out of the frame.
+  renderSafely(ctx, spell) {
+    try {
+      ctx.save?.();
+      spell.render(ctx);
+    } catch (error) {
+      console.error(`Spell render failed (${spell.constructor?.name ?? 'spell'}) — effect removed`, error);
+      spell.isFinished = true;
+    } finally {
+      ctx.restore?.();
+    }
   }
 
   // Sortable entries ({ y, spell } / { y, render }) for the actor pass.

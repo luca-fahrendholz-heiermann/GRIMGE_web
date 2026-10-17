@@ -104,9 +104,13 @@
 - **Easier glyphs and tracing**: LUX is a star of crossing lines (+ then ×; three lines also count), MORTIS accepts a wobbly, not quite closed pentagram. In Training, tapping a hand rune pre-draws it as a dashed template with numbered start dots and direction arrows (`rune_guides.js`, every template is itself an S-grade drawing); free drawing via DRAW shows none.
 - **Taller JUMP button** (pill shape) so the thumb hits it more reliably.
 
+- **Wide screens zoom instead of copying edges** (`battlefield.viewLimits`, `main.updateViewport`): on screens wider than a scene is painted (e.g. 19.5:9 phones such as the iPhone 17) the camera zooms in until the art fills the width and crops a little sky / foreground — no repeated edge strips. Training first reveals its painted margin (1086 px), Siege stays at 1024; procedural Arena/Dungeon backdrops still widen freely.
+- **Grimoire generated from the catalog**: rune gestures and every fusion are listed straight from the recognizer and the recipes, each rune with icon and name (e.g. NULL RAY = VOID + VOID), so new spells can never be missing or mislabelled.
+- **Robust spell rendering**: Halo Pulse no longer draws a negative ring radius (casting LUX froze the game loop); any spell whose drawing fails is now logged and removed instead of stopping the frame.
+
 ## Automated Validation Complete
 
-- `npm test` passes: 55 rune/spell checks, 9 world checks, 9 Mage progression checks, 346 runtime checks, and 38 PWA shell checks (**457 total**). The runtime suite covers the concept v0.2 slot/fusion/mana rules, Beam Clash outcomes, the new archetypes and the left-half flick classifier.
+- `npm test` passes: 55 rune/spell checks, 9 world checks, 9 Mage progression checks, 352 runtime checks, and 38 PWA shell checks (**463 total**). The runtime suite covers the concept v0.2 slot/fusion/mana rules, Beam Clash outcomes, the new archetypes and the left-half flick classifier.
 - Runtime coverage includes upper battlement spawn/access/fall, Wizard-only battlement/minion exclusion, depth/dash/jump, melee recovery, death/respawn, rune-hand cycling, recognition quality retained by a real spell slot, selected-card validation, 2-second auto-lock, selected-slot casting, triangle slot casting and swipe fusion, held guard stability/guard-break, perfect projectile reflection, Aura Shock, Arcane Shield, Eidolon Mantle mitigation, Ninefold Beast Form activation, Stone Wall projectile/movement blocking, Dark Lord selection, Spirit Wolf target acquisition/damage, World Rune Serpent launch/mount behavior, mount → input-driven summon movement → automatic dismount on mount death, Dragon Invocation impact/cleanup, depth-aware spells, Tower target filtering, and an input-driven siege chain (player melee/Fireball → Tower → Castle → final Wizard → Results → Rematch/Hub).
 - All browser modules pass `node --check`; local HTTP checks return 200 for `/` and `/src/main.js`.
 

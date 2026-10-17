@@ -232,6 +232,8 @@ export class HaloPulseSpell {
   update(dt, gameWorld) {
     if (!this.applied) {
       this.applied = true;
+      // addSpell() scales life by the cast quality after construction.
+      this.maxLife = Math.max(this.maxLife, this.life);
       const reach = (actor) => Math.hypot(actor.x - this.x, ((actor.z ?? this.z) - this.z) * DEPTH_PX) <= this.radius;
       for (const ally of this.allies) if (reach(ally)) healActor(ally, this.heal * (this.quality?.power ?? 1) * this.healMultiplier);
       for (const target of gameWorld.getHostileTargets(this.team)) {
@@ -245,7 +247,7 @@ export class HaloPulseSpell {
     if (this.life <= 0) this.isFinished = true;
   }
   render(ctx) {
-    const k = 1 - this.life / this.maxLife;
+    const k = Math.max(0, Math.min(1, 1 - this.life / Math.max(this.maxLife, this.life)));
     const y = groundYForDepth(this.z) - this.surfaceHeight;
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';

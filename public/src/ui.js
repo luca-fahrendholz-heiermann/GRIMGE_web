@@ -3,7 +3,7 @@ import { spells } from './spells.js';
 import { MAGE_SKILL_TREE, ALL_RUNE_IDS, runeUnlockLabel } from './progression.js';
 import { recognizer } from './recognizer.js';
 import { sprites } from './sprites.js';
-import { runeManaCost } from './spell_catalog.js';
+import { runeManaCost, SPELL_RECIPES, lookupRecipe, SOLO_RUNES } from './spell_catalog.js';
 import { TRAINING_MAPS, trainingMapThumb } from './training_maps.js';
 
 export class UIManager {
@@ -168,6 +168,7 @@ export class UIManager {
     this.heroChips = document.querySelectorAll('.hero-chip');
 
     this.setupListeners();
+    this.renderGrimoireGuides();
   }
 
   setupListeners() {
@@ -687,6 +688,37 @@ export class UIManager {
       const lockedText = runeUnlockLabel(rune.id);
       return `<article class="deck-rune ${unlocked ? '' : 'locked'}" style="--rune-color:${rune.color}"><b>${rune.glyph} ${rune.name}</b><span>${unlocked ? `${copies}/2 IN DECK · RUNE LV.${profile.runeLevel(rune.id)}` : `LOCKED · ${lockedText}`}</span><div><button data-deck-action="remove" data-rune-id="${rune.id}" ${copies ? '' : 'disabled'}>−</button><button data-deck-action="add" data-rune-id="${rune.id}" ${(!unlocked || copies >= 2 || profile.matchDeck.length >= 10) ? 'disabled' : ''}>+</button></div></article>`;
     }).join('');
+  }
+
+  // The grimoire lists every rune gesture and every recipe straight from the
+  // recognizer and the spell catalog, so it can never miss or mislabel a
+  // fusion. Each rune is shown with its icon AND its name.
+  renderGrimoireGuides() {
+    const deckRunes = recognizer.runes.filter((rune) => ALL_RUNE_IDS.includes(rune.id));
+    const byId = new Map(recognizer.runes.map((rune) => [rune.id, rune]));
+    const chip = (id) => {
+      const rune = byId.get(id);
+      return rune ? `<span class="g-rune" style="--rune-color:${rune.color}">${rune.icon} ${rune.name}</span>` : id.toUpperCase();
+    };
+    const glyphs = document.getElementById('rune-glyph-guide');
+    if (glyphs) {
+      glyphs.innerHTML = deckRunes.map((rune) => `<div class="g-item"><span class="r-icon">${rune.icon}</span><strong>${rune.name} (${rune.element})</strong>: ${rune.desc}${SOLO_RUNES.includes(rune.id) ? ' <span class="g-note">· special rune, no fusion</span>' : ''}</div>`).join('');
+    }
+    const fusions = document.getElementById('fusion-guide');
+    if (!fusions) return;
+    const groups = { 1: [], 2: [], 3: [] };
+    for (const key of Object.keys(SPELL_RECIPES)) {
+      const ids = key.split('+');
+      if (ids.some((id) => id.startsWith('transform_'))) continue;
+      const recipe = lookupRecipe(ids);
+      if (recipe) groups[ids.length]?.push({ ids, recipe });
+    }
+    const line = ({ ids, recipe }) => `<div class="g-item is-recipe">${ids.map(chip).join(' + ')} = <strong>${recipe.name}</strong></div>`;
+    fusions.innerHTML = [
+      ['SINGLE RUNES', groups[1]],
+      ['DUAL FUSIONS', groups[2]],
+      ['TRIPLE FUSIONS', groups[3]]
+    ].map(([title, list]) => `<h4>${title}</h4>${list.map(line).join('')}`).join('');
   }
 
   renderRuneProgression(profile) {
