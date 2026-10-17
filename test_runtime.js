@@ -62,6 +62,17 @@ game.canvas.getBoundingClientRect = () => ({ left: 112, top: 0, width: 1024, hei
 assert(game.getCanvasCoords(624, 288).x === 512 && game.getCanvasCoords(624, 288).y === 288, 'Input coordinates map through the centred stage');
 game.canvas.getBoundingClientRect = savedCanvasRect;
 screenSize(1024, 576);
+// Option FILL: wide screens zoom to full width (a little sky/foreground cut),
+// the HUD covers the visible screen; narrower screens still fit.
+elements.get('screen-fit-btn').listeners.pointerdown({ preventDefault() {}, stopPropagation() {} });
+screenSize(1248, 576);
+assert(game.screenFit === 'fill' && game.stage.width === 1248 && game.stage.left === 0 && game.stage.top < 0 && game.hud.left === 0 && game.hud.width === 1024 && game.hud.height === 473 && game.uiLayer.style.left === '0px' && elements.get('screen-fit-btn').textContent.includes('FILL'), 'Screen option FILL zooms a 19.5:9 screen to full width; the HUD sits on the visible screen');
+assert(Math.round(game.canvasToHud({ x: 512, y: 288 }).y) === Math.round(288 + game.stage.top / game.stage.scale), 'Canvas points convert into HUD coordinates for the dynamic joystick');
+screenSize(1024, 768);
+assert(game.stage.top === 96 && game.stage.width === 1024, 'FILL never crops the field on screens narrower than 16:9');
+elements.get('screen-fit-btn').listeners.pointerdown({ preventDefault() {}, stopPropagation() {} });
+assert(game.screenFit === 'fit' && elements.get('screen-fit-btn').textContent.includes('FIT'), 'The menu toggles back to FIT (same view everywhere)');
+screenSize(1024, 576);
 assert(game.minions.length === 6 && game.battlefield.waveNumber === 1, 'Initial lane wave spawns coherently');
 assert(game.battlefield.bgLoaded, 'Clean arena background load path completes');
 assert(['arena', 'dungeon', 'invasion'].every((world) => game.battlefield.modeBackdropImages[world]?.loaded), 'Alternate combat modes load authored scene backdrops instead of the debug-grid fallback');

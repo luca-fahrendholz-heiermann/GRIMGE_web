@@ -63,6 +63,12 @@ export class GameWorld {
     this.backdropCtx = this.backdropCanvas?.getContext?.('2d') ?? null;
     this.backdropFrame = 0;
     this.stage = { left: 0, top: 0, width: 1024, height: 576, scale: 1 };
+    this.hud = { left: 0, top: 0, width: 1024, height: 576, scale: 1 };
+    // Screen option: 'fit' shows the identical 16:9 stage with soft bars,
+    // 'fill' zooms wide screens to full width (a little sky / foreground cut).
+    let savedFit = null;
+    try { savedFit = globalThis.localStorage?.getItem?.('grimge-screen-fit'); } catch { /* storage may be disabled */ }
+    this.screenFit = savedFit === 'fill' ? 'fill' : 'fit';
     this.screenSize = { width: 1024, height: 576 };
 
     this.logicalWidth = VIEWPORT.width;
@@ -179,23 +185,22 @@ export class GameWorld {
   }
 
   syncHudScale() {
-    const stage = this.stage;
-    const height = stage?.height;
-    if (height > 0 && this.uiLayer) {
-      // The HUD is part of the 16:9 stage: same layout on every device,
-      // scaled together with the scene.
-      const scale = String(height / this.renderHeight);
-      this.uiLayer.style.left = `${stage.left}px`;
-      this.uiLayer.style.top = `${stage.top}px`;
+    const hud = this.hud ?? this.stage;
+    if (hud?.height > 0 && this.uiLayer) {
+      // FIT: the HUD is part of the 16:9 stage (same layout everywhere).
+      // FILL: the stage is cropped, so the HUD covers the visible screen.
+      const scale = String(hud.scale);
+      this.uiLayer.style.left = `${hud.left}px`;
+      this.uiLayer.style.top = `${hud.top}px`;
       // Custom CSS properties must be written through setProperty in a real
       // CSSStyleDeclaration. Bracket assignment happened to work in the test
       // stub but is ignored by browsers, leaving a 1024px HUD over a scaled
       // Canvas.
       if (this.uiLayer.style.setProperty) this.uiLayer.style.setProperty('--hud-scale', scale);
       else this.uiLayer.style['--hud-scale'] = scale;
-      this.uiLayer.style.width = `${this.renderWidth}px`;
-      this.uiLayer.style.height = `${this.renderHeight}px`;
-      const lw = String(this.renderWidth / 100);
+      this.uiLayer.style.width = `${hud.width}px`;
+      this.uiLayer.style.height = `${hud.height}px`;
+      const lw = String(hud.width / 100);
       if (this.uiLayer.style.setProperty) this.uiLayer.style.setProperty('--lw', `${lw}px`);
       else this.uiLayer.style['--lw'] = `${lw}px`;
 
@@ -208,10 +213,11 @@ export class GameWorld {
       // Insets are measured from the screen edge; the letterbox bars already
       // keep part (or all) of a notch / Home Indicator off the stage.
       const toLogical = (value, bar = 0) => Math.max(0, ((Number.parseFloat(value) || 0) - bar) / Number(scale));
+      const box = { left: hud.left, top: hud.top, width: hud.width * hud.scale, height: hud.height * hud.scale };
       const bars = {
-        top: stage.top, left: stage.left,
-        right: Math.max(0, this.screenSize.width - stage.left - stage.width),
-        bottom: Math.max(0, this.screenSize.height - stage.top - stage.height)
+        top: Math.max(0, box.top), left: Math.max(0, box.left),
+        right: Math.max(0, this.screenSize.width - box.left - box.width),
+        bottom: Math.max(0, this.screenSize.height - box.top - box.height)
       };
       const safe = {
         top: toLogical(computed?.paddingTop, bars.top),
@@ -245,10 +251,19 @@ export class GameWorld {
     // are the same everywhere and scale uniformly to fit the screen. Spare
     // room becomes letterbox / pillarbox bars filled by a soft ambient copy
     // of the scene (never stretched, never repeated edge strips).
-    const fit = Math.min(width / this.logicalWidth, height / this.logicalHeight);
+    // FILL (option) zooms screens wider than 16:9 to the full width and
+    // crops a little sky / foreground; narrower screens always fit, so the
+    // castles at the field edges are never cut off.
+    const wider = width / height > this.logicalWidth / this.logicalHeight;
+    const filling = this.screenFit === 'fill' && wider;
+    const fit = filling ? width / this.logicalWidth : Math.min(width / this.logicalWidth, height / this.logicalHeight);
     const stageW = Math.round(this.logicalWidth * fit);
     const stageH = Math.round(this.logicalHeight * fit);
-    this.stage = { left: Math.round((width - stageW) / 2), top: Math.round((height - stageH) / 2), width: stageW, height: stageH, scale: fit };
+    const stageTop = filling ? -Math.round((stageH - height) * .55) : Math.round((height - stageH) / 2);
+    this.stage = { left: Math.round((width - stageW) / 2), top: stageTop, width: stageW, height: stageH, scale: fit };
+    this.hud = filling
+      ? { left: 0, top: 0, width: Math.round(width / fit), height: Math.round(height / fit), scale: fit }
+      : { left: this.stage.left, top: this.stage.top, width: this.logicalWidth, height: this.logicalHeight, scale: fit };
     for (const element of [this.canvas, this.runeCanvas]) {
       if (!element?.style) continue;
       element.style.left = `${this.stage.left}px`;
@@ -274,6 +289,19 @@ export class GameWorld {
     this.syncHudScale();
   }
 
+  setScreenFit(mode) {
+    this.screenFit = mode === 'fill' ? 'fill' : 'fit';
+    try { globalThis.localStorage?.setItem?.('grimge-screen-fit', this.screenFit); } catch { /* optional */ }
+    this.updateViewport();
+    return this.screenFit;
+  }
+
+  // Canvas (stage) coordinates → HUD coordinates (they differ in FILL).
+  canvasToHud(pt) {
+    const hud = this.hud ?? this.stage;
+    return { x: pt.x + (this.stage.left - hud.left) / hud.scale, y: pt.y + (this.stage.top - hud.top) / hud.scale };
+  }
+
   // Ambient fill for the bars: a tiny copy of the stage, blurred by CSS.
   updateStageBackdrop() {
     if (!this.backdropCtx || (this.backdropFrame++ % 6)) return;
@@ -297,6 +325,7 @@ export class GameWorld {
     await Promise.all([sprites.loadAll(), loadFxSprites()]);
 
     window.gameWorld = this;
+    ui.syncScreenFitLabel(this.screenFit);
     this.resetMatch();
     this.matchState = 'Menu';
     // A mode changes only match rules. It never forks input, combat or spell
@@ -573,9 +602,11 @@ export class GameWorld {
     const FLICK_MIN_DISTANCE = 70;   // reference (logical) px
     const FLICK_MIN_SPEED = 700;     // reference px / s
     const FLICK_MAX_ANGLE = 25 * Math.PI / 180;
-    const placeStick = (pt) => {
-      joystick.style.left = `${Math.max(0, Math.min(this.renderWidth - JOYSTICK_RADIUS * 2, pt.x - JOYSTICK_RADIUS))}px`;
-      joystick.style.top = `${Math.max(0, Math.min(this.renderHeight - JOYSTICK_RADIUS * 2, pt.y - JOYSTICK_RADIUS))}px`;
+    const placeStick = (canvasPt) => {
+      const pt = this.canvasToHud(canvasPt);
+      const hud = this.hud ?? { width: this.renderWidth, height: this.renderHeight };
+      joystick.style.left = `${Math.max(0, Math.min(hud.width - JOYSTICK_RADIUS * 2, pt.x - JOYSTICK_RADIUS))}px`;
+      joystick.style.top = `${Math.max(0, Math.min(hud.height - JOYSTICK_RADIUS * 2, pt.y - JOYSTICK_RADIUS))}px`;
       joystick.style.bottom = 'auto';
     };
     const beginJoystick = (event, fromStickElement = false) => {

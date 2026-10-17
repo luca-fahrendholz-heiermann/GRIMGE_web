@@ -156,6 +156,7 @@ export class UIManager {
     this.closeGameMenuBtn = document.getElementById('close-game-menu-btn');
     this.resumeMatchBtn = document.getElementById('resume-match-btn');
     this.restartMatchBtn = document.getElementById('restart-match-btn');
+    this.screenFitBtn = document.getElementById('screen-fit-btn');
     this.menuHubBtn = document.getElementById('menu-hub-btn');
     this.uiLayer = document.getElementById('ui-layer');
 
@@ -253,6 +254,13 @@ export class UIManager {
     });
     this.resumeMatchBtn?.addEventListener('pointerdown', (e) => {
       e.preventDefault(); e.stopPropagation(); this.toggleIngameMenu(false);
+    });
+    this.screenFitBtn?.addEventListener('pointerdown', (e) => {
+      e.preventDefault(); e.stopPropagation();
+      const game = window.gameWorld;
+      if (!game) return;
+      game.setScreenFit(game.screenFit === 'fill' ? 'fit' : 'fill');
+      this.syncScreenFitLabel(game.screenFit);
     });
     this.restartMatchBtn?.addEventListener('pointerdown', (e) => {
       e.preventDefault(); e.stopPropagation(); this.toggleIngameMenu(false); window.gameWorld?.restartMatch();
@@ -693,6 +701,10 @@ export class UIManager {
   // The grimoire lists every rune gesture and every recipe straight from the
   // recognizer and the spell catalog, so it can never miss or mislabel a
   // fusion. Each rune is shown with its icon AND its name.
+  syncScreenFitLabel(mode) {
+    if (this.screenFitBtn) this.screenFitBtn.textContent = mode === 'fill' ? 'SCREEN: FILL (ZOOM)' : 'SCREEN: FIT (SAME VIEW)';
+  }
+
   renderGrimoireGuides() {
     const deckRunes = recognizer.runes.filter((rune) => ALL_RUNE_IDS.includes(rune.id));
     const byId = new Map(recognizer.runes.map((rune) => [rune.id, rune]));
