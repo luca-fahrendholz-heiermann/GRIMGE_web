@@ -5,7 +5,9 @@ import { audio } from './audio.js';
 import { spells } from './spells.js';
 import { ARENA_LAYOUT, ENTITY_VISUALS, GroundEntity, groundDistance } from './world.js';
 import { lookupRecipe, runeManaCost } from './spell_catalog.js';
-import { drawFocusAura, drawEidolonGuardian, drawNinefoldSpirit } from './forms_fx.js';
+import { drawFocusAura, drawEidolonGuardian, drawNinefoldSpirit, drawFormGuard } from './forms_fx.js';
+import { formGuardCounter, updateFormSprint, FormGrabFx, formJumpFx } from './form_actions.js';
+import { WEAPONS, ThrownWeaponSpell, drawHeldWeapon } from './weapons.js';
 import { drawBeastBomb, drawSpiritBow } from './form_attacks.js';
 import { FULL_CHARGE_TIME, activeMoveset, releaseFormTechnique, FORM_PALETTES } from './form_moves.js';
 
@@ -435,6 +437,7 @@ export class Player extends GroundEntity {
       gameWorld?.resolveSpellObstacles(this, previousX, previousZ);
       if (this.grounded) {
         if (this._wasAirborne) {
+          formJumpFx(this, 'land');
           combat.spawnDust(this.x, this.y, 6);
           if (this.launcherMode) {
             combat.spawnShockwave(this.x, this.y - 2, 28, '#b0bec5');
@@ -453,6 +456,7 @@ export class Player extends GroundEntity {
     }
 
     this.updateSprintVisuals(dt);
+    updateFormSprint(this, gameWorld, dt);
   }
 
   get isMounted() { return !!this.mountedSummon && !this.mountedSummon.isDead && this.mountedSummon.rider === this; }
@@ -665,9 +669,11 @@ export class Player extends GroundEntity {
     this.isSprintJump = wasSprinting;
     audio.playJump();
     combat.spawnDust(this.x, this.y, 3);
+    formJumpFx(this, 'takeoff');
   }
 
   activateSprint(dir) {
+    this._sprintHits = new Set();
     if (this.rootTimer > 0 || this.isGuarding || this.backdashTimer > 0 || this.backdashSuppressTimer > 0 || !this.grounded || this.activeClash) return;
     this.sprintActive = true;
     this.sprintDir = dir;
@@ -759,7 +765,13 @@ export class Player extends GroundEntity {
       const dist = Math.hypot(dx, dz * 150);
       if (dist < closestDist) { closest = t; closestDist = dist; }
     }
-    if (!closest) return false;
+    const grabForm = activeMoveset(this);
+    if (!closest) {
+      // A form shows a short search pulse when the grab misses.
+      if (grabForm && this.grabCooldown <= 0) { this.grabCooldown = .5; spells.addSpell(new FormGrabFx(this, null, grabForm), 'B'); }
+      return false;
+    }
+    if (grabForm) spells.addSpell(new FormGrabFx(this, closest, grabForm), 'B');
     this.grabCooldown = 1.5;
     this.isGuarding = false;
     this.state = 'attack1';
@@ -882,6 +894,12 @@ export class Player extends GroundEntity {
       const back = attackKind === 'normal' && normalizeMove(moveVector(input)).x * (this.facing || 1) < -.5;
       return this.activeTelekinesis.release(back ? 'pull' : attackKind);
     }
+    // Field weapons: attack while standing on one picks it up; sprint +
+    // attack throws the held weapon (Little Fighter style).
+    if (attackKind === 'normal' && !ACTION_STATES.has(this.state) && this.grounded) {
+      if (this.weapon && this.sprintActive) return this.throwWeapon();
+      if (window.gameWorld?.tryPickupWeapon?.(this)) return true;
+    }
     if (ACTION_STATES.has(this.state) || !this.canAttack) {
       const canBuffer = attackKind === 'normal' && /^attack[123]$/.test(this.state) && this.stateTimer <= MELEE_BASELINE.bufferWindow;
       if (canBuffer) {
@@ -892,11 +910,13 @@ export class Player extends GroundEntity {
     }
     this.canAttack = false;
     const move = moveVector(input);
+    const weapon = this.weapon ? WEAPONS[this.weapon] : null;
     if (attackKind === 'uppercut' || input.keys?.KeyU) {
-      this.state = 'uppercut'; this.stateTimer = MELEE_BASELINE.uppercut.time; this.vElevation = 280 * PLAYER_ARC_SCALE;
+      const up = weapon ? { ...MELEE_BASELINE.uppercut, ...weapon.uppercut } : MELEE_BASELINE.uppercut;
+      this.state = 'uppercut'; this.stateTimer = up.time; this._weaponSwingTime = up.time; this.vElevation = 280 * PLAYER_ARC_SCALE;
       audio.playSlash(1.2);
-      combat.spawnSlashArc(this.x, this.y - 25, this.facing, { radius: 46, angleStart: -1.2, angleEnd: 0.6, color: '#ffea00', glow: '#ff9800' });
-      this.triggerMeleeHitbox(MELEE_BASELINE.uppercut.damage, this.facing * MELEE_BASELINE.uppercut.knockback, MELEE_BASELINE.uppercut.lift, 0.5, false, { hitstopTicks: MELEE_BASELINE.uppercut.hitstopTicks, hitReaction: MELEE_BASELINE.uppercut.hitReaction });
+      combat.spawnSlashArc(this.x, this.y - 25, this.facing, { radius: 46, angleStart: -1.2, angleEnd: 0.6, color: weapon?.color ?? '#ffea00', glow: weapon?.accent ?? '#ff9800' });
+      this.triggerMeleeHitbox(up.damage, this.facing * up.knockback, up.lift, 0.5, false, { hitstopTicks: up.hitstopTicks, hitReaction: up.hitReaction });
       return true;
     }
     if (!this.grounded && (attackKind === 'dive' || move.z > 0.55)) {
@@ -907,25 +927,50 @@ export class Player extends GroundEntity {
       return true;
     }
     if (attackKind === 'heavy') {
-      this.state = 'heavyStrike'; this.stateTimer = MELEE_BASELINE.heavy.time; this.vx = this.facing * 360;
+      const heavy = weapon ? { ...MELEE_BASELINE.heavy, ...weapon.heavy } : MELEE_BASELINE.heavy;
+      this.state = 'heavyStrike'; this.stateTimer = heavy.time; this._weaponSwingTime = heavy.time; this.vx = this.facing * 360;
       audio.playSlash(0.78);
-      combat.spawnSlashArc(this.x + this.facing * 28, this.y - 25, this.facing, { radius: 58, angleStart: -0.9, angleEnd: 0.9, color: '#ffd54f', glow: '#ff6d00', width: 7 });
-      this.triggerMeleeHitbox(MELEE_BASELINE.heavy.damage, this.facing * MELEE_BASELINE.heavy.knockback, MELEE_BASELINE.heavy.lift, 0.48, true, { hitstopTicks: MELEE_BASELINE.heavy.hitstopTicks, hitReaction: MELEE_BASELINE.heavy.hitReaction });
+      combat.spawnSlashArc(this.x + this.facing * 28, this.y - 25, this.facing, { radius: weapon ? Math.round((heavy.reach ?? 90) * .65) : 58, angleStart: -0.9, angleEnd: 0.9, color: weapon?.color ?? '#ffd54f', glow: weapon?.accent ?? '#ff6d00', width: 7 });
+      this.triggerMeleeHitbox(heavy.damage, this.facing * heavy.knockback, heavy.lift, 0.48, true, { hitstopTicks: heavy.hitstopTicks, hitReaction: heavy.hitReaction, reach: heavy.reach, freeze: heavy.freeze });
       return true;
     }
-    this.comboStep = (this.comboStep % 3) + 1;
+    // A held weapon brings its own combo (length, speed, reach, finisher).
+    const combo = weapon ? weapon.combo : MELEE_BASELINE.normal;
+    this.comboStep = (this.comboStep % combo.length) + 1;
     this.comboResetTimer = 0.65;
-    const attack = MELEE_BASELINE.normal[this.comboStep - 1];
-    this.state = attack.state; this.stateTimer = attack.time; this.vx = this.facing * attack.vx;
-    audio.playSlash(this.comboStep === 3 ? 0.85 : 1 + this.comboStep * 0.1);
-    combat.spawnSlashArc(this.x + this.facing * 22, this.y - 28, this.facing, { radius: attack.radius, color: attack.color, glow: attack.glow, width: attack.finisher ? 7 : 4 });
+    const attack = combo[this.comboStep - 1];
+    this.state = attack.state; this.stateTimer = attack.time; this._weaponSwingTime = attack.time; this.vx = this.facing * attack.vx;
+    audio.playSlash(attack.finisher ? 0.85 : 1 + this.comboStep * 0.1);
+    combat.spawnSlashArc(this.x + this.facing * 22, this.y - 28, this.facing, { radius: attack.radius, color: weapon?.color ?? attack.color, glow: weapon?.accent ?? attack.glow, width: attack.finisher ? 7 : 4 });
     if (attack.finisher) {
       combat.spawnShockwave(this.x + this.facing * 16, this.y - 30, 60, '#ff3d00');
       combat.spawnShockwave(this.x + this.facing * 16, this.y - 30, 36, '#ffd740');
       combat.spawnHitSparks(this.x + this.facing * 20, this.y - 32, this.facing, '#ffd700', 14);
       combat.shakeCamera(6, 0.18);
     }
-    this.triggerMeleeHitbox(attack.damage, this.facing * attack.knockback, attack.lift, attack.finisher ? 0.6 : 0.4, !!attack.finisher, { hitstopTicks: attack.hitstopTicks, hitReaction: attack.hitReaction });
+    this.triggerMeleeHitbox(attack.damage, this.facing * attack.knockback, attack.lift, attack.finisher ? 0.6 : 0.4, !!attack.finisher, { hitstopTicks: attack.hitstopTicks, hitReaction: attack.hitReaction, reach: attack.reach, behind: attack.behind, crit: attack.crit, freeze: attack.freeze, guardBreak: attack.guardBreak, shockwave: attack.shockwave });
+    return true;
+  }
+
+  // Equip a field weapon (returns the previously held one, if any).
+  equipWeapon(weaponId, durability = null) {
+    const previous = this.weapon ? { weapon: this.weapon, durability: this.weaponDurability } : null;
+    this.weapon = WEAPONS[weaponId] ? weaponId : null;
+    this.weaponDurability = this.weapon ? (durability ?? WEAPONS[weaponId].durability ?? null) : null;
+    this.comboStep = 0;
+    return previous;
+  }
+
+  // Sprint + attack: the held weapon spins forward and lands on the field.
+  throwWeapon() {
+    if (!this.weapon) return false;
+    const world = window.gameWorld;
+    const thrown = new ThrownWeaponSpell(this, this.weapon, this.weaponDurability, (weapon, x, z, durability) => world?.armory?.drop(weapon, x, z, durability));
+    spells.addSpell(thrown, 'B');
+    this.weapon = null; this.weaponDurability = null;
+    this.cancelSprint();
+    this.state = 'attack2'; this.stateTimer = .22; this.canAttack = false; this.vx = 0;
+    audio.playSlash(1.4);
     return true;
   }
 
@@ -947,16 +992,32 @@ export class Player extends GroundEntity {
     }
     const targets = window.gameWorld?.getHostileTargets(this.team, true) ?? [];
     let hitAny = false; let hitCount = 0;
+    // Weapon reach / sweeps behind (scythe); the default reach stays 78 px.
+    const reach = hitMeta.reach ?? null;
+    if (hitMeta.crit && Math.random() < hitMeta.crit) { dmg *= 1.5; isFinisher = true; }
     for (const target of targets) {
       if (isUpperCastleBattlement(this) && isUpperCastleBattlement(target) && target.heroKey) continue;
-      const inFront = (target.x - this.x) * this.facing >= -10 && Math.abs(target.x - this.x) <= (target.hitRadiusX ?? 78);
+      const limit = reach ?? (target.hitRadiusX ?? 78);
+      const inFront = (target.x - this.x) * this.facing >= (hitMeta.behind ? -limit * .6 : -10) && Math.abs(target.x - this.x) <= limit;
       const closeDepth = Math.abs((target.z ?? this.z) - this.z) <= (target.hitRadiusZ ?? 0.22);
       const heightDifference = Math.abs((target.worldHeight ?? target.elevation ?? 0) - this.worldHeight);
       const verticalReach = target.hitHeightTolerance ?? (target.isObjective ? 120 : 70);
       if (inFront && closeDepth && heightDifference <= verticalReach) {
         target.takeDamage(dmg, kx, lift, stunDuration, isFinisher, 'melee');
         combat.spawnHitSparks(target.x, target.y - 25, this.facing, isFinisher ? '#ffea00' : '#fff', isFinisher ? 16 : 8);
+        if (hitMeta.freeze) target.freeze?.(hitMeta.freeze);
+        if (hitMeta.guardBreak && target.isGuarding && Number.isFinite(target.guardStability)) target.guardStability = Math.max(0, target.guardStability - hitMeta.guardBreak);
         hitAny = true; hitCount++;
+      }
+    }
+    if (hitMeta.shockwave) combat.spawnShockwave(this.x + this.facing * 40, this.y - 6, 70, '#b0bec5');
+    // Conjured weapons wear out with every hit and finally shatter.
+    if (hitAny && this.weaponDurability != null) {
+      this.weaponDurability -= 1;
+      if (this.weaponDurability <= 0) {
+        combat.spawnHitSparks(this.x + this.facing * 20, this.y - 40, this.facing, WEAPONS[this.weapon]?.color ?? '#fff', 18);
+        window.gameWorld?.showAnnouncement?.(`${WEAPONS[this.weapon]?.name ?? 'WEAPON'} SHATTERED`, 1);
+        this.weapon = null; this.weaponDurability = null;
       }
     }
     if (hitAny) {
@@ -983,9 +1044,17 @@ export class Player extends GroundEntity {
       combat.spawnShockwave(this.x + this.facing * 20, this.y - 38, 24, '#80d8ff');
       this.perfectBlockFlash = 0.3;
       audio.playImpact(true);
+      formGuardCounter(this, window.gameWorld);
       return { blocked: true, perfect: true, attackerRecoilDistance: PERFECT_BLOCK_ATTACKER_RECOIL, attackerRecoilTicks: PERFECT_BLOCK_ATTACKER_RECOIL_TICKS };
     }
     if (this.isGuarding && incomingFromFront) {
+      // In a form, a well-timed block of a melee hit counters as well.
+      if (hitKind === 'melee' && this.guardHoldTime <= .18 && activeMoveset(this) && !this._formCounterLock) {
+        this._formCounterLock = true;
+        this.perfectBlockFlash = .3;
+        formGuardCounter(this, window.gameWorld);
+        this._formCounterLock = false;
+      }
       if (hitKind === 'melee') {
         this.guardStability = Math.max(0, this.guardStability - 10);
         if (this.guardStability <= 0) {
@@ -1000,7 +1069,9 @@ export class Player extends GroundEntity {
         }
       }
       const isMovingWhileGuarding = Math.abs(this.vx) > 10;
-      const guardReduction = isMovingWhileGuarding ? 0.35 : 0.22;
+      // A shield weapon blocks better.
+      const shieldBonus = this.weapon ? (WEAPONS[this.weapon]?.guardBonus ?? 0) : 0;
+      const guardReduction = (isMovingWhileGuarding ? 0.35 : 0.22) * (1 - shieldBonus * .5);
       const guardedAmount = Math.max(1, Math.ceil(amount * guardReduction));
       this.sp = Math.max(0, this.sp - (6 + amount * 0.25));
       amount = guardedAmount;
@@ -1077,6 +1148,8 @@ export class Player extends GroundEntity {
 
   beginDeath() {
     this.dismount();
+    // A held weapon falls to the ground.
+    if (this.weapon) { window.gameWorld?.armory?.drop(this.weapon, this.x, this.z, this.weaponDurability); this.weapon = null; this.weaponDurability = null; }
     window.gameWorld?.recordWizardDeath?.(this.team);
     this.lifeState = 'Dying';
     this.state = 'dead'; this.stateTimer = 0.45; this.canAttack = false; this.isGuarding = false;
@@ -1274,13 +1347,23 @@ export class Player extends GroundEntity {
     if (useProc) { renderOpts.procRot = pRot; renderOpts.procScaleX = pSX; renderOpts.procScaleY = pSY; }
     if (formCloak) this.renderFormCloak(ctx, renderY, renderOpts, formCloak, 'back');
     sprites.renderEntity(ctx, this.heroKey, this.x, renderY, renderOpts);
+    if (this.isAlive && this.weapon) drawHeldWeapon(ctx, this, renderY);
     if (formCloak) this.renderFormCloak(ctx, renderY, renderOpts, formCloak, 'front');
+    // Guard poses: tail cocoon (Ninefold, drawn with the tails), ribs + palm, light shield.
+    if (this.isAlive && this.isGuarding) {
+      const guardForm = activeMoveset(this);
+      if (guardForm === 'eidolon' || guardForm === 'ascendant') drawFormGuard(ctx, this.x, renderY, this.facing, this.animTime, guardForm);
+    }
     // Charging a form technique: forward builds the projectile / bow, up and
     // down gather energy in the arms / legs; a pulse ring marks FULL ready.
     if (this.isAlive && this.formCharge) this.renderFormCharge(ctx, renderY);
     // Front layers of the body forms (ribs, claws) wrap around the Wizard.
     if (this.isAlive && this.eidolonTimer > 0) drawEidolonGuardian(ctx, this.x, renderY, this.facing, this.animTime, this.eidolonAge ?? 1, Math.min(1, this.eidolonTimer * 2), 'front', this.formMotion());
-    if (this.isAlive && this.ninefoldTimer > 0) drawNinefoldSpirit(ctx, this.x, renderY, this.facing, this.animTime, this.ninefoldAge ?? 1, Math.min(1, this.ninefoldTimer * 2), 'front', this.formMotion());
+    if (this.isAlive && this.ninefoldTimer > 0) {
+      drawNinefoldSpirit(ctx, this.x, renderY, this.facing, this.animTime, this.ninefoldAge ?? 1, Math.min(1, this.ninefoldTimer * 2), 'front', this.formMotion());
+      // Guarding: the tail cocoon wraps the front of the body.
+      if (this.isGuarding) drawNinefoldSpirit(ctx, this.x, renderY, this.facing, this.animTime, this.ninefoldAge ?? 1, Math.min(1, this.ninefoldTimer * 2) * .85, 'back', this.formMotion());
+    }
     if (this.isAlive) {
       const ratio = Math.max(0, this.hp / this.maxHp);
       ctx.save();
@@ -1290,7 +1373,8 @@ export class Player extends GroundEntity {
       ctx.strokeStyle = 'rgba(202, 239, 255, .7)'; ctx.lineWidth = 1; ctx.strokeRect(this.x - 24, healthBarY, 48, 5);
       ctx.restore();
     }
-    if (this.isGuarding && this.isAlive) {
+    // Forms show their own guard (tail cocoon, astral palm, light shield).
+    if (this.isGuarding && this.isAlive && !activeMoveset(this)) {
       const isPerfect = this.perfectBlockFlash > 0;
       const shieldX = this.x + this.facing * 26;
       const shieldY = renderY - 40;
@@ -1451,7 +1535,13 @@ export class Player extends GroundEntity {
   // Movement the body forms react to: lean (run speed along facing) and the
   // step phase while running.
   formMotion() {
-    return { lean: this.formLean ?? 0, bob: this.state === 'run' && this.grounded ? Math.sin(this.animTime * 14) : 0 };
+    return {
+      lean: this.formLean ?? 0,
+      bob: this.state === 'run' && this.grounded ? Math.sin(this.animTime * 14) : 0,
+      // -1 (falling fast) … 1 (rising fast) while airborne.
+      air: this.grounded ? 0 : Math.max(-1, Math.min(1, (this.vElevation ?? 0) / (this.jumpForce || 1))),
+      guarding: this.isGuarding
+    };
   }
 }
 
@@ -1682,6 +1772,15 @@ export class EnemyChampion extends GroundEntity {
       this.vx = this.vz = 0;
       if (this.stateTimer <= 0) this.state = 'idle';
     }
+    else if (this.passive) {
+      // Passive training partner: no decisions at all — physics (knockback,
+      // launches, lifts, freezes) still apply. Health refills after a pause.
+      this.aiMode = 'PASSIVE';
+      this.vx = this.vz = 0;
+      if (this.stateTimer <= 0 && this.grounded) this.state = 'idle';
+      this.passiveIdle = (this.passiveIdle ?? 0) + dt;
+      if (this.passiveIdle > 3 && this.hp < this.maxHp) this.hp = this.maxHp;
+    }
     else if (player.isAlive && this.tryAICounterBeam(gameWorld)) {
       this.vx = this.vz = 0;
     }
@@ -1789,7 +1888,7 @@ export class EnemyChampion extends GroundEntity {
     return false;
   }
   executeAIAttack(target) { this.attackCooldown = 1.1; this.state = 'attack1'; this.stateTimer = .28; audio.playSlash(1.1); combat.spawnSlashArc(this.x + this.facing * 20, this.y - 28, this.facing, { radius: 42, color: '#f44336', glow: '#b71c1c' }); if (!(isUpperCastleBattlement(this) && isUpperCastleBattlement(target)) && Math.abs(target.z - this.z) <= .22 && Math.abs((target.worldHeight ?? 0) - this.worldHeight) <= 70) target.takeDamage(24, this.facing * 240, 100, .3); }
-  takeDamage(amount, kx = 0, lift = 0, stun = .35, isCrit = false) { if (!this.isAlive) return; if (this.arcaneShield > 0) { const absorbed = Math.min(amount, this.arcaneShield); this.arcaneShield -= absorbed; amount -= absorbed; if (amount <= 0) { combat.spawnElementalParticles(this.x, this.y - 35, 'fulgur', 5); return; } } this.hp = Math.max(0, this.hp - amount); this.hitFlash = .15; this.kbVelX = kx; this.vx = 0; this.vElevation = lift; this.state = 'hurt'; this.stateTimer = stun; combat.spawnDamageText(this.x, this.y - 45, amount, { isCrit, color: '#ff7043' }); if (!this.hp) { window.gameWorld?.recordWizardDeath?.(this.team); this.lifeState = 'Dying'; this.state = 'dead'; this.stateTimer = .45; combat.spawnShockwave(this.x, this.y - 30, 80, '#ff5252'); } }
+  takeDamage(amount, kx = 0, lift = 0, stun = .35, isCrit = false) { if (!this.isAlive) return; if (this.arcaneShield > 0) { const absorbed = Math.min(amount, this.arcaneShield); this.arcaneShield -= absorbed; amount -= absorbed; if (amount <= 0) { combat.spawnElementalParticles(this.x, this.y - 35, 'fulgur', 5); return; } } this.passiveIdle = 0; this.hp = Math.max(this.passive ? 1 : 0, this.hp - amount); this.hitFlash = .15; this.kbVelX = kx; this.vx = 0; this.vElevation = lift; this.state = 'hurt'; this.stateTimer = stun; combat.spawnDamageText(this.x, this.y - 45, amount, { isCrit, color: '#ff7043' }); if (!this.hp) { window.gameWorld?.recordWizardDeath?.(this.team); this.lifeState = 'Dying'; this.state = 'dead'; this.stateTimer = .45; combat.spawnShockwave(this.x, this.y - 30, 80, '#ff5252'); } }
   takeHazardDamage(amount) {
     if (!this.isAlive || !(amount > 0)) return;
     if (this.arcaneShield > 0) { const absorbed = Math.min(amount, this.arcaneShield); this.arcaneShield -= absorbed; amount -= absorbed; if (amount <= 0) return; }

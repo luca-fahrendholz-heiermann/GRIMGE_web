@@ -22,6 +22,7 @@ import { sky } from './sky.js';
 import { renderGroundShadows } from './shadows.js';
 import { renderRuneGuide } from './rune_guides.js';
 import { castleBlocksAt } from './castles.js';
+import { WeaponArmory, WEAPONS } from './weapons.js';
 
 // LF2-style Dungeon rooms. Each room is a wide scrolling stretch: the camera
 // follows the player, enemy groups enter from the right screen edge once the
@@ -57,6 +58,8 @@ export class GameWorld {
     this.runeCanvas = document.getElementById('rune-canvas');
     this.runeCtx = this.runeCanvas.getContext('2d');
     this.uiLayer = document.getElementById('ui-layer');
+    // Training field weapons and weapon crates.
+    this.armory = new WeaponArmory();
     // One fixed 16:9 stage on every device; the container is the screen.
     this.container = document.getElementById('game-container');
     // Soft, dark ambient copy of the scene that fills the letterbox bars.
@@ -451,6 +454,8 @@ export class GameWorld {
 
       // Training: P toggles the sparring partner.
       if (e.code === 'KeyP') this.toggleSparringPartner();
+      // Training: O switches the present partner between active and passive.
+      if (e.code === 'KeyO') this.toggleSparringPassive();
 
       // Own Wolves and Golems can be ridden. Mounting is deliberately a
       // proximity action, not another spell slot: R toggles on/off.
@@ -1287,6 +1292,20 @@ export class GameWorld {
     return clash ? clash.humanAction(this.player) : null;
   }
 
+  // Attack while standing on a field weapon: pick it up (swap with the held one).
+  tryPickupWeapon(actor) {
+    const pickup = this.armory?.nearest(actor, 30);
+    if (!pickup || !actor.equipWeapon) return false;
+    this.armory.take(pickup);
+    const previous = actor.equipWeapon(pickup.weapon, pickup.durability);
+    if (previous) this.armory.drop(previous.weapon, actor.x - actor.facing * 18, actor.z, previous.durability);
+    const weapon = WEAPONS[pickup.weapon];
+    combat.spawnShockwave(actor.x, actor.y - 30, 34, weapon.accent);
+    audio.playRuneChime?.(660);
+    if (actor === this.player) this.showAnnouncement(`${weapon.name} — ${weapon.desc} SPRINT + ATTACK THROWS IT`, 2);
+    return true;
+  }
+
   // Tapping / clicking your own Wizard transforms once Focus is full.
   tryTransformByTap(pt) {
     const p = this.player;
@@ -1449,6 +1468,8 @@ export class GameWorld {
       for (const [kind, x, z] of map.props) environment.addProp(kind, x, z);
       this.trainingDecks ??= { player: this.profile.getMatchDeck(), opponent: [...DEFAULT_MATCH_DECK] };
       this.applyTrainingDecks();
+      // Field weapons: crates with a weapon inside appear now and then.
+      this.armory.clear();
       this.trainingDummy = new TrainingDummy(512, 0.5);
       this.battlefield.placeOnSurface(this.trainingDummy);
       this.minions.push(this.trainingDummy);
@@ -1497,11 +1518,26 @@ export class GameWorld {
     return true;
   }
 
+  // A present partner can be switched between ACTIVE (fights back) and
+  // PASSIVE (no actions; can be launched, lifted, pushed and frozen — for
+  // testing spells on a movable target, which the anchored dummy is not).
+  toggleSparringPassive() {
+    if (this.activeMode?.id !== 'training' || !this.isMatchRunning() || !this.modeState.sparring) return false;
+    const state = this.modeState;
+    state.sparringPassive = !state.sparringPassive;
+    this.enemyChampion.passive = state.sparringPassive;
+    this.enemyChampion.vx = this.enemyChampion.vz = 0;
+    this.showAnnouncement(state.sparringPassive ? 'PARTNER PASSIVE — TEST YOUR SPELLS ON IT' : 'PARTNER ACTIVE — IT FIGHTS BACK', 1.4);
+    return state.sparringPassive;
+  }
+
   toggleSparringPartner() {
     if (this.activeMode?.id !== 'training' || !this.isMatchRunning()) return false;
     const state = this.modeState;
-    state.sparring = !state.sparring;
     const champion = this.enemyChampion;
+    state.sparring = !state.sparring;
+    state.sparringPassive = false;
+    champion.passive = false;
     if (state.sparring) {
       champion.x = 840; champion.z = 0.58;
       champion.hp = champion.maxHp; champion.mp = champion.maxMp;
@@ -2207,6 +2243,8 @@ export class GameWorld {
     combat.resetEffects();
     this.activeMode = getGameMode(this.matchMode);
     this.battlefield = new Battlefield(this.activeMode, { trainingMapId: this.trainingMapId });
+    // Field weapons only live in Training.
+    this.armory?.clear();
     this.attachBattlefieldCallbacks();
     const spawn = this.battlefield.getSpawn('blue');
     this.player = new Player(spawn.x, spawn.z);
@@ -2429,6 +2467,7 @@ export class GameWorld {
 
         spells.update(scaledDt, this);
         environment.update(scaledDt, this, spells.getSummons());
+        if (this.activeMode?.id === 'training') this.armory.update(scaledDt, environment, this.battlefield.boundsOverride);
         this.updatePotions(scaledDt);
         this.updateMode(scaledDt);
       }
@@ -2611,7 +2650,7 @@ export class GameWorld {
     this.renderArenaRuneCollectibles(ctx);
     this.renderArenaTransformationRelic(ctx);
 
-    const actors = [...this.minions, ...environment.livingProps().map((prop) => ({ y: prop.y, render: (c) => renderProp(c, prop) }))];
+    const actors = [...this.minions, ...environment.livingProps().map((prop) => ({ y: prop.y, render: (c) => renderProp(c, prop) })), ...this.armory.pickups.map((pickup) => ({ y: pickup.y, render: (c) => pickup.render(c) }))];
     if (this.enemyChampion.lifeState !== 'Dead') actors.push(this.enemyChampion);
     if (this.player.lifeState !== 'Dead' && !this.player.isMounted) actors.push(this.player);
     // Spells with a ground position and summons share the painter's order

@@ -1517,6 +1517,91 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
   assert(detailHtml.includes('data-detail="gravity_lift"') && detailHtml.includes('ATTACK FORWARD to throw') && detailHtml.includes('HOW TO CAST'), 'The grimoire explains every recipe (e.g. Gravity Lift: throw / pull / slam)');
 }
 
+// Training: a PASSIVE sparring partner to test spells on a movable target.
+{
+  game.selectTrainingMap('waterfalls');
+  const P = game.player; const E = game.enemyChampion;
+  const neutral = { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false };
+  assert(!game.toggleSparringPassive(), 'Without a partner there is nothing to switch to passive');
+  assert(game.toggleSparringPartner() && !game.modeState.sparringPassive, 'The sparring partner joins and fights');
+  assert(game.toggleSparringPassive() && game.modeState.sparringPassive && E.passive, 'The PARTNER button (O) switches it to PASSIVE (no actions)');
+  P.x = 300; P.z = .58; game.battlefield.placeOnSurface(P);
+  E.x = 420; E.z = .58; E.elevation = 0; E.vx = 0; game.battlefield.placeOnSurface(E);
+  const startX = E.x;
+  for (let i = 0; i < 90; i++) E.update(1 / 60, game, game.battlefield);
+  assert(Math.abs(E.x - startX) < 1 && E.aiMode === 'PASSIVE', 'A passive partner does not walk, attack or cast');
+  spells.cast(P, { id: 'gravity_lift', tier: 2 }, game, null, { x: 420, z: .58 });
+  let maxLift = 0;
+  for (let i = 0; i < 50; i++) { spells.update(1 / 60, game); E.update(1 / 60, game, game.battlefield); maxLift = Math.max(maxLift, E.elevation); }
+  assert(maxLift > 50, `Gravity Lift visibly raises the passive partner (${Math.round(maxLift)} px)`);
+  E.takeDamage(99999, 0, 0, .1);
+  assert(E.isAlive && E.hp >= 1, 'A passive training partner cannot die');
+  for (let i = 0; i < 200; i++) E.update(1 / 60, game, game.battlefield);
+  assert(E.hp === E.maxHp, 'Its health refills after a short pause');
+  assert(!game.toggleSparringPassive() && !E.passive, 'The PARTNER button switches it back to ACTIVE');
+  game.toggleSparringPassive();
+  assert(!game.toggleSparringPartner() && !game.modeState.sparring && !E.passive, 'Removing the partner also ends passive mode');
+  spells.clearRuntime();
+  void neutral;
+}
+
+// Training: pickup weapons (Little Fighter style) — crates, combos, throwing.
+{
+  const { environment } = await import('./public/src/environment.js');
+  const { WEAPONS, WEAPON_IDS } = await import('./public/src/weapons.js');
+  game.selectTrainingMap('waterfalls');
+  const P = game.player;
+  const neutral = { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false };
+  const ready = () => { P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.grounded = true; P.elevation = 0; P.sprintActive = false; };
+  assert(WEAPON_IDS.length >= 10 && WEAPON_IDS.every((id) => WEAPONS[id].combo.length >= 2 && WEAPONS[id].heavy && WEAPONS[id].uppercut), 'At least ten weapon profiles with their own combo, heavy and uppercut');
+  game.armory.crateTimer = 0;
+  const crate = game.armory.update(1 / 60, environment, game.battlefield.boundsOverride, () => 'spear');
+  assert(crate?.weaponId === 'spear', 'Weapon crates appear on the training field now and then');
+  crate.takeDamage(999, 0, 0, 0, false, 'melee');
+  environment.update(1 / 60, game, []);
+  const dropped = game.armory.pickups.find((p) => p.weapon === 'spear');
+  assert(dropped && Math.abs(dropped.x - crate.x) < 1, 'Breaking a weapon crate drops its weapon');
+  P.x = dropped.x; P.z = dropped.z; game.battlefield.placeOnSurface(P); ready();
+  assert(P.executeAttack(neutral, 'normal') && P.weapon === 'spear' && !game.armory.pickups.includes(dropped), 'Attacking while standing on a weapon picks it up');
+  // The spear reaches further than the default 78 px.
+  const dummy = game.trainingDummy; dummy.homeX = dummy.x = P.x + 108; dummy.homeZ = dummy.z = P.z; P.facing = 1;
+  const before = dummy.hp; ready();
+  P.executeAttack(neutral, 'normal');
+  assert(dummy.hp < before, 'The spear hits at long reach (~110 px)');
+  // Dual swords: a five-hit chain.
+  P.equipWeapon('dual_swords'); P.comboStep = 0;
+  const states = [];
+  for (let i = 0; i < 5; i++) { ready(); P.executeAttack(neutral, 'normal'); states.push(P.comboStep); }
+  assert(states.join(',') === '1,2,3,4,5', 'Dual swords chain five strikes before the combo restarts');
+  // Throwing: sprint + attack; the weapon flies, hits and lands to be picked up again.
+  // Fixed free lane (no crates / barrels between thrower and dummy).
+  P.x = 300; P.z = .5; game.battlefield.placeOnSurface(P); P.facing = 1;
+  P.equipWeapon('great_axe'); ready(); P.sprintActive = true;
+  dummy.homeX = dummy.x = P.x + 120; dummy.homeZ = dummy.z = P.z;
+  const hpThrow = dummy.hp;
+  assert(P.executeAttack(neutral, 'normal') && !P.weapon && spells.activeSpells.some((s) => s.constructor.name === 'ThrownWeaponSpell'), 'Sprint + attack throws the held weapon');
+  for (let i = 0; i < 150; i++) spells.update(1 / 60, game);
+  const landed = game.armory.pickups.find((p) => p.weapon === 'great_axe');
+  assert(dummy.hp < hpThrow && landed, 'The thrown weapon hits and lands on the field');
+  P.x = landed.x; P.z = landed.z; game.battlefield.placeOnSurface(P); ready();
+  assert(P.executeAttack(neutral, 'normal') && P.weapon === 'great_axe', 'A thrown weapon can be picked up again');
+  // Conjured ice sword: the finisher freezes; it shatters after its hits.
+  P.equipWeapon('ice_sword'); P.comboStep = 0;
+  dummy.homeX = dummy.x = P.x + 50; dummy.homeZ = dummy.z = P.z;
+  let frozen = false; const freezeTarget = dummy; freezeTarget.freeze = () => { frozen = true; };
+  for (let i = 0; i < 3; i++) { ready(); P.executeAttack(neutral, 'normal'); }
+  assert(frozen && P.weaponDurability < WEAPONS.ice_sword.durability, 'The ice sword finisher freezes and wears the blade down');
+  P.weaponDurability = 1; ready(); P.executeAttack(neutral, 'normal');
+  assert(!P.weapon, 'The ice sword shatters after its last hit');
+  delete freezeTarget.freeze;
+  // A held weapon falls to the ground when the Wizard dies.
+  P.equipWeapon('katana'); const count = game.armory.pickups.length;
+  P.beginDeath();
+  assert(!P.weapon && game.armory.pickups.length === count + 1, 'A held weapon is dropped on death');
+  game.render();
+  game.selectTrainingMap('waterfalls');
+}
+
 // Light & shadow: Shadow Stomper, sky spheres, shadow doubles, revenants
 // and the round ground shadows under every actor.
 {

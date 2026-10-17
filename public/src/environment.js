@@ -311,6 +311,10 @@ export class EnvironmentSystem {
         }
       }
       this.add('scorch', prop.x, prop.z, { radius: 70 });
+    } else if (prop.weaponId) {
+      // A weapon crate drops its weapon onto the field.
+      this.add('rubble', prop.x, prop.z, { radius: 26, life: 3 });
+      gameWorld.armory?.drop(prop.weaponId, prop.x, prop.z);
     } else {
       this.add('rubble', prop.x, prop.z, { radius: 26, life: 3 });
       // Crates may hold a potion.
@@ -692,6 +696,15 @@ export class EnvironmentSystem {
 export function renderProp(ctx, prop) {
   const x = Math.round(prop.x + (prop.shake > 0 ? Math.sin(performance.now() * .08) * 2 : 0));
   const y = Math.round(prop.y);
+  if (prop.weaponId) {
+    // Weapon crates carry a golden band and a floating sword mark.
+    ctx.save();
+    const bob = Math.sin(performance.now() * .004) * 2;
+    ctx.fillStyle = 'rgba(255,213,79,.9)';
+    ctx.beginPath(); ctx.moveTo(x, y - 54 + bob); ctx.lineTo(x + 3, y - 46 + bob); ctx.lineTo(x + 1, y - 46 + bob); ctx.lineTo(x + 1, y - 40 + bob); ctx.lineTo(x - 1, y - 40 + bob); ctx.lineTo(x - 1, y - 46 + bob); ctx.lineTo(x - 3, y - 46 + bob); ctx.closePath(); ctx.fill();
+    ctx.fillRect(x - 4, y - 46 + bob, 8, 2);
+    ctx.restore();
+  }
   const sheet = prop.kind === 'barrel' ? 'prop_barrel' : 'prop_crate';
   if (fxReady(sheet)) {
     ctx.save();

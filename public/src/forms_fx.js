@@ -211,8 +211,36 @@ export function drawEidolonGuardian(ctx, x, feetY, facing, t, age, fade, layer =
   });
 }
 
+// ── Guard poses of the forms (front layer) ───────────────────────────────
+export function drawFormGuard(ctx, x, feetY, facing, t, form) {
+  renderPixelated(ctx, pixelSize(ctx), (c) => {
+    c.save();
+    c.translate(x, feetY); c.scale(facing, 1);
+    if (form === 'eidolon') {
+      // Glowing ribs and a giant open skeletal palm in front of the Wizard.
+      c.globalCompositeOperation = 'lighter';
+      c.strokeStyle = rgba('232,214,255', .55); c.lineWidth = 4; c.lineCap = 'round';
+      for (let i = 0; i < 4; i++) { const y = -76 - i * 12; c.beginPath(); c.moveTo(-22, y); c.quadraticCurveTo(14, y + 12, 30, y + 2); c.stroke(); }
+      c.globalCompositeOperation = 'source-over';
+      c.fillStyle = rgba('166,107,255', .6); c.strokeStyle = rgba('243,229,255', .95); c.lineWidth = 2;
+      c.beginPath(); c.ellipse(46, -56, 16, 26, 0, 0, TAU); c.fill(); c.stroke();
+      for (let f = 0; f < 4; f++) { const fy = -82 + f * 12; c.beginPath(); c.moveTo(54, fy + 6); c.lineTo(68 + Math.sin(t * 6 + f) * 1.5, fy); c.lineTo(66, fy + 8); c.closePath(); c.fill(); c.stroke(); }
+      c.beginPath(); c.moveTo(40, -38); c.lineTo(58, -26); c.lineTo(50, -40); c.closePath(); c.fill(); c.stroke();
+    } else if (form === 'ascendant') {
+      // A hexagonal shield of light.
+      c.globalCompositeOperation = 'lighter';
+      const pulse = 1 + Math.sin(t * 8) * .05;
+      c.fillStyle = rgba('255,214,80', .22); c.strokeStyle = rgba('255,240,170', .9); c.lineWidth = 3;
+      c.beginPath();
+      for (let i = 0; i < 6; i++) { const a = i / 6 * TAU + Math.PI / 6; const px = 38 + Math.cos(a) * 16 * pulse; const py = -50 + Math.sin(a) * 34 * pulse; if (i) c.lineTo(px, py); else c.moveTo(px, py); }
+      c.closePath(); c.fill(); c.stroke();
+    }
+    c.restore();
+  });
+}
+
 // ── Ninefold Beast Form: flame fox spirit ────────────────────────────────
-export function drawNinefoldSpirit(ctx, x, feetY, facing, t, age, fade, layer = 'back', { lean = 0, bob = 0 } = {}) {
+export function drawNinefoldSpirit(ctx, x, feetY, facing, t, age, fade, layer = 'back', { lean = 0, bob = 0, air = 0, guarding = false } = {}) {
   if (fade <= 0) return;
   const grow = clamp01(age / .45);
   renderPixelated(ctx, pixelSize(ctx), (c) => {
@@ -233,9 +261,12 @@ export function drawNinefoldSpirit(ctx, x, feetY, facing, t, age, fade, layer = 
     // Nine tapered flame tails fanning out behind (solid, outlined).
     for (let i = 0; i < 9; i++) {
       // Fan from straight up-back (95°) to back-down (191°), y pointing up.
-      // Running streams the tails back and flat behind the Wizard.
+      // Running streams the tails back and flat behind the Wizard; rising
+      // points them down and back, falling lifts them up.
       const run = Math.max(0, lean);
-      const base = (62 + i * 16.5 + run * (30 - i * 2)) * Math.PI / 180;
+      const jumpTilt = air > 0 ? air * 38 : air * 28;
+      // Guarding: the tails whip forward into a cocoon in front of the body.
+      const base = guarding ? (-70 + i * 17.5) * Math.PI / 180 : (62 + i * 16.5 + run * (30 - i * 2) + jumpTilt) * Math.PI / 180;
       const len = (92 + (i % 3) * 16) * (.35 + .65 * grow);
       const pts = [];
       const segs = 12;

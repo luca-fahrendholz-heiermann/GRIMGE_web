@@ -120,6 +120,7 @@ export class UIManager {
     // The own profile bar (portrait + bars) also triggers the transformation.
     this.blueSidePanel = document.querySelector?.('#top-hud-bar .blue-side') ?? null;
     this.trainingSparringBtn = document.getElementById('training-sparring-btn');
+    this.trainingPassiveBtn = document.getElementById('training-passive-btn');
     this.trainingDeckBtn = document.getElementById('training-deck-btn');
     this.trainingMapBtn = document.getElementById('training-map-btn');
     this.trainingMapModal = document.getElementById('training-map-modal');
@@ -334,6 +335,9 @@ export class UIManager {
     this.setupSpellTriangle();
     this.trainingSparringBtn?.addEventListener('pointerdown', (e) => {
       e.preventDefault(); e.stopPropagation(); window.gameWorld?.toggleSparringPartner();
+    });
+    this.trainingPassiveBtn?.addEventListener('pointerdown', (e) => {
+      e.preventDefault(); e.stopPropagation(); window.gameWorld?.toggleSparringPassive();
     });
     this.trainingDeckBtn?.addEventListener('pointerdown', (e) => {
       e.preventDefault(); e.stopPropagation(); window.gameWorld?.openTrainingDeck('player');
@@ -1045,7 +1049,13 @@ export class UIManager {
     this.updateSpellTriangle(player);
     if (this.trainingSparringBtn) {
       const sparring = !!window.gameWorld?.modeState?.sparring;
+      const passive = !!window.gameWorld?.modeState?.sparringPassive;
       this.trainingSparringBtn.textContent = sparring ? '⚔ SPARRING PARTNER: ON' : '⚔ SPARRING PARTNER: OFF';
+      if (this.trainingPassiveBtn) {
+        this.trainingPassiveBtn.classList.toggle('hidden', !sparring);
+        this.trainingPassiveBtn.classList.toggle('is-on', sparring && passive);
+        this.trainingPassiveBtn.textContent = passive ? '◎ PARTNER: PASSIVE' : '◉ PARTNER: ACTIVE';
+      }
       this.trainingSparringBtn.classList.toggle('is-on', sparring);
     }
 
