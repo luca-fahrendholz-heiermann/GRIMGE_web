@@ -31,15 +31,20 @@ export const BUFF_FORM_DATA = Object.freeze([
    },
    "defense": {
     "name": "Scherhaut",
-    "text": "Drei Plattenbänder überlappen vor der konturgenauen Spielerpose; Perfect Block reflektiert Impuls."
+    "text": "Drei Plattenbänder überlappen vor der konturgenauen Spielerpose; Perfect Block reflektiert Impuls.",
+    "counter": "reflect",
+    "status": []
    },
    "grab": {
     "name": "Plattenzunge",
-    "text": "kurze, kontaktgebundene Greifzunge fängt nahen Gegner und schleudert seitlich."
+    "text": "kurze, kontaktgebundene Greifzunge fängt nahen Gegner und schleudert seitlich.",
+    "throw": "side",
+    "status": []
    },
    "jump": {
     "name": "Risssprung",
-    "text": "Beim Sprint falten sich die Bänder als horizontale Scherlinien zusammen; bei Jump hängen sie am Apex weit unter dem Körper und fächern bei der Landung auf."
+    "text": "Beim Sprint falten sich die Bänder als horizontale Scherlinien zusammen; bei Jump hängen sie am Apex weit unter dem Körper und fächern bei der Landung auf.",
+    "landing": "fan"
    },
    "forward": {
     "short": {
@@ -129,15 +134,22 @@ export const BUFF_FORM_DATA = Object.freeze([
    },
    "defense": {
     "name": "Schildtrichter",
-    "text": "sechs Panzerplatten klappen überlappend zu einem frontalen Deflektor; Perfect Block mit Gegenstoß."
+    "text": "sechs Panzerplatten klappen überlappend zu einem frontalen Deflektor; Perfect Block mit Gegenstoß.",
+    "counter": "shove",
+    "status": []
    },
    "grab": {
     "name": "Greifzange",
-    "text": "zwei gelenkige externe Fingerträger packen nahe Gegner und versetzen sie kontrolliert."
+    "text": "zwei gelenkige externe Fingerträger packen nahe Gegner und versetzen sie kontrolliert.",
+    "throw": "forward",
+    "status": [
+     "slow"
+    ]
    },
    "jump": {
     "name": "Trägersprung",
-    "text": "Beim Sprint schieben sich Träger nach vorn wie ein beweglicher Kran; beim Jump hebt der Spieler tatsächlich ab, während die schweren Platten sichtbar verzögert nachziehen."
+    "text": "Beim Sprint schieben sich Träger nach vorn wie ein beweglicher Kran; beim Jump hebt der Spieler tatsächlich ab, während die schweren Platten sichtbar verzögert nachziehen.",
+    "landing": "dust"
    },
    "forward": {
     "short": {
@@ -145,18 +157,14 @@ export const BUFF_FORM_DATA = Object.freeze([
      "text": "bestehender Bogen feuert schnellen Präzisionsbolzen zur Unterbrechung.",
      "action": "ein schmales, auf die Facing-Achse ausgerichtetes Projektil aus mehrlagigen Materialfragmenten; vorne harte Leuchtkante, hinten feiner Splitter-Sog",
      "kind": "arrow",
-     "status": [
-      "shock"
-     ]
+     "status": []
     },
     "full": {
      "name": "Belagerungspfeil",
      "text": "bestehender Bogen feuert mehrteiliges Druckgeschoss mit Durchdringung und Endexplosion.",
      "action": "ein mehrteiliges Projektil mit gestaffelten Vorder- und Rückschichten; kontrollierte Spur, variierender Kern und ein getrenntes End-Impact-Volumen",
      "kind": "arrow",
-     "status": [
-      "shock"
-     ]
+     "status": []
     }
    },
    "up": {
@@ -185,9 +193,7 @@ export const BUFF_FORM_DATA = Object.freeze([
      "text": "kurzer Druckimpuls aus einer fokussierten Fußprojektion.",
      "action": "einen präzisen Fersen-, Hand- oder Kantenimpuls mit kurzen Bodenbruchpixeln",
      "kind": "ring",
-     "status": [
-      "shock"
-     ]
+     "status": []
     },
     "full": {
      "name": "Gericht des Gestells",
@@ -199,8 +205,7 @@ export const BUFF_FORM_DATA = Object.freeze([
    }
   },
   "statusAll": [
-   "slow",
-   "shock"
+   "slow"
   ]
  },
  {
@@ -232,15 +237,20 @@ export const BUFF_FORM_DATA = Object.freeze([
    },
    "defense": {
     "name": "Scale Aegis",
-    "text": "blockt frontal; Perfect Block stößt mit einer Dornplatte zurück."
+    "text": "blockt frontal; Perfect Block stößt mit einer Dornplatte zurück.",
+    "counter": "spike",
+    "status": []
    },
    "grab": {
     "name": "Jaw Clamp",
-    "text": "Der nahe gegner wird zwischen den klauen gefasst und mit einem schuppenschlag fortgestoßen."
+    "text": "Der nahe gegner wird zwischen den klauen gefasst und mit einem schuppenschlag fortgestoßen.",
+    "throw": "forward",
+    "status": []
    },
    "jump": {
     "name": "Drake Hop",
-    "text": "Beim Absprung klappt der Kamm zusammen, am Scheitel öffnet er sich; bei Landung federn die Lamellen nacheinander."
+    "text": "Beim Absprung klappt der Kamm zusammen, am Scheitel öffnet er sich; bei Landung federn die Lamellen nacheinander.",
+    "landing": "spring"
    },
    "forward": {
     "short": {
@@ -256,7 +266,7 @@ export const BUFF_FORM_DATA = Object.freeze([
      "name": "Drake Maw",
      "text": "durchdringende Hitzezone mit Brand.",
      "action": "eine verzahnte Abfolge von Boden- oder Luftfeldern mit ungleichzeitigen Impakten und klar begrenztem AoE",
-     "kind": "ring",
+     "kind": "beam",
      "status": [
       "burn"
      ]
@@ -288,7 +298,9 @@ export const BUFF_FORM_DATA = Object.freeze([
      "text": "kleine Flächenunterbrechung.",
      "action": "einen kurzen, materiell ausgefransten Wellenrand mit unterbrochenen Segmenten statt eines glatten Vollkreises",
      "kind": "ring",
-     "status": []
+     "status": [
+      "stun"
+     ]
     },
     "full": {
      "name": "Molten Mantle",
@@ -335,15 +347,20 @@ export const BUFF_FORM_DATA = Object.freeze([
    },
    "defense": {
     "name": "Basalt Shell",
-    "text": "harter Block; Perfect Block lässt die Kruste absplittern."
+    "text": "harter Block; Perfect Block lässt die Kruste absplittern.",
+    "counter": "spike",
+    "status": []
    },
    "grab": {
     "name": "Furnace Grip",
-    "text": "Gegner wird gefasst, angehoben und in eine heiße bodenspur gedrückt."
+    "text": "Gegner wird gefasst, angehoben und in eine heiße bodenspur gedrückt.",
+    "throw": "slam",
+    "status": []
    },
    "jump": {
     "name": "Magma Bound",
-    "text": "Ofenband kippt beim Takeoff zurück; Staub steigt unabhängig vom Spieler, bei Landung schließt eine Kachelwelle."
+    "text": "Ofenband kippt beim Takeoff zurück; Staub steigt unabhängig vom Spieler, bei Landung schließt eine Kachelwelle.",
+    "landing": "dust"
    },
    "forward": {
     "short": {
@@ -371,16 +388,16 @@ export const BUFF_FORM_DATA = Object.freeze([
      "text": "kurzer Juggle.",
      "action": "eine schnell ansteigende, scharf fragmentierte Stoßbahn über Kopf und Schulter",
      "kind": "burst",
-     "status": []
+     "status": [
+      "launch"
+     ]
     },
     "full": {
      "name": "Eruption Crown",
      "text": "vertikale Raumkontrolle in drei Positionen.",
      "action": "eine verzahnte Abfolge von Boden- oder Luftfeldern mit ungleichzeitigen Impakten und klar begrenztem AoE",
      "kind": "pillar",
-     "status": [
-      "shock"
-     ]
+     "status": []
     }
    },
    "down": {
@@ -398,13 +415,14 @@ export const BUFF_FORM_DATA = Object.freeze([
      "text": "große AoE mit zeitlich begrenzter Gefahrenzone.",
      "action": "eine verzahnte Abfolge von Boden- oder Luftfeldern mit ungleichzeitigen Impakten und klar begrenztem AoE",
      "kind": "sequence",
-     "status": []
+     "status": [
+      "burn"
+     ]
     }
    }
   },
   "statusAll": [
-   "burn",
-   "shock"
+   "burn"
   ]
  },
  {
@@ -435,15 +453,20 @@ export const BUFF_FORM_DATA = Object.freeze([
    },
    "defense": {
     "name": "Scale Veil",
-    "text": "Defensive; Perfect Block mit zurückklappender Klaue."
+    "text": "Defensive; Perfect Block mit zurückklappender Klaue.",
+    "counter": "reflect",
+    "status": []
    },
    "grab": {
     "name": "Jaw Seize",
-    "text": "Das maul packt ein nahes ziel kurz und schleudert es seitlich."
+    "text": "Das maul packt ein nahes ziel kurz und schleudert es seitlich.",
+    "throw": "side",
+    "status": []
    },
    "jump": {
     "name": "Wyrm Leap",
-    "text": "Kieferbögen bleiben unterhalb des Springers zurück und schnappen am Scheitel zur Schulterhöhe."
+    "text": "Kieferbögen bleiben unterhalb des Springers zurück und schnappen am Scheitel zur Schulterhöhe.",
+    "landing": "dust"
    },
    "forward": {
     "short": {
@@ -458,7 +481,9 @@ export const BUFF_FORM_DATA = Object.freeze([
      "text": "große Distanzfläche mit Debuff.",
      "action": "eine verzahnte Abfolge von Boden- oder Luftfeldern mit ungleichzeitigen Impakten und klar begrenztem AoE",
      "kind": "projectile",
-     "status": []
+     "status": [
+      "slow"
+     ]
     }
    },
    "up": {
@@ -485,7 +510,9 @@ export const BUFF_FORM_DATA = Object.freeze([
      "text": "Sweep mit Stolpern.",
      "action": "einen gekerbten, richtungsabhängigen Schnittbogen aus drei asymmetrisch zeitversetzten Lichtkanten",
      "kind": "ring",
-     "status": []
+     "status": [
+      "stun"
+     ]
     },
     "full": {
      "name": "Primal Coil",
@@ -529,31 +556,39 @@ export const BUFF_FORM_DATA = Object.freeze([
    },
    "defense": {
     "name": "Queen Mantle",
-    "text": "Block; Perfect Block überträgt einen kleinen Schutzimpuls."
+    "text": "Block; Perfect Block überträgt einen kleinen Schutzimpuls.",
+    "counter": "ward",
+    "status": [
+     "slow",
+     "shield"
+    ]
    },
    "grab": {
     "name": "Mercy Lift",
-    "text": "Ein naher gegner wird mit einer rubinschlinge gegriffen und behutsam fortgeschleudert."
+    "text": "Ein naher gegner wird mit einer rubinschlinge gegriffen und behutsam fortgeschleudert.",
+    "throw": "forward",
+    "status": []
    },
    "jump": {
     "name": "Bloom Flight",
-    "text": "Die Segel sind beim Aufstieg schmal, bremsen am Scheitel und federn bei Landung kurz aus."
+    "text": "Die Segel sind beim Aufstieg schmal, bremsen am Scheitel und federn bei Landung kurz aus.",
+    "landing": "spring"
    },
    "forward": {
     "short": {
      "name": "Life Spark",
      "text": "treffender Funke schwächt Gegner.",
      "action": "einen kompakten Materialstoß mit scharfem Einschlagspunkt und kurzem Nachziehen",
-     "kind": "cone",
+     "kind": "projectile",
      "status": [
-      "shock"
+      "slow"
      ]
     },
     "full": {
      "name": "Queenfire Stream",
      "text": "Flächenschaden und kleine Heilzone im Rücken des Spielers.",
      "action": "eine verzahnte Abfolge von Boden- oder Luftfeldern mit ungleichzeitigen Impakten und klar begrenztem AoE",
-     "kind": "projectile",
+     "kind": "beam",
      "status": [
       "heal"
      ]
@@ -574,7 +609,9 @@ export const BUFF_FORM_DATA = Object.freeze([
      "text": "großer Anti-Air, stärkt Verbündete im Bereich.",
      "action": "eine mehrstufige vertikale Materialentfaltung, deren Leuchtkerne nach oben wandern",
      "kind": "pillar",
-     "status": []
+     "status": [
+      "shield"
+     ]
     }
    },
    "down": {
@@ -583,7 +620,9 @@ export const BUFF_FORM_DATA = Object.freeze([
      "text": "geringer Knockback und Support-Zone.",
      "action": "einen kurzen, materiell ausgefransten Wellenrand mit unterbrochenen Segmenten statt eines glatten Vollkreises",
      "kind": "ring",
-     "status": []
+     "status": [
+      "heal"
+     ]
     },
     "full": {
      "name": "Sanctuary Bloom",
@@ -631,15 +670,22 @@ export const BUFF_FORM_DATA = Object.freeze([
    },
    "defense": {
     "name": "Fiend Wings",
-    "text": "Perfect Block durch Flügelreflex."
+    "text": "Perfect Block durch Flügelreflex.",
+    "counter": "reflect",
+    "status": []
    },
    "grab": {
     "name": "Talon Snare",
-    "text": "Krallen fassen das ziel und werfen es im halben luftkreis."
+    "text": "Krallen fassen das ziel und werfen es im halben luftkreis.",
+    "throw": "spin",
+    "status": [
+     "freeze"
+    ]
    },
    "jump": {
     "name": "Double Vault",
-    "text": "Beim Jump bilden die Finnen eine Dreieckslage, die beim Fallen unkontrolliert leicht zerfällt."
+    "text": "Beim Jump bilden die Finnen eine Dreieckslage, die beim Fallen unkontrolliert leicht zerfällt.",
+    "landing": "dust"
    },
    "forward": {
     "short": {
@@ -653,7 +699,7 @@ export const BUFF_FORM_DATA = Object.freeze([
      "name": "Annihilation Ray",
      "text": "geradliniger Fernkampf-Burst.",
      "action": "ein mehrteiliges Projektil mit gestaffelten Vorder- und Rückschichten; kontrollierte Spur, variierender Kern und ein getrenntes End-Impact-Volumen",
-     "kind": "projectile",
+     "kind": "beam",
      "status": []
     }
    },
@@ -725,15 +771,23 @@ export const BUFF_FORM_DATA = Object.freeze([
    },
    "defense": {
     "name": "Faraday Veil",
-    "text": "Block; Perfect Block leitet einen kurzen Stromstoß zurück."
+    "text": "Block; Perfect Block leitet einen kurzen Stromstoß zurück.",
+    "counter": "shock",
+    "status": []
    },
    "grab": {
     "name": "Lightning Bind",
-    "text": "Elektrischer faden zieht ein nahes ziel an und stößt es dann zurück."
+    "text": "Elektrischer faden zieht ein nahes ziel an und stößt es dann zurück.",
+    "throw": "pull",
+    "status": [
+     "pull",
+     "shock"
+    ]
    },
    "jump": {
     "name": "Ion Hop",
-    "text": "Die Spulen rotieren beim Absprung gegensinnig und pendeln bei der Landung nach."
+    "text": "Die Spulen rotieren beim Absprung gegensinnig und pendeln bei der Landung nach.",
+    "landing": "dust"
    },
    "forward": {
     "short": {
@@ -748,7 +802,9 @@ export const BUFF_FORM_DATA = Object.freeze([
      "text": "Chain-Hits auf nahe zweite Ziele.",
      "action": "eine wesentlich größere, mehrschichtige Kraftentladung mit eigenständigem Angriffspfad und Sekundärreaktion",
      "kind": "projectile",
-     "status": []
+     "status": [
+      "shock"
+     ]
     }
    },
    "up": {
@@ -766,7 +822,9 @@ export const BUFF_FORM_DATA = Object.freeze([
      "text": "hochreichender Anti-Air.",
      "action": "eine verzahnte Abfolge von Boden- oder Luftfeldern mit ungleichzeitigen Impakten und klar begrenztem AoE",
      "kind": "pillar",
-     "status": []
+     "status": [
+      "shock"
+     ]
     }
    },
    "down": {
@@ -776,7 +834,8 @@ export const BUFF_FORM_DATA = Object.freeze([
      "action": "einen präzisen Fersen-, Hand- oder Kantenimpuls mit kurzen Bodenbruchpixeln",
      "kind": "ring",
      "status": [
-      "stun"
+      "stun",
+      "shock"
      ]
     },
     "full": {
@@ -784,13 +843,14 @@ export const BUFF_FORM_DATA = Object.freeze([
      "text": "große AoE mit kurzem Lift.",
      "action": "eine verzahnte Abfolge von Boden- oder Luftfeldern mit ungleichzeitigen Impakten und klar begrenztem AoE",
      "kind": "sequence",
-     "status": []
+     "status": [
+      "launch",
+      "shock"
+     ]
     }
    }
   },
-  "statusAll": [
-   "shock"
-  ]
+  "statusAll": []
  },
  {
   "id": "T07",
@@ -821,15 +881,22 @@ export const BUFF_FORM_DATA = Object.freeze([
    },
    "defense": {
     "name": "Hide Guard",
-    "text": "Perfect Block federt durch Schulterstoß zurück."
+    "text": "Perfect Block federt durch Schulterstoß zurück.",
+    "counter": "spike",
+    "status": []
    },
    "grab": {
     "name": "Jaw Takedown",
-    "text": "Klaue fixiert das ziel; ein schulterwurf schleudert es über den rücken."
+    "text": "Klaue fixiert das ziel; ein schulterwurf schleudert es über den rücken.",
+    "throw": "over",
+    "status": [
+     "root"
+    ]
    },
    "jump": {
     "name": "Moonbound",
-    "text": "Sicheln strecken sich unter dem Springer ab und klappen beim Apex ein; Landung auf zwei weichen Rauchstützen."
+    "text": "Sicheln strecken sich unter dem Springer ab und klappen beim Apex ein; Landung auf zwei weichen Rauchstützen.",
+    "landing": "dust"
    },
    "forward": {
     "short": {
@@ -873,14 +940,18 @@ export const BUFF_FORM_DATA = Object.freeze([
      "text": "Stolpern gegen nahe Gegner.",
      "action": "einen präzisen Fersen-, Hand- oder Kantenimpuls mit kurzen Bodenbruchpixeln",
      "kind": "ring",
-     "status": []
+     "status": [
+      "stun"
+     ]
     },
     "full": {
      "name": "Lunar Ravage",
      "text": "große AoE mit Blutungsmarke.",
      "action": "eine verzahnte Abfolge von Boden- oder Luftfeldern mit ungleichzeitigen Impakten und klar begrenztem AoE",
      "kind": "sequence",
-     "status": []
+     "status": [
+      "burn"
+     ]
     }
    }
   },
@@ -917,15 +988,20 @@ export const BUFF_FORM_DATA = Object.freeze([
    },
    "defense": {
     "name": "Ossified Ward",
-    "text": "Perfect Block sprengt eine Rippe nach vorne."
+    "text": "Perfect Block sprengt eine Rippe nach vorne.",
+    "counter": "spike",
+    "status": []
    },
    "grab": {
     "name": "Rib Lock",
-    "text": "Knochenspangen schließen um das ziel und werfen es mit hüftdrehung."
+    "text": "Knochenspangen schließen um das ziel und werfen es mit hüftdrehung.",
+    "throw": "over",
+    "status": []
    },
    "jump": {
     "name": "Skeletal Hop",
-    "text": "Glocken geraten beim Absprung zurück und beginnen am Scheitel frei auszuschwingen."
+    "text": "Glocken geraten beim Absprung zurück und beginnen am Scheitel frei auszuschwingen.",
+    "landing": "dust"
    },
    "forward": {
     "short": {
@@ -942,7 +1018,8 @@ export const BUFF_FORM_DATA = Object.freeze([
      "kind": "projectile",
      "status": [
       "shield"
-     ]
+     ],
+     "pierce": true
     }
    },
    "up": {
@@ -969,14 +1046,18 @@ export const BUFF_FORM_DATA = Object.freeze([
      "text": "kurze Stolperfalle.",
      "action": "einen präzisen Fersen-, Hand- oder Kantenimpuls mit kurzen Bodenbruchpixeln",
      "kind": "ring",
-     "status": []
+     "status": [
+      "root"
+     ]
     },
     "full": {
      "name": "Bone Cathedral",
      "text": "große AoE und temporärer Engpass.",
      "action": "eine verzahnte Abfolge von Boden- oder Luftfeldern mit ungleichzeitigen Impakten und klar begrenztem AoE",
      "kind": "sequence",
-     "status": []
+     "status": [
+      "root"
+     ]
     }
    }
   },
@@ -1013,29 +1094,34 @@ export const BUFF_FORM_DATA = Object.freeze([
    },
    "defense": {
     "name": "Refractive Guard",
-    "text": "Perfect Block erzeugt einen richtungsgebundenen Reflektionsimpuls."
+    "text": "Perfect Block erzeugt einen richtungsgebundenen Reflektionsimpuls.",
+    "counter": "reflect",
+    "status": []
    },
    "grab": {
     "name": "Mirror Theft",
-    "text": "Nahe figur wird kurz von zwei spiegelarmen umfasst und nach vorne gedreht."
+    "text": "Nahe figur wird kurz von zwei spiegelarmen umfasst und nach vorne gedreht.",
+    "throw": "spin",
+    "status": []
    },
    "jump": {
     "name": "Split Leap",
-    "text": "Platten schweben beim Apex nach oben weiter, während der Charakter bereits fällt."
+    "text": "Platten schweben beim Apex nach oben weiter, während der Charakter bereits fällt.",
+    "landing": "dust"
    },
    "forward": {
     "short": {
      "name": "Glass Thorn",
      "text": "schneller Single-Target-Stich.",
      "action": "einen kompakten Materialstoß mit scharfem Einschlagspunkt und kurzem Nachziehen",
-     "kind": "cone",
+     "kind": "projectile",
      "status": []
     },
     "full": {
      "name": "Fractured Volley",
      "text": "Multi-Hit auf Vorderlinie.",
      "action": "ein mehrteiliges Projektil mit gestaffelten Vorder- und Rückschichten; kontrollierte Spur, variierender Kern und ein getrenntes End-Impact-Volumen",
-     "kind": "projectile",
+     "kind": "cone",
      "status": []
     }
    },
@@ -1070,13 +1156,13 @@ export const BUFF_FORM_DATA = Object.freeze([
      "text": "große AoE mit begrenztem Verwirrungseffekt.",
      "action": "eine verzahnte Abfolge von Boden- oder Luftfeldern mit ungleichzeitigen Impakten und klar begrenztem AoE",
      "kind": "sequence",
-     "status": []
+     "status": [
+      "stun"
+     ]
     }
    }
   },
-  "statusAll": [
-   "shock"
-  ]
+  "statusAll": []
  },
  {
   "id": "T10",
@@ -1107,15 +1193,22 @@ export const BUFF_FORM_DATA = Object.freeze([
    },
    "defense": {
     "name": "Wing Cocoon",
-    "text": "Perfect Block stößt eine Federwelle zurück."
+    "text": "Perfect Block stößt eine Federwelle zurück.",
+    "counter": "spike",
+    "status": []
    },
    "grab": {
     "name": "Heart Tether",
-    "text": "Kurzes heranziehen, dann seitlicher federwurf."
+    "text": "Kurzes heranziehen, dann seitlicher federwurf.",
+    "throw": "pull",
+    "status": [
+     "pull"
+    ]
    },
    "jump": {
     "name": "Bloodborne Jump",
-    "text": "Röhren verlängern sich beim Takeoff nach unten und schwingen vor der Landung hoch."
+    "text": "Röhren verlängern sich beim Takeoff nach unten und schwingen vor der Landung hoch.",
+    "landing": "dust"
    },
    "forward": {
     "short": {
@@ -1166,7 +1259,9 @@ export const BUFF_FORM_DATA = Object.freeze([
      "text": "AoE, lifesteal mit Gesamtlimit.",
      "action": "eine verzahnte Abfolge von Boden- oder Luftfeldern mit ungleichzeitigen Impakten und klar begrenztem AoE",
      "kind": "sequence",
-     "status": []
+     "status": [
+      "heal"
+     ]
     }
    }
   },
@@ -1202,15 +1297,20 @@ export const BUFF_FORM_DATA = Object.freeze([
    },
    "defense": {
     "name": "Frost Tail Guard",
-    "text": "Perfect Block erzeugt kurzes Reiffeld."
+    "text": "Perfect Block erzeugt kurzes Reiffeld.",
+    "counter": "frost",
+    "status": []
    },
    "grab": {
     "name": "Vulpine Snare",
-    "text": "Der gegner wird eng umschlungen und über die hüfte geworfen."
+    "text": "Der gegner wird eng umschlungen und über die hüfte geworfen.",
+    "throw": "over",
+    "status": []
    },
    "jump": {
     "name": "Foxbound",
-    "text": "Kometenbänder hängen beim Apex frei und falten sich bei Landung in Falten."
+    "text": "Kometenbänder hängen beim Apex frei und falten sich bei Landung in Falten.",
+    "landing": "dust"
    },
    "forward": {
     "short": {
@@ -1218,13 +1318,15 @@ export const BUFF_FORM_DATA = Object.freeze([
      "text": "einzelner Chill-Treffer.",
      "action": "einen kompakten Materialstoß mit scharfem Einschlagspunkt und kurzem Nachziehen",
      "kind": "cone",
-     "status": []
+     "status": [
+      "slow"
+     ]
     },
     "full": {
      "name": "Aurora Foxfire",
      "text": "breiter Frost-AoE mit Slow.",
      "action": "eine verzahnte Abfolge von Boden- oder Luftfeldern mit ungleichzeitigen Impakten und klar begrenztem AoE",
-     "kind": "projectile",
+     "kind": "cone",
      "status": [
       "freeze",
       "slow"
@@ -1245,7 +1347,7 @@ export const BUFF_FORM_DATA = Object.freeze([
      "name": "Nine-Star Leap",
      "text": "großer Anti-Air, keine dauerhafte Freeze-Kette.",
      "action": "eine mehrstufige vertikale Materialentfaltung, deren Leuchtkerne nach oben wandern",
-     "kind": "sequence",
+     "kind": "pillar",
      "status": []
     }
    },
@@ -1264,7 +1366,9 @@ export const BUFF_FORM_DATA = Object.freeze([
      "text": "große AoE mit Sicht- und Tempoeffekt.",
      "action": "eine verzahnte Abfolge von Boden- oder Luftfeldern mit ungleichzeitigen Impakten und klar begrenztem AoE",
      "kind": "sequence",
-     "status": []
+     "status": [
+      "slow"
+     ]
     }
    }
   },
@@ -1302,15 +1406,20 @@ export const BUFF_FORM_DATA = Object.freeze([
    },
    "defense": {
     "name": "Paw Bastion",
-    "text": "Perfect Block schlägt die Pranken weg."
+    "text": "Perfect Block schlägt die Pranken weg.",
+    "counter": "shove",
+    "status": []
    },
    "grab": {
     "name": "Tiger Hold",
-    "text": "Das ziel wird mit beiden pranken festgehalten und seitlich abgeschüttelt."
+    "text": "Das ziel wird mit beiden pranken festgehalten und seitlich abgeschüttelt.",
+    "throw": "side",
+    "status": []
    },
    "jump": {
     "name": "Prowler Leap",
-    "text": "Die Bügel springen mit dem Körper, verlängern sich beim Fallen und federn auf dem Boden ab."
+    "text": "Die Bügel springen mit dem Körper, verlängern sich beim Fallen und federn auf dem Boden ab.",
+    "landing": "spring"
    },
    "forward": {
     "short": {
@@ -1324,8 +1433,10 @@ export const BUFF_FORM_DATA = Object.freeze([
      "name": "Tiger Roar",
      "text": "breiter Taunt-artiger Aggroimpuls für PvE.",
      "action": "eine wesentlich größere, mehrschichtige Kraftentladung mit eigenständigem Angriffspfad und Sekundärreaktion",
-     "kind": "projectile",
-     "status": []
+     "kind": "cone",
+     "status": [
+      "stun"
+     ]
     }
    },
    "up": {
@@ -1361,7 +1472,9 @@ export const BUFF_FORM_DATA = Object.freeze([
      "text": "große Ringwelle mit Aggrokontrolle.",
      "action": "eine verzahnte Abfolge von Boden- oder Luftfeldern mit ungleichzeitigen Impakten und klar begrenztem AoE",
      "kind": "ring",
-     "status": []
+     "status": [
+      "stun"
+     ]
     }
    }
   },
@@ -1396,15 +1509,22 @@ export const BUFF_FORM_DATA = Object.freeze([
    },
    "defense": {
     "name": "Silk Parry",
-    "text": "Perfect Block leitet Strom entlang der Waffe ab."
+    "text": "Perfect Block leitet Strom entlang der Waffe ab.",
+    "counter": "shock",
+    "status": []
    },
    "grab": {
     "name": "Wire Snare",
-    "text": "Ein enger seidenblitz umschlingt das nahe ziel, dann armzug mit schulterwurf."
+    "text": "Ein enger seidenblitz umschlingt das nahe ziel, dann armzug mit schulterwurf.",
+    "throw": "forward",
+    "status": [
+     "shock"
+    ]
    },
    "jump": {
     "name": "Loom Jump",
-    "text": "Die Spule trägt beim Sprung die Trägheit, Fäden hängen am Scheitel etwas durch."
+    "text": "Die Spule trägt beim Sprung die Trägheit, Fäden hängen am Scheitel etwas durch.",
+    "landing": "dust"
    },
    "forward": {
     "short": {
@@ -1419,7 +1539,8 @@ export const BUFF_FORM_DATA = Object.freeze([
      "text": "enges Mehrfachprojektil.",
      "action": "ein mehrteiliges Projektil mit gestaffelten Vorder- und Rückschichten; kontrollierte Spur, variierender Kern und ein getrenntes End-Impact-Volumen",
      "kind": "projectile",
-     "status": []
+     "status": [],
+     "pierce": true
     }
    },
    "up": {
@@ -1453,13 +1574,13 @@ export const BUFF_FORM_DATA = Object.freeze([
      "text": "AoE mit kurzer Unterbrechung.",
      "action": "eine verzahnte Abfolge von Boden- oder Luftfeldern mit ungleichzeitigen Impakten und klar begrenztem AoE",
      "kind": "sequence",
-     "status": []
+     "status": [
+      "stun"
+     ]
     }
    }
   },
-  "statusAll": [
-   "shock"
-  ]
+  "statusAll": []
  },
  {
   "id": "T14",
@@ -1490,15 +1611,20 @@ export const BUFF_FORM_DATA = Object.freeze([
    },
    "defense": {
     "name": "Script Ward",
-    "text": "Perfect Block zeichnet die gegnerische Energie als Konterzeichen nach."
+    "text": "Perfect Block zeichnet die gegnerische Energie als Konterzeichen nach.",
+    "counter": "riposte",
+    "status": []
    },
    "grab": {
     "name": "Binding Diagram",
-    "text": "Das nahe ziel wird in zwei geschlossene linien eingespannt und weggeschoben."
+    "text": "Das nahe ziel wird in zwei geschlossene linien eingespannt und weggeschoben.",
+    "throw": "forward",
+    "status": []
    },
    "jump": {
     "name": "Glyph Step",
-    "text": "Platten schwingen beim Jump wie lose Maßschablonen und docken beim Landen wieder an."
+    "text": "Platten schwingen beim Jump wie lose Maßschablonen und docken beim Landen wieder an.",
+    "landing": "dust"
    },
    "forward": {
     "short": {
@@ -1540,7 +1666,9 @@ export const BUFF_FORM_DATA = Object.freeze([
      "text": "Nahbereichsinterrupt.",
      "action": "einen präzisen Fersen-, Hand- oder Kantenimpuls mit kurzen Bodenbruchpixeln",
      "kind": "ring",
-     "status": []
+     "status": [
+      "stun"
+     ]
     },
     "full": {
      "name": "Circle Codex",
@@ -1581,22 +1709,30 @@ export const BUFF_FORM_DATA = Object.freeze([
    },
    "defense": {
     "name": "Wave Guard",
-    "text": "Perfect Block lässt einen Impuls in Abprallrichtung zurücklaufen."
+    "text": "Perfect Block lässt einen Impuls in Abprallrichtung zurücklaufen.",
+    "counter": "reflect",
+    "status": []
    },
    "grab": {
     "name": "Element Clamp",
-    "text": "Kurze viertelkreis-klammer fixiert den gegner; anschließender rückstoß."
+    "text": "Kurze viertelkreis-klammer fixiert den gegner; anschließender rückstoß.",
+    "throw": "forward",
+    "status": [
+     "freeze",
+     "root"
+    ]
    },
    "jump": {
     "name": "Prism Jump",
-    "text": "Bänder schwimmen beim Apex träge auseinander und verbinden sich beim Landen neu."
+    "text": "Bänder schwimmen beim Apex träge auseinander und verbinden sich beim Landen neu.",
+    "landing": "fan"
    },
    "forward": {
     "short": {
      "name": "Heat Bolt",
      "text": "schneller Brand-Poke.",
      "action": "einen kompakten Materialstoß mit scharfem Einschlagspunkt und kurzem Nachziehen",
-     "kind": "cone",
+     "kind": "projectile",
      "status": [
       "burn"
      ]
@@ -1606,7 +1742,10 @@ export const BUFF_FORM_DATA = Object.freeze([
      "text": "kombinierte, aber gedeckelte Multi-Element-Wirkung.",
      "action": "eine wesentlich größere, mehrschichtige Kraftentladung mit eigenständigem Angriffspfad und Sekundärreaktion",
      "kind": "projectile",
-     "status": []
+     "status": [
+      "burn",
+      "slow"
+     ]
     }
    },
    "up": {
@@ -1615,7 +1754,9 @@ export const BUFF_FORM_DATA = Object.freeze([
      "text": "schneller Anti-Air.",
      "action": "eine schnell ansteigende, scharf fragmentierte Stoßbahn über Kopf und Schulter",
      "kind": "burst",
-     "status": []
+     "status": [
+      "launch"
+     ]
     },
     "full": {
      "name": "Prismatic Rise",
@@ -1642,7 +1783,9 @@ export const BUFF_FORM_DATA = Object.freeze([
      "text": "große AoE mit Fokus auf Zonenkontrolle.",
      "action": "eine verzahnte Abfolge von Boden- oder Luftfeldern mit ungleichzeitigen Impakten und klar begrenztem AoE",
      "kind": "sequence",
-     "status": []
+     "status": [
+      "slow"
+     ]
     }
    }
   },
@@ -1679,22 +1822,29 @@ export const BUFF_FORM_DATA = Object.freeze([
    },
    "defense": {
     "name": "Djinn Halo",
-    "text": "Perfect Block setzt einen Geist als leichten Konter frei."
+    "text": "Perfect Block setzt einen Geist als leichten Konter frei.",
+    "counter": "riposte",
+    "status": [
+     "freeze"
+    ]
    },
    "grab": {
     "name": "Crown Lariat",
-    "text": "Kurzer griff und gemeinsame drehbewegung werfen das ziel weg."
+    "text": "Kurzer griff und gemeinsame drehbewegung werfen das ziel weg.",
+    "throw": "spin",
+    "status": []
    },
    "jump": {
     "name": "Summoner Hop",
-    "text": "Beim Jump setzen die Pendel verzögert nach, am Apex überholen sie den Spieler."
+    "text": "Beim Jump setzen die Pendel verzögert nach, am Apex überholen sie den Spieler.",
+    "landing": "dust"
    },
    "forward": {
     "short": {
      "name": "Spirit Flick",
      "text": "schneller Poke.",
      "action": "einen kompakten Materialstoß mit scharfem Einschlagspunkt und kurzem Nachziehen",
-     "kind": "cone",
+     "kind": "projectile",
      "status": []
     },
     "full": {
@@ -1773,22 +1923,27 @@ export const BUFF_FORM_DATA = Object.freeze([
    },
    "defense": {
     "name": "Feather Veil",
-    "text": "Perfect Block wirft eine einzelne Feder zurück."
+    "text": "Perfect Block wirft eine einzelne Feder zurück.",
+    "counter": "spike",
+    "status": []
    },
    "grab": {
     "name": "Talon Rescue",
-    "text": "Ein naher gegner wird gegriffen und in einem flügelbogen weggestoßen."
+    "text": "Ein naher gegner wird gegriffen und in einem flügelbogen weggestoßen.",
+    "throw": "forward",
+    "status": []
    },
    "jump": {
     "name": "Phoenix Bound",
-    "text": "Beim Aufstieg lösen sich leichte Schindeln ab; Landung lässt neue nachwachsen."
+    "text": "Beim Aufstieg lösen sich leichte Schindeln ab; Landung lässt neue nachwachsen.",
+    "landing": "dust"
    },
    "forward": {
     "short": {
      "name": "Feather Shot",
      "text": "kleiner Fernkampf-Poke.",
      "action": "einen kompakten Materialstoß mit scharfem Einschlagspunkt und kurzem Nachziehen",
-     "kind": "cone",
+     "kind": "projectile",
      "status": []
     },
     "full": {
@@ -1797,7 +1952,7 @@ export const BUFF_FORM_DATA = Object.freeze([
      "action": "eine wesentlich größere, mehrschichtige Kraftentladung mit eigenständigem Angriffspfad und Sekundärreaktion",
      "kind": "projectile",
      "status": [
-      "shock"
+      "burn"
      ]
     }
    },
@@ -1835,15 +1990,15 @@ export const BUFF_FORM_DATA = Object.freeze([
      "action": "eine verzahnte Abfolge von Boden- oder Luftfeldern mit ungleichzeitigen Impakten und klar begrenztem AoE",
      "kind": "sequence",
      "status": [
-      "heal"
+      "heal",
+      "burn"
      ]
     }
    }
   },
   "statusAll": [
    "burn",
-   "heal",
-   "shock"
+   "heal"
   ]
  },
  {
@@ -1875,22 +2030,27 @@ export const BUFF_FORM_DATA = Object.freeze([
    },
    "defense": {
     "name": "Chimera Shell",
-    "text": "Perfect Block presst Horn nach vorne."
+    "text": "Perfect Block presst Horn nach vorne.",
+    "counter": "spike",
+    "status": []
    },
    "grab": {
     "name": "Tail Clamp",
-    "text": "Panzerarm greift zu und stößt das ziel aus der schwanzschlinge."
+    "text": "Panzerarm greift zu und stößt das ziel aus der schwanzschlinge.",
+    "throw": "forward",
+    "status": []
    },
    "jump": {
     "name": "Soul Morph Hop",
-    "text": "Gitter streckt sich beim Absprung, hängt am Apex sichtbar durch und federt bei Landung."
+    "text": "Gitter streckt sich beim Absprung, hängt am Apex sichtbar durch und federt bei Landung.",
+    "landing": "spring"
    },
    "forward": {
     "short": {
      "name": "Horn Shot",
      "text": "linearer Poke.",
      "action": "einen kompakten Materialstoß mit scharfem Einschlagspunkt und kurzem Nachziehen",
-     "kind": "cone",
+     "kind": "projectile",
      "status": []
     },
     "full": {
@@ -1898,9 +2058,8 @@ export const BUFF_FORM_DATA = Object.freeze([
      "text": "hoher Durchschlag und Aufprallexplosion.",
      "action": "eine wesentlich größere, mehrschichtige Kraftentladung mit eigenständigem Angriffspfad und Sekundärreaktion",
      "kind": "projectile",
-     "status": [
-      "shock"
-     ]
+     "status": [],
+     "pierce": true
     }
    },
    "up": {
@@ -1937,14 +2096,13 @@ export const BUFF_FORM_DATA = Object.freeze([
      "action": "eine verzahnte Abfolge von Boden- oder Luftfeldern mit ungleichzeitigen Impakten und klar begrenztem AoE",
      "kind": "sequence",
      "status": [
-      "stun"
+      "slow"
      ]
     }
    }
   },
   "statusAll": [
-   "stun",
-   "shock"
+   "stun"
   ]
  },
  {
@@ -1976,15 +2134,24 @@ export const BUFF_FORM_DATA = Object.freeze([
    },
    "defense": {
     "name": "Oath Shield",
-    "text": "Perfect Block führt unmittelbar einen Schildstoß aus."
+    "text": "Perfect Block führt unmittelbar einen Schildstoß aus.",
+    "counter": "shove",
+    "status": [
+     "shield"
+    ]
    },
    "grab": {
     "name": "Grapple Lock",
-    "text": "Gegner wird am unterarm fixiert und über die hüfte geschoben."
+    "text": "Gegner wird am unterarm fixiert und über die hüfte geschoben.",
+    "throw": "over",
+    "status": [
+     "root"
+    ]
    },
    "jump": {
     "name": "Armor Vault",
-    "text": "Beim Jump bleiben die Anker einen Frame zurück und ziehen dann nach, die Landung stampft sie ein."
+    "text": "Beim Jump bleiben die Anker einen Frame zurück und ziehen dann nach, die Landung stampft sie ein.",
+    "landing": "stomp"
    },
    "forward": {
     "short": {
@@ -2000,7 +2167,7 @@ export const BUFF_FORM_DATA = Object.freeze([
      "name": "Bastion Beam",
      "text": "durchdringender Push bei kurzer Reichweite.",
      "action": "ein mehrteiliges Projektil mit gestaffelten Vorder- und Rückschichten; kontrollierte Spur, variierender Kern und ein getrenntes End-Impact-Volumen",
-     "kind": "ring",
+     "kind": "beam",
      "status": []
     }
    },
@@ -2077,22 +2244,27 @@ export const BUFF_FORM_DATA = Object.freeze([
    },
    "defense": {
     "name": "Counter Stance",
-    "text": "Perfect Block antwortet mit Gegenstich."
+    "text": "Perfect Block antwortet mit Gegenstich.",
+    "counter": "riposte",
+    "status": []
    },
    "grab": {
     "name": "Bind and Turn",
-    "text": "Ein niedriger drehwurf folgt einem präzisen fußschritt."
+    "text": "Ein niedriger drehwurf folgt einem präzisen fußschritt.",
+    "throw": "spin",
+    "status": []
    },
    "jump": {
     "name": "Dance Vault",
-    "text": "Jump zeigt Taktmarken in aufsteigendem Tempo, Landung setzt den finalen Beat."
+    "text": "Jump zeigt Taktmarken in aufsteigendem Tempo, Landung setzt den finalen Beat.",
+    "landing": "stomp"
    },
    "forward": {
     "short": {
      "name": "Pulse Cut",
      "text": "schneller Sword-Poke.",
      "action": "einen kurzen, materiell ausgefransten Wellenrand mit unterbrochenen Segmenten statt eines glatten Vollkreises",
-     "kind": "ring",
+     "kind": "cone",
      "status": []
     },
     "full": {
@@ -2171,15 +2343,22 @@ export const BUFF_FORM_DATA = Object.freeze([
    },
    "defense": {
     "name": "Aura Brace",
-    "text": "Perfect Block löst kurzen Lichtblitz aus."
+    "text": "Perfect Block löst kurzen Lichtblitz aus.",
+    "counter": "flash",
+    "status": [
+     "shock"
+    ]
    },
    "grab": {
     "name": "Ki Grip",
-    "text": "Kurzer griff, drehung und ki-schubwurf."
+    "text": "Kurzer griff, drehung und ki-schubwurf.",
+    "throw": "spin",
+    "status": []
    },
    "jump": {
     "name": "Star Jump",
-    "text": "Satelliten driften beim Apex weiter und schnappen vor der Landung zurück."
+    "text": "Satelliten driften beim Apex weiter und schnappen vor der Landung zurück.",
+    "landing": "dust"
    },
    "forward": {
     "short": {
@@ -2267,15 +2446,22 @@ export const BUFF_FORM_DATA = Object.freeze([
    },
    "defense": {
     "name": "Fire Scale Guard",
-    "text": "Perfect Block schleudert Flammenfunken zurück."
+    "text": "Perfect Block schleudert Flammenfunken zurück.",
+    "counter": "spike",
+    "status": [
+     "shock"
+    ]
    },
    "grab": {
     "name": "Burning Maw",
-    "text": "Der spieler dreht das ziel kurz und wirft es mit feuerschweif."
+    "text": "Der spieler dreht das ziel kurz und wirft es mit feuerschweif.",
+    "throw": "spin",
+    "status": []
    },
    "jump": {
     "name": "Dragon Leap",
-    "text": "Kacheln kippen beim Takeoff zurück, beim Landen kurz nach vorne."
+    "text": "Kacheln kippen beim Takeoff zurück, beim Landen kurz nach vorne.",
+    "landing": "dust"
    },
    "forward": {
     "short": {
@@ -2368,32 +2554,37 @@ export const BUFF_FORM_DATA = Object.freeze([
    },
    "defense": {
     "name": "Negation Guard",
-    "text": "Perfect Block schwächt nächstes Projektil statt zu reflektieren."
+    "text": "Perfect Block schwächt nächstes Projektil statt zu reflektieren.",
+    "counter": "reflect",
+    "status": []
    },
    "grab": {
     "name": "Counter Bind",
-    "text": "Gegner wird kurz gepackt und in die entgegengesetzte richtung gezogen."
+    "text": "Gegner wird kurz gepackt und in die entgegengesetzte richtung gezogen.",
+    "throw": "pull",
+    "status": []
    },
    "jump": {
     "name": "Eclipse Jump",
-    "text": "Negativräume bleiben beim Absprung kurz ortsfest und docken am Apex wieder an."
+    "text": "Negativräume bleiben beim Absprung kurz ortsfest und docken am Apex wieder an.",
+    "landing": "dust"
    },
    "forward": {
     "short": {
      "name": "Mute Slash",
      "text": "geringer Schaden, reduzierte Buffdauer am Ziel.",
      "action": "einen kurzen, materiell ausgefransten Wellenrand mit unterbrochenen Segmenten statt eines glatten Vollkreises",
-     "kind": "ring",
-     "status": []
+     "kind": "cone",
+     "status": [
+      "slow"
+     ]
     },
     "full": {
      "name": "Spell Eater",
      "text": "stärker gegen aktive Zauberprojektionen.",
      "action": "eine wesentlich größere, mehrschichtige Kraftentladung mit eigenständigem Angriffspfad und Sekundärreaktion",
      "kind": "projectile",
-     "status": [
-      "shock"
-     ]
+     "status": []
     }
    },
    "up": {
@@ -2410,7 +2601,7 @@ export const BUFF_FORM_DATA = Object.freeze([
      "name": "Eclipse Pillar",
      "text": "Anti-Air und verringerte Elementverstärkung.",
      "action": "eine verzahnte Abfolge von Boden- oder Luftfeldern mit ungleichzeitigen Impakten und klar begrenztem AoE",
-     "kind": "ring",
+     "kind": "pillar",
      "status": []
     }
    },
@@ -2429,13 +2620,13 @@ export const BUFF_FORM_DATA = Object.freeze([
      "text": "AoE-Konter mit engem Timing.",
      "action": "eine verzahnte Abfolge von Boden- oder Luftfeldern mit ungleichzeitigen Impakten und klar begrenztem AoE",
      "kind": "sequence",
-     "status": []
+     "status": [
+      "stun"
+     ]
     }
    }
   },
-  "statusAll": [
-   "shock"
-  ]
+  "statusAll": []
  },
  {
   "id": "T24",
@@ -2465,15 +2656,22 @@ export const BUFF_FORM_DATA = Object.freeze([
    },
    "defense": {
     "name": "Royal Guard",
-    "text": "Perfect Block führt Wächterkonter aus."
+    "text": "Perfect Block führt Wächterkonter aus.",
+    "counter": "riposte",
+    "status": []
    },
    "grab": {
     "name": "Phantom Seize",
-    "text": "Der zweite zieht die beine weg; ziel wird kurz vor den charakter geworfen."
+    "text": "Der zweite zieht die beine weg; ziel wird kurz vor den charakter geworfen.",
+    "throw": "slam",
+    "status": [
+     "pull"
+    ]
    },
    "jump": {
     "name": "King Step",
-    "text": "Marionetten pendeln unter dem Springer und überholen ihn beim Apex."
+    "text": "Marionetten pendeln unter dem Springer und überholen ihn beim Apex.",
+    "landing": "dust"
    },
    "forward": {
     "short": {
@@ -2487,8 +2685,10 @@ export const BUFF_FORM_DATA = Object.freeze([
      "name": "Legion Spear",
      "text": "Durchdringung und temporäre Schattenspur.",
      "action": "ein mehrteiliges Projektil mit gestaffelten Vorder- und Rückschichten; kontrollierte Spur, variierender Kern und ein getrenntes End-Impact-Volumen",
-     "kind": "ring",
-     "status": []
+     "kind": "beam",
+     "status": [
+      "slow"
+     ]
     }
    },
    "up": {
@@ -2524,7 +2724,9 @@ export const BUFF_FORM_DATA = Object.freeze([
      "text": "große AoE mit kontrollierter Zone.",
      "action": "eine verzahnte Abfolge von Boden- oder Luftfeldern mit ungleichzeitigen Impakten und klar begrenztem AoE",
      "kind": "sequence",
-     "status": []
+     "status": [
+      "root"
+     ]
     }
    }
   },
@@ -2559,15 +2761,23 @@ export const BUFF_FORM_DATA = Object.freeze([
    },
    "defense": {
     "name": "Hemo Shell",
-    "text": "Perfect Block bricht eine Klinge als Gegenstoß ab."
+    "text": "Perfect Block bricht eine Klinge als Gegenstoß ab.",
+    "counter": "spike",
+    "status": []
    },
    "grab": {
     "name": "Scarlet Bind",
-    "text": "Die bänder verhärten sich; spieler zieht ziel zu boden und wirft es weg."
+    "text": "Die bänder verhärten sich; spieler zieht ziel zu boden und wirft es weg.",
+    "throw": "slam",
+    "status": [
+     "pull",
+     "knockdown"
+    ]
    },
    "jump": {
     "name": "Blood Leap",
-    "text": "Beim Jump hängen die Kapillaren leicht durch und ziehen sich vor der Landung zusammen."
+    "text": "Beim Jump hängen die Kapillaren leicht durch und ziehen sich vor der Landung zusammen.",
+    "landing": "dust"
    },
    "forward": {
     "short": {
@@ -2575,16 +2785,16 @@ export const BUFF_FORM_DATA = Object.freeze([
      "text": "kleiner Punktionshit.",
      "action": "ein schmales, auf die Facing-Achse ausgerichtetes Projektil aus mehrlagigen Materialfragmenten; vorne harte Leuchtkante, hinten feiner Splitter-Sog",
      "kind": "projectile",
-     "status": [
-      "shock"
-     ]
+     "status": []
     },
     "full": {
      "name": "Hemal Lance",
      "text": "Durchdringung und Blutungsmarker.",
      "action": "ein mehrteiliges Projektil mit gestaffelten Vorder- und Rückschichten; kontrollierte Spur, variierender Kern und ein getrenntes End-Impact-Volumen",
-     "kind": "ring",
-     "status": []
+     "kind": "beam",
+     "status": [
+      "burn"
+     ]
     }
    },
    "up": {
@@ -2593,7 +2803,9 @@ export const BUFF_FORM_DATA = Object.freeze([
      "text": "Anti-Air mit kurzem Zug.",
      "action": "eine kurze, materiell verankerte Fangbewegung vor der Spielfigur ohne Treffer-Magnetismus",
      "kind": "burst",
-     "status": []
+     "status": [
+      "pull"
+     ]
     },
     "full": {
      "name": "Crimson Gallows",
@@ -2611,14 +2823,18 @@ export const BUFF_FORM_DATA = Object.freeze([
      "text": "kleine schmerzhafte Nahzone.",
      "action": "einen kurzen, materiell ausgefransten Wellenrand mit unterbrochenen Segmenten statt eines glatten Vollkreises",
      "kind": "ring",
-     "status": []
+     "status": [
+      "burn"
+     ]
     },
     "full": {
      "name": "Red Thorn Garden",
      "text": "große AoE mit Blutungsfeld.",
      "action": "eine verzahnte Abfolge von Boden- oder Luftfeldern mit ungleichzeitigen Impakten und klar begrenztem AoE",
      "kind": "sequence",
-     "status": []
+     "status": [
+      "burn"
+     ]
     }
    }
   },
@@ -2655,15 +2871,22 @@ export const BUFF_FORM_DATA = Object.freeze([
    },
    "defense": {
     "name": "Ancestor Brace",
-    "text": "Perfect Block mit großem Gegenarm."
+    "text": "Perfect Block mit großem Gegenarm.",
+    "counter": "shove",
+    "status": []
    },
    "grab": {
     "name": "Spirit Wrestle",
-    "text": "Hand hebt es vor dem spieler an und wirft es über die schulter."
+    "text": "Hand hebt es vor dem spieler an und wirft es über die schulter.",
+    "throw": "over",
+    "status": [
+     "launch"
+    ]
    },
    "jump": {
     "name": "Ancestor Leap",
-    "text": "Zeitversatz wird beim Jump besonders sichtbar: Schnurarme landen nacheinander."
+    "text": "Zeitversatz wird beim Jump besonders sichtbar: Schnurarme landen nacheinander.",
+    "landing": "dust"
    },
    "forward": {
     "short": {
@@ -2677,7 +2900,7 @@ export const BUFF_FORM_DATA = Object.freeze([
      "name": "Ancestor Blade",
      "text": "breiter Fernschadensschnitt.",
      "action": "eine breite, schichtweise aufgefaltete Schneidfront mit getrennten Primär- und Sekundärspuren",
-     "kind": "projectile",
+     "kind": "wall",
      "status": []
     }
    },
@@ -2751,15 +2974,20 @@ export const BUFF_FORM_DATA = Object.freeze([
    },
    "defense": {
     "name": "Seam Shield",
-    "text": "Perfect Block verschiebt den visuellen Impuls seitlich."
+    "text": "Perfect Block verschiebt den visuellen Impuls seitlich.",
+    "counter": "reflect",
+    "status": []
    },
    "grab": {
     "name": "Rift Clamp",
-    "text": "Arme greifen durch kurze risse und werfen ziel zurück."
+    "text": "Arme greifen durch kurze risse und werfen ziel zurück.",
+    "throw": "forward",
+    "status": []
    },
    "jump": {
     "name": "Portal Hop",
-    "text": "Beim Jump öffnen sich Falten oberhalb des Spielers und schließen mit der Landung."
+    "text": "Beim Jump öffnen sich Falten oberhalb des Spielers und schließen mit der Landung.",
+    "landing": "fan"
    },
    "forward": {
     "short": {
@@ -2773,10 +3001,8 @@ export const BUFF_FORM_DATA = Object.freeze([
      "name": "Dimension Spear",
      "text": "Durchdringung und leichter Positionsversatz.",
      "action": "ein mehrteiliges Projektil mit gestaffelten Vorder- und Rückschichten; kontrollierte Spur, variierender Kern und ein getrenntes End-Impact-Volumen",
-     "kind": "ring",
-     "status": [
-      "shock"
-     ]
+     "kind": "beam",
+     "status": []
     }
    },
    "up": {
@@ -2819,8 +3045,7 @@ export const BUFF_FORM_DATA = Object.freeze([
    }
   },
   "statusAll": [
-   "pull",
-   "shock"
+   "pull"
   ]
  },
  {
@@ -2851,15 +3076,20 @@ export const BUFF_FORM_DATA = Object.freeze([
    },
    "defense": {
     "name": "Rule Aegis",
-    "text": "Perfect Block dreht den Torbogen in Richtung Angreifer."
+    "text": "Perfect Block dreht den Torbogen in Richtung Angreifer.",
+    "counter": "reflect",
+    "status": []
    },
    "grab": {
     "name": "Constraint Grip",
-    "text": "Ein geschlossener rahmen klemmt es kurz ein und stößt es hinaus."
+    "text": "Ein geschlossener rahmen klemmt es kurz ein und stößt es hinaus.",
+    "throw": "forward",
+    "status": []
    },
    "jump": {
     "name": "Threshold Leap",
-    "text": "Beim Jump verschieben sich Rasterebenen perspektivisch, bleiben aber am Boden verankert."
+    "text": "Beim Jump verschieben sich Rasterebenen perspektivisch, bleiben aber am Boden verankert.",
+    "landing": "dust"
    },
    "forward": {
     "short": {
@@ -2910,7 +3140,9 @@ export const BUFF_FORM_DATA = Object.freeze([
      "text": "große, vorher angezeigte Kontrollzone ohne Garantie-Treffer.",
      "action": "eine verzahnte Abfolge von Boden- oder Luftfeldern mit ungleichzeitigen Impakten und klar begrenztem AoE",
      "kind": "sequence",
-     "status": []
+     "status": [
+      "root"
+     ]
     }
    }
   },
@@ -2945,29 +3177,34 @@ export const BUFF_FORM_DATA = Object.freeze([
    },
    "defense": {
     "name": "Antique Ward",
-    "text": "Perfect Block stößt Steinplatte zurück."
+    "text": "Perfect Block stößt Steinplatte zurück.",
+    "counter": "spike",
+    "status": []
    },
    "grab": {
     "name": "Royal Chain",
-    "text": "Kurzer griff an schulter oder arm, drehung und kettenwurf."
+    "text": "Kurzer griff an schulter oder arm, drehung und kettenwurf.",
+    "throw": "spin",
+    "status": []
    },
    "jump": {
     "name": "Artifact Leap",
-    "text": "Apparate schleifen beim Jump unterschiedliche Trägheitskurven."
+    "text": "Apparate schleifen beim Jump unterschiedliche Trägheitskurven.",
+    "landing": "dust"
    },
    "forward": {
     "short": {
      "name": "Gold Shard",
      "text": "einzelner Poke.",
      "action": "einen kompakten Materialstoß mit scharfem Einschlagspunkt und kurzem Nachziehen",
-     "kind": "cone",
+     "kind": "projectile",
      "status": []
     },
     "full": {
      "name": "Kingmaker Spear",
      "text": "durchdringender Fernangriff.",
      "action": "ein mehrteiliges Projektil mit gestaffelten Vorder- und Rückschichten; kontrollierte Spur, variierender Kern und ein getrenntes End-Impact-Volumen",
-     "kind": "ring",
+     "kind": "beam",
      "status": []
     }
    },
@@ -3005,7 +3242,7 @@ export const BUFF_FORM_DATA = Object.freeze([
      "action": "eine verzahnte Abfolge von Boden- oder Luftfeldern mit ungleichzeitigen Impakten und klar begrenztem AoE",
      "kind": "sequence",
      "status": [
-      "stun"
+      "slow"
      ]
     }
    }
@@ -3042,15 +3279,22 @@ export const BUFF_FORM_DATA = Object.freeze([
    },
    "defense": {
     "name": "Cat Veil",
-    "text": "Perfect Block mit bissiger Rauchklaue."
+    "text": "Perfect Block mit bissiger Rauchklaue.",
+    "counter": "shove",
+    "status": []
    },
    "grab": {
     "name": "Familiar Snatch",
-    "text": "Spieler zieht ziel über die hüfte und stößt es mit rauchklaue weg."
+    "text": "Spieler zieht ziel über die hüfte und stößt es mit rauchklaue weg.",
+    "throw": "over",
+    "status": [
+     "pull"
+    ]
    },
    "jump": {
     "name": "Cat Jump",
-    "text": "Das Band bleibt beim Takeoff unten und steigt einen Takt später nach."
+    "text": "Das Band bleibt beim Takeoff unten und steigt einen Takt später nach.",
+    "landing": "stomp"
    },
    "forward": {
     "short": {
@@ -3064,7 +3308,7 @@ export const BUFF_FORM_DATA = Object.freeze([
      "name": "Nine Lives Lash",
      "text": "breiter Fernhieb.",
      "action": "eine wesentlich größere, mehrschichtige Kraftentladung mit eigenständigem Angriffspfad und Sekundärreaktion",
-     "kind": "projectile",
+     "kind": "wall",
      "status": []
     }
    },
@@ -3092,7 +3336,9 @@ export const BUFF_FORM_DATA = Object.freeze([
      "text": "Stolpern.",
      "action": "einen gekerbten, richtungsabhängigen Schnittbogen aus drei asymmetrisch zeitversetzten Lichtkanten",
      "kind": "ring",
-     "status": []
+     "status": [
+      "stun"
+     ]
     },
     "full": {
      "name": "Dark Prowl",
@@ -3134,15 +3380,20 @@ export const BUFF_FORM_DATA = Object.freeze([
    },
    "defense": {
     "name": "Petal Dome",
-    "text": "Perfect Block lenkt wenige Splitter zum Angreifer."
+    "text": "Perfect Block lenkt wenige Splitter zum Angreifer.",
+    "counter": "spike",
+    "status": []
    },
    "grab": {
     "name": "Blossom Bind",
-    "text": "Ring schließt sich kurz und stößt ziel mit lichtschlag hinaus."
+    "text": "Ring schließt sich kurz und stößt ziel mit lichtschlag hinaus.",
+    "throw": "forward",
+    "status": []
    },
    "jump": {
     "name": "Petal Jump",
-    "text": "Samen driften beim Jump in klaren Parabeln und docken bei Landung zurück."
+    "text": "Samen driften beim Jump in klaren Parabeln und docken bei Landung zurück.",
+    "landing": "dust"
    },
    "forward": {
     "short": {
@@ -3156,7 +3407,7 @@ export const BUFF_FORM_DATA = Object.freeze([
      "name": "Thousand-Petal Wave",
      "text": "Multi-Hit auf definierter Zone.",
      "action": "eine verzahnte Abfolge von Boden- oder Luftfeldern mit ungleichzeitigen Impakten und klar begrenztem AoE",
-     "kind": "projectile",
+     "kind": "sequence",
      "status": []
     }
    },
@@ -3226,15 +3477,22 @@ export const BUFF_FORM_DATA = Object.freeze([
    },
    "defense": {
     "name": "Thunder Guard",
-    "text": "Perfect Block beantwortet sofort mit Iai-Schnitt."
+    "text": "Perfect Block beantwortet sofort mit Iai-Schnitt.",
+    "counter": "riposte",
+    "status": []
    },
    "grab": {
     "name": "Sword Hilt Lock",
-    "text": "Kurze kontrollierte fußtechnik wirft ihn zu boden."
+    "text": "Kurze kontrollierte fußtechnik wirft ihn zu boden.",
+    "throw": "slam",
+    "status": [
+     "knockdown"
+    ]
    },
    "jump": {
     "name": "Flash Jump",
-    "text": "Takeoff und Landing tragen unterschiedliche Beats; am Apex fast völlige visuelle Stille."
+    "text": "Takeoff und Landing tragen unterschiedliche Beats; am Apex fast völlige visuelle Stille.",
+    "landing": "stomp"
    },
    "forward": {
     "short": {
@@ -3248,8 +3506,10 @@ export const BUFF_FORM_DATA = Object.freeze([
      "name": "Sixfold Flash",
      "text": "präzise Multi-Hit-Reihe.",
      "action": "eine wesentlich größere, mehrschichtige Kraftentladung mit eigenständigem Angriffspfad und Sekundärreaktion",
-     "kind": "projectile",
-     "status": []
+     "kind": "beam",
+     "status": [
+      "shock"
+     ]
     }
    },
    "up": {
@@ -3277,7 +3537,8 @@ export const BUFF_FORM_DATA = Object.freeze([
      "action": "einen präzisen Fersen-, Hand- oder Kantenimpuls mit kurzen Bodenbruchpixeln",
      "kind": "ring",
      "status": [
-      "stun"
+      "stun",
+      "shock"
      ]
     },
     "full": {
@@ -3285,7 +3546,9 @@ export const BUFF_FORM_DATA = Object.freeze([
      "text": "große AoE mit präzisem Timing.",
      "action": "eine verzahnte Abfolge von Boden- oder Luftfeldern mit ungleichzeitigen Impakten und klar begrenztem AoE",
      "kind": "sequence",
-     "status": []
+     "status": [
+      "shock"
+     ]
     }
    }
   },
@@ -3320,29 +3583,34 @@ export const BUFF_FORM_DATA = Object.freeze([
    },
    "defense": {
     "name": "Counter Veil",
-    "text": "Perfect Block lässt kurze Gegenattacke los."
+    "text": "Perfect Block lässt kurze Gegenattacke los.",
+    "counter": "riposte",
+    "status": []
    },
    "grab": {
     "name": "Ninja Grapple",
-    "text": "Die andere hand setzt kontrollierten wurf über das knie."
+    "text": "Die andere hand setzt kontrollierten wurf über das knie.",
+    "throw": "over",
+    "status": []
    },
    "jump": {
     "name": "Moon Vault",
-    "text": "Zirkelarme öffnen am Apex und rasten beim Landen ein."
+    "text": "Zirkelarme öffnen am Apex und rasten beim Landen ein.",
+    "landing": "fan"
    },
    "forward": {
     "short": {
      "name": "Moon Knife",
      "text": "Poke auf Einzelziel.",
      "action": "einen kompakten Materialstoß mit scharfem Einschlagspunkt und kurzem Nachziehen",
-     "kind": "cone",
+     "kind": "projectile",
      "status": []
     },
     "full": {
      "name": "Crescent Chain",
      "text": "lineare Mehrfachtreffer.",
      "action": "eine wesentlich größere, mehrschichtige Kraftentladung mit eigenständigem Angriffspfad und Sekundärreaktion",
-     "kind": "projectile",
+     "kind": "beam",
      "status": []
     }
    },
@@ -3378,7 +3646,7 @@ export const BUFF_FORM_DATA = Object.freeze([
      "name": "Shadow Wheel",
      "text": "AoE mit Knockback.",
      "action": "eine verzahnte Abfolge von Boden- oder Luftfeldern mit ungleichzeitigen Impakten und klar begrenztem AoE",
-     "kind": "sequence",
+     "kind": "ring",
      "status": []
     }
    }
@@ -3415,22 +3683,29 @@ export const BUFF_FORM_DATA = Object.freeze([
    },
    "defense": {
     "name": "Ward Sentinel",
-    "text": "Perfect Block löst Konstruktstich aus."
+    "text": "Perfect Block löst Konstruktstich aus.",
+    "counter": "riposte",
+    "status": []
    },
    "grab": {
     "name": "Warden Hand",
-    "text": "Der arm hebt ziel kurz und wirft es in blickrichtung."
+    "text": "Der arm hebt ziel kurz und wirft es in blickrichtung.",
+    "throw": "lift",
+    "status": [
+     "launch"
+    ]
    },
    "jump": {
     "name": "Star Hop",
-    "text": "Projektionsgerät schwebt beim Jump etwas länger oben und folgt dann."
+    "text": "Projektionsgerät schwebt beim Jump etwas länger oben und folgt dann.",
+    "landing": "dust"
    },
    "forward": {
     "short": {
      "name": "Arcane Pellet",
      "text": "Einzelziel-Poke.",
      "action": "einen kompakten Materialstoß mit scharfem Einschlagspunkt und kurzem Nachziehen",
-     "kind": "cone",
+     "kind": "projectile",
      "status": []
     },
     "full": {
@@ -3438,7 +3713,8 @@ export const BUFF_FORM_DATA = Object.freeze([
      "text": "Mehrfachtreffer ohne autonome Zielsuche.",
      "action": "ein mehrteiliges Projektil mit gestaffelten Vorder- und Rückschichten; kontrollierte Spur, variierender Kern und ein getrenntes End-Impact-Volumen",
      "kind": "projectile",
-     "status": []
+     "status": [],
+     "pierce": true
     }
    },
    "up": {
@@ -3447,7 +3723,9 @@ export const BUFF_FORM_DATA = Object.freeze([
      "text": "Anti-Air.",
      "action": "eine schnell ansteigende, scharf fragmentierte Stoßbahn über Kopf und Schulter",
      "kind": "burst",
-     "status": []
+     "status": [
+      "launch"
+     ]
     },
     "full": {
      "name": "Constellation Lift",
@@ -3510,15 +3788,24 @@ export const BUFF_FORM_DATA = Object.freeze([
    },
    "defense": {
     "name": "Frozen Clock",
-    "text": "Perfect Block erzeugt kurzen Frostsplitter."
+    "text": "Perfect Block erzeugt kurzen Frostsplitter.",
+    "counter": "frost",
+    "status": [
+     "freeze"
+    ]
    },
    "grab": {
     "name": "Second Hand",
-    "text": "Kurzer griff an armen und bein mit anschließender eisdrehung."
+    "text": "Kurzer griff an armen und bein mit anschließender eisdrehung.",
+    "throw": "spin",
+    "status": [
+     "freeze"
+    ]
    },
    "jump": {
     "name": "Clock Hop",
-    "text": "Beim Jump löst sich der Nebel unten ab und bildet am Apex kurze kristalline Stufen."
+    "text": "Beim Jump löst sich der Nebel unten ab und bildet am Apex kurze kristalline Stufen.",
+    "landing": "crystal"
    },
    "forward": {
     "short": {
@@ -3526,7 +3813,9 @@ export const BUFF_FORM_DATA = Object.freeze([
      "text": "kleiner Chill-Treffer.",
      "action": "einen kompakten Materialstoß mit scharfem Einschlagspunkt und kurzem Nachziehen",
      "kind": "cone",
-     "status": []
+     "status": [
+      "slow"
+     ]
     },
     "full": {
      "name": "Frozen Hour",
@@ -3611,15 +3900,24 @@ export const BUFF_FORM_DATA = Object.freeze([
    },
    "defense": {
     "name": "Halo Guard",
-    "text": "Perfect Block verteilt kurzen Schild an nächsten Verbündeten."
+    "text": "Perfect Block verteilt kurzen Schild an nächsten Verbündeten.",
+    "counter": "ward",
+    "status": [
+     "shield"
+    ]
    },
    "grab": {
     "name": "Guardian Turn",
-    "text": "Kontrolliertes heranziehen und seitliches wegdrehen."
+    "text": "Kontrolliertes heranziehen und seitliches wegdrehen.",
+    "throw": "pull",
+    "status": [
+     "pull"
+    ]
    },
    "jump": {
     "name": "Radiant Hop",
-    "text": "Bei Jump klappen die Paneele zur Stabilisierung seitlich aus."
+    "text": "Bei Jump klappen die Paneele zur Stabilisierung seitlich aus.",
+    "landing": "fan"
    },
    "forward": {
     "short": {
@@ -3635,7 +3933,7 @@ export const BUFF_FORM_DATA = Object.freeze([
      "name": "Dawn Ray",
      "text": "Frontschaden und Heilung von Verbündeten hinter dem Spieler.",
      "action": "ein mehrteiliges Projektil mit gestaffelten Vorder- und Rückschichten; kontrollierte Spur, variierender Kern und ein getrenntes End-Impact-Volumen",
-     "kind": "cone",
+     "kind": "beam",
      "status": [
       "heal"
      ]
@@ -3667,7 +3965,9 @@ export const BUFF_FORM_DATA = Object.freeze([
      "text": "Nahbereichskontrolle.",
      "action": "einen kurzen, materiell ausgefransten Wellenrand mit unterbrochenen Segmenten statt eines glatten Vollkreises",
      "kind": "ring",
-     "status": []
+     "status": [
+      "stun"
+     ]
     },
     "full": {
      "name": "Sanctuary Anchor",
@@ -3714,22 +4014,31 @@ export const BUFF_FORM_DATA = Object.freeze([
    },
    "defense": {
     "name": "Toxic Hide",
-    "text": "Perfect Block erzeugt kleinen Giftstachel."
+    "text": "Perfect Block erzeugt kleinen Giftstachel.",
+    "counter": "spike",
+    "status": [
+     "acid"
+    ]
    },
    "grab": {
     "name": "Caustic Grip",
-    "text": "Ein kontrollierter wurf hinterlässt kleine giftmarke."
+    "text": "Ein kontrollierter wurf hinterlässt kleine giftmarke.",
+    "throw": "forward",
+    "status": [
+     "acid"
+    ]
    },
    "jump": {
     "name": "Venom Jump",
-    "text": "Beim Jump verschiebt sich Flüssigkeit sichtbar entgegen der Beschleunigung."
+    "text": "Beim Jump verschiebt sich Flüssigkeit sichtbar entgegen der Beschleunigung.",
+    "landing": "dust"
    },
    "forward": {
     "short": {
      "name": "Acid Pellet",
      "text": "kleiner Giftschaden.",
      "action": "einen kompakten Materialstoß mit scharfem Einschlagspunkt und kurzem Nachziehen",
-     "kind": "cone",
+     "kind": "projectile",
      "status": [
       "acid"
      ]
@@ -3738,10 +4047,10 @@ export const BUFF_FORM_DATA = Object.freeze([
      "name": "Corrosion Breath",
      "text": "Flächen-Gift und kurzer Rüstungsabbau.",
      "action": "eine verzahnte Abfolge von Boden- oder Luftfeldern mit ungleichzeitigen Impakten und klar begrenztem AoE",
-     "kind": "projectile",
+     "kind": "cone",
      "status": [
-      "stun",
-      "acid"
+      "acid",
+      "slow"
      ]
     }
    },
@@ -3760,7 +4069,9 @@ export const BUFF_FORM_DATA = Object.freeze([
      "text": "vertikaler Multi-Hit.",
      "action": "eine mehrstufige vertikale Materialentfaltung, deren Leuchtkerne nach oben wandern",
      "kind": "pillar",
-     "status": []
+     "status": [
+      "acid"
+     ]
     }
    },
    "down": {
@@ -3770,7 +4081,8 @@ export const BUFF_FORM_DATA = Object.freeze([
      "action": "einen präzisen Fersen-, Hand- oder Kantenimpuls mit kurzen Bodenbruchpixeln",
      "kind": "ring",
      "status": [
-      "slow"
+      "slow",
+      "acid"
      ]
     },
     "full": {
@@ -3778,7 +4090,9 @@ export const BUFF_FORM_DATA = Object.freeze([
      "text": "AoE und kurze Pfützen ohne dauernde Kontaktticks.",
      "action": "eine verzahnte Abfolge von Boden- oder Luftfeldern mit ungleichzeitigen Impakten und klar begrenztem AoE",
      "kind": "sequence",
-     "status": []
+     "status": [
+      "acid"
+     ]
     }
    }
   },
@@ -3816,22 +4130,27 @@ export const BUFF_FORM_DATA = Object.freeze([
    },
    "defense": {
     "name": "Stonewall",
-    "text": "Perfect Block schleudert Steinspäne nach vorne."
+    "text": "Perfect Block schleudert Steinspäne nach vorne.",
+    "counter": "spike",
+    "status": []
    },
    "grab": {
     "name": "Granite Clamp",
-    "text": "Ein kurzer hebewurf setzt ziel seitlich ab."
+    "text": "Ein kurzer hebewurf setzt ziel seitlich ab.",
+    "throw": "side",
+    "status": []
    },
    "jump": {
     "name": "Crag Hop",
-    "text": "Bügel fallen beim Jump im unteren Bogen nach und verriegeln bei der Landung."
+    "text": "Bügel fallen beim Jump im unteren Bogen nach und verriegeln bei der Landung.",
+    "landing": "dust"
    },
    "forward": {
     "short": {
      "name": "Stone Splinter",
      "text": "schneller Stone-Poke.",
      "action": "einen kompakten Materialstoß mit scharfem Einschlagspunkt und kurzem Nachziehen",
-     "kind": "cone",
+     "kind": "projectile",
      "status": []
     },
     "full": {
@@ -3917,22 +4236,27 @@ export const BUFF_FORM_DATA = Object.freeze([
    },
    "defense": {
     "name": "Script Guard",
-    "text": "Perfect Block sendet ein einzelnes Zeichen zurück."
+    "text": "Perfect Block sendet ein einzelnes Zeichen zurück.",
+    "counter": "riposte",
+    "status": []
    },
    "grab": {
     "name": "Compass Capture",
-    "text": "Nahziel wird gehalten und mithilfe einer drehmatrix seitlich weggeschoben."
+    "text": "Nahziel wird gehalten und mithilfe einer drehmatrix seitlich weggeschoben.",
+    "throw": "side",
+    "status": []
    },
    "jump": {
     "name": "Atlas Leap",
-    "text": "Frames bleiben beim Jump kurz an alten Positionen stehen, dann schnappen sie zur Landepose."
+    "text": "Frames bleiben beim Jump kurz an alten Positionen stehen, dann schnappen sie zur Landepose.",
+    "landing": "dust"
    },
    "forward": {
     "short": {
      "name": "Star Dot",
      "text": "schneller einzelner Lichttreffer.",
      "action": "einen kompakten Materialstoß mit scharfem Einschlagspunkt und kurzem Nachziehen",
-     "kind": "cone",
+     "kind": "projectile",
      "status": []
     },
     "full": {
@@ -3976,7 +4300,9 @@ export const BUFF_FORM_DATA = Object.freeze([
      "text": "AoE mit kurzer Markierungswirkung.",
      "action": "eine verzahnte Abfolge von Boden- oder Luftfeldern mit ungleichzeitigen Impakten und klar begrenztem AoE",
      "kind": "sequence",
-     "status": []
+     "status": [
+      "slow"
+     ]
     }
    }
   },
@@ -4011,27 +4337,32 @@ export const BUFF_FORM_DATA = Object.freeze([
    },
    "defense": {
     "name": "Drachengrat",
-    "text": "1."
+    "text": "Drachengrat: Schuppenkamm blockt; Perfect Block stößt einen Grat aus Schuppen nach vorn.",
+    "counter": "spike",
+    "status": []
    },
    "grab": {
     "name": "Wyrmfang",
-    "text": "Auslösung: DefenseHeld && DownPressed, nur bei bestätigtem, greifbarem Ziel in Nahdistanz und passender Lane-/Höhenüberlappung."
+    "text": "Wyrmfang: nur bestätigtes Nahziel; ein Wyrmkopf packt und schleudert es im Bogen.",
+    "throw": "spin",
+    "status": []
    },
    "jump": {
     "name": "Himmelslauf und konturtreue Air-Aura",
-    "text": "Regel: Der Avatar springt physikalisch mit seinen bereits vorhandenen Jump-/Air-Frames."
+    "text": "Himmelslauf: Wyrmbänder folgen der Sprungphase und fächern bei der Landung auf.",
+    "landing": "fan"
    },
    "forward": {
     "short": {
      "name": "Sonnenstich",
-     "text": "",
+     "text": "Schneller, geradliniger Verstärkungsimpuls (Lanzenstich).",
      "action": "",
-     "kind": "cone",
+     "kind": "beam",
      "status": []
     },
     "full": {
      "name": "Zwillingswyrm-Jagd",
-     "text": "",
+     "text": "Zwei unabhängig jagende Drachen treffen mehrere Ziele entlang der Lane.",
      "action": "",
      "kind": "wyrms",
      "status": []
@@ -4050,7 +4381,9 @@ export const BUFF_FORM_DATA = Object.freeze([
      "text": "Ein großer spiraliger Aufstiegswyrm mit getrennten Trefferphasen.",
      "action": "",
      "kind": "pillar",
-     "status": []
+     "status": [
+      "launch"
+     ]
     }
    },
    "down": {
@@ -4059,11 +4392,13 @@ export const BUFF_FORM_DATA = Object.freeze([
      "text": "körpernaher Rundumsweep.",
      "action": "",
      "kind": "ring",
-     "status": []
+     "status": [
+      "burn"
+     ]
     },
     "full": {
      "name": "Wyrmportal-Ritual",
-     "text": "mehrere Portale um einen anvisierten Gegner bzw.",
+     "text": "Portale um einen anvisierten Gegner, aus denen Wyrme in zeitlicher Folge einschlagen.",
      "action": "",
      "kind": "portals",
      "status": []

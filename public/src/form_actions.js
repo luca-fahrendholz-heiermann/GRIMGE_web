@@ -32,6 +32,8 @@ const front = (p, t, reach, depth = 30) => {
 export function formGuardCounter(player, gameWorld) {
   const form = activeMoveset(player);
   if (!form || !gameWorld) return false;
+  // Buff transformations bring their own counter (atlas defense text).
+  if (FORM_FX_HOOKS.counter?.(player, gameWorld, form)) return true;
   const foes = gameWorld.getHostileTargets(player.team).filter(alive);
   const pal = FORM_PALETTES[form];
   if (form === 'ninefold') {
@@ -209,6 +211,7 @@ export class FormGrabFx {
     this.t += dt;
     if (this.target && !this.slammed && this.t >= .3) {
       this.slammed = true;
+      if (FORM_FX_HOOKS.grabSlam?.(this)) { if (this.t >= this.life) this.isFinished = true; return; }
       const extra = this.form === 'eidolon' ? 30 : this.form === 'ninefold' ? 22 : 18;
       this.target.takeDamage?.(extra, this.facing * (this.form === 'eidolon' ? 260 : 180), 120, .6, true, 'grab');
       combat.spawnShockwave(this.target.x, groundYForDepth(this.target.z ?? this.player.z) - 4, this.form === 'eidolon' ? 70 : 50, this.palette.main);
@@ -261,6 +264,7 @@ export class FormGrabFx {
 export function formJumpFx(player, phase) {
   const form = activeMoveset(player);
   if (!form) return false;
+  if (FORM_FX_HOOKS.jump?.(player, phase, form)) return true;
   const pal = FORM_PALETTES[form];
   const y = groundYForDepth(player.z) - (player.surfaceHeight ?? 0);
   if (phase === 'takeoff') {

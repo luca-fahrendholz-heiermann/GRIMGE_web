@@ -404,14 +404,14 @@ function bands(ctx, s, pose, mat, form, layer) {
     if ((layer === 'front') !== front) continue;
     const from = [s.back[0], s.back[1] + (b - (n - 1) / 2) * 12];
     const spine = [];
-    const len = 110 + (b % 2) * 30; const sweep = pose.sprint ? 1 : pose.run * .5;
+    const len = (n === 1 ? 160 : 110) + (b % 2) * 30; const sweep = pose.sprint ? 1 : pose.run * .5;
     for (let i = 0; i < 8; i++) {
       const k = i / 7;
       // S-curve flowing behind; sprint stretches it flat, the jump apex lets it hang.
       const wave = Math.sin(t * 1.4 + b * 1.7 + k * 4.2) * (10 + 22 * k) * (1 - .6 * sweep);
       spine.push([from[0] - f * len * k, from[1] + (b - (n - 1) / 2) * 16 * k - 18 * Math.sin(k * Math.PI) * (1 - sweep) + wave + (pose.airborne ? 30 * k * k * (pose.air < 0 ? 1 : -.4) : 0)]);
     }
-    band(ctx, spine, (i, nn) => (6 + (b % 2) * 3) * (1 - .55 * i / (nn - 1)) + (i === nn - 1 ? 4 : 0), mat, seed + b * 13, { t, alpha: pose.fade });
+    band(ctx, spine, (i, nn) => (n === 1 ? 1.7 : 1) * (6 + (b % 2) * 3) * (1 - .55 * i / (nn - 1)) + (i === nn - 1 ? 4 : 0), mat, seed + b * 13, { t, alpha: pose.fade });
     // Fan-shaped end (comet bands / leading bands).
     const tip = spine[spine.length - 1];
     for (let k = -1; k <= 1; k++) plate(ctx, [[tip[0], tip[1]], [tip[0] - f * 16, tip[1] + k * 9 - 3], [tip[0] - f * 13, tip[1] + k * 9 + 3]], mat, seed + 50 + b * 3 + k, { alpha: pose.fade * .9 });
@@ -525,7 +525,9 @@ function orbit(ctx, s, pose, mat, form, layer) {
     if ((layer === 'back') !== back) continue;
     const x = center[0] + Math.cos(a) * rx * (pose.sprint ? .7 : 1) - s.f * pose.run * 10;
     const y = center[1] + Math.sin(a) * ry + (item === 'knot' || item === 'bell' ? Math.sin(t * 2 + i) * 6 : 0) + pose.air * -10;
-    const size = small ? 5 : item === 'mirror' ? 13 - i : 10;
+    const size = small ? 6 : item === 'mirror' ? 13 - i : 10;
+    // Small orbit bodies leave a short comet trail of shards.
+    if (small) for (let g = 1; g <= 3; g++) { const ag = a - g * .22; orbitItem(ctx, item, center[0] + Math.cos(ag) * rx - s.f * pose.run * 10, center[1] + Math.sin(ag) * ry, size * (1 - g * .2), ag * .5, mat, seed + i * 11 + g, pose.fade * (back ? .75 : 1) * (.5 - g * .12), t); }
     orbitItem(ctx, item, x, y, size, item === 'coil' ? .6 : item === 'frame' ? 0 : a * .5, mat, seed + i * 11, pose.fade * (back ? .75 : 1), t);
   }
   if (layer === 'front') fallout(ctx, [center], mat, t, seed + 5, { count: 6, alpha: pose.fade });
@@ -541,6 +543,13 @@ function limbs(ctx, s, pose, mat, form, layer) {
     if (item === 'accent' && !leg) return;
     if ((item === 'capillary' || item === 'tube' || item === 'fold' || item === 'notes' || item === 'thread') && leg) return;
     const k = seed + si * 7 + (side > 0 ? 0 : 3);
+    // A material bracer along forearm / calf anchors the attachment on the body.
+    if (item !== 'thread') {
+      const mx = (A[0] + B[0]) / 2; const my = (A[1] + B[1]) / 2;
+      const dx = B[0] - A[0]; const dy = B[1] - A[1]; const len = Math.hypot(dx, dy) || 1; const nx = -dy / len * 3.5; const ny = dx / len * 3.5;
+      plate(ctx, [[A[0] + dx * .2 + nx, A[1] + dy * .2 + ny], [mx + nx * 1.2, my + ny * 1.2], [mx - nx * 1.2, my - ny * 1.2], [A[0] + dx * .2 - nx, A[1] + dy * .2 - ny]], mat, k + 40, { alpha: pose.fade * .9 });
+      plate(ctx, [[mx + nx * 1.1, my + ny * 1.1], [B[0] - dx * .12 + nx, B[1] - dy * .12 + ny], [B[0] - dx * .12 - nx, B[1] - dy * .12 - ny], [mx - nx * 1.1, my - ny * 1.1]], mat, k + 41, { alpha: pose.fade * .9, pulse: .5 + .5 * Math.sin(t * 4 + si) });
+    }
     switch (item) {
       case 'sickle': {
         const swing = Math.sin(t * 2.4 + si + side) * .3 - pose.run * .4;
@@ -784,7 +793,7 @@ export function renderManifestation(ctx, player, form, layer, renderY, fade = 1)
 }
 
 // Contour veins: painted inside the sprite frame's own alpha (source-atop).
-export function contourVeinPainter(form, t) {
+export function contourVeinPainter(form, t, sweep = null) {
   const mat = form.mat ?? (form.mat = materialFor(form));
   const seed = hashStr(form.id);
   return (mctx, w, h) => {
@@ -804,6 +813,15 @@ export function contourVeinPainter(form, t) {
       mctx.stroke();
       mctx.globalAlpha = .9 * pulse; mctx.fillStyle = mat.core;
       mctx.fillRect(x - scale, y - scale, 2 * scale, 2 * scale);
+    }
+    // Transform-in / -out: a band of light running over the real contour.
+    if (sweep) {
+      const yb = h * (1 - sweep.pos);
+      mctx.globalCompositeOperation = 'source-atop';
+      mctx.globalAlpha = .85 * sweep.alpha; mctx.fillStyle = mat.edge;
+      mctx.fillRect(0, yb - h * .05, w, h * .05);
+      mctx.globalAlpha = .5 * sweep.alpha; mctx.fillStyle = mat.core;
+      mctx.fillRect(0, yb - h * .015, w, h * .015);
     }
     mctx.globalCompositeOperation = 'source-over';
   };

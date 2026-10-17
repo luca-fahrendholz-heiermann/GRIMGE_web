@@ -2262,6 +2262,45 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   assert(!game.player.classWeapon, 'Cycling further returns to bare hands');
 }
 
+// Buff choreography from the atlas: perfect-block counters, grab throws, jumps, transform in/out.
+{
+  const buff = await import('./public/src/buff_forms.js');
+  const { formGuardCounter, formJumpFx, FormGrabFx } = await import('./public/src/form_actions.js');
+  const data = buff.BUFF_FORMS;
+  assert(Object.values(data).every((f) => f.tech.defense?.counter && f.tech.grab?.throw && f.tech.jump?.landing), 'Every buff form has its own counter, throw and landing from the atlas text');
+  assert(data.T01.tech.defense.counter === 'spike' && data.T06.tech.defense.counter === 'shock' && data.T07.tech.grab.throw === 'over' && data.T02.tech.grab.throw === 'slam', 'Examples: Kammwacht thorn plate, Ionspindel current, Dämmerlauf throw over the back, Schlackenkern slam into the ground');
+  assert(data.T02.tech.up.full.status.length === 0 && data.T05.tech.forward.full.kind === 'beam' && data.T11.tech.forward.full.kind === 'cone', 'Reviewed mechanics: no lightning from "Positionen", Annihilation Ray is a beam, Aurora Foxfire a frost cone');
+  game.returnToHub(); game.setMatchMode('training'); game.startMatch(); game.selectTrainingMap('waterfalls');
+  const P = game.player; const E = game.enemyChampion;
+  game.toggleSparringPartner(); game.toggleSparringPassive();
+  const place = (dx) => { P.x = 400; P.z = .5; P.facing = 1; game.battlefield.placeOnSurface(P); E.x = P.x + dx; E.z = .5; E.hp = E.maxHp; E.elevation = 0; E.vx = 0; E.kbVelX = 0; E.state = 'idle'; game.battlefield.placeOnSurface(E); };
+  spells.clearRuntime();
+  spells.cast(P, spells.resolveSpell([{ id: 'buff_T01' }]), game);
+  assert(spells.activeSpells.some((sp) => sp.constructor.name === 'BuffBurstFx' && sp.kind === 'assemble'), 'Transform-in: the form assembles from material shards');
+  P.buffForm.age = .3;
+  const painter = buff.buffVeinPainter(P);
+  assert(typeof painter === 'function', 'Transform-in: a light thread runs over the real sprite contour (mask painter with sweep)');
+  P.buffForm.age = 2;
+  place(70);
+  assert(formGuardCounter(P, game) && E.hp < E.maxHp && spells.activeSpells.some((sp) => sp.kind === 'spike'), 'Kammwacht perfect block: a thorn plate strikes back');
+  // Grab: Dämmerlauf throws over the back (target ends up behind).
+  spells.clearRuntime();
+  P.buffForm = { id: 'T07', timer: 10, total: 16, age: 2, power: 1 }; place(30);
+  const grab = new FormGrabFx(P, E, 'T07'); spells.addSpell(grab, 'B');
+  for (let i = 0; i < 40; i++) { spells.update(1 / 60, game); E.update(1 / 60, game, game.battlefield); }
+  assert(E.hp < E.maxHp && E.x < P.x + 10, `Dämmerlauf grab throws the target over the back (${Math.round(E.x - P.x)} px)`);
+  // Jump: takeoff and the form's own landing.
+  spells.clearRuntime();
+  assert(formJumpFx(P, 'takeoff') && formJumpFx(P, 'land') && spells.activeSpells.filter((sp) => sp.constructor.name === 'BuffBurstFx').length >= 2, 'Jump: material takeoff burst and form-specific landing');
+  game.render();
+  // Transform-out: shards scatter when the buff ends.
+  spells.clearRuntime();
+  buff.endBuffForm(P);
+  assert(!P.buffForm && spells.activeSpells.some((sp) => sp.kind === 'scatter'), 'Transform-out: the manifestation breaks apart into shards');
+  game.toggleSparringPartner();
+  spells.clearRuntime();
+}
+
 const frameCallback = nextFrame;
 frameCallback(game.lastFrameTime + 16);
 game.debugVisible = true;

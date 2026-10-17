@@ -50,7 +50,8 @@ function statusOf(s) {
   if (has(s, /launcher|hebt|schleudert .*hoch|in die luft|nach oben|aufwärts/)) st.push('launch');
   if (has(s, /knockdown|niederwerf|zu boden/)) st.push('knockdown');
   if (has(s, /säure|ätz|gift|korrod/)) st.push('acid');
-  if (has(s, /blitz|elektr|strom|ion|funke/)) st.push('shock');
+  // Whole words only: "Positionen", "Dimension" or "Punktion" are no lightning.
+  if (has(s, /blitz|elektr|(^|[^a-zäöüß])ionen?([^a-zäöüß]|$)|funke|statisch|gewitter|donner/)) st.push('shock');
   return st;
 }
 function kindOf(s, dir, variant) {
@@ -97,6 +98,38 @@ function archetypeOf(id, sil) {
 
 const hex = (s) => (s.match(/#[0-9A-Fa-f]{6}/g) ?? []).map((h) => h.toLowerCase());
 
+// Perfect-block counter, grab throw and jump landing from the atlas text.
+function counterOf(text) {
+  const t = (text ?? '').toLowerCase();
+  if (/schutzimpuls|schild an|verbündet/.test(t)) return 'ward';
+  if (/strom/.test(t)) return 'shock';
+  if (/lichtblitz|blitz aus/.test(t)) return 'flash';
+  if (/reiffeld|frost/.test(t)) return 'frost';
+  if (/gegenstich|iai|gegenattacke|konstruktstich|wächterkonter|konterzeichen|geist|zeichen/.test(t)) return 'riposte';
+  if (/dorn|rippe|horn|klinge|steinplatte|steinspäne|giftstachel|splitter|feder|funken|kruste/.test(t)) return 'spike';
+  if (/reflekt|reflex|abprall|zurück|torbogen|verschiebt/.test(t)) return 'reflect';
+  if (/schwächt/.test(t)) return 'weaken';
+  return 'shove';
+}
+function throwOf(text) {
+  const t = (text ?? '').toLowerCase();
+  if (/über den rücken|über die hüfte|über die schulter|über das knie|hüftdrehung/.test(t)) return 'over';
+  if (/zu boden|bodenspur|beine weg|zieht ziel zu boden/.test(t)) return 'slam';
+  if (/heranzieh|zieht ein nahes|zieht .* an|entgegengesetzte richtung gezogen/.test(t)) return 'pull';
+  if (/seitlich|abgeschüttelt/.test(t)) return 'side';
+  if (/dreh|luftkreis|kettenwurf|drehmatrix/.test(t)) return 'spin';
+  if (/hebt|hebewurf|angehoben/.test(t)) return 'lift';
+  return 'forward';
+}
+function landingOf(text) {
+  const t = (text ?? '').toLowerCase();
+  if (/stampf|beat|takt/.test(t)) return 'stomp';
+  if (/fächer|auseinander|öffnen|aufklapp|klappen .* aus/.test(t)) return 'fan';
+  if (/feder|federn/.test(t)) return 'spring';
+  if (/kristall|stufen/.test(t)) return 'crystal';
+  return 'dust';
+}
+
 const forms = [];
 for (const block of blocks) {
   const head = block.split('\n')[0];
@@ -131,14 +164,61 @@ for (const block of blocks) {
     };
   }
   const shape = archetypeOf(id, silhouette);
+  if (tech.defense) { tech.defense.counter = counterOf(tech.defense.text); tech.defense.status = statusOf(tech.defense.text); }
+  if (tech.grab) { tech.grab.throw = throwOf(tech.grab.text); tech.grab.status = statusOf(tech.grab.text); }
+  if (tech.jump) tech.jump.landing = landingOf(tech.jump.text);
   forms.push({ id, name, title: title ?? null, ref, palette: hex(paletteLine), material, quality, motion, silhouette, avoid, ...shape, tech, statusAll: statusOf([tech.forward?.full.text, tech.up?.full.text, tech.down?.full.text, tech.defense?.text].join(' ')) });
 }
 
 // ── Manual corrections where the keywords mislead ───────────────────────
+// Reviewed by hand against every gameplay sentence of the atlas (kind =
+// how the technique travels / hits; status = what it does to the target;
+// pierce = passes through targets).
+const T = (fs, ff, us, uf, ds, df) => ({ tech: { forward: { short: fs ?? {}, full: ff ?? {} }, up: { short: us ?? {}, full: uf ?? {} }, down: { short: ds ?? {}, full: df ?? {} } } });
 const OVERRIDES = {
   B01: { tech: { forward: { full: { kind: 'bomb' } }, up: { full: { kind: 'pillar' } }, down: { full: { kind: 'sequence' } } } },
   B02: { tech: { forward: { short: { kind: 'arrow' }, full: { kind: 'arrow' } }, up: { full: { kind: 'wall' } } } },
-  T40: { tech: { forward: { full: { kind: 'wyrms' } }, up: { full: { kind: 'pillar' } }, down: { full: { kind: 'portals' } } } }
+  T01: T(null, { kind: 'beam', status: ['burn'] }, null, null, { status: ['stun'] }, null),
+  T02: T(null, null, { status: ['launch'] }, { kind: 'pillar', status: [] }, null, { status: ['burn'] }),
+  T03: T(null, { kind: 'projectile', status: ['slow'] }, null, null, { status: ['stun'] }, null),
+  T04: T({ kind: 'projectile', status: ['slow'] }, { kind: 'beam', status: ['heal'] }, null, { status: ['shield'] }, { status: ['heal'] }, null),
+  T05: T(null, { kind: 'beam', status: [] }),
+  T06: T(null, { status: ['shock'] }, null, { status: ['shock'] }, { status: ['stun', 'shock'] }, { status: ['launch', 'shock'] }),
+  T07: T(null, null, null, null, { status: ['stun'] }, { status: ['burn'] }),
+  T08: T(null, { pierce: true }, null, null, { status: ['root'] }, { status: ['root'] }),
+  T09: T({ kind: 'projectile' }, { kind: 'cone' }, null, null, null, { status: ['stun'] }),
+  T10: T(null, null, null, null, null, { status: ['heal'] }),
+  T11: T({ status: ['slow'] }, { kind: 'cone', status: ['freeze', 'slow'] }, null, { kind: 'pillar' }, null, { status: ['slow'] }),
+  T12: T(null, { kind: 'cone', status: ['stun'] }, null, null, null, { status: ['stun'] }),
+  T13: T(null, { pierce: true }, null, null, null, { status: ['stun'] }),
+  T14: T(null, null, null, null, { status: ['stun'] }, null),
+  T15: T({ kind: 'projectile' }, { status: ['burn', 'slow'] }, { status: ['launch'] }, null, null, { status: ['slow'] }),
+  T16: T({ kind: 'projectile' }),
+  T17: T({ kind: 'projectile' }, { status: ['burn'] }, null, null, null, { status: ['heal', 'burn'] }),
+  T18: T({ kind: 'projectile' }, { status: [], pierce: true }, null, null, null, { status: ['slow'] }),
+  T19: T(null, { kind: 'beam', status: [] }),
+  T20: T({ kind: 'cone' }),
+  T23: T({ kind: 'cone', status: ['slow'] }, { status: [] }, null, { kind: 'pillar' }, null, { status: ['stun'] }),
+  T24: T(null, { kind: 'beam', status: ['slow'] }, null, null, null, { status: ['root'] }),
+  T25: T({ status: [] }, { kind: 'beam', status: ['burn'] }, { status: ['pull'] }, null, { status: ['burn'] }, { status: ['burn'] }),
+  T26: T(null, { kind: 'wall' }),
+  T27: T(null, { kind: 'beam', status: [] }),
+  T28: T(null, null, null, null, null, { status: ['root'] }),
+  T29: T({ kind: 'projectile' }, { kind: 'beam' }, null, null, null, { status: ['slow'] }),
+  T30: T(null, { kind: 'wall' }, null, null, { status: ['stun'] }, null),
+  T31: T(null, { kind: 'sequence' }),
+  T32: T(null, { kind: 'beam', status: ['shock'] }, null, null, { status: ['stun', 'shock'] }, { status: ['shock'] }),
+  T33: T({ kind: 'projectile' }, { kind: 'beam' }, null, null, null, { kind: 'ring' }),
+  T34: T({ kind: 'projectile' }, { pierce: true }, { status: ['launch'] }),
+  T35: T({ status: ['slow'] }),
+  T36: T(null, { kind: 'beam', status: ['heal'] }, null, null, { status: ['stun'] }, null),
+  T37: T({ kind: 'projectile', status: ['acid'] }, { kind: 'cone', status: ['acid', 'slow'] }, null, { status: ['acid'] }, { status: ['slow', 'acid'] }, { status: ['acid'] }),
+  T38: T({ kind: 'projectile' }),
+  T39: T({ kind: 'projectile' }, null, null, null, null, { status: ['slow'] }),
+  T40: { tech: { forward: { short: { kind: 'beam', text: 'Schneller, geradliniger Verstärkungsimpuls (Lanzenstich).' }, full: { kind: 'wyrms', text: 'Zwei unabhängig jagende Drachen treffen mehrere Ziele entlang der Lane.' } }, up: { full: { kind: 'pillar', status: ['launch'] } }, down: { short: { status: ['burn'] }, full: { kind: 'portals', text: 'Portale um einen anvisierten Gegner, aus denen Wyrme in zeitlicher Folge einschlagen.' } },
+    defense: { counter: 'spike', text: 'Drachengrat: Schuppenkamm blockt; Perfect Block stößt einen Grat aus Schuppen nach vorn.' },
+    grab: { throw: 'spin', text: 'Wyrmfang: nur bestätigtes Nahziel; ein Wyrmkopf packt und schleudert es im Bogen.' },
+    jump: { landing: 'fan', text: 'Himmelslauf: Wyrmbänder folgen der Sprungphase und fächern bei der Landung auf.' } } }
 };
 const merge = (a, b) => { for (const [k, v] of Object.entries(b)) a[k] = v && typeof v === 'object' && !Array.isArray(v) ? merge(a[k] ?? {}, v) : v; return a; };
 for (const f of forms) if (OVERRIDES[f.id]) merge(f, OVERRIDES[f.id]);

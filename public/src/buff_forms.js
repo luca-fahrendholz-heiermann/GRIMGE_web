@@ -15,7 +15,7 @@ import { BUFF_FORM_DATA } from './buff_forms_data.js';
 import { FORM_MOVESETS, registerFormPalette, FormStrikeSpell } from './form_moves.js';
 import { FORM_SPRINT_ATTACKS, FORM_FX_HOOKS } from './form_actions.js';
 import { materialFor, renderManifestation, contourVeinPainter, plate, band, rgba } from './buff_vfx.js';
-import { BuffStrikeSpell } from './buff_techniques.js';
+import { BuffStrikeSpell, applyStatuses } from './buff_techniques.js';
 import { combat } from './combat.js';
 import { groundYForDepth } from './world.js';
 
@@ -47,7 +47,7 @@ function techniqueConfig(form, dir, variant, tech) {
     case 'pillar': return { ...base, kind: 'pillar', width: short ? 28 : 38, damage: short ? 40 : 74, life: short ? .7 : 1.0, offset: 48, tick: .14 };
     case 'sequence': return { ...base, kind: 'sequence', damage: short ? 46 : 82, life: short ? .8 : 1.3, events: short ? [...slamPoints(4, 70, .1, .08), { at: .55, dx: 0, dz: 0, radius: 90, final: true }] : [...slamPoints(7, 100, .1, .09), { at: 1.0, dx: 0, dz: 0, radius: 175, final: true }] };
     case 'wall': return { ...base, kind: 'wall', speed: 260, travel: short ? .45 : .7, damage: short ? 44 : 76, life: short ? .75 : 1.0, offset: 40 };
-    case 'projectile': return { ...base, kind: 'projectile', speed: short ? 520 : 400, range: short ? 320 : 460, damage: short ? 32 : 60, kx: 240, lift: lift ?? 60, explode: short ? 0 : 92, pierce: st.includes('pull') };
+    case 'projectile': return { ...base, kind: 'projectile', speed: short ? 520 : 400, range: short ? 320 : 460, damage: short ? 32 : 60, kx: 240, lift: lift ?? 60, explode: short ? 0 : 92, pierce: !!tech.pierce || st.includes('pull') };
     case 'beam': return { ...base, kind: 'beam', length: short ? 260 : 400, width: 22, damage: short ? 40 : 76, life: short ? .55 : .95, tick: .12 };
     case 'wyrms': return { ...base, kind: 'wyrms', damage: 70, life: 1.5 };
     case 'portals': return { ...base, kind: 'portals', damage: 92, life: 1.2 };
@@ -147,6 +147,7 @@ export function buffFade(player) {
 export function activateBuffForm(player, id, quality = { duration: 1, power: 1, area: 1, particles: 1 }, spells = null) {
   const form = BUFF_FORMS[id];
   if (!form || !player) return false;
+  setBuffSpellSink(spells);
   const active = currentBuffForm(player);
   if (active && active.id !== id) {
     window.gameWorld?.showAnnouncement?.(`${active.name.toUpperCase()} IS STILL ACTIVE — ONE BUFF TRANSFORMATION AT A TIME`, 1.4);
@@ -159,6 +160,7 @@ export function activateBuffForm(player, id, quality = { duration: 1, power: 1, 
     player.ninefoldTimer = 0; player.eidolonTimer = 0;
   }
   player.buffForm = { id, timer: duration, total: duration, age: active ? (player.buffForm?.age ?? 1) : 0, power: quality.power ?? 1 };
+  if (!active) buffTransformFx(player, form, 'in');
   combat.spawnShockwave(player.x, player.y - 40, 80 * (quality.area ?? 1), form.mat.vein);
   combat.spawnShockwave(player.x, player.y - 4, 50, form.mat.edge);
   window.gameWorld?.showAnnouncement?.(`${form.name.toUpperCase()}${form.title ? ' — ' + form.title.toUpperCase() : ''} · ${Math.round(duration)} S`, 1.6);
@@ -178,7 +180,7 @@ export function updateBuffForm(player, dt) {
 export function endBuffForm(player) {
   if (!player.buffForm) return;
   const form = BUFF_FORMS[player.buffForm.id];
-  if (form && player.isAlive) combat.spawnShockwave(player.x, player.y - 40, 46, form.mat.edge);
+  if (form && player.isAlive) { combat.spawnShockwave(player.x, player.y - 40, 46, form.mat.edge); buffTransformFx(player, form, 'out'); }
   if (player.buffForm.id === 'B01') player.ninefoldTimer = 0;
   if (player.buffForm.id === 'B02') player.eidolonTimer = 0;
   player.buffForm = null;
@@ -198,7 +200,12 @@ export function renderBuffManifestation(ctx, player, renderY, layer) {
 
 export function buffVeinPainter(player) {
   const form = currentBuffForm(player);
-  return form ? contourVeinPainter(form, player.animTime ?? 0) : null;
+  if (!form) return null;
+  const b = player.buffForm;
+  let sweep = null;
+  if (b && b.age < .6) sweep = { pos: b.age / .6, alpha: 1 };
+  else if (b && b.timer < .5) sweep = { pos: b.timer / .5, alpha: 1 };
+  return contourVeinPainter(form, player.animTime ?? 0, sweep);
 }
 
 export function buffCloakColor(player) {
@@ -278,4 +285,126 @@ export function buffHowTo(id) {
     ...['forward', 'up', 'down'].map((d) => t[d] ? `${d.toUpperCase()} + Heavy: ${t[d].short.name} (short) — ${t[d].short.text} / ${t[d].full.name} (full) — ${t[d].full.text}` : null),
     line('Defense', t.defense), line('Grab (Defense + Down)', t.grab), line('Jump', t.jump)
   ].filter(Boolean).join('\n');
+}
+
+// ── Per-form choreography: perfect-block counter, grab throw, jump, in/out ──
+// All derived from the atlas text of each form (generator: counter / throw /
+// landing). Effects are short material instances; damage only comes from the
+// explicit gameplay checks below, never from the size of the effect.
+let spellSink = null; // the spell system (registered on the first buff cast)
+export function setBuffSpellSink(spells) { if (spells?.addSpell) spellSink = spells; }
+const emit = (fx) => { spellSink?.addSpell?.(fx, 'B'); return fx; };
+
+export class BuffBurstFx {
+  constructor(form, x, y, kind, { facing = 1, life = .45, size = 1, z = null } = {}) {
+    this.form = form; this.mat = form.mat; this.x = x; this.baseY = y; this.kind = kind;
+    this.facing = facing; this.life = life; this.size = size; this.t = 0; this.isFinished = false;
+    this.z = z; this.team = 'fx'; this.seed = form.id.charCodeAt(1) * 7 + kind.length * 13;
+  }
+  get y() { return this.baseY; }
+  update(dt) { this.t += dt; if (this.t >= this.life) this.isFinished = true; }
+  render(ctx) {
+    const k = Math.min(1, this.t / this.life); const fade = 1 - k; const m = this.mat; const f = this.facing; const s = this.size;
+    const x = this.x; const y = this.baseY;
+    ctx.save();
+    switch (this.kind) {
+      case 'ring': case 'stomp': {
+        const n = this.kind === 'stomp' ? 14 : 10; const r = (14 + 46 * k) * s;
+        for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2; const px = x + Math.cos(a) * r; const py = y + Math.sin(a) * r * .3; plate(ctx, [[px - 4, py - 3], [px + 4, py - 4], [px + 3, py + 2], [px - 3, py + 2]], m, this.seed + i, { alpha: fade, pulse: 1 }); }
+        break;
+      }
+      case 'spike': {
+        const len = (40 + 70 * Math.min(1, k * 2.5)) * s;
+        for (let i = 0; i < 3; i++) { const oy = (i - 1) * 9; plate(ctx, [[x, y + oy - 4], [x + f * len * (1 - Math.abs(i - 1) * .25), y + oy], [x, y + oy + 4]], m, this.seed + i, { alpha: fade, pulse: 1, core: i === 1 ? 1 : 0 }); }
+        break;
+      }
+      case 'slash': {
+        for (let i = 0; i < 5; i++) { const a = -1.2 + (2.2 * Math.min(1, k * 2)) * (i / 4); const r = 46 * s; plate(ctx, [[x + f * Math.cos(a) * r * .5, y + Math.sin(a) * r * .5], [x + f * Math.cos(a) * r, y + Math.sin(a) * r], [x + f * Math.cos(a + .2) * r * .6, y + Math.sin(a + .2) * r * .6]], m, this.seed + i, { alpha: fade, pulse: 1 }); }
+        break;
+      }
+      case 'flash': {
+        for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2; const r = (10 + 40 * k) * s; plate(ctx, [[x, y], [x + Math.cos(a - .12) * r, y + Math.sin(a - .12) * r], [x + Math.cos(a) * r * 1.4, y + Math.sin(a) * r * 1.4], [x + Math.cos(a + .12) * r, y + Math.sin(a + .12) * r]], m, this.seed + i, { alpha: fade, pulse: 1, glowEdge: 1.4 }); }
+        break;
+      }
+      case 'assemble': case 'scatter': {
+        const inward = this.kind === 'assemble';
+        for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2 + this.seed; const d = (inward ? 1 - k : k) * 70 * s + 6; const px = x + Math.cos(a) * d; const py = y + Math.sin(a) * d * .8; const rot = a + k * 4; plate(ctx, [[px + Math.cos(rot) * 5, py + Math.sin(rot) * 5], [px + Math.cos(rot + 2.2) * 4, py + Math.sin(rot + 2.2) * 4], [px + Math.cos(rot + 4.2) * 4, py + Math.sin(rot + 4.2) * 4]], m, this.seed + i, { alpha: inward ? .4 + .6 * k : fade, pulse: 1 }); }
+        break;
+      }
+      case 'fan': {
+        for (let i = 0; i < 9; i++) { const a = Math.PI + (i / 8) * Math.PI; const r = (12 + 50 * k) * s; plate(ctx, [[x, y - 2], [x + Math.cos(a - .1) * r, y + Math.sin(a - .1) * r * .5 - 2], [x + Math.cos(a + .1) * r, y + Math.sin(a + .1) * r * .5 - 2]], m, this.seed + i, { alpha: fade }); }
+        break;
+      }
+      case 'crystal': {
+        for (let i = 0; i < 5; i++) { const px = x + (i - 2) * 12 * s; const h = (10 + 20 * Math.sin(Math.min(1, k * 2) * Math.PI / 2)) * (1 - Math.abs(i - 2) * .2); plate(ctx, [[px - 4, y], [px, y - h], [px + 4, y]], m, this.seed + i, { alpha: fade, core: 1 }); }
+        break;
+      }
+      default: break;
+    }
+    ctx.restore();
+  }
+}
+
+const formOfKey = (key) => BUFF_FORMS[key] ?? (key === 'ninefold' ? BUFF_FORMS.B01 : key === 'eidolon' ? BUFF_FORMS.B02 : null);
+const aliveFoe = (t) => t && !t.isDead && (!t.lifeState || t.lifeState === 'Alive') && !t.isObjective && !t.isProp;
+
+// Perfect block: the form's own counter (atlas: "Perfect Block ...").
+FORM_FX_HOOKS.counter = (player, gameWorld, key) => {
+  const form = formOfKey(key);
+  if (!form || !gameWorld) return false;
+  const f = player.facing || 1; const kind = form.tech.defense?.counter ?? 'shove'; const st = form.tech.defense?.status ?? [];
+  const foes = gameWorld.getHostileTargets(player.team).filter(aliveFoe);
+  const front = (t, reach, depth = 34) => { const dx = (t.x - player.x) * f; return dx > -6 && dx <= reach && Math.abs(((t.z ?? player.z) - player.z) * 150) <= depth; };
+  const around = (t, r) => Math.hypot(t.x - player.x, ((t.z ?? player.z) - player.z) * 150) <= r;
+  const hit = (t, dmg, kx, lift, stun, extra = []) => { t.takeDamage(dmg, kx, lift, stun, false, 'melee'); applyStatuses(t, [...st, ...extra], player, f); };
+  const cy = player.y - 46;
+  switch (kind) {
+    case 'spike': { const t = foes.filter((x) => front(x, 130)).sort((a, b) => Math.abs(a.x - player.x) - Math.abs(b.x - player.x))[0]; if (t) hit(t, 16, f * 260, 60, .5); emit(new BuffBurstFx(form, player.x + f * 10, cy, 'spike', { facing: f })); break; }
+    case 'riposte': { for (const t of foes) if (front(t, 95)) hit(t, 22, f * 200, 80, .5); emit(new BuffBurstFx(form, player.x + f * 14, cy, 'slash', { facing: f })); break; }
+    case 'shock': { for (const t of foes) if (around(t, 90)) hit(t, 10, Math.sign(t.x - player.x || f) * 200, 40, .5, ['shock']); emit(new BuffBurstFx(form, player.x, player.y - 2, 'ring', { size: 1.4 })); break; }
+    case 'flash': { for (const t of foes) if (around(t, 90)) hit(t, 6, Math.sign(t.x - player.x || f) * 120, 20, .6, ['stun']); emit(new BuffBurstFx(form, player.x + f * 12, cy, 'flash')); break; }
+    case 'frost': { for (const t of foes) if (around(t, 90)) hit(t, 8, Math.sign(t.x - player.x || f) * 120, 20, .5, ['slow']); emit(new BuffBurstFx(form, player.x, player.y - 2, 'crystal', { size: 1.4 })); break; }
+    case 'ward': { player.arcaneShield = Math.max(player.arcaneShield ?? 0, 40); player.arcaneShieldTimer = Math.max(player.arcaneShieldTimer ?? 0, 3); emit(new BuffBurstFx(form, player.x, player.y - 40, 'assemble', { life: .4 })); break; }
+    case 'weaken': { for (const t of foes) if (front(t, 120)) applyStatuses(t, ['slow'], player, f); emit(new BuffBurstFx(form, player.x + f * 12, cy, 'flash', { size: .7 })); break; }
+    default: { for (const t of foes) if (front(t, 110)) hit(t, 10, f * (kind === 'reflect' ? 380 : 460), 80, .5); emit(new BuffBurstFx(form, player.x + f * 8, cy, 'spike', { facing: f, size: 1.3 })); }
+  }
+  return true;
+};
+
+// Grab: the form's own throw (atlas grab sentence).
+FORM_FX_HOOKS.grabSlam = (fx) => {
+  const form = formOfKey(fx.form);
+  if (!form || !fx.target) return false;
+  const f = fx.facing; const t = fx.target; const kind = form.tech.grab?.throw ?? 'forward';
+  const throws = {
+    side: [20, f * 180, 140, .6], over: [24, -f * 320, 260, .7], slam: [26, f * 60, -200, .9], pull: [22, f * 380, 120, .6],
+    spin: [22, f * 300, 200, .6], lift: [22, f * 120, 420, .7], forward: [20, f * 280, 120, .6]
+  };
+  const [dmg, kx, lift, stun] = throws[kind] ?? throws.forward;
+  t.takeDamage?.(dmg, kx, lift, stun, true, 'grab');
+  if (kind === 'side' && 'z' in t) t.z = Math.max(.04, Math.min(.96, t.z + (t.z > .5 ? -.12 : .12)));
+  applyStatuses(t, form.tech.grab?.status ?? [], fx.player, f);
+  const ty = (t.y ?? groundYForDepth(t.z ?? fx.player.z));
+  emit(new BuffBurstFx(form, t.x, kind === 'slam' ? ty - 2 : ty - 36, kind === 'slam' ? 'stomp' : 'scatter', { facing: f, size: kind === 'slam' ? 1.3 : .8 }));
+  combat.shakeCamera(kind === 'slam' ? 9 : 5, .22);
+  return true;
+};
+
+// Jump: takeoff burst and the form's own landing (no damage).
+FORM_FX_HOOKS.jump = (player, phase, key) => {
+  const form = formOfKey(key);
+  if (!form) return false;
+  const y = groundYForDepth(player.z) - (player.surfaceHeight ?? 0);
+  if (phase === 'takeoff') { emit(new BuffBurstFx(form, player.x, y - 1, 'ring', { size: .7, life: .3 })); return true; }
+  const landing = form.tech.jump?.landing ?? 'dust';
+  const kind = landing === 'stomp' ? 'stomp' : landing === 'fan' ? 'fan' : landing === 'crystal' ? 'crystal' : 'ring';
+  emit(new BuffBurstFx(form, player.x, y - 1, kind, { size: landing === 'stomp' ? 1.3 : 1 }));
+  if (landing === 'spring') emit(new BuffBurstFx(form, player.x, y - 1, 'ring', { size: .6, life: .3 }));
+  if (landing === 'stomp') combat.shakeCamera(4, .15);
+  return true;
+};
+
+// Transform-in / -out instances (called from activate / end).
+export function buffTransformFx(player, form, phase) {
+  emit(new BuffBurstFx(form, player.x, player.y - 46, phase === 'in' ? 'assemble' : 'scatter', { life: phase === 'in' ? .5 : .55, size: 1.2 }));
 }
