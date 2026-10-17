@@ -890,7 +890,7 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
   resetDuel();
   P.focus = 50; P.focusDecayDelay = 0;
   P.update(1, neutralInput, game.battlefield, game);
-  assert(P.focus < 50 && P.focus > 47, 'Focus decays continuously after its grace period');
+  assert(Math.abs(P.focus - 49) < .01, 'Focus decays 1 per second after its grace period (Unity value)');
   P.focus = P.maxFocus; P.focusDecayDelay = 0;
   P.update(1, neutralInput, game.battlefield, game);
   assert(P.focus === P.maxFocus, 'A full Focus meter holds until the transformation is activated');
@@ -1482,11 +1482,11 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
   assert(game.activateFocusTransformation() && P.runeDeck.length + P.runeHand.length === deckBefore, 'Transforming adds no extra rune card to deck or hand');
   for (let i = 0; i < 60; i++) P.update(1 / 60, neutralInput, game.battlefield, game);
   const afterSecond = P.focus;
-  assert(P.focusTransformTimer > 0 && afterSecond < P.maxFocus - 5 && afterSecond > P.maxFocus - 15, 'While transformed the Focus meter drains (~10 per second)');
-  P.focus = 60; P.focusTransformTimer = 6;
+  assert(P.focusTransformTimer > 0 && Math.abs(afterSecond - (P.maxFocus - 1.5)) < .05, 'While transformed the Focus meter drains 1.5 per second (Unity value)');
+  P.focus = 60; P.focusTransformTimer = 40;
   P.gainFocus(20, 'COMBO');
-  assert(Math.abs(P.focus - 80) < .01 && Math.abs(P.focusTransformTimer - 8) < .01, 'Combos refill the meter and extend the transformation');
-  P.focus = .05; P.update(1 / 60, neutralInput, game.battlefield, game);
+  assert(Math.abs(P.focus - 70) < .01 && Math.abs(P.focusTransformTimer - 70 / 1.5) < .01, 'Combos refill the meter at half rate and extend the transformation');
+  P.focus = .02; P.update(1 / 60, neutralInput, game.battlefield, game);
   assert(P.focusTransformTimer === 0 && P.focus === 0, 'The transformation ends when the Focus meter is empty');
   resetForm();
   // Movement values ported from the Unity project (24 px per unit, 60 Hz).

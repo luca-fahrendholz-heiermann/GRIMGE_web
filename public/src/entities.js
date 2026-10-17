@@ -115,11 +115,13 @@ const TOUCH_SPRINT_MIN_TIME = 0.6;     // collisions may eat the distance
 
 // ── Resources ───────────────────────────────────────────────────────────
 const MANA_REGEN = 9;            // spent mana regenerates; bound mana stays bound
-const FOCUS_DECAY_RATE = 1.5;    // per second, after a short grace period
+// Focus values from the Unity CharacterDefinition (character_base_fighter).
+const FOCUS_DECAY_RATE = 1.0;    // per second (_focusDecayPerTick 1/60), after the grace period
 // A real transformation has no timer of its own: it burns the Focus meter
-// (full meter ≈ 10 s) and lasts as long as combos keep refilling it.
-const FOCUS_TRANSFORM_DRAIN = 10; // Focus per second while transformed
-const FOCUS_DECAY_DELAY = 3;
+// (full meter ≈ 67 s) and lasts as long as combos keep refilling it.
+const FOCUS_TRANSFORM_DRAIN = 1.5; // Focus per second while transformed (_transformationFocusDrainPerSecond)
+const FOCUS_TRANSFORM_GAIN_MULT = 0.5; // gains are halved while transformed (_transformationFocusGainMultiplier)
+const FOCUS_DECAY_DELAY = 5;     // _focusDecayGraceTicks 300 @ 60 Hz
 const CLASH_MOVE_MULT = 0.45;
 
 function keyboardMoveX(input) {
@@ -1500,7 +1502,8 @@ export class Player extends GroundEntity {
     const previous = this.focus;
     const transformed = this.focusTransformTimer > 0;
     this.focusDecayDelay = FOCUS_DECAY_DELAY;
-    this.focus = Math.min(this.maxFocus, this.focus + Math.max(0, amount) * (this.buildModifiers?.focusGain ?? 1));
+    const gainMult = (this.buildModifiers?.focusGain ?? 1) * (transformed ? FOCUS_TRANSFORM_GAIN_MULT : 1);
+    this.focus = Math.min(this.maxFocus, this.focus + Math.max(0, amount) * gainMult);
     // While transformed, combos refill the meter and so extend the form.
     if (transformed) {
       this.focusTransformTimer = this.focus / FOCUS_TRANSFORM_DRAIN;
