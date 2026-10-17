@@ -628,10 +628,9 @@ export class SpriteManager {
           offsetY = Math.sin(animTime * 3) * 2 * proc;
           break;
         case 'run':
-          sy = 1.0 + Math.abs(Math.sin(animTime * 14)) * 0.08 * proc;
-          sx = 1.0 - Math.abs(Math.sin(animTime * 14)) * 0.05 * proc;
-          rot = facing * 0.08 * proc;
-          offsetY = -Math.abs(Math.sin(animTime * 14)) * 6 * proc;
+          // Only a slight forward lean: the run frames carry the motion; an
+          // extra hop on top made walking look bumpy and stuttering.
+          rot = facing * 0.06 * proc;
           break;
         case 'jump':
           sy = 1.0 + 0.18 * proc; sx = 1.0 - 0.14 * proc; rot = facing * 0.05 * proc;

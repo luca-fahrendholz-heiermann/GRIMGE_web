@@ -7,7 +7,7 @@ import { ARENA_LAYOUT, ENTITY_VISUALS, GroundEntity, groundDistance } from './wo
 import { lookupRecipe, runeManaCost } from './spell_catalog.js';
 import { drawFocusAura, drawEidolonGuardian, drawNinefoldSpirit, drawFormGuard } from './forms_fx.js';
 import { formGuardCounter, updateFormSprint, FormGrabFx, formJumpFx, FORM_SPRINT_ATTACKS, FormSprintAttackFx, formSprintImpact } from './form_actions.js';
-import { WEAPONS, ThrownWeaponSpell, drawHeldWeapon } from './weapons.js';
+import { WEAPONS, ThrownWeaponSpell, drawHeldWeapon, weaponMotion } from './weapons.js';
 import { drawBeastBomb, drawSpiritBow } from './form_attacks.js';
 import { FULL_CHARGE_TIME, activeMoveset, releaseFormTechnique, FORM_PALETTES } from './form_moves.js';
 import { updatePrimalBond, bondMoveMultiplier, bondGainMultiplier, bondDisplacement, bondOnBlock, primalSprintVariant, renderPrimalBond, endPrimalBond } from './primals.js';
@@ -554,6 +554,14 @@ export class Player extends GroundEntity {
     // Keyboard double-flicks keep their PC behaviour. Touch flicks are
     // classified by the left-half gesture router instead, so an active
     // joystick can never trigger a dash or sprint by itself.
+    // Charging a heavy roots the Wizard (like Smash Bros. smash attacks): no
+    // walking, sprinting, dashing or jumping until it is released.
+    if (this.chargeTimer > 0) {
+      this.vx = moveTowards(this.vx, 0, this.moveSpeed / WALK_DECEL_TIME * dt);
+      this.vz = moveTowards(this.vz, 0, this.depthSpeed / WALK_DECEL_TIME * dt);
+      this._prevInputDir = 0;
+      return;
+    }
     this.detectFlicks(input?.touchMove?.x ? keyboardMoveX(input) : move.x, input);
 
     if (this.touchSprint && this.sprintActive) {
@@ -748,6 +756,8 @@ export class Player extends GroundEntity {
     const kbMult = 1 + chargeRatio * 0.6;
     this.state = 'heavyStrike';
     this.stateTimer = heavy.time;
+    this._weaponSwingTime = heavy.time;
+    this.setWeaponMotion('heavy');
     this.vx = this.facing * 360 * (1 + chargeRatio * 0.3);
     this.canAttack = false;
     audio.playSlash(0.78 - chargeRatio * 0.15);
@@ -938,8 +948,10 @@ export class Player extends GroundEntity {
     if (attackKind === 'uppercut' || input.keys?.KeyU) {
       const up = weapon ? { ...MELEE_BASELINE.uppercut, ...weapon.uppercut } : MELEE_BASELINE.uppercut;
       this.state = 'uppercut'; this.stateTimer = up.time; this._weaponSwingTime = up.time; this.vElevation = 280 * PLAYER_ARC_SCALE;
+      this.setWeaponMotion('uppercut');
       audio.playSlash(1.2);
-      combat.spawnSlashArc(this.x, this.y - 25, this.facing, { radius: 46, angleStart: -1.2, angleEnd: 0.6, color: weapon?.color ?? '#ffea00', glow: weapon?.accent ?? '#ff9800' });
+      // An astral weapon draws its own trail; bare hands keep the slash arc.
+      if (!weapon) combat.spawnSlashArc(this.x, this.y - 25, this.facing, { radius: 46, angleStart: -1.2, angleEnd: 0.6, color: '#ffea00', glow: '#ff9800' });
       this.triggerMeleeHitbox(up.damage, this.facing * up.knockback, up.lift, 0.5, false, { hitstopTicks: up.hitstopTicks, hitReaction: up.hitReaction });
       return true;
     }
@@ -953,8 +965,9 @@ export class Player extends GroundEntity {
     if (attackKind === 'heavy') {
       const heavy = weapon ? { ...MELEE_BASELINE.heavy, ...weapon.heavy } : MELEE_BASELINE.heavy;
       this.state = 'heavyStrike'; this.stateTimer = heavy.time; this._weaponSwingTime = heavy.time; this.vx = this.facing * 360;
+      this.setWeaponMotion('heavy');
       audio.playSlash(0.78);
-      combat.spawnSlashArc(this.x + this.facing * 28, this.y - 25, this.facing, { radius: weapon ? Math.round((heavy.reach ?? 90) * .65) : 58, angleStart: -0.9, angleEnd: 0.9, color: weapon?.color ?? '#ffd54f', glow: weapon?.accent ?? '#ff6d00', width: 7 });
+      if (!weapon) combat.spawnSlashArc(this.x + this.facing * 28, this.y - 25, this.facing, { radius: 58, angleStart: -0.9, angleEnd: 0.9, color: '#ffd54f', glow: '#ff6d00', width: 7 });
       this.triggerMeleeHitbox(heavy.damage, this.facing * heavy.knockback, heavy.lift, 0.48, true, { hitstopTicks: heavy.hitstopTicks, hitReaction: heavy.hitReaction, reach: heavy.reach, freeze: heavy.freeze });
       return true;
     }
@@ -964,8 +977,9 @@ export class Player extends GroundEntity {
     this.comboResetTimer = 0.65;
     const attack = combo[this.comboStep - 1];
     this.state = attack.state; this.stateTimer = attack.time; this._weaponSwingTime = attack.time; this.vx = this.facing * attack.vx;
+    this.setWeaponMotion('combo', this.comboStep);
     audio.playSlash(attack.finisher ? 0.85 : 1 + this.comboStep * 0.1);
-    combat.spawnSlashArc(this.x + this.facing * 22, this.y - 28, this.facing, { radius: attack.radius, color: weapon?.color ?? attack.color, glow: weapon?.accent ?? attack.glow, width: attack.finisher ? 7 : 4 });
+    if (!weapon) combat.spawnSlashArc(this.x + this.facing * 22, this.y - 28, this.facing, { radius: attack.radius, color: attack.color, glow: attack.glow, width: attack.finisher ? 7 : 4 });
     if (attack.finisher) {
       combat.spawnShockwave(this.x + this.facing * 16, this.y - 30, 60, '#ff3d00');
       combat.spawnShockwave(this.x + this.facing * 16, this.y - 30, 36, '#ffd740');
@@ -974,6 +988,15 @@ export class Player extends GroundEntity {
     }
     this.triggerMeleeHitbox(attack.damage, this.facing * attack.knockback, attack.lift, attack.finisher ? 0.6 : 0.4, !!attack.finisher, { hitstopTicks: attack.hitstopTicks, hitReaction: attack.hitReaction, reach: attack.reach, behind: attack.behind, crit: attack.crit, freeze: attack.freeze, guardBreak: attack.guardBreak, shockwave: attack.shockwave });
     return true;
+  }
+
+  // Which motion the astral weapon plays (each weapon has its own set) and
+  // which hand leads (paired weapons alternate per combo step).
+  setWeaponMotion(kind, step = 1) {
+    const id = this.weapon ?? this.classWeapon;
+    this._weaponMotion = id ? weaponMotion(id, kind, step) : null;
+    this._weaponLead = kind === 'combo' && step % 2 === 0 ? 'rear' : 'front';
+    return this._weaponMotion;
   }
 
   // The moveset in use: a picked-up field weapon overrides the class weapon.
@@ -1011,13 +1034,14 @@ export class Player extends GroundEntity {
     const active = variant?.active ?? SPRINT_ATTACK_ACTIVE_TIME;
     const time = variant ? windup + active + variant.recovery : heavy.time;
     this.state = 'heavyStrike'; this.stateTimer = time; this._weaponSwingTime = time;
+    this.setWeaponMotion('heavy');
     this.vx = this.facing * speed * (variant?.windupSpeed ?? 1); this.vz = 0;
     this.sprintStrike = { heavy, form, variant, speed, windup, active, elapsed: 0, launched: false, connected: false, carry: 0, hits: new Set() };
     this.lastSprintAttack = variant?.name ?? 'SPRINT ATTACK';
     audio.playSlash(variant?.pitch ?? 0.82);
     combat.spawnDust(this.x, this.y, 6);
     if (variant && !variant.primal) spells.addSpell(new FormSprintAttackFx(this, form), 'B');
-    else combat.spawnSlashArc(this.x + this.facing * 28, this.y - 25, this.facing, { radius: weapon ? Math.round((heavy.reach ?? 90) * .65) : 58, angleStart: -0.9, angleEnd: 0.9, color: weapon?.color ?? '#ffd54f', glow: weapon?.accent ?? '#ff6d00', width: 7 });
+    else if (!weapon) combat.spawnSlashArc(this.x + this.facing * 28, this.y - 25, this.facing, { radius: 58, angleStart: -0.9, angleEnd: 0.9, color: '#ffd54f', glow: '#ff6d00', width: 7 });
     this.updateSprintAttack(0);
     return true;
   }
@@ -1465,8 +1489,11 @@ export class Player extends GroundEntity {
     };
     if (useProc) { renderOpts.procRot = pRot; renderOpts.procScaleX = pSX; renderOpts.procScaleY = pSY; }
     if (formCloak) this.renderFormCloak(ctx, renderY, renderOpts, formCloak, 'back');
+    // Astral weapon: the rear-hand piece behind the body, the front one in front.
+    const armed = this.isAlive && (this.weapon || this.classWeapon);
+    if (armed) drawHeldWeapon(ctx, this, renderY, 'back');
     sprites.renderEntity(ctx, this.heroKey, this.x, renderY, renderOpts);
-    if (this.isAlive && (this.weapon || this.classWeapon)) drawHeldWeapon(ctx, this, renderY);
+    if (armed) drawHeldWeapon(ctx, this, renderY, 'front');
     if (formCloak) this.renderFormCloak(ctx, renderY, renderOpts, formCloak, 'front');
     // Guard poses: tail cocoon (Ninefold, drawn with the tails), ribs + palm, light shield.
     if (this.isAlive && this.isGuarding) {

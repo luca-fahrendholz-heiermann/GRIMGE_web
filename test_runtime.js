@@ -2110,6 +2110,34 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   assert(!game.primal, 'Without a Primal none is spawned');
 }
 
+// Charging roots the Wizard; every astral weapon has its own motion set.
+{
+  const { WEAPON_IDS, WEAPON_MOTIONS, MOTION_NAMES, weaponMotion } = await import('./public/src/weapons.js');
+  game.returnToHub(); game.setMatchMode('training'); game.startMatch(); game.selectTrainingMap('waterfalls');
+  const P = game.player;
+  const neutral = { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false };
+  P.x = 400; P.z = .5; P.state = 'idle'; P.stateTimer = 0; P.grounded = true; P.vx = 0; game.battlefield.placeOnSurface(P);
+  assert(P.beginCharge('forward'), 'A heavy charge starts');
+  const startX = P.x;
+  for (let i = 0; i < 30; i++) P.update(1 / 60, { ...neutral, move: { x: 1, z: .5 }, keys: { KeyD: true } }, game.battlefield, game);
+  assert(Math.abs(P.x - startX) < 1 && P.chargeTimer > 0, 'While charging the Wizard cannot walk (Smash-style)');
+  P.releaseCharge(); P.state = 'idle'; P.stateTimer = 0;
+  const motions = WEAPON_IDS.map((id) => [weaponMotion(id, 'combo', 1), weaponMotion(id, 'heavy')].join('/'));
+  assert(WEAPON_IDS.every((id) => [...WEAPON_MOTIONS[id].combo, WEAPON_MOTIONS[id].heavy, WEAPON_MOTIONS[id].uppercut].every((m) => MOTION_NAMES.includes(m))), 'Every weapon motion is a known motion');
+  assert(new Set(motions).size >= 8, `The weapons play clearly different attacks (${new Set(motions).size} distinct opener/heavy pairs)`);
+  assert(weaponMotion('spear', 'combo', 1) === 'thrust' && weaponMotion('katana', 'combo', 1) === 'iaido' && weaponMotion('great_hammer', 'heavy') === 'slam' && weaponMotion('scythe', 'heavy') === 'whirl', 'Spear thrusts, katana draws (iaido), hammer slams, scythe whirls');
+  const ready = () => { P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.grounded = true; P.sprintActive = false; };
+  P.equipWeapon('dual_swords'); P.comboStep = 0;
+  ready(); P.executeAttack(neutral, 'normal'); const lead1 = P._weaponLead;
+  ready(); P.executeAttack(neutral, 'normal'); const lead2 = P._weaponLead;
+  assert(P._weaponMotion === 'backhand' && lead1 === 'front' && lead2 === 'rear', 'Dual swords alternate the striking hand');
+  assert(WEAPON_MOTIONS.sword_shield.hands === 'shield' && WEAPON_MOTIONS.daggers.hands === 'pair' && WEAPON_MOTIONS.gauntlets.hands === 'pair', 'Sword and shield sit in separate hands; daggers and fists one per hand');
+  P.equipWeapon('sword_shield'); ready(); P.executeAttack(neutral, 'heavy');
+  assert(P._weaponMotion === 'bash', 'Sword & shield heavy is a shield bash');
+  game.render();
+  P.equipWeapon(null);
+}
+
 const frameCallback = nextFrame;
 frameCallback(game.lastFrameTime + 16);
 game.debugVisible = true;

@@ -82,71 +82,196 @@ export const WEAPON_IDS = Object.freeze(Object.keys(WEAPONS));
 // ── drawing ──────────────────────────────────────────────────────────────
 // Astral weapons: until weapon sprites and the final character animations
 // exist, every weapon is a conjured, glowing VFX silhouette (additive glow,
-// crystal core, swing trail). It floats at the hand instead of being held
-// pixel-exact, so it reads well with any body animation.
+// crystal core, rune details). Each weapon has its own motion set — slash,
+// overhead chop, thrust, iaido draw, whirl, punches … — and its pieces sit
+// in the hands they belong to (sword in the rear hand, shield in the front;
+// dual blades, daggers and fists one per hand). It floats at the hands
+// instead of being held pixel-exact, so it reads well with any body animation.
 const ASTRAL_HUES = Object.freeze({
   sword_shield: '#7fd8ff', great_axe: '#ff7a45', great_hammer: '#ffb300', dual_swords: '#4dd0e1', katana: '#ff4d6d',
   spear: '#9be564', daggers: '#b388ff', gauntlets: '#ffab40', scythe: '#c158ff', ice_sword: '#80e9ff'
 });
 export const astralHue = (weapon) => ASTRAL_HUES[weapon] ?? WEAPONS[weapon]?.accent ?? '#7fd8ff';
 
-// Silhouette parts per look, pointing along +x from the grip at (0,0).
-// 'fill' parts trace a closed outline, 'line' parts a stroked line.
-const bladePath = (len, width, from = 6) => (c) => { c.moveTo(from, -width / 2); c.lineTo(len - 6, -width / 2); c.lineTo(len, 0); c.lineTo(len - 6, width / 2); c.lineTo(from, width / 2); c.closePath(); };
-const linePath = (x0, x1) => (c) => { c.moveTo(x0, 0); c.lineTo(x1, 0); };
-const ASTRAL_SHAPES = {
-  sword: { tip: 40, parts: [{ type: 'line', width: 3, draw: linePath(-6, 2) }, { type: 'line', width: 3, draw: (c) => { c.moveTo(2, -6); c.lineTo(2, 6); } }, { type: 'fill', draw: bladePath(40, 6) }] },
-  axe: { tip: 58, parts: [{ type: 'line', width: 3, draw: linePath(-6, 46) }, { type: 'fill', draw: (c) => { c.moveTo(38, -3); c.quadraticCurveTo(52, -18, 58, -14); c.lineTo(56, 14); c.quadraticCurveTo(50, 18, 38, 3); c.closePath(); } }] },
-  hammer: { tip: 52, parts: [{ type: 'line', width: 3, draw: linePath(-6, 42) }, { type: 'fill', draw: (c) => { c.rect(36, -12, 16, 24); } }] },
-  spear: { tip: 78, parts: [{ type: 'line', width: 3, draw: linePath(-6, 62) }, { type: 'fill', draw: bladePath(78, 7, 58) }] },
-  katana: { tip: 44, parts: [{ type: 'line', width: 3, draw: linePath(-6, 4) }, { type: 'line', width: 3, draw: (c) => { c.moveTo(4, -4); c.lineTo(4, 4); } }, { type: 'line', width: 3.5, draw: (c) => { c.moveTo(6, 0); c.quadraticCurveTo(26, -5, 44, -7); } }] },
-  dual: { tip: 34, parts: [{ type: 'fill', draw: bladePath(34, 5) }, { type: 'fill', draw: (c) => { c.moveTo(6, 5.5); c.lineTo(24, 5.5); c.lineTo(30, 8); c.lineTo(24, 10.5); c.lineTo(6, 10.5); c.closePath(); } }] },
-  daggers: { tip: 20, parts: [{ type: 'fill', draw: bladePath(20, 5) }, { type: 'fill', draw: (c) => { c.moveTo(6, 4.5); c.lineTo(12, 4.5); c.lineTo(18, 7); c.lineTo(12, 9.5); c.lineTo(6, 9.5); c.closePath(); } }] },
-  gauntlets: { tip: 14, parts: [{ type: 'fill', draw: (c) => { c.rect(-4, -6, 16, 12); } }, { type: 'line', width: 2, draw: (c) => { c.moveTo(8, -6); c.lineTo(8, 6); } }] },
-  scythe: { tip: 58, parts: [{ type: 'line', width: 3, draw: linePath(-6, 58) }, { type: 'line', width: 4.5, draw: (c) => { c.moveTo(56, 0); c.quadraticCurveTo(46, -26, 20, -30); } }] }
+// Per weapon: idle pose, hand layout and the motion of every attack.
+// hands: 'single' (one weapon, front hand), 'shield' (sword rear + shield
+// front), 'pair' (one piece per hand; the lead hand alternates per strike).
+export const WEAPON_MOTIONS = Object.freeze({
+  sword_shield: { hands: 'shield', idle: -2.05, combo: ['slash', 'backhand', 'overhead'], heavy: 'bash', uppercut: 'rising' },
+  great_axe: { hands: 'single', idle: .95, combo: ['cleave', 'overhead'], heavy: 'whirl', uppercut: 'rising' },
+  great_hammer: { hands: 'single', idle: -2.35, combo: ['overhead', 'slam'], heavy: 'slam', uppercut: 'rising' },
+  dual_swords: { hands: 'pair', idle: -.55, idleRear: -.95, combo: ['slash', 'backhand', 'slash', 'backhand', 'cross'], heavy: 'cross', uppercut: 'rising' },
+  katana: { hands: 'single', idle: 2.75, combo: ['iaido', 'backhand', 'iaido'], heavy: 'iaido', uppercut: 'rising' },
+  spear: { hands: 'single', idle: -.22, combo: ['thrust', 'thrust', 'lunge'], heavy: 'lunge', uppercut: 'rising' },
+  daggers: { hands: 'pair', idle: 1.9, idleRear: 2.1, combo: ['stab', 'stab', 'stab', 'flurry'], heavy: 'flurry', uppercut: 'rising' },
+  gauntlets: { hands: 'pair', idle: 0, idleRear: 0, combo: ['punch', 'punch', 'punch', 'smash'], heavy: 'smash', uppercut: 'upper' },
+  scythe: { hands: 'single', idle: -1.85, combo: ['reap', 'whirl'], heavy: 'whirl', uppercut: 'rising' },
+  ice_sword: { hands: 'single', idle: -.55, combo: ['slash', 'backhand', 'overhead'], heavy: 'thrust', uppercut: 'rising' }
+});
+
+// The motion of an attack ('combo' with its 1-based step, 'heavy', 'uppercut').
+export function weaponMotion(weaponId, kind, step = 1) {
+  const m = WEAPON_MOTIONS[weaponId];
+  if (!m) return 'slash';
+  if (kind === 'heavy') return m.heavy;
+  if (kind === 'uppercut') return m.uppercut;
+  return m.combo[(Math.max(1, step) - 1) % m.combo.length];
+}
+
+const clamp01 = (t) => Math.max(0, Math.min(1, t));
+const ease = (t) => 1 - Math.pow(1 - clamp01(t), 3);
+const span = (p, a, b) => clamp01((p - a) / (b - a));
+
+// Motion → pose at progress p (0…1): angle (0 = forward, negative = up),
+// reach (px pushed forward), the trail kind and where it starts.
+const MOTIONS = {
+  slash: (p) => ({ angle: -1.6 + ease(p * 1.35) * 2.4, trail: 'arc', from: -1.6 }),
+  backhand: (p) => ({ angle: .9 - ease(p * 1.35) * 2.4, trail: 'arc', from: .9 }),
+  rising: (p) => ({ angle: 1.3 - ease(p * 1.3) * 3.3, trail: 'arc', from: 1.3 }),
+  overhead: (p) => {
+    const up = span(p, 0, .3); const down = span(p, .3, .55);
+    return down > 0 ? { angle: -2.7 + ease(down) * 4.0, trail: 'arc', from: -2.7 } : { angle: -.6 - up * 2.1 };
+  },
+  slam: (p) => {
+    const up = span(p, 0, .35); const down = span(p, .35, .55);
+    return down > 0 ? { angle: -2.8 + ease(down) * 4.3, trail: 'arc', from: -2.8, impact: span(p, .52, 1) } : { angle: -2.35 - up * .6 };
+  },
+  cleave: (p) => ({ angle: -2.9 + ease(p * 1.2) * 3.8, trail: 'arc', from: -2.9, wide: true }),
+  reap: (p) => ({ angle: -2.6 + ease(p * 1.15) * 3.5, trail: 'arc', from: -2.6, wide: true }),
+  whirl: (p) => ({ angle: -1.8 + ease(p) * Math.PI * 2.4, trail: 'ring', from: -1.8, wide: true }),
+  thrust: (p) => { const back = span(p, 0, .22); const out = span(p, .22, .45); const ret = span(p, .7, 1); return { angle: -.06, reach: -10 * back * (1 - out) + 30 * ease(out) * (1 - ret), trail: out > 0 && ret < 1 ? 'line' : null }; },
+  lunge: (p) => { const back = span(p, 0, .28); const out = span(p, .28, .5); const ret = span(p, .75, 1); return { angle: -.04, reach: -16 * back * (1 - out) + 56 * ease(out) * (1 - ret), trail: out > 0 && ret < 1 ? 'line' : null, long: true }; },
+  stab: (p) => { const out = span(p, 0, .35); const ret = span(p, .5, 1); return { angle: .1, reach: 20 * ease(out) * (1 - ret), trail: out > 0 && ret < 1 ? 'line' : null }; },
+  flurry: (p) => ({ angle: .05 + Math.sin(p * 37) * .12, reach: 10 + Math.abs(Math.sin(p * Math.PI * 6)) * 20, trail: 'line', both: true }),
+  punch: (p) => { const out = span(p, 0, .3); const ret = span(p, .45, 1); return { angle: 0, reach: 22 * ease(out) * (1 - ret), trail: out > 0 && ret < 1 ? 'line' : null }; },
+  smash: (p) => { const back = span(p, 0, .3); const out = span(p, .3, .5); const ret = span(p, .75, 1); return { angle: 0, reach: -10 * back * (1 - out) + 34 * ease(out) * (1 - ret), trail: out > 0 ? 'line' : null, impact: span(p, .45, 1), long: true }; },
+  upper: (p) => { const out = span(p, 0, .4); return { angle: -1.2 * ease(out), reach: 14 * ease(out), lift: 18 * ease(out), trail: 'line' }; },
+  iaido: (p) => { const draw = span(p, .12, .3); return draw > 0 ? { angle: 2.75 - ease(draw) * 3.25, trail: 'flash', flash: 1 - span(p, .3, 1) } : { angle: 2.75 }; },
+  bash: (p) => { const out = span(p, .1, .35); const ret = span(p, .65, 1); return { angle: -1.0, shieldReach: 24 * ease(out) * (1 - ret), impact: span(p, .3, .9) }; },
+  cross: (p) => ({ angle: -1.6 + ease(p * 1.3) * 2.5, trail: 'arc', from: -1.6, both: true, cross: true })
 };
-const shapeFor = (w) => ASTRAL_SHAPES[w.look] ?? ASTRAL_SHAPES.sword;
-export const astralTipLength = (weapon) => shapeFor(WEAPONS[weapon] ?? WEAPONS.sword_shield).tip;
+export const MOTION_NAMES = Object.freeze(Object.keys(MOTIONS));
+
+// ── Silhouettes: parts per piece, pointing along +x from the grip. ──────
+// 'fill' = closed outline, 'line' = stroked line, 'detail' = thin inner
+// line drawn only in the bright core pass (fullers, runes, bands …).
+const bladePath = (len, width, from = 6) => (c) => { c.moveTo(from, -width / 2); c.lineTo(len - 7, -width / 2); c.lineTo(len, 0); c.lineTo(len - 7, width / 2); c.lineTo(from, width / 2); c.closePath(); };
+const seg = (x0, y0, x1, y1) => (c) => { c.moveTo(x0, y0); c.lineTo(x1, y1); };
+const runeTicks = (x0, x1, n, h = 1.6) => (c) => { for (let i = 0; i < n; i++) { const x = x0 + (x1 - x0) * (i + .5) / n; c.moveTo(x - 1.2, -h); c.lineTo(x + 1.2, h); } };
+const ASTRAL_SHAPES = {
+  sword: { tip: 42, parts: [
+    { type: 'line', width: 3, draw: seg(-7, 0, 1, 0) },
+    { type: 'fill', draw: (c) => { c.arc(-8, 0, 2.4, 0, Math.PI * 2); } },
+    { type: 'fill', draw: (c) => { c.moveTo(1, -7); c.lineTo(4, -7); c.lineTo(4, 7); c.lineTo(1, 7); c.closePath(); } },
+    { type: 'fill', draw: bladePath(42, 6.5) },
+    { type: 'detail', draw: seg(8, 0, 34, 0) },
+    { type: 'detail', draw: runeTicks(10, 30, 4) }
+  ] },
+  shield: { tip: 14, parts: [
+    { type: 'fill', draw: (c) => { c.moveTo(-6, -13); c.lineTo(8, -13); c.quadraticCurveTo(12, -6, 10, 1); c.lineTo(1, 15); c.lineTo(-8, 1); c.quadraticCurveTo(-10, -6, -6, -13); c.closePath(); } },
+    { type: 'detail', draw: (c) => { c.moveTo(-4, -10.5); c.lineTo(6, -10.5); c.quadraticCurveTo(9, -5, 7.5, 0.5); c.lineTo(1, 11.5); c.lineTo(-5.5, 0.5); c.quadraticCurveTo(-7.5, -5, -4, -10.5); } },
+    { type: 'detail', draw: (c) => { c.moveTo(1, -9); c.lineTo(1, 9); c.moveTo(-5, -3); c.lineTo(7, -3); } },
+    { type: 'fill', draw: (c) => { c.arc(1, -3, 2.6, 0, Math.PI * 2); } }
+  ] },
+  axe: { tip: 60, parts: [
+    { type: 'line', width: 3.2, draw: seg(-8, 0, 50, 0) },
+    { type: 'detail', draw: (c) => { for (let x = -4; x < 30; x += 7) { c.moveTo(x, -2); c.lineTo(x + 3, 2); } } },
+    { type: 'fill', draw: (c) => { c.moveTo(40, -3); c.quadraticCurveTo(54, -22, 60, -17); c.quadraticCurveTo(57, 0, 60, 17); c.quadraticCurveTo(54, 22, 40, 3); c.closePath(); } },
+    { type: 'fill', draw: (c) => { c.moveTo(38, -2); c.quadraticCurveTo(31, -9, 29, -6); c.quadraticCurveTo(31, 0, 29, 6); c.quadraticCurveTo(31, 9, 38, 2); c.closePath(); } },
+    { type: 'detail', draw: (c) => { c.moveTo(57, -14); c.quadraticCurveTo(55, 0, 57, 14); } },
+    { type: 'detail', draw: (c) => { c.moveTo(46, -4); c.lineTo(50, 0); c.lineTo(46, 4); } }
+  ] },
+  hammer: { tip: 54, parts: [
+    { type: 'line', width: 3.4, draw: seg(-8, 0, 44, 0) },
+    { type: 'fill', draw: (c) => { c.rect(36, -13, 18, 26); } },
+    { type: 'fill', draw: (c) => { c.rect(33, -9, 3, 18); } },
+    { type: 'detail', draw: (c) => { c.moveTo(40, -13); c.lineTo(40, 13); c.moveTo(50, -13); c.lineTo(50, 13); } },
+    { type: 'detail', draw: (c) => { c.moveTo(45, -5); c.lineTo(49, 0); c.lineTo(45, 5); c.lineTo(41, 0); c.closePath(); } },
+    { type: 'detail', draw: (c) => { for (let x = -4; x < 28; x += 6) { c.moveTo(x, -2); c.lineTo(x + 3, 2); } } }
+  ] },
+  spear: { tip: 80, parts: [
+    { type: 'line', width: 3, draw: seg(-10, 0, 62, 0) },
+    { type: 'fill', draw: (c) => { c.moveTo(60, 0); c.quadraticCurveTo(68, -7, 80, 0); c.quadraticCurveTo(68, 7, 60, 0); c.closePath(); } },
+    { type: 'fill', draw: (c) => { c.rect(56, -3.5, 4, 7); } },
+    { type: 'detail', draw: seg(62, 0, 76, 0) },
+    // Tassel ribbon under the blade.
+    { type: 'line', width: 1.6, draw: (c) => { c.moveTo(57, 3); c.quadraticCurveTo(52, 10, 47, 12); c.moveTo(57, 3); c.quadraticCurveTo(54, 12, 51, 15); } }
+  ] },
+  katana: { tip: 46, parts: [
+    { type: 'line', width: 3, draw: seg(-10, 0, 2, 0) },
+    { type: 'detail', draw: (c) => { for (let x = -8; x < 1; x += 3) { c.moveTo(x, -1.6); c.lineTo(x + 1.5, 1.6); c.moveTo(x, 1.6); c.lineTo(x + 1.5, -1.6); } } },
+    { type: 'fill', draw: (c) => { c.ellipse(3, 0, 1.6, 5.5, 0, 0, Math.PI * 2); } },
+    { type: 'fill', draw: (c) => { c.moveTo(5, -1.8); c.quadraticCurveTo(26, -6.5, 46, -8.5); c.quadraticCurveTo(28, -2.5, 5, 1.8); c.closePath(); } },
+    // Hamon temper line.
+    { type: 'detail', draw: (c) => { c.moveTo(8, 0); for (let x = 8; x <= 40; x += 4) c.quadraticCurveTo(x + 2, -2.4 - x * .1, x + 4, -1.2 - x * .12); } }
+  ] },
+  blade: { tip: 36, parts: [
+    { type: 'line', width: 3, draw: seg(-6, 0, 1, 0) },
+    { type: 'fill', draw: (c) => { c.moveTo(1, -5); c.lineTo(3, -5); c.lineTo(3, 5); c.lineTo(1, 5); c.closePath(); } },
+    { type: 'fill', draw: bladePath(36, 5) },
+    { type: 'detail', draw: seg(7, 0, 29, 0) }
+  ] },
+  dagger: { tip: 24, parts: [
+    { type: 'line', width: 2.6, draw: seg(-5, 0, 1, 0) },
+    { type: 'fill', draw: (c) => { c.moveTo(1, -4); c.lineTo(3, -4); c.lineTo(3, 4); c.lineTo(1, 4); c.closePath(); } },
+    { type: 'fill', draw: (c) => { c.moveTo(3, -2.6); c.quadraticCurveTo(14, -5, 24, -1); c.quadraticCurveTo(14, 1, 3, 2.6); c.closePath(); } },
+    { type: 'detail', draw: (c) => { c.moveTo(6, -.5); c.quadraticCurveTo(14, -2, 20, -1); } }
+  ] },
+  fist: { tip: 14, parts: [
+    { type: 'fill', draw: (c) => { c.moveTo(-6, -7); c.lineTo(9, -7); c.quadraticCurveTo(14, -6, 14, 0); c.quadraticCurveTo(14, 6, 9, 7); c.lineTo(-6, 7); c.closePath(); } },
+    { type: 'detail', draw: (c) => { for (const y of [-4.5, -1.5, 1.5, 4.5]) { c.moveTo(7, y); c.lineTo(12.5, y); } } },
+    { type: 'detail', draw: (c) => { c.moveTo(-6, -7); c.lineTo(-6, 7); c.moveTo(-2, -7); c.lineTo(-2, 7); } },
+    { type: 'fill', draw: (c) => { c.arc(3, 0, 2, 0, Math.PI * 2); } }
+  ] },
+  scythe: { tip: 62, parts: [
+    { type: 'line', width: 3, draw: seg(-10, 0, 60, 0) },
+    { type: 'detail', draw: (c) => { c.moveTo(18, -2); c.lineTo(18, 2); c.moveTo(38, -2); c.lineTo(38, 2); } },
+    { type: 'fill', draw: (c) => { c.moveTo(58, -2); c.quadraticCurveTo(50, -34, 16, -36); c.quadraticCurveTo(44, -26, 54, 3); c.closePath(); } },
+    { type: 'detail', draw: (c) => { c.moveTo(55, -4); c.quadraticCurveTo(48, -28, 22, -33); } },
+    { type: 'detail', draw: runeTicks(28, 46, 3, 1.4) }
+  ] }
+};
+const PIECES = Object.freeze({
+  sword_shield: { main: 'sword', off: 'shield' }, great_axe: { main: 'axe' }, great_hammer: { main: 'hammer' },
+  dual_swords: { main: 'blade', off: 'blade' }, katana: { main: 'katana' }, spear: { main: 'spear' },
+  daggers: { main: 'dagger', off: 'dagger' }, gauntlets: { main: 'fist', off: 'fist' }, scythe: { main: 'scythe' },
+  ice_sword: { main: 'sword' }
+});
+const shapeOf = (piece) => ASTRAL_SHAPES[piece] ?? ASTRAL_SHAPES.sword;
+export const astralTipLength = (weapon) => shapeOf(PIECES[weapon]?.main).tip;
 
 function traceParts(ctx, parts, pass) {
   for (const part of parts) {
+    if (part.type === 'detail' && !pass.detail) continue;
     ctx.beginPath();
     part.draw(ctx);
     if (part.type === 'fill') {
       if (pass.fill) { ctx.fillStyle = pass.fill; ctx.fill(); }
       if (pass.edge) { ctx.strokeStyle = pass.edge; ctx.lineWidth = pass.edgeWidth; ctx.stroke(); }
-    } else {
+    } else if (part.type === 'line') {
       ctx.strokeStyle = pass.line; ctx.lineWidth = Math.max(1, part.width + pass.lineGrow); ctx.stroke();
+    } else {
+      ctx.strokeStyle = pass.detail; ctx.lineWidth = 1; ctx.stroke();
     }
   }
 }
 
-// Draws a weapon pointing along +x from (0,0) (the grip), already rotated.
-// options: intensity (glow strength), time (shimmer phase).
-export function drawWeaponShape(ctx, weapon, scale = 1, { intensity = .8, time = performance.now() / 1000 } = {}) {
-  const w = WEAPONS[weapon] ?? WEAPONS.sword_shield;
-  const hue = astralHue(weapon);
-  const shape = shapeFor(w);
+// One astral piece pointing along +x from (0,0), already placed/rotated.
+export function drawAstralPiece(ctx, piece, hue, { intensity = .8, time = performance.now() / 1000 } = {}) {
+  const shape = shapeOf(piece);
   ctx.save();
-  ctx.scale(scale, scale);
   ctx.lineCap = 'round'; ctx.lineJoin = 'round';
   ctx.globalCompositeOperation = 'lighter';
   const base = ctx.globalAlpha;
   // 1) Soft outer glow.
   ctx.shadowColor = hue; ctx.shadowBlur = 10 + 8 * intensity;
-  ctx.globalAlpha = base * Math.min(1, .32 + .25 * intensity);
+  ctx.globalAlpha = base * Math.min(1, .3 + .25 * intensity);
   traceParts(ctx, shape.parts, { fill: hue, edge: hue, edgeWidth: 4, line: hue, lineGrow: 4 });
-  // 2) Crystal core with a bright edge.
+  // 2) Crystal core, bright edge and the inner rune details.
   ctx.shadowBlur = 0;
-  ctx.globalAlpha = base * .85;
-  traceParts(ctx, shape.parts, { fill: hue + '59', edge: 'rgba(255,255,255,.9)', edgeWidth: 1.2, line: 'rgba(255,255,255,.92)', lineGrow: -1 });
-  // The shield of sword & shield: a ring of light.
-  if (w.shield) {
-    ctx.globalAlpha = base * .7; ctx.strokeStyle = hue; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.ellipse(-4, 14, 8, 11, 0, 0, Math.PI * 2); ctx.stroke();
-    ctx.globalAlpha = base * .18; ctx.fillStyle = hue; ctx.fill();
-  }
-  // 3) Motes drifting along the weapon.
+  ctx.globalAlpha = base * .88;
+  traceParts(ctx, shape.parts, { fill: hue + '59', edge: 'rgba(255,255,255,.9)', edgeWidth: 1.2, line: 'rgba(255,255,255,.92)', lineGrow: -1, detail: 'rgba(255,255,255,.75)' });
+  // 3) Motes drifting along the piece.
   ctx.fillStyle = '#ffffff';
   for (let i = 0; i < 3; i++) {
     const u = (time * .7 + i / 3) % 1;
@@ -156,55 +281,144 @@ export function drawWeaponShape(ctx, weapon, scale = 1, { intensity = .8, time =
   ctx.restore();
 }
 
-// Swing angles (grip-relative) of the held weapon for the current action.
-export function weaponSwing(player) {
-  const swinging = player.stateTimer > 0 && /^attack|uppercut|heavyStrike/.test(player.state);
-  const progress = swinging ? 1 - Math.max(0, player.stateTimer) / (player._weaponSwingTime || .3) : 0;
-  if (!swinging) return { swinging, progress, from: 0, angle: -.55 + Math.sin((player.animTime ?? 0) * 3) * .05 };
-  const from = player.state === 'uppercut' ? -2.2 : -1.6;
-  const sweep = player.state === 'uppercut' ? 1.4 : 2.4;
-  // Front-loaded: the strike snaps through, then settles.
-  const eased = 1 - Math.pow(1 - Math.min(1, progress * 1.35), 3);
-  return { swinging, progress, from, angle: from + eased * sweep };
+// Draws a weapon pointing along +x from (0,0) (pickups and thrown weapons).
+export function drawWeaponShape(ctx, weapon, scale = 1, options = {}) {
+  const pieces = PIECES[weapon] ?? PIECES.sword_shield;
+  const hue = astralHue(weapon);
+  ctx.save();
+  ctx.scale(scale, scale);
+  drawAstralPiece(ctx, pieces.main, hue, options);
+  if (pieces.off) { ctx.translate(pieces.off === 'shield' ? -2 : 0, pieces.off === 'shield' ? 14 : 9); drawAstralPiece(ctx, pieces.off, hue, options); }
+  ctx.restore();
 }
 
-// The weapon at a Wizard's hand: floats, swings with the attack and leaves
-// a crescent of light behind.
-export function drawHeldWeapon(ctx, player, renderY) {
+// Current swing of the held weapon: motion name, progress and pose.
+export function weaponSwing(player, weaponId = player.weapon ?? player.classWeapon) {
+  const swinging = player.stateTimer > 0 && /^attack|uppercut|heavyStrike/.test(player.state);
+  const progress = swinging ? 1 - Math.max(0, player.stateTimer) / (player._weaponSwingTime || .3) : 0;
+  const motion = swinging ? (player._weaponMotion ?? 'slash') : null;
+  const pose = motion ? (MOTIONS[motion] ?? MOTIONS.slash)(clamp01(progress)) : null;
+  return { swinging, progress, motion, pose };
+}
+
+// Trails of a swing, drawn in hand space (unrotated).
+function drawTrail(ctx, pose, tip, hue, progress) {
+  if (!pose?.trail) return;
+  const fade = 1 - progress * .7;
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.lineCap = 'round';
+  if (pose.trail === 'arc' || pose.trail === 'ring') {
+    const from = pose.from ?? pose.angle; const to = pose.angle;
+    if (Math.abs(to - from) > .05) {
+      const a0 = Math.min(from, to); const a1 = Math.max(from, to);
+      ctx.globalAlpha = .28 * fade; ctx.strokeStyle = hue; ctx.lineWidth = pose.wide ? 20 : 13;
+      ctx.beginPath(); ctx.arc(0, 0, tip * .78, a0, a1); ctx.stroke();
+      ctx.globalAlpha = .55 * fade; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.5;
+      const head = to > from ? [Math.max(from, to - 1), to] : [to, Math.min(from, to + 1)];
+      ctx.beginPath(); ctx.arc(0, 0, tip * .96, head[0], head[1]); ctx.stroke();
+      if (pose.cross) {
+        // The second blade crosses the first: an X of two crescents.
+        ctx.globalAlpha = .3 * fade; ctx.strokeStyle = hue; ctx.lineWidth = 13;
+        ctx.beginPath(); ctx.arc(0, 6, tip * .78, -a1 + .2, -a0 + .2); ctx.stroke();
+      }
+    }
+  } else if (pose.trail === 'line') {
+    const len = tip + (pose.reach ?? 0);
+    for (const [dy, a, w] of [[0, .5, 3], [-4, .25, 1.5], [4, .25, 1.5]]) {
+      ctx.globalAlpha = a * fade; ctx.strokeStyle = dy ? '#ffffff' : hue; ctx.lineWidth = w;
+      ctx.beginPath(); ctx.moveTo(len - (pose.long ? 70 : 40), dy - (pose.lift ?? 0)); ctx.lineTo(len, dy - (pose.lift ?? 0)); ctx.stroke();
+    }
+  } else if (pose.trail === 'flash') {
+    // Iaido: one long thin flash across the line of the draw.
+    const k = pose.flash ?? 1;
+    ctx.globalAlpha = .85 * k; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(-18, -6); ctx.lineTo(tip + 70, -14); ctx.stroke();
+    ctx.globalAlpha = .35 * k; ctx.strokeStyle = hue; ctx.lineWidth = 9;
+    ctx.beginPath(); ctx.moveTo(-18, -6); ctx.lineTo(tip + 70, -14); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+// Ground impact under a slam / smash / bash (hand space; ground ≈ +44 px).
+function drawImpact(ctx, x, k, hue) {
+  if (!(k > 0) || k >= 1) return;
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.globalAlpha = (1 - k) * .8; ctx.strokeStyle = hue; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.ellipse(x, 44, 10 + 46 * k, 4 + 12 * k, 0, 0, Math.PI * 2); ctx.stroke();
+  ctx.globalAlpha = (1 - k) * .5; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.ellipse(x, 44, 6 + 30 * k, 2 + 8 * k, 0, 0, Math.PI * 2); ctx.stroke();
+  ctx.restore();
+}
+
+// Hand anchors relative to the Wizard's feet (facing right; mirrored by facing).
+const HANDS = Object.freeze({ front: Object.freeze({ x: 15, y: -44 }), rear: Object.freeze({ x: -7, y: -47 }) });
+
+// The weapon at the Wizard's hands. layer 'back' draws the rear-hand piece
+// (behind the body), 'front' the front-hand piece and the trails.
+export function drawHeldWeapon(ctx, player, renderY, layer = 'front') {
   const weaponId = player.weapon ?? player.classWeapon;
   if (!weaponId) return;
-  const f = player.facing || 1;
-  const { swinging, progress, from, angle } = weaponSwing(player);
+  const cfg = WEAPON_MOTIONS[weaponId] ?? WEAPON_MOTIONS.sword_shield;
+  const pieces = PIECES[weaponId] ?? PIECES.sword_shield;
   const hue = astralHue(weaponId);
-  const tip = astralTipLength(weaponId);
+  const f = player.facing || 1;
   const time = player.animTime ?? 0;
+  const { swinging, progress, pose } = weaponSwing(player, weaponId);
   const hover = swinging ? 0 : Math.sin(time * 2.4) * 2;
-  ctx.save();
-  ctx.translate(player.x + f * 14, renderY - 44 + hover);
-  ctx.scale(f, 1);
-  if (swinging && angle > from + .05) {
-    const fade = 1 - progress * .7;
-    ctx.save();
-    ctx.globalCompositeOperation = 'lighter';
-    ctx.lineCap = 'round';
-    ctx.globalAlpha = .28 * fade; ctx.strokeStyle = hue; ctx.lineWidth = 14;
-    ctx.beginPath(); ctx.arc(0, 0, tip * .78, from, angle); ctx.stroke();
-    ctx.globalAlpha = .55 * fade; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.5;
-    ctx.beginPath(); ctx.arc(0, 0, tip * .95, Math.max(from, angle - .9), angle); ctx.stroke();
-    ctx.restore();
-    // Afterimages just behind the blade.
-    for (let k = 3; k >= 1; k--) {
-      ctx.save(); ctx.globalAlpha = .16 / k * fade; ctx.rotate(Math.max(from, angle - k * .22));
-      drawWeaponShape(ctx, weaponId, 1, { intensity: .4, time });
-      ctx.restore();
-    }
+  const guarding = !!player.isGuarding;
+  // Which hand leads this strike (pairs alternate per combo step).
+  const leadFront = cfg.hands !== 'pair' || (player._weaponLead ?? 'front') === 'front';
+  const items = [];
+  if (cfg.hands === 'shield') {
+    // Shield in the front hand, sword in the rear hand.
+    const bashing = pose?.shieldReach;
+    items.push({ hand: 'front', piece: 'shield', angle: guarding ? -.15 : -.35, reach: bashing ?? (guarding ? 6 : 0), dy: 6, active: !!bashing || guarding, static: true });
+    items.push({ hand: 'rear', piece: pieces.main, angle: pose && !pose.shieldReach ? pose.angle : cfg.idle, reach: 0, active: !!pose && !pose.shieldReach, layerOverride: pose && !pose.shieldReach ? 'front' : null });
+  } else if (cfg.hands === 'pair') {
+    const both = !!pose?.both;
+    const leadPose = pose ? { angle: pose.angle, reach: pose.reach ?? 0 } : null;
+    const restFront = { angle: cfg.idle, reach: 0 }; const restRear = { angle: cfg.idleRear ?? cfg.idle, reach: 0 };
+    const frontPose = pose && (leadFront || both) ? leadPose : restFront;
+    let rearPose = pose && (!leadFront || both) ? leadPose : restRear;
+    if (both && pose?.cross) rearPose = { angle: -pose.angle + .4, reach: 0 };
+    if (both && pose?.reach !== undefined && !pose.cross) rearPose = { angle: pose.angle, reach: 30 - (pose.reach ?? 0) };
+    items.push({ hand: 'front', piece: pieces.main, ...frontPose, active: frontPose !== restFront });
+    items.push({ hand: 'rear', piece: pieces.off ?? pieces.main, ...rearPose, active: rearPose !== restRear, layerOverride: rearPose !== restRear && !both ? 'front' : null });
+  } else {
+    items.push({ hand: 'front', piece: pieces.main, angle: pose ? pose.angle : cfg.idle, reach: pose?.reach ?? 0, active: !!pose });
   }
-  // Grip anchor: a small orb of light where the weapon is bound to the hand.
-  ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = .5; ctx.fillStyle = hue;
-  ctx.beginPath(); ctx.arc(0, 0, swinging ? 5 : 3.5, 0, Math.PI * 2); ctx.fill(); ctx.restore();
-  ctx.rotate(angle);
-  drawWeaponShape(ctx, weaponId, 1, { intensity: swinging ? 1.1 : .7, time });
-  ctx.restore();
+  for (const item of items) {
+    const itemLayer = item.layerOverride ?? (item.hand === 'rear' ? 'back' : 'front');
+    if (itemLayer !== layer) continue;
+    const hand = HANDS[item.hand];
+    const lift = item.active ? (pose?.lift ?? 0) : 0;
+    ctx.save();
+    ctx.translate(player.x + f * hand.x, renderY + hand.y + hover - lift + (item.dy ?? 0));
+    ctx.scale(f, 1);
+    if (item.active && pose && !item.static) {
+      drawTrail(ctx, pose, shapeOf(item.piece).tip, hue, progress);
+      drawImpact(ctx, Math.cos(item.angle) * shapeOf(item.piece).tip + (item.reach ?? 0), pose.impact, hue);
+      // Afterimages just behind the blade on sweeping motions.
+      if (pose.trail === 'arc' || pose.trail === 'ring') {
+        for (let k = 3; k >= 1; k--) {
+          const back = pose.angle - Math.sign(pose.angle - (pose.from ?? pose.angle)) * k * .22;
+          ctx.save(); ctx.globalAlpha = .15 / k * (1 - progress * .7); ctx.rotate(back);
+          drawAstralPiece(ctx, item.piece, hue, { intensity: .4, time });
+          ctx.restore();
+        }
+      }
+    }
+    if (item.static && pose?.impact) drawImpact(ctx, 18 + (item.reach ?? 0), pose.impact, hue);
+    // Grip anchor: a small orb of light binding the piece to the hand.
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = .5; ctx.fillStyle = hue;
+    ctx.beginPath(); ctx.arc(0, 0, item.active ? 4.5 : 3, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+    ctx.translate(item.reach ?? 0, 0);
+    ctx.rotate(item.angle);
+    drawAstralPiece(ctx, item.piece, hue, { intensity: item.active ? 1.1 : .7, time });
+    ctx.restore();
+  }
 }
 
 // ── field items ──────────────────────────────────────────────────────────
