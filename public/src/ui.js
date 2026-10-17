@@ -3,7 +3,7 @@ import { spells } from './spells.js';
 import { MAGE_SKILL_TREE, ALL_RUNE_IDS, runeUnlockLabel } from './progression.js';
 import { recognizer } from './recognizer.js';
 import { sprites } from './sprites.js';
-import { runeManaCost, SPELL_RECIPES, lookupRecipe, SOLO_RUNES } from './spell_catalog.js';
+import { runeManaCost, SPELL_RECIPES, lookupRecipe, SOLO_RUNES, spellHowTo } from './spell_catalog.js';
 import { TRAINING_MAPS, trainingMapThumb } from './training_maps.js';
 
 export class UIManager {
@@ -117,6 +117,8 @@ export class UIManager {
     this.activeSpellPreview = document.getElementById('active-spell-preview');
     this.summonStatus = document.getElementById('summon-status');
     this.focusActivateBtn = document.getElementById('focus-activate-btn');
+    // The own profile bar (portrait + bars) also triggers the transformation.
+    this.blueSidePanel = document.querySelector?.('#top-hud-bar .blue-side') ?? null;
     this.trainingSparringBtn = document.getElementById('training-sparring-btn');
     this.trainingDeckBtn = document.getElementById('training-deck-btn');
     this.trainingMapBtn = document.getElementById('training-map-btn');
@@ -357,6 +359,11 @@ export class UIManager {
     });
     this.mountBtn?.addEventListener('pointerdown', (e) => {
       e.preventDefault(); e.stopPropagation(); window.gameWorld?.toggleMount();
+    });
+    this.blueSidePanel?.addEventListener?.('pointerdown', (e) => {
+      const game = window.gameWorld;
+      if (!game?.player || game.player.focus < game.player.maxFocus || game.player.focusTransformTimer > 0) return;
+      e.preventDefault(); e.stopPropagation(); game.activateFocusTransformation();
     });
     this.focusActivateBtn?.addEventListener('pointerdown', (e) => {
       e.preventDefault(); e.stopPropagation(); window.gameWorld?.activateFocusTransformation();
@@ -725,7 +732,20 @@ export class UIManager {
       const recipe = lookupRecipe(ids);
       if (recipe) groups[ids.length]?.push({ ids, recipe });
     }
-    const line = ({ ids, recipe }) => `<div class="g-item is-recipe">${ids.map(chip).join(' + ')} = <strong>${recipe.name}</strong></div>`;
+    // Tap a recipe to see what it does and how to cast it.
+    const line = ({ ids, recipe }) => {
+      const how = spellHowTo(recipe.id);
+      const detail = how ? `<div class="g-detail" data-detail="${recipe.id}"><p><b>WHAT IT DOES</b> ${how.effect}</p><p><b>HOW TO CAST</b> ${how.targeting}</p>${how.summon ? `<p><b>TIP</b> ${how.summon}</p>` : ''}</div>` : '';
+      return `<div class="g-item is-recipe" data-spell="${recipe.id}" role="button" tabindex="0">${ids.map(chip).join(' + ')} = <strong>${recipe.name}</strong><span class="g-more">ⓘ</span></div>${detail}`;
+    };
+    if (!fusions.dataset?.bound) {
+      if (fusions.dataset) fusions.dataset.bound = '1';
+      fusions.addEventListener('pointerdown', (e) => {
+        const row = e.target?.closest?.('[data-spell]');
+        if (!row) return;
+        this.toggleRecipeDetail(row.getAttribute('data-spell'));
+      });
+    }
     fusions.innerHTML = [
       ['SINGLE RUNES', groups[1]],
       ['DUAL FUSIONS', groups[2]],
@@ -733,9 +753,25 @@ export class UIManager {
     ].map(([title, list]) => `<h4>${title}</h4>${list.map(line).join('')}`).join('');
   }
 
+  // Open one recipe explanation in the grimoire (closes the previous one).
+  toggleRecipeDetail(spellId) {
+    const fusions = document.getElementById('fusion-guide');
+    if (!fusions?.querySelectorAll) return null;
+    let opened = null;
+    for (const detail of fusions.querySelectorAll('.g-detail')) {
+      const match = detail.getAttribute('data-detail') === spellId;
+      const open = match && !detail.classList.contains('open');
+      detail.classList.toggle('open', open);
+      if (open) opened = spellId;
+    }
+    for (const row of fusions.querySelectorAll('[data-spell]')) row.classList.toggle('active', row.getAttribute('data-spell') === opened);
+    return opened;
+  }
+
   renderRuneProgression(profile) {
     if (!profile || !this.runeProgressList) return;
-    this.runeProgressList.innerHTML = recognizer.runes.map((rune) => {
+    // Only real deck runes; transformation runes are granted in battle.
+    this.runeProgressList.innerHTML = recognizer.runes.filter((rune) => ALL_RUNE_IDS.includes(rune.id)).map((rune) => {
       const unlocked = profile.isRuneUnlocked(rune.id);
       const level = profile.runeLevel(rune.id);
       const xp = profile.runeXpIntoLevel(rune.id);
@@ -1000,6 +1036,7 @@ export class UIManager {
         ? `ASCENDANT ${player.focusTransformTimer.toFixed(1)}s`
         : `${Math.round(player.focus / player.maxFocus * 100)}%`;
     }
+    this.blueSidePanel?.classList?.toggle('focus-ready', focusReady);
     if (this.focusActivateBtn) {
       this.focusActivateBtn.classList.toggle('ready', focusReady);
       this.focusActivateBtn.disabled = !focusReady;

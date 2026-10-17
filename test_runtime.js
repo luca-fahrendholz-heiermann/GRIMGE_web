@@ -1334,7 +1334,8 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
   const hay = terrain[0];
   environment.add('scorch', hay.x, hay.z, { radius: 30, team: 'blue' });
   assert(hay.burning > 0, 'Fire sets a dry hay field ablaze');
-  stepWorld(1);
+  // Random start angle: give the fire a few spread ticks (overlapping spots merge).
+  stepWorld(1.75);
   assert(environment.effects.filter((e) => e.type === 'scorch').length > 2, 'The hay fire spreads across the field');
 
   terrain = prepare('arcane');
@@ -1381,6 +1382,43 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
   assert(castles.castleSkinFor('red', 'frozen') === 'volcano' && castles.castleSkinFor('blue', 'frozen') === 'frozen', 'Each team can choose its own castle skin');
   castles.setCastleSkin('red', null);
   game.render();
+  // The gate opens at the arena's middle depth; the wall in front overlaps the castle.
+  assert(Math.abs(gate.z - .5) < .03, 'The castle gate opens at the middle depth of the arena');
+  const overlay = castles.castleWallOverlay('frozen', 'blue');
+  const blueBase = castles.castleFootprint('frozen', 'blue')[0].y;
+  assert(overlay.length === 4 && Math.min(...overlay.map((p) => p.y)) < blueBase && Math.max(...overlay.map((p) => p.y)) > blueBase, 'The painted wall in front is redrawn over the castle base (wall butts against the castle)');
+}
+
+// Focus: a rising aura while charging; tapping the own Wizard or profile bar transforms.
+{
+  game.selectTrainingMap('waterfalls');
+  const P = game.player;
+  P.x = 400; P.z = .6; P.elevation = 0; game.battlefield.placeOnSurface(P);
+  P.focus = P.maxFocus * .6; P.focusTransformTimer = 0;
+  game.render();
+  assert(!game.tryTransformByTap({ x: P.x, y: P.y - 40 }), 'Below full Focus, tapping the Wizard does not transform');
+  P.focus = P.maxFocus;
+  game.render();
+  assert(!game.tryTransformByTap({ x: P.x + 200, y: P.y - 40 }) && P.focusTransformTimer === 0, 'Tapping beside the Wizard does not transform');
+  assert(game.tryTransformByTap({ x: P.x + 5, y: P.y - 40 }) && P.focusTransformTimer > 0, 'With full Focus, tapping your own Wizard transforms');
+  game.render();
+  P.focusTransformTimer = 0; P.focus = P.maxFocus;
+  ui.update(1 / 60, P, game.hudOpponent(), game.battlefield);
+  assert(game.activateFocusTransformation() && P.focusTransformTimer > 0, 'The profile bar / ✦ button path activates the transformation too');
+  P.focusTransformTimer = 0; P.focus = 0;
+  // Body forms render without errors (skeleton guardian, nine tails).
+  const { spells: spellSystem } = await import('./public/src/spells.js');
+  spellSystem.cast(P, spellSystem.resolveSpell([{ id: 'bestia' }, { id: 'terra' }, { id: 'void' }]), game);
+  for (let i = 0; i < 20; i++) P.update(1 / 60, { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false }, game.battlefield, game);
+  game.render();
+  assert(P.eidolonTimer > 0 && P.eidolonAge > .2, 'The Eidolon guardian builds up over time while the mantle lasts');
+  spellSystem.cast(P, spellSystem.resolveSpell([{ id: 'bestia' }, { id: 'ignis' }, { id: 'void' }]), game);
+  game.render();
+  assert(P.ninefoldTimer > 0 && P.eidolonTimer === 0, 'The Ninefold spirit replaces the guardian and renders');
+  P.ninefoldTimer = 0;
+  // Grimoire: tapping a recipe explains what it does and how to cast it.
+  const detailHtml = document.getElementById('fusion-guide').innerHTML;
+  assert(detailHtml.includes('data-detail="gravity_lift"') && detailHtml.includes('ATTACK FORWARD to throw') && detailHtml.includes('HOW TO CAST'), 'The grimoire explains every recipe (e.g. Gravity Lift: throw / pull / slam)');
 }
 
 // Light & shadow: Shadow Stomper, sky spheres, shadow doubles, revenants

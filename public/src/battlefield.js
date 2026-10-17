@@ -228,7 +228,7 @@ export class Battlefield {
     // The stage is always 16:9, so the scene never needs copied edge strips.
     ctx.drawImage(image, x, y, drawW, drawH);
     // Team castles (skins) stand in the side walls, part of the backdrop.
-    renderCastles(ctx, this.trainingMap?.id, { x, y, w: drawW, h: drawH });
+    renderCastles(ctx, this.trainingMap?.id, { x, y, w: drawW, h: drawH }, image);
   }
 
   renderBackground(ctx, camera, gameplayWidth, viewH, renderWidth = gameplayWidth, cameraOffsetX = 0, modeState = null) {

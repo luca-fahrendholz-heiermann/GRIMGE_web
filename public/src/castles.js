@@ -25,15 +25,23 @@ export const CASTLE_GEOMETRY = Object.freeze({
   frontLeft: Object.freeze({ u: 72 / 793, v: 1935 / 1983 }),
   frontRight: Object.freeze({ u: 528 / 793, v: 1932 / 1983 }),
   rearRight: Object.freeze({ u: 750 / 793, v: 1150 / 1983 }),
-  gate: Object.freeze({ u: 640 / 793, v: 1545 / 1983 })
+  // Ground point under the middle of the gate (inner side face).
+  gate: Object.freeze({ u: .80, v: .785 })
 });
 
 // Placement of the LEFT castle on the scene image (percent of the image).
-// Based on the pptx composition (x 1.02 %, y 11.4 %, 11.81 × 52.49 %), but
-// lowered by the side wall's height so the castle stands at the wall foot
-// instead of on top of the wall, and nudged outward so its rear edge
-// clears the painted corner brazier. Maps may override it.
-export const CASTLE_PLACEMENT = Object.freeze({ x: .2, y: 15.6, w: 11.81, h: 52.49 });
+// Based on the pptx composition (11.81 × 52.49 %): raised so the middle of
+// the gate opens exactly at the arena's middle depth (z = 0.5), nudged
+// outward so its rear edge clears the painted corner brazier. Maps may
+// override it.
+export const CASTLE_PLACEMENT = Object.freeze({ x: .2, y: 13.56, w: 11.81, h: 52.49 });
+
+// The painted side wall in front of a castle (left side, image percent):
+// its centre line runs from the brazier pillar at (5.8 %, 56.8 %) to the
+// front corner pillar at (3.5 %, 69 %). The part of that wall that meets
+// the castle front is drawn again on top of the castle, so the wall visibly
+// butts against the castle instead of the castle sitting on it.
+const WALL_LINE = Object.freeze({ x0: 5.8, y0: 56.8, slope: -.18, halfWidth: 1.05, height: 3.2, below: 2.6 });
 const PLACEMENT_BY_MAP = Object.freeze({});
 
 const skinOverride = { blue: null, red: null };
@@ -104,11 +112,9 @@ export function castleFootprint(mapId, team, rect = sceneRect()) {
 // The gate on the inner side face: where minions leave the castle (world).
 export function castleGatePoint(mapId, team) {
   const box = castleBox(mapId, team);
-  const fr = castlePoint(box, CASTLE_GEOMETRY.frontRight.u, CASTLE_GEOMETRY.frontRight.v);
-  const rr = castlePoint(box, CASTLE_GEOMETRY.rearRight.u, CASTLE_GEOMETRY.rearRight.v);
-  // Halfway along the gate-side base line, one step into the arena.
-  const mid = { x: (fr.x + rr.x) / 2, y: (fr.y + rr.y) / 2 };
-  return { x: mid.x + (team === 'red' ? -26 : 26), z: depthOf(mid.y) };
+  // Ground under the middle of the gate, one step into the arena.
+  const gate = castlePoint(box, CASTLE_GEOMETRY.gate.u, CASTLE_GEOMETRY.gate.v);
+  return { x: gate.x + (team === 'red' ? -24 : 24), z: depthOf(gate.y) };
 }
 
 function insidePolygon(pt, poly) {
@@ -139,9 +145,22 @@ export function castleBlocksAt(mapId, x, z, pad = 10) {
   return false;
 }
 
+// The wall piece in front of a castle (screen polygon), from just above the
+// castle's front base down below it.
+export function castleWallOverlay(mapId, team, rect = sceneRect()) {
+  const box = castleBox(mapId, team, rect);
+  const baseV = (box.y + box.h * CASTLE_GEOMETRY.frontLeft.v - rect.y) / rect.h * 100;
+  const w = WALL_LINE;
+  const xc = (y) => w.x0 + (y - w.y0) * w.slope;
+  const top = baseV - w.height; const bottom = baseV + w.below;
+  const pts = [[xc(top) - w.halfWidth, top], [xc(top) + w.halfWidth, top], [xc(bottom) + w.halfWidth, bottom], [xc(bottom) - w.halfWidth, bottom]];
+  return pts.map(([px, py]) => ({ x: team === 'red' ? rect.x + rect.w * (1 - px / 100) : rect.x + rect.w * px / 100, y: rect.y + rect.h * py / 100 }));
+}
+
 // Draw both castles onto the scene: a soft contact shadow first so they sit
-// on the ground, then the (mirrored) castle image.
-export function renderCastles(ctx, mapId, rect = sceneRect()) {
+// on the ground, then the (mirrored) castle image, then the painted wall in
+// front of it again so the wall overlaps the castle where they meet.
+export function renderCastles(ctx, mapId, rect = sceneRect(), sceneImage = null) {
   if (!mapId) return;
   for (const team of ['blue', 'red']) {
     const entry = castleImage(castleSkinFor(team, mapId), team);
@@ -168,5 +187,15 @@ export function renderCastles(ctx, mapId, rect = sceneRect()) {
       ctx.drawImage(entry.image, box.x, box.y, box.w, box.h);
     }
     ctx.restore();
+    if (sceneImage) {
+      const wall = castleWallOverlay(mapId, team, rect);
+      ctx.save();
+      ctx.beginPath();
+      wall.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
+      ctx.closePath();
+      ctx.clip();
+      ctx.drawImage(sceneImage, rect.x, rect.y, rect.w, rect.h);
+      ctx.restore();
+    }
   }
 }

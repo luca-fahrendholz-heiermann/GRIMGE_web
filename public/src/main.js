@@ -7,7 +7,7 @@ import { spells, RUNE_GRADE_PROFILES } from './spells.js';
 import { Player, EnemyChampion, Minion, TrainingDummy } from './entities.js';
 import { Battlefield } from './battlefield.js';
 import { ui } from './ui.js';
-import { VIEWPORT, ARENA_LAYOUT, groundDistance, groundYForDepth } from './world.js';
+import { VIEWPORT, ARENA_LAYOUT, ENTITY_VISUALS, groundDistance, groundYForDepth } from './world.js';
 import { ART_ASSETS } from './art_assets.js';
 import { MageProfile, MAGE_SKILL_TREE, applyMageProfile, DEFAULT_MATCH_DECK, MATCH_DECK_SIZE, MAX_RUNE_COPIES, ALL_RUNE_IDS } from './progression.js';
 import { getGameMode, DEBUG_BUILD } from './game_modes.js';
@@ -491,6 +491,7 @@ export class GameWorld {
       this.input.mouse.x = pt.x;
       this.input.mouse.y = pt.y;
 
+      if (e.button === 0 && this.tryTransformByTap(pt)) return;
       // Targeting owns the mouse: LMB confirms / drags a wall, RMB cancels.
       if (this.targeting.isActive && !this.drawing.active) {
         if (e.button === 0) this.targeting.pointerDown(pt, 'mouse');
@@ -743,6 +744,10 @@ export class GameWorld {
       if (event.pointerType === 'touch' && this.targeting.isActive && this.targeting.active.pointerId === null && !this.drawing.active) {
         this.targeting.pointerDown(this.getCanvasCoords(event.clientX, event.clientY), event.pointerId);
         this.canvas.setPointerCapture?.(event.pointerId);
+        event.preventDefault?.();
+        return;
+      }
+      if (event.pointerType === 'touch' && this.tryTransformByTap(this.getCanvasCoords(event.clientX, event.clientY))) {
         event.preventDefault?.();
         return;
       }
@@ -1270,6 +1275,16 @@ export class GameWorld {
   clashAction() {
     const clash = spells.getClashFor(this.player);
     return clash ? clash.humanAction(this.player) : null;
+  }
+
+  // Tapping / clicking your own Wizard transforms once Focus is full.
+  tryTransformByTap(pt) {
+    const p = this.player;
+    if (!pt || !this.isMatchRunning() || !p?.isAlive || this.drawing.active || this.targeting.isActive) return false;
+    if (p.focus < p.maxFocus || p.focusTransformTimer > 0) return false;
+    const height = ENTITY_VISUALS.heroHeight;
+    const inside = Math.abs(pt.x - p.x) <= 30 && pt.y <= p.y + 10 && pt.y >= p.y - height - 12;
+    return inside ? this.activateFocusTransformation() : false;
   }
 
   activateFocusTransformation() {

@@ -172,6 +172,73 @@ export function lookupRecipe(runes) {
   return RECIPE_NAMES[key] ? { ...definition, name: RECIPE_NAMES[key] } : { ...definition };
 }
 
+// How to cast a spell (shown when a recipe is tapped in the grimoire): the
+// targeting step every spell of a mode shares, plus what to do for spells
+// whose use is not obvious from their description.
+const TARGETING_HOW_TO = Object.freeze({
+  direction: 'Tap its slot (Z/X/C): it fires the way you face. Mouse: toward the cursor. Touch: drag the slot onto the field to aim.',
+  ground: 'Tap its slot, then tap the spot where it should land (mouse: click; gamepad: right stick + A). Esc / B cancels.',
+  placement: 'Tap its slot, then swipe a line on the ground — the wall is built exactly along it, in any direction. Cleaner runes give more blocks.',
+  ally: 'Tap its slot, then tap the ally to protect (yourself, a minion or a summon).',
+  aim: 'Tap its slot, then drag / point the direction (depth included). The cone shows the enemy it will catch; release to cast.',
+  dual: 'Tap its slot, then set the first point and the second point.',
+  self: 'Tap its slot: it takes effect around you at once.'
+});
+
+export const SPELL_HOW_TO = Object.freeze({
+  gravity_lift: 'Up to four enemies near the chosen spot are lifted and held in the air (Telekinetic Grip: more, longer). While they hang: ATTACK FORWARD to throw them away, ATTACK WHILE HOLDING BACK to pull them to you — or wait and they are slammed into the ground.',
+  mirror_ward: 'A ward appears in front of you and catches up to five enemy projectiles. After a moment it fires all of them back as a volley.',
+  shadow_stomper: 'You hop and stomp; your shadow runs to the nearest enemy in the cone and holds it in place (no walking, jumping or dashing). Enemies who guard in time slip free. Walk too far away and the hold breaks.',
+  titan_stomp: 'You leap up and crash down: everything around the landing point is hit — also enemies in the air.',
+  seismic_slam: 'A shockwave travels along the ground in front of you, launches enemies and leaves short rock pillars that block for a moment.',
+  burrow_strike: 'You dig in: untouchable and faster for a moment. Move under your enemies — you erupt automatically and launch everyone around you.',
+  soul_seekers: 'Three homing flames fan out and steer toward the nearest enemies. They can be reflected, captured or blocked.',
+  inferno_beam: 'A sustained fire beam. If an enemy beam meets it tip to tip, a Beam Clash starts: mash CAST to push your beam forward.',
+  glacial_ray: 'A sustained freezing ray that slows what it touches. Meeting an enemy beam starts a Beam Clash: mash CAST to win it.',
+  thunder_lance: 'A very fast, short lightning beam. Meeting an enemy beam starts a Beam Clash: mash CAST to win it.',
+  null_ray: 'A void beam that drags its targets toward you. Meeting an enemy beam starts a Beam Clash: mash CAST to win it.',
+  radiant_lance: 'A blinding light beam that slows what it touches. Meeting an enemy beam starts a Beam Clash: mash CAST to win it.',
+  meteor_cataclysm: 'A meteor falls on the chosen spot and leaves a burning crater. An enemy beam can shatter it while it falls.',
+  firestorm: 'A flame tornado at the chosen spot pulls enemies in, burns them and finally launches them.',
+  magma_fissure: 'The ground at the chosen spot splits open with lava geysers; standing in it burns.',
+  tempest_blitz: 'You become lightning and dash forward, slashing every enemy on your way.',
+  sandstorm_bastion: 'A whirl of sand and stone around you deflects incoming shots for a while.',
+  blizzard_surge: 'A freezing gale in front of you freezes minions and slows everything it hits.',
+  aura_shock: 'A frost-lightning pulse blasts nearby enemies away from you (short cooldown).',
+  arcane_aegis: 'The chosen ally gets a shield that absorbs damage for a while.',
+  stone_wall: 'Raises a wall along your swipe. It blocks enemies and their projectiles until it is broken or expires; you cannot walk through it either.',
+  construct_bulwark: 'A short, low wall along your swipe — quick cover against shots.',
+  dragon_breath: 'A wide cone of fire in front of you that widens with distance and burns everything inside.',
+  mirror_gate: 'Two ice mirrors appear at your points. Step into one to come out of the other (step off before it works again). Lasts 30 s, twice as long in the Dungeon.',
+  shadow_step: 'You sink into your shadow and rise behind the nearest enemy ahead, striking it from behind.',
+  halo_pulse: 'A ring of sunlight: heals you and nearby allies, sears and slows nearby enemies.',
+  shadow_doppelganger: 'A shadow double of you appears and fights on its own (40 % of your health). Casting again replaces the oldest double; Shadow passives keep more at once.',
+  revenant_call: 'Raises the nearest fallen fighter (soul wisp on the ground) as your revenant; without one a fallen soldier rises. It bursts when destroyed. Casting again replaces the oldest.',
+  eidolon_mantle: 'A spectral guardian forms around you: you take less damage and knockback and your melee hits harder for a while.',
+  ninefold_beast_form: 'A flame fox spirit surrounds you: you move faster, your melee becomes savage and you take a little less damage.',
+  void_implosion: 'A void singularity at the chosen spot pulls enemies in and crushes them.',
+  annihilation_beam: 'Charges a sphere, then fires a huge beam across half the lane. Wins most Beam Clashes.',
+  inferno_rampage: 'A blazing dash across the lane that scorches everything on the way.',
+  solar_orb: 'A sun rises for a while: fire and light grow stronger, ice and shadow weaker, shadows get short. Only one sky sphere at a time.',
+  lunar_orb: 'A moon rises: water, ice and shadow grow stronger, puddles appear under enemies and slow them, fire weakens. Only one sky sphere at a time.',
+  eclipse: 'Light and shadow magic surge, every other element dims. Only one sky sphere at a time.',
+  thunderhead: 'A storm cloud strikes your enemies and their puddles with lightning every few seconds. Only one sky sphere at a time.',
+  blood_moon: 'All spells hit harder (for everyone!), healing is halved. Only one sky sphere at a time.',
+  starfall: 'Stars rain down on your enemies for a while. Only one sky sphere at a time.',
+  aurora_veil: 'Your side slowly regenerates health and mana. Only one sky sphere at a time.'
+});
+
+export function spellHowTo(spellId) {
+  const definition = SPELL_DEFINITIONS[spellId];
+  if (!definition) return null;
+  return {
+    targeting: TARGETING_HOW_TO[definition.targetingMode] ?? TARGETING_HOW_TO.direction,
+    effect: SPELL_HOW_TO[spellId] ?? definition.desc,
+    summon: definition.deliveryType === DELIVERY.SUMMON && !SPELL_HOW_TO[spellId]
+      ? 'Summons fight on their own. Mountable ones can be ridden with the MOUNT button when you stand next to them.' : null
+  };
+}
+
 // Solo special runes are ordinary deck cards with a harder glyph; like the
 // transformation runes they are a complete spell and never fuse.
 export const SOLO_RUNES = Object.freeze(['doppel', 'mortis']);

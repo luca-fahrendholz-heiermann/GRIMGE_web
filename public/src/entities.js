@@ -5,6 +5,7 @@ import { audio } from './audio.js';
 import { spells } from './spells.js';
 import { ARENA_LAYOUT, ENTITY_VISUALS, GroundEntity, groundDistance } from './world.js';
 import { lookupRecipe, runeManaCost } from './spell_catalog.js';
+import { drawFocusAura, drawEidolonGuardian, drawNinefoldSpirit } from './forms_fx.js';
 
 // Every spell a rune deck can produce: single runes plus every valid two-
 // and three-rune recipe that its cards allow (copies respected).
@@ -318,6 +319,9 @@ export class Player extends GroundEntity {
     this.eidolonCooldown = Math.max(0, this.eidolonCooldown - dt);
     if (this.eidolonTimer <= 0) { this.eidolonPower = 1; this.eidolonArmor = 0; }
     this.ninefoldTimer = Math.max(0, this.ninefoldTimer - dt);
+    // How long each body form has been manifest (drives its build-up).
+    this.eidolonAge = this.eidolonTimer > 0 ? (this.eidolonAge ?? 0) + dt : 0;
+    this.ninefoldAge = this.ninefoldTimer > 0 ? (this.ninefoldAge ?? 0) + dt : 0;
     this.ninefoldCooldown = Math.max(0, this.ninefoldCooldown - dt);
     if (this.ninefoldTimer <= 0) this.ninefoldPower = 1;
     this.focusTransformTimer = Math.max(0, this.focusTransformTimer - dt);
@@ -1120,6 +1124,7 @@ export class Player extends GroundEntity {
       ctx.restore();
     }
     if (this.isAlive && this.focusTransformTimer > 0) this.renderFocusAscendant(ctx, renderY);
+    else if (this.isAlive) this.renderFocusCharge(ctx, renderY);
     if (this.isAlive && this.ninefoldTimer > 0) this.renderNinefoldBeast(ctx, renderY);
     if (this.isAlive && this.eidolonTimer > 0) this.renderEidolonMantle(ctx, renderY);
     if (this.isAlive && this.chargeTimer > 0) this.renderChargeAura(ctx, renderY);
@@ -1211,6 +1216,9 @@ export class Player extends GroundEntity {
     };
     if (useProc) { renderOpts.procRot = pRot; renderOpts.procScaleX = pSX; renderOpts.procScaleY = pSY; }
     sprites.renderEntity(ctx, this.heroKey, this.x, renderY, renderOpts);
+    // Front layers of the body forms (ribs, claws) wrap around the Wizard.
+    if (this.isAlive && this.eidolonTimer > 0) drawEidolonGuardian(ctx, this.x, renderY, this.facing, this.animTime, this.eidolonAge ?? 1, Math.min(1, this.eidolonTimer * 2), 'front');
+    if (this.isAlive && this.ninefoldTimer > 0) drawNinefoldSpirit(ctx, this.x, renderY, this.facing, this.animTime, this.ninefoldAge ?? 1, Math.min(1, this.ninefoldTimer * 2), 'front');
     if (this.isAlive) {
       const ratio = Math.max(0, this.hp / this.maxHp);
       ctx.save();
@@ -1248,23 +1256,21 @@ export class Player extends GroundEntity {
     }
   }
 
+  // Transformed: the full blazing aura streams upward.
   renderFocusAscendant(ctx, renderY) {
-    const pulse = 1 + Math.sin(this.animTime * 7) * .08;
-    ctx.save();
-    ctx.globalAlpha = .52;
-    ctx.strokeStyle = '#f0a6ff';
-    ctx.shadowColor = '#b668ff';
-    ctx.shadowBlur = 18;
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.ellipse(this.x, renderY - 28, 31 * pulse, 46 * pulse, 0, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.globalAlpha = .92;
-    ctx.fillStyle = '#fff0ff';
-    ctx.font = '9px Cinzel';
-    ctx.textAlign = 'center';
-    ctx.fillText('ASCENDANT', this.x, renderY - 78);
-    ctx.restore();
+    drawFocusAura(ctx, this.x, renderY, this.animTime, 1.3, { height: ENTITY_VISUALS.heroHeight });
+  }
+
+  // Charging: from 25 % Focus a rising aura grows with the meter; at 100 %
+  // a ring and a hint show how to transform (tap the Wizard / the profile bar).
+  renderFocusCharge(ctx, renderY) {
+    const ratio = this.focus / this.maxFocus;
+    if (ratio < .25) return;
+    const ready = this.focus >= this.maxFocus;
+    const touch = globalThis.window?.gameWorld?.inputMode === 'touch';
+    drawFocusAura(ctx, this.x, renderY, this.animTime, (ratio - .25) / .75, {
+      height: ENTITY_VISUALS.heroHeight, ready, hint: ready ? (touch ? '✦ TAP TO TRANSFORM' : '✦ CLICK OR T TO TRANSFORM') : ''
+    });
   }
 
   renderChargeAura(ctx, renderY) {
@@ -1314,56 +1320,11 @@ export class Player extends GroundEntity {
   }
 
   renderEidolonMantle(ctx, renderY) {
-    const pulse = .82 + Math.sin(this.animTime * 5) * .10;
-    const alpha = Math.min(1, this.eidolonTimer * 2) * .52;
-    ctx.save();
-    ctx.translate(this.x, renderY - 35);
-    ctx.scale(this.facing, 1);
-    ctx.globalAlpha = alpha;
-    ctx.shadowColor = '#b668ff'; ctx.shadowBlur = 24;
-    ctx.fillStyle = 'rgba(128, 50, 220, .28)';
-    ctx.strokeStyle = '#e2a7ff'; ctx.lineWidth = 3;
-    // Original, abstract guardian silhouette: crown, shoulders, arms and
-    // a broad rune blade. It deliberately evokes GRIMGE's void magic rather
-    // than reproducing a specific external character design.
-    ctx.beginPath();
-    ctx.moveTo(-34 * pulse, 30); ctx.lineTo(-43, -6); ctx.lineTo(-28, -46);
-    ctx.lineTo(-14, -64); ctx.lineTo(0, -74); ctx.lineTo(14, -64); ctx.lineTo(28, -46);
-    ctx.lineTo(43, -6); ctx.lineTo(34 * pulse, 30); ctx.lineTo(20, 48);
-    ctx.lineTo(0, 56); ctx.lineTo(-20, 48); ctx.closePath();
-    ctx.fill(); ctx.stroke();
-    ctx.fillStyle = 'rgba(211, 126, 255, .65)';
-    ctx.beginPath(); ctx.arc(0, -51, 13, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.moveTo(-18, -62); ctx.lineTo(-7, -83); ctx.lineTo(0, -66); ctx.lineTo(8, -86); ctx.lineTo(18, -62); ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = 'rgba(242, 202, 255, .92)'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(-28, -20); ctx.lineTo(-62, 12); ctx.lineTo(-70, 38); ctx.moveTo(28, -20); ctx.lineTo(60, 8); ctx.lineTo(68, 33); ctx.stroke();
-    ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(48, 36); ctx.lineTo(84, -34); ctx.stroke();
-    ctx.shadowBlur = 0; ctx.fillStyle = '#fff0ff'; ctx.font = '14px serif'; ctx.textAlign = 'center';
-    ctx.fillText('✦', 0, -47);
-    ctx.restore();
+    drawEidolonGuardian(ctx, this.x, renderY, this.facing, this.animTime, this.eidolonAge ?? 1, Math.min(1, this.eidolonTimer * 2), 'back');
   }
 
   renderNinefoldBeast(ctx, renderY) {
-    const alpha = Math.min(1, this.ninefoldTimer * 2) * .50;
-    const wave = Math.sin(this.animTime * 7) * 5;
-    ctx.save();
-    ctx.translate(this.x - this.facing * 8, renderY - 26);
-    ctx.scale(this.facing, 1);
-    ctx.globalAlpha = alpha;
-    ctx.strokeStyle = '#ffb13b'; ctx.fillStyle = 'rgba(255, 70, 30, .23)';
-    ctx.shadowColor = '#ff4c24'; ctx.shadowBlur = 22; ctx.lineWidth = 4;
-    // Nine independent energy tails make the form readable as a fast,
-    // original GRIMGE beast manifestation rather than a borrowed character.
-    for (let i = 0; i < 9; i++) {
-      const angle = -2.65 + i * .66;
-      const length = 42 + (i % 3) * 9;
-      ctx.beginPath(); ctx.moveTo(-3, 16);
-      ctx.quadraticCurveTo(Math.cos(angle) * length * .55, Math.sin(angle) * length + wave, Math.cos(angle) * length, Math.sin(angle) * length * 1.25 + wave);
-      ctx.stroke();
-    }
-    ctx.beginPath(); ctx.ellipse(0, -17, 29, 43, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#ffe7a0'; ctx.beginPath(); ctx.arc(11, -32, 4, 0, Math.PI * 2); ctx.fill();
-    ctx.shadowBlur = 0; ctx.restore();
+    drawNinefoldSpirit(ctx, this.x, renderY, this.facing, this.animTime, this.ninefoldAge ?? 1, Math.min(1, this.ninefoldTimer * 2), 'back');
   }
 }
 

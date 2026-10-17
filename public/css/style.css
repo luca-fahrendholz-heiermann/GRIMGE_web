@@ -970,6 +970,9 @@ body.portrait-gameplay #game-container { visibility: hidden; pointer-events: non
   pointer-events: auto;
 }
 
+/* Full Focus: the own profile bar glows and can be tapped to transform. */
+#top-hud-bar .blue-side.focus-ready { pointer-events: auto; cursor: pointer; border-radius: 10px; animation: profileReadyGlow .8s ease-in-out infinite alternate; }
+@keyframes profileReadyGlow { from { box-shadow: 0 0 6px rgba(255, 213, 79, .45); } to { box-shadow: 0 0 18px rgba(255, 213, 79, .95), inset 0 0 8px rgba(234, 128, 252, .5); } }
 .focus-activate.ready { border-color: #ffd54f; color: #fff3c4; opacity: 1; box-shadow: 0 0 12px rgba(255, 213, 79, .8); animation: focusReadyPulse .8s ease-in-out infinite alternate; }
 @keyframes focusReadyPulse { from { transform: scale(.96); } to { transform: scale(1.04); } }
 
@@ -1228,7 +1231,13 @@ body.portrait-gameplay #game-container { visibility: hidden; pointer-events: non
   margin-bottom: 5px;
 }
 
-.g-item.is-recipe { flex-wrap: wrap; gap: 3px; }
+.g-item.is-recipe { flex-wrap: wrap; gap: 3px; cursor: pointer; border-radius: 4px; padding: 2px 4px; }
+.g-item.is-recipe:hover, .g-item.is-recipe.active { background: rgba(255, 215, 112, .1); }
+.g-item .g-more { margin-left: auto; color: #ffd770; font-size: 11px; opacity: .8; }
+.g-detail { display: none; margin: 0 0 7px 6px; padding: 6px 8px; border-left: 2px solid #ffd770; background: rgba(20, 14, 36, .75); border-radius: 0 6px 6px 0; font-size: 10px; line-height: 1.4; color: #e8e0f4; }
+.g-detail.open { display: block; }
+.g-detail p { margin: 0 0 4px; }
+.g-detail b { color: #ffd770; letter-spacing: .5px; margin-right: 4px; font-size: 9px; }
 .g-item .g-rune { color: var(--rune-color); font-weight: 700; white-space: nowrap; }
 .g-item .g-note { color: #b8aecf; font-size: 10px; }
 .g-col h4 { margin: 8px 0 4px; color: #e8d9ff; font-size: 10px; letter-spacing: .5px; }
