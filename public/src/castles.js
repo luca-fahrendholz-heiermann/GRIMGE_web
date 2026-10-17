@@ -7,8 +7,12 @@
 // on the left; the red one is the same kind of image mirrored on the right.
 // Each team may later choose its own skin (setCastleSkin); by default a map
 // uses the castle painted for it.
-import { TRAINING_IMAGE } from './training_maps.js';
-import { groundYForDepth, getGroundProjection } from './world.js';
+import { TRAINING_IMAGE, TRAINING_PROJECTION } from './training_maps.js';
+
+// Castles only exist in the training arenas, so their ground mapping always
+// uses the training projection (independent of the active mode).
+const groundY = (z) => TRAINING_PROJECTION.farY + (TRAINING_PROJECTION.nearY - TRAINING_PROJECTION.farY) * z;
+const depthOf = (y) => (y - TRAINING_PROJECTION.farY) / (TRAINING_PROJECTION.nearY - TRAINING_PROJECTION.farY);
 
 export const CASTLE_SKINS = Object.freeze({
   waterfalls: 'CLASSIC KEEP', frozen: 'FROST KEEP', arcane: 'ARCANE KEEP', volcano: 'VOLCANIC KEEP',
@@ -104,8 +108,7 @@ export function castleGatePoint(mapId, team) {
   const rr = castlePoint(box, CASTLE_GEOMETRY.rearRight.u, CASTLE_GEOMETRY.rearRight.v);
   // Halfway along the gate-side base line, one step into the arena.
   const mid = { x: (fr.x + rr.x) / 2, y: (fr.y + rr.y) / 2 };
-  const { farY, nearY } = getGroundProjection();
-  return { x: mid.x + (team === 'red' ? -26 : 26), z: (mid.y - farY) / (nearY - farY) };
+  return { x: mid.x + (team === 'red' ? -26 : 26), z: depthOf(mid.y) };
 }
 
 function insidePolygon(pt, poly) {
@@ -127,7 +130,7 @@ function distanceToSegment(pt, a, b) {
 // actor's body outside the walls.
 export function castleBlocksAt(mapId, x, z, pad = 10) {
   if (!mapId) return false;
-  const pt = { x, y: groundYForDepth(z) };
+  const pt = { x, y: groundY(z) };
   for (const team of ['blue', 'red']) {
     const poly = castleFootprint(mapId, team);
     if (insidePolygon(pt, poly)) return true;
