@@ -1458,3 +1458,8 @@ code {
 .siege-deploy-btn[data-state="deployed"] { border-color: #ffd54f; color: #fff8e1; }
 .siege-deploy-btn[data-state="laststand"] { border-color: #ef5350; color: #ffcdd2; }
 @keyframes deploy-pulse { 50% { box-shadow: 0 0 22px rgba(100, 181, 246, 1); } }
+
+/* Buff transformation special runes (max. 1 per deck). */
+.deck-section-title { grid-column: 1 / -1; margin: 10px 0 2px; color: #ffd27a; font: 800 11px/1.2 'Rajdhani', sans-serif; letter-spacing: 1px; }
+.deck-rune.is-buff { border-style: dashed; }
+.buff-tag { font-style: normal; font-size: 8px; padding: 1px 4px; border-radius: 3px; background: rgba(255, 210, 122, .18); color: #ffd27a; letter-spacing: .5px; }

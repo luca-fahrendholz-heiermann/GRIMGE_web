@@ -23,15 +23,18 @@ export const RUNE_GUIDES = Object.freeze({
   lux: [[[-.9, 0], [.9, 0]], [[0, -.9], [0, .9]], [[-.65, -.65], [.65, .65]], [[.65, -.65], [-.65, .65]]],
   umbra: [Array.from({ length: 31 }, (_, i) => { const a = Math.PI * .3 + i / 30 * Math.PI * 1.4; return [Math.cos(a) * .8, Math.sin(a) * .8]; })],
   doppel: [Array.from({ length: 61 }, (_, i) => { const t = i / 60 * Math.PI * 2; return [Math.sin(t) * .95, Math.sin(t) * Math.cos(t) * .9]; })],
-  mortis: [Array.from({ length: 6 }, (_, k) => { const a = -Math.PI / 2 + k * Math.PI * 4 / 5; return [Math.cos(a) * .85, Math.sin(a) * .85]; })]
+  mortis: [Array.from({ length: 6 }, (_, k) => { const a = -Math.PI / 2 + k * Math.PI * 4 / 5; return [Math.cos(a) * .85, Math.sin(a) * .85]; })],
+  // Buff transformation sigil: a closed hourglass in one stroke.
+  buff_sigil: [[[-.6, -.85], [.6, -.85], [-.6, .85], [.6, .85], [-.6, -.85]]]
 });
+const guideKey = (runeId) => (String(runeId).startsWith('buff_') ? 'buff_sigil' : runeId);
 
-export function hasRuneGuide(runeId) { return !!RUNE_GUIDES[runeId]; }
+export function hasRuneGuide(runeId) { return !!RUNE_GUIDES[guideKey(runeId)]; }
 
 // Strokes of a guide in screen space: dense points (every ~6 px) centred on
 // (cx, cy) with half-size `size`.
 export function guideStrokes(runeId, cx, cy, size) {
-  const guide = RUNE_GUIDES[runeId];
+  const guide = RUNE_GUIDES[guideKey(runeId)];
   if (!guide) return [];
   return guide.map((stroke) => {
     const points = [];

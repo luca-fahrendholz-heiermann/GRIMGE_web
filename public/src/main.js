@@ -9,7 +9,7 @@ import { Battlefield } from './battlefield.js';
 import { ui } from './ui.js';
 import { VIEWPORT, ARENA_LAYOUT, ENTITY_VISUALS, groundDistance, groundYForDepth } from './world.js';
 import { ART_ASSETS } from './art_assets.js';
-import { MageProfile, MAGE_SKILL_TREE, applyMageProfile, DEFAULT_MATCH_DECK, MATCH_DECK_SIZE, MAX_RUNE_COPIES, ALL_RUNE_IDS } from './progression.js';
+import { MageProfile, MAGE_SKILL_TREE, applyMageProfile, DEFAULT_MATCH_DECK, MATCH_DECK_SIZE, MAX_RUNE_COPIES, ALL_RUNE_IDS, deckAccepts } from './progression.js';
 import { getGameMode, DEBUG_BUILD } from './game_modes.js';
 import { runeManaCost, isSpecialRune, TARGETING } from './spell_catalog.js';
 import { SpellTargeting, SlotChord, needsTarget } from './targeting.js';
@@ -1710,6 +1710,8 @@ export class GameWorld {
     else if (action === 'add') {
       if (!ALL_RUNE_IDS.includes(runeId) || !this.trainingDeckSource().isRuneUnlocked(runeId)) return false;
       if (deck.length >= MATCH_DECK_SIZE || deck.filter((id) => id === runeId).length >= MAX_RUNE_COPIES) return false;
+      // Only one buff transformation rune per deck.
+      if (!deckAccepts(deck, runeId)) { this.showAnnouncement('ONE BUFF TRANSFORMATION PER DECK', 1.2); return false; }
       deck.push(runeId);
     } else if (action === 'remove') {
       const index = deck.lastIndexOf(runeId);

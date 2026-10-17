@@ -1,6 +1,6 @@
 // GRIMGE Prototype — UI & HUD Controller matching Setup Mockup Exactly
 import { spells } from './spells.js';
-import { MAGE_SKILL_TREE, ALL_RUNE_IDS, runeUnlockLabel } from './progression.js';
+import { MAGE_SKILL_TREE, ALL_RUNE_IDS, runeUnlockLabel, isBuffRuneId } from './progression.js';
 import { recognizer } from './recognizer.js';
 import { sprites } from './sprites.js';
 import { runeManaCost, SPELL_RECIPES, lookupRecipe, SOLO_RUNES, spellHowTo } from './spell_catalog.js';
@@ -717,12 +717,23 @@ export class UIManager {
       ? `${profile.target === 'player' ? 'YOUR' : 'SPARRING PARTNER'} TRAINING DECK ${profile.matchDeck.length}/10 · DEBUG: ALL RUNES AVAILABLE`
       : `MATCH DECK ${profile.matchDeck.length}/10 · MAX 2 COPIES PER RUNE`;
     // Only real deck runes; transformation runes are granted in battle.
-    this.deckBuilderContent.innerHTML = recognizer.runes.filter((rune) => ALL_RUNE_IDS.includes(rune.id)).map((rune) => {
+    const card = (rune) => {
       const unlocked = profile.isRuneUnlocked(rune.id);
       const copies = profile.getRuneCopies(rune.id);
       const lockedText = runeUnlockLabel(rune.id);
-      return `<article class="deck-rune ${unlocked ? '' : 'locked'}" style="--rune-color:${rune.color}"><b>${rune.glyph} ${rune.name}</b><span>${unlocked ? `${copies}/2 IN DECK · RUNE LV.${profile.runeLevel(rune.id)}` : `LOCKED · ${lockedText}`}</span><div><button data-deck-action="remove" data-rune-id="${rune.id}" ${copies ? '' : 'disabled'}>−</button><button data-deck-action="add" data-rune-id="${rune.id}" ${(!unlocked || copies >= 2 || profile.matchDeck.length >= 10) ? 'disabled' : ''}>+</button></div></article>`;
-    }).join('');
+      // Buff transformation runes: max. one of all of them in the deck.
+      const buff = isBuffRuneId(rune.id);
+      const buffTaken = buff && !copies && profile.matchDeck.some(isBuffRuneId);
+      const status = !unlocked ? `LOCKED · ${lockedText}`
+        : buff ? (copies ? 'IN DECK · BUFF TRANSFORMATION' : buffTaken ? 'ANOTHER BUFF IS IN THE DECK' : 'BUFF TRANSFORMATION · MAX 1 PER DECK')
+        : `${copies}/2 IN DECK · RUNE LV.${profile.runeLevel(rune.id)}`;
+      const blocked = !unlocked || copies >= (buff ? 1 : 2) || profile.matchDeck.length >= 10 || buffTaken;
+      return `<article class="deck-rune ${unlocked ? '' : 'locked'} ${buff ? 'is-buff' : ''}" style="--rune-color:${rune.color}"><b>${rune.glyph} ${rune.name}${buff ? ' <i class="buff-tag">BUFF</i>' : ''}</b><span>${status}</span><div><button data-deck-action="remove" data-rune-id="${rune.id}" ${copies ? '' : 'disabled'}>−</button><button data-deck-action="add" data-rune-id="${rune.id}" ${blocked ? 'disabled' : ''}>+</button></div></article>`;
+    };
+    const deckRunes = recognizer.runes.filter((rune) => ALL_RUNE_IDS.includes(rune.id));
+    this.deckBuilderContent.innerHTML = deckRunes.filter((rune) => !isBuffRuneId(rune.id)).map(card).join('')
+      + '<h4 class="deck-section-title">⧗ BUFF TRANSFORMATIONS — SPECIAL RUNES · MAX 1 PER DECK · ONE HOURGLASS SIGIL</h4>'
+      + deckRunes.filter((rune) => isBuffRuneId(rune.id)).map(card).join('');
   }
 
   // The grimoire lists every rune gesture and every recipe straight from the
@@ -741,7 +752,7 @@ export class UIManager {
     };
     const glyphs = document.getElementById('rune-glyph-guide');
     if (glyphs) {
-      glyphs.innerHTML = deckRunes.map((rune) => `<div class="g-item"><span class="r-icon">${rune.icon}</span><strong>${rune.name} (${rune.element})</strong>: ${rune.desc}${SOLO_RUNES.includes(rune.id) ? ' <span class="g-note">· special rune, no fusion</span>' : ''}</div>`).join('');
+      glyphs.innerHTML = deckRunes.map((rune) => `<div class="g-item"><span class="r-icon">${rune.icon}</span><strong>${rune.name} (${rune.element})</strong>: ${rune.desc}${SOLO_RUNES.includes(rune.id) ? ' <span class="g-note">· special rune, no fusion</span>' : ''}${isBuffRuneId(rune.id) ? ' <span class="g-note buff-tag">· BUFF TRANSFORMATION · MAX 1 PER DECK</span>' : ''}</div>`).join('');
     }
     const fusions = document.getElementById('fusion-guide');
     if (!fusions) return;

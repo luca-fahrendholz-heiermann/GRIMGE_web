@@ -44,9 +44,22 @@
 | ★ | **ANNIHILATION BEAM** `transform_beam` | Transformation | ★ | `#ff4cff` | 0 | Any gesture while Focus Ascendant | ANNIHILATION BEAM |
 | ◉ | **VOID IMPLOSION** `transform_implode` | Transformation | ◉ | `#b668ff` | 0 | Any gesture while Eidolon Mantle | VOID IMPLOSION |
 | ⚡ | **INFERNO RAMPAGE** `transform_rampage` | Transformation | ⚡ | `#ff6f3b` | 0 | Any gesture while Ninefold Beast | INFERNO RAMPAGE |
+| <img src="runes/buff_sigil.svg" width="48" alt="buff"> | **BUFF-SIEGEL** `buff_*` (42 Runen) | Buff-Transformation | ⧗ | je Form | 30 | Sanduhr ⧗ in einem geschlossenen Strich — **Tag: buff-transformation · max-1-per-deck** | die Buff-Form der Rune (Abschnitt 3.7) |
 
 ### Glyphen als ASCII (Ziffer = Startpunkt des Strichs)
 
+**⧗ BUFF-SIEGEL** — Sanduhr in einem geschlossenen Strich (gilt für alle Buff-Transformations-Runen)
+```
+
+   1##########
+     ##   ##
+      ## ##
+       ###
+      ## ##
+     ##   ##
+   ###########
+
+```
 **🔥 IGNIS** — Upward Triangle or Chevron
 ```
 
@@ -243,8 +256,8 @@
 | **BLOOD MOON** | 🔥 IGNIS + ☾ UMBRA | `self` | `self` | A red moon: all spells hit harder, healing is halved, shadows turn red. Your doubles and revenants grow savage. |
 | **STARFALL** | ☀ LUX + 💨 VENTUS | `self` | `self` | A night sky of falling stars that rain down on your enemies. |
 | **AURORA VEIL** | ❄️ AQUA + ☀ LUX | `self` | `self` | Northern lights: your side slowly regenerates health and mana, ice grows stronger. |
-| **EIDOLON MANTLE** | 🐺 BESTIA + 🪨 TERRA + 🕳️ VOID | `self` | `self` | Bestia, Earth and Void form a temporary spectral guardian around the Wizard: damage resistance, knockback resistance and empowered melee. |
-| **NINEFOLD BEAST FORM** | 🐺 BESTIA + 🔥 IGNIS + 🕳️ VOID | `self` | `self` | Bestia, Fire and Void awaken a short feral rune form: faster movement, savage melee and light damage resistance. |
+| **ARKENGESTELL** |  | `self` | `self` | An open arcane force frame around the Wizard: damage resistance, knockback resistance and empowered melee. |
+| **RISSWILD** |  | `self` | `self` | Three cracked molten energy bands: faster movement, savage melee and light damage resistance. |
 | **DRAGON INVOCATION** | 🐺 BESTIA + 🔥 IGNIS + 💨 VENTUS / ⚡ FULGUR + 🔥 IGNIS + 🪨 TERRA | `area` | `direction` | Calls a temporary fire dragon to scorch a battlefield zone. |
 | **WORLD RUNE SERPENT** | 🐺 BESTIA + 🪨 TERRA + 💨 VENTUS | `summon` | `direction` | A mountable lane-control serpent that slithers through the fight and launches enemies upward. |
 | **SPIRIT WOLF** | ❄️ AQUA + 🪨 TERRA + 💨 VENTUS | `summon` | `direction` | Summons a quick frost spirit that hunts nearby enemies. |
@@ -933,33 +946,33 @@
 
 ### 3.5 Advanced — drei Runen
 
-#### EIDOLON MANTLE `eidolon_mantle`
+#### ARKENGESTELL `eidolon_mantle`
 
 | | |
 |---|---|
-| **Rezept** | <img src="runes/bestia.svg" width="32" alt="bestia"> <img src="runes/terra.svg" width="32" alt="terra"> <img src="runes/void.svg" width="32" alt="void"> 🐺 BESTIA + 🪨 TERRA + 🕳️ VOID |
+| **Rezept** | — |
 | **Tier** | 3 | 
-| **Mana (gebunden)** | 44 (Katalogwert 45) · Cooldown 18 s |
+| **Mana (gebunden)** | — · Cooldown 18 s |
 | **Delivery** | `self` |
 | **Zielmodus** | `self` |
 | **Interaktions-Tags** | — |
-| **Farbe** | `#b668ff` |
-| **Beschreibung** | Bestia, Earth and Void form a temporary spectral guardian around the Wizard: damage resistance, knockback resistance and empowered melee. |
+| **Farbe** | `#8e67f0` |
+| **Beschreibung** | An open arcane force frame around the Wizard: damage resistance, knockback resistance and empowered melee. |
 | **Wirkung im Spiel** | A spectral guardian forms around you: you take less damage and knockback and your melee hits harder for a while. |
 | **Visualisierung** | A huge see-through violet skeletal guardian forms behind the caster: void flames, a horned skull helm, purple armor and a crystal greatsword, plus a violet glow around them. |
 
-#### NINEFOLD BEAST FORM `ninefold_beast_form`
+#### RISSWILD `ninefold_beast_form`
 
 | | |
 |---|---|
-| **Rezept** | <img src="runes/bestia.svg" width="32" alt="bestia"> <img src="runes/ignis.svg" width="32" alt="ignis"> <img src="runes/void.svg" width="32" alt="void"> 🐺 BESTIA + 🔥 IGNIS + 🕳️ VOID |
+| **Rezept** | — |
 | **Tier** | 3 | 
-| **Mana (gebunden)** | 44 (Katalogwert 55) · Cooldown 22 s |
+| **Mana (gebunden)** | — · Cooldown 22 s |
 | **Delivery** | `self` |
 | **Zielmodus** | `self` |
 | **Interaktions-Tags** | — |
-| **Farbe** | `#ff7a2f` |
-| **Beschreibung** | Bestia, Fire and Void awaken a short feral rune form: faster movement, savage melee and light damage resistance. |
+| **Farbe** | `#f29b35` |
+| **Beschreibung** | Three cracked molten energy bands: faster movement, savage melee and light damage resistance. |
 | **Wirkung im Spiel** | A flame fox spirit surrounds you: you move faster, your melee becomes savage and you take a little less damage. |
 | **Visualisierung** | Nine flame tails in orange, amber and yellow fan out behind the caster, with a fiery fox-spirit head above them and an orange glow around the body. |
 
@@ -1083,6 +1096,55 @@
 | **Wirkung im Spiel** | A blazing dash across the lane that scorches everything on the way. |
 | **Visualisierung** | A big pulsing fireball head races along the ground trailing alternating orange and yellow fire blobs, orbiting yellow sparks and scorch marks. |
 
+### 3.7 Buff-Transformationen (Spezialrunen · Tag: buff-transformation · max. 1 pro Deck)
+
+Quelle: `docs/GRIMGE_Transformations_Atlas_V3_1_Sonnenwyrm.md`. Jede Form ist eine Spezialrune mit dem gemeinsamen Sanduhr-Siegel ⧗, läuft 16 s (× Runenqualität), ist mit der primären Fokus-Transformation kombinierbar und verändert den Charakter-Sprite nie (nur VFX/Attachments). Es ist immer nur eine Buff-Form aktiv und nur eine Buff-Rune im Deck erlaubt.
+
+| ID | Form | Archetyp der Manifestation | Palette | Sprint + Heavy | Forward kurz / voll | Up kurz / voll | Down kurz / voll | Defense · Grab · Jump |
+|---|---|---|---|---|---|---|---|---|
+| B01 | **Risswild**<br><sub>Drei ungleich breite, kantige Energiebänder entstehen versetzt an Hüfte und Schulter; keine Fuchsohren und keine neun Schweife. Die Bänder fließen wie zähe, in Platten brechende Flüssigkeit.</sub> | `risswild` ×3 | `#241623` `#f29b35` `#ffd774` `#ff5b25` | Beast Pounce | Rissimpuls (`cone`) / Verdichteter Risskern (`bomb`) | Bruchheber (`burst`) / Doppelter Rissaufstieg (`pillar`) | Scherfeger (`ring`) / Rissfeld-Einschlag (`sequence`) | Scherhaut · Plattenzunge · Risssprung |
+| B02 | **Arkengestell**<br><sub>Vier große modulare Träger und sechs isolierte Panzerplatten formen ein offenes, asymmetrisches Kraftgestell um den Avatar. Kein riesiger Geister-Samurai, kein Schädel und keine Rippen.</sub> | `arkengestell` ×4 | `#30205d` `#8e67f0` `#d6a7ff` `#e994f2` | Kolossstoß | Glyphenbolzen (`arrow`) / Belagerungspfeil (`arrow`) | Trägerheber (`burst`) / Lichtspalter (`wall`) | Ankerstampfer (`ring`) / Gericht des Gestells (`ring`) | Schildtrichter · Greifzange · Trägersprung |
+| T01 | **Kammwacht**<br><sub>Vier gestaffelte, breitkantige Rückenlamellen aus Porzellanmetall statt Drachenstacheln.</sub> | `fins/blade` ×4 | `#222c32` `#5c988e` `#e9b777` | Horn Break | Cinder Hook (`cone`) / Drake Maw (`ring`) | Spine Jab (`burst`) / Draconic Eruption (`pillar`) | Ash Heel (`ring`) / Molten Mantle (`sequence`) | Scale Aegis · Jaw Clamp · Drake Hop |
+| T02 | **Schlackenkern**<br><sub>Schwebender Keramikofen als asymmetrisches Rippenband um Taille und Schulter; glühende Öffnung an der linken Hüfte.</sub> | `girdle/rib` ×4 | `#292c33` `#e4a357` `#ab78c0` | Melt Ram | Cinder Spit (`projectile`) / Volcano Lance (`beam`) | Ash Vent (`burst`) / Eruption Crown (`pillar`) | Soot Stomp (`ring`) / Crater Heart (`sequence`) | Basalt Shell · Furnace Grip · Magma Bound |
+| T03 | **Reliktkiefer**<br><sub>Drei freischwebende, winkelige Kieferbögen aus Fossilglas bilden einen offenen Greifapparat neben dem Avatar.</sub> | `jaws` ×3 | `#556261` `#e0d2aa` `#36a49c` | Snap Maw | Drake Claw (`cone`) / Ancestral Breath (`projectile`) | Wyrm Horn (`burst`) / Sky Maw (`pillar`) | Tail Crook (`ring`) / Primal Coil (`ring`) | Scale Veil · Jaw Seize · Wyrm Leap |
+| T04 | **Korallenschild**<br><sub>Zwei fächerförmige Schutzsegel aus Korallenlamellen stehen seitlich statt klassischer Drachenflügel.</sub> | `fins/sail` ×2 | `#345a65` `#f0a89e` `#e4d78d` | Wing Embrace | Life Spark (`cone`) / Queenfire Stream (`projectile`) | Winglift (`burst`) / Crown Ascent (`pillar`) | Bloom Step (`ring`) / Sanctuary Bloom (`sequence`) | Queen Mantle · Mercy Lift · Bloom Flight |
+| T05 | **Bruchflug**<br><sub>Drei gebrochene, schwebende Gravitätsfinnen statt zwei biologischer Flügel; keine Hörner.</sub> | `fins/blade` ×3 | `#161d29` `#2fa89c` `#d77d9d` | Hell Dive | Rift Scratch (`cone`) / Annihilation Ray (`projectile`) | Wing Barb (`burst`) / Infernal Ascent (`pillar`) | Claw Rake (`ring`) / Abyss Crash (`sequence`) | Fiend Wings · Talon Snare · Double Vault |
+| T06 | **Ionspindel**<br><sub>Drei schmale Magnetspulen rotieren diagonal um Hüfte, Ellbogen und Schulter.</sub> | `orbit/coil` ×3 | `#254e59` `#b6d46b` `#f29a70` | Volt Lunge | Spark Needle (`projectile`) / Tempest Chain (`projectile`) | Static Lift (`burst`) / Storm Spire (`pillar`) | Thunder Step (`ring`) / Cyclone Ground (`sequence`) | Faraday Veil · Lightning Bind · Ion Hop |
+| T07 | **Dämmerlauf**<br><sub>Vier asymmetrische Rauchsicheln entlang Unterarmen und Waden verlängern die Körperkontur; kein Fell, kein Wolfsmaul.</sub> | `limbs/sickle` ×4 | `#414d51` `#a7ba87` `#e6af8c` | Predator Break | Crescent Swipe (`cone`) / Moon Howl (`cone`) | Rising Fang (`burst`) / Silver Ascension (`pillar`) | Low Pounce (`ring`) / Lunar Ravage (`sequence`) | Hide Guard · Jaw Takedown · Moonbound |
+| T08 | **Ossuarium**<br><sub>Hängende Keramikglocken und geknickte Grabplatten bilden ein bewegliches, hohles Rüstungskarussell.</sub> | `girdle/bell` ×4 | `#323c40` `#f2e7cc` `#8ebf97` | Sepulcher Rush | Bone Dart (`projectile`) / Sarcophagus Lance (`projectile`) | Rib Hook (`burst`) / Ossuary Bloom (`pillar`) | Grave Nail (`ring`) / Bone Cathedral (`sequence`) | Ossified Ward · Rib Lock · Skeletal Hop |
+| T09 | **Prismabruch**<br><sub>Ein einseitig schwebendes Prisma aus fünf ungleichen Spiegelplatten; keine Dämonenhörner und keine vollständigen Doppelgänger.</sub> | `orbit/mirror` ×5 | `#21343a` `#e6a36d` `#84c9ae` | False Entry | Glass Thorn (`cone`) / Fractured Volley (`projectile`) | Mirror Flick (`burst`) / Prism Ascension (`pillar`) | Shard Sweep (`ring`) / Reflection Rift (`sequence`) | Refractive Guard · Mirror Theft · Split Leap |
+| T10 | **Aderarchon**<br><sub>Vier hohle Wurzelröhren verlaufen außen um Torso und Arme, ohne Fledermausflügel.</sub> | `girdle/tube` ×4 | `#543544` `#c07a78` `#e8cfbd` | Crimson Hook | Blood Needle (`projectile`) / Eclipse Lance (`projectile`) | Feather Flick (`burst`) / Crimson Ascension (`pillar`) | Scarlet Circle (`ring`) / Demonflare (`sequence`) | Wing Cocoon · Heart Tether · Bloodborne Jump |
+| T11 | **Polartrick**<br><sub>Drei flache Kometenbänder aus Frostpapier mit fächerartigen Enden; keine Fuchsohren oder biologischen Schweife.</sub> | `bands` ×3 | `#e8e5db` `#9c9aca` `#eaaa8c` | Fox Feint | Frost Kiss (`cone`) / Aurora Foxfire (`projectile`) | Snowfang (`burst`) / Nine-Star Leap (`sequence`) | Ice Brush (`ring`) / Whiteout Veil (`sequence`) | Frost Tail Guard · Vulpine Snare · Foxbound |
+| T12 | **Stratospalter**<br><sub>Vier offene Prankenbügel schweben als externe Exoskelett-Stützen um Hüfte und Schultern.</sub> | `frame/brace` ×4 | `#285060` `#e7e9dd` `#eead6b` | Sky Pounce | Feral Swipe (`cone`) / Tiger Roar (`projectile`) | Upward Claw (`burst`) / Heaven Prowl (`pillar`) | Ground Paw (`ring`) / Imperial Roar (`ring`) | Paw Bastion · Tiger Hold · Prowler Leap |
+| T13 | **Fadenschlag**<br><sub>Sichtbare metallische Fadenspule nahe der Schulter; vier Spannseile führen zu der vorhandenen Waffe.</sub> | `limbs/thread` ×4 | `#193e53` `#d7a856` `#e77b62` | Silk Strike | Thread Needle (`projectile`) / Hundred Filaments (`projectile`) | Sky Pin (`burst`) / Heaven Loom (`pillar`) | Ground Stitch (`ring`) / Thunder Weave (`sequence`) | Silk Parry · Wire Snare · Loom Jump |
+| T14 | **Glyphenschmied**<br><sub>Drei schiefe, gestanzte Glyphenplatten hängen an einer zentralen Klemme statt generischer Magiekreise.</sub> | `orbit/glyph` ×3 | `#25383d` `#d4b482` `#8ad1be` | Rune Spear | Quick Sigil (`projectile`) / Grand Script (`projectile`) | Arc Notch (`burst`) / Runic Obelisk (`pillar`) | Seal Drop (`ring`) / Circle Codex (`ring`) | Script Ward · Binding Diagram · Glyph Step |
+| T15 | **Spektralweiche**<br><sub>Vier verflochtene Leitbänder verlaufen von Rücken zur Hand und wechseln ihre Reihenfolge beim Elementwechsel.</sub> | `bands` ×4 | `#244358` `#f29b75` `#a3d5c1` | Flux Pierce | Heat Bolt (`cone`) / Quadra Torrent (`projectile`) | Shock Lift (`burst`) / Prismatic Rise (`pillar`) | Cold Foot (`ring`) / Flux Basin (`sequence`) | Wave Guard · Element Clamp · Prism Jump |
+| T16 | **Vierknoten**<br><sub>Vier mechanische Pendelknoten hängen in asymmetrischem Orbit um den Rücken statt kleiner humanoider Dschinn.</sub> | `orbit/knot` ×4 | `#5f596b` `#d1ba84` `#8faeaa` | Crown Pierce | Spirit Flick (`cone`) / Conclave Burst (`projectile`) | Djinn Upper (`burst`) / Ascendant Choir (`pillar`) | Spirit Tap (`ring`) / Summoners Ring (`sequence`) | Djinn Halo · Crown Lariat · Summoner Hop |
+| T17 | **Glutmauser**<br><sub>Asymmetrische Streifen aus verkohlter Lichtkeramik lösen sich vom Rücken wie mausernde Schindeln.</sub> | `fins/shingle` ×3 | `#413b36` `#d9b08c` `#fae3b4` | Phoenix Lunge | Feather Shot (`cone`) / Phoenix Beak (`projectile`) | Rising Wing (`burst`) / Solar Ascension (`pillar`) | Cinder Sweep (`ring`) / Ash Rebirth (`sequence`) | Feather Veil · Talon Rescue · Phoenix Bound |
+| T18 | **Morphgitter**<br><sub>Ein offenes Gitter aus beweglichen Prismenzellen verbindet vorhandene Gliedmaßen mit temporären Werkzeugformen.</sub> | `girdle/cell` ×4 | `#4d6052` `#e3bb85` `#6d97a4` | Beast Lever | Horn Shot (`cone`) / Soul Cannon (`projectile`) | Horn Rise (`burst`) / Manticore Crown (`pillar`) | Tail Slap (`ring`) / Ancient Shellbreak (`sequence`) | Chimera Shell · Tail Clamp · Soul Morph Hop |
+| T19 | **Schwuranker**<br><sub>Drei schwere U-förmige Klammern schweben um Schulter, Hüfte und Unterarm; kein klassischer Schildritter.</sub> | `frame/clamp` ×3 | `#303940` `#bd986a` `#a6c2b0` | Oath Breaker | Shield Ram (`cone`) / Bastion Beam (`ring`) | Steel Uplift (`burst`) / Citadel Rise (`pillar`) | Knee Check (`ring`) / Fortress Quake (`sequence`) | Oath Shield · Grapple Lock · Armor Vault |
+| T20 | **Taktklinge**<br><sub>Kurze Messerkanten aus leuchtenden Notenstrichen liegen an den Unterarmen; Fußspuren sind abstrakte Taktmarken.</sub> | `limbs/notes` ×3 | `#244451` `#efba7a` `#87c7b0` | Cross Tempo | Pulse Cut (`ring`) / Grand Pirouette (`projectile`) | Tempo Lift (`burst`) / Rhapsody Rise (`pillar`) | Low Rhythm (`ring`) / Falling Cadence (`sequence`) | Counter Stance · Bind and Turn · Dance Vault |
+| T21 | **Orbitpranke**<br><sub>Winzige scharfkantige Orbitkörper kreisen um die Hände und Ellbogen; Haare und Gesicht bleiben unverändert.</sub> | `orbit/shard` ×6 | `#1e3853` `#f2b16f` `#b9cfd6` | Meteor Knuckle | Ki Flash (`cone`) / Nova Beam (`beam`) | Astral Upper (`burst`) / Comet Ascend (`pillar`) | Ki Foot (`ring`) / Supernova Pulse (`ring`) | Aura Brace · Ki Grip · Star Jump |
+| T22 | **Zündschuppe**<br><sub>Mattgrüne keramische Schuppenkacheln sitzen in unregelmäßigen Reihen nur an Gelenken, ohne Drachenkopf.</sub> | `limbs/scale` ×3 | `#4b4b45` `#c0d0a0` `#d66f52` | Dragon Fang | Cinder Fist (`cone`) / King Roar (`cone`) | Ember Ascend (`burst`) / Sky Dragon Coil (`pillar`) | Dragon Heel (`ring`) / Scales of Ruin (`ring`) | Fire Scale Guard · Burning Maw · Dragon Leap |
+| T23 | **Nullfeldträger**<br><sub>Drei offene, farblose Negativräume schweben über Schulter und Hand. Licht und Partikel verschwinden innerhalb ihrer Kontur.</sub> | `orbit/void` ×3 | `#333743` `#e8e2d9` `#a9d77f` | Null Cleave | Mute Slash (`ring`) / Spell Eater (`projectile`) | Null Rising (`burst`) / Eclipse Pillar (`ring`) | Mute Heel (`ring`) / Silence Rift (`sequence`) | Negation Guard · Counter Bind · Eclipse Jump |
+| T24 | **Fadenregent**<br><sub>Zwei flache, gelenkige Schatten-Marionetten hängen an sichtbaren diagonalen Lichtfäden; keine Geistersoldaten-Armee.</sub> | `puppets` ×2 | `#293d5b` `#e0cba5` `#ce945e` | Vanguard Order | Shadow Dart (`projectile`) / Legion Spear (`ring`) | Warden Rise (`burst`) / Kingdom Ascends (`pillar`) | Shade Sweep (`ring`) / March of Shades (`sequence`) | Royal Guard · Phantom Seize · King Step |
+| T25 | **Hämolith**<br><sub>Dünne keramische Kapillaren liegen offen um die Unterarme und formen raue Mineralkanten.</sub> | `limbs/capillary` ×3 | `#5a4551` `#b88483` `#d4b0a7` | Blood Saw | Blood Needle (`projectile`) / Hemal Lance (`ring`) | Scarlet Hook (`burst`) / Crimson Gallows (`pillar`) | Blood Stomp (`ring`) / Red Thorn Garden (`sequence`) | Hemo Shell · Scarlet Bind · Blood Leap |
+| T26 | **Resonanzwache**<br><sub>Drei versetzte, halbtransparente Armaturelemente aus geflochtenen Schnüren folgen mit Zeitversatz, keine zweite humanoide Riesengestalt.</sub> | `frame/braid` ×3 | `#4a554f` `#d4b78d` `#739f9b` | Warrior Thrust | Spirit Cut (`cone`) / Ancestor Blade (`projectile`) | Guardian Lift (`burst`) / Ancestor Ascension (`pillar`) | Spirit Heel (`ring`) / Grave Oath (`sequence`) | Ancestor Brace · Spirit Wrestle · Ancestor Leap |
+| T27 | **Faltspur**<br><sub>Rechteckige Raumfalze wie gefaltete Papierkanten liegen um beide Ellbogen, ohne Körper-Tattoos.</sub> | `limbs/fold` ×3 | `#273b57` `#9fcdbd` `#e9ab7e` | Rift Entry | Seam Dart (`projectile`) / Dimension Spear (`ring`) | Split Rise (`burst`) / Rift Pillar (`pillar`) | Seam Foot (`ring`) / Broken Compass (`sequence`) | Seam Shield · Rift Clamp · Portal Hop |
+| T28 | **Rasterdom**<br><sub>Drei offene bauliche Rasterbögen setzen auf der Lane auf; keine geschlossene Anime-Domäne.</sub> | `arches` ×3 | `#314a57` `#e8ca9c` `#99d2bc` | Gate Entry | Rule Needle (`projectile`) / Edict Lance (`cone`) | Keystone Lift (`burst`) / Judgment Column (`pillar`) | Ground Seal (`ring`) / Court of Lines (`sequence`) | Rule Aegis · Constraint Grip · Threshold Leap |
+| T29 | **Werkgestalt**<br><sub>Drei eigenwillige Apparate, Pendel, Zange und Spindel, kreisen um die Hüfte; keine Krone oder Edelsteinreliquien.</sub> | `orbit/apparatus` ×3 | `#515852` `#d2a06d` `#a8c7b9` | Chain Crown | Gold Shard (`cone`) / Kingmaker Spear (`ring`) | Crown Uprise (`burst`) / Ascendant Vault (`pillar`) | Anchor Drop (`ring`) / Relic Convergence (`sequence`) | Antique Ward · Royal Chain · Artifact Leap |
+| T30 | **Leisefaden**<br><sub>Nur ein einzelnes versetztes Schattenband löst sich beim Bewegen vom Körper; keine Katzenohren, kein Tierkopf.</sub> | `bands` ×1 | `#293434` `#ced0b0` `#d59a7e` | Night Pounce | Shadow Claw (`cone`) / Nine Lives Lash (`projectile`) | Catapult Claw (`burst`) / Night Chimera Rise (`pillar`) | Paw Sweep (`ring`) / Dark Prowl (`ring`) | Cat Veil · Familiar Snatch · Cat Jump |
+| T31 | **Klingenherbarium**<br><sub>Ein Fächer aus flachen, dreieckigen Glimmer-Samen statt Blütenblättern umkreist ein leeres Waffenlager.</sub> | `orbit/seed` ×6 | `#2d5a52` `#d7bb99` `#c06f66` | Blossom Pierce | Petal Fang (`cone`) / Thousand-Petal Wave (`projectile`) | Petal Hook (`burst`) / Blooming Vault (`pillar`) | Falling Blossom (`ring`) / Royal Bloom (`ring`) | Petal Dome · Blossom Bind · Petal Jump |
+| T32 | **Taktfunke**<br><sub>Abstrakte, rechteckige Akzentzeichen blitzen nur an den Fußgelenken bei tatsächlich getroffenen Schritten.</sub> | `limbs/accent` ×3 | `#363b42` `#d8bc6b` `#78baaf` | Flash Cut | Lightning Notch (`cone`) / Sixfold Flash (`projectile`) | Vertical Draw (`burst`) / Heaven Tempo (`pillar`) | Heel Flash (`ring`) / Storm Cantata (`sequence`) | Thunder Guard · Sword Hilt Lock · Flash Jump |
+| T33 | **Nachtmaß**<br><sub>Zwei schmale schwenkbare Messzirkel-Bügel an Schultern und Knien bilden die Stealth-Silhouette.</sub> | `frame/compass` ×2 | `#3b4359` `#c1b6a1` `#94b8b7` | Assassin Step | Moon Knife (`cone`) / Crescent Chain (`projectile`) | Rising Shade (`burst`) / Midnight Split (`pillar`) | Dust Sweep (`ring`) / Shadow Wheel (`sequence`) | Counter Veil · Ninja Grapple · Moon Vault |
+| T34 | **Sternwerk**<br><sub>Ein schwebender Projektionsapparat aus drei nach außen klappenden Segmenten trägt eine leere Werkzeugfassung.</sub> | `arches` ×3 | `#2d4766` `#cbaa77` `#b5c4ba` | Guardian Ram | Arcane Pellet (`cone`) / Sentinel Volley (`projectile`) | Sky Sprite (`burst`) / Constellation Lift (`pillar`) | Rune Mine (`ring`) / Orbit Fortress (`sequence`) | Ward Sentinel · Warden Hand · Star Hop |
+| T35 | **Kältestillstand**<br><sub>Drei gebrochene, halbtransparente Kondensationsbänder liegen an Arm, Rücken und Hüfte; keine Zifferblätter.</sub> | `bands` ×3 | `#66757a` `#d6e5d6` `#d9a99a` | Chrono Brake | Icy Tick (`cone`) / Frozen Hour (`cone`) | Frost Hand (`burst`) / Winter Pendulum (`pillar`) | Cold Stamp (`ring`) / Clockwork Blizzard (`sequence`) | Frozen Clock · Second Hand · Clock Hop |
+| T36 | **Bollwerklicht**<br><sub>Drei geknickte, segelartige Paneele strahlen seitlich vom Rücken ab, ohne Federn oder Halo.</sub> | `fins/sail` ×3 | `#344d69` `#cbdea2` `#e9d9ba` | Anchor Rush | Beacon Spark (`cone`) / Dawn Ray (`cone`) | Wing Lift (`burst`) / Ascension Chorus (`pillar`) | Beacon Pulse (`ring`) / Sanctuary Anchor (`sequence`) | Halo Guard · Guardian Turn · Radiant Hop |
+| T37 | **Säuregerüst**<br><sub>Durchsichtige Katalysatorrohre und sechseckige Dosierkammern ziehen sich um die Unterarme; kein Drachenkopf.</sub> | `limbs/tube` ×3 | `#385a58` `#cfb76c` `#9c9c87` | Venom Jab | Acid Pellet (`cone`) / Corrosion Breath (`projectile`) | Wyrm Fang (`burst`) / Pestilent Pillar (`pillar`) | Mire Tail (`ring`) / Blight Crater (`sequence`) | Toxic Hide · Caustic Grip · Venom Jump |
+| T38 | **Asterglied**<br><sub>Fünf frei schwebende Stein-Gelenkbügel bilden eine offene Architektur um Arme und Beine.</sub> | `frame/brace` ×5 | `#5e5b55` `#9ca992` `#d8b68c` | Meteor Shoulder | Stone Splinter (`cone`) / Crystal Boulder (`projectile`) | Rock Upper (`burst`) / Mountain Crown (`pillar`) | Granite Heel (`ring`) / Faultline (`sequence`) | Stonewall · Granite Clamp · Crag Hop |
+| T39 | **Vorausschnitt**<br><sub>Vier dünne schwebende Bildrahmen zeigen nur abstrakte Bewegungsvektoren; keine Sternenkrone oder Himmelszeichen.</sub> | `orbit/frame` ×4 | `#4c4a5f` `#e8cfb1` `#97bd9e` | Atlas Break | Star Dot (`cone`) / Convergence Formula (`projectile`) | Compass Up (`burst`) / Zodiac Ascent (`pillar`) | Atlas Foot (`ring`) / Nebula Equation (`sequence`) | Script Guard · Compass Capture · Atlas Leap |
+| T40 | **Sonnenwyrm** — Eid der Drachenlanze<br><sub>verwobene, unterschiedlich breite Schuppenband-Segmente auf zwei gegenläufigen Bewegungsachsen. Jedes Segment hat dunklen Grund, matte Innenfacette, gravierte Schneidkerbe, goldene gefaste Lichtkante und einzelne orange Schmelznähte.</sub> | `wyrm` ×2 | `#f6cb6a` `#ed7b32` `#29212b` `#69d0c2` | Drachenlanzenstoß | Sonnenstich (`cone`) / Zwillingswyrm-Jagd (`wyrms`) | Himmelszahn (`burst`) / Himmelswendel (`pillar`) | Glutkreis (`ring`) / Wyrmportal-Ritual (`portals`) | Drachengrat · Wyrmfang · Himmelslauf und konturtreue Air-Aura |
+
 ## 4. Kombinationsmatrix
 
 Zwei-Runen-Kombinationen der 10 Basisrunen (symmetrisch, Diagonale = doppelte Rune). **— = noch frei** (kein Rezept → Designraum für neue Spells).
@@ -1106,8 +1168,6 @@ Zwei-Runen-Kombinationen der 10 Basisrunen (symmetrisch, Diagonale = doppelte Ru
 
 | Rezept | Spell |
 |---|---|
-| 🐺 BESTIA + 🪨 TERRA + 🕳️ VOID | **EIDOLON MANTLE** |
-| 🐺 BESTIA + 🔥 IGNIS + 🕳️ VOID | **NINEFOLD BEAST FORM** |
 | 🐺 BESTIA + 🔥 IGNIS + 💨 VENTUS | **DRAGON INVOCATION** (als „INFERNO DRAGON INVOCATION“) |
 | 🐺 BESTIA + 🪨 TERRA + 💨 VENTUS | **WORLD RUNE SERPENT** |
 | ❄️ AQUA + 🪨 TERRA + 💨 VENTUS | **SPIRIT WOLF** |
@@ -1123,8 +1183,9 @@ Transformationen geben kein zusätzliches Rune-Deck; ihre Techniken liegen auf *
 
 | Form | Quelle | Forward kurz / voll | Up kurz / voll | Down kurz / voll | Sprint + Angriff |
 |---|---|---|---|---|---|
-| **Ninefold Beast** (Fuchsgeist, 9 Flammenschweife) | Rezept Bestia+Ignis+Void (Manifest-Buff, eigener Timer) | Beast Pulse / Beast Bomb | Chakra Uppercut / Twin Beast Ascension | Tail Sweep / Tailed Beast Slam | Beast Pounce (springende Chakra-Klaue) |
-| **Eidolon Guardian** (Astralkrieger) | Rezept Bestia+Terra+Void (Manifest-Buff) | Spectral Arrow / Astral Siege Arrow (Bogen) | Rising Blade / Heaven Splitter | Titan Stomp / Titan's Judgment | Colossus Breaker (Astralfaust) |
+| **B01 Risswild** (drei gebrochene Schmelzbänder, Splitterkrone; ehem. Ninefold) | Buff-Rune `buff_B01` (⧗, max. 1 pro Deck, 16 s) | Rissimpuls / Verdichteter Risskern | Bruchheber / Doppelter Rissaufstieg | Scherfeger / Rissfeld-Einschlag | Beast Pounce |
+| **B02 Arkengestell** (offenes Kristall-Kraftgestell mit Halo und Bogen; ehem. Eidolon) | Buff-Rune `buff_B02` (⧗, max. 1 pro Deck, 16 s) | Glyphenbolzen / Belagerungspfeil (Bogen) | Trägerheber / Lichtspalter | Ankerstampfer / Gericht des Gestells | Kolossstoß |
+| **T01–T40** (40 weitere Buff-Formen, siehe 3.7) | je eine Buff-Rune `buff_Txx` | aus dem Atlas | aus dem Atlas | aus dem Atlas | aus dem Atlas |
 | **Focus Ascendant** | Focus 100 % → T / Tippen auf den Wizard (ohne Primal) | Radiant Wave / Annihilation Beam | Ascending Strike / Heaven Pillar | Light Nova / Starfall Crash | Radiant Lunge (goldener Durchstoß) |
 | **Primal Bond** (Wolf / Schildkröte) | Focus 100 % → T mit Primal in der Nähe | — (Buff-Form: Tempo bzw. Panzerung) | — | — | Primal Pounce / Shell Rush |
 
@@ -1152,7 +1213,7 @@ Transformations-Spells (Spezial, 0 Mana): ANNIHILATION BEAM (über Focus Ascenda
 | `summon` | BEAST FAMILIAR, SHADOW DOPPELGANGER, REVENANT CALL, STORM WOLF, VOID SPIDER, RUNE GOLEM, WORLD RUNE SERPENT, SPIRIT WOLF, SIEGE GOLEM |
 | `dash` | SHADOW STEP, INFERNO RAMPAGE, TEMPEST BLITZ |
 | `heavy_object` | METEOR CATACLYSM |
-| `self` | SANDSTORM BASTION, ARCANE AEGIS, SOLAR ORB, LUNAR ORB, ECLIPSE, THUNDERHEAD, BLOOD MOON, STARFALL, AURORA VEIL, EIDOLON MANTLE, NINEFOLD BEAST FORM |
+| `self` | SANDSTORM BASTION, ARCANE AEGIS, SOLAR ORB, LUNAR ORB, ECLIPSE, THUNDERHEAD, BLOOD MOON, STARFALL, AURORA VEIL, ARKENGESTELL, RISSWILD, RISSWILD, ARKENGESTELL, KAMMWACHT, SCHLACKENKERN, RELIKTKIEFER, KORALLENSCHILD, BRUCHFLUG, IONSPINDEL, DÄMMERLAUF, OSSUARIUM, PRISMABRUCH, ADERARCHON, POLARTRICK, STRATOSPALTER, FADENSCHLAG, GLYPHENSCHMIED, SPEKTRALWEICHE, VIERKNOTEN, GLUTMAUSER, MORPHGITTER, SCHWURANKER, TAKTKLINGE, ORBITPRANKE, ZÜNDSCHUPPE, NULLFELDTRÄGER, FADENREGENT, HÄMOLITH, RESONANZWACHE, FALTSPUR, RASTERDOM, WERKGESTALT, LEISEFADEN, KLINGENHERBARIUM, TAKTFUNKE, NACHTMASS, STERNWERK, KÄLTESTILLSTAND, BOLLWERKLICHT, SÄUREGERÜST, ASTERGLIED, VORAUSSCHNITT, SONNENWYRM |
 
 **Zielmodi** (gleiche Regeln für Touch, Maus/Tastatur, Gamepad):
 
@@ -1172,9 +1233,9 @@ Transformations-Spells (Spezial, 0 Mana): ANNIHILATION BEAM (über Focus Ascenda
 
 ## 7. Statistik
 
-- Runen: 15 (davon 10 Basis, 2 Solo-Spezial, 3 Transformation)
-- Spells: 55 — Fundamental 10, Solo 2, Compound 26, Himmelsfelder 7, Advanced 7, Transformation 3
-- Rezepte: 56 · freie Zwei-Runen-Paare: 22 von 55
+- Runen: 57 (davon 10 Basis, 2 Solo-Spezial, 3 Transformation)
+- Spells: 97 — Fundamental 10, Solo 2, Compound 26, Himmelsfelder 7, Advanced 7, Transformation 3
+- Rezepte: 96 · freie Zwei-Runen-Paare: 22 von 55
 
 ## 8. Hinweise für den Research-Agenten
 

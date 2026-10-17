@@ -1,4 +1,5 @@
 // GRIMGE Prototype — Rune Gesture Recognition System (High-Tolerance Radial & Angular Engine)
+import { BUFF_FORM_DATA } from './buff_forms_data.js';
 export class RuneRecognizer {
   constructor() {
     this.runes = [
@@ -151,7 +152,20 @@ export class RuneRecognizer {
         glowColor: '#ffab91',
         icon: '⚡',
         desc: 'Any gesture while Ninefold Beast'
-      }
+      },
+      // Buff transformations: one special rune per form, one hourglass sigil.
+      ...BUFF_FORM_DATA.map((form) => ({
+        id: 'buff_' + form.id,
+        name: form.name.toUpperCase(),
+        element: 'Buff Transformation',
+        glyph: '⧗',
+        color: form.palette?.[1] ?? '#ffd27a',
+        glowColor: form.palette?.[2] ?? '#fff3c4',
+        icon: '⧗',
+        isBuffForm: true,
+        tags: ['buff-transformation', 'max-1-per-deck'],
+        desc: 'Special: the hourglass sigil ⧗ in one closed stroke — BUFF TRANSFORMATION, max. 1 per deck'
+      }))
     ];
   }
 
@@ -427,6 +441,14 @@ export class RuneRecognizer {
     } else {
       scores.mortis = 0.1;
     }
+
+    // BUFF SIGIL (special): a closed hourglass ⧗ in one stroke — two
+    // triangles tip to tip. Tall, sharp-cornered, net turn ≈ 0 (unlike the
+    // round, wide ∞ of DOPPEL and the open Z of FULGUR).
+    let sigil = 0.1;
+    if (loopClosed && Math.abs(netTurn) < Math.PI * .8 && absTurn > Math.PI * 2.2 && aspectRatio >= .35 && aspectRatio <= 1.15) sigil = 0.96;
+    else if (closureDist / Math.max(bbWidth, bbHeight) < 0.6 && Math.abs(netTurn) < Math.PI && absTurn > Math.PI * 1.9 && aspectRatio >= .3 && aspectRatio <= 1.3) sigil = 0.72;
+    for (const id of allowedRuneIds ?? []) if (String(id).startsWith('buff_')) scores[id] = sigil;
 
     if (allowedRuneIds?.includes('transform_beam')) scores.transform_beam = 0.92;
     if (allowedRuneIds?.includes('transform_implode')) scores.transform_implode = 0.92;

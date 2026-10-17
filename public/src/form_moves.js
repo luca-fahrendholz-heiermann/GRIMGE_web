@@ -19,11 +19,13 @@ import { BeastBombSpell, SpiritArrowSpell } from './form_attacks.js';
 export const FULL_CHARGE_TIME = 1.2;
 const DEPTH_PX = 150;
 
-export const FORM_PALETTES = Object.freeze({
+// Extensible: the buff transformations register their palettes at load.
+export const FORM_PALETTES = {
   ninefold: Object.freeze({ core: '#fff3c4', main: '#ff7a1a', edge: '#b3260b', glow: 'rgba(255,110,20,' }),
   eidolon: Object.freeze({ core: '#f3e5ff', main: '#a66bff', edge: '#4a1d96', glow: 'rgba(150,80,255,' }),
   ascendant: Object.freeze({ core: '#fffde7', main: '#ffd54f', edge: '#b8860b', glow: 'rgba(255,214,80,' })
-});
+};
+export function registerFormPalette(id, palette) { FORM_PALETTES[id] = Object.freeze({ ...palette }); }
 
 const targetable = (t) => t && !t.isDead && (!t.lifeState || t.lifeState === 'Alive') && !t.isObjective && !t.isProp;
 
@@ -37,6 +39,7 @@ function hitTargets(spell, gameWorld, inside, { damage, kx = 0, lift = 0, stun =
     spell.hitSet.add(target);
     const dir = Math.sign(dx) || spell.facing;
     target.takeDamage(damage, typeof kx === 'function' ? kx(dir, target) : kx * dir, lift, stun, crit, 'spell');
+    spell.onHit?.(target);
     hits++;
   }
   return hits;
@@ -121,6 +124,7 @@ export class FormStrikeSpell {
             if (d > e.radius + (target.radius ?? 12) || hitNow.has(target)) continue;
             hitNow.add(target);
             target.takeDamage(e.final ? this.damage : this.damage * .2, Math.sign(target.x - ex || this.facing) * (e.final ? 360 : 60), e.final ? 300 : 110, .4, !!e.final, 'spell');
+            this.onHit?.(target);
           }
         }
         break;
@@ -214,7 +218,8 @@ function slamPoints(count, radius, startAt, gap) {
 }
 
 // The six techniques of each form: [direction][tier] → spell factory.
-export const FORM_MOVESETS = Object.freeze({
+// Extensible: buff transformations add their movesets at load.
+export const FORM_MOVESETS = {
   ninefold: {
     name: 'NINEFOLD BEAST',
     forward: {
@@ -260,10 +265,12 @@ export const FORM_MOVESETS = Object.freeze({
       full: { name: 'STARFALL CRASH', make: (p) => new FormStrikeSpell(p, { form: 'ascendant', kind: 'sequence', damage: 84, life: 1.25, events: [...slamPoints(6, 110, .12, .1), { at: 1.0, dx: 0, dz: 0, radius: 180, final: true }] }) }
     }
   }
-});
+};
 
 // Which moveset is active: a manifest overrides the transformation.
 export function activeMoveset(player) {
+  // A generic buff transformation (T01–T40) owns the moveset while it lasts.
+  if (player.buffForm?.timer > 0 && FORM_MOVESETS[player.buffForm.id]) return player.buffForm.id;
   if (player.ninefoldTimer > 0) return 'ninefold';
   if (player.eidolonTimer > 0) return 'eidolon';
   if (player.focusTransformTimer > 0) return 'ascendant';

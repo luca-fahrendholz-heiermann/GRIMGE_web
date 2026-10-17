@@ -64,7 +64,17 @@ export const RUNE_XP_BY_GRADE = Object.freeze({ C: 6, B: 10, A: 14, S: 18 });
 export const STARTER_RUNES = Object.freeze(['ignis', 'ventus', 'fulgur', 'terra', 'aqua']);
 export const MATCH_DECK_SIZE = 10;
 export const MAX_RUNE_COPIES = 2;
-export const ALL_RUNE_IDS = Object.freeze(['ignis', 'ventus', 'fulgur', 'terra', 'aqua', 'bestia', 'construct', 'void', 'lux', 'umbra', 'doppel', 'mortis']);
+import { BUFF_FORM_DATA } from './buff_forms_data.js';
+// Buff transformation special runes: max. ONE of them per deck (atlas §1.9).
+export const BUFF_RUNE_IDS = Object.freeze(BUFF_FORM_DATA.map((form) => 'buff_' + form.id));
+export const MAX_BUFF_RUNES = 1;
+export const isBuffRuneId = (id) => String(id).startsWith('buff_');
+export const ALL_RUNE_IDS = Object.freeze(['ignis', 'ventus', 'fulgur', 'terra', 'aqua', 'bestia', 'construct', 'void', 'lux', 'umbra', 'doppel', 'mortis', ...BUFF_RUNE_IDS]);
+// A deck may take this rune (copy limit, and only one buff rune at all).
+export function deckAccepts(deck, id) {
+  if (isBuffRuneId(id)) return deck.filter(isBuffRuneId).length < MAX_BUFF_RUNES;
+  return deck.filter((entry) => entry === id).length < MAX_RUNE_COPIES;
+}
 // The first deck deliberately contains two copies of every starter rune.
 // It is a legal 10-card deck and guarantees a varied initial three-card hand.
 export const DEFAULT_MATCH_DECK = Object.freeze(['fulgur', 'terra', 'ignis', 'ventus', 'aqua', 'fulgur', 'terra', 'ignis', 'ventus', 'aqua']);
@@ -125,7 +135,8 @@ export class MageProfile {
   xpToNextLevel() { return 70 + (this.level - 1) * 35; }
   runeLevel(id) { return 1 + Math.floor((this.runeXp[id] ?? 0) / 60); }
   runeXpIntoLevel(id) { return (this.runeXp[id] ?? 0) % 60; }
-  isRuneUnlocked(id) { return this.unlockedRunes.has(id); }
+  // Prototype: every buff rune is available (its deck slot is the limit).
+  isRuneUnlocked(id) { return isBuffRuneId(id) || this.unlockedRunes.has(id); }
 
   sanitizeDeck(ids = []) {
     const copies = new Map();
@@ -133,6 +144,7 @@ export class MageProfile {
       if (!ALL_RUNE_IDS.includes(id) || !this.isRuneUnlocked(id)) return false;
       const count = copies.get(id) ?? 0;
       if (count >= MAX_RUNE_COPIES || copies.size > ALL_RUNE_IDS.length) return false;
+      if (isBuffRuneId(id) && [...copies.keys()].some(isBuffRuneId)) return false;
       copies.set(id, count + 1);
       return true;
     }).slice(0, MATCH_DECK_SIZE);
@@ -146,6 +158,7 @@ export class MageProfile {
     if (!this.isRuneUnlocked(id)) return { ok: false, reason: 'LOCKED' };
     if (this.matchDeck.length >= MATCH_DECK_SIZE) return { ok: false, reason: 'DECK FULL' };
     if (this.getRuneCopies(id) >= MAX_RUNE_COPIES) return { ok: false, reason: 'COPY LIMIT' };
+    if (!deckAccepts(this.matchDeck, id)) return { ok: false, reason: 'ONE BUFF TRANSFORMATION PER DECK' };
     this.matchDeck.push(id); this.save();
     return { ok: true };
   }

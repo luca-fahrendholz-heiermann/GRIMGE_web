@@ -455,19 +455,19 @@ assert(true, 'All core spells update against the 2.5D actor model without except
 
 // EIDOLON MANTLE is a combat form, not a cosmetic: its real spell path
 // creates a temporary guardian state that improves melee and mitigates damage.
-const eidolonRunes = ['bestia', 'terra', 'void'].map((id) => recognizer.runes.find((rune) => rune.id === id));
+const eidolonRunes = [recognizer.runes.find((rune) => rune.id === 'buff_B02')];
 game.player.eidolonTimer = 0; game.player.eidolonCooldown = 0; game.player.eidolonArmor = 0; game.player.hp = game.player.maxHp; game.player.invulnerableTimer = 0; game.player.isGuarding = false; game.player.arcaneShield = 0;
 spells.cast(game.player, spells.resolveSpell(eidolonRunes), game, spells.qualityForRunes(eidolonRunes));
 const eidolonHp = game.player.hp;
 game.player.takeDamage(100, 200, 0, .1, false, 'spell');
-assert(game.player.eidolonTimer > 0 && game.player.eidolonArmor > 0 && game.player.hp > eidolonHp - 100, 'Eidolon Mantle creates a temporary protective guardian form with real mitigation');
-game.player.eidolonTimer = 0; game.player.eidolonArmor = 0; game.player.eidolonPower = 1;
+assert(game.player.eidolonTimer > 0 && game.player.eidolonArmor > 0 && game.player.hp > eidolonHp - 100, 'Arkengestell (buff rune B02) creates a temporary protective frame with real mitigation');
+game.player.eidolonTimer = 0; game.player.eidolonArmor = 0; game.player.eidolonPower = 1; game.player.buffForm = null;
 
-const ninefoldRunes = ['bestia', 'ignis', 'void'].map((id) => recognizer.runes.find((rune) => rune.id === id));
+const ninefoldRunes = [recognizer.runes.find((rune) => rune.id === 'buff_B01')];
 game.player.ninefoldTimer = 0; game.player.ninefoldCooldown = 0; game.player.ninefoldPower = 1;
 spells.cast(game.player, spells.resolveSpell(ninefoldRunes), game, spells.qualityForRunes(ninefoldRunes));
-assert(game.player.ninefoldTimer > 0 && game.player.ninefoldPower >= 1, 'Ninefold Beast Form creates a temporary aggressive rune transformation');
-game.player.ninefoldTimer = 0; game.player.ninefoldPower = 1;
+assert(game.player.ninefoldTimer > 0 && game.player.ninefoldPower >= 1, 'Risswild (buff rune B01) creates a temporary aggressive transformation');
+game.player.ninefoldTimer = 0; game.player.ninefoldPower = 1; game.player.buffForm = null;
 
 // Aura Shock is a rune combination: Aqua + Fulgur, mana/cooldown gated radial
 // damage and 2.5D push, with no separate action button or shortcut.
@@ -1452,13 +1452,16 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
   P.focusTransformTimer = 0; P.focus = 0;
   // Body forms render without errors (skeleton guardian, nine tails).
   const { spells: spellSystem } = await import('./public/src/spells.js');
-  spellSystem.cast(P, spellSystem.resolveSpell([{ id: 'bestia' }, { id: 'terra' }, { id: 'void' }]), game);
+  spellSystem.cast(P, spellSystem.resolveSpell([{ id: 'buff_B02' }]), game);
   for (let i = 0; i < 20; i++) P.update(1 / 60, { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false }, game.battlefield, game);
   game.render();
   assert(P.eidolonTimer > 0 && P.eidolonAge > .2, 'The Eidolon guardian builds up over time while the mantle lasts');
-  spellSystem.cast(P, spellSystem.resolveSpell([{ id: 'bestia' }, { id: 'ignis' }, { id: 'void' }]), game);
+  spellSystem.cast(P, spellSystem.resolveSpell([{ id: 'buff_B01' }]), game);
+  assert(P.ninefoldTimer === 0 && P.eidolonTimer > 0, 'Only one buff transformation at a time: Risswild is refused while Arkengestell lasts');
+  P.eidolonTimer = 0; P.update(1 / 60, { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false }, game.battlefield, game);
+  spellSystem.cast(P, spellSystem.resolveSpell([{ id: 'buff_B01' }]), game);
   game.render();
-  assert(P.ninefoldTimer > 0 && P.eidolonTimer === 0, 'The Ninefold spirit replaces the guardian and renders');
+  assert(P.ninefoldTimer > 0 && P.eidolonTimer === 0, 'After it ends, Risswild takes over and renders');
   P.ninefoldTimer = 0;
   // Form techniques: six charged heavies (forward / up / down × short / full)
   // per transformation and manifest — no extra rune card is ever added.
@@ -1488,7 +1491,7 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
   assert(released.length === 18, `Every transformation / manifest has six charged techniques (forward / up / down × short / full): ${released.length}/18`);
   resetForm(); P.ninefoldTimer = 8;
   chargeAndRelease('forward', false);
-  assert(spellSystem.activeSpells.some((s) => s.constructor.name === 'FormStrikeSpell' && s.kind === 'cone'), 'A short forward heavy in the Ninefold form is the Beast Pulse cone wave');
+  assert(spellSystem.activeSpells.some((s) => (s.constructor.name === 'FormStrikeSpell' || s.constructor.name === 'BuffStrikeSpell') && s.kind === 'cone'), 'A short forward heavy in Risswild is the Rissimpuls pressure wave (atlas material)');
   resetForm(); P.ninefoldTimer = 8;
   const hpBeforeBomb = formTarget.hp;
   chargeAndRelease('forward', true);
@@ -1518,7 +1521,7 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
   assert(P.chargeDir === 'up' && P.formCharge, 'K + W charges the UP technique on the keyboard');
   P.formCharge.elapsed = FULL_CHARGE_TIME + .1;
   windowListeners.keyup?.({ code: 'KeyK', preventDefault() {} });
-  assert(P.lastFormTechnique === 'HEAVEN SPLITTER', 'Releasing K fires the full up technique (Heaven Splitter)');
+  assert(P.lastFormTechnique === 'LICHTSPALTER', 'Releasing K fires the full up technique (Lichtspalter)');
   // Transformations burn the Focus meter instead of running on a timer.
   resetForm();
   const deckBefore = P.runeDeck.length + P.runeHand.length;
@@ -1701,7 +1704,7 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
   // Eidolon: Colossus Breaker — slow wind-up, far push, shoves the enemy behind, long recovery.
   formReady('eidolon'); placePartner(120); placeDummy(120 + 70); sprintReady();
   P.executeAttack(neutral, 'normal');
-  assert(P.lastSprintAttack === 'COLOSSUS BREAKER', 'Eidolon: sprint + attack is the Colossus Breaker');
+  assert(P.lastSprintAttack === 'KOLOSSSTOSS' || P.lastSprintAttack === 'KOLOSSSTOß', 'Arkengestell: sprint + attack is the Kolossstoß');
   step(10);
   assert(E.hp === E.maxHp, 'The Colossus Breaker winds up before the fist flies');
   const breakerStart = E.x;
@@ -2152,6 +2155,97 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   assert(P._weaponMotion === 'bash', 'Sword & shield heavy is a shield bash');
   game.render();
   P.equipWeapon(null);
+}
+
+// Buff transformations (Transformations-Atlas V3.1): 42 special runes, max. one per deck.
+{
+  const buff = await import('./public/src/buff_forms.js');
+  const { FORM_MOVESETS, activeMoveset } = await import('./public/src/form_moves.js');
+  const { FORM_SPRINT_ATTACKS } = await import('./public/src/form_actions.js');
+  const { SPELL_DEFINITIONS, isSpecialRune } = await import('./public/src/spell_catalog.js');
+  const { guideStrokes } = await import('./public/src/rune_guides.js');
+  const { MageProfile, BUFF_RUNE_IDS } = await import('./public/src/progression.js');
+  const neutral = { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false };
+  const ids = buff.BUFF_FORM_IDS;
+  assert(ids.length === 42 && ids[0] === 'B01' && ids[1] === 'B02' && ids.includes('T40'), 'All 42 atlas buff transformations are registered (B01, B02, T01–T40)');
+  const tForms = ids.filter((id) => id.startsWith('T'));
+  assert(tForms.every((id) => ['forward', 'up', 'down'].every((d) => FORM_MOVESETS[id]?.[d]?.short?.make && FORM_MOVESETS[id][d].full?.make) && FORM_SPRINT_ATTACKS[id]?.name), 'Every T form has six charged techniques and its own sprint attack');
+  assert(FORM_MOVESETS.T07.forward.short.name === 'CRESCENT SWIPE' && FORM_MOVESETS.T07.forward.full.name === 'MOON HOWL' && FORM_SPRINT_ATTACKS.T07.name === 'PREDATOR BREAK', 'Technique names come straight from the atlas (T07 Dämmerlauf)');
+  assert(FORM_MOVESETS.ninefold.forward.short.name === 'RISSIMPULS' && FORM_MOVESETS.eidolon.up.full.name === 'LICHTSPALTER', 'B01 Risswild / B02 Arkengestell carry the atlas technique names');
+  assert(ids.every((id) => { const r = recognizer.runes.find((x) => x.id === 'buff_' + id); const d = SPELL_DEFINITIONS['buff_' + id]; return r?.isBuffForm && r.tags.includes('max-1-per-deck') && d?.isBuffForm && d.tags.includes('buff-transformation') && isSpecialRune('buff_' + id); }), 'Each form is a tagged special rune: "buff-transformation · max-1-per-deck", never fusable');
+  // Deck rule: at most one buff rune.
+  const profile = new MageProfile();
+  profile.matchDeck = ['ignis', 'ventus', 'fulgur', 'terra', 'aqua', 'ignis', 'ventus', 'fulgur'];
+  assert(profile.addRuneToDeck('buff_T07').ok, 'A buff rune can join the deck');
+  const second = profile.addRuneToDeck('buff_B01');
+  assert(!second.ok && /ONE BUFF/.test(second.reason), 'A second buff rune is refused (one per deck)');
+  assert(profile.sanitizeDeck(['ignis', 'buff_T07', 'buff_T08', 'aqua']).filter((id) => id.startsWith('buff_')).length === 1, 'Loading a deck keeps only one buff rune');
+  assert(BUFF_RUNE_IDS.length === 42, 'All buff runes are offered in the deck builder');
+  // The shared hourglass sigil.
+  const hand = ['ignis', 'fulgur', 'doppel', 'buff_T07'];
+  const sigil = recognizer.recognize(guideStrokes('buff_T07', 400, 300, 120), hand);
+  assert(sigil?.rune.id === 'buff_T07' && sigil.grade === 'S', 'The hourglass sigil resolves to the buff rune in the hand');
+  assert(recognizer.recognize(guideStrokes('fulgur', 400, 300, 120), hand)?.rune.id === 'fulgur' && recognizer.recognize(guideStrokes('doppel', 400, 300, 120), hand)?.rune.id === 'doppel', 'The open Z stays FULGUR and the wide ∞ stays DOPPEL');
+  // Activation in Training, together with the Focus transformation.
+  game.returnToHub(); game.setMatchMode('training'); game.startMatch(); game.selectTrainingMap('waterfalls');
+  const P = game.player; const dummy = game.trainingDummy;
+  P.x = 400; P.z = .5; game.battlefield.placeOnSurface(P);
+  P.focus = P.maxFocus; game.activateFocusTransformation();
+  spells.cast(P, spells.resolveSpell([{ id: 'buff_T07' }]), game);
+  assert(P.buffForm?.id === 'T07' && P.focusTransformTimer > 0 && activeMoveset(P) === 'T07', 'A buff runs together with the Focus transformation and owns the charged heavy');
+  spells.cast(P, spells.resolveSpell([{ id: 'buff_T08' }]), game);
+  assert(P.buffForm.id === 'T07', 'Only one buff transformation can be active at a time');
+  // Render the manifestation in every pose.
+  for (const pose of [{}, { sprintActive: true, vx: 300 }, { grounded: false, vElevation: 150 }, { grounded: false, vElevation: -20 }, { isGuarding: true, guardHoldTime: .2 }]) {
+    Object.assign(P, { sprintActive: false, vx: 0, grounded: true, vElevation: 0, isGuarding: false }, pose);
+    game.render();
+  }
+  Object.assign(P, { sprintActive: false, vx: 0, grounded: true, vElevation: 0, isGuarding: false });
+  assert(true, 'The manifestation renders idle, sprinting, rising, at the apex and guarding');
+  // Generic combat bonus of a T buff.
+  dummy.homeX = dummy.x = P.x + 14; dummy.homeZ = dummy.z = P.z;
+  P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.focusTransformTimer = 0; P.comboStep = 0; P.facing = 1; P.weapon = null; P.classWeapon = null;
+  let hpBefore = dummy.hp; P.executeAttack(neutral, 'normal'); const buffed = hpBefore - dummy.hp;
+  const saved = P.buffForm; P.buffForm = null;
+  P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.comboStep = 0;
+  hpBefore = dummy.hp; P.executeAttack(neutral, 'normal'); const plain = hpBefore - dummy.hp;
+  P.buffForm = saved;
+  assert(buffed > plain, `A buff transformation strengthens melee (${Math.round(buffed)} vs ${Math.round(plain)})`);
+  // Every technique of every T form runs and renders.
+  let fired = 0;
+  for (const id of tForms) {
+    P.buffForm = { id, timer: 10, total: 16, age: 1, power: 1 };
+    for (const d of ['forward', 'up', 'down']) for (const v of ['short', 'full']) {
+      spells.clearRuntime();
+      const spell = FORM_MOVESETS[id][d][v].make(P);
+      spells.addSpell(spell, 'B');
+      for (let i = 0; i < 20; i++) spells.update(1 / 60, game);
+      game.render();
+      fired++;
+    }
+  }
+  assert(fired === 240, `All 240 T-form techniques release, update and render (${fired}/240)`);
+  // The new kinds hit.
+  const hitBy = (id, d, v, dx) => { spells.clearRuntime(); dummy.homeX = dummy.x = P.x + dx; dummy.hp = dummy.maxHp; P.buffForm = { id, timer: 10, total: 16, age: 1, power: 1 }; spells.addSpell(FORM_MOVESETS[id][d][v].make(P), 'B'); for (let i = 0; i < 90; i++) spells.update(1 / 60, game); return dummy.maxHp - dummy.hp; };
+  const kindOf = (id, d, v) => FORM_MOVESETS[id][d][v].make(P).kind;
+  const projectileForm = tForms.find((id) => kindOf(id, 'forward', 'full') === 'projectile');
+  const beamForm = tForms.find((id) => kindOf(id, 'forward', 'full') === 'beam');
+  assert(projectileForm && hitBy(projectileForm, 'forward', 'full', 200) > 0, `A travelling core hits and implodes (${projectileForm})`);
+  assert(beamForm && hitBy(beamForm, 'forward', 'full', 160) > 0, `A lane beam hits (${beamForm})`);
+  assert(hitBy('T40', 'forward', 'full', 220) > 0 && hitBy('T40', 'down', 'full', 180) > 0, 'T40 Sonnenwyrm: the twin wyrms hunt along the lane and the portal ritual strikes its target');
+  spells.clearRuntime();
+  // Sprint attack and grab use the form's material.
+  P.buffForm = { id: 'T07', timer: 10, total: 16, age: 1, power: 1 };
+  P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.grounded = true; P.sprintActive = true; P.facing = 1;
+  P.executeAttack(neutral, 'normal');
+  assert(P.lastSprintAttack === 'PREDATOR BREAK', 'Sprint + attack is the form\'s own sprint heavy (Predator Break)');
+  game.render();
+  P.state = 'idle'; P.stateTimer = 0; P.sprintStrike = null;
+  // Timer runs out → the buff ends.
+  P.buffForm.timer = .05; P.update(1 / 10, neutral, game.battlefield, game);
+  assert(!P.buffForm && activeMoveset(P) === null, 'When its time runs out the buff ends and the normal moveset returns');
+  spells.clearRuntime();
+  dummy.homeX = dummy.x = 512;
 }
 
 const frameCallback = nextFrame;

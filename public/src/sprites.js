@@ -591,6 +591,7 @@ export class SpriteManager {
       visualHeight = ENTITY_VISUALS.heroHeight,
       targetScale = null,
       tint = null,
+      maskPaint = null,
       cadence = 1.0,
       reverse = false,
       procRot = null,
@@ -602,6 +603,8 @@ export class SpriteManager {
 
     const frame = this.resolveFrame(spr, state, animTime, hitFlash, { cadence, reverse });
     if (tint && !hitFlash) frame.canvas = this.tintedCanvas(frame.canvas, tint);
+    // Contour-bound detail: paint only where the current frame has pixels.
+    if (maskPaint && !hitFlash && !tint) frame.canvas = this.maskedCanvas(frame.canvas, maskPaint);
     const renderScale = targetScale ?? (visualHeight / frame.height);
 
     ctx.save();
@@ -685,6 +688,23 @@ export class SpriteManager {
 
   // A frame recoloured toward `tint` (any CSS colour; its alpha is the
   // strength), cached per source canvas.
+  maskedCanvas(source, paint) {
+    const doc = globalThis.document;
+    if (!source || typeof doc?.createElement !== 'function') return source;
+    this._maskCanvas ??= doc.createElement('canvas');
+    const canvas = this._maskCanvas;
+    if (canvas.width !== source.width || canvas.height !== source.height) { canvas.width = source.width; canvas.height = source.height; }
+    const c = canvas.getContext?.('2d');
+    if (!c) return source;
+    c.save();
+    c.clearRect?.(0, 0, canvas.width, canvas.height);
+    c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1;
+    c.drawImage(source, 0, 0);
+    paint(c, canvas.width, canvas.height);
+    c.restore();
+    return canvas;
+  }
+
   tintedCanvas(source, tint) {
     const doc = globalThis.document;
     if (!source || typeof doc?.createElement !== 'function') return source;

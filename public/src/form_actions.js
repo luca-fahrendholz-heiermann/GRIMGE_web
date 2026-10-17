@@ -79,11 +79,14 @@ export function updateFormSprint(player, gameWorld, dt) {
 // Times in seconds. Carry/recoil multiply the Unity Sprint Attack values
 // (0.6 u carry, 1.8 u target recoil): Pounce carry ×1.5 like the wolf bond
 // form, the Breaker's push ×1.65 like the turtle bond's Shell Rush.
-export const FORM_SPRINT_ATTACKS = Object.freeze({
+// Extensible: buff transformations add their variants at load.
+export const FORM_SPRINT_ATTACKS = {
   ninefold: Object.freeze({ name: 'BEAST POUNCE', windup: .12, windupSpeed: .55, active: .22, lungeSpeed: 1.25, recovery: .30, leap: 260, damageMult: 1.15, reach: 112, carryMult: 1.5, recoilMult: 1.2, lift: -80, stun: .75, hitstopTicks: 7, pitch: .9 }),
   eidolon: Object.freeze({ name: 'COLOSSUS BREAKER', windup: .28, windupSpeed: .3, active: .16, lungeSpeed: 1.1, recovery: .50, damageMult: 1.35, reach: 108, carryMult: 1, recoilMult: 1.65, lift: 30, stun: .6, hitstopTicks: 9, chainPush: true, pitch: .6 }),
   ascendant: Object.freeze({ name: 'RADIANT LUNGE', windup: .06, windupSpeed: .8, active: .24, lungeSpeed: 1.45, recovery: .26, damageMult: 1.1, reach: 84, carryMult: 1, recoilMult: 1.2, lift: 20, stun: .5, hitstopTicks: 5, pierce: true, pitch: 1.1 })
-});
+};
+// Optional render hooks (buff transformations draw grab / sprint FX in their material).
+export const FORM_FX_HOOKS = {};
 
 // Impact extras of a form sprint attack (hits = every target struck so far).
 export function formSprintImpact(player, form, hits, gameWorld) {
@@ -135,6 +138,7 @@ export class FormSprintAttackFx {
   render(ctx) {
     const s = this.strike; const p = this.player; const pal = this.palette; const f = this.facing;
     if (!s) return;
+    if (FORM_FX_HOOKS.sprint?.(ctx, this)) return;
     const t = s.elapsed;
     const total = s.windup + s.active + (s.variant?.recovery ?? 0);
     const strikeT = Math.max(0, t - s.windup);
@@ -214,6 +218,7 @@ export class FormGrabFx {
     if (this.t >= this.life) this.isFinished = true;
   }
   render(ctx) {
+    if (FORM_FX_HOOKS.grab?.(ctx, this)) return;
     const p = this.player; const pal = this.palette;
     const hx = p.x + this.facing * 10; const hy = p.y - 48;
     const k = Math.min(1, this.t / .18);

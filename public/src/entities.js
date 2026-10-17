@@ -11,6 +11,7 @@ import { WEAPONS, ThrownWeaponSpell, drawHeldWeapon, weaponMotion } from './weap
 import { drawBeastBomb, drawSpiritBow } from './form_attacks.js';
 import { FULL_CHARGE_TIME, activeMoveset, releaseFormTechnique, FORM_PALETTES } from './form_moves.js';
 import { updatePrimalBond, bondMoveMultiplier, bondGainMultiplier, bondDisplacement, bondOnBlock, primalSprintVariant, renderPrimalBond, endPrimalBond } from './primals.js';
+import { updateBuffForm, endBuffForm, isGenericBuff, currentBuffForm, renderBuffManifestation, buffVeinPainter, buffCloakColor, renderBuffGuard } from './buff_forms.js';
 
 // Every spell a rune deck can produce: single runes plus every valid two-
 // and three-rune recipe that its cards allow (copies respected).
@@ -239,6 +240,7 @@ export class Player extends GroundEntity {
     this.maxFocus = 100;
     this.focusTransformTimer = 0;
     this.primalBond = null;
+    this.buffForm = null;
     this.focusTransformPower = 1;
     this.focusDecayDelay = FOCUS_DECAY_DELAY;
     this.activeClash = null;
@@ -369,6 +371,8 @@ export class Player extends GroundEntity {
     if (this.focusTransformTimer <= 0) this.focusTransformPower = 1;
     // Primal Bond: wind-up, merge, Focus drain (1.5/s × form), Fortified.
     updatePrimalBond(this, dt, FOCUS_TRANSFORM_DRAIN);
+    // Buff transformation (special rune): limited time, one at a time.
+    updateBuffForm(this, dt);
     this.attackBufferTimer = Math.max(0, this.attackBufferTimer - dt);
     if (this.attackBufferTimer <= 0) this.queuedAttack = null;
     this.guardBreakTimer = Math.max(0, this.guardBreakTimer - dt);
@@ -590,7 +594,7 @@ export class Player extends GroundEntity {
     const focusMult = this.focusTransformTimer > 0 ? 1.12 : 1;
     const clashMult = this.activeClash ? CLASH_MOVE_MULT : 1;
     const burrowMult = this.burrowed ? 1.35 : 1;
-    const bondMult = bondMoveMultiplier(this); // Wolf bond: SpeedBoost
+    const bondMult = bondMoveMultiplier(this) * (isGenericBuff(this) ? 1.08 : 1); // Wolf bond: SpeedBoost; buff forms move a little faster
     const combinedMult = this.slowFactor * guardMult * beastMult * focusMult * sprintMult * clashMult * burrowMult * bondMult;
 
     const baseSpeed = this.moveSpeed;
@@ -1117,6 +1121,11 @@ export class Player extends GroundEntity {
       kx *= 1.30;
       lift *= 1.18;
     }
+    if (isGenericBuff(this)) {
+      dmg *= 1.25 * (this.buffForm.power ?? 1);
+      kx *= 1.15;
+      lift *= 1.08;
+    }
     if (this.focusTransformTimer > 0) {
       dmg *= 1.18 * this.focusTransformPower;
       kx *= 1.14;
@@ -1241,6 +1250,7 @@ export class Player extends GroundEntity {
       kx *= .82;
       lift *= .88;
     }
+    if (isGenericBuff(this)) { amount *= .88; kx *= .85; }
     // Turtle bond: Shell Guard / Fortified scale the displacement taken.
     const displacement = bondDisplacement(this);
     kx *= displacement; lift *= displacement;
@@ -1290,6 +1300,7 @@ export class Player extends GroundEntity {
   beginDeath() {
     this.dismount();
     endPrimalBond(this, 'death');
+    endBuffForm(this);
     // A held weapon falls to the ground.
     if (this.weapon) { window.gameWorld?.armory?.drop(this.weapon, this.x, this.z, this.weaponDurability); this.weapon = null; this.weaponDurability = null; }
     window.gameWorld?.recordWizardDeath?.(this.team);
@@ -1396,9 +1407,9 @@ export class Player extends GroundEntity {
     if (this.isAlive && this.focusTransformTimer > 0) this.renderFocusAscendant(ctx, renderY);
     if (this.isAlive && this.primalBond) renderPrimalBond(ctx, this, renderY);
     else if (this.isAlive) this.renderFocusCharge(ctx, renderY);
-    if (this.isAlive && this.ninefoldTimer > 0) this.renderNinefoldBeast(ctx, renderY);
-    if (this.isAlive && this.eidolonTimer > 0) this.renderEidolonMantle(ctx, renderY);
-    if (this.isAlive && this.chargeTimer > 0 && !this.ninefoldTimer && !this.eidolonTimer) this.renderChargeAura(ctx, renderY);
+    // Buff transformation manifestation behind the body (P1/P2).
+    const buffActive = this.isAlive && renderBuffManifestation(ctx, this, renderY, 'back');
+    if (this.isAlive && this.chargeTimer > 0 && !buffActive) this.renderChargeAura(ctx, renderY);
     // Body forms glow along the Wizard's own silhouette (chakra cloak).
     const formCloak = this.isAlive ? this.formCloakColor() : null;
     for (const g of this.ghosts) sprites.renderEntity(ctx, this.heroKey, g.x, g.y, { facing: g.facing, state: g.state, animTime: g.animTime, alpha: g.alpha, hitFlash: 1 });
@@ -1488,6 +1499,8 @@ export class Player extends GroundEntity {
       cadence, reverse, procOffsetX: pOX, procOffsetY: pOY,
     };
     if (useProc) { renderOpts.procRot = pRot; renderOpts.procScaleX = pSX; renderOpts.procScaleY = pSY; }
+    const veins = this.isAlive ? buffVeinPainter(this) : null;
+    if (veins) renderOpts.maskPaint = veins;
     if (formCloak) this.renderFormCloak(ctx, renderY, renderOpts, formCloak, 'back');
     // Astral weapon: the rear-hand piece behind the body, the front one in front.
     const armed = this.isAlive && (this.weapon || this.classWeapon);
@@ -1498,18 +1511,14 @@ export class Player extends GroundEntity {
     // Guard poses: tail cocoon (Ninefold, drawn with the tails), ribs + palm, light shield.
     if (this.isAlive && this.isGuarding) {
       const guardForm = activeMoveset(this);
-      if (guardForm === 'eidolon' || guardForm === 'ascendant') drawFormGuard(ctx, this.x, renderY, this.facing, this.animTime, guardForm);
+      if (!renderBuffGuard(ctx, this, renderY) && guardForm === 'ascendant') drawFormGuard(ctx, this.x, renderY, this.facing, this.animTime, guardForm);
     }
     // Charging a form technique: forward builds the projectile / bow, up and
     // down gather energy in the arms / legs; a pulse ring marks FULL ready.
     if (this.isAlive && this.formCharge) this.renderFormCharge(ctx, renderY);
     // Front layers of the body forms (ribs, claws) wrap around the Wizard.
-    if (this.isAlive && this.eidolonTimer > 0) drawEidolonGuardian(ctx, this.x, renderY, this.facing, this.animTime, this.eidolonAge ?? 1, Math.min(1, this.eidolonTimer * 2), 'front', this.formMotion());
-    if (this.isAlive && this.ninefoldTimer > 0) {
-      drawNinefoldSpirit(ctx, this.x, renderY, this.facing, this.animTime, this.ninefoldAge ?? 1, Math.min(1, this.ninefoldTimer * 2), 'front', this.formMotion());
-      // Guarding: the tail cocoon wraps the front of the body.
-      if (this.isGuarding) drawNinefoldSpirit(ctx, this.x, renderY, this.facing, this.animTime, this.ninefoldAge ?? 1, Math.min(1, this.ninefoldTimer * 2) * .85, 'back', this.formMotion());
-    }
+    // Buff transformation manifestation in front of the body (P5).
+    if (this.isAlive) renderBuffManifestation(ctx, this, renderY, 'front');
     if (this.isAlive) {
       const ratio = Math.max(0, this.hp / this.maxHp);
       ctx.save();
@@ -1593,6 +1602,8 @@ export class Player extends GroundEntity {
 
   // Colour of the cloak of the active body form / transformation.
   formCloakColor() {
+    const buff = buffCloakColor(this);
+    if (buff) return buff;
     if (this.ninefoldTimer > 0) return { edge: 'rgba(255,110,20,1)', inner: 'rgba(255,170,60,1)', fade: Math.min(1, this.ninefoldTimer * 2) };
     if (this.eidolonTimer > 0) return { edge: 'rgba(150,80,255,1)', inner: 'rgba(200,150,255,1)', fade: Math.min(1, this.eidolonTimer * 2) };
     if (this.focusTransformTimer > 0) return { edge: 'rgba(255,214,80,1)', inner: 'rgba(255,240,170,1)', fade: Math.min(1, this.focusTransformTimer * 2) };

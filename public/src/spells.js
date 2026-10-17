@@ -7,6 +7,7 @@ import { environment } from './environment.js';
 import { sky, isSkyField } from './sky.js';
 import { ShadowStomperSpell, HaloPulseSpell, castShadowStep, alliesOf } from './light_shadow.js';
 import { raiseMirrorGate } from './portal.js';
+import { activateBuffForm } from './buff_forms.js';
 import { BeamSpell, BeamClash, resolveBeamInteractions, MirrorWardSpell, GravityLiftSpell, TitanStompSpell, SoulSeekerBolt, SeismicSlamSpell, ConeBreathSpell, BurrowStrikeSpell, ShieldBubbleSpell, renderPixelated } from './abilities.js';
 
 export { BeamClash };
@@ -232,6 +233,9 @@ export class SpellSystem {
     const startX = caster.x + facing * 35;
     const startZ = caster.z;
     const startHeight = caster.worldHeight ?? 0;
+
+    // Buff transformation special runes (one per deck, one active at a time).
+    if (spellDef.isBuffForm) { activateBuffForm(caster, spellDef.buffFormId, castQuality, this); return; }
 
     switch (spellDef.id) {
       case 'fireball': {

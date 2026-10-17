@@ -141,11 +141,14 @@ assert(sAuraShock && sAuraShock.id === 'aura_shock', 'Spell: Aqua + Fulgur -> AU
 const sArcaneAegis = spells.resolveSpell([rAqua, rTerra]);
 assert(sArcaneAegis && sArcaneAegis.id === 'arcane_aegis', 'Spell: Aqua + Terra -> ARCANE AEGIS');
 
-const sEidolonMantle = spells.resolveSpell([rBestia, rTerra, rVoid]);
-assert(sEidolonMantle && sEidolonMantle.id === 'eidolon_mantle', 'Spell: Bestia + Terra + Void -> EIDOLON MANTLE');
+// The former 3-rune manifests are buff-transformation special runes now
+// (atlas: max. one buff per deck), so the old recipes are gone.
+assert(!spells.resolveSpell([rBestia, rTerra, rVoid]) && !spells.resolveSpell([rBestia, rIgnis, rVoid]), 'Bestia + Terra/Ignis + Void no longer fuse (Arkengestell / Risswild are buff runes)');
+const sEidolonMantle = spells.resolveSpell([{ id: 'buff_B02' }]);
+assert(sEidolonMantle && sEidolonMantle.isBuffForm && sEidolonMantle.buffFormId === 'B02', 'Buff rune B02 -> ARKENGESTELL buff transformation');
 
-const sNinefoldBeast = spells.resolveSpell([rBestia, rIgnis, rVoid]);
-assert(sNinefoldBeast && sNinefoldBeast.id === 'ninefold_beast_form', 'Spell: Bestia + Ignis + Void -> NINEFOLD BEAST FORM');
+const sNinefoldBeast = spells.resolveSpell([{ id: 'buff_B01' }]);
+assert(sNinefoldBeast && sNinefoldBeast.isBuffForm && sNinefoldBeast.buffFormId === 'B01', 'Buff rune B01 -> RISSWILD buff transformation');
 
 const sStoneWall = spells.resolveSpell([rTerra, rTerra]);
 assert(sStoneWall && sStoneWall.id === 'stone_wall', 'Spell: Terra + Terra -> STONE WALL');
@@ -201,8 +204,11 @@ assert(resStar4?.rune.id === 'lux' && resStar4.grade === 'S', 'Recognize: four c
 assert(recognizer.recognize(starLines.slice(0, 3))?.rune.id === 'lux', 'Recognize: three crossing lines also count as LUX');
 assert(recognizer.recognize([lineStroke(100, 150, 300, 150), lineStroke(100, 250, 300, 250)], ['lux', 'ventus'])?.rune.id !== 'lux', 'Recognize: two parallel lines are not a LUX star');
 const { RUNE_GUIDES, guideStrokes } = await import('./public/src/rune_guides.js');
-const guideMisses = Object.keys(RUNE_GUIDES).filter((id) => {
-  const free = recognizer.recognize(guideStrokes(id, 400, 300, 150));
+const BASE_HAND = ['ignis', 'ventus', 'fulgur', 'terra', 'aqua', 'bestia', 'construct', 'void', 'lux', 'umbra', 'doppel', 'mortis'];
+const guideMisses = Object.keys(RUNE_GUIDES).filter((key) => {
+  // The buff sigil resolves to whichever buff rune is in the hand.
+  const id = key === 'buff_sigil' ? 'buff_T07' : key;
+  const free = recognizer.recognize(guideStrokes(id, 400, 300, 150), key === 'buff_sigil' ? [...BASE_HAND, id] : null);
   const own = recognizer.recognize(guideStrokes(id, 400, 300, 110), [id]);
   return free?.rune.id !== id || own?.grade !== 'S';
 });

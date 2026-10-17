@@ -68,6 +68,7 @@ const tierName = { 1: 'Fundamental (1 Rune)', 2: 'Compound (2 Runen)', 3: 'Advan
 function spellGroup(id) {
   const def = SPELL_DEFINITIONS[id];
   const recs = recipesFor(id);
+  if (def.isBuffForm) return 'buff';
   if (recs.some((r) => r.some((x) => x.startsWith('transform_')))) return 'transform';
   if (recs.some((r) => r.length === 1 && SOLO_RUNES.includes(r[0]))) return 'solo';
   if (def.isSkyField) return 'sky';
@@ -75,7 +76,7 @@ function spellGroup(id) {
   return n === 1 ? 't1' : n === 2 ? 't2' : 't3';
 }
 
-const groups = { t1: [], solo: [], transform: [], t2: [], sky: [], t3: [] };
+const groups = { t1: [], solo: [], transform: [], t2: [], sky: [], t3: [], buff: [] };
 for (const id of Object.keys(SPELL_DEFINITIONS)) groups[spellGroup(id)].push(id);
 
 function spellBlock(id) {
@@ -137,15 +138,21 @@ P('## 2. Runen');
 P('');
 P('| Glyphe | Rune | Element | Icon | Farbe | Mana | Zeichnen | Allein ergibt |');
 P('|---|---|---|---|---|---|---|---|');
-for (const r of runes) {
+for (const r of runes.filter((x) => !x.isBuffForm)) {
   const solo = SPELL_RECIPES[r.id] ? SPELL_DEFINITIONS[SPELL_RECIPES[r.id]]?.name : '—';
   const img = RUNE_GUIDES[r.id] ? `<img src="runes/${r.id}.svg" width="48" alt="${r.id}">` : r.glyph;
   P(`| ${img} | **${r.name}** \`${r.id}\` | ${r.element} | ${r.icon} | \`${r.color}\` | ${RUNE_MANA_COSTS[r.id] ?? 10} | ${r.desc} | ${solo} |`);
 }
+const buffRuneCount = runes.filter((x) => x.isBuffForm).length;
+P(`| <img src="runes/buff_sigil.svg" width="48" alt="buff"> | **BUFF-SIEGEL** \`buff_*\` (${buffRuneCount} Runen) | Buff-Transformation | ⧗ | je Form | 30 | Sanduhr ⧗ in einem geschlossenen Strich — **Tag: buff-transformation · max-1-per-deck** | die Buff-Form der Rune (Abschnitt 3.7) |`);
 P('');
 P('### Glyphen als ASCII (Ziffer = Startpunkt des Strichs)');
 P('');
-for (const r of runes) {
+P('**⧗ BUFF-SIEGEL** — Sanduhr in einem geschlossenen Strich (gilt für alle Buff-Transformations-Runen)');
+P('```');
+P(runeAscii('buff_sigil'));
+P('```');
+for (const r of runes.filter((x) => !x.isBuffForm)) {
   const ascii = runeAscii(r.id);
   if (!ascii) continue;
   P(`**${r.icon} ${r.name}** — ${r.desc}`);
@@ -178,6 +185,21 @@ for (const [key, title] of sections) {
   P('');
   for (const id of groups[key]) P(spellBlock(id));
 }
+
+// Buff transformations: compact, one row per form (atlas V3.1).
+const { BUFF_FORM_DATA } = await load('public/src/buff_forms_data.js');
+P('### 3.7 Buff-Transformationen (Spezialrunen · Tag: buff-transformation · max. 1 pro Deck)');
+P('');
+P('Quelle: `docs/GRIMGE_Transformations_Atlas_V3_1_Sonnenwyrm.md`. Jede Form ist eine Spezialrune mit dem gemeinsamen Sanduhr-Siegel ⧗, läuft 16 s (× Runenqualität), ist mit der primären Fokus-Transformation kombinierbar und verändert den Charakter-Sprite nie (nur VFX/Attachments). Es ist immer nur eine Buff-Form aktiv und nur eine Buff-Rune im Deck erlaubt.');
+P('');
+P('| ID | Form | Archetyp der Manifestation | Palette | Sprint + Heavy | Forward kurz / voll | Up kurz / voll | Down kurz / voll | Defense · Grab · Jump |');
+P('|---|---|---|---|---|---|---|---|---|');
+for (const f of BUFF_FORM_DATA) {
+  const t = f.tech;
+  const d = (x) => (t[x] ? `${t[x].short.name} (\`${t[x].short.kind}\`) / ${t[x].full.name} (\`${t[x].full.kind}\`)` : '—');
+  P(`| ${f.id} | **${f.name}**${f.title ? ` — ${f.title}` : ''}<br><sub>${f.silhouette}</sub> | \`${f.archetype}${f.item ? '/' + f.item : ''}\` ×${f.count} | ${f.palette.map((c) => `\`${c}\``).join(' ')} | ${t.sprintHeavy?.name ?? '—'} | ${d('forward')} | ${d('up')} | ${d('down')} | ${t.defense?.name ?? '—'} · ${t.grab?.name ?? '—'} · ${t.jump?.name ?? '—'} |`);
+}
+P('');
 
 P('## 4. Kombinationsmatrix');
 P('');
@@ -216,8 +238,9 @@ P('Transformationen geben kein zusätzliches Rune-Deck; ihre Techniken liegen au
 P('');
 P('| Form | Quelle | Forward kurz / voll | Up kurz / voll | Down kurz / voll | Sprint + Angriff |');
 P('|---|---|---|---|---|---|');
-P('| **Ninefold Beast** (Fuchsgeist, 9 Flammenschweife) | Rezept Bestia+Ignis+Void (Manifest-Buff, eigener Timer) | Beast Pulse / Beast Bomb | Chakra Uppercut / Twin Beast Ascension | Tail Sweep / Tailed Beast Slam | Beast Pounce (springende Chakra-Klaue) |');
-P('| **Eidolon Guardian** (Astralkrieger) | Rezept Bestia+Terra+Void (Manifest-Buff) | Spectral Arrow / Astral Siege Arrow (Bogen) | Rising Blade / Heaven Splitter | Titan Stomp / Titan\'s Judgment | Colossus Breaker (Astralfaust) |');
+P('| **B01 Risswild** (drei gebrochene Schmelzbänder, Splitterkrone; ehem. Ninefold) | Buff-Rune `buff_B01` (⧗, max. 1 pro Deck, 16 s) | Rissimpuls / Verdichteter Risskern | Bruchheber / Doppelter Rissaufstieg | Scherfeger / Rissfeld-Einschlag | Beast Pounce |');
+P('| **B02 Arkengestell** (offenes Kristall-Kraftgestell mit Halo und Bogen; ehem. Eidolon) | Buff-Rune `buff_B02` (⧗, max. 1 pro Deck, 16 s) | Glyphenbolzen / Belagerungspfeil (Bogen) | Trägerheber / Lichtspalter | Ankerstampfer / Gericht des Gestells | Kolossstoß |');
+P('| **T01–T40** (40 weitere Buff-Formen, siehe 3.7) | je eine Buff-Rune `buff_Txx` | aus dem Atlas | aus dem Atlas | aus dem Atlas | aus dem Atlas |');
 P('| **Focus Ascendant** | Focus 100 % → T / Tippen auf den Wizard (ohne Primal) | Radiant Wave / Annihilation Beam | Ascending Strike / Heaven Pillar | Light Nova / Starfall Crash | Radiant Lunge (goldener Durchstoß) |');
 P('| **Primal Bond** (Wolf / Schildkröte) | Focus 100 % → T mit Primal in der Nähe | — (Buff-Form: Tempo bzw. Panzerung) | — | — | Primal Pounce / Shell Rush |');
 P('');

@@ -10,6 +10,8 @@
 // combination simply has no recipe (a failed fusion is resolved by the slot
 // rules in main.js, never by inventing a random spell).
 
+import { BUFF_FORM_DATA } from './buff_forms_data.js';
+
 export const DELIVERY = Object.freeze({
   PROJECTILE: 'projectile', SALVO: 'salvo', HOMING: 'homing', BEAM: 'beam', CONE: 'cone', BURROW: 'burrow',
   AREA: 'area', ZONE: 'zone', WALL: 'wall', TELEKINESIS: 'telekinesis',
@@ -47,18 +49,21 @@ export const RUNE_MANA_COSTS = Object.freeze({
   bestia: 18, construct: 16, void: 16, lux: 12, umbra: 12,
   // Solo special runes: one hard glyph, a full spell on its own, never fused.
   doppel: 22, mortis: 26,
+  // Buff-transformation special runes (max. one per deck) share one cost.
   // Transformation runes are granted by an active transformation.
   transform_beam: 0, transform_implode: 0, transform_rampage: 0
 });
 
+export const BUFF_RUNE_MANA = 30;
 export function runeManaCost(runeOrId) {
   const id = typeof runeOrId === 'string' ? runeOrId : runeOrId?.id;
+  if (String(id).startsWith('buff_')) return BUFF_RUNE_MANA;
   return RUNE_MANA_COSTS[id] ?? 10;
 }
 
 const def = (id, fields) => Object.freeze({ id, tier: 1, interactionTags: Object.freeze([]), targetingMode: TARGETING_BY_SPELL[id] ?? TARGETING.DIRECTION, ...fields });
 
-export const SPELL_DEFINITIONS = Object.freeze({
+const SPELL_DEFINITIONS_EXT = {
   // ── Fundamental (one rune) ─────────────────────────────────────────────
   fireball: def('fireball', { name: 'IGNIS FIREBALL', color: '#ff5722', deliveryType: DELIVERY.PROJECTILE, interactionTags: ['reflectable', 'capturable', 'blockable'], desc: 'Explosive projectile burning enemies.' }),
   gale_blast: def('gale_blast', { name: 'GALE SHOCKWAVE', color: '#00bcd4', deliveryType: DELIVERY.AREA, desc: 'High-velocity wind wave knocking enemies back.' }),
@@ -120,19 +125,20 @@ export const SPELL_DEFINITIONS = Object.freeze({
   soul_seekers: def('soul_seekers', { name: 'SOUL SEEKERS', tier: 2, color: '#ea80fc', deliveryType: DELIVERY.HOMING, interactionTags: ['reflectable', 'capturable', 'blockable'], desc: 'A salvo of three homing void flames that steer toward enemies within a turn limit.' }),
 
   // ── Advanced (three runes) ─────────────────────────────────────────────
-  eidolon_mantle: def('eidolon_mantle', { name: 'EIDOLON MANTLE', tier: 3, manaCost: 45, cooldown: 18, color: '#b668ff', deliveryType: DELIVERY.SELF, desc: 'Bestia, Earth and Void form a temporary spectral guardian around the Wizard: damage resistance, knockback resistance and empowered melee.' }),
+  // Engines of the buff runes B02 / B01 (formerly 3-rune recipes).
+  eidolon_mantle: def('eidolon_mantle', { name: 'ARKENGESTELL', tier: 3, manaCost: 45, cooldown: 18, color: '#8e67f0', deliveryType: DELIVERY.SELF, desc: 'An open arcane force frame around the Wizard: damage resistance, knockback resistance and empowered melee.' }),
   // An original GRIMGE feral transformation: its nine rune-flame tails
   // evoke a legendary beast without borrowing a named character or form.
-  ninefold_beast_form: def('ninefold_beast_form', { name: 'NINEFOLD BEAST FORM', tier: 3, manaCost: 55, cooldown: 22, color: '#ff7a2f', deliveryType: DELIVERY.SELF, desc: 'Bestia, Fire and Void awaken a short feral rune form: faster movement, savage melee and light damage resistance.' }),
+  ninefold_beast_form: def('ninefold_beast_form', { name: 'RISSWILD', tier: 3, manaCost: 55, cooldown: 22, color: '#f29b35', deliveryType: DELIVERY.SELF, desc: 'Three cracked molten energy bands: faster movement, savage melee and light damage resistance.' }),
   dragon_invocation: def('dragon_invocation', { name: 'DRAGON INVOCATION', tier: 3, manaCost: 70, color: '#ff7043', deliveryType: DELIVERY.AREA, desc: 'Calls a temporary fire dragon to scorch a battlefield zone.' }),
   summon_rune_snake: def('summon_rune_snake', { name: 'WORLD RUNE SERPENT', tier: 3, manaCost: 48, color: '#b668ff', deliveryType: DELIVERY.SUMMON, desc: 'A mountable lane-control serpent that slithers through the fight and launches enemies upward.' }),
   summon_spirit_wolf: def('summon_spirit_wolf', { name: 'SPIRIT WOLF', tier: 3, manaCost: 32, color: '#80d8ff', deliveryType: DELIVERY.SUMMON, desc: 'Summons a quick frost spirit that hunts nearby enemies.' }),
   summon_siege_golem: def('summon_siege_golem', { name: 'SIEGE GOLEM', tier: 3, manaCost: 46, color: '#a1887f', deliveryType: DELIVERY.SUMMON, desc: 'Summons a slow, durable golem that presses objectives.' }),
   apocalyptic_heavensurge: def('apocalyptic_heavensurge', { name: 'APOCALYPTIC HEAVENSURGE', tier: 3, color: '#ff3d00', deliveryType: DELIVERY.AREA, desc: 'Cataclysmic storm of Fire, Wind, and Thunder engulfing the battlefield!' })
-});
+};
 
 // Sorted rune-id key → spell id.
-export const SPELL_RECIPES = Object.freeze({
+const SPELL_RECIPES_EXT = {
   ignis: 'fireball', ventus: 'gale_blast', fulgur: 'chain_lightning', terra: 'stone_spikes',
   aqua: 'frost_nova', bestia: 'summon_lesser_beast', construct: 'construct_bulwark', void: 'void_bolt',
   lux: 'halo_pulse', umbra: 'shadow_step', doppel: 'shadow_doppelganger', mortis: 'revenant_call',
@@ -150,11 +156,28 @@ export const SPELL_RECIPES = Object.freeze({
   'ignis+lux': 'solar_orb', 'aqua+umbra': 'lunar_orb', 'lux+umbra': 'eclipse', 'fulgur+umbra': 'thunderhead',
   'ignis+umbra': 'blood_moon', 'lux+ventus': 'starfall', 'aqua+lux': 'aurora_veil',
 
-  'bestia+terra+void': 'eidolon_mantle', 'bestia+ignis+void': 'ninefold_beast_form',
   'bestia+ignis+ventus': 'dragon_invocation', 'bestia+terra+ventus': 'summon_rune_snake',
   'aqua+terra+ventus': 'summon_spirit_wolf', 'fulgur+terra+terra': 'summon_siege_golem',
   'fulgur+ignis+terra': 'dragon_invocation', 'fulgur+ignis+ventus': 'apocalyptic_heavensurge'
-});
+};
+
+// Buff transformations (atlas B01, B02, T01–T40): one special rune each.
+// Every buff rune is drawn with the same hourglass sigil — only one can be
+// in a deck, so the sigil always resolves to that deck's buff.
+export const BUFF_SPELL_IDS = Object.freeze(BUFF_FORM_DATA.map((form) => 'buff_' + form.id));
+for (const form of BUFF_FORM_DATA) {
+  const id = 'buff_' + form.id;
+  SPELL_DEFINITIONS_EXT[id] = def(id, {
+    name: form.name.toUpperCase(), tier: 3, manaCost: 30, color: form.palette?.[1] ?? '#ffd27a',
+    deliveryType: DELIVERY.SELF, targetingMode: TARGETING.SELF, isSpecial: true, isBuffForm: true, buffFormId: form.id,
+    tags: Object.freeze(['buff-transformation', 'max-1-per-deck']),
+    desc: `Buff transformation (max. 1 per deck): ${form.silhouette}`
+  });
+  SPELL_RECIPES_EXT[id] = id;
+}
+
+export const SPELL_DEFINITIONS = Object.freeze(SPELL_DEFINITIONS_EXT);
+export const SPELL_RECIPES = Object.freeze(SPELL_RECIPES_EXT);
 
 // Recipe-specific display overrides (same mechanics, different name).
 const RECIPE_NAMES = Object.freeze({ 'bestia+ignis+ventus': 'INFERNO DRAGON INVOCATION' });
@@ -228,9 +251,28 @@ export const SPELL_HOW_TO = Object.freeze({
   aurora_veil: 'Your side slowly regenerates health and mana. Only one sky sphere at a time.'
 });
 
+// A buff transformation explains its whole moveset (atlas text).
+function buffHowTo(definition) {
+  const form = BUFF_FORM_DATA.find((f) => f.id === definition.buffFormId);
+  if (!form) return definition.desc;
+  const t = form.tech;
+  const dir = (d, label) => (t[d] ? `${label} + HEAVY: ${t[d].short.name} (short) — ${t[d].short.text} · ${t[d].full.name} (full, hold 1.2 s) — ${t[d].full.text}` : '');
+  return [
+    `BUFF TRANSFORMATION · MAX 1 PER DECK · lasts 16 s, stacks with the Focus transformation; your sprite stays unchanged.`,
+    form.silhouette,
+    t.sprint ? `SPRINT: ${t.sprint.name} — ${t.sprint.text}` : '',
+    t.sprintHeavy ? `SPRINT + ATTACK: ${t.sprintHeavy.name} — ${t.sprintHeavy.text}` : '',
+    dir('forward', 'FORWARD'), dir('up', 'UP'), dir('down', 'DOWN'),
+    t.defense ? `DEFENSE: ${t.defense.name} — ${t.defense.text}` : '',
+    t.grab ? `GRAB (DEFENSE + DOWN): ${t.grab.name} — ${t.grab.text}` : '',
+    t.jump ? `JUMP: ${t.jump.name} — ${t.jump.text}` : ''
+  ].filter(Boolean).join(' ¶ ');
+}
+
 export function spellHowTo(spellId) {
   const definition = SPELL_DEFINITIONS[spellId];
   if (!definition) return null;
+  if (definition.isBuffForm) return { targeting: 'Draw the hourglass sigil ⧗ (the buff rune in your hand), then tap its slot: the form takes shape around you at once.', effect: buffHowTo(definition), summon: null };
   return {
     targeting: TARGETING_HOW_TO[definition.targetingMode] ?? TARGETING_HOW_TO.direction,
     effect: SPELL_HOW_TO[spellId] ?? definition.desc,
@@ -245,8 +287,9 @@ export const SOLO_RUNES = Object.freeze(['doppel', 'mortis']);
 
 export function isSpecialRune(rune) {
   const id = String(typeof rune === 'string' ? rune : rune?.id);
-  return id.startsWith('transform_') || SOLO_RUNES.includes(id);
+  return id.startsWith('transform_') || id.startsWith('buff_') || SOLO_RUNES.includes(id);
 }
+export const isBuffRune = (rune) => String(typeof rune === 'string' ? rune : rune?.id).startsWith('buff_');
 
 // The runes a spell is made of (first recipe that forms it). Sky fields use
 // this to strengthen or weaken whole elements.
