@@ -78,6 +78,14 @@ const BACKDASH_REVERSAL_WINDOW = 9 / 60;  // flick toward facing, then back with
 // suppressed for 8 ticks in Unity). The prototype keeps its dodge cooldown.
 const BACKDASH_SUPPRESS_TIME = 8 / 60;
 const BACKDASH_COOLDOWN = 0.5;
+// Sprint Attack (sprint punisher) — Unity CharacterDefinition "Sprint Attack":
+// the Forward Heavy at normal Heavy strength, started at once from a sprint.
+// It keeps advancing until it connects; a clean hit carries the attacker a
+// little further and drives the target back (forced ground recoil, no launch).
+const SPRINT_ATTACK_ACTIVE_TIME = .20;                 // advancing hit window
+const SPRINT_ATTACK_CARRY_DISTANCE = 0.6 * UNITY_PX;   // _sprintAttackLungeDistance
+const SPRINT_ATTACK_CARRY_TIME = 6 / 60;               // _sprintAttackLungeTicks
+const SPRINT_ATTACK_RECOIL_DISTANCE = 1.8 * UNITY_PX;  // _sprintAttackTargetRecoilDistance
 
 const KB_DECAY_RATE = 450;
 
@@ -379,6 +387,7 @@ export class Player extends GroundEntity {
     }
 
     if (ACTION_STATES.has(this.state)) {
+      if (this.sprintStrike) this.updateSprintAttack(dt);
       this.stateTimer -= dt;
       if (this.state === 'dash' && Math.random() < 0.6) {
         this.ghosts.push({ x: this.x, y: this.y, z: this.z, elevation: this.elevation, facing: this.facing, alpha: 0.5, state: this.state, animTime: this.animTime });
@@ -601,8 +610,9 @@ export class Player extends GroundEntity {
     }
 
     if (input.justPressed('KeyJ') || input.justPressed('Mouse0')) {
-      this.cancelSprint();
+      // The attack reads the sprint first (sprint attack / weapon throw).
       this.executeAttack(input);
+      this.cancelSprint();
     }
 
     if (this.isGuarding && (move.z > 0.55 || input.keys?.ArrowDown || input.keys?.KeyS)) {
@@ -896,10 +906,15 @@ export class Player extends GroundEntity {
       const back = attackKind === 'normal' && normalizeMove(moveVector(input)).x * (this.facing || 1) < -.5;
       return this.activeTelekinesis.release(back ? 'pull' : attackKind);
     }
-    // Field weapons: attack while standing on one picks it up; sprint +
-    // attack throws the held weapon (Little Fighter style).
+    // Sprint + attack: a picked-up field weapon is thrown (Little Fighter
+    // style); otherwise — bare hands or the class's own fixed weapon, which
+    // can never be thrown — it is the Sprint Attack.
+    const sprinting = this.sprintActive && this.grounded && !ACTION_STATES.has(this.state) && this.canAttack;
+    if (sprinting && (attackKind === 'normal' || attackKind === 'heavy')) {
+      return this.weapon ? this.throwWeapon() : this.startSprintAttack();
+    }
+    // Attack while standing on a field weapon picks it up.
     if (attackKind === 'normal' && !ACTION_STATES.has(this.state) && this.grounded) {
-      if (this.weapon && this.sprintActive) return this.throwWeapon();
       if (window.gameWorld?.tryPickupWeapon?.(this)) return true;
     }
     if (ACTION_STATES.has(this.state) || !this.canAttack) {
@@ -911,8 +926,9 @@ export class Player extends GroundEntity {
       return canBuffer;
     }
     this.canAttack = false;
+    this.cancelSprint();
     const move = moveVector(input);
-    const weapon = this.weapon ? WEAPONS[this.weapon] : null;
+    const weapon = this.weaponProfile;
     if (attackKind === 'uppercut' || input.keys?.KeyU) {
       const up = weapon ? { ...MELEE_BASELINE.uppercut, ...weapon.uppercut } : MELEE_BASELINE.uppercut;
       this.state = 'uppercut'; this.stateTimer = up.time; this._weaponSwingTime = up.time; this.vElevation = 280 * PLAYER_ARC_SCALE;
@@ -952,6 +968,65 @@ export class Player extends GroundEntity {
     }
     this.triggerMeleeHitbox(attack.damage, this.facing * attack.knockback, attack.lift, attack.finisher ? 0.6 : 0.4, !!attack.finisher, { hitstopTicks: attack.hitstopTicks, hitReaction: attack.hitReaction, reach: attack.reach, behind: attack.behind, crit: attack.crit, freeze: attack.freeze, guardBreak: attack.guardBreak, shockwave: attack.shockwave });
     return true;
+  }
+
+  // The moveset in use: a picked-up field weapon overrides the class weapon.
+  get weaponProfile() {
+    const id = this.weapon ?? this.classWeapon;
+    return id ? WEAPONS[id] ?? null : null;
+  }
+
+  // The chosen class's own weapon: a fixed part of the Wizard — never thrown,
+  // dropped or worn out. A field weapon picked up on top of it takes over the
+  // moveset until it is thrown away or breaks.
+  equipClassWeapon(weaponId) {
+    this.classWeapon = WEAPONS[weaponId] ? weaponId : null;
+    this.comboStep = 0;
+    return this.classWeapon;
+  }
+
+  startSprintAttack() {
+    const weapon = this.weaponProfile;
+    const heavy = weapon ? { ...MELEE_BASELINE.heavy, ...weapon.heavy } : MELEE_BASELINE.heavy;
+    const speed = Math.max(Math.abs(this.vx), this.moveSpeed * SPRINT_MULT);
+    this.cancelSprint();
+    this.canAttack = false;
+    this.comboStep = 0;
+    this.queuedAttack = null;
+    this.state = 'heavyStrike'; this.stateTimer = heavy.time; this._weaponSwingTime = heavy.time;
+    this.vx = this.facing * speed; this.vz = 0;
+    this.sprintStrike = { heavy, elapsed: 0, connected: false, carry: 0 };
+    this.lastSprintAttack = 'SPRINT ATTACK';
+    audio.playSlash(0.82);
+    combat.spawnDust(this.x, this.y, 6);
+    combat.spawnSlashArc(this.x + this.facing * 28, this.y - 25, this.facing, { radius: weapon ? Math.round((heavy.reach ?? 90) * .65) : 58, angleStart: -0.9, angleEnd: 0.9, color: weapon?.color ?? '#ffd54f', glow: weapon?.accent ?? '#ff6d00', width: 7 });
+    this.updateSprintAttack(0);
+    return true;
+  }
+
+  // Advancing hit window, then the post-impact carry; recovery is planted.
+  updateSprintAttack(dt) {
+    const strike = this.sprintStrike;
+    if (!strike) return;
+    if (this.state !== 'heavyStrike') { this.sprintStrike = null; return; }
+    strike.elapsed += dt;
+    if (strike.connected) {
+      strike.carry -= dt;
+      if (strike.carry <= 0) this.vx = 0;
+      return;
+    }
+    if (strike.elapsed > SPRINT_ATTACK_ACTIVE_TIME) { this.vx = 0; return; }
+    if (Math.random() < .5) this.ghosts.push({ x: this.x, y: this.y, z: this.z, elevation: this.elevation, facing: this.facing, alpha: .3, state: this.state, animTime: this.animTime });
+    const { heavy } = strike;
+    // Recoil as knockback: the linear knockback decay slides the target ≈ 1.8 u.
+    const recoil = Math.sqrt(2 * KB_DECAY_RATE * SPRINT_ATTACK_RECOIL_DISTANCE);
+    const hit = this.triggerMeleeHitbox(heavy.damage, this.facing * recoil, 0, .48, true, { hitstopTicks: heavy.hitstopTicks, hitReaction: heavy.hitReaction, reach: heavy.reach, freeze: heavy.freeze, sprintAttack: true });
+    if (hit) {
+      strike.connected = true;
+      strike.carry = SPRINT_ATTACK_CARRY_TIME;
+      this.vx = this.facing * SPRINT_ATTACK_CARRY_DISTANCE / SPRINT_ATTACK_CARRY_TIME;
+      combat.spawnShockwave(this.x + this.facing * 30, this.y - 26, 46, '#ffab00');
+    }
   }
 
   // Equip a field weapon (returns the previously held one, if any).
@@ -1030,6 +1105,7 @@ export class Player extends GroundEntity {
       this.entityHitstop = hsFrames;
       combat.shakeCamera(isFinisher ? 8 : 4, 0.2);
     }
+    return hitAny;
   }
 
   takeDamage(amount, kx = 0, lift = 0, stun = 0.3, isCrit = false, hitKind = 'melee') {
@@ -1349,7 +1425,7 @@ export class Player extends GroundEntity {
     if (useProc) { renderOpts.procRot = pRot; renderOpts.procScaleX = pSX; renderOpts.procScaleY = pSY; }
     if (formCloak) this.renderFormCloak(ctx, renderY, renderOpts, formCloak, 'back');
     sprites.renderEntity(ctx, this.heroKey, this.x, renderY, renderOpts);
-    if (this.isAlive && this.weapon) drawHeldWeapon(ctx, this, renderY);
+    if (this.isAlive && (this.weapon || this.classWeapon)) drawHeldWeapon(ctx, this, renderY);
     if (formCloak) this.renderFormCloak(ctx, renderY, renderOpts, formCloak, 'front');
     // Guard poses: tail cocoon (Ninefold, drawn with the tails), ribs + palm, light shield.
     if (this.isAlive && this.isGuarding) {

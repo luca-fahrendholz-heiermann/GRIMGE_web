@@ -80,43 +80,130 @@ export const WEAPONS = Object.freeze({
 export const WEAPON_IDS = Object.freeze(Object.keys(WEAPONS));
 
 // ── drawing ──────────────────────────────────────────────────────────────
+// Astral weapons: until weapon sprites and the final character animations
+// exist, every weapon is a conjured, glowing VFX silhouette (additive glow,
+// crystal core, swing trail). It floats at the hand instead of being held
+// pixel-exact, so it reads well with any body animation.
+const ASTRAL_HUES = Object.freeze({
+  sword_shield: '#7fd8ff', great_axe: '#ff7a45', great_hammer: '#ffb300', dual_swords: '#4dd0e1', katana: '#ff4d6d',
+  spear: '#9be564', daggers: '#b388ff', gauntlets: '#ffab40', scythe: '#c158ff', ice_sword: '#80e9ff'
+});
+export const astralHue = (weapon) => ASTRAL_HUES[weapon] ?? WEAPONS[weapon]?.accent ?? '#7fd8ff';
+
+// Silhouette parts per look, pointing along +x from the grip at (0,0).
+// 'fill' parts trace a closed outline, 'line' parts a stroked line.
+const bladePath = (len, width, from = 6) => (c) => { c.moveTo(from, -width / 2); c.lineTo(len - 6, -width / 2); c.lineTo(len, 0); c.lineTo(len - 6, width / 2); c.lineTo(from, width / 2); c.closePath(); };
+const linePath = (x0, x1) => (c) => { c.moveTo(x0, 0); c.lineTo(x1, 0); };
+const ASTRAL_SHAPES = {
+  sword: { tip: 40, parts: [{ type: 'line', width: 3, draw: linePath(-6, 2) }, { type: 'line', width: 3, draw: (c) => { c.moveTo(2, -6); c.lineTo(2, 6); } }, { type: 'fill', draw: bladePath(40, 6) }] },
+  axe: { tip: 58, parts: [{ type: 'line', width: 3, draw: linePath(-6, 46) }, { type: 'fill', draw: (c) => { c.moveTo(38, -3); c.quadraticCurveTo(52, -18, 58, -14); c.lineTo(56, 14); c.quadraticCurveTo(50, 18, 38, 3); c.closePath(); } }] },
+  hammer: { tip: 52, parts: [{ type: 'line', width: 3, draw: linePath(-6, 42) }, { type: 'fill', draw: (c) => { c.rect(36, -12, 16, 24); } }] },
+  spear: { tip: 78, parts: [{ type: 'line', width: 3, draw: linePath(-6, 62) }, { type: 'fill', draw: bladePath(78, 7, 58) }] },
+  katana: { tip: 44, parts: [{ type: 'line', width: 3, draw: linePath(-6, 4) }, { type: 'line', width: 3, draw: (c) => { c.moveTo(4, -4); c.lineTo(4, 4); } }, { type: 'line', width: 3.5, draw: (c) => { c.moveTo(6, 0); c.quadraticCurveTo(26, -5, 44, -7); } }] },
+  dual: { tip: 34, parts: [{ type: 'fill', draw: bladePath(34, 5) }, { type: 'fill', draw: (c) => { c.moveTo(6, 5.5); c.lineTo(24, 5.5); c.lineTo(30, 8); c.lineTo(24, 10.5); c.lineTo(6, 10.5); c.closePath(); } }] },
+  daggers: { tip: 20, parts: [{ type: 'fill', draw: bladePath(20, 5) }, { type: 'fill', draw: (c) => { c.moveTo(6, 4.5); c.lineTo(12, 4.5); c.lineTo(18, 7); c.lineTo(12, 9.5); c.lineTo(6, 9.5); c.closePath(); } }] },
+  gauntlets: { tip: 14, parts: [{ type: 'fill', draw: (c) => { c.rect(-4, -6, 16, 12); } }, { type: 'line', width: 2, draw: (c) => { c.moveTo(8, -6); c.lineTo(8, 6); } }] },
+  scythe: { tip: 58, parts: [{ type: 'line', width: 3, draw: linePath(-6, 58) }, { type: 'line', width: 4.5, draw: (c) => { c.moveTo(56, 0); c.quadraticCurveTo(46, -26, 20, -30); } }] }
+};
+const shapeFor = (w) => ASTRAL_SHAPES[w.look] ?? ASTRAL_SHAPES.sword;
+export const astralTipLength = (weapon) => shapeFor(WEAPONS[weapon] ?? WEAPONS.sword_shield).tip;
+
+function traceParts(ctx, parts, pass) {
+  for (const part of parts) {
+    ctx.beginPath();
+    part.draw(ctx);
+    if (part.type === 'fill') {
+      if (pass.fill) { ctx.fillStyle = pass.fill; ctx.fill(); }
+      if (pass.edge) { ctx.strokeStyle = pass.edge; ctx.lineWidth = pass.edgeWidth; ctx.stroke(); }
+    } else {
+      ctx.strokeStyle = pass.line; ctx.lineWidth = Math.max(1, part.width + pass.lineGrow); ctx.stroke();
+    }
+  }
+}
+
 // Draws a weapon pointing along +x from (0,0) (the grip), already rotated.
-export function drawWeaponShape(ctx, weapon, scale = 1) {
+// options: intensity (glow strength), time (shimmer phase).
+export function drawWeaponShape(ctx, weapon, scale = 1, { intensity = .8, time = performance.now() / 1000 } = {}) {
   const w = WEAPONS[weapon] ?? WEAPONS.sword_shield;
+  const hue = astralHue(weapon);
+  const shape = shapeFor(w);
   ctx.save();
   ctx.scale(scale, scale);
-  ctx.globalAlpha *= w.translucent ? .8 : 1;
-  ctx.lineCap = 'round';
-  const blade = (len, width, color) => { ctx.fillStyle = color; ctx.beginPath(); ctx.moveTo(6, -width / 2); ctx.lineTo(len - 6, -width / 2); ctx.lineTo(len, 0); ctx.lineTo(len - 6, width / 2); ctx.lineTo(6, width / 2); ctx.closePath(); ctx.fill(); ctx.strokeStyle = 'rgba(20,20,30,.7)'; ctx.lineWidth = 1; ctx.stroke(); };
-  const haft = (len, color = '#6d4c41') => { ctx.strokeStyle = color; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-6, 0); ctx.lineTo(len, 0); ctx.stroke(); };
-  switch (w.look) {
-    case 'axe': haft(46); ctx.fillStyle = w.color; ctx.beginPath(); ctx.moveTo(38, -3); ctx.quadraticCurveTo(52, -18, 58, -14); ctx.lineTo(56, 14); ctx.quadraticCurveTo(50, 18, 38, 3); ctx.closePath(); ctx.fill(); ctx.strokeStyle = 'rgba(20,20,30,.7)'; ctx.lineWidth = 1; ctx.stroke(); break;
-    case 'hammer': haft(42); ctx.fillStyle = w.color; ctx.fillRect(36, -12, 16, 24); ctx.strokeStyle = 'rgba(20,20,30,.7)'; ctx.strokeRect(36, -12, 16, 24); break;
-    case 'spear': haft(62); blade(78, 7, w.color); break;
-    case 'katana': ctx.fillStyle = '#3e2723'; ctx.fillRect(-6, -2, 10, 4); ctx.fillStyle = w.accent; ctx.fillRect(3, -4, 3, 8); ctx.strokeStyle = w.color; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(6, 0); ctx.quadraticCurveTo(26, -5, 44, -7); ctx.stroke(); break;
-    case 'dual': blade(34, 5, w.color); ctx.translate(0, 8); blade(30, 5, w.color); break;
-    case 'daggers': blade(20, 5, w.color); ctx.translate(0, 7); blade(18, 5, w.color); break;
-    case 'gauntlets': ctx.fillStyle = w.color; ctx.fillRect(-4, -6, 14, 12); ctx.fillStyle = w.accent; ctx.fillRect(8, -6, 4, 12); break;
-    case 'scythe': haft(58, '#4e342e'); ctx.strokeStyle = w.color; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(56, 0); ctx.quadraticCurveTo(46, -26, 20, -30); ctx.stroke(); break;
-    default:
-      ctx.fillStyle = '#4e342e'; ctx.fillRect(-6, -2, 8, 4); ctx.fillStyle = w.accent; ctx.fillRect(1, -6, 3, 12);
-      blade(40, 6, w.color);
-      if (w.shield) { ctx.fillStyle = '#546e7a'; ctx.beginPath(); ctx.ellipse(-4, 14, 8, 11, 0, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = w.accent; ctx.lineWidth = 1.5; ctx.stroke(); }
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.globalCompositeOperation = 'lighter';
+  const base = ctx.globalAlpha;
+  // 1) Soft outer glow.
+  ctx.shadowColor = hue; ctx.shadowBlur = 10 + 8 * intensity;
+  ctx.globalAlpha = base * Math.min(1, .32 + .25 * intensity);
+  traceParts(ctx, shape.parts, { fill: hue, edge: hue, edgeWidth: 4, line: hue, lineGrow: 4 });
+  // 2) Crystal core with a bright edge.
+  ctx.shadowBlur = 0;
+  ctx.globalAlpha = base * .85;
+  traceParts(ctx, shape.parts, { fill: hue + '59', edge: 'rgba(255,255,255,.9)', edgeWidth: 1.2, line: 'rgba(255,255,255,.92)', lineGrow: -1 });
+  // The shield of sword & shield: a ring of light.
+  if (w.shield) {
+    ctx.globalAlpha = base * .7; ctx.strokeStyle = hue; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.ellipse(-4, 14, 8, 11, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.globalAlpha = base * .18; ctx.fillStyle = hue; ctx.fill();
+  }
+  // 3) Motes drifting along the weapon.
+  ctx.fillStyle = '#ffffff';
+  for (let i = 0; i < 3; i++) {
+    const u = (time * .7 + i / 3) % 1;
+    ctx.globalAlpha = base * Math.sin(u * Math.PI) * .9;
+    ctx.fillRect(u * shape.tip - 1, Math.sin(time * 5 + i * 2.1) * 4 - 1, 2, 2);
   }
   ctx.restore();
 }
 
-// The weapon in a Wizard's hand: angle follows the attack swing.
+// Swing angles (grip-relative) of the held weapon for the current action.
+export function weaponSwing(player) {
+  const swinging = player.stateTimer > 0 && /^attack|uppercut|heavyStrike/.test(player.state);
+  const progress = swinging ? 1 - Math.max(0, player.stateTimer) / (player._weaponSwingTime || .3) : 0;
+  if (!swinging) return { swinging, progress, from: 0, angle: -.55 + Math.sin((player.animTime ?? 0) * 3) * .05 };
+  const from = player.state === 'uppercut' ? -2.2 : -1.6;
+  const sweep = player.state === 'uppercut' ? 1.4 : 2.4;
+  // Front-loaded: the strike snaps through, then settles.
+  const eased = 1 - Math.pow(1 - Math.min(1, progress * 1.35), 3);
+  return { swinging, progress, from, angle: from + eased * sweep };
+}
+
+// The weapon at a Wizard's hand: floats, swings with the attack and leaves
+// a crescent of light behind.
 export function drawHeldWeapon(ctx, player, renderY) {
-  if (!player.weapon) return;
+  const weaponId = player.weapon ?? player.classWeapon;
+  if (!weaponId) return;
   const f = player.facing || 1;
-  const progress = player.stateTimer > 0 && /^attack|uppercut|heavyStrike/.test(player.state) ? 1 - Math.max(0, player.stateTimer) / (player._weaponSwingTime || .3) : 0;
-  const swing = player.state === 'uppercut' ? -2.2 + progress * 1.4 : /^attack|heavyStrike/.test(player.state) ? -1.6 + progress * 2.4 : -.55 + Math.sin(player.animTime * 3) * .05;
+  const { swinging, progress, from, angle } = weaponSwing(player);
+  const hue = astralHue(weaponId);
+  const tip = astralTipLength(weaponId);
+  const time = player.animTime ?? 0;
+  const hover = swinging ? 0 : Math.sin(time * 2.4) * 2;
   ctx.save();
-  ctx.translate(player.x + f * 14, renderY - 44);
+  ctx.translate(player.x + f * 14, renderY - 44 + hover);
   ctx.scale(f, 1);
-  ctx.rotate(swing);
-  drawWeaponShape(ctx, player.weapon, 1);
+  if (swinging && angle > from + .05) {
+    const fade = 1 - progress * .7;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.lineCap = 'round';
+    ctx.globalAlpha = .28 * fade; ctx.strokeStyle = hue; ctx.lineWidth = 14;
+    ctx.beginPath(); ctx.arc(0, 0, tip * .78, from, angle); ctx.stroke();
+    ctx.globalAlpha = .55 * fade; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.arc(0, 0, tip * .95, Math.max(from, angle - .9), angle); ctx.stroke();
+    ctx.restore();
+    // Afterimages just behind the blade.
+    for (let k = 3; k >= 1; k--) {
+      ctx.save(); ctx.globalAlpha = .16 / k * fade; ctx.rotate(Math.max(from, angle - k * .22));
+      drawWeaponShape(ctx, weaponId, 1, { intensity: .4, time });
+      ctx.restore();
+    }
+  }
+  // Grip anchor: a small orb of light where the weapon is bound to the hand.
+  ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = .5; ctx.fillStyle = hue;
+  ctx.beginPath(); ctx.arc(0, 0, swinging ? 5 : 3.5, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+  ctx.rotate(angle);
+  drawWeaponShape(ctx, weaponId, 1, { intensity: swinging ? 1.1 : .7, time });
   ctx.restore();
 }
 

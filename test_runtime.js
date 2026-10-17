@@ -1602,6 +1602,48 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
   game.selectTrainingMap('waterfalls');
 }
 
+// Sprint attack (sprint punisher) vs. throwing a picked-up field weapon.
+{
+  game.selectTrainingMap('waterfalls');
+  const P = game.player; const E = game.enemyChampion;
+  const neutral = { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false };
+  const thrownCount = () => spells.activeSpells.filter((s) => s.constructor.name === 'ThrownWeaponSpell').length;
+  const sprintReady = () => { P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.grounded = true; P.elevation = 0; P.facing = 1; P.sprintActive = true; P.sprintDir = 1; P.vx = 0; P.lastSprintAttack = null; };
+  game.toggleSparringPartner(); game.toggleSparringPassive();
+  const placePartner = (dx) => { P.x = 300; P.z = .58; game.battlefield.placeOnSurface(P); E.x = P.x + dx; E.z = .58; E.elevation = 0; E.vx = 0; E.kbVelX = 0; E.hp = E.maxHp; E.state = 'idle'; game.battlefield.placeOnSurface(E); };
+  // Bare hands: the Unity sprint attack, advancing until it connects.
+  P.equipWeapon(null); P.equipClassWeapon(null);
+  placePartner(118); sprintReady();
+  assert(P.executeAttack(neutral, 'normal') && P.lastSprintAttack === 'SPRINT ATTACK' && P.state === 'heavyStrike' && !P.sprintActive, 'Sprint + attack without a field weapon is the Sprint Attack');
+  assert(E.hp === E.maxHp, 'The partner starts just out of reach');
+  const recoilStart = E.x;
+  for (let i = 0; i < 30; i++) { P.update(1 / 60, neutral, game.battlefield, game); E.update(1 / 60, game, game.battlefield); }
+  assert(E.hp < E.maxHp, 'The Sprint Attack keeps advancing until it connects');
+  for (let i = 0; i < 30; i++) { P.update(1 / 60, neutral, game.battlefield, game); E.update(1 / 60, game, game.battlefield); }
+  assert(E.x - recoilStart > 28 && E.elevation < 5, `A clean hit drives the target back along the ground (${Math.round(E.x - recoilStart)} px, no launch)`);
+  // Keyboard: J during a sprint must reach the attack before the sprint ends.
+  placePartner(400); sprintReady();
+  const pressJ = { ...neutral, keys: { KeyD: true }, move: { x: 1, z: 0 }, justPressed: (k) => k === 'KeyJ' };
+  P.update(1 / 60, pressJ, game.battlefield, game);
+  assert(P.lastSprintAttack === 'SPRINT ATTACK', 'Pressing J while sprinting triggers the Sprint Attack on the keyboard too');
+  // A class weapon is part of the Wizard: never thrown, its heavy powers the sprint attack.
+  P.equipClassWeapon('katana'); placePartner(400); sprintReady();
+  const before = thrownCount();
+  assert(P.executeAttack(neutral, 'normal') && P.lastSprintAttack === 'SPRINT ATTACK' && P.classWeapon === 'katana' && thrownCount() === before, 'The class weapon is never thrown: sprint + attack stays the Sprint Attack');
+  // A picked-up field weapon overrides the class moveset and can be thrown.
+  P.equipWeapon('great_axe');
+  assert(P.weaponProfile?.name === 'GREAT AXE', 'A picked-up field weapon takes over the moveset');
+  sprintReady();
+  assert(P.executeAttack(neutral, 'normal') && !P.weapon && thrownCount() === before + 1 && P.lastSprintAttack === null, 'Sprint + attack throws the field weapon (Little Fighter style)');
+  assert(P.weaponProfile?.name === 'KATANA', 'After the throw the class weapon moveset returns');
+  P.beginDeath();
+  assert(P.classWeapon === 'katana' && !game.armory.pickups.some((pk) => pk.weapon === 'katana'), 'The class weapon is not dropped on death');
+  P.equipClassWeapon(null);
+  game.render();
+  spells.clearRuntime();
+  game.selectTrainingMap('waterfalls');
+}
+
 // Light & shadow: Shadow Stomper, sky spheres, shadow doubles, revenants
 // and the round ground shadows under every actor.
 {
