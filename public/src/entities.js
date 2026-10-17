@@ -6,6 +6,7 @@ import { spells } from './spells.js';
 import { ARENA_LAYOUT, ENTITY_VISUALS, GroundEntity, groundDistance } from './world.js';
 import { lookupRecipe, runeManaCost } from './spell_catalog.js';
 import { drawFocusAura, drawEidolonGuardian, drawNinefoldSpirit } from './forms_fx.js';
+import { BeastBombSpell, SpiritArrowSpell, drawBeastBomb, drawSpiritBow } from './form_attacks.js';
 
 // Every spell a rune deck can produce: single runes plus every valid two-
 // and three-rune recipe that its cards allow (copies respected).
@@ -322,6 +323,9 @@ export class Player extends GroundEntity {
     // How long each body form has been manifest (drives its build-up).
     this.eidolonAge = this.eidolonTimer > 0 ? (this.eidolonAge ?? 0) + dt : 0;
     this.ninefoldAge = this.ninefoldTimer > 0 ? (this.ninefoldAge ?? 0) + dt : 0;
+    // Smoothed run speed along the facing: body forms lean, lag and stream with it.
+    const runAlongFacing = Math.max(-1, Math.min(1, (this.vx ?? 0) * (this.facing || 1) / 340));
+    this.formLean = (this.formLean ?? 0) + (runAlongFacing - (this.formLean ?? 0)) * Math.min(1, dt * 6);
     this.ninefoldCooldown = Math.max(0, this.ninefoldCooldown - dt);
     if (this.ninefoldTimer <= 0) this.ninefoldPower = 1;
     this.focusTransformTimer = Math.max(0, this.focusTransformTimer - dt);
@@ -679,6 +683,9 @@ export class Player extends GroundEntity {
     const chargeRatio = 1 - (this.chargeTimer / this.chargeMaxTime);
     this.chargeTimer = 0;
     if (!this.isAlive || chargeRatio < 0.05) return false;
+    // Body forms replace the charged sword strike with their own attack.
+    if (this.ninefoldTimer > 0) return this.releaseFormAttack(new BeastBombSpell(this, chargeRatio), 'ninefold');
+    if (this.eidolonTimer > 0) return this.releaseFormAttack(new SpiritArrowSpell(this, chargeRatio), 'eidolon');
     const heavy = MELEE_BASELINE.heavy;
     const dmgMult = 1 + chargeRatio * 0.8;
     const kbMult = 1 + chargeRatio * 0.6;
@@ -691,6 +698,14 @@ export class Player extends GroundEntity {
     combat.spawnSlashArc(this.x + this.facing * 28, this.y - 25, this.facing, { radius, angleStart: -0.9, angleEnd: 0.9, color: chargeRatio > 0.5 ? '#ff6d00' : '#ffd54f', glow: '#ff3d00', width: 7 + chargeRatio * 5 });
     if (chargeRatio > 0.6) combat.spawnShockwave(this.x + this.facing * 30, this.y - 25, 35, '#ffab00');
     this.triggerMeleeHitbox(heavy.damage * dmgMult, this.facing * heavy.knockback * kbMult, heavy.lift * (1 + chargeRatio * 0.4), 0.48 + chargeRatio * 0.2, chargeRatio > 0.7, { hitstopTicks: Math.round(4 + chargeRatio * 4), hitReaction: chargeRatio > 0.7 ? 'finisher' : 'strong', isCharged: true, chargeRatio });
+    return true;
+  }
+
+  releaseFormAttack(spell, form) {
+    spells.addSpell(spell, 'B');
+    this.state = 'attack3'; this.stateTimer = .32; this.canAttack = false; this.vx = 0;
+    combat.shakeCamera(form === 'ninefold' ? 8 : 6, .25);
+    audio.playSpell?.(form === 'ninefold' ? 'ignis' : 'void_bolt');
     return true;
   }
 
@@ -1127,7 +1142,9 @@ export class Player extends GroundEntity {
     else if (this.isAlive) this.renderFocusCharge(ctx, renderY);
     if (this.isAlive && this.ninefoldTimer > 0) this.renderNinefoldBeast(ctx, renderY);
     if (this.isAlive && this.eidolonTimer > 0) this.renderEidolonMantle(ctx, renderY);
-    if (this.isAlive && this.chargeTimer > 0) this.renderChargeAura(ctx, renderY);
+    if (this.isAlive && this.chargeTimer > 0 && !this.ninefoldTimer && !this.eidolonTimer) this.renderChargeAura(ctx, renderY);
+    // Body forms glow along the Wizard's own silhouette (chakra cloak).
+    const formCloak = this.isAlive ? this.formCloakColor() : null;
     for (const g of this.ghosts) sprites.renderEntity(ctx, this.heroKey, g.x, g.y, { facing: g.facing, state: g.state, animTime: g.animTime, alpha: g.alpha, hitFlash: 1 });
 
     let useProc = false;
@@ -1215,10 +1232,18 @@ export class Player extends GroundEntity {
       cadence, reverse, procOffsetX: pOX, procOffsetY: pOY,
     };
     if (useProc) { renderOpts.procRot = pRot; renderOpts.procScaleX = pSX; renderOpts.procScaleY = pSY; }
+    if (formCloak) this.renderFormCloak(ctx, renderY, renderOpts, formCloak, 'back');
     sprites.renderEntity(ctx, this.heroKey, this.x, renderY, renderOpts);
+    if (formCloak) this.renderFormCloak(ctx, renderY, renderOpts, formCloak, 'front');
+    // Charging inside a body form: the beast bomb grows / the spirit bow is drawn.
+    if (this.isAlive && this.chargeTimer > 0 && (this.ninefoldTimer > 0 || this.eidolonTimer > 0)) {
+      const charge = 1 - this.chargeTimer / this.chargeMaxTime;
+      if (this.ninefoldTimer > 0) drawBeastBomb(ctx, this.x + this.facing * (34 + 10 * charge), renderY - 52, 6 + 24 * charge, this.animTime);
+      else drawSpiritBow(ctx, this.x + this.facing * 40, renderY - 84, this.facing, charge, this.animTime);
+    }
     // Front layers of the body forms (ribs, claws) wrap around the Wizard.
-    if (this.isAlive && this.eidolonTimer > 0) drawEidolonGuardian(ctx, this.x, renderY, this.facing, this.animTime, this.eidolonAge ?? 1, Math.min(1, this.eidolonTimer * 2), 'front');
-    if (this.isAlive && this.ninefoldTimer > 0) drawNinefoldSpirit(ctx, this.x, renderY, this.facing, this.animTime, this.ninefoldAge ?? 1, Math.min(1, this.ninefoldTimer * 2), 'front');
+    if (this.isAlive && this.eidolonTimer > 0) drawEidolonGuardian(ctx, this.x, renderY, this.facing, this.animTime, this.eidolonAge ?? 1, Math.min(1, this.eidolonTimer * 2), 'front', this.formMotion());
+    if (this.isAlive && this.ninefoldTimer > 0) drawNinefoldSpirit(ctx, this.x, renderY, this.facing, this.animTime, this.ninefoldAge ?? 1, Math.min(1, this.ninefoldTimer * 2), 'front', this.formMotion());
     if (this.isAlive) {
       const ratio = Math.max(0, this.hp / this.maxHp);
       ctx.save();
@@ -1273,6 +1298,33 @@ export class Player extends GroundEntity {
     });
   }
 
+  // Colour of the cloak of the active body form / transformation.
+  formCloakColor() {
+    if (this.ninefoldTimer > 0) return { edge: 'rgba(255,110,20,1)', inner: 'rgba(255,170,60,1)', fade: Math.min(1, this.ninefoldTimer * 2) };
+    if (this.eidolonTimer > 0) return { edge: 'rgba(150,80,255,1)', inner: 'rgba(200,150,255,1)', fade: Math.min(1, this.eidolonTimer * 2) };
+    if (this.focusTransformTimer > 0) return { edge: 'rgba(255,214,80,1)', inner: 'rgba(255,240,170,1)', fade: Math.min(1, this.focusTransformTimer * 2) };
+    return null;
+  }
+
+  // A flickering cloak hugging the sprite: tinted copies of the Wizard's own
+  // silhouette around it (back) and a glow over the body (front).
+  renderFormCloak(ctx, renderY, renderOpts, cloak, layer) {
+    if (layer === 'back') {
+      const flicker = 2.6 + Math.sin(this.animTime * 17) * .8 + Math.sin(this.animTime * 7.3) * .6;
+      for (let i = 0; i < 8; i++) {
+        const a = i / 8 * Math.PI * 2;
+        // The cloak streams upward: copies above the body reach further.
+        const lift = Math.sin(a) < 0 ? 1.8 : 1;
+        sprites.renderEntity(ctx, this.heroKey, this.x + Math.cos(a) * flicker, renderY + Math.sin(a) * flicker * lift, { ...renderOpts, hitFlash: 0, tint: cloak.edge, alpha: .5 * cloak.fade });
+      }
+      return;
+    }
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    sprites.renderEntity(ctx, this.heroKey, this.x, renderY, { ...renderOpts, hitFlash: 0, tint: cloak.inner, alpha: (.22 + Math.sin(this.animTime * 9) * .05) * cloak.fade });
+    ctx.restore();
+  }
+
   renderChargeAura(ctx, renderY) {
     const t = this.chargeTimer;
     const intensity = Math.min(1, t / 0.5);
@@ -1320,11 +1372,17 @@ export class Player extends GroundEntity {
   }
 
   renderEidolonMantle(ctx, renderY) {
-    drawEidolonGuardian(ctx, this.x, renderY, this.facing, this.animTime, this.eidolonAge ?? 1, Math.min(1, this.eidolonTimer * 2), 'back');
+    drawEidolonGuardian(ctx, this.x, renderY, this.facing, this.animTime, this.eidolonAge ?? 1, Math.min(1, this.eidolonTimer * 2), 'back', { drawingBow: this.chargeTimer > 0, ...this.formMotion() });
   }
 
   renderNinefoldBeast(ctx, renderY) {
-    drawNinefoldSpirit(ctx, this.x, renderY, this.facing, this.animTime, this.ninefoldAge ?? 1, Math.min(1, this.ninefoldTimer * 2), 'back');
+    drawNinefoldSpirit(ctx, this.x, renderY, this.facing, this.animTime, this.ninefoldAge ?? 1, Math.min(1, this.ninefoldTimer * 2), 'back', this.formMotion());
+  }
+
+  // Movement the body forms react to: lean (run speed along facing) and the
+  // step phase while running.
+  formMotion() {
+    return { lean: this.formLean ?? 0, bob: this.state === 'run' && this.grounded ? Math.sin(this.animTime * 14) : 0 };
   }
 }
 

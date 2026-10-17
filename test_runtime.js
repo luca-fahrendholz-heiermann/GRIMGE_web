@@ -1416,6 +1416,44 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
   game.render();
   assert(P.ninefoldTimer > 0 && P.eidolonTimer === 0, 'The Ninefold spirit replaces the guardian and renders');
   P.ninefoldTimer = 0;
+  // Charged attacks inside the body forms: beast bomb (Ninefold) / spirit arrow (Eidolon).
+  const neutralInput = { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false };
+  const resetForm = () => { spellSystem.clearRuntime(); P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.grounded = true; P.elevation = 0; P.chargeTimer = 0; P.facing = 1; P.x = 300; P.z = .5; game.battlefield.placeOnSurface(P); };
+  resetForm();
+  P.ninefoldTimer = 8; P.eidolonTimer = 0;
+  const bombTarget = game.trainingDummy; bombTarget.homeX = bombTarget.x = 520; bombTarget.homeZ = bombTarget.z = .5;
+  assert(P.beginCharge('forward'), 'Holding the heavy attack starts charging in the Ninefold form');
+  P.chargeTimer = P.chargeMaxTime * .2;
+  game.render();
+  assert(P.releaseCharge() && spellSystem.activeSpells.some((s) => s.constructor.name === 'BeastBombSpell'), 'Releasing the charge in the Ninefold form hurls a beast bomb instead of a sword strike');
+  const bomb = spellSystem.activeSpells.find((s) => s.constructor.name === 'BeastBombSpell');
+  const dummyHp = bombTarget.hp;
+  for (let i = 0; i < 90 && !bomb.exploded; i++) spellSystem.update(1 / 60, game);
+  assert(bomb.exploded && bombTarget.hp < dummyHp, 'The beast bomb detonates on the first enemy and damages it');
+  resetForm();
+  P.ninefoldTimer = 0; P.eidolonTimer = 8;
+  P.beginCharge('forward'); P.chargeTimer = P.chargeMaxTime * .3;
+  game.render();
+  assert(P.releaseCharge() && spellSystem.activeSpells.some((s) => s.constructor.name === 'SpiritArrowSpell'), 'Releasing the charge in the Eidolon Mantle shoots a giant spirit arrow');
+  const arrow = spellSystem.activeSpells.find((s) => s.constructor.name === 'SpiritArrowSpell');
+  const arrowHp = bombTarget.hp;
+  for (let i = 0; i < 30; i++) spellSystem.update(1 / 60, game);
+  assert(arrow.hit.has(bombTarget) && bombTarget.hp < arrowHp, 'The spirit arrow pierces through the enemies in its path');
+  resetForm();
+  windowListeners.keydown?.({ code: 'KeyK', repeat: false, preventDefault() {} });
+  assert(P.chargeTimer > 0, 'Holding K charges the heavy attack on the keyboard');
+  P.chargeTimer = P.chargeMaxTime * .3;
+  windowListeners.keyup?.({ code: 'KeyK', preventDefault() {} });
+  assert(P.chargeTimer === 0 && spellSystem.activeSpells.some((s) => s.constructor.name === 'SpiritArrowSpell'), 'Releasing K lets the charged attack fly');
+  // The body forms move with the Wizard: running makes them lean / stream.
+  resetForm();
+  const runInput = { ...neutralInput, move: { x: 1, z: 0 } };
+  for (let i = 0; i < 40; i++) P.update(1 / 60, runInput, game.battlefield, game);
+  assert(P.formLean > .4 && P.formMotion().lean === P.formLean, 'Running makes the body forms lean and stream with the Wizard');
+  for (let i = 0; i < 60; i++) P.update(1 / 60, neutralInput, game.battlefield, game);
+  assert(Math.abs(P.formLean) < .15, 'Standing still lets the body forms settle again');
+  game.render();
+  P.eidolonTimer = 0; P.ninefoldTimer = 0;
   // Grimoire: tapping a recipe explains what it does and how to cast it.
   const detailHtml = document.getElementById('fusion-guide').innerHTML;
   assert(detailHtml.includes('data-detail="gravity_lift"') && detailHtml.includes('ATTACK FORWARD to throw') && detailHtml.includes('HOW TO CAST'), 'The grimoire explains every recipe (e.g. Gravity Lift: throw / pull / slam)');

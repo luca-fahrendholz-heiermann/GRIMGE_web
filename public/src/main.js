@@ -436,6 +436,10 @@ export class GameWorld {
       const slotKey = { KeyZ: 0, KeyX: 1, KeyC: 2 }[e.code];
       if (slotKey !== undefined && !e.repeat) this.keySlotChord.press(slotKey);
 
+      // K (hold): charge the heavy attack — in a body form the beast bomb /
+      // spirit bow. Releasing K lets it fly.
+      if (e.code === 'KeyK' && !e.repeat && this.isMatchRunning() && !this.drawing.active) this.player?.beginCharge('forward');
+
       // Earned Focus is a match-only transformation resource. It deliberately
       // stays off the rune deck so a full meter remains a fast tactical choice.
       if (e.code === 'KeyT') this.activateFocusTransformation();
@@ -474,6 +478,7 @@ export class GameWorld {
 
     window.addEventListener('keyup', (e) => {
       this.input.keys[e.code] = false;
+      if (e.code === 'KeyK' && this.player?.chargeTimer > 0) this.player.releaseCharge();
       const slotKey = { KeyZ: 0, KeyX: 1, KeyC: 2 }[e.code];
       if (slotKey !== undefined) this.keySlotChord.release(slotKey);
     });

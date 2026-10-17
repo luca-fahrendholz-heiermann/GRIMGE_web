@@ -101,15 +101,19 @@ export function drawFocusAura(ctx, x, feetY, t, intensity, { height = 88, ready 
 
 // ── Eidolon Mantle: spectral armoured void guardian ──────────────────────
 // age: seconds since the mantle formed; fade: 0…1 overall visibility.
-export function drawEidolonGuardian(ctx, x, feetY, facing, t, age, fade, layer = 'back') {
+// motion: { lean: -1…1 speed along facing (smoothed), bob: -1…1 step phase }
+export function drawEidolonGuardian(ctx, x, feetY, facing, t, age, fade, layer = 'back', { drawingBow = false, lean = 0, bob = 0 } = {}) {
   if (fade <= 0) return;
   const bones = clamp01(age / .35) * fade;
   const armour = clamp01((age - .25) / .4) * fade;
   const breathe = 1 + Math.sin(t * 2.4) * .018;
   renderPixelated(ctx, pixelSize(ctx), (c) => {
     c.save();
-    c.translate(x - facing * 6, feetY);
+    // The guardian trails slightly behind a running Wizard, leans into the
+    // run and rises and falls with the steps.
+    c.translate(x - facing * (6 + lean * 10), feetY - Math.abs(bob) * 3 * Math.abs(lean));
     c.scale(facing * breathe, breathe);
+    c.rotate(lean * .1);
     const bone = 'rgba(232,214,255,';
     const boneEdge = 'rgba(120,60,200,';
     if (layer === 'front') {
@@ -155,15 +159,18 @@ export function drawEidolonGuardian(ctx, x, feetY, facing, t, age, fade, layer =
     c.beginPath(); c.moveTo(-58, -142); c.lineTo(0, -132); c.lineTo(58, -142); c.stroke();
     c.beginPath(); c.moveTo(-26, -42); c.quadraticCurveTo(0, -30, 26, -42); c.stroke();
     // Arms: rear arm hangs, front arm grips the crystal greatsword.
-    const swing = Math.sin(t * 1.8) * .06;
+    const swing = Math.sin(t * 1.8) * .06 + bob * .12 * Math.abs(lean);
     const arm = (sx, ex, ey, hx, hy) => {
       c.strokeStyle = boneEdge + (.7 * bones) + ')'; c.lineWidth = 8;
       c.beginPath(); c.moveTo(sx, -140); c.lineTo(ex, ey); c.lineTo(hx, hy); c.stroke();
       c.strokeStyle = bone + (.9 * bones) + ')'; c.lineWidth = 4; c.stroke();
     };
-    arm(-60, -82, -96, -74, -58);
-    arm(60, 84, -100, 92, -70);
-    // Crystal greatsword in the front hand.
+    // Arms swing with the stride.
+    const stride = bob * 10 * Math.abs(lean);
+    arm(-60, -82 - stride * .5, -96, -74 - stride, -58);
+    arm(60, 84 + stride * .5, -100, 92 + stride, -70);
+    // Crystal greatsword in the front hand (put away while the spirit bow is drawn).
+    if (!drawingBow) {
     c.save();
     c.translate(92, -70); c.rotate(-.95 + swing);
     c.fillStyle = rgba('206,147,216', .55 * armour);
@@ -172,6 +179,7 @@ export function drawEidolonGuardian(ctx, x, feetY, facing, t, age, fade, layer =
     c.beginPath(); c.moveTo(-1.5, -6); c.lineTo(0, -140); c.lineTo(1.5, -6); c.closePath(); c.fill();
     c.fillStyle = rgba('123,63,214', .9 * armour); c.fillRect(-14, -4, 28, 6); c.fillRect(-3, 0, 6, 16);
     c.restore();
+    }
     // Armour: pauldrons, breastplate, gauntlets.
     const plate = (px, py, w, h, flip) => {
       c.fillStyle = rgba('110,56,200', .78 * armour);
@@ -204,7 +212,7 @@ export function drawEidolonGuardian(ctx, x, feetY, facing, t, age, fade, layer =
 }
 
 // ── Ninefold Beast Form: flame fox spirit ────────────────────────────────
-export function drawNinefoldSpirit(ctx, x, feetY, facing, t, age, fade, layer = 'back') {
+export function drawNinefoldSpirit(ctx, x, feetY, facing, t, age, fade, layer = 'back', { lean = 0, bob = 0 } = {}) {
   if (fade <= 0) return;
   const grow = clamp01(age / .45);
   renderPixelated(ctx, pixelSize(ctx), (c) => {
@@ -225,7 +233,9 @@ export function drawNinefoldSpirit(ctx, x, feetY, facing, t, age, fade, layer = 
     // Nine tapered flame tails fanning out behind (solid, outlined).
     for (let i = 0; i < 9; i++) {
       // Fan from straight up-back (95°) to back-down (191°), y pointing up.
-      const base = (62 + i * 16.5) * Math.PI / 180;
+      // Running streams the tails back and flat behind the Wizard.
+      const run = Math.max(0, lean);
+      const base = (62 + i * 16.5 + run * (30 - i * 2)) * Math.PI / 180;
       const len = (92 + (i % 3) * 16) * (.35 + .65 * grow);
       const pts = [];
       const segs = 12;
@@ -233,7 +243,7 @@ export function drawNinefoldSpirit(ctx, x, feetY, facing, t, age, fade, layer = 
       for (let s = 0; s <= segs; s++) {
         const f = s / segs;
         // Each tail curls upward towards its tip and sways on its own beat.
-        const ang = base - .55 * f + Math.sin(t * 3 + i * .8 + f * 3) * .25 * f;
+        const ang = base - .55 * f * (1 - run * .6) + Math.sin(t * (3 + run * 5) + i * .8 + f * 3) * (.25 + run * .2) * f + bob * .08 * f;
         if (s) { px += Math.cos(ang) * len / segs; py -= Math.sin(ang) * len / segs; }
         pts.push({ x: px, y: py, w: (15 * (1 - f) + 2) * (.6 + .4 * grow) });
       }
@@ -263,11 +273,11 @@ export function drawNinefoldSpirit(ctx, x, feetY, facing, t, age, fade, layer = 
     // Flame cloak around the shoulders and back.
     c.fillStyle = rgba('255,112,67', .32 * fade);
     c.beginPath(); c.moveTo(-26, -8);
-    for (let i = 0; i <= 10; i++) { const f = i / 10; c.lineTo(-26 + f * 44, -78 - Math.sin(f * Math.PI) * 10 - Math.sin(t * 10 + i) * 5); }
+    for (let i = 0; i <= 10; i++) { const f = i / 10; c.lineTo(-26 + f * 44 - lean * 10 * (1 - f), -78 - Math.sin(f * Math.PI) * 10 - Math.sin(t * 10 + i) * 5); }
     c.lineTo(18, -8); c.closePath(); c.fill();
     // Fox spirit head above the Wizard: ears, snout, burning eyes.
-    const hy = -118 - Math.sin(t * 2.2) * 3; const hs = .55 + .45 * grow;
-    c.save(); c.translate(-2, hy); c.scale(hs, hs);
+    const hy = -118 - Math.sin(t * 2.2) * 3 - Math.abs(bob) * 4 * Math.abs(lean); const hs = .55 + .45 * grow;
+    c.save(); c.translate(-2 - lean * 14, hy); c.scale(hs, hs); c.rotate(-lean * .12);
     c.fillStyle = rgba('255,138,61', .5 * fade);
     c.beginPath();
     c.moveTo(-26, 4); c.lineTo(-22, -26); c.lineTo(-30, -60); c.lineTo(-8, -32); c.lineTo(8, -32); c.lineTo(28, -62); c.lineTo(22, -24); c.lineTo(46, -6); c.lineTo(52, 2); c.lineTo(30, 10); c.lineTo(0, 16); c.closePath(); c.fill();
