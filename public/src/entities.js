@@ -6,7 +6,7 @@ import { spells } from './spells.js';
 import { ARENA_LAYOUT, ENTITY_VISUALS, GroundEntity, groundDistance } from './world.js';
 import { lookupRecipe, runeManaCost } from './spell_catalog.js';
 import { drawFocusAura, drawEidolonGuardian, drawNinefoldSpirit, drawFormGuard } from './forms_fx.js';
-import { formGuardCounter, updateFormSprint, FormGrabFx, formJumpFx } from './form_actions.js';
+import { formGuardCounter, updateFormSprint, FormGrabFx, formJumpFx, FORM_SPRINT_ATTACKS, FormSprintAttackFx, formSprintImpact } from './form_actions.js';
 import { WEAPONS, ThrownWeaponSpell, drawHeldWeapon } from './weapons.js';
 import { drawBeastBomb, drawSpiritBow } from './form_attacks.js';
 import { FULL_CHARGE_TIME, activeMoveset, releaseFormTechnique, FORM_PALETTES } from './form_moves.js';
@@ -887,6 +887,7 @@ export class Player extends GroundEntity {
   }
 
   finishAction(input = null) {
+    this.sprintStrike = null;
     if (!this.isAlive) return;
     this.state = this.grounded ? 'idle' : (this.vElevation > 0 ? 'jump' : 'fall');
     this.stateTimer = 0;
@@ -985,48 +986,68 @@ export class Player extends GroundEntity {
     return this.classWeapon;
   }
 
+  // In a transformation / manifest the form's own variant replaces it
+  // (Beast Pounce, Colossus Breaker, Radiant Lunge — like Unity's Pounce /
+  // Shell Rush sprint variants): own wind-up, reach, carry, recoil, recovery.
   startSprintAttack() {
     const weapon = this.weaponProfile;
     const heavy = weapon ? { ...MELEE_BASELINE.heavy, ...weapon.heavy } : MELEE_BASELINE.heavy;
+    const form = activeMoveset(this);
+    const variant = form ? FORM_SPRINT_ATTACKS[form] : null;
     const speed = Math.max(Math.abs(this.vx), this.moveSpeed * SPRINT_MULT);
     this.cancelSprint();
     this.canAttack = false;
     this.comboStep = 0;
     this.queuedAttack = null;
-    this.state = 'heavyStrike'; this.stateTimer = heavy.time; this._weaponSwingTime = heavy.time;
-    this.vx = this.facing * speed; this.vz = 0;
-    this.sprintStrike = { heavy, elapsed: 0, connected: false, carry: 0 };
-    this.lastSprintAttack = 'SPRINT ATTACK';
-    audio.playSlash(0.82);
+    const windup = variant?.windup ?? 0;
+    const active = variant?.active ?? SPRINT_ATTACK_ACTIVE_TIME;
+    const time = variant ? windup + active + variant.recovery : heavy.time;
+    this.state = 'heavyStrike'; this.stateTimer = time; this._weaponSwingTime = time;
+    this.vx = this.facing * speed * (variant?.windupSpeed ?? 1); this.vz = 0;
+    this.sprintStrike = { heavy, form, variant, speed, windup, active, elapsed: 0, launched: false, connected: false, carry: 0, hits: new Set() };
+    this.lastSprintAttack = variant?.name ?? 'SPRINT ATTACK';
+    audio.playSlash(variant?.pitch ?? 0.82);
     combat.spawnDust(this.x, this.y, 6);
-    combat.spawnSlashArc(this.x + this.facing * 28, this.y - 25, this.facing, { radius: weapon ? Math.round((heavy.reach ?? 90) * .65) : 58, angleStart: -0.9, angleEnd: 0.9, color: weapon?.color ?? '#ffd54f', glow: weapon?.accent ?? '#ff6d00', width: 7 });
+    if (variant) spells.addSpell(new FormSprintAttackFx(this, form), 'B');
+    else combat.spawnSlashArc(this.x + this.facing * 28, this.y - 25, this.facing, { radius: weapon ? Math.round((heavy.reach ?? 90) * .65) : 58, angleStart: -0.9, angleEnd: 0.9, color: weapon?.color ?? '#ffd54f', glow: weapon?.accent ?? '#ff6d00', width: 7 });
     this.updateSprintAttack(0);
     return true;
   }
 
-  // Advancing hit window, then the post-impact carry; recovery is planted.
+  // Wind-up, advancing hit window, then the post-impact carry; recovery is planted.
   updateSprintAttack(dt) {
     const strike = this.sprintStrike;
     if (!strike) return;
     if (this.state !== 'heavyStrike') { this.sprintStrike = null; return; }
     strike.elapsed += dt;
+    const { heavy, variant } = strike;
+    if (strike.elapsed < strike.windup) return; // anticipation: keeps sliding at wind-up speed
+    if (!strike.launched) {
+      strike.launched = true;
+      this.vx = this.facing * strike.speed * (variant?.lungeSpeed ?? 1);
+      if (variant?.leap && this.grounded) { this.grounded = false; this.vElevation = variant.leap * PLAYER_ARC_SCALE; }
+    }
     if (strike.connected) {
       strike.carry -= dt;
       if (strike.carry <= 0) this.vx = 0;
       return;
     }
-    if (strike.elapsed > SPRINT_ATTACK_ACTIVE_TIME) { this.vx = 0; return; }
+    if (strike.elapsed > strike.windup + strike.active) { this.vx = 0; return; }
     if (Math.random() < .5) this.ghosts.push({ x: this.x, y: this.y, z: this.z, elevation: this.elevation, facing: this.facing, alpha: .3, state: this.state, animTime: this.animTime });
-    const { heavy } = strike;
-    // Recoil as knockback: the linear knockback decay slides the target ≈ 1.8 u.
-    const recoil = Math.sqrt(2 * KB_DECAY_RATE * SPRINT_ATTACK_RECOIL_DISTANCE);
-    const hit = this.triggerMeleeHitbox(heavy.damage, this.facing * recoil, 0, .48, true, { hitstopTicks: heavy.hitstopTicks, hitReaction: heavy.hitReaction, reach: heavy.reach, freeze: heavy.freeze, sprintAttack: true });
-    if (hit) {
-      strike.connected = true;
-      strike.carry = SPRINT_ATTACK_CARRY_TIME;
-      this.vx = this.facing * SPRINT_ATTACK_CARRY_DISTANCE / SPRINT_ATTACK_CARRY_TIME;
-      combat.spawnShockwave(this.x + this.facing * 30, this.y - 26, 46, '#ffab00');
-    }
+    // Recoil as knockback: the linear knockback decay slides the target ≈ 1.8 u (× variant).
+    const recoil = Math.sqrt(2 * KB_DECAY_RATE * SPRINT_ATTACK_RECOIL_DISTANCE * (variant?.recoilMult ?? 1));
+    const hit = this.triggerMeleeHitbox(heavy.damage * (variant?.damageMult ?? 1), this.facing * recoil, variant?.lift ?? 0, variant?.stun ?? .48, true, {
+      hitstopTicks: variant?.hitstopTicks ?? heavy.hitstopTicks, hitReaction: variant ? 'finisher' : heavy.hitReaction,
+      reach: variant?.reach ?? heavy.reach, freeze: heavy.freeze, sprintAttack: true, hitSet: strike.hits
+    });
+    if (!hit) return;
+    if (variant) formSprintImpact(this, strike.form, strike.hits, window.gameWorld);
+    // A piercing lunge keeps going and hits every enemy on its path once.
+    if (variant?.pierce) return;
+    strike.connected = true;
+    strike.carry = SPRINT_ATTACK_CARRY_TIME;
+    this.vx = this.facing * SPRINT_ATTACK_CARRY_DISTANCE * (variant?.carryMult ?? 1) / SPRINT_ATTACK_CARRY_TIME;
+    if (!variant) combat.spawnShockwave(this.x + this.facing * 30, this.y - 26, 46, '#ffab00');
   }
 
   // Equip a field weapon (returns the previously held one, if any).
@@ -1073,6 +1094,7 @@ export class Player extends GroundEntity {
     const reach = hitMeta.reach ?? null;
     if (hitMeta.crit && Math.random() < hitMeta.crit) { dmg *= 1.5; isFinisher = true; }
     for (const target of targets) {
+      if (hitMeta.hitSet?.has(target)) continue;
       if (isUpperCastleBattlement(this) && isUpperCastleBattlement(target) && target.heroKey) continue;
       const limit = reach ?? (target.hitRadiusX ?? 78);
       const inFront = (target.x - this.x) * this.facing >= (hitMeta.behind ? -limit * .6 : -10) && Math.abs(target.x - this.x) <= limit;
@@ -1081,6 +1103,7 @@ export class Player extends GroundEntity {
       const verticalReach = target.hitHeightTolerance ?? (target.isObjective ? 120 : 70);
       if (inFront && closeDepth && heightDifference <= verticalReach) {
         target.takeDamage(dmg, kx, lift, stunDuration, isFinisher, 'melee');
+        hitMeta.hitSet?.add(target);
         combat.spawnHitSparks(target.x, target.y - 25, this.facing, isFinisher ? '#ffea00' : '#fff', isFinisher ? 16 : 8);
         if (hitMeta.freeze) target.freeze?.(hitMeta.freeze);
         if (hitMeta.guardBreak && target.isGuarding && Number.isFinite(target.guardStability)) target.guardStability = Math.max(0, target.guardStability - hitMeta.guardBreak);

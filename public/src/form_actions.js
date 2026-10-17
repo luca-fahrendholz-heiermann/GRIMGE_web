@@ -12,6 +12,10 @@
 //    seizes, swings and slams; Ascendant — light chains. A miss shows a short
 //    search pulse.
 //  • Jump: takeoff burst and landing ring in the form's colour (no damage).
+//  • Sprint + attack: Ninefold — Beast Pounce (leaping chakra claw,
+//    knockdown, long carry); Eidolon — Colossus Breaker (slow wind-up, straight
+//    astral fist, huge push that also shoves enemies behind, long recovery);
+//    Ascendant — Radiant Lunge (golden lunge through every enemy on the path).
 import { audio } from './audio.js';
 import { combat } from './combat.js';
 import { groundYForDepth } from './world.js';
@@ -68,6 +72,123 @@ export function updateFormSprint(player, gameWorld, dt) {
     player._sprintHits.add(t);
     t.takeDamage(damage, player.facing * push, form === 'eidolon' ? 60 : 30, .3, false, 'melee');
     combat.spawnHitSparks(t.x, (t.y ?? groundYForDepth(t.z)) - 30, player.facing, pal.main, 8);
+  }
+}
+
+// ── Sprint + attack: form variants of the Sprint Attack ─────────────────
+// Times in seconds. Carry/recoil multiply the Unity Sprint Attack values
+// (0.6 u carry, 1.8 u target recoil): Pounce carry ×1.5 like the wolf bond
+// form, the Breaker's push ×1.65 like the turtle bond's Shell Rush.
+export const FORM_SPRINT_ATTACKS = Object.freeze({
+  ninefold: Object.freeze({ name: 'BEAST POUNCE', windup: .12, windupSpeed: .55, active: .22, lungeSpeed: 1.25, recovery: .30, leap: 260, damageMult: 1.15, reach: 112, carryMult: 1.5, recoilMult: 1.2, lift: -80, stun: .75, hitstopTicks: 7, pitch: .9 }),
+  eidolon: Object.freeze({ name: 'COLOSSUS BREAKER', windup: .28, windupSpeed: .3, active: .16, lungeSpeed: 1.1, recovery: .50, damageMult: 1.35, reach: 108, carryMult: 1, recoilMult: 1.65, lift: 30, stun: .6, hitstopTicks: 9, chainPush: true, pitch: .6 }),
+  ascendant: Object.freeze({ name: 'RADIANT LUNGE', windup: .06, windupSpeed: .8, active: .24, lungeSpeed: 1.45, recovery: .26, damageMult: 1.1, reach: 84, carryMult: 1, recoilMult: 1.2, lift: 20, stun: .5, hitstopTicks: 5, pierce: true, pitch: 1.1 })
+});
+
+// Impact extras of a form sprint attack (hits = every target struck so far).
+export function formSprintImpact(player, form, hits, gameWorld) {
+  const pal = FORM_PALETTES[form];
+  const f = player.facing || 1;
+  const struck = [...hits].at(-1); // the latest target hit
+  const fy = struck ? (struck.y ?? groundYForDepth(struck.z)) : player.y;
+  if (form === 'ninefold') {
+    // A crescent scratch of energy, sparks and dust where the claw lands.
+    if (struck) {
+      combat.spawnSlashArc(struck.x, fy - 30, f, { radius: 44, angleStart: -1.1, angleEnd: 1.3, color: pal.core, glow: pal.main, width: 8 });
+      combat.spawnElementalParticles(struck.x, fy - 20, 'ignis', 12);
+      combat.spawnDust(struck.x, fy, 6);
+    }
+    combat.shakeCamera(7, .2);
+  } else if (form === 'eidolon') {
+    // A cone of pressure behind the fist; it shoves enemies standing behind.
+    combat.spawnShockwave(player.x + f * 60, player.y - 50, 70, pal.main);
+    combat.spawnShockwave(player.x + f * 90, player.y - 50, 44, pal.core);
+    combat.shakeCamera(10, .26);
+    if (struck && gameWorld && FORM_SPRINT_ATTACKS.eidolon.chainPush) {
+      for (const t of gameWorld.getHostileTargets(player.team).filter(alive)) {
+        if (hits.has(t)) continue;
+        const beyond = (t.x - struck.x) * f;
+        if (beyond < -4 || beyond > 140 || Math.abs(((t.z ?? struck.z) - struck.z) * DEPTH_PX) > 32) continue;
+        hits.add(t);
+        t.takeDamage(14, f * 420, 40, .5, false, 'melee');
+        combat.spawnHitSparks(t.x, (t.y ?? groundYForDepth(t.z)) - 30, f, pal.main, 10);
+      }
+    }
+  } else {
+    combat.spawnHitSparks(struck?.x ?? player.x, fy - 30, f, pal.main, 14);
+    combat.spawnShockwave(struck?.x ?? player.x, fy - 30, 34, pal.core);
+  }
+}
+
+// Visual of a form sprint attack; follows the Wizard through its phases.
+export class FormSprintAttackFx {
+  constructor(player, form) {
+    this.player = player; this.form = form; this.team = player.team;
+    this.strike = player.sprintStrike; this.palette = FORM_PALETTES[form];
+    this.facing = player.facing || 1; this.isFinished = false;
+  }
+  get x() { return this.player.x; }
+  get z() { return this.player.z; }
+  update() {
+    if (this.player.sprintStrike !== this.strike || !this.player.isAlive) this.isFinished = true;
+  }
+  render(ctx) {
+    const s = this.strike; const p = this.player; const pal = this.palette; const f = this.facing;
+    if (!s) return;
+    const t = s.elapsed;
+    const total = s.windup + s.active + (s.variant?.recovery ?? 0);
+    const strikeT = Math.max(0, t - s.windup);
+    const fade = t < s.windup + s.active ? 1 : Math.max(0, 1 - (t - s.windup - s.active) / Math.max(.01, total - s.windup - s.active));
+    const ry = p.y - (p.elevation ?? 0);
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.lineCap = 'round';
+    if (this.form === 'ninefold') {
+      if (t < s.windup) {
+        // The tails bundle like a drawn spring: energy gathers at the shoulder.
+        const k = t / s.windup;
+        ctx.fillStyle = pal.glow + (.35 + .4 * k) + ')';
+        ctx.beginPath(); ctx.arc(p.x - f * 10, ry - 52, 6 + 10 * k, 0, Math.PI * 2); ctx.fill();
+      } else {
+        // A giant chakra claw rakes diagonally from above to below.
+        const k = Math.min(1, strikeT / (s.active * .6));
+        const cx = p.x + f * 46; const cy = ry - 46;
+        for (let i = -1; i <= 1; i++) {
+          const ox = i * 13 * f; const oy = i * 7;
+          const x0 = cx + ox - f * 22; const y0 = cy + oy - 42;
+          const x1 = cx + ox + f * 30 * k; const y1 = cy + oy - 42 + 84 * k;
+          ctx.strokeStyle = pal.glow + (.55 * fade) + ')'; ctx.lineWidth = 11;
+          ctx.beginPath(); ctx.moveTo(x0, y0); ctx.quadraticCurveTo(cx + ox + f * 34, cy + oy - 20, x1, y1); ctx.stroke();
+          ctx.strokeStyle = pal.core; ctx.globalAlpha = fade; ctx.lineWidth = 2.5; ctx.stroke(); ctx.globalAlpha = 1;
+        }
+        // The claw's palm around the arm.
+        ctx.fillStyle = pal.glow + (.3 * fade) + ')';
+        ctx.beginPath(); ctx.ellipse(p.x + f * 22, ry - 48, 18, 12, f * .5, 0, Math.PI * 2); ctx.fill();
+      }
+    } else if (this.form === 'eidolon') {
+      // The astral fist: pulled far back during the wind-up, then shot forward.
+      const k = t < s.windup ? -(t / s.windup) : Math.min(1, strikeT / (s.active * .5));
+      const reach = k < 0 ? -26 * -k : 30 + 66 * k;
+      const fx = p.x + f * reach; const fy = ry - 54;
+      ctx.strokeStyle = pal.glow + (.45 * fade) + ')'; ctx.lineWidth = 16;
+      ctx.beginPath(); ctx.moveTo(p.x - f * 6, ry - 62); ctx.lineTo(fx, fy); ctx.stroke();
+      ctx.fillStyle = pal.glow + ((k < 0 ? .3 + .4 * -k : .6) * fade) + ')';
+      ctx.beginPath(); ctx.arc(fx, fy, 15 + (k < 0 ? 4 * -k : 6), 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = pal.core; ctx.globalAlpha = fade; ctx.lineWidth = 2.5; ctx.stroke();
+      // Knuckle plates.
+      for (let i = -1; i <= 1; i++) { ctx.beginPath(); ctx.moveTo(fx + f * 8, fy + i * 7); ctx.lineTo(fx + f * 18, fy + i * 7); ctx.stroke(); }
+      ctx.globalAlpha = 1;
+    } else {
+      // A golden lance of light streaking with the lunge.
+      const len = t < s.windup ? 20 : 40 + 80 * Math.min(1, strikeT / s.active);
+      const g = ry - 44;
+      ctx.strokeStyle = pal.glow + (.45 * fade) + ')'; ctx.lineWidth = 12;
+      ctx.beginPath(); ctx.moveTo(p.x - f * len, g); ctx.lineTo(p.x + f * 34, g); ctx.stroke();
+      ctx.strokeStyle = pal.core; ctx.globalAlpha = fade; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(p.x - f * len * .7, g); ctx.lineTo(p.x + f * 40, g); ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+    ctx.restore();
   }
 }
 

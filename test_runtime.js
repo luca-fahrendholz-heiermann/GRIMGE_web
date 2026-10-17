@@ -1604,6 +1604,7 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
 
 // Sprint attack (sprint punisher) vs. throwing a picked-up field weapon.
 {
+  const { FORM_SPRINT_ATTACKS } = await import('./public/src/form_actions.js');
   game.selectTrainingMap('waterfalls');
   const P = game.player; const E = game.enemyChampion;
   const neutral = { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false };
@@ -1639,6 +1640,45 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
   P.beginDeath();
   assert(P.classWeapon === 'katana' && !game.armory.pickups.some((pk) => pk.weapon === 'katana'), 'The class weapon is not dropped on death');
   P.equipClassWeapon(null);
+  // Form variants of the sprint attack.
+  const dummy = game.trainingDummy;
+  const step = (n) => { for (let i = 0; i < n; i++) { P.update(1 / 60, neutral, game.battlefield, game); E.update(1 / 60, game, game.battlefield); spells.update(1 / 60, game); } };
+  const formReady = (form) => { spells.clearRuntime(); if (!P.isAlive) P.respawn(game.battlefield); P.ninefoldTimer = form === 'ninefold' ? 20 : 0; P.eidolonTimer = form === 'eidolon' ? 20 : 0; P.focusTransformTimer = form === 'ascendant' ? 20 : 0; P.focus = form === 'ascendant' ? P.maxFocus : 0; P.hp = P.maxHp; };
+  const placeDummy = (dx) => { dummy.homeX = dummy.x = P.x + dx; dummy.homeZ = dummy.z = P.z; dummy.hp = dummy.maxHp; };
+  // Ninefold: Beast Pounce — leaps, long reach, carries further than the base sprint attack.
+  formReady('ninefold'); placePartner(150); placeDummy(600); sprintReady();
+  P.executeAttack(neutral, 'normal');
+  assert(P.lastSprintAttack === 'BEAST POUNCE' && spells.activeSpells.some((sp) => sp.constructor.name === 'FormSprintAttackFx'), 'Ninefold: sprint + attack is the Beast Pounce with its chakra claw');
+  let peak = 0;
+  for (let i = 0; i < 24; i++) { step(1); peak = Math.max(peak, P.elevation); }
+  assert(peak > 8 && E.hp < E.maxHp, `The Beast Pounce leaps (${Math.round(peak)} px) and strikes with long reach`);
+  step(60);
+  assert(!P.sprintStrike && !spells.activeSpells.some((sp) => sp.constructor.name === 'FormSprintAttackFx'), 'The claw dissolves when the pounce ends');
+  // Eidolon: Colossus Breaker — slow wind-up, far push, shoves the enemy behind, long recovery.
+  formReady('eidolon'); placePartner(120); placeDummy(120 + 70); sprintReady();
+  P.executeAttack(neutral, 'normal');
+  assert(P.lastSprintAttack === 'COLOSSUS BREAKER', 'Eidolon: sprint + attack is the Colossus Breaker');
+  step(10);
+  assert(E.hp === E.maxHp, 'The Colossus Breaker winds up before the fist flies');
+  const breakerStart = E.x;
+  step(30);
+  assert(E.hp < E.maxHp && dummy.hp < dummy.maxHp, 'The astral fist hits and its pressure shoves the enemy standing behind');
+  step(40);
+  assert(E.x - breakerStart > 40, `The Colossus Breaker pushes far (${Math.round(E.x - breakerStart)} px)`);
+  const T = FORM_SPRINT_ATTACKS;
+  assert(T.eidolon.windup + T.eidolon.recovery > T.ninefold.windup + T.ninefold.recovery + .2 && T.eidolon.recoilMult === 1.65 && T.ninefold.carryMult === 1.5, 'Breaker: clearly longer wind-up and recovery than the Pounce; Unity bond multipliers (carry ×1.5, push ×1.65)');
+  // Ascendant: Radiant Lunge — pierces and hits every enemy on its path once.
+  formReady('ascendant'); placePartner(60); placeDummy(130); sprintReady();
+  P.executeAttack(neutral, 'normal');
+  assert(P.lastSprintAttack === 'RADIANT LUNGE', 'Ascendant: sprint + attack is the Radiant Lunge');
+  const hpAfter = () => [E.hp, dummy.hp];
+  step(30);
+  const [eHp, dHp] = hpAfter();
+  assert(eHp < E.maxHp && dHp < dummy.maxHp, 'The Radiant Lunge passes through and hits every enemy on its path');
+  step(30);
+  assert(E.hp === eHp, 'Each enemy is struck only once per lunge');
+  formReady(null);
+  dummy.homeX = dummy.x = 400;
   game.render();
   spells.clearRuntime();
   game.selectTrainingMap('waterfalls');
