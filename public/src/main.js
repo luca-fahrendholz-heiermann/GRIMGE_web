@@ -24,6 +24,7 @@ import { renderRuneGuide } from './rune_guides.js';
 import { castleBlocksAt, castleGateDoor, castleDeckEntry, castleDeckHeight } from './castles.js';
 import { WeaponArmory, WEAPONS } from './weapons.js';
 import { SiegeMatch } from './siege_match.js';
+import { PrimalCompanion, normalizePrimalChoice, startPrimalBond, endPrimalBond, bondForm, PRIMAL_ARCHETYPES } from './primals.js';
 
 // LF2-style Dungeon rooms. Each room is a wide scrolling stretch: the camera
 // follows the player, enemy groups enter from the right screen edge once the
@@ -461,6 +462,7 @@ export class GameWorld {
       if (e.code === 'KeyG') this.requestDeploy();
       // Training: M switches minion waves, N the lane towers.
       if (e.code === 'KeyM') this.toggleTrainingMinions();
+      if (e.code === 'KeyB' && this.activeMode?.id === 'training' && this.isMatchRunning()) this.cyclePrimal();
       if (e.code === 'KeyN') this.toggleTrainingTowers();
       // Training: O switches the present partner between active and passive.
       if (e.code === 'KeyO') this.toggleSparringPassive();
@@ -1322,6 +1324,8 @@ export class GameWorld {
   tryTransformByTap(pt) {
     const p = this.player;
     if (!pt || !this.isMatchRunning() || !p?.isAlive || this.drawing.active || this.targeting.isActive) return false;
+    // Siege: a tap on the waiting Primal sends it to the lane alone.
+    if (this.primal?.tryTapDeploy(pt, this)) return true;
     if (p.focus < p.maxFocus || p.focusTransformTimer > 0) return false;
     const height = ENTITY_VISUALS.heroHeight;
     const inside = Math.abs(pt.x - p.x) <= 30 && pt.y <= p.y + 10 && pt.y >= p.y - height - 12;
@@ -1332,6 +1336,8 @@ export class GameWorld {
     if (this.player?.activeClash) {
       this.showAnnouncement('TRANSFORMATION LOCKED DURING A CLASH'); return false;
     }
+    // With a Primal the transformation loadout is the Primal Bond.
+    if (this.primal) return this.togglePrimalBond();
     if (!this.isMatchRunning() || !this.player?.activateFocusTransformation?.()) {
       this.showAnnouncement(this.player?.focus >= this.player?.maxFocus ? 'FOCUS ALREADY ACTIVE' : `FOCUS ${Math.round(this.player?.focus ?? 0)}/${this.player?.maxFocus ?? 100}`);
       return false;
@@ -1537,6 +1543,20 @@ export class GameWorld {
   // A present partner can be switched between ACTIVE (fights back) and
   // PASSIVE (no actions; can be launched, lifted, pushed and frozen — for
   // testing spells on a movable target, which the anchored dummy is not).
+  // Primal Bond (Unity PrimalBondRuntime): full Focus, grounded, Primal alive
+  // and within 3.5 u → 0.5 s wind-up, then merged. T again releases it.
+  togglePrimalBond() {
+    const p = this.player; const primal = this.primal;
+    if (!this.isMatchRunning() || !p?.isAlive) return false;
+    if (p.primalBond) return endPrimalBond(p, 'decouple');
+    if (p.focus < p.maxFocus) { this.showAnnouncement(`FOCUS ${Math.round(p.focus)}/${p.maxFocus}`); return false; }
+    if (!p.grounded || p.freezeTimer > 0) { this.showAnnouncement('PRIMAL BOND NEEDS SOLID GROUND', 1); return false; }
+    if (!primal.canBond(p)) { this.showAnnouncement(primal.isAlive ? `${primal.info.name} MUST BE CLOSE` : `${primal.info.name} IS DOWN`, 1.1); return false; }
+    const bond = startPrimalBond(p, primal);
+    this.showAnnouncement(`PRIMAL BOND — ${bond.form.name.toUpperCase()}`, 1.4);
+    return true;
+  }
+
   // Castle Siege: from the castle platform onto the lane (timed).
   requestDeploy() {
     const match = this.siegeMatch;
@@ -2072,6 +2092,7 @@ export class GameWorld {
       if (summon.team !== myTeam) targets.push(summon);
     }
     if (myTeam === 'red' && this.player.isAlive) targets.push(this.player);
+    if (this.primal && myTeam !== this.primal.team && this.primal.isTargetable && (!this.siegeMatch || this.primal.onLane)) targets.push(this.primal);
     if (myTeam === 'blue' && this.enemyChampion.isAlive) targets.push(this.enemyChampion);
 
     if (this.activeMode?.objectives !== false || this.battlefield.trainingTowersOn) {
@@ -2103,6 +2124,7 @@ export class GameWorld {
       if (summon.team !== myTeam && summon.isMobileCombatant) targets.push(summon);
     }
     if (myTeam === 'red' && this.player.isAlive && this.player.isMobileCombatant && !sheltered(this.player)) targets.push(this.player);
+    if (this.primal && myTeam !== this.primal.team && this.primal.isTargetable && (!this.siegeMatch || this.primal.onLane)) targets.push(this.primal);
     if (myTeam === 'blue' && this.enemyChampion.isAlive && this.enemyChampion.isMobileCombatant && !sheltered(this.enemyChampion)) targets.push(this.enemyChampion);
     return targets;
   }
@@ -2340,6 +2362,43 @@ export class GameWorld {
     this.mountCandidate = null;
     this.prepareDefaultRunes();
     this.setupModeMatch();
+    this.spawnPrimal();
+  }
+
+  // ── Primals ───────────────────────────────────────────────────────────
+  get primalChoice() { return normalizePrimalChoice(ui.selectedCompanion); }
+  get primalStage() {
+    if (this._primalStage) return this._primalStage;
+    try { return Math.max(1, Math.min(3, parseInt(globalThis.localStorage?.getItem?.('grimge-primal-stage') ?? '1', 10) || 1)); } catch { return 1; }
+  }
+
+  // The Wizard's Primal joins Siege, Invasion and Training.
+  spawnPrimal() {
+    if (this.player?.primalBond) this.player.primalBond = null;
+    this.primal = null;
+    const mode = this.activeMode?.id;
+    if (!['siege', 'invasion', 'training'].includes(mode) || this.primalChoice === 'none') return null;
+    this.primal = new PrimalCompanion(this.player, this.primalChoice, this.primalStage);
+    if (this.siegeMatch) this.primal.returnToPlatform(this);
+    else this.primal.place(this, this.player.x - (this.player.facing || 1) * 24, this.player.z - .05);
+    return this.primal;
+  }
+
+  // Training: cycle NONE → WOLF I–III → TURTLE I–III (B / PRIMAL button).
+  cyclePrimal() {
+    const order = ['none', 'wolf:1', 'wolf:2', 'wolf:3', 'turtle:1', 'turtle:2', 'turtle:3'];
+    const current = this.primalChoice === 'none' ? 'none' : `${this.primalChoice}:${this.primalStage}`;
+    const next = order[(order.indexOf(current) + 1) % order.length];
+    const [choice, stage] = next.split(':');
+    ui.setHubCompanion?.(choice);
+    if (stage) {
+      this._primalStage = Number(stage);
+      try { globalThis.localStorage?.setItem?.('grimge-primal-stage', stage); } catch { /* optional */ }
+    }
+    this.spawnPrimal();
+    if (choice === 'none') this.showAnnouncement('NO PRIMAL — T TRANSFORMS INTO FOCUS ASCENDANT', 1.4);
+    else this.showAnnouncement(`${PRIMAL_ARCHETYPES[choice].name} ${'I'.repeat(Number(stage))} — ${bondForm(choice, Number(stage)).name.toUpperCase()}`, 1.4);
+    return next;
   }
 
   startMatch() {
@@ -2518,6 +2577,7 @@ export class GameWorld {
       this.player.update(scaledDt, this.input, this.battlefield, this);
       this.enemyChampion.update(scaledDt, this, this.battlefield);
       this.siegeMatch?.tick(scaledDt);
+      this.primal?.update(scaledDt, this);
       this.noteFallenWizards();
       this.updateArenaRuneCollectibles();
 
@@ -2729,6 +2789,7 @@ export class GameWorld {
     const actors = [...this.minions, ...environment.livingProps().map((prop) => ({ y: prop.y, render: (c) => renderProp(c, prop) })), ...this.armory.pickups.map((pickup) => ({ y: pickup.y, render: (c) => pickup.render(c) }))];
     if (this.enemyChampion.lifeState !== 'Dead') actors.push(this.enemyChampion);
     if (this.player.lifeState !== 'Dead' && !this.player.isMounted) actors.push(this.player);
+    if (this.primal?.isTargetable) actors.push(this.primal);
     // Spells with a ground position and summons share the painter's order
     // with the actors, so a spike behind the dummy is hidden by the dummy.
     actors.push(...spells.depthEntries());

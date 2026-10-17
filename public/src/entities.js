@@ -10,6 +10,7 @@ import { formGuardCounter, updateFormSprint, FormGrabFx, formJumpFx, FORM_SPRINT
 import { WEAPONS, ThrownWeaponSpell, drawHeldWeapon } from './weapons.js';
 import { drawBeastBomb, drawSpiritBow } from './form_attacks.js';
 import { FULL_CHARGE_TIME, activeMoveset, releaseFormTechnique, FORM_PALETTES } from './form_moves.js';
+import { updatePrimalBond, bondMoveMultiplier, bondGainMultiplier, bondDisplacement, bondOnBlock, primalSprintVariant, renderPrimalBond, endPrimalBond } from './primals.js';
 
 // Every spell a rune deck can produce: single runes plus every valid two-
 // and three-rune recipe that its cards allow (copies respected).
@@ -237,6 +238,7 @@ export class Player extends GroundEntity {
     this.focus = 0;
     this.maxFocus = 100;
     this.focusTransformTimer = 0;
+    this.primalBond = null;
     this.focusTransformPower = 1;
     this.focusDecayDelay = FOCUS_DECAY_DELAY;
     this.activeClash = null;
@@ -338,7 +340,7 @@ export class Player extends GroundEntity {
     this.mp = Math.min(this.maxMp, this.mp + dt * MANA_REGEN);
     // Focus drains after a short grace period without gains. A full meter
     // holds while the transformation is ready to be activated.
-    if (this.focusTransformTimer <= 0 && this.focus < this.maxFocus) {
+    if (this.focusTransformTimer <= 0 && !this.primalBond && this.focus < this.maxFocus) {
       this.focusDecayDelay = Math.max(0, this.focusDecayDelay - dt);
       if (this.focusDecayDelay <= 0) this.focus = Math.max(0, this.focus - FOCUS_DECAY_RATE * dt);
     }
@@ -365,6 +367,8 @@ export class Player extends GroundEntity {
       this.focusTransformTimer = this.focus > 0 ? this.focus / FOCUS_TRANSFORM_DRAIN : 0;
     }
     if (this.focusTransformTimer <= 0) this.focusTransformPower = 1;
+    // Primal Bond: wind-up, merge, Focus drain (1.5/s × form), Fortified.
+    updatePrimalBond(this, dt, FOCUS_TRANSFORM_DRAIN);
     this.attackBufferTimer = Math.max(0, this.attackBufferTimer - dt);
     if (this.attackBufferTimer <= 0) this.queuedAttack = null;
     this.guardBreakTimer = Math.max(0, this.guardBreakTimer - dt);
@@ -578,7 +582,8 @@ export class Player extends GroundEntity {
     const focusMult = this.focusTransformTimer > 0 ? 1.12 : 1;
     const clashMult = this.activeClash ? CLASH_MOVE_MULT : 1;
     const burrowMult = this.burrowed ? 1.35 : 1;
-    const combinedMult = this.slowFactor * guardMult * beastMult * focusMult * sprintMult * clashMult * burrowMult;
+    const bondMult = bondMoveMultiplier(this); // Wolf bond: SpeedBoost
+    const combinedMult = this.slowFactor * guardMult * beastMult * focusMult * sprintMult * clashMult * burrowMult * bondMult;
 
     const baseSpeed = this.moveSpeed;
     const baseDepth = this.depthSpeed;
@@ -993,7 +998,10 @@ export class Player extends GroundEntity {
     const weapon = this.weaponProfile;
     const heavy = weapon ? { ...MELEE_BASELINE.heavy, ...weapon.heavy } : MELEE_BASELINE.heavy;
     const form = activeMoveset(this);
-    const variant = form ? FORM_SPRINT_ATTACKS[form] : null;
+    // Primal Bond: the Unity sprint attack with the bond's carry / push.
+    const primal = form ? null : primalSprintVariant(this);
+    const variant = form ? FORM_SPRINT_ATTACKS[form]
+      : primal ? { ...primal, windup: 0, active: SPRINT_ATTACK_ACTIVE_TIME, recovery: Math.max(.05, heavy.time - SPRINT_ATTACK_ACTIVE_TIME) } : null;
     const speed = Math.max(Math.abs(this.vx), this.moveSpeed * SPRINT_MULT);
     this.cancelSprint();
     this.canAttack = false;
@@ -1008,7 +1016,7 @@ export class Player extends GroundEntity {
     this.lastSprintAttack = variant?.name ?? 'SPRINT ATTACK';
     audio.playSlash(variant?.pitch ?? 0.82);
     combat.spawnDust(this.x, this.y, 6);
-    if (variant) spells.addSpell(new FormSprintAttackFx(this, form), 'B');
+    if (variant && !variant.primal) spells.addSpell(new FormSprintAttackFx(this, form), 'B');
     else combat.spawnSlashArc(this.x + this.facing * 28, this.y - 25, this.facing, { radius: weapon ? Math.round((heavy.reach ?? 90) * .65) : 58, angleStart: -0.9, angleEnd: 0.9, color: weapon?.color ?? '#ffd54f', glow: weapon?.accent ?? '#ff6d00', width: 7 });
     this.updateSprintAttack(0);
     return true;
@@ -1037,17 +1045,19 @@ export class Player extends GroundEntity {
     // Recoil as knockback: the linear knockback decay slides the target ≈ 1.8 u (× variant).
     const recoil = Math.sqrt(2 * KB_DECAY_RATE * SPRINT_ATTACK_RECOIL_DISTANCE * (variant?.recoilMult ?? 1));
     const hit = this.triggerMeleeHitbox(heavy.damage * (variant?.damageMult ?? 1), this.facing * recoil, variant?.lift ?? 0, variant?.stun ?? .48, true, {
-      hitstopTicks: variant?.hitstopTicks ?? heavy.hitstopTicks, hitReaction: variant ? 'finisher' : heavy.hitReaction,
+      hitstopTicks: variant?.hitstopTicks ?? heavy.hitstopTicks, hitReaction: variant && !variant.primal ? 'finisher' : heavy.hitReaction,
       reach: variant?.reach ?? heavy.reach, freeze: heavy.freeze, sprintAttack: true, hitSet: strike.hits
     });
     if (!hit) return;
-    if (variant) formSprintImpact(this, strike.form, strike.hits, window.gameWorld);
+    if (variant && !variant.primal) formSprintImpact(this, strike.form, strike.hits, window.gameWorld);
+    else if (variant?.primal) combat.spawnShockwave(this.x + this.facing * 30, this.y - 26, 50, variant.color);
     // A piercing lunge keeps going and hits every enemy on its path once.
     if (variant?.pierce) return;
     strike.connected = true;
     strike.carry = SPRINT_ATTACK_CARRY_TIME;
     this.vx = this.facing * SPRINT_ATTACK_CARRY_DISTANCE * (variant?.carryMult ?? 1) / SPRINT_ATTACK_CARRY_TIME;
     if (!variant) combat.spawnShockwave(this.x + this.facing * 30, this.y - 26, 46, '#ffab00');
+    if (variant?.primal) combat.spawnHitSparks(this.x + this.facing * 34, this.y - 30, this.facing, variant.color, 12);
   }
 
   // Equip a field weapon (returns the previously held one, if any).
@@ -1133,6 +1143,8 @@ export class Player extends GroundEntity {
 
   takeDamage(amount, kx = 0, lift = 0, stun = 0.3, isCrit = false, hitKind = 'melee') {
     if (!this.isAlive || this.invulnerableTimer > 0) return { ignored: true };
+    // The Primal steps in: during its intercept window it takes the melee hit.
+    if (hitKind === 'melee' && window.gameWorld?.primal?.tryIntercept?.(this, amount)) return { intercepted: true };
     // Knockback points away from the attacker, so its inverse identifies the
     // attacker's approach direction. Only an attack from the held shield's
     // front receives the physical guard reduction.
@@ -1178,6 +1190,7 @@ export class Player extends GroundEntity {
       amount = guardedAmount;
       kx *= 0.12; lift *= 0.12; stun *= 0.18;
       this.guardStaggerTimer = 0.15;
+      bondOnBlock(this); // Turtle bond: Fortified
       combat.spawnHitSparks(this.x + this.facing * 24, this.y - 38, this.facing, '#7de8ff', 7);
       combat.spawnShockwave(this.x + this.facing * 22, this.y - 38, 18, '#4fc3f7');
     }
@@ -1204,6 +1217,9 @@ export class Player extends GroundEntity {
       kx *= .82;
       lift *= .88;
     }
+    // Turtle bond: Shell Guard / Fortified scale the displacement taken.
+    const displacement = bondDisplacement(this);
+    kx *= displacement; lift *= displacement;
     // Passive build modifiers are applied after temporary forms/shields so
     // every incoming source shares the same final damage rule.
     amount *= this.buildModifiers?.damageTaken ?? 1;
@@ -1249,6 +1265,7 @@ export class Player extends GroundEntity {
 
   beginDeath() {
     this.dismount();
+    endPrimalBond(this, 'death');
     // A held weapon falls to the ground.
     if (this.weapon) { window.gameWorld?.armory?.drop(this.weapon, this.x, this.z, this.weaponDurability); this.weapon = null; this.weaponDurability = null; }
     window.gameWorld?.recordWizardDeath?.(this.team);
@@ -1353,6 +1370,7 @@ export class Player extends GroundEntity {
       ctx.restore();
     }
     if (this.isAlive && this.focusTransformTimer > 0) this.renderFocusAscendant(ctx, renderY);
+    if (this.isAlive && this.primalBond) renderPrimalBond(ctx, this, renderY);
     else if (this.isAlive) this.renderFocusCharge(ctx, renderY);
     if (this.isAlive && this.ninefoldTimer > 0) this.renderNinefoldBeast(ctx, renderY);
     if (this.isAlive && this.eidolonTimer > 0) this.renderEidolonMantle(ctx, renderY);
@@ -1601,14 +1619,14 @@ export class Player extends GroundEntity {
     const previous = this.focus;
     const transformed = this.focusTransformTimer > 0;
     this.focusDecayDelay = FOCUS_DECAY_DELAY;
-    const gainMult = (this.buildModifiers?.focusGain ?? 1) * (transformed ? FOCUS_TRANSFORM_GAIN_MULT : 1);
+    const gainMult = (this.buildModifiers?.focusGain ?? 1) * (transformed ? FOCUS_TRANSFORM_GAIN_MULT : 1) * bondGainMultiplier(this);
     this.focus = Math.min(this.maxFocus, this.focus + Math.max(0, amount) * gainMult);
     // While transformed, combos refill the meter and so extend the form.
     if (transformed) {
       this.focusTransformTimer = this.focus / FOCUS_TRANSFORM_DRAIN;
       return this.focus > previous;
     }
-    if (previous < this.maxFocus && this.focus >= this.maxFocus) {
+    if (previous < this.maxFocus && this.focus >= this.maxFocus && !this.primalBond) {
       window.gameWorld?.showAnnouncement?.('FOCUS FULL — TAP FOCUS OR PRESS T', 1.8);
       combat.spawnShockwave(this.x, this.y - 34, 52, '#f0c8ff');
     }

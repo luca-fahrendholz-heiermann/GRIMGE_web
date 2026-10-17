@@ -28,6 +28,8 @@ await game.init();
 // Most tests place the Wizard freely on the Siege lane; the platform ↔ lane
 // match rules get their own block (they are on by default in the game).
 game.siegeDeployRules = false;
+// Legacy tests expect T to be Focus Ascendant: no Primal unless a block picks one.
+ui.selectedCompanion = 'none';
 assert(game.matchState === 'Menu', 'Boot enters the playable Hub state');
 ui.setHubHero('astral');
 assert(ui.getSelectedHero() === 'astral' && game.player.heroKey === 'astral' && game.sprites.sprites.astral && game.sprites.sprites.astral_v2, 'Astral hooded and unhooded variants are loaded selectable gameplay heroes');
@@ -2024,6 +2026,88 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   game.render();
   game.returnToHub(); game.siegeDeployRules = false; game.setMatchMode('siege'); game.startMatch();
   assert(!game.siegeMatch && !game.player.confineBounds, 'With the rules switched off, Siege runs without platform confinement');
+}
+
+// Primals (Unity PetCompanionRuntime / PrimalBondRuntime).
+{
+  const { PRIMAL_STATS, BOND_FORMS, bondMoveMultiplier, bondDisplacement } = await import('./public/src/primals.js');
+  const { SIEGE_ZONES } = await import('./public/src/siege_match.js');
+  const neutral = { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false };
+  globalThis.localStorage?.setItem?.('grimge-primal-stage', '1');
+  ui.selectedCompanion = 'wolf';
+  game.returnToHub(); game.setMatchMode('training'); game.startMatch(); game.selectTrainingMap('waterfalls');
+  let P = game.player; let W = game.primal;
+  const step = (seconds, input = neutral) => { for (let t = 0; t < seconds; t += 1 / 60) { P.update(1 / 60, input, game.battlefield, game); game.primal?.update(1 / 60, game); } };
+  assert(W && W.archetype === 'wolf' && W.stage === 1 && W.hp === PRIMAL_STATS.hp, 'The chosen Primal (wolf, stage I) joins the Wizard in Training');
+  // Follows behind the Wizard.
+  const dummy = game.trainingDummy; dummy.homeX = dummy.x = 900; dummy.homeZ = dummy.z = .9;
+  P.x = 500; P.z = .5; game.battlefield.placeOnSurface(P); W.place(game, 300, .5);
+  step(3);
+  assert(Math.abs(W.x - P.x) < 50 && W.x < P.x + 5, `The Primal follows behind its Wizard (${Math.round(W.x)} vs ${Math.round(P.x)})`);
+  // Bites an enemy close to the Wizard.
+  dummy.homeX = dummy.x = P.x + 60; dummy.homeZ = dummy.z = P.z; dummy.hp = dummy.maxHp;
+  step(2.5);
+  assert(dummy.hp < dummy.maxHp, 'It bites enemies within 3.5 u of the Wizard');
+  dummy.homeX = dummy.x = 900; dummy.homeZ = dummy.z = .9;
+  // Intercept: a melee hit on the Wizard lands on the Primal instead.
+  const pHp = P.hp; const wHp = W.hp; P.invulnerableTimer = 0;
+  W.interceptWindow = PRIMAL_STATS.intercept.window;
+  const res = P.takeDamage(30, 100, 0, .2, false, 'melee');
+  assert(res.intercepted && P.hp === pHp && W.hp < wHp, 'During its intercept window the Primal takes the melee hit for the Wizard');
+  // Down for 12 s, then back.
+  W.takeDamage(9999);
+  assert(!W.isAlive && !game.getHostileTargets('red').includes(W), 'A downed Primal disappears');
+  step(PRIMAL_STATS.recoveryTime + .2);
+  assert(W.isAlive && W.hp === W.maxHp && groundDistanceOk(W, P), 'After 12 s it returns to the Wizard');
+  function groundDistanceOk(a, b) { return Math.hypot(a.x - b.x, (a.z - b.z) * 150) < 80; }
+  // Primal Bond: T at full Focus with the Primal close.
+  P.state = 'idle'; P.stateTimer = 0; P.grounded = true; P.focus = P.maxFocus; P.focusTransformTimer = 0;
+  W.place(game, P.x - 30, P.z);
+  assert(game.activateFocusTransformation() && P.primalBond && !P.primalBond.active && P.focusTransformTimer === 0, 'With a Primal, T starts the Primal Bond (not Focus Ascendant)');
+  step(PRIMAL_STATS.bondWindup + .05);
+  assert(P.primalBond.active && W.merged && !game.getHostileTargets('red').includes(W), 'After the 0.5 s wind-up the Primal merges into the Wizard');
+  assert(bondMoveMultiplier(P) === BOND_FORMS.wolf[0].move, 'Wolf bond (Synchronization): ×1.25 movement');
+  const f0 = P.focus; step(1);
+  assert(Math.abs((f0 - P.focus) - 1.5 * BOND_FORMS.wolf[0].drain) < .05, 'The bond drains Focus at 1.5/s × the form multiplier');
+  P.gainFocus(10); const fGain = P.focus; P.gainFocus(10);
+  assert(Math.abs(P.focus - fGain - 5) < .01 || P.focus === P.maxFocus, 'Focus gains are halved while bonded');
+  P.sprintActive = true; P.canAttack = true; P.state = 'idle'; P.stateTimer = 0;
+  P.executeAttack(neutral, 'normal');
+  assert(P.lastSprintAttack === 'PRIMAL POUNCE', 'Wolf bond: the sprint attack becomes the Primal Pounce');
+  P.state = 'idle'; P.stateTimer = 0; P.sprintStrike = null;
+  assert(game.activateFocusTransformation() !== false && !P.primalBond && !W.merged && W.isTargetable, 'T again releases the bond; the Primal reappears');
+  // Bond refused when the Primal is far away.
+  P.focus = P.maxFocus; W.place(game, P.x + 300, P.z);
+  assert(!game.activateFocusTransformation() && !P.primalBond, 'The bond needs the Primal within 3.5 u');
+  // Turtle: shell guard, Fortified after a block, Shell Rush.
+  assert(game.cyclePrimal() === 'wolf:2' && game.primal.stage === 2, 'B / the PRIMAL button cycles the Primal and its stage');
+  game.cyclePrimal(); game.cyclePrimal();
+  W = game.primal;
+  assert(W.archetype === 'turtle' && W.stage === 1, 'The turtle can be chosen');
+  P.focus = P.maxFocus; P.grounded = true; W.place(game, P.x - 20, P.z);
+  game.activateFocusTransformation(); step(PRIMAL_STATS.bondWindup + .05);
+  assert(bondDisplacement(P) === BOND_FORMS.turtle[0].shellGuard, 'Turtle bond (Shell Sync): shell guard ×0.7 displacement');
+  P.isGuarding = true; P.facing = 1; P.guardHoldTime = 1; P.invulnerableTimer = 0;
+  P.takeDamage(10, -120, 0, .2, false, 'melee');
+  assert(bondDisplacement(P) === BOND_FORMS.turtle[0].fortified, 'A block makes the turtle bond Fortified (×0.4)');
+  P.isGuarding = false; P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.sprintActive = true; P.grounded = true;
+  P.executeAttack(neutral, 'normal');
+  assert(P.lastSprintAttack === 'SHELL RUSH', 'Turtle bond: the sprint attack becomes the Shell Rush');
+  P.state = 'idle'; P.stateTimer = 0; P.sprintStrike = null;
+  // Siege: waits on the platform, comes along on deploy, returns after 24 s.
+  ui.setHubCompanion('wolf');
+  game.returnToHub(); game.siegeDeployRules = true; game.setMatchMode('siege'); game.startMatch();
+  P = game.player; W = game.primal; const M = game.siegeMatch;
+  game.enemyChampion.update = () => {};
+  assert(W && !W.onLane && W.x <= SIEGE_ZONES.platform.blue.right + 1, 'Siege: the Primal waits on the castle platform');
+  game.requestDeploy(); step(.1);
+  assert(W.onLane && W.x >= SIEGE_ZONES.lane.left - 1, 'When the Wizard deploys, the Primal comes along');
+  for (let t = 0; t < PRIMAL_STATS.laneDuration + .3; t += 1 / 60) { P.update(1 / 60, neutral, game.battlefield, game); M.tick(1 / 60); W.update(1 / 60, game); }
+  assert(!W.onLane && W.x <= SIEGE_ZONES.platform.blue.right + 1, 'After 24 s on the lane the Primal returns to the platform');
+  game.render();
+  assert(W.tryTapDeploy({ x: W.x, y: W.y - 20 }, game) && W.onLane && W.autonomous, 'A tap on the waiting Primal sends it to the lane alone');
+  game.returnToHub(); game.siegeDeployRules = false; ui.selectedCompanion = 'none'; game.setMatchMode('siege'); game.startMatch();
+  assert(!game.primal, 'Without a Primal none is spawned');
 }
 
 const frameCallback = nextFrame;

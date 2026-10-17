@@ -79,9 +79,9 @@ export class UIManager {
     this.hubSwipeStart = null;
     try {
       this.selectedHero = window.localStorage?.getItem?.('grimge-selected-hero') || 'astral';
-      this.selectedCompanion = window.localStorage?.getItem?.('grimge-selected-companion') || 'spirit_wolf';
+      this.selectedCompanion = window.localStorage?.getItem?.('grimge-selected-companion') || 'wolf';
     } catch {
-      this.selectedHero = 'astral'; this.selectedCompanion = 'spirit_wolf';
+      this.selectedHero = 'astral'; this.selectedCompanion = 'wolf';
     }
     this.resultsOverlay = document.getElementById('results-overlay');
     this.playMatchBtn = document.getElementById('play-match-btn');
@@ -123,6 +123,7 @@ export class UIManager {
     this.siegeDeployBtn = document.getElementById('siege-deploy-btn');
     this.trainingPassiveBtn = document.getElementById('training-passive-btn');
     this.trainingMinionsBtn = document.getElementById('training-minions-btn');
+    this.trainingPrimalBtn = document.getElementById('training-primal-btn');
     this.trainingTowersBtn = document.getElementById('training-towers-btn');
     this.trainingDeckBtn = document.getElementById('training-deck-btn');
     this.trainingMapBtn = document.getElementById('training-map-btn');
@@ -341,6 +342,9 @@ export class UIManager {
     });
     this.trainingSparringBtn?.addEventListener('pointerdown', (e) => {
       e.preventDefault(); e.stopPropagation(); window.gameWorld?.toggleSparringPartner();
+    });
+    this.trainingPrimalBtn?.addEventListener('pointerdown', (e) => {
+      e.preventDefault(); e.stopPropagation(); window.gameWorld?.cyclePrimal();
     });
     this.trainingMinionsBtn?.addEventListener('pointerdown', (e) => {
       e.preventDefault(); e.stopPropagation(); window.gameWorld?.toggleTrainingMinions();
@@ -1042,13 +1046,15 @@ export class UIManager {
       : `${blueCurrentMp} / ${blueMpMax}`;
 
     // Focus sits in the top HUD with a compact transformation icon.
-    const focusReady = player.focus >= player.maxFocus && player.focusTransformTimer <= 0;
+    const focusReady = player.focus >= player.maxFocus && player.focusTransformTimer <= 0 && !player.primalBond;
     if (this.blueFocusFill) {
       this.blueFocusFill.style.width = `${Math.max(0, Math.min(100, player.focus / player.maxFocus * 100))}%`;
       this.blueFocusFill.parentElement?.classList?.toggle('focus-ready', focusReady);
     }
     if (this.blueFocusText) {
-      this.blueFocusText.textContent = player.focusTransformTimer > 0
+      this.blueFocusText.textContent = player.primalBond
+        ? `BOND ${Math.round(player.focus / player.maxFocus * 100)}%`
+        : player.focusTransformTimer > 0
         ? `ASCENDANT ${Math.round(player.focus / player.maxFocus * 100)}%`
         : `${Math.round(player.focus / player.maxFocus * 100)}%`;
     }
@@ -1069,6 +1075,12 @@ export class UIManager {
         this.trainingPassiveBtn.textContent = passive ? '◎ PARTNER: PASSIVE' : '◉ PARTNER: ACTIVE';
       }
       this.trainingSparringBtn.classList.toggle('is-on', sparring);
+    }
+    if (this.trainingPrimalBtn) {
+      const game = window.gameWorld;
+      const choice = game?.primalChoice ?? 'none';
+      this.trainingPrimalBtn.textContent = choice === 'none' ? '✧ PRIMAL: NONE' : `${choice === 'wolf' ? '🐺' : '🐢'} PRIMAL: ${choice.toUpperCase()} ${'I'.repeat(game?.primalStage ?? 1)}`;
+      this.trainingPrimalBtn.classList.toggle('is-on', choice !== 'none');
     }
     const siege = window.gameWorld?.siegeMatch;
     if (this.siegeDeployBtn) {
