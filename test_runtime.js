@@ -1205,9 +1205,9 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
 
   // 2. The whole painted training floor is walkable.
   reset();
-  assert(groundYForDepth(0) === 212 && game.battlefield.boundsOverride.farZ <= .02, 'Training projects the combat plane over the whole painted floor');
+  assert(Math.abs(groundYForDepth(0) - 199.57) < .1 && game.battlefield.boundsOverride.farZ <= .02, 'Training projects the combat plane over the whole painted floor (scene fitted to the 16:9 stage)');
   P.z = .01; P.x = 60; game.battlefield.resolveEntityCollision(P);
-  assert(P.z === .02 && P.x === 70, 'The player can walk to the rear and side edges of the training yard');
+  assert(P.z === .02 && P.x === 96, 'The player can walk to the rear and side edges of the training yard');
 
   // 3. Spells are depth-sorted with actors.
   reset();
@@ -1303,7 +1303,7 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
   let terrain = prepare('rain');
   assert(game.trainingMapId === 'rain' && game.battlefield.trainingMap.id === 'rain' && terrain.length === 2 && terrain.every((zone) => zone.type === 'water'), 'Selecting a map restarts Training on it with its painted terrain');
   const leftPool = zoneToWorld(TRAINING_MAPS.find((m) => m.id === 'rain').zones[0]);
-  assert(Math.abs(leftPool.x - 259) < 3 && leftPool.shape === 'rect', 'Painted zones convert from image percentages into world space');
+  assert(Math.abs(leftPool.x - 274) < 3 && leftPool.shape === 'rect', 'Painted zones convert from image percentages into world space');
   const pool = terrain[0];
   place(E, pool.x, pool.z);
   assert(environment.electrify(pool.x, pool.z, 20, 'blue', 16, game) && E.hp < E.maxHp, 'Lightning into a painted water basin shocks whoever stands in it');
@@ -1361,6 +1361,28 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
   game.selectTrainingMap('waterfalls');
   assert(environment.terrain.length === 0 && game.trainingMapId === 'waterfalls', 'The classic map has no special terrain');
 }
+// Team castles (skins) in the training arenas.
+{
+  const castles = await import('./public/src/castles.js');
+  const { TRAINING_MAPS } = await import('./public/src/training_maps.js');
+  game.selectTrainingMap('frozen');
+  const P = game.player;
+  assert(castles.castleSkinFor('blue', 'frozen') === 'frozen' && castles.castleImageSrc('frozen', 'red') === 'assets/castles/frozen_red.png' && TRAINING_MAPS.every((map) => castles.CASTLE_SKINS[map.id]), 'Every training map has its own castle skin (blue and red image)');
+  const blueBox = castles.castleBox('frozen', 'blue'); const redBox = castles.castleBox('frozen', 'red');
+  assert(blueBox.x >= 0 && redBox.x + redBox.w <= 1024 && redBox.mirrored && !blueBox.mirrored && Math.abs(blueBox.x - (1024 - redBox.x - redBox.w)) < .01, 'The blue castle stands on the left, the red one mirrored on the right, both fully on the 16:9 stage');
+  const gate = castles.castleGatePoint('frozen', 'blue');
+  assert(gate.x > 96 && gate.z > .3 && gate.z < .8 && !castles.castleBlocksAt('frozen', gate.x, gate.z), 'The gate point lies just inside the arena in front of the castle');
+  assert(castles.castleBlocksAt('frozen', 60, .55) && !castles.castleBlocksAt('frozen', 512, .5), 'The castle footprint is solid, the arena centre is free');
+  P.x = 140; P.z = .5; P.elevation = 0; game.battlefield.placeOnSurface(P);
+  const intoCastle = { x: 100, z: .5 };
+  const fromX = P.x; P.x = intoCastle.x; P.z = intoCastle.z;
+  assert(game.resolveSpellObstacles(P, fromX, .5) && P.x === fromX, 'The player cannot walk into a castle');
+  castles.setCastleSkin('red', 'volcano');
+  assert(castles.castleSkinFor('red', 'frozen') === 'volcano' && castles.castleSkinFor('blue', 'frozen') === 'frozen', 'Each team can choose its own castle skin');
+  castles.setCastleSkin('red', null);
+  game.render();
+}
+
 // Light & shadow: Shadow Stomper, sky spheres, shadow doubles, revenants
 // and the round ground shadows under every actor.
 {

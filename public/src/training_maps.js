@@ -7,14 +7,22 @@
 // conducts lightning and freezes, ice is slippery, lava burns, hay catches
 // fire, sand slows.
 
-export const TRAINING_PROJECTION = Object.freeze({ farY: 212, nearY: 455 });
+// The 16:9 scene fills the fixed 16:9 stage exactly (1672×941 → 1024×576),
+// so nothing at the painted edges — like the team castles — is cut off.
+// The combat plane is derived from the same image fractions, so painted
+// zones always line up with gameplay. See Battlefield.renderTrainingBackground.
+const SCENE_SCALE = 1024 / 1672;
+const SCENE_H = 941 * SCENE_SCALE;
+// Rear and front edge of the walkable floor as fractions of the image height.
+const FLOOR_FAR_V = .3463;
+const FLOOR_NEAR_V = .7436;
+export const TRAINING_PROJECTION = Object.freeze({ farY: FLOOR_FAR_V * SCENE_H, nearY: FLOOR_NEAR_V * SCENE_H });
 
-// How the scene image is placed on the 1024x576 logical view (fixed scale,
-// so painted zones always line up with gameplay). See
-// Battlefield.renderTrainingBackground.
 export const TRAINING_IMAGE = Object.freeze({
-  width: 1672, height: 941, scale: .65, floorFrontV: 712 / 941, anchorY: TRAINING_PROJECTION.nearY + 8
+  width: 1672, height: 941, scale: SCENE_SCALE, floorFrontV: 712 / 941, anchorY: (712 / 941) * SCENE_H
 });
+// Walkable side edges in world x (9.33 % / 90.76 % of the image width).
+export const TRAINING_FIELD = Object.freeze({ left: Math.round(.0933 * 1024), right: Math.round(.9076 * 1024) });
 
 function imageToScreen(px, py) {
   const w = TRAINING_IMAGE.width * TRAINING_IMAGE.scale;

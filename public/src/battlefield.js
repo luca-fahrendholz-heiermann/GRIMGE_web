@@ -4,14 +4,16 @@ import { ARENA_LAYOUT, clampToArena, groundYForDepth, setGroundProjection, surfa
 
 // The training yard paints a much deeper floor than the Siege arena: its
 // whole field (rear wall to front parapet) is walkable.
-const TRAINING_BOUNDS = Object.freeze({ left: 70, right: 955, farZ: 0.02, nearZ: 0.98 });
+const TRAINING_BOUNDS = Object.freeze({ left: TRAINING_FIELD.left, right: TRAINING_FIELD.right, farZ: 0.02, nearZ: 0.98 });
 import { ART_ASSETS } from './art_assets.js';
-import { TRAINING_IMAGE, TRAINING_PROJECTION, getTrainingMap, trainingMapScene } from './training_maps.js';
+import { TRAINING_IMAGE, TRAINING_PROJECTION, TRAINING_FIELD, getTrainingMap, trainingMapScene } from './training_maps.js';
+import { renderCastles, preloadCastles } from './castles.js';
 
 export class Battlefield {
   constructor(mode = null, options = {}) {
     setGroundProjection(mode?.world === 'training' ? TRAINING_PROJECTION : null);
     this.trainingMap = mode?.world === 'training' ? getTrainingMap(options.trainingMapId) : null;
+    if (this.trainingMap) preloadCastles(this.trainingMap.id);
     this.width = ARENA_LAYOUT.width;
     this.height = ARENA_LAYOUT.height;
     this.playableBounds = ARENA_LAYOUT.playableBounds;
@@ -225,6 +227,8 @@ export class Battlefield {
     const y = TRAINING_IMAGE.anchorY - TRAINING_IMAGE.floorFrontV * drawH;
     // The stage is always 16:9, so the scene never needs copied edge strips.
     ctx.drawImage(image, x, y, drawW, drawH);
+    // Team castles (skins) stand in the side walls, part of the backdrop.
+    renderCastles(ctx, this.trainingMap?.id, { x, y, w: drawW, h: drawH });
   }
 
   renderBackground(ctx, camera, gameplayWidth, viewH, renderWidth = gameplayWidth, cameraOffsetX = 0, modeState = null) {

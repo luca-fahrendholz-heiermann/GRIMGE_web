@@ -21,6 +21,7 @@ import { renderPixelated } from './abilities.js';
 import { sky } from './sky.js';
 import { renderGroundShadows } from './shadows.js';
 import { renderRuneGuide } from './rune_guides.js';
+import { castleBlocksAt } from './castles.js';
 
 // LF2-style Dungeon rooms. Each room is a wide scrolling stretch: the camera
 // follows the player, enemy groups enter from the right screen edge once the
@@ -2481,6 +2482,13 @@ export class GameWorld {
 
   resolveSpellObstacles(entity, previousX, previousZ) {
     if (!entity?.isMobileCombatant) return false;
+    // Training castles are solid (their footprint reaches into the arena edge).
+    const castleMap = this.activeMode?.id === 'training' ? this.battlefield?.trainingMap?.id : null;
+    if (castleMap && castleBlocksAt(castleMap, entity.x, entity.z) && !castleBlocksAt(castleMap, previousX, previousZ)) {
+      entity.x = previousX; entity.z = previousZ;
+      entity.vx *= .15; entity.vz *= .15;
+      return true;
+    }
     if (environment.blocks(entity) && !environment.blocksAt(entity, previousX, previousZ)) {
       entity.x = previousX; entity.z = previousZ;
       entity.vx *= .15; entity.vz *= .15;
