@@ -2174,7 +2174,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   assert(FORM_MOVESETS.ninefold.forward.short.name === 'RISSIMPULS' && FORM_MOVESETS.eidolon.up.full.name === 'LICHTSPALTER', 'B01 Risswild / B02 Arkengestell carry the atlas technique names');
   assert(ids.every((id) => { const r = recognizer.runes.find((x) => x.id === 'buff_' + id); const d = SPELL_DEFINITIONS['buff_' + id]; return r?.isBuffForm && r.tags.includes('max-1-per-deck') && d?.isBuffForm && d.tags.includes('buff-transformation') && isSpecialRune('buff_' + id); }), 'Each form is a tagged special rune: "buff-transformation · max-1-per-deck", never fusable');
   // Deck rule: at most one buff rune.
-  const profile = new MageProfile();
+  const profile = new MageProfile(); profile.level = 20;
   profile.matchDeck = ['ignis', 'ventus', 'fulgur', 'terra', 'aqua', 'ignis', 'ventus', 'fulgur'];
   assert(profile.addRuneToDeck('buff_T07').ok, 'A buff rune can join the deck');
   const second = profile.addRuneToDeck('buff_B01');
@@ -2246,6 +2246,20 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   assert(!P.buffForm && activeMoveset(P) === null, 'When its time runs out the buff ends and the normal moveset returns');
   spells.clearRuntime();
   dummy.homeX = dummy.x = 512;
+}
+
+// Buff rune unlocks and the class weapon selector in Training.
+{
+  const { MageProfile, buffUnlockLevel, runeUnlockLabel } = await import('./public/src/progression.js');
+  const fresh = new MageProfile(); fresh.level = 1;
+  assert(!fresh.isRuneUnlocked('buff_B01') && buffUnlockLevel('buff_B01') === 3 && buffUnlockLevel('buff_T01') === 4 && buffUnlockLevel('buff_T40') === 13 && runeUnlockLabel('buff_T40') === 'MAGE LV.13', 'Buff runes unlock with the Mage level (B01/B02 at 3, T01–T40 in groups of four up to 13)');
+  fresh.level = 3;
+  assert(fresh.isRuneUnlocked('buff_B02') && !fresh.isRuneUnlocked('buff_T01'), 'At level 3 the first two buff runes are available');
+  game.returnToHub(); game.setMatchMode('training'); game.startMatch();
+  const first = game.cycleClassWeapon();
+  assert(first && game.player.classWeapon === first && !game.player.weapon, 'V cycles a class weapon in Training (fixed, not a pickup)');
+  let guard = 0; while (game.player.classWeapon && guard++ < 20) game.cycleClassWeapon();
+  assert(!game.player.classWeapon, 'Cycling further returns to bare hands');
 }
 
 const frameCallback = nextFrame;

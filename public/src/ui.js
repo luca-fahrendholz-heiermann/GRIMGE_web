@@ -124,6 +124,7 @@ export class UIManager {
     this.trainingPassiveBtn = document.getElementById('training-passive-btn');
     this.trainingMinionsBtn = document.getElementById('training-minions-btn');
     this.trainingPrimalBtn = document.getElementById('training-primal-btn');
+    this.trainingWeaponBtn = document.getElementById('training-weapon-btn');
     this.trainingTowersBtn = document.getElementById('training-towers-btn');
     this.trainingDeckBtn = document.getElementById('training-deck-btn');
     this.trainingMapBtn = document.getElementById('training-map-btn');
@@ -342,6 +343,9 @@ export class UIManager {
     });
     this.trainingSparringBtn?.addEventListener('pointerdown', (e) => {
       e.preventDefault(); e.stopPropagation(); window.gameWorld?.toggleSparringPartner();
+    });
+    this.trainingWeaponBtn?.addEventListener('pointerdown', (e) => {
+      e.preventDefault(); e.stopPropagation(); window.gameWorld?.cycleClassWeapon();
     });
     this.trainingPrimalBtn?.addEventListener('pointerdown', (e) => {
       e.preventDefault(); e.stopPropagation(); window.gameWorld?.cyclePrimal();
@@ -1086,6 +1090,11 @@ export class UIManager {
         this.trainingPassiveBtn.textContent = passive ? '◎ PARTNER: PASSIVE' : '◉ PARTNER: ACTIVE';
       }
       this.trainingSparringBtn.classList.toggle('is-on', sparring);
+    }
+    if (this.trainingWeaponBtn) {
+      const id = window.gameWorld?.player?.classWeapon;
+      this.trainingWeaponBtn.textContent = id ? `⚔ CLASS: ${id.replace('_', ' ').toUpperCase()}` : '⚔ CLASS: NONE';
+      this.trainingWeaponBtn.classList.toggle('is-on', !!id);
     }
     if (this.trainingPrimalBtn) {
       const game = window.gameWorld;

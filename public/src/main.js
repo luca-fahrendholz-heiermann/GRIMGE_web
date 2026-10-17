@@ -462,6 +462,7 @@ export class GameWorld {
       if (e.code === 'KeyG') this.requestDeploy();
       // Training: M switches minion waves, N the lane towers.
       if (e.code === 'KeyM') this.toggleTrainingMinions();
+      if (e.code === 'KeyV' && this.activeMode?.id === 'training' && this.isMatchRunning()) this.cycleClassWeapon();
       if (e.code === 'KeyB' && this.activeMode?.id === 'training' && this.isMatchRunning()) this.cyclePrimal();
       if (e.code === 'KeyN') this.toggleTrainingTowers();
       // Training: O switches the present partner between active and passive.
@@ -1606,6 +1607,17 @@ export class GameWorld {
       return true;
     }
     return false;
+  }
+
+  // Training: try a class weapon (fixed part of the Wizard, never thrown;
+  // sprint + attack is the sprint attack). V / the CLASS WEAPON button.
+  cycleClassWeapon() {
+    if (this.activeMode?.id !== 'training' || !this.isMatchRunning()) return null;
+    const order = [null, ...Object.keys(WEAPONS).filter((id) => id !== 'ice_sword')];
+    const next = order[(order.indexOf(this.player.classWeapon ?? null) + 1) % order.length];
+    this.player.equipClassWeapon(next);
+    this.showAnnouncement(next ? `CLASS WEAPON: ${WEAPONS[next].name}` : 'CLASS WEAPON: NONE (BARE HANDS)', 1.2);
+    return next;
   }
 
   // Training: minion waves from the castle gates (M) and lane towers (N).

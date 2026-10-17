@@ -89,7 +89,15 @@ export const MAGE_LEVEL_RUNE_UNLOCKS = Object.freeze([
   { level: 8, runeId: 'doppel', title: 'DOPPEL SPECIAL RUNE UNLOCKED' },
   { level: 10, runeId: 'mortis', title: 'MORTIS SPECIAL RUNE UNLOCKED' }
 ]);
+// Buff transformation runes unlock with the Mage level: B01/B02 at 3, then
+// the atlas forms in groups of four (T01–T04 at 4 … T37–T40 at 13).
+export function buffUnlockLevel(runeId) {
+  const index = BUFF_RUNE_IDS.indexOf(runeId);
+  if (index < 0) return Infinity;
+  return index < 2 ? 3 : 4 + Math.floor((index - 2) / 4);
+}
 export function runeUnlockLabel(runeId) {
+  if (isBuffRuneId(runeId)) return `MAGE LV.${buffUnlockLevel(runeId)}`;
   const entry = MAGE_LEVEL_RUNE_UNLOCKS.find((unlock) => unlock.runeId === runeId);
   return entry ? `MAGE LV.${entry.level}` : 'STARTER';
 }
@@ -135,8 +143,7 @@ export class MageProfile {
   xpToNextLevel() { return 70 + (this.level - 1) * 35; }
   runeLevel(id) { return 1 + Math.floor((this.runeXp[id] ?? 0) / 60); }
   runeXpIntoLevel(id) { return (this.runeXp[id] ?? 0) % 60; }
-  // Prototype: every buff rune is available (its deck slot is the limit).
-  isRuneUnlocked(id) { return isBuffRuneId(id) || this.unlockedRunes.has(id); }
+  isRuneUnlocked(id) { return isBuffRuneId(id) ? this.level >= buffUnlockLevel(id) : this.unlockedRunes.has(id); }
 
   sanitizeDeck(ids = []) {
     const copies = new Map();
@@ -183,6 +190,13 @@ export class MageProfile {
         this.unlockedRunes.add(entry.runeId);
         unlocked.push(entry);
       }
+    }
+    // Newly reached buff transformation runes (announced once).
+    this.announcedBuffLevel ??= 0;
+    if (this.level > this.announcedBuffLevel) {
+      const fresh = BUFF_RUNE_IDS.filter((id) => buffUnlockLevel(id) > this.announcedBuffLevel && buffUnlockLevel(id) <= this.level);
+      if (fresh.length && this.announcedBuffLevel > 0) unlocked.push({ level: this.level, runeId: fresh[0], title: `${fresh.length} BUFF TRANSFORMATION RUNE${fresh.length > 1 ? 'S' : ''} UNLOCKED` });
+      this.announcedBuffLevel = this.level;
     }
     return unlocked;
   }
