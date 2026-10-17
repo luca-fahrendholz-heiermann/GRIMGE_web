@@ -68,19 +68,30 @@ body.portrait-gameplay #game-container { visibility: hidden; pointer-events: non
 #game-container {
   position: fixed;
   inset: 0;
-  /* This is now an edge-to-edge render surface. GameWorld keeps the combat
-     field at a constant logical height and widens only the visual camera. */
+  /* The screen. GameWorld centres one fixed 16:9 stage (canvas + HUD) in it
+     and scales it uniformly; the bars show the blurred ambient backdrop. */
   width: 100vw;
   height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
-  background: #101925;
+  background: #05070d;
   box-shadow: none;
   touch-action: none;
+  overflow: hidden;
+}
+
+#stage-backdrop {
+  position: absolute;
+  inset: -6%;
+  width: 112%;
+  height: 112%;
+  filter: blur(22px) brightness(.42) saturate(1.25);
+  pointer-events: none;
 }
 
 #game-canvas {
+  /* Position and size of the 16:9 stage are written by updateViewport(). */
   position: absolute;
   top: 0;
   left: 0;

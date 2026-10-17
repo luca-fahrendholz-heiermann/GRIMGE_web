@@ -49,18 +49,19 @@ menuButton.listeners.pointerdown({ preventDefault() {}, stopPropagation() {} });
 assert(game.menuPaused && !menuModal.classList.values.has('hidden'), 'Match menu opens from the HUD button and pauses the live match');
 menuModal.listeners.pointerdown({ target: menuModal });
 assert(!game.menuPaused && menuModal.classList.values.has('hidden'), 'Tapping beside the match-menu panel closes it and resumes the match');
-const fullViewportRect = game.canvas.getBoundingClientRect;
-game.canvas.getBoundingClientRect = () => ({ left: 0, top: 0, width: 512, height: 288 });
-game.syncHudScale();
-assert(game.uiLayer.style['--hud-scale'] === '0.5', 'HUD scales as one 1024×576 composition with a resized Canvas');
-game.canvas.getBoundingClientRect = () => ({ left: 0, top: 0, width: 1248, height: 576 });
-game.updateViewport();
-// A 19.5:9 phone is wider than the painted Siege scene: the camera zooms in
-// to fill the width and crops a little sky / foreground (no copied strips).
-assert(game.renderWidth === 1024 && game.renderHeight === 473 && game.worldOffsetY < 0 && game.worldOffsetY > -80 && game.canvas.width === 2048, 'A 19.5:9 screen zooms the painted scene to full width and crops sky/foreground instead of repeating edge strips');
-assert(game.uiLayer.style.width === '1024px' && game.getCanvasCoords(624, 288).x === 512 && Math.abs(game.getCanvasCoords(624, 288).y - 236.5) < .01, 'HUD and rune/input coordinates follow the zoomed camera');
-game.canvas.getBoundingClientRect = fullViewportRect;
-game.updateViewport();
+// One fixed 16:9 stage on every device: scene, camera and HUD scale together.
+const stageHost = elements.get('game-container');
+const screenSize = (w, h) => { stageHost.getBoundingClientRect = () => ({ left: 0, top: 0, width: w, height: h }); game.updateViewport(); };
+screenSize(512, 288);
+assert(game.uiLayer.style['--hud-scale'] === '0.5' && game.stage.width === 512 && game.stage.height === 288, 'HUD and scene scale together as one 1024×576 stage');
+screenSize(1248, 576);
+assert(game.renderWidth === 1024 && game.renderHeight === 576 && game.worldOffsetY === 0 && game.cameraOffsetX === 0 && game.stage.left === 112 && game.canvas.style.left === '112px' && game.canvas.style.width === '1024px', 'A 19.5:9 screen shows exactly the same 16:9 stage, centred between side bars (no copied edges, no crop)');
+assert(game.uiLayer.style.left === '112px' && game.uiLayer.style.width === '1024px' && game.runeCanvas.style.left === '112px', 'HUD and rune layer sit on the same stage as the scene');
+const savedCanvasRect = game.canvas.getBoundingClientRect;
+game.canvas.getBoundingClientRect = () => ({ left: 112, top: 0, width: 1024, height: 576 });
+assert(game.getCanvasCoords(624, 288).x === 512 && game.getCanvasCoords(624, 288).y === 288, 'Input coordinates map through the centred stage');
+game.canvas.getBoundingClientRect = savedCanvasRect;
+screenSize(1024, 576);
 assert(game.minions.length === 6 && game.battlefield.waveNumber === 1, 'Initial lane wave spawns coherently');
 assert(game.battlefield.bgLoaded, 'Clean arena background load path completes');
 assert(['arena', 'dungeon', 'invasion'].every((world) => game.battlefield.modeBackdropImages[world]?.loaded), 'Alternate combat modes load authored scene backdrops instead of the debug-grid fallback');
@@ -1583,24 +1584,19 @@ game.setMatchMode('siege'); game.startMatch();
 assert(game.matchState === 'Running' && game.objectivePhase === 'LanePhase', 'A new Siege match can start cleanly after alternate modes');
 assert(groundYForDepth(0) === 306, 'Leaving Training restores the Siege ground projection');
 
-// Screens narrower than 16:9 get a taller camera (extra sky) instead of a
-// distorted canvas or a HUD that runs off the right edge.
-const canvasRect = game.canvas.getBoundingClientRect;
-game.canvas.getBoundingClientRect = () => ({ left: 0, top: 0, width: 1024, height: 768 });
-game.updateViewport();
-assert(game.renderWidth === 1024 && game.renderHeight === 768 && game.worldOffsetY === 192 && game.uiLayer.style.height === '768px', 'A 4:3 screen keeps the full width and adds 192 logical px of sky above the battlefield');
-assert(Math.round(game.getCanvasCoords(512, 768).y) === 768 && game.canvas.height === Math.round(768 * game.deviceScale), 'Pointer mapping and the canvas buffer follow the taller camera');
+// Every screen format shows the identical 16:9 stage, only scaled.
+screenSize(1024, 768);
+assert(game.renderWidth === 1024 && game.renderHeight === 576 && game.stage.top === 96 && game.stage.width === 1024 && game.uiLayer.style.top === '96px', 'A 4:3 screen shows the same stage with bars above and below');
 game.render();
-game.canvas.getBoundingClientRect = () => ({ left: 0, top: 0, width: 2560, height: 1080 });
-game.updateViewport();
-assert(game.renderWidth === 1024 && game.renderHeight === 432 && game.worldOffsetY === -94, 'Ultrawide screens zoom in on the painted Siege scene (sky cropped) instead of copying its edges');
+screenSize(2560, 1080);
+assert(game.renderWidth === 1024 && game.renderHeight === 576 && game.stage.width === 1920 && game.stage.left === 320 && game.canvas.width === Math.round(1024 * game.deviceScale) && game.deviceScale <= 2.5, 'An ultrawide monitor shows the same stage, scaled up crisply and centred');
 game.returnToHub(); game.setMatchMode('training'); game.startMatch();
-assert(game.renderWidth === 1086 && game.renderHeight === Math.round(1086 / (2560 / 1080)) && game.worldOffsetY < 0, 'Training reveals the painted margin of its scene, then zooms (no copied strips)');
+assert(game.renderWidth === 1024 && game.stage.width === 1920, 'Training uses the same stage framing');
 game.returnToHub(); game.setMatchMode('arena'); game.startMatch();
-assert(game.renderWidth > 1300 && game.worldOffsetY === 0, 'Procedural backdrops (Arena) still widen freely');
+assert(game.renderWidth === 1024 && game.worldOffsetY === 0, 'The Arena uses the same stage framing');
 game.returnToHub(); game.setMatchMode('siege'); game.startMatch();
-game.canvas.getBoundingClientRect = canvasRect;
-game.updateViewport();
+game.render();
+screenSize(1024, 576);
 assert(game.renderWidth === 1024 && game.renderHeight === 576, 'A 16:9 screen uses the authored 1024×576 view');
 // Touch vs. mouse/keyboard is detected from the input actually used.
 windowListeners.pointerdown?.({ pointerType: 'touch' });

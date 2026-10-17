@@ -56,6 +56,14 @@ export class GameWorld {
     this.runeCanvas = document.getElementById('rune-canvas');
     this.runeCtx = this.runeCanvas.getContext('2d');
     this.uiLayer = document.getElementById('ui-layer');
+    // One fixed 16:9 stage on every device; the container is the screen.
+    this.container = document.getElementById('game-container');
+    // Soft, dark ambient copy of the scene that fills the letterbox bars.
+    this.backdropCanvas = document.getElementById('stage-backdrop');
+    this.backdropCtx = this.backdropCanvas?.getContext?.('2d') ?? null;
+    this.backdropFrame = 0;
+    this.stage = { left: 0, top: 0, width: 1024, height: 576, scale: 1 };
+    this.screenSize = { width: 1024, height: 576 };
 
     this.logicalWidth = VIEWPORT.width;
     this.logicalHeight = VIEWPORT.height;
@@ -171,13 +179,14 @@ export class GameWorld {
   }
 
   syncHudScale() {
-    const rect = this.canvas.getBoundingClientRect();
-    const height = rect.height;
+    const stage = this.stage;
+    const height = stage?.height;
     if (height > 0 && this.uiLayer) {
-      // HUD scale follows the available height, not the width. This keeps the
-      // perceived character/card size stable while an ultrawide viewport
-      // exposes more horizontal world space.
+      // The HUD is part of the 16:9 stage: same layout on every device,
+      // scaled together with the scene.
       const scale = String(height / this.renderHeight);
+      this.uiLayer.style.left = `${stage.left}px`;
+      this.uiLayer.style.top = `${stage.top}px`;
       // Custom CSS properties must be written through setProperty in a real
       // CSSStyleDeclaration. Bracket assignment happened to work in the test
       // stub but is ignored by browsers, leaving a 1024px HUD over a scaled
@@ -196,12 +205,19 @@ export class GameWorld {
       // itself deliberately remains edge-to-edge.
       const probe = document.getElementById?.('safe-area-probe');
       const computed = probe && globalThis.getComputedStyle?.(probe);
-      const toLogical = (value) => Math.max(0, (Number.parseFloat(value) || 0) / Number(scale));
+      // Insets are measured from the screen edge; the letterbox bars already
+      // keep part (or all) of a notch / Home Indicator off the stage.
+      const toLogical = (value, bar = 0) => Math.max(0, ((Number.parseFloat(value) || 0) - bar) / Number(scale));
+      const bars = {
+        top: stage.top, left: stage.left,
+        right: Math.max(0, this.screenSize.width - stage.left - stage.width),
+        bottom: Math.max(0, this.screenSize.height - stage.top - stage.height)
+      };
       const safe = {
-        top: toLogical(computed?.paddingTop),
-        right: toLogical(computed?.paddingRight),
-        bottom: toLogical(computed?.paddingBottom),
-        left: toLogical(computed?.paddingLeft)
+        top: toLogical(computed?.paddingTop, bars.top),
+        right: toLogical(computed?.paddingRight, bars.right),
+        bottom: toLogical(computed?.paddingBottom, bars.bottom),
+        left: toLogical(computed?.paddingLeft, bars.left)
       };
       // Some iOS standalone launches expose the Home Indicator inset a paint
       // late. Reserve its small physical clearance immediately for installed
@@ -210,7 +226,7 @@ export class GameWorld {
       const isIOS = /iPad|iPhone|iPod/.test(nav?.userAgent || '')
         || (nav?.platform === 'MacIntel' && (nav?.maxTouchPoints || 0) > 1);
       const isStandalone = globalThis.matchMedia?.('(display-mode: standalone)')?.matches || nav?.standalone === true;
-      if (isIOS && isStandalone) safe.bottom = Math.max(safe.bottom, toLogical('22px'));
+      if (isIOS && isStandalone) safe.bottom = Math.max(safe.bottom, toLogical('22px', bars.bottom));
       for (const [edge, value] of Object.entries(safe)) {
         this.uiLayer.style.setProperty?.(`--safe-${edge}`, `${value}px`);
       }
@@ -219,38 +235,50 @@ export class GameWorld {
   }
 
   updateViewport() {
-    const rect = this.canvas.getBoundingClientRect();
+    const rect = this.container?.getBoundingClientRect?.() ?? {};
     const width = rect.width || globalThis.innerWidth || this.logicalWidth;
     const height = rect.height || globalThis.innerHeight || this.logicalHeight;
     if (width <= 0 || height <= 0) return;
+    this.screenSize = { width, height };
 
-    // Constant logical height, variable camera width. Narrow screens add sky
-    // above the arena. Wide screens (e.g. 19.5:9 phones) may reveal more of
-    // the scene only as far as it is painted; beyond that the camera zooms
-    // in and crops a little sky / foreground instead of repeating edge
-    // strips. Gameplay continues to use logicalWidth everywhere.
-    const aspect = width / height;
-    const limits = this.battlefield?.viewLimits?.() ?? { maxWidth: Infinity, topShare: .5 };
-    let nextRenderWidth = Math.max(this.logicalWidth, Math.round(this.logicalHeight * aspect));
-    let nextRenderHeight = Math.max(this.logicalHeight, Math.round(this.logicalWidth / aspect));
-    if (nextRenderWidth > limits.maxWidth) {
-      nextRenderWidth = Math.max(this.logicalWidth, limits.maxWidth);
-      nextRenderHeight = Math.round(nextRenderWidth / aspect);
+    // One identical 16:9 stage on PC, tablet and phone: scene, camera and HUD
+    // are the same everywhere and scale uniformly to fit the screen. Spare
+    // room becomes letterbox / pillarbox bars filled by a soft ambient copy
+    // of the scene (never stretched, never repeated edge strips).
+    const fit = Math.min(width / this.logicalWidth, height / this.logicalHeight);
+    const stageW = Math.round(this.logicalWidth * fit);
+    const stageH = Math.round(this.logicalHeight * fit);
+    this.stage = { left: Math.round((width - stageW) / 2), top: Math.round((height - stageH) / 2), width: stageW, height: stageH, scale: fit };
+    for (const element of [this.canvas, this.runeCanvas]) {
+      if (!element?.style) continue;
+      element.style.left = `${this.stage.left}px`;
+      element.style.top = `${this.stage.top}px`;
+      element.style.width = `${stageW}px`;
+      element.style.height = `${stageH}px`;
     }
-    const nextDeviceScale = Math.min(2, globalThis.window?.devicePixelRatio || globalThis.devicePixelRatio || 1);
-    const changed = nextRenderWidth !== this.renderWidth || nextRenderHeight !== this.renderHeight || nextDeviceScale !== this.deviceScale;
-    this.renderWidth = nextRenderWidth;
-    this.renderHeight = nextRenderHeight;
-    const crop = Math.max(0, this.logicalHeight - this.renderHeight);
-    this.worldOffsetY = crop > 0 ? -Math.round(crop * limits.topShare) : this.renderHeight - this.logicalHeight;
+    // The backing buffer matches the physical pixels of the stage (crisp on
+    // high-DPI phones, capped for performance on 4K screens).
+    const dpr = globalThis.window?.devicePixelRatio || globalThis.devicePixelRatio || 1;
+    const nextDeviceScale = Math.max(1, Math.min(2.5, Math.round(fit * dpr * 100) / 100));
+    const changed = this.renderWidth !== this.logicalWidth || this.renderHeight !== this.logicalHeight || nextDeviceScale !== this.deviceScale;
+    this.renderWidth = this.logicalWidth;
+    this.renderHeight = this.logicalHeight;
+    this.worldOffsetY = 0;
+    this.cameraOffsetX = 0;
     this.deviceScale = nextDeviceScale;
-    this.cameraOffsetX = (this.renderWidth - this.logicalWidth) * 0.5;
     if (changed || this.canvas.width !== Math.round(this.renderWidth * this.deviceScale)) {
       this.configureCanvas(this.canvas, this.ctx);
       this.configureCanvas(this.runeCanvas, this.runeCtx);
       this.clearRuneCanvas();
     }
     this.syncHudScale();
+  }
+
+  // Ambient fill for the bars: a tiny copy of the stage, blurred by CSS.
+  updateStageBackdrop() {
+    if (!this.backdropCtx || (this.backdropFrame++ % 6)) return;
+    const { width, height } = this.backdropCanvas;
+    this.backdropCtx.drawImage?.(this.canvas, 0, 0, width, height);
   }
 
   async init() {
@@ -2154,8 +2182,6 @@ export class GameWorld {
     combat.resetEffects();
     this.activeMode = getGameMode(this.matchMode);
     this.battlefield = new Battlefield(this.activeMode, { trainingMapId: this.trainingMapId });
-    // Each world has its own painted width (wide-screen zoom / crop).
-    this.updateViewport();
     this.attachBattlefieldCallbacks();
     const spawn = this.battlefield.getSpawn('blue');
     this.player = new Player(spawn.x, spawn.z);
@@ -2530,17 +2556,11 @@ export class GameWorld {
 
     ctx.clearRect(0, 0, viewW, viewH);
 
-    // 1. Scene Backdrop (High-Def Waterfalls & Fortress Arena). On screens
-    // narrower than 16:9 the extra top band continues the backdrop's own top
-    // edge, so it reads as more sky rather than a letterbox bar.
+    // 1. Scene Backdrop (the fixed 16:9 stage).
     ctx.save();
     ctx.translate(0, worldY);
     this.battlefield.renderBackground(ctx, cam, this.logicalWidth, this.logicalHeight, viewW, this.cameraOffsetX, this.modeState);
     ctx.restore();
-    if (worldY > 0) {
-      const dpr = this.deviceScale;
-      ctx.drawImage?.(this.canvas, 0, Math.round(worldY * dpr), this.canvas.width, Math.max(1, Math.round(dpr)), 0, 0, viewW, worldY);
-    }
 
     // 2. World Space Layer (with Camera Shake + Dungeon Scroll)
     const dungeonCamX = this.modeState?.dungeonCameraX ?? 0;
@@ -2607,6 +2627,7 @@ export class GameWorld {
     if (this.drawing.active) {
       this.renderRuneStrokes();
     }
+    this.updateStageBackdrop();
   }
 
   renderDungeonExitArrow(ctx, viewW) {
