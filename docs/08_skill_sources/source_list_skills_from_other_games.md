@@ -25,6 +25,11 @@
 
 2. Animes:
 - Sword Art Online
+- Overgeared
+- Black Clover
+- Tougen Anki
+- Black Torch
+- Tomb Raider King
 - Naruto
 - Boruto
 - Bleach
