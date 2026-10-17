@@ -1033,7 +1033,7 @@ export class UIManager {
     }
     if (this.blueFocusText) {
       this.blueFocusText.textContent = player.focusTransformTimer > 0
-        ? `ASCENDANT ${player.focusTransformTimer.toFixed(1)}s`
+        ? `ASCENDANT ${Math.round(player.focus / player.maxFocus * 100)}%`
         : `${Math.round(player.focus / player.maxFocus * 100)}%`;
     }
     this.blueSidePanel?.classList?.toggle('focus-ready', focusReady);

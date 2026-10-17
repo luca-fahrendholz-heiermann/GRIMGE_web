@@ -116,7 +116,10 @@ export function drawBeastBomb(ctx, x, y, r, t) {
 }
 
 export class SpiritArrowSpell {
-  constructor(caster, charge = 1) {
+  // options.pierce: fly through every enemy (else stop at the first);
+  // options.explodeAtEnd: blast with radial blades at max range.
+  constructor(caster, charge = 1, { pierce = true, explodeAtEnd = false } = {}) {
+    this.pierce = pierce; this.explodeAtEnd = explodeAtEnd;
     this.team = caster.team; this.caster = caster;
     this.facing = caster.facing || 1;
     this.charge = Math.max(.15, Math.min(1, charge));
@@ -133,6 +136,16 @@ export class SpiritArrowSpell {
   update(dt, gameWorld) {
     this.t += dt;
     if (this.travel >= this.maxTravel) {
+      if (this.explodeAtEnd && !this.exploded) {
+        this.exploded = true;
+        combat.spawnShockwave(this.x, this.y - this.height * .5, 110, '#ce93d8');
+        combat.spawnHitSparks(this.x, this.y - this.height * .5, this.facing, '#f3e5ff', 18);
+        combat.shakeCamera(8, .25);
+        for (const target of gameWorld.getHostileTargets(this.team).filter(alive)) {
+          if (Math.hypot(target.x - this.x, ((target.z ?? this.z) - this.z) * DEPTH_PX) > 110) continue;
+          target.takeDamage(this.damage * .6, Math.sign(target.x - this.x || this.facing) * 340, 200, .5, false, 'spell');
+        }
+      }
       this.fade += dt;
       if (this.fade > .25) this.isFinished = true;
       return;
@@ -144,9 +157,11 @@ export class SpiritArrowSpell {
       if (this.hit.has(target)) continue;
       if (target.x < lo || target.x > hi || Math.abs((target.z ?? this.z) - this.z) * DEPTH_PX > 30) continue;
       this.hit.add(target);
-      target.takeDamage(this.damage, this.facing * 380, 140, .5, true, 'spell');
+      target.takeDamage(this.damage, this.facing * (this.pierce ? 380 : 160), this.pierce ? 140 : 40, .5, this.pierce, 'spell');
       combat.spawnHitSparks(target.x, (target.y ?? this.y) - 40, this.facing, '#e1bee7', 12);
       combat.shakeCamera(5, .15);
+      // A short arrow stops at its first target.
+      if (!this.pierce) { this.travel = this.maxTravel; this.fade = .2; break; }
     }
   }
 

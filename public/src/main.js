@@ -438,7 +438,12 @@ export class GameWorld {
 
       // K (hold): charge the heavy attack — in a body form the beast bomb /
       // spirit bow. Releasing K lets it fly.
-      if (e.code === 'KeyK' && !e.repeat && this.isMatchRunning() && !this.drawing.active) this.player?.beginCharge('forward');
+      if (e.code === 'KeyK' && !e.repeat && this.isMatchRunning() && !this.drawing.active) {
+        // Direction of the charged attack: K + W = up, K + S = down.
+        const keys = this.input.keys;
+        const dir = keys.KeyW || keys.ArrowUp ? 'up' : keys.KeyS || keys.ArrowDown ? 'down' : 'forward';
+        this.player?.beginCharge(dir);
+      }
 
       // Earned Focus is a match-only transformation resource. It deliberately
       // stays off the rune deck so a full meter remains a fast tactical choice.
@@ -1300,39 +1305,9 @@ export class GameWorld {
       this.showAnnouncement(this.player?.focus >= this.player?.maxFocus ? 'FOCUS ALREADY ACTIVE' : `FOCUS ${Math.round(this.player?.focus ?? 0)}/${this.player?.maxFocus ?? 100}`);
       return false;
     }
-    if (this.activeMode?.id === 'arena') this.grantTransformationRune();
+    // No extra rune card: the form's techniques live on the charged heavy attack.
     this.showAnnouncement('FOCUS ASCENDANT — 8 SECONDS', 1.4);
     return true;
-  }
-
-  grantTransformationRune(form = null) {
-    if (this.player._transformRuneGranted) return;
-    this.player._transformRuneGranted = true;
-    const kind = form ?? (this.player.eidolonTimer > 0 ? 'eidolon' : this.player.ninefoldTimer > 0 ? 'ninefold' : 'focus');
-    const TRANSFORM_RUNES = {
-      focus:    { id: 'transform_beam',    name: 'ANNIHILATION BEAM',   color: '#ff4cff', symbol: '★', glyph: '★' },
-      eidolon:  { id: 'transform_implode', name: 'VOID IMPLOSION',     color: '#b668ff', symbol: '◉', glyph: '◉' },
-      ninefold: { id: 'transform_rampage', name: 'INFERNO RAMPAGE',    color: '#ff6f3b', symbol: '⚡', glyph: '⚡' },
-    };
-    const def = TRANSFORM_RUNES[kind];
-    const card = { ...def, cardId: `${def.id}_${Date.now()}` };
-    this.player.runeDeck.push(card);
-    this.player.drawRunesToHand();
-    this.showAnnouncement(`${def.name} RUNE ACQUIRED`, 1.0);
-  }
-
-  revokeTransformationRune() {
-    if (!this.player._transformRuneGranted) return;
-    this.player._transformRuneGranted = false;
-    const transformIds = new Set(['transform_beam', 'transform_implode', 'transform_rampage']);
-    this.player.runeDeck = this.player.runeDeck.filter(c => !transformIds.has(c.id));
-    this.player.runeHand = this.player.runeHand.filter(c => !transformIds.has(c.id));
-    const slots = this.player.slottedSpells;
-    for (let i = slots.length - 1; i >= 0; i--) {
-      if (slots[i].runes.some(r => transformIds.has(r.id))) slots.splice(i, 1);
-    }
-    this.player.selectedSpellIndex = Math.max(0, Math.min(this.player.selectedSpellIndex, slots.length - 1));
-    this.player.preparedRunes = slots.flatMap(s => s.runes);
   }
 
   setGuardHeld(held) {
@@ -1909,11 +1884,9 @@ export class GameWorld {
     const playerDist = this.player.isAlive ? Math.hypot(this.player.x - relic.x, (this.player.z - relic.z) * 150) : Infinity;
     const enemyDist = this.enemyChampion.isAlive ? Math.hypot(this.enemyChampion.x - relic.x, (this.enemyChampion.z - relic.z) * 150) : Infinity;
     if (playerDist <= 44) {
-      const formKey = relic.form === 'EIDOLON MANTLE' ? 'eidolon' : relic.form === 'NINEFOLD BEAST' ? 'ninefold' : 'focus';
       if (relic.form === 'EIDOLON MANTLE') spells.castEidolonMantle(this.player, RUNE_GRADE_PROFILES.A);
       else if (relic.form === 'NINEFOLD BEAST') spells.castNinefoldBeast(this.player, RUNE_GRADE_PROFILES.A);
       else { this.player.focus = this.player.maxFocus; this.player.activateFocusTransformation(); }
-      if (formKey !== 'focus') this.grantTransformationRune(formKey);
       state.transformationRelic = null;
       state.transformationRelicTimer = 17 + Math.random() * 7;
       this.showAnnouncement(`${relic.form} RELIC CLAIMED`, 1.5);
@@ -2436,9 +2409,6 @@ export class GameWorld {
       this.player.update(scaledDt, this.input, this.battlefield, this);
       this.enemyChampion.update(scaledDt, this, this.battlefield);
       this.noteFallenWizards();
-      if (this.player._transformRuneGranted && this.player.focusTransformTimer <= 0 && this.player.eidolonTimer <= 0 && this.player.ninefoldTimer <= 0) {
-        this.revokeTransformationRune();
-      }
       this.updateArenaRuneCollectibles();
 
       if (this.isMatchRunning()) {

@@ -6,7 +6,8 @@ import { spells } from './spells.js';
 import { ARENA_LAYOUT, ENTITY_VISUALS, GroundEntity, groundDistance } from './world.js';
 import { lookupRecipe, runeManaCost } from './spell_catalog.js';
 import { drawFocusAura, drawEidolonGuardian, drawNinefoldSpirit } from './forms_fx.js';
-import { BeastBombSpell, SpiritArrowSpell, drawBeastBomb, drawSpiritBow } from './form_attacks.js';
+import { drawBeastBomb, drawSpiritBow } from './form_attacks.js';
+import { FULL_CHARGE_TIME, activeMoveset, releaseFormTechnique, FORM_PALETTES } from './form_moves.js';
 
 // Every spell a rune deck can produce: single runes plus every valid two-
 // and three-rune recipe that its cards allow (copies respected).
@@ -41,28 +42,39 @@ export const MELEE_BASELINE = Object.freeze({
   heavy: Object.freeze({ time: .34, damage: 48, knockback: 620, lift: 170, hitstopTicks: 6, hitReaction: 'strong' }),
   dive: Object.freeze({ time: .35, damage: 55, knockback: 200, lift: -300, hitstopTicks: 5, hitReaction: 'strong' })
 });
-// z is projected more strongly than x, but needs to stay quick enough for
-// brawler-style depth dodges and lane changes.
-const DEPTH_SPEED = 1.15;
+// ── Movement values ported from the Unity project ─────────────────────
+// Source: C:\Dev\unity_projects\GRIMGE, character_base_fighter.asset
+// (overrides CharacterDefinition.cs defaults), CharacterMotion.cs and
+// CharacterDriver.cs; 60 Hz ticks. Conversion: UNITY_PX = 24 px per Unity
+// unit (the 3.7 u tall fighter ↔ the 88.8 px hero; the 6 u deep lane ↔ the
+// prototype's 150 px depth metric). Controls and mechanics are unchanged.
+const UNITY_PX = 24;
+const UNITY_LANE_DEPTH = 6;               // u — the full depth range z 0…1
+export const UNITY_MOVEMENT = Object.freeze({
+  walkSpeed: 6.0 * UNITY_PX,               // 6.0 u/s lateral   → 144 px/s
+  depthSpeed: 3.9 / UNITY_LANE_DEPTH,      // 3.9 u/s depth     → 0.65 z/s
+  jumpVelocity: 9.0 * UNITY_PX,            // 9.0 u/s           → 216 px/s
+  gravity: 25.0 * UNITY_PX                 // 25 u/s²           → 600 px/s²
+});
+const DEPTH_SPEED = UNITY_MOVEMENT.depthSpeed;
 
-// ── Movement Spec Constants ────────────────────────────────────────────
-const WALK_ACCEL_TIME = 0.28;
-const WALK_DECEL_TIME = 0.18;
-const TURN_TIME = 0.05;
+const WALK_ACCEL_TIME = 0.12;   // asset: accelerationTime
+const WALK_DECEL_TIME = 0.08;   // asset: decelerationTime
+const TURN_TIME = 0.07;         // asset: turnTime (full reversal)
 
-const SPRINT_MULT = 1.65;
-const SPRINT_FLICK_WINDOW = 0.35;
-const SPRINT_ACCEL_TIME = 0.06;
+const SPRINT_MULT = 1.65;                 // lateral only (depth stays at walk speed)
+const SPRINT_FLICK_WINDOW = 14 / 60;      // 14 ticks between the two taps
+const SPRINT_ACCEL_TIME = 0.06;           // walk → sprint speed
 
-const JUMP_BUFFER_TIME = 0.1;
+const JUMP_BUFFER_TIME = 6 / 60;          // 6 ticks
 
-const BACKDASH_DISTANCE = 320;
-const BACKDASH_DURATION = 0.25;
-const BACKDASH_INVULN_TIME = 0.05;
-const BACKDASH_REVERSAL_WINDOW = 0.25;
-// After a backdash the dodge has a cooldown and no sprint can start right
-// away (a dash never chains into a sprint).
-const BACKDASH_SUPPRESS_TIME = 0.45;
+const BACKDASH_DISTANCE = 1.5 * UNITY_PX; // 1.5 u → 36 px
+const BACKDASH_DURATION = 15 / 60;        // 15 ticks
+const BACKDASH_INVULN_TIME = 3 / 60;      // first 3 ticks
+const BACKDASH_REVERSAL_WINDOW = 9 / 60;  // flick toward facing, then back within 9 ticks
+// After a backdash no sprint can start right away (stale direction is
+// suppressed for 8 ticks in Unity). The prototype keeps its dodge cooldown.
+const BACKDASH_SUPPRESS_TIME = 8 / 60;
 const BACKDASH_COOLDOWN = 0.5;
 
 const KB_DECAY_RATE = 450;
@@ -74,6 +86,7 @@ const HITSTOP_CHARGED_MAX = 8;
 const FINISHER_RECOIL_TICKS = 12;
 const PERFECT_FINISHER_KB_MULT = 1.5;
 
+// Launch speeds applied to hit targets (their own gravity) — combat tuning, unchanged.
 const CHARGED_LAUNCHER_MIN_VEL = 350;
 const CHARGED_LAUNCHER_MAX_VEL = 650;
 const LAUNCHER_LANDING_RECOVERY_TICKS = 18;
@@ -84,10 +97,13 @@ const PERFECT_BLOCK_ATTACKER_RECOIL_TICKS = 8;
 const GRAB_THROW_KB = 5.0;
 const GRAB_RANGE = 55;
 
-const AIR_STEER_ACCEL = 340;
+const AIR_STEER_ACCEL = 6.0 * UNITY_PX;   // sprint-jump air steering, 6 u/s²
+// The player's own combat launches (uppercut, dive, being hit) keep their
+// former arc height under the new gravity: v scales with sqrt(g_new / g_old).
+const PLAYER_ARC_SCALE = Math.sqrt(UNITY_MOVEMENT.gravity / 1250);
 const LAUNCHER_GRAV_SCALE = 0.65;
 const LAUNCHER_APEX_GRAV_SCALE = 0.45;
-const LAUNCHER_APEX_VEL_THRESH = 75;
+const LAUNCHER_APEX_VEL_THRESH = 1.25 * UNITY_PX; // |v| ≤ 1.25 u/s near the apex
 
 const BLOCK_MOVE_MULT = 0.4;
 
@@ -98,6 +114,9 @@ const TOUCH_SPRINT_MIN_TIME = 0.6;     // collisions may eat the distance
 // ── Resources ───────────────────────────────────────────────────────────
 const MANA_REGEN = 9;            // spent mana regenerates; bound mana stays bound
 const FOCUS_DECAY_RATE = 1.5;    // per second, after a short grace period
+// A real transformation has no timer of its own: it burns the Focus meter
+// (full meter ≈ 10 s) and lasts as long as combos keep refilling it.
+const FOCUS_TRANSFORM_DRAIN = 10; // Focus per second while transformed
 const FOCUS_DECAY_DELAY = 3;
 const CLASH_MOVE_MULT = 0.45;
 
@@ -164,9 +183,9 @@ export class Player extends GroundEntity {
     // remaining FREE mana can start a new rune.
     this.reservedMana = 0;
     this.maxSp = 100; this.sp = 100;
-    this.moveSpeed = 340;
+    this.moveSpeed = UNITY_MOVEMENT.walkSpeed;
     this.depthSpeed = DEPTH_SPEED;
-    this.jumpForce = 580;
+    this.jumpForce = UNITY_MOVEMENT.jumpVelocity;
     this.jumpsLeft = 1;
     this.state = 'idle';
     this.stateTimer = 0;
@@ -328,7 +347,11 @@ export class Player extends GroundEntity {
     this.formLean = (this.formLean ?? 0) + (runAlongFacing - (this.formLean ?? 0)) * Math.min(1, dt * 6);
     this.ninefoldCooldown = Math.max(0, this.ninefoldCooldown - dt);
     if (this.ninefoldTimer <= 0) this.ninefoldPower = 1;
-    this.focusTransformTimer = Math.max(0, this.focusTransformTimer - dt);
+    if (this.focusTransformTimer > 0) {
+      this.focus = Math.max(0, this.focus - FOCUS_TRANSFORM_DRAIN * dt);
+      // Remaining time at the current meter (kept for every "is transformed" check).
+      this.focusTransformTimer = this.focus > 0 ? this.focus / FOCUS_TRANSFORM_DRAIN : 0;
+    }
     if (this.focusTransformTimer <= 0) this.focusTransformPower = 1;
     this.attackBufferTimer = Math.max(0, this.attackBufferTimer - dt);
     if (this.attackBufferTimer <= 0) this.queuedAttack = null;
@@ -342,7 +365,11 @@ export class Player extends GroundEntity {
     if (this.slowTimer <= 0) this.slowFactor = 1;
     this.comboResetTimer = Math.max(0, this.comboResetTimer - dt);
     if (this.comboResetTimer <= 0) this.comboStep = 0;
-    if (this.chargeTimer > 0) {
+    if (this.chargeTimer > 0 && this.formCharge) {
+      // Form charge: no auto release at the threshold (safety cap 4 s).
+      this.formCharge.elapsed += dt;
+      if (this.formCharge.elapsed >= 4 || !activeMoveset(this)) this.releaseCharge();
+    } else if (this.chargeTimer > 0) {
       this.chargeTimer = Math.max(0, this.chargeTimer - dt);
       if (this.chargeTimer <= 0) this.releaseCharge();
     }
@@ -541,7 +568,8 @@ export class Player extends GroundEntity {
     const baseSpeed = this.moveSpeed;
     const baseDepth = this.depthSpeed;
     const targetX = move.x * baseSpeed * combinedMult;
-    const targetZ = this.isGuarding ? 0 : move.z * baseDepth * combinedMult;
+    // Sprint speeds up the lateral axis only (Unity: depth stays at walk speed).
+    const targetZ = this.isGuarding ? 0 : move.z * baseDepth * combinedMult / sprintMult;
 
     const accelSpeed = this.sprintActive ? baseSpeed * SPRINT_MULT : baseSpeed;
     this.vx = this.accelerateAxis(this.vx, targetX, accelSpeed, dt);
@@ -671,7 +699,10 @@ export class Player extends GroundEntity {
   beginCharge(direction = 'forward') {
     if (!this.isAlive || this.isGuarding || !this.grounded || this.chargeTimer > 0) return false;
     if (ACTION_STATES.has(this.state)) return false;
-    this.chargeTimer = this.chargeMaxTime;
+    // Inside a transformation / manifest the charge feeds a form technique:
+    // held for FULL_CHARGE_TIME it becomes the FULL version and can be held.
+    this.formCharge = activeMoveset(this) ? { elapsed: 0 } : null;
+    this.chargeTimer = this.formCharge ? 99 : this.chargeMaxTime;
     this.chargeDir = direction;
     this.state = 'guard';
     this.cancelSprint();
@@ -680,12 +711,15 @@ export class Player extends GroundEntity {
   }
 
   releaseCharge() {
+    // Transformations / manifests: one of six form techniques.
+    if (this.formCharge) {
+      const charge = this.formCharge; this.formCharge = null; this.chargeTimer = 0;
+      if (!this.isAlive || charge.elapsed < .08) return false;
+      return this.releaseFormTechnique(charge.elapsed >= FULL_CHARGE_TIME);
+    }
     const chargeRatio = 1 - (this.chargeTimer / this.chargeMaxTime);
     this.chargeTimer = 0;
     if (!this.isAlive || chargeRatio < 0.05) return false;
-    // Body forms replace the charged sword strike with their own attack.
-    if (this.ninefoldTimer > 0) return this.releaseFormAttack(new BeastBombSpell(this, chargeRatio), 'ninefold');
-    if (this.eidolonTimer > 0) return this.releaseFormAttack(new SpiritArrowSpell(this, chargeRatio), 'eidolon');
     const heavy = MELEE_BASELINE.heavy;
     const dmgMult = 1 + chargeRatio * 0.8;
     const kbMult = 1 + chargeRatio * 0.6;
@@ -701,11 +735,16 @@ export class Player extends GroundEntity {
     return true;
   }
 
-  releaseFormAttack(spell, form) {
-    spells.addSpell(spell, 'B');
-    this.state = 'attack3'; this.stateTimer = .32; this.canAttack = false; this.vx = 0;
-    combat.shakeCamera(form === 'ninefold' ? 8 : 6, .25);
-    audio.playSpell?.(form === 'ninefold' ? 'ignis' : 'void_bolt');
+  // Recovery per form and tier (moveset doc: Kyubi fast, Susanoo heavy).
+  releaseFormTechnique(full) {
+    const form = activeMoveset(this);
+    const name = releaseFormTechnique(this, window.gameWorld, spells, this.chargeDir ?? 'forward', full);
+    if (!name) return false;
+    const recovery = { ninefold: full ? .42 : .2, eidolon: full ? .55 : .28, ascendant: full ? .45 : .24 }[form] ?? .3;
+    this.state = this.chargeDir === 'up' ? 'uppercut' : 'attack3';
+    this.stateTimer = recovery; this.canAttack = false; this.vx = 0;
+    combat.shakeCamera(full ? 8 : 4, .25);
+    this.lastFormTechnique = name;
     return true;
   }
 
@@ -802,9 +841,10 @@ export class Player extends GroundEntity {
   }
 
   getEffectiveGravity() {
-    if (!this.launcherMode) return 1250;
-    if (Math.abs(this.vElevation) <= LAUNCHER_APEX_VEL_THRESH) return 1250 * LAUNCHER_APEX_GRAV_SCALE;
-    return 1250 * LAUNCHER_GRAV_SCALE;
+    const g = UNITY_MOVEMENT.gravity;
+    if (!this.launcherMode) return g;
+    if (Math.abs(this.vElevation) <= LAUNCHER_APEX_VEL_THRESH) return g * LAUNCHER_APEX_GRAV_SCALE;
+    return g * LAUNCHER_GRAV_SCALE;
   }
 
   updateSprintVisuals(dt) {
@@ -853,14 +893,14 @@ export class Player extends GroundEntity {
     this.canAttack = false;
     const move = moveVector(input);
     if (attackKind === 'uppercut' || input.keys?.KeyU) {
-      this.state = 'uppercut'; this.stateTimer = MELEE_BASELINE.uppercut.time; this.vElevation = 280;
+      this.state = 'uppercut'; this.stateTimer = MELEE_BASELINE.uppercut.time; this.vElevation = 280 * PLAYER_ARC_SCALE;
       audio.playSlash(1.2);
       combat.spawnSlashArc(this.x, this.y - 25, this.facing, { radius: 46, angleStart: -1.2, angleEnd: 0.6, color: '#ffea00', glow: '#ff9800' });
       this.triggerMeleeHitbox(MELEE_BASELINE.uppercut.damage, this.facing * MELEE_BASELINE.uppercut.knockback, MELEE_BASELINE.uppercut.lift, 0.5, false, { hitstopTicks: MELEE_BASELINE.uppercut.hitstopTicks, hitReaction: MELEE_BASELINE.uppercut.hitReaction });
       return true;
     }
     if (!this.grounded && (attackKind === 'dive' || move.z > 0.55)) {
-      this.state = 'dive'; this.stateTimer = MELEE_BASELINE.dive.time; this.vElevation = -850;
+      this.state = 'dive'; this.stateTimer = MELEE_BASELINE.dive.time; this.vElevation = -850 * PLAYER_ARC_SCALE;
       audio.playSlash(0.9);
       combat.spawnSlashArc(this.x, this.y - 15, this.facing, { radius: 50, angleStart: 0.8, angleEnd: 2.2, color: '#ff5722', glow: '#d50000' });
       this.triggerMeleeHitbox(MELEE_BASELINE.dive.damage, this.facing * MELEE_BASELINE.dive.knockback, MELEE_BASELINE.dive.lift, 0.6, false, { hitstopTicks: MELEE_BASELINE.dive.hitstopTicks, hitReaction: MELEE_BASELINE.dive.hitReaction });
@@ -953,7 +993,7 @@ export class Player extends GroundEntity {
           this.guardHoldTime = 0;
           this.guardBreakTimer = 0.7;
           this.state = 'hurt'; this.stateTimer = 0.7; this.canAttack = false;
-          this.kbVelX = -this.facing * 110; this.vElevation = 35;
+          this.kbVelX = -this.facing * 110; this.vElevation = 35 * PLAYER_ARC_SCALE;
           combat.spawnShockwave(this.x, this.y - 28, 46, '#ffca28');
           combat.spawnDamageText(this.x, this.y - 56, 'BREAK', { color: '#ffca28', isCrit: true });
           return { blocked: true, guardBroken: true };
@@ -1003,7 +1043,7 @@ export class Player extends GroundEntity {
     if (lift > 200) {
       this.launcherMode = true;
     }
-    this.vElevation = lift;
+    this.vElevation = lift * PLAYER_ARC_SCALE;
     this.cancelSprint();
     this.backdashTimer = 0;
     this.state = 'hurt'; this.stateTimer = stun; this.canAttack = false;
@@ -1235,12 +1275,9 @@ export class Player extends GroundEntity {
     if (formCloak) this.renderFormCloak(ctx, renderY, renderOpts, formCloak, 'back');
     sprites.renderEntity(ctx, this.heroKey, this.x, renderY, renderOpts);
     if (formCloak) this.renderFormCloak(ctx, renderY, renderOpts, formCloak, 'front');
-    // Charging inside a body form: the beast bomb grows / the spirit bow is drawn.
-    if (this.isAlive && this.chargeTimer > 0 && (this.ninefoldTimer > 0 || this.eidolonTimer > 0)) {
-      const charge = 1 - this.chargeTimer / this.chargeMaxTime;
-      if (this.ninefoldTimer > 0) drawBeastBomb(ctx, this.x + this.facing * (34 + 10 * charge), renderY - 52, 6 + 24 * charge, this.animTime);
-      else drawSpiritBow(ctx, this.x + this.facing * 40, renderY - 84, this.facing, charge, this.animTime);
-    }
+    // Charging a form technique: forward builds the projectile / bow, up and
+    // down gather energy in the arms / legs; a pulse ring marks FULL ready.
+    if (this.isAlive && this.formCharge) this.renderFormCharge(ctx, renderY);
     // Front layers of the body forms (ribs, claws) wrap around the Wizard.
     if (this.isAlive && this.eidolonTimer > 0) drawEidolonGuardian(ctx, this.x, renderY, this.facing, this.animTime, this.eidolonAge ?? 1, Math.min(1, this.eidolonTimer * 2), 'front', this.formMotion());
     if (this.isAlive && this.ninefoldTimer > 0) drawNinefoldSpirit(ctx, this.x, renderY, this.facing, this.animTime, this.ninefoldAge ?? 1, Math.min(1, this.ninefoldTimer * 2), 'front', this.formMotion());
@@ -1298,6 +1335,32 @@ export class Player extends GroundEntity {
     });
   }
 
+  renderFormCharge(ctx, renderY) {
+    const form = activeMoveset(this);
+    if (!form) return;
+    const charge = Math.min(1, this.formCharge.elapsed / FULL_CHARGE_TIME);
+    const full = this.formCharge.elapsed >= FULL_CHARGE_TIME;
+    const dir = this.chargeDir ?? 'forward';
+    const pal = FORM_PALETTES[form];
+    if (dir === 'forward' && form === 'ninefold') drawBeastBomb(ctx, this.x + this.facing * (34 + 10 * charge), renderY - 52, 6 + 24 * charge, this.animTime);
+    else if (dir === 'forward' && form === 'eidolon') drawSpiritBow(ctx, this.x + this.facing * 40, renderY - 84, this.facing, charge, this.animTime);
+    else {
+      // Energy gathering: a core in front (forward), in the fists (up) or at the feet (down).
+      const cy = dir === 'up' ? renderY - 70 : dir === 'down' ? renderY - 8 : renderY - 52;
+      const cx = this.x + this.facing * (dir === 'forward' ? 36 : 14);
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      ctx.fillStyle = pal.glow + (.35 + .4 * charge) + ')';
+      ctx.beginPath(); ctx.arc(cx, cy, 6 + 14 * charge, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = pal.core; ctx.beginPath(); ctx.arc(cx, cy, 3 + 6 * charge, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
+    if (full) {
+      const pulse = .5 + .5 * Math.sin(this.animTime * 14);
+      ctx.save(); ctx.strokeStyle = pal.glow + (.6 + .4 * pulse) + ')'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.ellipse(this.x, renderY, 30 + 6 * pulse, 9 + 2 * pulse, 0, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+    }
+  }
+
   // Colour of the cloak of the active body form / transformation.
   formCloakColor() {
     if (this.ninefoldTimer > 0) return { edge: 'rgba(255,110,20,1)', inner: 'rgba(255,170,60,1)', fade: Math.min(1, this.ninefoldTimer * 2) };
@@ -1349,10 +1412,16 @@ export class Player extends GroundEntity {
   }
 
   gainFocus(amount, source = 'COMBAT') {
-    if (!this.isAlive || this.focusTransformTimer > 0) return false;
+    if (!this.isAlive) return false;
     const previous = this.focus;
+    const transformed = this.focusTransformTimer > 0;
     this.focusDecayDelay = FOCUS_DECAY_DELAY;
     this.focus = Math.min(this.maxFocus, this.focus + Math.max(0, amount) * (this.buildModifiers?.focusGain ?? 1));
+    // While transformed, combos refill the meter and so extend the form.
+    if (transformed) {
+      this.focusTransformTimer = this.focus / FOCUS_TRANSFORM_DRAIN;
+      return this.focus > previous;
+    }
     if (previous < this.maxFocus && this.focus >= this.maxFocus) {
       window.gameWorld?.showAnnouncement?.('FOCUS FULL — TAP FOCUS OR PRESS T', 1.8);
       combat.spawnShockwave(this.x, this.y - 34, 52, '#f0c8ff');
@@ -1362,8 +1431,8 @@ export class Player extends GroundEntity {
 
   activateFocusTransformation() {
     if (!this.isAlive || this.focus < this.maxFocus || this.focusTransformTimer > 0 || this.activeClash) return false;
-    this.focus = 0;
-    this.focusTransformTimer = 8;
+    // No own timer: the transformation now burns the Focus meter.
+    this.focusTransformTimer = this.focus / FOCUS_TRANSFORM_DRAIN;
     this.focusTransformPower = 1;
     combat.spawnShockwave(this.x, this.y - 38, 92, '#f0a6ff');
     combat.spawnElementalParticles(this.x, this.y - 38, 'void', 34);

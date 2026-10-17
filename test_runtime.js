@@ -1416,35 +1416,93 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
   game.render();
   assert(P.ninefoldTimer > 0 && P.eidolonTimer === 0, 'The Ninefold spirit replaces the guardian and renders');
   P.ninefoldTimer = 0;
-  // Charged attacks inside the body forms: beast bomb (Ninefold) / spirit arrow (Eidolon).
+  // Form techniques: six charged heavies (forward / up / down × short / full)
+  // per transformation and manifest — no extra rune card is ever added.
+  const { FORM_MOVESETS, FULL_CHARGE_TIME, activeMoveset } = await import('./public/src/form_moves.js');
   const neutralInput = { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false };
-  const resetForm = () => { spellSystem.clearRuntime(); P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.grounded = true; P.elevation = 0; P.chargeTimer = 0; P.facing = 1; P.x = 300; P.z = .5; game.battlefield.placeOnSurface(P); };
-  resetForm();
-  P.ninefoldTimer = 8; P.eidolonTimer = 0;
-  const bombTarget = game.trainingDummy; bombTarget.homeX = bombTarget.x = 520; bombTarget.homeZ = bombTarget.z = .5;
-  assert(P.beginCharge('forward'), 'Holding the heavy attack starts charging in the Ninefold form');
-  P.chargeTimer = P.chargeMaxTime * .2;
-  game.render();
-  assert(P.releaseCharge() && spellSystem.activeSpells.some((s) => s.constructor.name === 'BeastBombSpell'), 'Releasing the charge in the Ninefold form hurls a beast bomb instead of a sword strike');
+  const resetForm = () => { spellSystem.clearRuntime(); P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.grounded = true; P.elevation = 0; P.chargeTimer = 0; P.formCharge = null; P.facing = 1; P.x = 300; P.z = .5; P.ninefoldTimer = 0; P.eidolonTimer = 0; P.focusTransformTimer = 0; game.battlefield.placeOnSurface(P); };
+  const formTarget = game.trainingDummy; formTarget.homeX = formTarget.x = 400; formTarget.homeZ = formTarget.z = .5;
+  const chargeAndRelease = (dir, full) => {
+    P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.grounded = true;
+    if (!P.beginCharge(dir)) return null;
+    P.formCharge.elapsed = full ? FULL_CHARGE_TIME + .05 : .3;
+    return P.releaseCharge() ? P.lastFormTechnique : null;
+  };
+  const forms = { ninefold: () => { P.ninefoldTimer = 8; }, eidolon: () => { P.eidolonTimer = 8; }, ascendant: () => { P.focus = P.maxFocus; P.focusTransformTimer = 10; } };
+  const released = [];
+  for (const [formId, enable] of Object.entries(forms)) {
+    for (const dir of ['forward', 'up', 'down']) {
+      for (const full of [false, true]) {
+        resetForm(); enable();
+        const name = chargeAndRelease(dir, full);
+        for (let i = 0; i < 80; i++) spellSystem.update(1 / 60, game);
+        game.render();
+        if (name === FORM_MOVESETS[formId][dir][full ? 'full' : 'short'].name) released.push(`${formId}:${dir}:${full}`);
+      }
+    }
+  }
+  assert(released.length === 18, `Every transformation / manifest has six charged techniques (forward / up / down × short / full): ${released.length}/18`);
+  resetForm(); P.ninefoldTimer = 8;
+  chargeAndRelease('forward', false);
+  assert(spellSystem.activeSpells.some((s) => s.constructor.name === 'FormStrikeSpell' && s.kind === 'cone'), 'A short forward heavy in the Ninefold form is the Beast Pulse cone wave');
+  resetForm(); P.ninefoldTimer = 8;
+  const hpBeforeBomb = formTarget.hp;
+  chargeAndRelease('forward', true);
   const bomb = spellSystem.activeSpells.find((s) => s.constructor.name === 'BeastBombSpell');
-  const dummyHp = bombTarget.hp;
-  for (let i = 0; i < 90 && !bomb.exploded; i++) spellSystem.update(1 / 60, game);
-  assert(bomb.exploded && bombTarget.hp < dummyHp, 'The beast bomb detonates on the first enemy and damages it');
-  resetForm();
-  P.ninefoldTimer = 0; P.eidolonTimer = 8;
-  P.beginCharge('forward'); P.chargeTimer = P.chargeMaxTime * .3;
-  game.render();
-  assert(P.releaseCharge() && spellSystem.activeSpells.some((s) => s.constructor.name === 'SpiritArrowSpell'), 'Releasing the charge in the Eidolon Mantle shoots a giant spirit arrow');
-  const arrow = spellSystem.activeSpells.find((s) => s.constructor.name === 'SpiritArrowSpell');
-  const arrowHp = bombTarget.hp;
-  for (let i = 0; i < 30; i++) spellSystem.update(1 / 60, game);
-  assert(arrow.hit.has(bombTarget) && bombTarget.hp < arrowHp, 'The spirit arrow pierces through the enemies in its path');
-  resetForm();
+  for (let i = 0; i < 90 && bomb && !bomb.exploded; i++) spellSystem.update(1 / 60, game);
+  assert(bomb?.exploded && formTarget.hp < hpBeforeBomb, 'A full forward heavy hurls the beast bomb, which detonates on the first enemy');
+  resetForm(); P.eidolonTimer = 8;
+  chargeAndRelease('forward', false);
+  const shortArrow = spellSystem.activeSpells.find((s) => s.constructor.name === 'SpiritArrowSpell');
+  assert(shortArrow && !shortArrow.pierce, 'A short forward heavy in the Eidolon form looses a single spectral arrow (no pierce)');
+  resetForm(); P.eidolonTimer = 8;
+  chargeAndRelease('forward', true);
+  const siegeArrow = spellSystem.activeSpells.find((s) => s.constructor.name === 'SpiritArrowSpell');
+  assert(siegeArrow?.pierce && siegeArrow.explodeAtEnd, 'A full forward heavy looses the piercing Astral Siege Arrow that explodes at max range');
+  resetForm(); P.focus = P.maxFocus; P.focusTransformTimer = 10; P.ninefoldTimer = 8;
+  assert(activeMoveset(P) === 'ninefold', 'A manifest overrides the transformation moveset while it lasts');
+  P.ninefoldTimer = 0;
+  assert(activeMoveset(P) === 'ascendant', 'Afterwards the transformation moveset returns');
+  resetForm(); P.ninefoldTimer = 8;
+  P.beginCharge('forward'); P.formCharge.elapsed = 2; P.update(1 / 60, neutralInput, game.battlefield, game);
+  assert(P.formCharge && P.chargeTimer > 0, 'A FULL form charge can be held (no automatic release at the threshold)');
+  P.releaseCharge();
+  resetForm(); P.eidolonTimer = 8;
+  game.input.keys.KeyW = true;
   windowListeners.keydown?.({ code: 'KeyK', repeat: false, preventDefault() {} });
-  assert(P.chargeTimer > 0, 'Holding K charges the heavy attack on the keyboard');
-  P.chargeTimer = P.chargeMaxTime * .3;
+  game.input.keys.KeyW = false;
+  assert(P.chargeDir === 'up' && P.formCharge, 'K + W charges the UP technique on the keyboard');
+  P.formCharge.elapsed = FULL_CHARGE_TIME + .1;
   windowListeners.keyup?.({ code: 'KeyK', preventDefault() {} });
-  assert(P.chargeTimer === 0 && spellSystem.activeSpells.some((s) => s.constructor.name === 'SpiritArrowSpell'), 'Releasing K lets the charged attack fly');
+  assert(P.lastFormTechnique === 'HEAVEN SPLITTER', 'Releasing K fires the full up technique (Heaven Splitter)');
+  // Transformations burn the Focus meter instead of running on a timer.
+  resetForm();
+  const deckBefore = P.runeDeck.length + P.runeHand.length;
+  P.focus = P.maxFocus;
+  assert(game.activateFocusTransformation() && P.runeDeck.length + P.runeHand.length === deckBefore, 'Transforming adds no extra rune card to deck or hand');
+  for (let i = 0; i < 60; i++) P.update(1 / 60, neutralInput, game.battlefield, game);
+  const afterSecond = P.focus;
+  assert(P.focusTransformTimer > 0 && afterSecond < P.maxFocus - 5 && afterSecond > P.maxFocus - 15, 'While transformed the Focus meter drains (~10 per second)');
+  P.focus = 60; P.focusTransformTimer = 6;
+  P.gainFocus(20, 'COMBO');
+  assert(Math.abs(P.focus - 80) < .01 && Math.abs(P.focusTransformTimer - 8) < .01, 'Combos refill the meter and extend the transformation');
+  P.focus = .05; P.update(1 / 60, neutralInput, game.battlefield, game);
+  assert(P.focusTransformTimer === 0 && P.focus === 0, 'The transformation ends when the Focus meter is empty');
+  resetForm();
+  // Movement values ported from the Unity project (24 px per unit, 60 Hz).
+  const { UNITY_MOVEMENT } = await import('./public/src/entities.js');
+  resetForm();
+  assert(P.moveSpeed === 144 && Math.abs(P.depthSpeed - .65) < 1e-9 && P.jumpForce === 216 && UNITY_MOVEMENT.gravity === 600, 'Walk 6 u/s, depth 3.9 u/s, jump 9 u/s and gravity 25 u/s² come from the Unity character asset');
+  P.performJump();
+  let apex = 0; let airTicks = 0;
+  for (let i = 0; i < 120; i++) { P.update(1 / 60, neutralInput, game.battlefield, game); apex = Math.max(apex, P.elevation); airTicks++; if (P.grounded && i > 2) break; }
+  assert(Math.abs(apex - 38.9) < 3 && Math.abs(airTicks / 60 - .72) < .06, `A jump peaks at ~1.6 u (${apex.toFixed(1)} px) and lasts ~0.72 s (${(airTicks / 60).toFixed(2)} s) like in Unity`);
+  resetForm(); P.backdashCooldown = 0; P.backdashSuppressTimer = 0;
+  const dashFrom = P.x;
+  P.triggerBackdash();
+  for (let i = 0; i < 20; i++) P.update(1 / 60, neutralInput, game.battlefield, game);
+  assert(Math.abs(Math.abs(P.x - dashFrom) - 36) < 4, `The backdash covers 1.5 u (${Math.abs(P.x - dashFrom).toFixed(1)} px) over 15 ticks`);
+  resetForm();
   // The body forms move with the Wizard: running makes them lean / stream.
   resetForm();
   const runInput = { ...neutralInput, move: { x: 1, z: 0 } };
