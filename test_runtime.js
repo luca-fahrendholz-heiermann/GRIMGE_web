@@ -913,7 +913,9 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
   P.update(.1, neutralInput, game.battlefield, game);
   assert(P.sprintActive && P.vx > 0, 'Releasing right after the sprint flick still runs the guaranteed minimum distance');
   for (let t = 0; t < 1.2; t += 1 / 60) P.update(1 / 60, neutralInput, game.battlefield, game);
-  assert(!P.sprintActive, 'After the minimum run a released sprint brakes to a stop instead of running forever');
+  assert(P.sprintActive && P.vx > 0, 'Auto-run: after the flick the sprint keeps going without holding the direction');
+  P.update(1 / 60, { ...neutralInput, keys: { ArrowLeft: true }, move: { x: -1, z: 0 } }, game.battlefield, game);
+  assert(!P.sprintActive, 'Another movement input (here the opposite direction) ends the auto-run');
   resetDuel(); P.backdashCooldown = 0;
   fakeNow += 1000; touch.beginJoystick(ev(300, 400));
   fakeNow += 70; touch.update(ev(190, 398));
@@ -1539,11 +1541,11 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
   // Movement values ported from the Unity project (24 px per unit, 60 Hz).
   const { UNITY_MOVEMENT } = await import('./public/src/entities.js');
   resetForm();
-  assert(P.moveSpeed === 144 && Math.abs(P.depthSpeed - .65) < 1e-9 && P.jumpForce === 216 && UNITY_MOVEMENT.gravity === 600, 'Walk 6 u/s, depth 3.9 u/s, jump 9 u/s and gravity 25 u/s² come from the Unity character asset');
+  assert(P.moveSpeed === 144 && Math.abs(P.depthSpeed - .65) < 1e-9 && P.jumpForce === 324 && UNITY_MOVEMENT.gravity === 816, 'Walk 6 u/s and depth 3.9 u/s from the Unity asset; the jump is raised (13.5 u/s, 34 u/s²)');
   P.performJump();
   let apex = 0; let airTicks = 0;
   for (let i = 0; i < 120; i++) { P.update(1 / 60, neutralInput, game.battlefield, game); apex = Math.max(apex, P.elevation); airTicks++; if (P.grounded && i > 2) break; }
-  assert(Math.abs(apex - 38.9) < 3 && Math.abs(airTicks / 60 - .72) < .06, `A jump peaks at ~1.6 u (${apex.toFixed(1)} px) and lasts ~0.72 s (${(airTicks / 60).toFixed(2)} s) like in Unity`);
+  assert(Math.abs(apex - 64.3) < 4 && Math.abs(airTicks / 60 - .79) < .06, `A jump peaks at ~0.73 hero heights (${apex.toFixed(1)} px) and lasts ~0.79 s (${(airTicks / 60).toFixed(2)} s)`);
   resetForm(); P.backdashCooldown = 0; P.backdashSuppressTimer = 0;
   const dashFrom = P.x;
   P.triggerBackdash();
@@ -2532,6 +2534,32 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   P.beginCharge('up', 'key'); P.formCharge.elapsed = .3; const fired = P.releaseCharge();
   assert(!fired && P.mp === 3 && !spells.activeSpells.length, 'Without free mana the technique fizzles (NO MANA)');
   P.mp = P.maxMp; buff.endBuffForm(P); spells.clearRuntime();
+}
+
+// Movement after the Unity original: rooted attacks, full combos on a target in front, long sprint jump, auto-run.
+{
+  game.returnToHub(); game.setMatchMode('training'); game.startMatch(); game.selectTrainingMap('waterfalls');
+  const P = game.player; const dummy = game.trainingDummy; spells.clearRuntime();
+  const neutral = { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false };
+  const idle = () => { P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.vx = 0; P.vz = 0; P.kbVelX = 0; P.grounded = true; P.elevation = 0; P.sprintActive = false; P.comboStep = 0; };
+  P.equipWeapon(null); P.equipClassWeapon(null);
+  P.x = 300; P.z = .5; P.facing = 1; game.battlefield.placeOnSurface(P); dummy.homeX = dummy.x = 700; idle();
+  const x0 = P.x; P.executeAttack(neutral, 'normal'); for (let i = 0; i < 20; i++) P.update(1 / 60, neutral, game.battlefield, game);
+  assert(Math.abs(P.x - x0) < 1, 'A whiffed attack no longer lunges forward (rooted like in Unity)');
+  // Repeated attacks on a target in front: every chain hit lands, nobody walks through.
+  idle(); dummy.homeX = dummy.x = P.x + 14; dummy.homeZ = dummy.z = P.z; dummy.hp = dummy.maxHp; let hits = 0; let last = dummy.hp;
+  for (let k = 0; k < 3; k++) { idle(); P.comboStep = k; P.executeAttack(neutral, 'normal'); if (dummy.hp < last) hits++; last = dummy.hp; for (let i = 0; i < 18; i++) P.update(1 / 60, neutral, game.battlefield, game); }
+  assert(hits === 3 && P.x < dummy.x, 'Mashing attack keeps hammering the enemy in front (all three chain hits land, no walking through)');
+  // Sprint jump carries much further than a walking jump.
+  const jumpDistance = (sprint) => { idle(); P.x = 300; P.facing = 1; if (sprint) { P.sprintActive = true; P.sprintDir = 1; P.vx = P.moveSpeed * 1.65; } else P.vx = P.moveSpeed; P.performJump(); const s0 = P.x; for (let i = 0; i < 90 && (i < 3 || !P.grounded); i++) P.update(1 / 60, neutral, game.battlefield, game); return P.x - s0; };
+  const walkJ = jumpDistance(false); const sprintJ = jumpDistance(true);
+  assert(sprintJ > walkJ * 1.45, 'Sprint + jump is a much longer jump (' + Math.round(sprintJ) + ' vs ' + Math.round(walkJ) + ' px)');
+  // Keyboard auto-run: the sprint keeps going after releasing the key; a depth input ends it.
+  idle(); P.x = 300; P.activateSprint(1); for (let i = 0; i < 20; i++) P.update(1 / 60, neutral, game.battlefield, game);
+  assert(P.sprintActive && P.vx > P.moveSpeed, 'Auto-run: the sprint continues without holding the direction');
+  P.update(1 / 60, { ...neutral, keys: { KeyS: true }, move: { x: 0, z: 1 } }, game.battlefield, game);
+  assert(!P.sprintActive, 'A different movement input (depth) ends the auto-run');
+  idle(); dummy.homeX = dummy.x = 512;
 }
 
 const frameCallback = nextFrame;

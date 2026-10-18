@@ -61,8 +61,10 @@ const UNITY_LANE_DEPTH = 6;               // u — the full depth range z 0…1
 export const UNITY_MOVEMENT = Object.freeze({
   walkSpeed: 6.0 * UNITY_PX,               // 6.0 u/s lateral   → 144 px/s
   depthSpeed: 3.9 / UNITY_LANE_DEPTH,      // 3.9 u/s depth     → 0.65 z/s
-  jumpVelocity: 9.0 * UNITY_PX,            // 9.0 u/s           → 216 px/s
-  gravity: 25.0 * UNITY_PX                 // 25 u/s²           → 600 px/s²
+  // Jump raised on request (Unity: 9 u/s / 25 u/s², apex ≈ 0.44 hero heights):
+  // 13.5 u/s with 34 u/s² peaks at ≈ 0.73 hero heights in ≈ 0.79 s.
+  jumpVelocity: 13.5 * UNITY_PX,           // 13.5 u/s          → 324 px/s
+  gravity: 34.0 * UNITY_PX                 // 34 u/s²           → 816 px/s²
 });
 const DEPTH_SPEED = UNITY_MOVEMENT.depthSpeed;
 
@@ -420,7 +422,8 @@ export class Player extends GroundEntity {
     this.backdashSuppressTimer = Math.max(0, this.backdashSuppressTimer - dt);
 
     const controlsBlocked = input.gameplayBlocked || this.freezeTimer > 0 || this.state === 'hurt' || !this.isAlive;
-    const isAction = ACTION_STATES.has(this.state) && this.state !== 'hurt';
+    const whiffFree = this._whiffRecovery > 0 && /^attack[12]$/.test(this.state) && this.stateTimer <= this._whiffRecovery;
+    const isAction = ACTION_STATES.has(this.state) && this.state !== 'hurt' && !whiffFree;
     const guardRequested = !!(input.keys?.KeyF || input.guardHeld);
     const wasGuarding = this.isGuarding;
     this.isGuarding = !controlsBlocked && !isAction && this.grounded
@@ -467,6 +470,7 @@ export class Player extends GroundEntity {
       this.z += (this.vz + this.kbVelZ) * dt;
       battlefield.resolveEntityCollision(this);
       gameWorld?.resolveSpellObstacles(this, previousX, previousZ);
+      if (this.sprintActive && this.grounded && Math.abs(this.vx) > this.moveSpeed && Math.abs(this.x - previousX) < Math.abs(this.vx) * dt * .2) this.cancelSprint();
       if (this.grounded) {
         if (this._wasAirborne) {
           formJumpFx(this, 'land');
@@ -588,7 +592,6 @@ export class Player extends GroundEntity {
       const along = move.x * this.sprintDir;
       const minRunLeft = this.touchSprint.remaining > 0 && this.touchSprint.time < TOUCH_SPRINT_MIN_TIME;
       if (minRunLeft && along < 0.3 && along > -0.5) move = { x: this.sprintDir, z: move.z };
-      else if (!minRunLeft && !this.touchSprint.held) this.cancelSprint();
     }
 
     if (this.backdashTimer > 0) return;
@@ -599,6 +602,13 @@ export class Player extends GroundEntity {
       return;
     }
 
+    // Auto-run (user request): a sprint keeps going without holding the direction until
+    // another movement input — the opposite direction or a depth input — ends it.
+    if (this.sprintActive) {
+      const reverse = Math.abs(move.x) >= .3 && Math.sign(move.x) !== this.sprintDir;
+      if (reverse || Math.abs(move.z) >= .3) this.cancelSprint();
+      else move = { x: this.sprintDir, z: 0 };
+    }
     if (Math.abs(move.x) > 0.02 && !this.sprintActive && !this.isGuarding && !this.touchFacingLock) this.facing = Math.sign(move.x);
 
     const sprintMult = this.sprintActive ? SPRINT_MULT : 1;
@@ -623,11 +633,6 @@ export class Player extends GroundEntity {
     this.vz = this.accelerateAxis(this.vz, targetZ, baseDepth * (combinedMult > 1 ? combinedMult : 1), dt);
     if (this.touchSprint) this.touchSprint.remaining -= Math.abs(this.vx) * dt;
 
-    if (this.sprintActive) {
-      if (Math.abs(move.x) < 0.3 || Math.sign(move.x) !== this.sprintDir) {
-        this.cancelSprint();
-      }
-    }
 
     const moving = Math.hypot(move.x, move.z) > 0.05;
     if (moving && this.grounded) {
@@ -782,7 +787,7 @@ export class Player extends GroundEntity {
       const up = dir === 'up';
       this.state = up ? 'uppercut' : 'heavyStrike'; this.stateTimer = heavy.time; this._weaponSwingTime = heavy.time;
       this.setWeaponMotion(up ? 'uppercut' : 'heavy');
-      this.vx = this.facing * (up ? 120 : 260); this.canAttack = false;
+      this.vx = 0; this.canAttack = false;
       if (up) this.vElevation = 180 * PLAYER_ARC_SCALE;
       audio.playSlash(up ? 1.05 : .7);
       combat.spawnSlashArc(this.x + this.facing * 20, this.y - (up ? 30 : 8), this.facing, up ? { radius: 56 + chargeRatio * 16, angleStart: -1.5, angleEnd: .5, color: '#ffea00', glow: '#ff9800', width: 6 + chargeRatio * 4 } : { radius: 64 + chargeRatio * 18, angleStart: .1, angleEnd: 1.2, color: '#ffd54f', glow: '#ff6d00', width: 6 + chargeRatio * 4 });
@@ -794,7 +799,7 @@ export class Player extends GroundEntity {
     this.stateTimer = heavy.time;
     this._weaponSwingTime = heavy.time;
     this.setWeaponMotion('heavy');
-    this.vx = this.facing * 360 * (1 + chargeRatio * 0.3);
+    this.vx = 0; this.vz = 0; // rooted heavy (Unity)
     this.canAttack = false;
     audio.playSlash(0.78 - chargeRatio * 0.15);
     const radius = 58 + chargeRatio * 20;
@@ -908,11 +913,11 @@ export class Player extends GroundEntity {
   }
 
   updateAirSteering(dt, input) {
+    // Unity: RequestSprintJump locks the sprint velocity for the whole jump (the
+    // 6 u/s² steering never applies), so a sprint jump carries ≈ 1.65 × further.
+    // Only a firm counter-input brakes it gently.
     const move = normalizeMove(moveVector(input));
-    const targetX = move.x * this.moveSpeed;
-    const accelDelta = AIR_STEER_ACCEL * dt;
-    this.vx = moveTowards(this.vx, targetX, accelDelta);
-    if (Math.abs(move.x) > 0.02) this.facing = Math.sign(move.x);
+    if (Math.abs(move.x) > .5 && Math.sign(move.x) !== Math.sign(this.vx)) this.vx = moveTowards(this.vx, 0, AIR_STEER_ACCEL * dt);
   }
 
   updateKnockback(dt) {
@@ -1015,7 +1020,7 @@ export class Player extends GroundEntity {
     }
     if (attackKind === 'heavy') {
       const heavy = weapon ? { ...MELEE_BASELINE.heavy, ...weapon.heavy } : MELEE_BASELINE.heavy;
-      this.state = 'heavyStrike'; this.stateTimer = heavy.time; this._weaponSwingTime = heavy.time; this.vx = this.facing * 360;
+      this.state = 'heavyStrike'; this.stateTimer = heavy.time; this._weaponSwingTime = heavy.time; this.vx = 0; this.vz = 0;
       signatureEvent(this, 'heavy', { charge: 0 });
       this.setWeaponMotion('heavy');
       audio.playSlash(0.78);
@@ -1028,7 +1033,9 @@ export class Player extends GroundEntity {
     this.comboStep = (this.comboStep % combo.length) + 1;
     this.comboResetTimer = 0.65;
     const attack = combo[this.comboStep - 1];
-    this.state = attack.state; this.stateTimer = attack.time; this._weaponSwingTime = attack.time; this.vx = this.facing * attack.vx;
+    // Unity: ground attacks root the Wizard — no forward lunge on a whiff.
+    this.state = attack.state; this.stateTimer = attack.time; this._weaponSwingTime = attack.time; this.vx = 0; this.vz = 0;
+    this._whiffRecovery = 0;
     signatureEvent(this, 'attack', { step: this.comboStep, damage: attack.damage });
     this.setWeaponMotion('combo', this.comboStep);
     audio.playSlash(attack.finisher ? 0.85 : 1 + this.comboStep * 0.1);
@@ -1039,7 +1046,11 @@ export class Player extends GroundEntity {
       combat.spawnHitSparks(this.x + this.facing * 20, this.y - 32, this.facing, '#ffd700', 14);
       combat.shakeCamera(6, 0.18);
     }
-    this.triggerMeleeHitbox(attack.damage, this.facing * attack.knockback, attack.lift, attack.finisher ? 0.6 : 0.4, !!attack.finisher, { hitstopTicks: attack.hitstopTicks, hitReaction: attack.hitReaction, reach: attack.reach, behind: attack.behind, crit: attack.crit, freeze: attack.freeze, guardBreak: attack.guardBreak, shockwave: attack.shockwave });
+    // Chain steps barely push (the target stays in front for the next hit); only the finisher sends it away.
+    const push = attack.finisher ? 1 : .3; const pop = attack.finisher ? 1 : .2;
+    const connected = this.triggerMeleeHitbox(attack.damage, this.facing * attack.knockback * push, attack.lift * pop, attack.finisher ? 0.6 : 0.4, !!attack.finisher, { hitstopTicks: attack.hitstopTicks, hitReaction: attack.hitReaction, reach: attack.reach, behind: attack.behind, crit: attack.crit, freeze: attack.freeze, guardBreak: attack.guardBreak, shockwave: attack.shockwave });
+    // Unity whiff relief: a missed chain step frees locomotion once its active window is over.
+    if (!connected && !attack.finisher) this._whiffRecovery = attack.time * .5;
     return true;
   }
 
@@ -1120,9 +1131,11 @@ export class Player extends GroundEntity {
     if (strike.elapsed > strike.windup + strike.active) { this.vx = 0; return; }
     if (Math.random() < .5) this.ghosts.push({ x: this.x, y: this.y, z: this.z, elevation: this.elevation, facing: this.facing, alpha: .3, state: this.state, animTime: this.animTime });
     // Recoil as knockback: the linear knockback decay slides the target ≈ 1.8 u (× variant).
-    const recoil = Math.sqrt(2 * KB_DECAY_RATE * SPRINT_ATTACK_RECOIL_DISTANCE * (variant?.recoilMult ?? 1));
-    const hit = this.triggerMeleeHitbox(heavy.damage * (variant?.damageMult ?? 1), this.facing * recoil, variant?.lift ?? 0, variant?.stun ?? .48, true, {
-      hitstopTicks: variant?.hitstopTicks ?? heavy.hitstopTicks, hitReaction: variant && !variant.primal ? 'finisher' : heavy.hitReaction,
+    // The run-up carries into the punch: entry speed scales the drive-back and the impact.
+    const momentum = Math.max(.8, Math.min(1.35, strike.speed / (this.moveSpeed * SPRINT_MULT)));
+    const recoil = Math.sqrt(2 * KB_DECAY_RATE * SPRINT_ATTACK_RECOIL_DISTANCE * (variant?.recoilMult ?? 1) * momentum);
+    const hit = this.triggerMeleeHitbox(heavy.damage * (variant?.damageMult ?? 1) * (1 + .25 * momentum), this.facing * recoil, variant?.lift ?? 0, variant?.stun ?? .55, true, {
+      hitstopTicks: (variant?.hitstopTicks ?? heavy.hitstopTicks) + 2, hitReaction: variant && !variant.primal ? 'finisher' : heavy.hitReaction,
       reach: variant?.reach ?? heavy.reach, freeze: heavy.freeze, sprintAttack: true, hitSet: strike.hits
     });
     if (!hit) return;
