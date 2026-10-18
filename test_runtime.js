@@ -2260,7 +2260,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   game.returnToHub(); game.setMatchMode('training'); game.startMatch();
   const first = game.cycleClassWeapon();
   assert(first && game.player.classWeapon === first && !game.player.weapon, 'V cycles a class weapon in Training (fixed, not a pickup)');
-  let guard = 0; while (game.player.classWeapon && guard++ < 20) game.cycleClassWeapon();
+  let guard = 0; while (game.player.classWeapon && guard++ < 60) game.cycleClassWeapon();
   assert(!game.player.classWeapon, 'Cycling further returns to bare hands');
 }
 
@@ -2565,6 +2565,33 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   P.update(1 / 60, { ...neutral, keys: { KeyS: true }, move: { x: 0, z: 1 } }, game.battlefield, game);
   assert(!P.sprintActive, 'A different movement input (depth) ends the auto-run');
   idle(); dummy.homeX = dummy.x = 512;
+}
+
+// All weapons of the class concept, including ranged and magic weapons that fire real projectiles.
+{
+  const W = await import('./public/src/weapons.js');
+  const need = ['sword_shield', 'mace_shield', 'great_axe', 'great_hammer', 'dual_swords', 'twinblade', 'katana', 'odachi', 'spear', 'glaive', 'daggers', 'throwing_blades', 'bow', 'crossbow', 'gauntlets', 'quarterstaff', 'scythe', 'chain_scythe', 'spellblade', 'rune_greatsword', 'arcane_staff', 'orb_focus', 'warlock_rod', 'rod_grimoire', 'scepter_shield', 'sacred_staff', 'harp', 'battle_zither', 'spirit_glaive', 'spirit_sword', 'claws', 'beast_staff', 'chakrams', 'magic_cards', 'talisman', 'ritual_fan'];
+  assert(need.every((id) => W.WEAPONS[id] && W.WEAPON_MOTIONS[id]) && W.WEAPON_IDS.length >= 37, 'All 36 class-concept weapons (A + B of 18 classes) exist with their own motion set');
+  game.returnToHub(); game.setMatchMode('training'); game.startMatch(); game.selectTrainingMap('waterfalls');
+  const P = game.player; const dummy = game.trainingDummy; spells.clearRuntime();
+  const neutral = { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false };
+  const ready = () => { P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.vx = 0; P.grounded = true; P.sprintActive = false; P.comboStep = 0; };
+  P.x = 300; P.z = .5; P.facing = 1; game.battlefield.placeOnSurface(P);
+  dummy.homeX = dummy.x = 520; dummy.homeZ = dummy.z = .5; dummy.hp = dummy.maxHp;
+  P.equipClassWeapon('bow'); ready(); P.executeAttack(neutral, 'normal');
+  assert(spells.activeSpells.some((s) => s.isWeaponShot && s.kind === 'arrow'), 'The bow fires an arrow on attack');
+  for (let i = 0; i < 40; i++) spells.update(1 / 60, game);
+  assert(dummy.hp < dummy.maxHp, 'The arrow hits a target at range');
+  spells.clearRuntime(); ready(); P.beginCharge('up', 'key'); P.chargeTimer = P.chargeMaxTime * .2; P.chargeDir = 'up'; P.releaseCharge();
+  assert(spells.activeSpells.filter((s) => s.isWeaponShot).length === 3, 'Charged UP with the bow: a three-arrow volley');
+  spells.clearRuntime(); P.equipClassWeapon('chakrams'); ready(); P.executeAttack(neutral, 'normal');
+  assert(spells.activeSpells.some((s) => s.isWeaponShot && s.ricochet > 0), 'Chakrams ricochet');
+  // Every weapon attacks without errors (melee hitbox or projectiles) and renders.
+  const strict = new Proxy({}, { get: (t, k) => (k === 'canvas' ? undefined : (k === 'measureText' ? () => ({ width: 10 }) : () => {})), set: () => true });
+  const broken = [];
+  for (const id of need) { try { spells.clearRuntime(); P.equipClassWeapon(id); for (const kind of ['normal', 'normal', 'normal', 'heavy']) { ready(); P.executeAttack(neutral, kind); for (let i = 0; i < 6; i++) { P.update(1 / 60, neutral, game.battlefield, game); spells.update(1 / 60, game); } W.drawHeldWeapon(strict, P, P.y, 'front'); W.drawHeldWeapon(strict, P, P.y, 'back'); for (const s of spells.activeSpells) s.render?.(strict); } } catch (e) { broken.push(id + ': ' + e.message); } }
+  assert(!broken.length, 'Every weapon attacks and renders without errors ' + broken.slice(0, 3).join(' | '));
+  P.equipClassWeapon(null); spells.clearRuntime(); dummy.homeX = dummy.x = 512;
 }
 
 const frameCallback = nextFrame;

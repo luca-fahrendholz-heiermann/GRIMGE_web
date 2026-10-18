@@ -7,7 +7,7 @@ import { ARENA_LAYOUT, ENTITY_VISUALS, GroundEntity, groundDistance } from './wo
 import { lookupRecipe, runeManaCost } from './spell_catalog.js';
 import { drawFocusAura, drawEidolonGuardian, drawNinefoldSpirit, drawFormGuard } from './forms_fx.js';
 import { formGuardCounter, updateFormSprint, FormGrabFx, formJumpFx, FORM_SPRINT_ATTACKS, FormSprintAttackFx, formSprintImpact } from './form_actions.js';
-import { WEAPONS, ThrownWeaponSpell, drawHeldWeapon, weaponMotion } from './weapons.js';
+import { WEAPONS, ThrownWeaponSpell, drawHeldWeapon, weaponMotion, makeWeaponShots } from './weapons.js';
 import { drawBeastBomb, drawSpiritBow } from './form_attacks.js';
 import { FULL_CHARGE_TIME, activeMoveset, releaseFormTechnique, FORM_PALETTES } from './form_moves.js';
 import { updatePrimalBond, bondMoveMultiplier, bondGainMultiplier, bondDisplacement, bondOnBlock, primalSprintVariant, renderPrimalBond, endPrimalBond } from './primals.js';
@@ -781,6 +781,15 @@ export class Player extends GroundEntity {
     const dmgMult = 1 + chargeRatio * 0.8;
     const kbMult = 1 + chargeRatio * 0.6;
     const dir = this.chargeDir ?? 'forward';
+    // Ranged weapons: the charged heavy is a stronger shot — UP a volley, DOWN a low pinning shot.
+    const weaponHeavy = this.weaponProfile?.heavy;
+    if (weaponHeavy?.shot) {
+      this.state = 'heavyStrike'; this.stateTimer = heavy.time; this._weaponSwingTime = heavy.time; this.setWeaponMotion('heavy'); this.vx = 0; this.canAttack = false;
+      const shots = makeWeaponShots(this, { ...weaponHeavy.shot, pierce: weaponHeavy.shot.pierce || chargeRatio > .7 }, this.weapon ?? this.classWeapon, { power: 1 + chargeRatio * .8, volley: dir === 'up' ? 2 : 0, low: dir === 'down' });
+      for (const shot of shots) spells.addSpell(shot, 'B');
+      audio.playSlash(.9 - chargeRatio * .2);
+      return true;
+    }
     if (dir !== 'forward') {
       // Up: a rising launcher that lifts the target high (air follow-ups);
       // Down: a low sweep along the ground that breaks guards and trips.
@@ -1023,6 +1032,7 @@ export class Player extends GroundEntity {
       this.state = 'heavyStrike'; this.stateTimer = heavy.time; this._weaponSwingTime = heavy.time; this.vx = 0; this.vz = 0;
       signatureEvent(this, 'heavy', { charge: 0 });
       this.setWeaponMotion('heavy');
+      if (heavy.shot) { for (const shot of makeWeaponShots(this, heavy.shot, this.weapon ?? this.classWeapon)) spells.addSpell(shot, 'B'); return true; }
       audio.playSlash(0.78);
       if (!weapon) combat.spawnSlashArc(this.x + this.facing * 28, this.y - 25, this.facing, { radius: 58, angleStart: -0.9, angleEnd: 0.9, color: '#ffd54f', glow: '#ff6d00', width: 7 });
       this.triggerMeleeHitbox(heavy.damage, this.facing * heavy.knockback, heavy.lift, 0.48, true, { hitstopTicks: heavy.hitstopTicks, hitReaction: heavy.hitReaction, reach: heavy.reach, freeze: heavy.freeze });
@@ -1046,6 +1056,12 @@ export class Player extends GroundEntity {
       combat.spawnHitSparks(this.x + this.facing * 20, this.y - 32, this.facing, '#ffd700', 14);
       combat.shakeCamera(6, 0.18);
     }
+    // Ranged / magic weapons: the step fires real projectiles instead of a melee hitbox.
+    if (attack.shot) {
+      for (const shot of makeWeaponShots(this, attack.shot, this.weapon ?? this.classWeapon)) spells.addSpell(shot, 'B');
+      return true;
+    }
+    if (attack.bolt) for (const shot of makeWeaponShots(this, attack.bolt, this.weapon ?? this.classWeapon)) spells.addSpell(shot, 'B');
     // Chain steps barely push (the target stays in front for the next hit); only the finisher sends it away.
     const push = attack.finisher ? 1 : .3; const pop = attack.finisher ? 1 : .2;
     const connected = this.triggerMeleeHitbox(attack.damage, this.facing * attack.knockback * push, attack.lift * pop, attack.finisher ? 0.6 : 0.4, !!attack.finisher, { hitstopTicks: attack.hitstopTicks, hitReaction: attack.hitReaction, reach: attack.reach, behind: attack.behind, crit: attack.crit, freeze: attack.freeze, guardBreak: attack.guardBreak, shockwave: attack.shockwave });

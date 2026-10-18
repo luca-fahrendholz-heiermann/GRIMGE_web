@@ -11,10 +11,11 @@
 import { audio } from './audio.js';
 import { combat } from './combat.js';
 import { groundYForDepth } from './world.js';
+import { EXT_WEAPONS, EXT_HUES, EXT_MOTIONS, EXT_MOTION_FNS, EXT_SHAPES, EXT_PIECES, WeaponShot } from './weapons_ext.js';
 
 const hit = (state, time, vx, damage, knockback, lift, reach, extra = {}) => Object.freeze({ state, time, vx, damage, knockback, lift, radius: Math.round(reach * .6), reach, hitstopTicks: extra.finisher ? 6 : 3, hitReaction: extra.finisher ? 'finisher' : 'light', ...extra });
 
-export const WEAPONS = Object.freeze({
+const BASE_WEAPONS = ({
   sword_shield: Object.freeze({
     name: 'SWORD & SHIELD', family: 'Guardian', look: 'sword', shield: true, color: '#cfd8dc', accent: '#ffd54f',
     desc: 'Fast, precise cuts; the shield blocks better.',
@@ -77,6 +78,8 @@ export const WEAPONS = Object.freeze({
   })
 });
 
+// All 36 weapon families of docs/class_concept.md (+ the conjured ice sword).
+export const WEAPONS = Object.freeze({ ...BASE_WEAPONS, ...Object.fromEntries(Object.entries(EXT_WEAPONS).map(([id, w]) => [id, Object.freeze(w)])) });
 export const WEAPON_IDS = Object.freeze(Object.keys(WEAPONS));
 
 // ── drawing ──────────────────────────────────────────────────────────────
@@ -87,7 +90,7 @@ export const WEAPON_IDS = Object.freeze(Object.keys(WEAPONS));
 // in the hands they belong to (sword in the rear hand, shield in the front;
 // dual blades, daggers and fists one per hand). It floats at the hands
 // instead of being held pixel-exact, so it reads well with any body animation.
-const ASTRAL_HUES = Object.freeze({
+const ASTRAL_HUES = Object.freeze({ ...EXT_HUES,
   sword_shield: '#7fd8ff', great_axe: '#ff7a45', great_hammer: '#ffb300', dual_swords: '#4dd0e1', katana: '#ff4d6d',
   spear: '#9be564', daggers: '#b388ff', gauntlets: '#ffab40', scythe: '#c158ff', ice_sword: '#80e9ff'
 });
@@ -96,7 +99,7 @@ export const astralHue = (weapon) => ASTRAL_HUES[weapon] ?? WEAPONS[weapon]?.acc
 // Per weapon: idle pose, hand layout and the motion of every attack.
 // hands: 'single' (one weapon, front hand), 'shield' (sword rear + shield
 // front), 'pair' (one piece per hand; the lead hand alternates per strike).
-export const WEAPON_MOTIONS = Object.freeze({
+export const WEAPON_MOTIONS = Object.freeze({ ...EXT_MOTIONS,
   sword_shield: { hands: 'shield', idle: -2.05, combo: ['slash', 'backhand', 'overhead'], heavy: 'bash', uppercut: 'rising' },
   great_axe: { hands: 'single', idle: .95, combo: ['cleave', 'overhead'], heavy: 'whirl', uppercut: 'rising' },
   great_hammer: { hands: 'single', idle: -2.35, combo: ['overhead', 'slam'], heavy: 'slam', uppercut: 'rising' },
@@ -125,6 +128,7 @@ const span = (p, a, b) => clamp01((p - a) / (b - a));
 // Motion → pose at progress p (0…1): angle (0 = forward, negative = up),
 // reach (px pushed forward), the trail kind and where it starts.
 const MOTIONS = {
+  ...EXT_MOTION_FNS,
   slash: (p) => ({ angle: -1.6 + ease(p * 1.35) * 2.4, trail: 'arc', from: -1.6 }),
   backhand: (p) => ({ angle: .9 - ease(p * 1.35) * 2.4, trail: 'arc', from: .9 }),
   rising: (p) => ({ angle: 1.3 - ease(p * 1.3) * 3.3, trail: 'arc', from: 1.3 }),
@@ -159,6 +163,7 @@ const bladePath = (len, width, from = 6) => (c) => { c.moveTo(from, -width / 2);
 const seg = (x0, y0, x1, y1) => (c) => { c.moveTo(x0, y0); c.lineTo(x1, y1); };
 const runeTicks = (x0, x1, n, h = 1.6) => (c) => { for (let i = 0; i < n; i++) { const x = x0 + (x1 - x0) * (i + .5) / n; c.moveTo(x - 1.2, -h); c.lineTo(x + 1.2, h); } };
 const ASTRAL_SHAPES = {
+  ...EXT_SHAPES,
   sword: { tip: 42, parts: [
     { type: 'line', width: 3, draw: seg(-7, 0, 1, 0) },
     { type: 'fill', draw: (c) => { c.arc(-8, 0, 2.4, 0, Math.PI * 2); } },
@@ -231,7 +236,7 @@ const ASTRAL_SHAPES = {
     { type: 'detail', draw: runeTicks(28, 46, 3, 1.4) }
   ] }
 };
-const PIECES = Object.freeze({
+const PIECES = Object.freeze({ ...EXT_PIECES,
   sword_shield: { main: 'sword', off: 'shield' }, great_axe: { main: 'axe' }, great_hammer: { main: 'hammer' },
   dual_swords: { main: 'blade', off: 'blade' }, katana: { main: 'katana' }, spear: { main: 'spear' },
   daggers: { main: 'dagger', off: 'dagger' }, gauntlets: { main: 'fist', off: 'fist' }, scythe: { main: 'scythe' },
@@ -279,6 +284,13 @@ export function drawAstralPiece(ctx, piece, hue, { intensity = .8, time = perfor
     ctx.fillRect(u * shape.tip - 1, Math.sin(time * 5 + i * 2.1) * 4 - 1, 2, 2);
   }
   ctx.restore();
+}
+
+// Projectiles of a ranged / magic weapon shot (count, spread, charge power).
+export function makeWeaponShots(player, shot, weaponId, { power = 1, volley = 0, low = false } = {}) {
+  const hue = astralHue(weaponId); const count = (shot.count ?? 1) + volley;
+  const cfg = volley ? { ...shot, spread: Math.max(shot.spread ?? 0, .22) } : low ? { ...shot, slow: Math.min(shot.slow ?? 1, .45) } : shot;
+  return Array.from({ length: count }, (_, index) => new WeaponShot(player, cfg, hue, drawAstralPiece, { power, index, count, height: low ? (player.worldHeight ?? 0) + 14 : null }));
 }
 
 // Draws a weapon pointing along +x from (0,0) (pickups and thrown weapons).
