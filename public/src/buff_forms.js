@@ -187,6 +187,7 @@ export function endBuffForm(player) {
   if (player.buffForm.id === 'B01') player.ninefoldTimer = 0;
   if (player.buffForm.id === 'B02') player.eidolonTimer = 0;
   player.buffForm = null;
+  player._timeTrail = null; // no stale echoes in the next Arcane State
 }
 
 // Combat modifiers of the generic T forms (B01/B02 keep their engines').
