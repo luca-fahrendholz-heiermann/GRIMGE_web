@@ -264,6 +264,41 @@ for (const f of forms) {
   };
 }
 
+// ── V3.2 Morphologie-Overhaul (docs/GRIMGE_Arcane_States_Atlas_V3_2_Morphologie_Overhaul.md) ──
+// Every form gets its own morphology profile: category, binding silhouette,
+// anchors, the three visual states, its own transform / movement animations
+// and the morphological mapping of the six heavies. These are binding for
+// everything visual; the V3.1 movesets stay the source for names and combat.
+{
+  const v32src = path.join(root, 'docs', 'GRIMGE_Arcane_States_Atlas_V3_2_Morphologie_Overhaul.md');
+  if (fs.existsSync(v32src)) {
+    const doc = fs.readFileSync(v32src, 'utf8').replace(/\r\n/g, '\n');
+    const strip = (x) => (x ?? '').replace(/\*\*/g, '').replace(/\s+/g, ' ').trim();
+    const grab = (blk, label) => strip(blk.match(new RegExp('\\*\\*' + label + ':\\*\\*\\s*([^\\n]+)'))?.[1]);
+    for (const f of forms) {
+      const head = new RegExp('\\n### ' + f.id + '\\.(?:0|1a) Morphologie-Revision V3\\.2: ([^\\n]+)\\n');
+      const m = doc.match(head); if (!m) continue;
+      const start = m.index + m[0].length; const rest = doc.slice(start); const end = rest.search(/\n### /);
+      const blk = end > 0 ? rest.slice(0, end) : rest;
+      const anim = {};
+      const keys = [['transformIn', 'Transform-In'], ['idle', 'Idle'], ['sprint', 'Sprint und Richtungswechsel'], ['defense', 'Defense und Perfect Block'], ['grab', 'Grab \\(Defense \\+ Down\\)'], ['jump', 'Jump \\(Takeoff → Ascend → Apex → Fall → Land\\)'], ['peak', 'Full-Ready und Peak'], ['transformOut', 'Transform-Out']];
+      for (const [k, label] of keys) anim[k] = strip(blk.match(new RegExp('\\d\\. \\*\\*' + label + ':\\*\\*\\s*([^\\n]+)'))?.[1]).replace(/ (Im Ruhezustand werden|Das laufende Charakter-Sprite|Ein bestätigter Perfect Block|Reichweite und Erfolg werden|Für den Avatar wird nur|Die deutlich größere Außenwirkung)[^]*$/, '');
+      const attacks = {};
+      for (const [k, label] of [['forward', 'Forward'], ['up', 'Up'], ['down', 'Down']]) attacks[k] = strip(blk.match(new RegExp('- \\*\\*' + label + ' Short / Full\\*\\* \\([^)]*\\)[^)]*\\)\\):\\s*([^\\n]+)'))?.[1] ?? blk.match(new RegExp('- \\*\\*' + label + ' Short / Full\\*\\*[^:]*:\\s*([^\\n]+)'))?.[1]);
+      const cat = blk.match(/\*\*Technische Hauptanker:\*\*\s*([^.]*)\./);
+      f.v32 = {
+        category: strip(m[1]), silhouette: grab(blk, 'Verbindliche Silhouettenentscheidung'),
+        anchors: (cat?.[1] ?? '').replace(/`/g, '').split(',').map((x) => x.trim()).filter(Boolean),
+        idle: grab(blk, 'Idle-Silhouette'), action: grab(blk, 'Action-Silhouette'), peak: grab(blk, 'Peak Manifestation'),
+        anim, attacks, exclusions: grab(blk, 'Sichtbare Ausschlüsse').replace(/ Auch bei maximaler Aufladung[^]*$/, '')
+      };
+      // V3.2 states replace the generic family texts.
+      f.states = { idle: f.v32.idle || f.states.idle, action: f.v32.action || f.states.action, peak: f.v32.peak || f.states.peak };
+      f.morphCategory = f.v32.category;
+    }
+  }
+}
+
 const merge = (a, b) => { for (const [k, v] of Object.entries(b)) a[k] = v && typeof v === 'object' && !Array.isArray(v) ? merge(a[k] ?? {}, v) : v; return a; };
 for (const f of forms) if (OVERRIDES[f.id]) merge(f, OVERRIDES[f.id]);
 
@@ -278,17 +313,25 @@ fs.writeFileSync(path.join(root, 'public', 'src', 'buff_forms_data.js'), out);
 {
   const L = [];
   L.push('# GRIMGE — Arcane States: Morphologien und drei visuelle Zustände', '');
-  L.push('> Generiert von `tools/generate_buff_forms.mjs` aus dem Transformations-Atlas V3.1 plus Design-Notiz vom 18.10.2026.');
+  L.push('> Generiert von `tools/generate_buff_forms.mjs` aus dem Transformations-Atlas V3.1, der Design-Notiz vom 18.10.2026 und dem **V3.2 Morphologie-Overhaul** (individuelle Morphologie je Form: Kategorie, Anker, drei Zustände, eigene Animationen, Heavy-Abbildung).');
   L.push('> **Regel:** Nur **Arkengestell** ist eine riesige humanoide Manifestation (Astral Avatar). Alle anderen Arcane States unterscheiden sich schon an der Silhouette — durch die Art, wie sich die Effekte zum Charakter und zur Welt verhalten. Umsetzung weiterhin ausschließlich mit VFX/Attachments, der Charakter-Sprite bleibt unverändert.', '');
   L.push('> **Nicht jeder State braucht eine große permanente Manifestation.** Jeder hat drei Zustände: **Idle-Silhouette** (Erkennungsbild während der Aktivierung), **Action-Silhouette** (Sprint, Jump, Defense, Heavy) und **Peak Manifestation** (maximale Ausprägung, z. B. Full Charge).', '');
   L.push('## Morphologie-Typen', '', '| Morphologie | Aufbau | Formen |', '|---|---|---|');
   for (const [key, m] of Object.entries(MORPH)) L.push(`| **${m.label}** | ${m.what} | ${forms.filter((f) => f.morphology === key).map((f) => `${f.id} ${f.name}`).join(', ') || '—'} |`);
   L.push('', '## Alle 42 Arcane States', '');
   for (const f of forms) {
-    L.push(`### ${f.id} ${f.name}${f.title ? ' — ' + f.title : ''} · *${f.morphologyLabel}*`, '');
+    L.push(`### ${f.id} ${f.name}${f.title ? ' — ' + f.title : ''} · *${f.morphologyLabel}*${f.morphCategory ? ' · V3.2: ' + f.morphCategory : ''}`, '');
+    if (f.v32?.anchors?.length) L.push(`- **Anker:** ${f.v32.anchors.map((a) => '\`' + a + '\`').join(', ')}`);
     L.push(`- **Idle-Silhouette:** ${f.states.idle}`);
     L.push(`- **Action-Silhouette:** ${f.states.action}`);
     L.push(`- **Peak Manifestation:** ${f.states.peak}`);
+    if (f.v32) {
+      const a = f.v32.anim; const t = f.v32.attacks;
+      L.push(`- **Transform-In / Out:** ${a.transformIn} / ${a.transformOut}`);
+      L.push(`- **Defense · Grab · Jump:** ${a.defense} · ${a.grab} · ${a.jump}`);
+      L.push(`- **Heavies (V3.2-Abbildung):** Forward — ${t.forward} · Up — ${t.up} · Down — ${t.down}`);
+      if (f.v32.exclusions) L.push(`- **Ausschlüsse:** ${f.v32.exclusions}`);
+    }
     L.push(`- Palette: ${f.palette.map((c) => '`' + c + '`').join(' ')} · Material: ${f.material}`, '');
   }
   fs.writeFileSync(path.join(root, 'docs', 'GRIMGE_Arcane_States_Morphologien.md'), L.join('\n'));

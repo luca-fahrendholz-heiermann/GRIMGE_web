@@ -92,19 +92,26 @@ function sonnenwyrm(ctx, s, pose, mat, form, layer) {
       // Sprint: the wyrms stream out behind, heads at the shoulders.
       spine = Array.from({ length: 16 }, (_, i) => { const k = i / 15; return [s.x - f * (20 + k * 190), w.cy + 30 * (wi ? 1 : -.4) + Math.sin(t * 6 + k * 5 + wi) * 10 * k]; });
     } else {
-      const head = t * w.speed * (f > 0 ? 1 : -1) + w.phase;
-      spine = orbitSpine(s.x - f * 8, w.cy + pose.air * -30, w.rx, w.ry, head, 3.4, 28, w.tilt);
+      // V3.2: two differently long lance bands swing BEHIND the Wizard and cross
+      // each other dynamically — chest and head stay free (no orbit through the body).
+      const side = wi ? 1 : -1; const len = wi ? 150 : 190;
+      spine = Array.from({ length: 18 }, (_, i) => { const k = i / 17; const sw = Math.sin(t * 1.1 + wi * Math.PI + k * 3.2); return [s.x - f * (14 + k * len * .62) + f * sw * 14 * k, w.cy + 40 * wi - side * Math.sin(k * Math.PI) * 38 + sw * 22 * (.3 + k) + pose.air * -30 * (1 - k) + (pose.airborne && pose.air < 0 ? 30 * k : 0)]; });
     }
-    // Depth: draw each scale run on the layer it is on (behind or in front of the body).
-    const isBack = (p, i) => pose.sprint ? true : Math.sin(t * w.speed * (f > 0 ? 1 : -1) + w.phase - (i / 27) * 3.4) < 0;
+    // Depth: everything stays behind the body (sprint trail included).
+    const isBack = () => true;
     const runs = []; let cur = [];
     spine.forEach((p, i) => { if (isBack(p, i) === (layer === 'back')) cur.push(p); else { if (cur.length > 1) runs.push(cur); cur = []; } });
     if (cur.length > 1) runs.push(cur);
     for (const run of runs) drawWyrmBody(ctx, run, mat, 4000 + wi * 50, pose.fade, wi ? 1.15 : 1.3);
     // Head on its own layer.
     const [hx, hy] = spine[0]; const [nx, ny] = spine[1];
-    // Heads always read in front of their own body.
-    if (layer === 'front' || (isBack(spine[0], 0) && layer === 'back')) drawWyrmHead(ctx, hx, hy, hx - nx, hy - ny, w.size, mat, pose.charge ? .2 + .5 * pose.charge : .15 + .1 * Math.sin(t * 2 + wi), pose.fade, 4200 + wi * 20);
+    // V3.2: recognisable wyrm heads appear only for heavy attacks (charge / release);
+    // otherwise the band ends in a narrow lance-scale wedge.
+    const heavy = Math.max(pose.charge ?? 0, pose.tech ? pose.tech.k : 0);
+    if (layer === 'back') {
+      if (heavy > .05) drawWyrmHead(ctx, hx, hy, hx - nx, hy - ny, w.size * (.6 + .4 * heavy), mat, .2 + .5 * heavy, pose.fade * Math.min(1, heavy * 2), 4200 + wi * 20);
+      else { const dx = hx - nx; const dy = hy - ny; const l = Math.hypot(dx, dy) || 1; plate(ctx, [[hx - dy / l * 5, hy + dx / l * 5], [hx + dx / l * 18, hy + dy / l * 18], [hx + dy / l * 5, hy - dx / l * 5]], mat, 4230 + wi, { alpha: pose.fade, core: 1, glowEdge: 1.2 }); }
+    }
   });
   if (layer === 'back') {
     // Spiked halo crown above the head and floating scales.

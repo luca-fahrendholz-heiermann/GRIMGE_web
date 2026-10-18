@@ -107,10 +107,40 @@ export const BUFF_FORM_DATA = Object.freeze([
   "morphology": "energy_extension",
   "morphologyLabel": "Energy Extension",
   "states": {
-   "idle": "Entfesselte Energiebänder: drei asymmetrische, lange Energiebänder brechen aus der Körperkontur hervor und bewegen sich wie lebendige Peitschen — keine humanoide Gestalt.",
-   "action": "Beim Angriff peitschen die Bänder nach vorn und verändern ihre Form; die Silhouette bleibt dynamisch und ungleichmäßig.",
-   "peak": "Die Bänder schießen auf volle Länge aus und formen die Full-Attacke. Full: Verdichteter Risskern / Doppelter Rissaufstieg / Rissfeld-Einschlag."
-  }
+   "idle": "Drei grobe obsidiangoldene Zungen bilden keine Schulterbreite, sondern eine S-förmige Diagonale vom linken Becken bis deutlich über die rechte Schulter; Größenfolge 0,7/1,5/2,4 H, keine Kopf- oder Armsilhouette.",
+   "action": "Bei Sprint werden alle drei Zungen stromlinienförmig nach hinten gezogen; beim Richtungswechsel bricht ihre Mitte und heilt mit zeitversetztem Goldlauf; bei Schlägen schnalzt nur ein Band zielwärts.",
+   "peak": "Full Charge ordnet die drei Bänder zum asymmetrischen gebrochenen Trichter, danach zerreißt die Spitze in kantige Risskerne; kein vollständiger Tierkörper."
+  },
+  "v32": {
+   "category": "Dynamische Bruchbänder, asymmetrischer Dreifach-Streamer",
+   "silhouette": "Drei grobe obsidiangoldene Zungen bilden keine Schulterbreite, sondern eine S-förmige Diagonale vom linken Becken bis deutlich über die rechte Schulter; Größenfolge 0,7/1,5/2,4 H, keine Kopf- oder Armsilhouette.",
+   "anchors": [
+    "back_left",
+    "hip_right",
+    "shoulder_right",
+    "sprite_alpha"
+   ],
+   "idle": "Drei grobe obsidiangoldene Zungen bilden keine Schulterbreite, sondern eine S-förmige Diagonale vom linken Becken bis deutlich über die rechte Schulter; Größenfolge 0,7/1,5/2,4 H, keine Kopf- oder Armsilhouette.",
+   "action": "Bei Sprint werden alle drei Zungen stromlinienförmig nach hinten gezogen; beim Richtungswechsel bricht ihre Mitte und heilt mit zeitversetztem Goldlauf; bei Schlägen schnalzt nur ein Band zielwärts.",
+   "peak": "Full Charge ordnet die drei Bänder zum asymmetrischen gebrochenen Trichter, danach zerreißt die Spitze in kantige Risskerne; kein vollständiger Tierkörper.",
+   "anim": {
+    "transformIn": "Eine dünne Glutnaht rast die echte Spritekontur ab, drei dunkle Plattenbänder platzen nacheinander am Rücken auf, werden durch goldene Schmelzkanten zusammengehalten und schwingen auseinander.",
+    "idle": "Drei grobe obsidiangoldene Zungen bilden keine Schulterbreite, sondern eine S-förmige Diagonale vom linken Becken bis deutlich über die rechte Schulter; Größenfolge 0,7/1,5/2,4 H, keine Kopf- oder Armsilhouette.",
+    "sprint": "Bei Sprint werden alle drei Zungen stromlinienförmig nach hinten gezogen; beim Richtungswechsel bricht ihre Mitte und heilt mit zeitversetztem Goldlauf; bei Schlägen schnalzt nur ein Band zielwärts.",
+    "defense": "Die drei Bänder falten sich als versetzte, keilförmige Panzerschichten vor die Blickrichtung; Blockwucht läuft als helle Rissader nach außen.",
+    "grab": "Ein einziger dünner Rissfaden schießt aus der unteren Bandkante zum nahen Ziel und verhakt sich nur beim bestätigten Kontakt.",
+    "jump": "Beim Absprung sacken die breiten Platten erst nach unten, folgen dann federnd; am Scheitelpunkt stehen sie horizontal, bei Landung schlagen die Enden auf den Boden.",
+    "peak": "Full Charge ordnet die drei Bänder zum asymmetrischen gebrochenen Trichter, danach zerreißt die Spitze in kantige Risskerne; kein vollständiger Tierkörper.",
+    "transformOut": "Die einzelnen Fragmente verschwinden in umgekehrter Materiallogik der Aktivierung. Existierende Projektile und Bodenobjekte folgen ihren normalen, deterministischen Laufzeitregeln."
+   },
+   "attacks": {
+    "forward": "Short: eine einzelne spitze Bruchzunge schnellt geradlinig vor; Full: die Zungen verdichten ihre Rissadern zum explodierenden dunklen Projektilkern.",
+    "up": "Short: eine schmale Kante hebelt ein Ziel hoch; Full: zwei gegenläufige Risssäulen spiralen über dem Avatar und stoßen nach oben.",
+    "down": "Short: bodennaher Kreisschlag aus einer Zunge; Full: versetzte Scherbenanker schlagen über mehrere Bodenpunkte ein und entladen ein Rissfeld."
+   },
+   "exclusions": "Keine Füchse, neun Schweife, symmetrischen Schultergelenke oder großen Fäuste."
+  },
+  "morphCategory": "Dynamische Bruchbänder, asymmetrischer Dreifach-Streamer"
  },
  {
   "id": "B02",
@@ -217,10 +247,41 @@ export const BUFF_FORM_DATA = Object.freeze([
   "morphology": "astral_avatar",
   "morphologyLabel": "Astral Avatar",
   "states": {
-   "idle": "Astralkoloss: riesige Arme, Panzersegmente, Brustkorb-Architektur und ein spiritueller Bogen bilden einen eigenständigen Kampfavatar — als einzige Form humanoid.",
-   "action": "Die Gestalt beugt sich mit, Arme und Panzer falten sich bei Defense vor die Blickrichtung. Sprint Trägeransturm, Jump Trägersprung, Defense Schildtrichter.",
-   "peak": "Der Avatar entfaltet sich zur vollen Kampfgestalt; Waffe und Arme setzen die Full-Attacke um. Full: Belagerungspfeil / Lichtspalter / Gericht des Gestells."
-  }
+   "idle": "Über dem normalen Charakter schwebt ein 2,8–3,8 H hohes, offenes violettes Skelett aus Plattenträgern, schwebenden Schultermodulen und zwei klar artikulierten Konstruktarmen; Zentrum und Gesicht des Spielers bleiben frei.",
+   "action": "Hände haben echte Fingerblock-Gelenke; Ellbogenplatten tragen Gewicht nach, der Bogen bleibt zusammengefaltet im rechten Segment; bei Bewegung werden Träger über verschobene Sekundäranker nachgeführt.",
+   "peak": "Full Charge klappt den bereits implementierten Konstruktbogen auf; die Pfeilführung findet zwischen den Konstruktarmen statt. Bei anderen Heavy-Richtungen lösen sich Arme oder Träger einzeln zur Angriffsbahn."
+  },
+  "v32": {
+   "category": "Einziger großer humanoid lesbarer Außenavatar: offenes astrales Kraftgestell",
+   "silhouette": "Über dem normalen Charakter schwebt ein 2,8–3,8 H hohes, offenes violettes Skelett aus Plattenträgern, schwebenden Schultermodulen und zwei klar artikulierten Konstruktarmen; Zentrum und Gesicht des Spielers bleiben frei.",
+   "anchors": [
+    "shoulder_left/right",
+    "hand_left/right",
+    "chest",
+    "weapon_tip",
+    "sprite_alpha"
+   ],
+   "idle": "Über dem normalen Charakter schwebt ein 2,8–3,8 H hohes, offenes violettes Skelett aus Plattenträgern, schwebenden Schultermodulen und zwei klar artikulierten Konstruktarmen; Zentrum und Gesicht des Spielers bleiben frei.",
+   "action": "Hände haben echte Fingerblock-Gelenke; Ellbogenplatten tragen Gewicht nach, der Bogen bleibt zusammengefaltet im rechten Segment; bei Bewegung werden Träger über verschobene Sekundäranker nachgeführt.",
+   "peak": "Full Charge klappt den bereits implementierten Konstruktbogen auf; die Pfeilführung findet zwischen den Konstruktarmen statt. Bei anderen Heavy-Richtungen lösen sich Arme oder Träger einzeln zur Angriffsbahn.",
+   "anim": {
+    "transformIn": "Sechs Kristallplatten fahren aus getrennten Raumpositionen zum Grundgerüst, verriegeln mit blassvioletten Stromadern und erzeugen erst dann die großen Arme; kein Geisterkopf.",
+    "idle": "Über dem normalen Charakter schwebt ein 2,8–3,8 H hohes, offenes violettes Skelett aus Plattenträgern, schwebenden Schultermodulen und zwei klar artikulierten Konstruktarmen; Zentrum und Gesicht des Spielers bleiben frei.",
+    "sprint": "Hände haben echte Fingerblock-Gelenke; Ellbogenplatten tragen Gewicht nach, der Bogen bleibt zusammengefaltet im rechten Segment; bei Bewegung werden Träger über verschobene Sekundäranker nachgeführt.",
+    "defense": "Die vordere Hand klappt zu einem facettierten Schirm auf; nicht erneut einen vollständigen zusätzlichen Rippenkäfig erzeugen.",
+    "grab": "Eine segmentierte Greifhand packt im nahen, validierten Bereich, während die zweite die freie Mitte stabilisiert.",
+    "jump": "Beim echten Sprung fährt das Gestell leicht zusammen, Füße des Avatars springen normal; die beiden riesigen Arme folgen mit deutlichem Gelenknachlauf.",
+    "peak": "Full Charge klappt den bereits implementierten Konstruktbogen auf; die Pfeilführung findet zwischen den Konstruktarmen statt. Bei anderen Heavy-Richtungen lösen sich Arme oder Träger einzeln zur Angriffsbahn.",
+    "transformOut": "Die einzelnen Fragmente verschwinden in umgekehrter Materiallogik der Aktivierung. Existierende Projektile und Bodenobjekte folgen ihren normalen, deterministischen Laufzeitregeln."
+   },
+   "attacks": {
+    "forward": "Short: kurzer präziser Glyphenpfeil vom vorhandenen Bogen; Full: vollständig ausgefahrener Konstruktbogen mit gefasstem Belagerungspfeil und Einzel-Release.",
+    "up": "Short: eine offene Trägerhand hebt vor dem Charakter; Full: Gelenkplatten fügen sich zur aufsteigenden Lichtschneide.",
+    "down": "Short: ein schwerer Bodenanker des Gestells; Full: beide Träger drücken auf getrennte Bodenkontaktpunkte und erzeugen gerichtete Druckwellen."
+   },
+   "exclusions": "Kein Schädel, Samurai, Rippenkäfig, Avatarersatz. Nur diese Form darf im Idle wie ein riesiger zweihändiger Kämpfer wirken."
+  },
+  "morphCategory": "Einziger großer humanoid lesbarer Außenavatar: offenes astrales Kraftgestell"
  },
  {
   "id": "T01",
@@ -334,10 +395,40 @@ export const BUFF_FORM_DATA = Object.freeze([
   "morphology": "energy_extension",
   "morphologyLabel": "Energy Extension",
   "states": {
-   "idle": "Energy Extension (bewegliche Schweife, Bänder und Peitschen aus der Körperkontur): Vier gestaffelte, breitkantige Rückenlamellen aus Porzellanmetall statt Drachenstacheln.",
-   "action": "Sprint zieht die Bänder flach nach hinten, beim Sprung hängen sie unter dem Körper, Angriffe lassen sie nach vorn peitschen. Sprint Scale Charge, Jump Drake Hop, Defense Scale Aegis.",
-   "peak": "Die Bänder schießen auf volle Länge aus und formen die Full-Attacke. Full: Drake Maw / Draconic Eruption / Molten Mantle."
-  }
+   "idle": "Vier breitkantige Porzellanmetall-Lamellen ragen wie versetzte Schiffskielfinnen hinter einer Körperseite auf, 1,2–2,1 H; keinerlei Arme oder Helm.",
+   "action": "Die Lamellen öffnen sich im Atemrhythmus minimal, Oxidadern wandern nur auf echten Oberflächen; beim Laufen neigen sie sich wie eine flexible Rückenfeder nach hinten.",
+   "peak": "Bei Peak rasten die Lamellen als steile scharfkantige Wand oder gezahnter Vorwärtskamm ineinander; Impact lässt Platten abbrechen und reproduzierbar nachwachsen."
+  },
+  "v32": {
+   "category": "Vertikaler Rückenfächer aus Schindellamellen",
+   "silhouette": "Vier breitkantige Porzellanmetall-Lamellen ragen wie versetzte Schiffskielfinnen hinter einer Körperseite auf, 1,2–2,1 H; keinerlei Arme oder Helm.",
+   "anchors": [
+    "back_left",
+    "back_right",
+    "hip",
+    "sprite_alpha"
+   ],
+   "idle": "Vier breitkantige Porzellanmetall-Lamellen ragen wie versetzte Schiffskielfinnen hinter einer Körperseite auf, 1,2–2,1 H; keinerlei Arme oder Helm.",
+   "action": "Die Lamellen öffnen sich im Atemrhythmus minimal, Oxidadern wandern nur auf echten Oberflächen; beim Laufen neigen sie sich wie eine flexible Rückenfeder nach hinten.",
+   "peak": "Bei Peak rasten die Lamellen als steile scharfkantige Wand oder gezahnter Vorwärtskamm ineinander; Impact lässt Platten abbrechen und reproduzierbar nachwachsen.",
+   "anim": {
+    "transformIn": "Vom unteren Rücken steigen gerissene Emailleplättchen auf, sortieren sich zu vier versetzten Rippen und schließen mit dumpfem Keramik-Klick.",
+    "idle": "Vier breitkantige Porzellanmetall-Lamellen ragen wie versetzte Schiffskielfinnen hinter einer Körperseite auf, 1,2–2,1 H; keinerlei Arme oder Helm.",
+    "sprint": "Die Lamellen öffnen sich im Atemrhythmus minimal, Oxidadern wandern nur auf echten Oberflächen; beim Laufen neigen sie sich wie eine flexible Rückenfeder nach hinten.",
+    "defense": "Lamellen scheren seitlich nach vorn und bilden einen halb offenen schrägen Schutzkamm.",
+    "grab": "Zwei Lamellenenden verschränken sich kurz um das nahestehende Ziel, ohne separaten riesigen Greifarm.",
+    "jump": "Beim Sprung legen sich die Lamellen dachziegelartig flach; beim Landen fahren sie über die Schultern wieder aus.",
+    "peak": "Bei Peak rasten die Lamellen als steile scharfkantige Wand oder gezahnter Vorwärtskamm ineinander; Impact lässt Platten abbrechen und reproduzierbar nachwachsen.",
+    "transformOut": "Die einzelnen Fragmente verschwinden in umgekehrter Materiallogik der Aktivierung. Existierende Projektile und Bodenobjekte folgen ihren normalen, deterministischen Laufzeitregeln."
+   },
+   "attacks": {
+    "forward": "Short: ein einzelner Emaillezahn schlägt nach vorn; Full: der ganze Kamm öffnet sich in einen glühenden, nach vorne gerichteten Plattenkanal.",
+    "up": "Short: oberste Lamelle stößt aufwärts; Full: vier Platten klappen nacheinander zu einer steilen Aufstiegsbahn.",
+    "down": "Short: Lamellenende wischt Bodenstaub auf; Full: Schindeln stemmen eine breite Hitzewand aus dem Bodenkontakt."
+   },
+   "exclusions": "Kein Drachenkopf, Hörner, geschuppter Körper oder externes humanoides Gerüst."
+  },
+  "morphCategory": "Vertikaler Rückenfächer aus Schindellamellen"
  },
  {
   "id": "T02",
@@ -448,10 +539,40 @@ export const BUFF_FORM_DATA = Object.freeze([
   "morphology": "orbital_construct",
   "morphologyLabel": "Orbital Construct",
   "states": {
-   "idle": "Orbital Construct (freischwebende Ringe, Objekte und Fragmente): Schwebender Keramikofen als asymmetrisches Rippenband um Taille und Schulter; glühende Öffnung an der linken Hüfte.",
-   "action": "Die Konstrukte kreisen auf eigenen, geneigten Bahnen; bei Angriffen rotieren sie schneller und schließen sich vor der Hand zur Speerspitze, bei Defense stapeln sie sich zur Wand, dem Sprung folgen sie träge. Sprint Lava Tread, Jump Magma Bound, Defense Basalt Shell.",
-   "peak": "Beim Aufladen setzen sich die Konstrukte vor dem Spieler zu einer großen, verstrebten Form zusammen (Faust, Schild, Maschine …). Full: Volcano Lance / Eruption Crown / Crater Heart."
-  }
+   "idle": "Eine einzige bauchige Ofenkammer hängt links hinter der Hüfte, mit drei gebrochenen Keramik-Düsenbändern und leuchtendem Ofenmund; Größenbereich 1,0–2,0 H.",
+   "action": "Heiße Asche fällt nach unten, die Ventile atmen gegeneinander; bei Bewegung schaukelt die Kammer wie schweres Gepäck und bleibt asymmetrisch.",
+   "peak": "Full Charge lässt die Ofenkammer als großes schräges Düsenaggregat aufreißen, das Raum und Boden überstrahlt; keine künstlichen Beine, kein Torso."
+  },
+  "v32": {
+   "category": "Ortsnaher asymmetrischer Schwebeofen, keine Körperstatue",
+   "silhouette": "Eine einzige bauchige Ofenkammer hängt links hinter der Hüfte, mit drei gebrochenen Keramik-Düsenbändern und leuchtendem Ofenmund; Größenbereich 1,0–2,0 H.",
+   "anchors": [
+    "hip_left",
+    "back_left",
+    "feet_world",
+    "sprite_alpha"
+   ],
+   "idle": "Eine einzige bauchige Ofenkammer hängt links hinter der Hüfte, mit drei gebrochenen Keramik-Düsenbändern und leuchtendem Ofenmund; Größenbereich 1,0–2,0 H.",
+   "action": "Heiße Asche fällt nach unten, die Ventile atmen gegeneinander; bei Bewegung schaukelt die Kammer wie schweres Gepäck und bleibt asymmetrisch.",
+   "peak": "Full Charge lässt die Ofenkammer als großes schräges Düsenaggregat aufreißen, das Raum und Boden überstrahlt; keine künstlichen Beine, kein Torso.",
+   "anim": {
+    "transformIn": "Poröse Glasur wächst als kleiner Ring am Boden, hebt eine hohle Keramikglocke zur Hüfte und öffnet seitlich zwei ungleiche Glutventile.",
+    "idle": "Eine einzige bauchige Ofenkammer hängt links hinter der Hüfte, mit drei gebrochenen Keramik-Düsenbändern und leuchtendem Ofenmund; Größenbereich 1,0–2,0 H.",
+    "sprint": "Heiße Asche fällt nach unten, die Ventile atmen gegeneinander; bei Bewegung schaukelt die Kammer wie schweres Gepäck und bleibt asymmetrisch.",
+    "defense": "Keramikblenden schließen sich um die blickseitige Flanke und verteilen Treffer in kurzen Glutstößen.",
+    "grab": "Ein Ofenhaken greift im Nahbereich aus dem seitlichen Ventil und zieht das Ziel zum Hitframe.",
+    "jump": "Im Sprung hängt die Kammer tiefer als der Körper und gibt eine vertikale Funkenfahne ab; bei Landung stampft sie als Gewichts-Nachlauf.",
+    "peak": "Full Charge lässt die Ofenkammer als großes schräges Düsenaggregat aufreißen, das Raum und Boden überstrahlt; keine künstlichen Beine, kein Torso.",
+    "transformOut": "Die einzelnen Fragmente verschwinden in umgekehrter Materiallogik der Aktivierung. Existierende Projektile und Bodenobjekte folgen ihren normalen, deterministischen Laufzeitregeln."
+   },
+   "attacks": {
+    "forward": "Short: kurzer Funkenausstoß aus einer Düse; Full: Ofentür klappt auf und presst eine konzentrierte Lava-Lanze vorwärts.",
+    "up": "Short: ein Ascherohr hustet aufwärts; Full: mehrere Ventile schichten einen eruptiven vertikalen Fächer.",
+    "down": "Short: Rußkranz an den Füßen; Full: Kammer senkt sich über einen Bodenpunkt und gießt einen breiten Kraterkern aus."
+   },
+   "exclusions": "Kein Magmariese, keine Lava-Ganzkörpertätowierung."
+  },
+  "morphCategory": "Ortsnaher asymmetrischer Schwebeofen, keine Körperstatue"
  },
  {
   "id": "T03",
@@ -557,10 +678,40 @@ export const BUFF_FORM_DATA = Object.freeze([
   "morphology": "creature_manifestation",
   "morphologyLabel": "Creature Manifestation",
   "states": {
-   "idle": "Creature Manifestation (unabhängige Energiegeschöpfe): Drei freischwebende, winkelige Kieferbögen aus Fossilglas bilden einen offenen Greifapparat neben dem Avatar.",
-   "action": "Die Geschöpfe bewegen sich auf eigenen Bahnen um den Spieler (Marionetten stehen am Boden und hängen an seinen Fäden), strecken sich im Sprint nach hinten und schnellen bei Angriffen vor. Sprint Wyrm Skitter, Jump Wyrm Leap, Defense Scale Veil.",
-   "peak": "Die Geschöpfe lösen sich als eigenständige Angreifer vom Spieler. Full: Ancestral Breath / Sky Maw / Primal Coil."
-  }
+   "idle": "Drei einzelne Kieferbögen schweben rechts und links der Figur, nicht über dem Kopf; ihre offenen Innenräume bleiben sichtbar, einer hängt deutlich tiefer als die anderen.",
+   "action": "Die Bögen gleiten wie schwebende Scheren gegeneinander und zeigen in den Innenfacetten kleine türkisfarbene Fossileinschlüsse, keine Zähne eines Tiergesichts.",
+   "peak": "Bei Full gruppieren sich die Bögen vorübergehend zu einer weit nach vorne reichenden Zange oder einem steilen Aufwärtskegel, der sofort wieder in drei unabhängige Teile zerfällt."
+  },
+  "v32": {
+   "category": "Seitlicher dreiteiliger fossiler Greifapparat",
+   "silhouette": "Drei einzelne Kieferbögen schweben rechts und links der Figur, nicht über dem Kopf; ihre offenen Innenräume bleiben sichtbar, einer hängt deutlich tiefer als die anderen.",
+   "anchors": [
+    "shoulder_left/right",
+    "hip",
+    "hand_right",
+    "sprite_alpha"
+   ],
+   "idle": "Drei einzelne Kieferbögen schweben rechts und links der Figur, nicht über dem Kopf; ihre offenen Innenräume bleiben sichtbar, einer hängt deutlich tiefer als die anderen.",
+   "action": "Die Bögen gleiten wie schwebende Scheren gegeneinander und zeigen in den Innenfacetten kleine türkisfarbene Fossileinschlüsse, keine Zähne eines Tiergesichts.",
+   "peak": "Bei Full gruppieren sich die Bögen vorübergehend zu einer weit nach vorne reichenden Zange oder einem steilen Aufwärtskegel, der sofort wieder in drei unabhängige Teile zerfällt.",
+   "anim": {
+    "transformIn": "Sedimentstreifen steigen aus drei kleinen Glasstaub-Wirbeln auf und setzen sich zu gebogenen fossilen Greifspangen zusammen; das Zentrum der Figur bleibt frei.",
+    "idle": "Drei einzelne Kieferbögen schweben rechts und links der Figur, nicht über dem Kopf; ihre offenen Innenräume bleiben sichtbar, einer hängt deutlich tiefer als die anderen.",
+    "sprint": "Die Bögen gleiten wie schwebende Scheren gegeneinander und zeigen in den Innenfacetten kleine türkisfarbene Fossileinschlüsse, keine Zähne eines Tiergesichts.",
+    "defense": "Zwei Bögen kreuzen vor dem Rumpf als Schutzklemmung; nur sichtbare Kontaktkanten leuchten.",
+    "grab": "Die untere Fossilspange umfasst ein nahegelegenes Ziel im Trefferframe, ohne Monstermaul direkt am Avatar.",
+    "jump": "Alle drei Spangen verzögern im Aufstieg; bei Fall strecken sie sich vertikal und klappen auf Landung zusammen.",
+    "peak": "Bei Full gruppieren sich die Bögen vorübergehend zu einer weit nach vorne reichenden Zange oder einem steilen Aufwärtskegel, der sofort wieder in drei unabhängige Teile zerfällt.",
+    "transformOut": "Die einzelnen Fragmente verschwinden in umgekehrter Materiallogik der Aktivierung. Existierende Projektile und Bodenobjekte folgen ihren normalen, deterministischen Laufzeitregeln."
+   },
+   "attacks": {
+    "forward": "Short: ein einzelner Kieferbogen schnappt waagerecht; Full: alle Bögen fächern zu einem breiten sedimental leuchtenden Strahlfächer auf.",
+    "up": "Short: hohe Spange stößt nach oben; Full: drei Bogenachsen bilden eine offene sich schließende Himmelsschere.",
+    "down": "Short: untere Spange zieht im Halbkreis; Full: mehrere Fossilbögen windet sich bodennah zu einer großen, nicht biologischen Spirale."
+   },
+   "exclusions": "Keine Drachenfratze, kein Schnauzenkopf, kein halbhumanoides Rippenskelett."
+  },
+  "morphCategory": "Seitlicher dreiteiliger fossiler Greifapparat"
  },
  {
   "id": "T04",
@@ -678,10 +829,39 @@ export const BUFF_FORM_DATA = Object.freeze([
   "morphology": "energy_extension",
   "morphologyLabel": "Energy Extension",
   "states": {
-   "idle": "Energy Extension (bewegliche Schweife, Bänder und Peitschen aus der Körperkontur): Zwei fächerförmige Schutzsegel aus Korallenlamellen stehen seitlich statt klassischer Drachenflügel.",
-   "action": "Sprint zieht die Bänder flach nach hinten, beim Sprung hängen sie unter dem Körper, Angriffe lassen sie nach vorn peitschen. Sprint Ruby Glide, Jump Bloom Flight, Defense Queen Mantle.",
-   "peak": "Die Bänder schießen auf volle Länge aus und formen die Full-Attacke. Full: Queenfire Stream / Crown Ascent / Sanctuary Bloom."
-  }
+   "idle": "Zwei breite fächerförmige Segel schweben seitlich auf Hüfthöhe, eines deutlich höher, mit salzweiß gesprenkelter Porzellanoberfläche, 1,5–2,4 H Spannweite.",
+   "action": "Die Fächer öffnen und schließen sich langsamer als die Figur atmet; bei Sprint falten sie sich nach hinten und hinterlassen einen zweigeteilten salzigen Partikelstreifen.",
+   "peak": "Full Charge breitet die Segel zu einem raumgreifenden seitlichen Schutz-/Heilungsfeld aus; sie formen ausdrücklich keinen fliegenden Drachen."
+  },
+  "v32": {
+   "category": "Zweiflügeliger Schutzfächer aus korallinen Segeln",
+   "silhouette": "Zwei breite fächerförmige Segel schweben seitlich auf Hüfthöhe, eines deutlich höher, mit salzweiß gesprenkelter Porzellanoberfläche, 1,5–2,4 H Spannweite.",
+   "anchors": [
+    "hip_left/right",
+    "back_left/right",
+    "sprite_alpha"
+   ],
+   "idle": "Zwei breite fächerförmige Segel schweben seitlich auf Hüfthöhe, eines deutlich höher, mit salzweiß gesprenkelter Porzellanoberfläche, 1,5–2,4 H Spannweite.",
+   "action": "Die Fächer öffnen und schließen sich langsamer als die Figur atmet; bei Sprint falten sie sich nach hinten und hinterlassen einen zweigeteilten salzigen Partikelstreifen.",
+   "peak": "Full Charge breitet die Segel zu einem raumgreifenden seitlichen Schutz-/Heilungsfeld aus; sie formen ausdrücklich keinen fliegenden Drachen.",
+   "anim": {
+    "transformIn": "Winzige Kalkplättchen strömen seitlich vom Sprite und falten sich wie Segellatten auf, dabei werden rosige Innenperlen sichtbar.",
+    "idle": "Zwei breite fächerförmige Segel schweben seitlich auf Hüfthöhe, eines deutlich höher, mit salzweiß gesprenkelter Porzellanoberfläche, 1,5–2,4 H Spannweite.",
+    "sprint": "Die Fächer öffnen und schließen sich langsamer als die Figur atmet; bei Sprint falten sie sich nach hinten und hinterlassen einen zweigeteilten salzigen Partikelstreifen.",
+    "defense": "Beide Segel stellen ihre gefassten Kanten wie einen V-Schild vor den Avatar.",
+    "grab": "Ein Segelrand schiebt sich auf das unmittelbar benachbarte Ziel und lenkt es nur nach Trefferbestätigung um.",
+    "jump": "Die Fächer ziehen sich beim Sprung unter den Avatar und steigen als verzögerte Gleiter nach, ohne eigenständiges Flugmodell zu benötigen.",
+    "peak": "Full Charge breitet die Segel zu einem raumgreifenden seitlichen Schutz-/Heilungsfeld aus; sie formen ausdrücklich keinen fliegenden Drachen.",
+    "transformOut": "Die einzelnen Fragmente verschwinden in umgekehrter Materiallogik der Aktivierung. Existierende Projektile und Bodenobjekte folgen ihren normalen, deterministischen Laufzeitregeln."
+   },
+   "attacks": {
+    "forward": "Short: einzelner rosiger Perlstrahl; Full: die geöffneten Fächer weben einen breiten schimmernden Strom nach vorn.",
+    "up": "Short: ein Fächer kippt hoch; Full: beide Segel heben eine gebogene perlmuttfarbene Schutzaufwindbahn.",
+    "down": "Short: heller Kreidekreis am Fuß; Full: Segel setzen mehrere Salzpunkte zu einer ausgedehnten Schutzblüte zusammen."
+   },
+   "exclusions": "Keine biologischen Flügel oder Engelsflügel, kein rotgoldenes Reptil."
+  },
+  "morphCategory": "Zweiflügeliger Schutzfächer aus korallinen Segeln"
  },
  {
   "id": "T05",
@@ -786,10 +966,41 @@ export const BUFF_FORM_DATA = Object.freeze([
   "morphology": "levitation",
   "morphologyLabel": "Levitation State",
   "states": {
-   "idle": "Levitation State (schwebender Spieler mit kontrollierten Projektilen): Drei gebrochene, schwebende Gravitätsfinnen statt zwei biologischer Flügel; keine Hörner.",
-   "action": "Der Spieler schwebt über seinem Schatten; die Projektile ordnen sich je nach Aktion neu: Halo im Idle, Zielreihe vor der Hand beim Angriff, Schildbogen bei Defense, Schleppe im Sprint, unter den Füßen im Sprung. Sprint Fel Skim, Jump Double Vault, Defense Fiend Wings.",
-   "peak": "Er steigt kurz höher, die Projektile fächern zur Full-Attacke aus. Full: Annihilation Ray / Infernal Ascent / Abyss Crash."
-  }
+   "idle": "Drei voneinander getrennte dunkle Bruchfinnen hängen diagonal hinter und unter dem Avatar, ohne symmetrische Flügelpaarung; der Raum zwischen ihnen verzerrt die Hintergrundpixel.",
+   "action": "Die Finnen kippen bei Beschleunigung auf unterschiedliche Winkel und scheinen nach dem Stoppen kurz nachzurutschen, weil ihre Positionsanker nicht identisch sind.",
+   "peak": "Peak bildet einen einzelnen langen räumlichen Scherkeil oder einen kurzen freien Fallkanal; die Finnen bleiben drei unterscheidbare Teile, nie Riesenarme."
+  },
+  "v32": {
+   "category": "Asymmetrische Gravitätsfinnen als richtungsabhängiger Schwebeversatz",
+   "silhouette": "Drei voneinander getrennte dunkle Bruchfinnen hängen diagonal hinter und unter dem Avatar, ohne symmetrische Flügelpaarung; der Raum zwischen ihnen verzerrt die Hintergrundpixel.",
+   "anchors": [
+    "hip",
+    "back_left",
+    "feet_world",
+    "velocity",
+    "sprite_alpha"
+   ],
+   "idle": "Drei voneinander getrennte dunkle Bruchfinnen hängen diagonal hinter und unter dem Avatar, ohne symmetrische Flügelpaarung; der Raum zwischen ihnen verzerrt die Hintergrundpixel.",
+   "action": "Die Finnen kippen bei Beschleunigung auf unterschiedliche Winkel und scheinen nach dem Stoppen kurz nachzurutschen, weil ihre Positionsanker nicht identisch sind.",
+   "peak": "Peak bildet einen einzelnen langen räumlichen Scherkeil oder einen kurzen freien Fallkanal; die Finnen bleiben drei unterscheidbare Teile, nie Riesenarme.",
+   "anim": {
+    "transformIn": "Je ein Schwerkraftfeld knickt aus dem Schatten des Sprites, zieht drei schwarzgläserne Blätter aus unterschiedlichen Höhen und setzt helle Polknoten an die Spitze.",
+    "idle": "Drei voneinander getrennte dunkle Bruchfinnen hängen diagonal hinter und unter dem Avatar, ohne symmetrische Flügelpaarung; der Raum zwischen ihnen verzerrt die Hintergrundpixel.",
+    "sprint": "Die Finnen kippen bei Beschleunigung auf unterschiedliche Winkel und scheinen nach dem Stoppen kurz nachzurutschen, weil ihre Positionsanker nicht identisch sind.",
+    "defense": "Die vordere Finne deckt einen schmalen Raumkorridor ab und biegt feindliche Lichtspuren sichtbar seitlich weg.",
+    "grab": "Eine Finne arretiert nahe Ziele kurz mit einem richtungsgebundenen Schwerkraftkeil.",
+    "jump": "Aufstieg: Finnen strecken sich wie drei unterseitige Jets; Apex: Schwerelosigkeit und Gegenrotation; Landung: versetzte Druckringe am Boden.",
+    "peak": "Peak bildet einen einzelnen langen räumlichen Scherkeil oder einen kurzen freien Fallkanal; die Finnen bleiben drei unterscheidbare Teile, nie Riesenarme.",
+    "transformOut": "Die einzelnen Fragmente verschwinden in umgekehrter Materiallogik der Aktivierung. Existierende Projektile und Bodenobjekte folgen ihren normalen, deterministischen Laufzeitregeln."
+   },
+   "attacks": {
+    "forward": "Short: ein Scherkeil zerkratzt Luft vor der Hand; Full: die Finnen öffnen einen langgestreckten leeren Strahlkanal.",
+    "up": "Short: kurze Aufwärtsfinne; Full: drei nacheinander ausfahrende Druckflügel treiben eine vertikale Scherkante.",
+    "down": "Short: eine Bodenfinne streift über den Boden; Full: das gesamte Feld fällt als breiter räumlicher Drucksturz auf eine Lanezone."
+   },
+   "exclusions": "Keine Fledermausflügel, Hörner oder Dämonenjäger-Silhouette."
+  },
+  "morphCategory": "Asymmetrische Gravitätsfinnen als richtungsabhängiger Schwebeversatz"
  },
  {
   "id": "T06",
@@ -903,10 +1114,41 @@ export const BUFF_FORM_DATA = Object.freeze([
   "morphology": "orbital_construct",
   "morphologyLabel": "Orbital Construct",
   "states": {
-   "idle": "Orbital Construct (freischwebende Ringe, Objekte und Fragmente): Drei schmale Magnetspulen rotieren diagonal um Hüfte, Ellbogen und Schulter.",
-   "action": "Die Konstrukte kreisen auf eigenen, geneigten Bahnen; bei Angriffen rotieren sie schneller und schließen sich vor der Hand zur Speerspitze, bei Defense stapeln sie sich zur Wand, dem Sprung folgen sie träge. Sprint Arc Sprint, Jump Ion Hop, Defense Faraday Veil.",
-   "peak": "Beim Aufladen setzen sich die Konstrukte vor dem Spieler zu einer großen, verstrebten Form zusammen (Faust, Schild, Maschine …). Full: Tempest Chain / Storm Spire / Cyclone Ground."
-  }
+   "idle": "Die Spulen umlaufen nicht den ganzen Körper als Käfig, sondern sind versetzt bei Schulter, Ellbogen und linker Hüfte angeordnet; dünne Kupferfäden verbinden sie, sichtbar 0,8–1,5 H.",
+   "action": "Spulen drehen gegensinnig in verschiedenen Geschwindigkeiten; zwischen den Rotoren springen haarfeine gelbgrüne Funken, während das Zentrum der Figur unverdeckt bleibt.",
+   "peak": "Bei Full richten sich die drei Spulen zu einer langen schrägen Induktionsschiene aus und entladen eine gerichtete Lichtfaserbahn; keine Körpergröße-Erhöhung."
+  },
+  "v32": {
+   "category": "Drei diagonal gesetzte elektromagnetische Spulen",
+   "silhouette": "Die Spulen umlaufen nicht den ganzen Körper als Käfig, sondern sind versetzt bei Schulter, Ellbogen und linker Hüfte angeordnet; dünne Kupferfäden verbinden sie, sichtbar 0,8–1,5 H.",
+   "anchors": [
+    "shoulder_right",
+    "elbow_right",
+    "hip_left",
+    "hand_right",
+    "sprite_alpha"
+   ],
+   "idle": "Die Spulen umlaufen nicht den ganzen Körper als Käfig, sondern sind versetzt bei Schulter, Ellbogen und linker Hüfte angeordnet; dünne Kupferfäden verbinden sie, sichtbar 0,8–1,5 H.",
+   "action": "Spulen drehen gegensinnig in verschiedenen Geschwindigkeiten; zwischen den Rotoren springen haarfeine gelbgrüne Funken, während das Zentrum der Figur unverdeckt bleibt.",
+   "peak": "Bei Full richten sich die drei Spulen zu einer langen schrägen Induktionsschiene aus und entladen eine gerichtete Lichtfaserbahn; keine Körpergröße-Erhöhung.",
+   "anim": {
+    "transformIn": "Ein kurzer Stromblitz zieht längs der wahren Spritekontur, drei ringartige Isoliergehäuse schnappen aus unterschiedlichen Richtungen an die Außenanker.",
+    "idle": "Die Spulen umlaufen nicht den ganzen Körper als Käfig, sondern sind versetzt bei Schulter, Ellbogen und linker Hüfte angeordnet; dünne Kupferfäden verbinden sie, sichtbar 0,8–1,5 H.",
+    "sprint": "Spulen drehen gegensinnig in verschiedenen Geschwindigkeiten; zwischen den Rotoren springen haarfeine gelbgrüne Funken, während das Zentrum der Figur unverdeckt bleibt.",
+    "defense": "Spulen schieben sich vor die Verteidigungsseite und erzeugen ein engmaschiges Netz wechselnder Feldlinien.",
+    "grab": "Magnetischer Kupferfaden schnürt die nahe Zielkontur für den kurzen Nah-Griff ein.",
+    "jump": "Im Sprung laufen elektrische Funken entlang der Trajektorie; Rotoren drehen am Scheitelpunkt gegensinnig und schwingen nach Landung zurück.",
+    "peak": "Bei Full richten sich die drei Spulen zu einer langen schrägen Induktionsschiene aus und entladen eine gerichtete Lichtfaserbahn; keine Körpergröße-Erhöhung.",
+    "transformOut": "Die einzelnen Fragmente verschwinden in umgekehrter Materiallogik der Aktivierung. Existierende Projektile und Bodenobjekte folgen ihren normalen, deterministischen Laufzeitregeln."
+   },
+   "attacks": {
+    "forward": "Short: einzelne dünne Nadelentladung; Full: Spulen bilden eine hintereinander geschaltete Kettenblitz-Schiene.",
+    "up": "Short: Funkenimpuls entlang eines Unterarmankers nach oben; Full: mehrere Induktionskerne setzen eine steile Stromsäule frei.",
+    "down": "Short: kurzer Sohlenpuls; Full: Rotoren koppeln den Boden zu einer wandernden elektromagnetischen Wirbelzone."
+   },
+   "exclusions": "Keine Vollrüstung aus Blitzen, keine ewig gleichen Blitzkringel."
+  },
+  "morphCategory": "Drei diagonal gesetzte elektromagnetische Spulen"
  },
  {
   "id": "T07",
@@ -1017,10 +1259,40 @@ export const BUFF_FORM_DATA = Object.freeze([
   "morphology": "body_augmentation",
   "morphologyLabel": "Body Augmentation",
   "states": {
-   "idle": "Body Augmentation (Strukturen direkt am Körper, zusätzliche Glieder und Leitungen): Vier asymmetrische Rauchsicheln entlang Unterarmen und Waden verlängern die Körperkontur; kein Fell, kein Wolfsmaul.",
-   "action": "Leitungen pumpen entlang Armen und Beinen zwischen den Anbauten; bei Angriffen entfaltet sich ein zusätzliches Gelenkglied aus der hinteren Schulter und schlägt zu, bei Defense wächst eine Platte über den vorderen Unterarm. Sprint Lunar Hunt, Jump Moonbound, Defense Hide Guard.",
-   "peak": "Die körpernahen Strukturen wachsen kurz als Stacheln aus dem Arenaboden. Full: Moon Howl / Silver Ascension / Lunar Ravage."
-  }
+   "idle": "Zwei schmale Sichelfahnen an den Unterarmen und zwei an den Waden, jeweils asymmetrisch und rau ausgefranst; Silhouette bleibt auf höchstens 1,5 H.",
+   "action": "Während Idle zittert jede Sichel unabhängig; beim Sprint zieht sie eine zackige tiefe Spur dicht über die Lane und vergrößert nicht die Körperbreite.",
+   "peak": "Full lässt nur kurz eine weite, einseitige Halbmond-Schnittbahn entstehen, die wieder in vier schmale Sichelfahnen zusammenfällt."
+  },
+  "v32": {
+   "category": "Vier körpernahe Rauch-Sichelverlängerungen",
+   "silhouette": "Zwei schmale Sichelfahnen an den Unterarmen und zwei an den Waden, jeweils asymmetrisch und rau ausgefranst; Silhouette bleibt auf höchstens 1,5 H.",
+   "anchors": [
+    "hand_left/right",
+    "shin_left/right",
+    "feet_world",
+    "sprite_alpha"
+   ],
+   "idle": "Zwei schmale Sichelfahnen an den Unterarmen und zwei an den Waden, jeweils asymmetrisch und rau ausgefranst; Silhouette bleibt auf höchstens 1,5 H.",
+   "action": "Während Idle zittert jede Sichel unabhängig; beim Sprint zieht sie eine zackige tiefe Spur dicht über die Lane und vergrößert nicht die Körperbreite.",
+   "peak": "Full lässt nur kurz eine weite, einseitige Halbmond-Schnittbahn entstehen, die wieder in vier schmale Sichelfahnen zusammenfällt.",
+   "anim": {
+    "transformIn": "Der Schatten an realen Unterarm- und Wadenkanten löst sich in vier dünne Rußschnitte, deren metallischer Kern erst am Rand aufblitzt.",
+    "idle": "Zwei schmale Sichelfahnen an den Unterarmen und zwei an den Waden, jeweils asymmetrisch und rau ausgefranst; Silhouette bleibt auf höchstens 1,5 H.",
+    "sprint": "Während Idle zittert jede Sichel unabhängig; beim Sprint zieht sie eine zackige tiefe Spur dicht über die Lane und vergrößert nicht die Körperbreite.",
+    "defense": "Unterarmsicheln kreuzen kurz blickseitig und erzeugen eine matt-rauchige Gegenkante.",
+    "grab": "Ein Wadenstreifen zieht das nahe Ziel mit einem tiefen Schattenhaken aus dem Gleichgewicht.",
+    "jump": "Sprung: Wadenfahnen hängen deutlich nach unten; Apex: Schneiden liegen parallel zur Bewegung; Landung: Ruß schlägt am Fuß aus.",
+    "peak": "Full lässt nur kurz eine weite, einseitige Halbmond-Schnittbahn entstehen, die wieder in vier schmale Sichelfahnen zusammenfällt.",
+    "transformOut": "Die einzelnen Fragmente verschwinden in umgekehrter Materiallogik der Aktivierung. Existierende Projektile und Bodenobjekte folgen ihren normalen, deterministischen Laufzeitregeln."
+   },
+   "attacks": {
+    "forward": "Short: knapper Sichelstreich; Full: Rauch-Sicheln verbinden sich zu einer durchlaufenden, breiten Bogenfront.",
+    "up": "Short: obere Sichel winkelt hoch; Full: vier rauchmetallene Schneiden steigen nacheinander in einem hohen Versatzbogen.",
+    "down": "Short: tiefer Jagdschnitt; Full: die Sicheln rennen über den Boden als kreisendes Schatten-Scherfeld."
+   },
+   "exclusions": "Kein Wolf, kein Tierkopf, keine humanoide Schattenbestie."
+  },
+  "morphCategory": "Vier körpernahe Rauch-Sichelverlängerungen"
  },
  {
   "id": "T08",
@@ -1130,10 +1402,40 @@ export const BUFF_FORM_DATA = Object.freeze([
   "morphology": "orbital_construct",
   "morphologyLabel": "Orbital Construct",
   "states": {
-   "idle": "Orbital Construct (freischwebende Ringe, Objekte und Fragmente): Hängende Keramikglocken und geknickte Grabplatten bilden ein bewegliches, hohles Rüstungskarussell.",
-   "action": "Die Konstrukte kreisen auf eigenen, geneigten Bahnen; bei Angriffen rotieren sie schneller und schließen sich vor der Hand zur Speerspitze, bei Defense stapeln sie sich zur Wand, dem Sprung folgen sie träge. Sprint Grave Drift, Jump Skeletal Hop, Defense Ossified Ward.",
-   "peak": "Beim Aufladen setzen sich die Konstrukte vor dem Spieler zu einer großen, verstrebten Form zusammen (Faust, Schild, Maschine …). Full: Sarcophagus Lance / Ossuary Bloom / Bone Cathedral."
-  }
+   "idle": "Drei unterschiedlich große Hohlglocken und zwei hängende Grabplatten bilden eine vertikale, seitlich versetzte Mobile-Silhouette hinter dem Rücken, 1,6–2,6 H.",
+   "action": "Bei Idle kollidieren die Hohlglocken nie, sondern schwingen phasenverschoben; aus jedem Schallrand läuft eine zarte, schraffierte Resonanzkante.",
+   "peak": "Full Charge fügt die Glockenöffnungen zu einer gewaltigen offenen Resonanzgasse zusammen; das Bild einer Menschengestalt bleibt aus."
+  },
+  "v32": {
+   "category": "Akustisches Glockenmobile aus Keramik, keine Rüstung",
+   "silhouette": "Drei unterschiedlich große Hohlglocken und zwei hängende Grabplatten bilden eine vertikale, seitlich versetzte Mobile-Silhouette hinter dem Rücken, 1,6–2,6 H.",
+   "anchors": [
+    "back_left",
+    "back_right",
+    "feet_world",
+    "sprite_alpha"
+   ],
+   "idle": "Drei unterschiedlich große Hohlglocken und zwei hängende Grabplatten bilden eine vertikale, seitlich versetzte Mobile-Silhouette hinter dem Rücken, 1,6–2,6 H.",
+   "action": "Bei Idle kollidieren die Hohlglocken nie, sondern schwingen phasenverschoben; aus jedem Schallrand läuft eine zarte, schraffierte Resonanzkante.",
+   "peak": "Full Charge fügt die Glockenöffnungen zu einer gewaltigen offenen Resonanzgasse zusammen; das Bild einer Menschengestalt bleibt aus.",
+   "anim": {
+    "transformIn": "Staubige Glasurscherben schweben aus der Bodenspur, fügen sich zu hängenden Glocken; unsichtbare Zugachsen lassen die schweren Teile allmählich ausschwingen.",
+    "idle": "Drei unterschiedlich große Hohlglocken und zwei hängende Grabplatten bilden eine vertikale, seitlich versetzte Mobile-Silhouette hinter dem Rücken, 1,6–2,6 H.",
+    "sprint": "Bei Idle kollidieren die Hohlglocken nie, sondern schwingen phasenverschoben; aus jedem Schallrand läuft eine zarte, schraffierte Resonanzkante.",
+    "defense": "Eine tiefe Glocke schwenkt zwischen Angriff und Figur, sodass die Schallfront den Treffer dämpft.",
+    "grab": "Der unterste Grabplattenhaken schwingt zum validierten Nahziel und arretiert kurz vor dem Opfer.",
+    "jump": "Während der Sprungphase hängen Glocken nach unten, bei Landung schwingen sie gegeneinander und klingeln stumm durch Lichtpulse.",
+    "peak": "Full Charge fügt die Glockenöffnungen zu einer gewaltigen offenen Resonanzgasse zusammen; das Bild einer Menschengestalt bleibt aus.",
+    "transformOut": "Die einzelnen Fragmente verschwinden in umgekehrter Materiallogik der Aktivierung. Existierende Projektile und Bodenobjekte folgen ihren normalen, deterministischen Laufzeitregeln."
+   },
+   "attacks": {
+    "forward": "Short: scharfer Scherben-Tonpfeil; Full: die Glocken in Linie setzen einen schweren sarkophagartigen Schallkeil frei.",
+    "up": "Short: oberes Plättchen zieht hoch; Full: alle Glocken schweben öffnend zur mehrlagigen Resonanzblüte.",
+    "down": "Short: Grabplatte prallt auf Bodenmarke; Full: Glocken öffnen ein rechteckig-hohles Schallfeld auf dem Boden."
+   },
+   "exclusions": "Keine Knochenrüstung, Totenschädelkrone oder Nekromantenkörper."
+  },
+  "morphCategory": "Akustisches Glockenmobile aus Keramik, keine Rüstung"
  },
  {
   "id": "T09",
@@ -1236,10 +1538,40 @@ export const BUFF_FORM_DATA = Object.freeze([
   "morphology": "orbital_construct",
   "morphologyLabel": "Orbital Construct",
   "states": {
-   "idle": "Orbital Construct (freischwebende Ringe, Objekte und Fragmente): Ein einseitig schwebendes Prisma aus fünf ungleichen Spiegelplatten; keine Dämonenhörner und keine vollständigen Doppelgänger.",
-   "action": "Die Konstrukte kreisen auf eigenen, geneigten Bahnen; bei Angriffen rotieren sie schneller und schließen sich vor der Hand zur Speerspitze, bei Defense stapeln sie sich zur Wand, dem Sprung folgen sie träge. Sprint Mirror Drift, Jump Split Leap, Defense Refractive Guard.",
-   "peak": "Beim Aufladen setzen sich die Konstrukte vor dem Spieler zu einer großen, verstrebten Form zusammen (Faust, Schild, Maschine …). Full: Fractured Volley / Prism Ascension / Reflection Rift."
-  }
+   "idle": "Fünf ungleiche Spiegelplatten schweben nur an einer Flanke, als schräg gestapelter, prismatischer Schirm; die Gegenseite des Avatars bleibt optisch fast frei.",
+   "action": "Jede Platte reflektiert einen anderen Ausschnitt aus Bewegung und Boden; die Reflexe rutschen unabhängig von der realen Pose über zerkratztes Glas.",
+   "peak": "Bei Full spreizen sich die fünf Spiegel zu einer gerichteten Reflexionslinse und geben mehrfach gebrochene Bahnen frei, niemals ein Doppelgänger-Heer."
+  },
+  "v32": {
+   "category": "Einseitiges Fünfplatten-Spiegelprisma",
+   "silhouette": "Fünf ungleiche Spiegelplatten schweben nur an einer Flanke, als schräg gestapelter, prismatischer Schirm; die Gegenseite des Avatars bleibt optisch fast frei.",
+   "anchors": [
+    "shoulder_left",
+    "hip_left",
+    "facing",
+    "sprite_alpha"
+   ],
+   "idle": "Fünf ungleiche Spiegelplatten schweben nur an einer Flanke, als schräg gestapelter, prismatischer Schirm; die Gegenseite des Avatars bleibt optisch fast frei.",
+   "action": "Jede Platte reflektiert einen anderen Ausschnitt aus Bewegung und Boden; die Reflexe rutschen unabhängig von der realen Pose über zerkratztes Glas.",
+   "peak": "Bei Full spreizen sich die fünf Spiegel zu einer gerichteten Reflexionslinse und geben mehrfach gebrochene Bahnen frei, niemals ein Doppelgänger-Heer.",
+   "anim": {
+    "transformIn": "Ein dünner Reflex tastet die echte Spritekontur ab, bricht dann in fünf isolierte Spiegelteile, die sich seitlich versetzt einrasten.",
+    "idle": "Fünf ungleiche Spiegelplatten schweben nur an einer Flanke, als schräg gestapelter, prismatischer Schirm; die Gegenseite des Avatars bleibt optisch fast frei.",
+    "sprint": "Jede Platte reflektiert einen anderen Ausschnitt aus Bewegung und Boden; die Reflexe rutschen unabhängig von der realen Pose über zerkratztes Glas.",
+    "defense": "Für Defense dreht sich das einseitige Prisma wie eine Jalousie vor die Blickrichtung und verteilt Projektilreflexe.",
+    "grab": "Eine Spiegelkante markiert das nahe Ziel mit kurz verzögertem Kontakt-Nachbild statt eines Greifarms.",
+    "jump": "Im Sprung kippt der ganze Seitenstapel nach hinten, einzelne Platten bleiben kurz in World-Space und schnappen zurück.",
+    "peak": "Bei Full spreizen sich die fünf Spiegel zu einer gerichteten Reflexionslinse und geben mehrfach gebrochene Bahnen frei, niemals ein Doppelgänger-Heer.",
+    "transformOut": "Die einzelnen Fragmente verschwinden in umgekehrter Materiallogik der Aktivierung. Existierende Projektile und Bodenobjekte folgen ihren normalen, deterministischen Laufzeitregeln."
+   },
+   "attacks": {
+    "forward": "Short: eine schmale Glasnadel aus vorderster Platte; Full: fünf Platten fächern als gebrochene Projektilsalve auf.",
+    "up": "Short: eine Spiegelkante hebt; Full: die Spiegel staffeln einen aufwärts wandernden Reflexionskorridor.",
+    "down": "Short: scharfes Splitter-Sweep; Full: breiter Reflektionsriss mit gestaffelten Projektilkopien nur als Effekt."
+   },
+   "exclusions": "Keine Dämonenhörner, symmetrischen Flügel, zweite Person oder starrer Spiegelrahmen."
+  },
+  "morphCategory": "Einseitiges Fünfplatten-Spiegelprisma"
  },
  {
   "id": "T10",
@@ -1348,10 +1680,40 @@ export const BUFF_FORM_DATA = Object.freeze([
   "morphology": "body_augmentation",
   "morphologyLabel": "Body Augmentation",
   "states": {
-   "idle": "Body Augmentation (Strukturen direkt am Körper, zusätzliche Glieder und Leitungen): Vier hohle Wurzelröhren verlaufen außen um Torso und Arme, ohne Fledermausflügel.",
-   "action": "Leitungen pumpen entlang Armen und Beinen zwischen den Anbauten; bei Angriffen entfaltet sich ein zusätzliches Gelenkglied aus der hinteren Schulter und schlägt zu, bei Defense wächst eine Platte über den vorderen Unterarm. Sprint Sanguine Drift, Jump Bloodborne Jump, Defense Wing Cocoon.",
-   "peak": "Die körpernahen Strukturen wachsen kurz als Stacheln aus dem Arenaboden. Full: Eclipse Lance / Crimson Ascension / Demonflare."
-  }
+   "idle": "Vier hohle Wurzelglasröhren rahmen Arme und Rippenraum nur von außen; die stärkste Pumpe sitzt deutlich seitlich hinter der Hüfte, nicht in einer Brustplatte.",
+   "action": "Die Flüssigkeit pulsiert mit eigener Frequenz; auf jeder Röhrenwand läuft eine helle Front; die gesamte Struktur zieht sich bei schnellen Moves kurz zusammen.",
+   "peak": "Full fächert die vier Kapillarröhren zur gerichteten Aderlanze oder zu einem bodennahen Saugkreislauf auf; die Körperkleidung wird nicht überzogen."
+  },
+  "v32": {
+   "category": "Externes pulsierendes Kapillarnetzwerk",
+   "silhouette": "Vier hohle Wurzelglasröhren rahmen Arme und Rippenraum nur von außen; die stärkste Pumpe sitzt deutlich seitlich hinter der Hüfte, nicht in einer Brustplatte.",
+   "anchors": [
+    "back_left",
+    "arm_left/right",
+    "hip_left",
+    "sprite_alpha"
+   ],
+   "idle": "Vier hohle Wurzelglasröhren rahmen Arme und Rippenraum nur von außen; die stärkste Pumpe sitzt deutlich seitlich hinter der Hüfte, nicht in einer Brustplatte.",
+   "action": "Die Flüssigkeit pulsiert mit eigener Frequenz; auf jeder Röhrenwand läuft eine helle Front; die gesamte Struktur zieht sich bei schnellen Moves kurz zusammen.",
+   "peak": "Full fächert die vier Kapillarröhren zur gerichteten Aderlanze oder zu einem bodennahen Saugkreislauf auf; die Körperkleidung wird nicht überzogen.",
+   "anim": {
+    "transformIn": "Eine matte Flüssigkeit steigt in schmalen Außenadern auf und zieht vier elastische Rohrbögen aus Lichtglas; sie verbinden sich an einer asymmetrischen Pumpe.",
+    "idle": "Vier hohle Wurzelglasröhren rahmen Arme und Rippenraum nur von außen; die stärkste Pumpe sitzt deutlich seitlich hinter der Hüfte, nicht in einer Brustplatte.",
+    "sprint": "Die Flüssigkeit pulsiert mit eigener Frequenz; auf jeder Röhrenwand läuft eine helle Front; die gesamte Struktur zieht sich bei schnellen Moves kurz zusammen.",
+    "defense": "Kapillarbögen schließen als beweglicher V-förmiger Absorber über der Angriffsseite.",
+    "grab": "Ein einzelner röhrenförmiger Saugfinger greift nur kurze Distanzen und zieht den Gegner in den bestätigten Kontakt.",
+    "jump": "Beim Springen hängen Flüssigkeitstropfen hinter der Bewegung; am Apex steigen Blasen in den Röhren auf, bei Landung pulsieren sie sichtbar.",
+    "peak": "Full fächert die vier Kapillarröhren zur gerichteten Aderlanze oder zu einem bodennahen Saugkreislauf auf; die Körperkleidung wird nicht überzogen.",
+    "transformOut": "Die einzelnen Fragmente verschwinden in umgekehrter Materiallogik der Aktivierung. Existierende Projektile und Bodenobjekte folgen ihren normalen, deterministischen Laufzeitregeln."
+   },
+   "attacks": {
+    "forward": "Short: schmale Kapillarnadel; Full: vier Röhren entleeren konzentriert in eine vorwärts schießende Aderlanze.",
+    "up": "Short: eine Röhre schlägt als Haken hoch; Full: das Rohrnetz richtet mehrere leuchtende Schläuche in eine steile Saugsäule.",
+    "down": "Short: kurzer Flüssigkeitskreis; Full: der gesamte Kreislauf entlädt sich in eine flache radial pumpende Bodenblüte."
+   },
+   "exclusions": "Keine Fledermausflügel, rote Dämonenaura oder vollständige Blutpanzerung."
+  },
+  "morphCategory": "Externes pulsierendes Kapillarnetzwerk"
  },
  {
   "id": "T11",
@@ -1463,10 +1825,40 @@ export const BUFF_FORM_DATA = Object.freeze([
   "morphology": "energy_extension",
   "morphologyLabel": "Energy Extension",
   "states": {
-   "idle": "Energy Extension (bewegliche Schweife, Bänder und Peitschen aus der Körperkontur): Drei flache Kometenbänder aus Frostpapier mit fächerartigen Enden; keine Fuchsohren oder biologischen Schweife.",
-   "action": "Sprint zieht die Bänder flach nach hinten, beim Sprung hängen sie unter dem Körper, Angriffe lassen sie nach vorn peitschen. Sprint Snow Track, Jump Foxbound, Defense Frost Tail Guard.",
-   "peak": "Die Bänder schießen auf volle Länge aus und formen die Full-Attacke. Full: Aurora Foxfire / Nine-Star Leap / Whiteout Veil."
-  }
+   "idle": "Drei flache lange Papierkometen schweben in ungleicher Höhe schräg hinter dem Charakter, jeder mit gefrorenen Faltkanten und kleinen freien Blattzipfeln.",
+   "action": "Papierblätter knicken ungleichmäßig, die Spitzen brechen zu Schneeclustern; Laufbewegung macht aus ihnen flache Schleppfahnen.",
+   "peak": "Full Charge faltet die drei Kometen zu einer flächigen nichtbiologischen Frost-Lichtwelle, die wie eine geknickte Scherenschnittbahn aufreißt."
+  },
+  "v32": {
+   "category": "Gefalteter Frostpapier-Kometenschwarm",
+   "silhouette": "Drei flache lange Papierkometen schweben in ungleicher Höhe schräg hinter dem Charakter, jeder mit gefrorenen Faltkanten und kleinen freien Blattzipfeln.",
+   "anchors": [
+    "back_left",
+    "hip_right",
+    "shoulder_left",
+    "sprite_alpha"
+   ],
+   "idle": "Drei flache lange Papierkometen schweben in ungleicher Höhe schräg hinter dem Charakter, jeder mit gefrorenen Faltkanten und kleinen freien Blattzipfeln.",
+   "action": "Papierblätter knicken ungleichmäßig, die Spitzen brechen zu Schneeclustern; Laufbewegung macht aus ihnen flache Schleppfahnen.",
+   "peak": "Full Charge faltet die drei Kometen zu einer flächigen nichtbiologischen Frost-Lichtwelle, die wie eine geknickte Scherenschnittbahn aufreißt.",
+   "anim": {
+    "transformIn": "Reif zeichnet drei diagonale Linien von Arm zur Hüfte, die sich wie Papierstreifen aus dem Raum lösen und kristalline Falzkanten bekommen.",
+    "idle": "Drei flache lange Papierkometen schweben in ungleicher Höhe schräg hinter dem Charakter, jeder mit gefrorenen Faltkanten und kleinen freien Blattzipfeln.",
+    "sprint": "Papierblätter knicken ungleichmäßig, die Spitzen brechen zu Schneeclustern; Laufbewegung macht aus ihnen flache Schleppfahnen.",
+    "defense": "Drei gefaltete Bahnen legen sich versetzt vor den Avatar und leiten Einschläge entlang der Faltkanten ab.",
+    "grab": "Ein frostiger Papierstreifen schnellt wie ein Band zur nahen Zielkontur, legt sich nur im gültigen Grab-Fenster an.",
+    "jump": "Im Jump falten die Kometen zu langen vertikalen Bahnen auf; Apex: kurz flache Querstellung; Landing: gefrorene Papierfetzen prasseln ab.",
+    "peak": "Full Charge faltet die drei Kometen zu einer flächigen nichtbiologischen Frost-Lichtwelle, die wie eine geknickte Scherenschnittbahn aufreißt.",
+    "transformOut": "Die einzelnen Fragmente verschwinden in umgekehrter Materiallogik der Aktivierung. Existierende Projektile und Bodenobjekte folgen ihren normalen, deterministischen Laufzeitregeln."
+   },
+   "attacks": {
+    "forward": "Short: frostiger Faltpunkt; Full: drei Komenten spucken einen geschichteten Aurora-Fächer vorwärts.",
+    "up": "Short: eine Papierkante richtet sich hoch; Full: alle Streifen falten zu einem gestuften Aufwärtssturm.",
+    "down": "Short: Bodenstrich aus Reifpapier; Full: offene Papierflächen blenden den Bereich in eine kurzlebige frostige Weißzone."
+   },
+   "exclusions": "Keine Fuchsgeister, Schneeschweife aus Tierkörpern oder Tierohren."
+  },
+  "morphCategory": "Gefalteter Frostpapier-Kometenschwarm"
  },
  {
   "id": "T12",
@@ -1573,10 +1965,40 @@ export const BUFF_FORM_DATA = Object.freeze([
   "morphology": "body_augmentation",
   "morphologyLabel": "Body Augmentation",
   "states": {
-   "idle": "Body Augmentation (Strukturen direkt am Körper, zusätzliche Glieder und Leitungen): Vier offene Prankenbügel schweben als externe Exoskelett-Stützen um Hüfte und Schultern.",
-   "action": "Leitungen pumpen entlang Armen und Beinen zwischen den Anbauten; bei Angriffen entfaltet sich ein zusätzliches Gelenkglied aus der hinteren Schulter und schlägt zu, bei Defense wächst eine Platte über den vorderen Unterarm. Sprint Paw Gallop, Jump Prowler Leap, Defense Paw Bastion.",
-   "peak": "Die körpernahen Strukturen wachsen kurz als Stacheln aus dem Arenaboden. Full: Tiger Roar / Heaven Prowl / Imperial Roar."
-  }
+   "idle": "Vier scharf polierte Druckstützen stehen schräg in der Luft, zwei unterhalb der Schultern und zwei bei der Hüfte; innen offen, ohne sichtbare Hände oder Schulterpanzer.",
+   "action": "Die Bügel arbeiten wie nicht synchronisierte pneumatische Federbeine, sie stützen sich nie dauerhaft auf den Avatar selbst ab.",
+   "peak": "Peak bringt die vorderen Bügel kurz in einen aufprallenden Druckkeil und die hinteren in einen hochdrückenden Luftkanal; keinerlei Tigerkopf."
+  },
+  "v32": {
+   "category": "Vier externe Luftdruck-Prankenbügel ohne Tierkörper",
+   "silhouette": "Vier scharf polierte Druckstützen stehen schräg in der Luft, zwei unterhalb der Schultern und zwei bei der Hüfte; innen offen, ohne sichtbare Hände oder Schulterpanzer.",
+   "anchors": [
+    "shoulder_left/right",
+    "hip_left/right",
+    "velocity",
+    "sprite_alpha"
+   ],
+   "idle": "Vier scharf polierte Druckstützen stehen schräg in der Luft, zwei unterhalb der Schultern und zwei bei der Hüfte; innen offen, ohne sichtbare Hände oder Schulterpanzer.",
+   "action": "Die Bügel arbeiten wie nicht synchronisierte pneumatische Federbeine, sie stützen sich nie dauerhaft auf den Avatar selbst ab.",
+   "peak": "Peak bringt die vorderen Bügel kurz in einen aufprallenden Druckkeil und die hinteren in einen hochdrückenden Luftkanal; keinerlei Tigerkopf.",
+   "anim": {
+    "transformIn": "Kondensierende Luft zeichnet vier schmale Spuren um den Avatar, aus denen harte, federnde Druckbügel mit eingeritzten Pufferkammern treten.",
+    "idle": "Vier scharf polierte Druckstützen stehen schräg in der Luft, zwei unterhalb der Schultern und zwei bei der Hüfte; innen offen, ohne sichtbare Hände oder Schulterpanzer.",
+    "sprint": "Die Bügel arbeiten wie nicht synchronisierte pneumatische Federbeine, sie stützen sich nie dauerhaft auf den Avatar selbst ab.",
+    "defense": "Zwei Bügel federn einen Angriff ab und pressen durch Luftgegendruck in die Ursprungsrichtung.",
+    "grab": "Ein Bügel schnappt über die kurze Nähe des validierten Ziels, der andere drückt unterstützend hinterher.",
+    "jump": "Beim Aufstieg stellen hintere Druckstützen senkrecht; Apex: Ventile öffnen; Landung: alle vier Bügel stoßen nach außen und federn nach.",
+    "peak": "Peak bringt die vorderen Bügel kurz in einen aufprallenden Druckkeil und die hinteren in einen hochdrückenden Luftkanal; keinerlei Tigerkopf.",
+    "transformOut": "Die einzelnen Fragmente verschwinden in umgekehrter Materiallogik der Aktivierung. Existierende Projektile und Bodenobjekte folgen ihren normalen, deterministischen Laufzeitregeln."
+   },
+   "attacks": {
+    "forward": "Short: seitlicher pneumatischer Wischer; Full: Druckstützen formen einen breiten horizontalen Schallstoß.",
+    "up": "Short: eine Druckstütze hebelt hoch; Full: alle vier Bügel schieben eine gestufte Luftdrucksäule aufwärts.",
+    "down": "Short: kleiner Pfoten-Puff ohne Tierpfote; Full: Stützen kreuzen am Boden einen weiten Luftdruckring."
+   },
+   "exclusions": "Kein Katzen-/Tigerkörper, keine großen biologischen Krallen, kein Exoskelett-Torso."
+  },
+  "morphCategory": "Vier externe Luftdruck-Prankenbügel ohne Tierkörper"
  },
  {
   "id": "T13",
@@ -1682,10 +2104,40 @@ export const BUFF_FORM_DATA = Object.freeze([
   "morphology": "body_augmentation",
   "morphologyLabel": "Body Augmentation",
   "states": {
-   "idle": "Body Augmentation (Strukturen direkt am Körper, zusätzliche Glieder und Leitungen): Sichtbare metallische Fadenspule nahe der Schulter; vier Spannseile führen zu der vorhandenen Waffe.",
-   "action": "Leitungen pumpen entlang Armen und Beinen zwischen den Anbauten; bei Angriffen entfaltet sich ein zusätzliches Gelenkglied aus der hinteren Schulter und schlägt zu, bei Defense wächst eine Platte über den vorderen Unterarm. Sprint Lightning Thread, Jump Loom Jump, Defense Silk Parry.",
-   "peak": "Die körpernahen Strukturen wachsen kurz als Stacheln aus dem Arenaboden. Full: Hundred Filaments / Heaven Loom / Thunder Weave."
-  }
+   "idle": "Eine einzelne grob geätzte Spule hängt an einer Schulter; vier dünne Metalldrahtzüge laufen zur aktuell sichtbaren Waffe oder ersatzweise zu Hand-/Focusankern.",
+   "action": "Idle: der Spulenrand zittert mit unterschiedlichen Drahtschwingungen; bei Sprüngen und Angriffen läuft eine Materialwelle entlang der Leitungen.",
+   "peak": "Full lädt alle Fäden auf Spannung und webt vorübergehend ein breites Kampfgeflecht nach vorne; keine zusätzliche Körpermasse."
+  },
+  "v32": {
+   "category": "Fadenspule und vier gespannte sichtbare Waffenleitungen",
+   "silhouette": "Eine einzelne grob geätzte Spule hängt an einer Schulter; vier dünne Metalldrahtzüge laufen zur aktuell sichtbaren Waffe oder ersatzweise zu Hand-/Focusankern.",
+   "anchors": [
+    "shoulder_right",
+    "weapon_grip",
+    "hand_left/right",
+    "sprite_alpha"
+   ],
+   "idle": "Eine einzelne grob geätzte Spule hängt an einer Schulter; vier dünne Metalldrahtzüge laufen zur aktuell sichtbaren Waffe oder ersatzweise zu Hand-/Focusankern.",
+   "action": "Idle: der Spulenrand zittert mit unterschiedlichen Drahtschwingungen; bei Sprüngen und Angriffen läuft eine Materialwelle entlang der Leitungen.",
+   "peak": "Full lädt alle Fäden auf Spannung und webt vorübergehend ein breites Kampfgeflecht nach vorne; keine zusätzliche Körpermasse.",
+   "anim": {
+    "transformIn": "Vier leuchtende Fäden ziehen die Spule als Paket aus scharfkantigen Metallfasern von der Schulter weg, dann spannen sie sich zur Waffe.",
+    "idle": "Eine einzelne grob geätzte Spule hängt an einer Schulter; vier dünne Metalldrahtzüge laufen zur aktuell sichtbaren Waffe oder ersatzweise zu Hand-/Focusankern.",
+    "sprint": "Idle: der Spulenrand zittert mit unterschiedlichen Drahtschwingungen; bei Sprüngen und Angriffen läuft eine Materialwelle entlang der Leitungen.",
+    "defense": "Fäden spannen ein fein graviertes Schutznetz vor die Blickrichtung, das sich bei Hit als Schwingmuster entlädt.",
+    "grab": "Zwei Drähte verhaken sich im nahen Ziel und werden nur bei bestätigtem Grab kurz eingezogen.",
+    "jump": "Aufstieg: Fäden strecken hinterher; Apex: Schwingung stoppt kurz; Landung: sichtbares mehrstufiges Zurückschnalzen.",
+    "peak": "Full lädt alle Fäden auf Spannung und webt vorübergehend ein breites Kampfgeflecht nach vorne; keine zusätzliche Körpermasse.",
+    "transformOut": "Die einzelnen Fragmente verschwinden in umgekehrter Materiallogik der Aktivierung. Existierende Projektile und Bodenobjekte folgen ihren normalen, deterministischen Laufzeitregeln."
+   },
+   "attacks": {
+    "forward": "Short: einzelne gezielte Drahtnadel; Full: gleichzeitig gespannte Filamente schießen als gerichteter Fadenteppich nach vorn.",
+    "up": "Short: ein gespannter Faden hakt oben ein; Full: sämtliche Leitungen schlagen als hochgezogenes Gewebe um den Aufwärtsbereich.",
+    "down": "Short: kurzer Bodenstich mit einer Drahtspitze; Full: Fäden vernähen mehrere Bodenpunkte zu einem flächigen Impulsfeld."
+   },
+   "exclusions": "Keine Puppenarme, keine Riesenschwerter, keine gleichmäßige Spinnennetzkugel."
+  },
+  "morphCategory": "Fadenspule und vier gespannte sichtbare Waffenleitungen"
  },
  {
   "id": "T14",
@@ -1788,10 +2240,40 @@ export const BUFF_FORM_DATA = Object.freeze([
   "morphology": "orbital_construct",
   "morphologyLabel": "Orbital Construct",
   "states": {
-   "idle": "Orbital Construct (freischwebende Ringe, Objekte und Fragmente): Drei schiefe, gestanzte Glyphenplatten hängen an einer zentralen Klemme statt generischer Magiekreise.",
-   "action": "Die Konstrukte kreisen auf eigenen, geneigten Bahnen; bei Angriffen rotieren sie schneller und schließen sich vor der Hand zur Speerspitze, bei Defense stapeln sie sich zur Wand, dem Sprung folgen sie träge. Sprint Glyph Flow, Jump Glyph Step, Defense Script Ward.",
-   "peak": "Beim Aufladen setzen sich die Konstrukte vor dem Spieler zu einer großen, verstrebten Form zusammen (Faust, Schild, Maschine …). Full: Grand Script / Runic Obelisk / Circle Codex."
-  }
+   "idle": "Drei schiefe gestanzte Metallglyphen hängen in einer vertikalen Staffelung an einer einzigen mechanischen Klemme über einer Schulter; keine konzentrischen Zauberkreise.",
+   "action": "Die Platten bewegen sich in kleinen Stop-Motion-Rastschritten, dunkle Stanzlöcher bleiben sichtbar; nur geprägte Kerben beginnen langsam zu leuchten.",
+   "peak": "Full klappt die Glyphenplatten zur großen einmaligen Schriftstanze auf und prägt ein effektvolles Siegel in den Raum; anschließend fährt alles zurück."
+  },
+  "v32": {
+   "category": "Hängendes Glyphenblech-Pendel mit Klammerapparat",
+   "silhouette": "Drei schiefe gestanzte Metallglyphen hängen in einer vertikalen Staffelung an einer einzigen mechanischen Klemme über einer Schulter; keine konzentrischen Zauberkreise.",
+   "anchors": [
+    "shoulder_left",
+    "back_left",
+    "hand_right",
+    "sprite_alpha"
+   ],
+   "idle": "Drei schiefe gestanzte Metallglyphen hängen in einer vertikalen Staffelung an einer einzigen mechanischen Klemme über einer Schulter; keine konzentrischen Zauberkreise.",
+   "action": "Die Platten bewegen sich in kleinen Stop-Motion-Rastschritten, dunkle Stanzlöcher bleiben sichtbar; nur geprägte Kerben beginnen langsam zu leuchten.",
+   "peak": "Full klappt die Glyphenplatten zur großen einmaligen Schriftstanze auf und prägt ein effektvolles Siegel in den Raum; anschließend fährt alles zurück.",
+   "anim": {
+    "transformIn": "Die Kontur projiziert kurze Pressmarkierungen, dann stanzen sich drei getrennte Platten von innen nach außen aus Lichtblech und rasten klickend ein.",
+    "idle": "Drei schiefe gestanzte Metallglyphen hängen in einer vertikalen Staffelung an einer einzigen mechanischen Klemme über einer Schulter; keine konzentrischen Zauberkreise.",
+    "sprint": "Die Platten bewegen sich in kleinen Stop-Motion-Rastschritten, dunkle Stanzlöcher bleiben sichtbar; nur geprägte Kerben beginnen langsam zu leuchten.",
+    "defense": "Ein Schutzblech dreht sich vor den Charakter und schließt an den gestanzten Rändern.",
+    "grab": "Die Klammer fährt für einen sehr kurzen mechanischen Halt zu einem Ziel in Grab-Reichweite.",
+    "jump": "Beim Sprung geraten die Platten aus ihrer gerasterten Lage; oben klicken sie neu und bei Landung rasten sie stufenweise zusammen.",
+    "peak": "Full klappt die Glyphenplatten zur großen einmaligen Schriftstanze auf und prägt ein effektvolles Siegel in den Raum; anschließend fährt alles zurück.",
+    "transformOut": "Die einzelnen Fragmente verschwinden in umgekehrter Materiallogik der Aktivierung. Existierende Projektile und Bodenobjekte folgen ihren normalen, deterministischen Laufzeitregeln."
+   },
+   "attacks": {
+    "forward": "Short: schnelles Einzelstempel-Siegel; Full: drei Bleche bilden eine mächtige frontale Schriftwalze.",
+    "up": "Short: ein Blech schiebt aufwärts; Full: ganze Rasterstanze stülpt ein gestaffeltes Säulensiegel hoch.",
+    "down": "Short: ein Siegelstempel auf Bodenhöhe; Full: mehrschichtiger Druckcodex legt sich über ein großes Bodenfeld."
+   },
+   "exclusions": "Keine Runenkrone, kein Standard-Magiekreis, kein symmetrischer Astralkörper."
+  },
+  "morphCategory": "Hängendes Glyphenblech-Pendel mit Klammerapparat"
  },
  {
   "id": "T15",
@@ -1907,10 +2389,40 @@ export const BUFF_FORM_DATA = Object.freeze([
   "morphology": "energy_extension",
   "morphologyLabel": "Energy Extension",
   "states": {
-   "idle": "Energy Extension (bewegliche Schweife, Bänder und Peitschen aus der Körperkontur): Vier verflochtene Leitbänder verlaufen von Rücken zur Hand und wechseln ihre Reihenfolge beim Elementwechsel.",
-   "action": "Sprint zieht die Bänder flach nach hinten, beim Sprung hängen sie unter dem Körper, Angriffe lassen sie nach vorn peitschen. Sprint Element Cycle, Jump Prism Jump, Defense Wave Guard.",
-   "peak": "Die Bänder schießen auf volle Länge aus und formen die Full-Attacke. Full: Quadra Torrent / Prismatic Rise / Flux Basin."
-  }
+   "idle": "Vier halbtransparente Lichtleitstreifen laufen von unterschiedlichen Rückenpunkten zu Hand, Waffe oder Focus; sie wechseln ihre Reihenfolge bei Farbwechseln, bilden aber keine Flügel.",
+   "action": "Farbkerne wandern in unterschiedlicher Geschwindigkeit durch die Innenröhren; Bänder dürfen sich kreuzen, ohne zu verschmelzen.",
+   "peak": "Full ordnet den Verteiler in eine große Schaltgabel, die mehrere elementare Effektbahnen gleichzeitig freigibt, ohne einen Geisterkörper zu erzeugen."
+  },
+  "v32": {
+   "category": "Vier leitende Spektralbänder als kreuzender Flussverteiler",
+   "silhouette": "Vier halbtransparente Lichtleitstreifen laufen von unterschiedlichen Rückenpunkten zu Hand, Waffe oder Focus; sie wechseln ihre Reihenfolge bei Farbwechseln, bilden aber keine Flügel.",
+   "anchors": [
+    "back_left/right",
+    "hand_right",
+    "weapon_grip",
+    "sprite_alpha"
+   ],
+   "idle": "Vier halbtransparente Lichtleitstreifen laufen von unterschiedlichen Rückenpunkten zu Hand, Waffe oder Focus; sie wechseln ihre Reihenfolge bei Farbwechseln, bilden aber keine Flügel.",
+   "action": "Farbkerne wandern in unterschiedlicher Geschwindigkeit durch die Innenröhren; Bänder dürfen sich kreuzen, ohne zu verschmelzen.",
+   "peak": "Full ordnet den Verteiler in eine große Schaltgabel, die mehrere elementare Effektbahnen gleichzeitig freigibt, ohne einen Geisterkörper zu erzeugen.",
+   "anim": {
+    "transformIn": "Ein Prisma bricht als kurzes Lichtsignal an der Schulterkontur auf; aus vier Spaltwinkeln schießen separate leuchtende Leitbänder zur Angriffshand.",
+    "idle": "Vier halbtransparente Lichtleitstreifen laufen von unterschiedlichen Rückenpunkten zu Hand, Waffe oder Focus; sie wechseln ihre Reihenfolge bei Farbwechseln, bilden aber keine Flügel.",
+    "sprint": "Farbkerne wandern in unterschiedlicher Geschwindigkeit durch die Innenröhren; Bänder dürfen sich kreuzen, ohne zu verschmelzen.",
+    "defense": "Die Bänder legen sich als schräg verschachtelte Leiterbahn vor den Guard und leiten Stoßenergie seitlich weg.",
+    "grab": "Ein Leitstreifen schnappt zum Nahziel, wobei nur der verankerte Endpunkt bei erfolgreichem Kontakt Halt bietet.",
+    "jump": "Beim Jump hängen Leitbahnen nach und rücken am Scheitelpunkt nach oben; Landung: Farbstrom verteilt sich erst verzögert wieder gleichmäßig.",
+    "peak": "Full ordnet den Verteiler in eine große Schaltgabel, die mehrere elementare Effektbahnen gleichzeitig freigibt, ohne einen Geisterkörper zu erzeugen.",
+    "transformOut": "Die einzelnen Fragmente verschwinden in umgekehrter Materiallogik der Aktivierung. Existierende Projektile und Bodenobjekte folgen ihren normalen, deterministischen Laufzeitregeln."
+   },
+   "attacks": {
+    "forward": "Short: ein heißer Leitstreifen sendet ein Projektil; Full: alle vier Bahnen bündeln sich zum mehrfarbigen Frontstrom.",
+    "up": "Short: elektrischer Hebeimpuls; Full: Leiterbahnen entfalten eine gestaffelte Prisma-Aufwärtsspur.",
+    "down": "Short: kalte Sohlenentladung; Full: vier Leitfarben kippen in einen breiten bodennahen Flussverteiler."
+   },
+   "exclusions": "Keine komplett ummantelte Ganzkörperaura oder Vierer-Flügelpakete."
+  },
+  "morphCategory": "Vier leitende Spektralbänder als kreuzender Flussverteiler"
  },
  {
   "id": "T16",
@@ -2015,10 +2527,40 @@ export const BUFF_FORM_DATA = Object.freeze([
   "morphology": "orbital_construct",
   "morphologyLabel": "Orbital Construct",
   "states": {
-   "idle": "Orbital Construct (freischwebende Ringe, Objekte und Fragmente): Vier mechanische Pendelknoten hängen in asymmetrischem Orbit um den Rücken statt kleiner humanoider Dschinn.",
-   "action": "Die Konstrukte kreisen auf eigenen, geneigten Bahnen; bei Angriffen rotieren sie schneller und schließen sich vor der Hand zur Speerspitze, bei Defense stapeln sie sich zur Wand, dem Sprung folgen sie träge. Sprint Djinn Parade, Jump Summoner Hop, Defense Djinn Halo.",
-   "peak": "Beim Aufladen setzen sich die Konstrukte vor dem Spieler zu einer großen, verstrebten Form zusammen (Faust, Schild, Maschine …). Full: Conclave Burst / Ascendant Choir / Summoners Ring."
-  }
+   "idle": "Statt Körperrüstung schweben vier Pendelgewichte in unterschiedlichen Tiefen und Entfernungen um den Rücken, ihre Aufhängungen sind kurze gewundene Lichtachsen, Größenmaß 0,5–1,6 H.",
+   "action": "Jedes Pendel besitzt andere Phase und Eigendrehung; Bewegungen lassen die Gewichte als schweres vierteiliges Mobile nachschwingen.",
+   "peak": "Full Charge bündelt die Knoten nie zu einem Riesenleib, sondern lässt sie vier verschiedene Stoßachsen im Zielbereich erzeugen."
+  },
+  "v32": {
+   "category": "Vier ungleich gewichtete Pendelknoten im asymmetrischen Orbit",
+   "silhouette": "Statt Körperrüstung schweben vier Pendelgewichte in unterschiedlichen Tiefen und Entfernungen um den Rücken, ihre Aufhängungen sind kurze gewundene Lichtachsen, Größenmaß 0,5–1,6 H.",
+   "anchors": [
+    "back_left",
+    "back_right",
+    "root",
+    "sprite_alpha"
+   ],
+   "idle": "Statt Körperrüstung schweben vier Pendelgewichte in unterschiedlichen Tiefen und Entfernungen um den Rücken, ihre Aufhängungen sind kurze gewundene Lichtachsen, Größenmaß 0,5–1,6 H.",
+   "action": "Jedes Pendel besitzt andere Phase und Eigendrehung; Bewegungen lassen die Gewichte als schweres vierteiliges Mobile nachschwingen.",
+   "peak": "Full Charge bündelt die Knoten nie zu einem Riesenleib, sondern lässt sie vier verschiedene Stoßachsen im Zielbereich erzeugen.",
+   "anim": {
+    "transformIn": "Vier schmale Lichtlotlinien werden von der Avatarposition aus in den Raum gespannt, an denen metallische Knoten aus Sandpartikeln und Kratzmetall zusammenlaufen.",
+    "idle": "Statt Körperrüstung schweben vier Pendelgewichte in unterschiedlichen Tiefen und Entfernungen um den Rücken, ihre Aufhängungen sind kurze gewundene Lichtachsen, Größenmaß 0,5–1,6 H.",
+    "sprint": "Jedes Pendel besitzt andere Phase und Eigendrehung; Bewegungen lassen die Gewichte als schweres vierteiliges Mobile nachschwingen.",
+    "defense": "Ein Gewicht dreht als Pendelblock vor die Blickrichtung, die anderen bleiben auf verschiedenen Bahnen verteilt.",
+    "grab": "Zwei Gewichte kreuzen sich am Nahziel als temporäre Fessel, nach bestätigtem Treffer wird zurückgeschwenkt.",
+    "jump": "Beim Sprung pendeln Gewichte deutlich nach unten, beim Apex schwingen sie über die Flugbahn, bei Landung folgen vier zeitversetzte Rückstöße.",
+    "peak": "Full Charge bündelt die Knoten nie zu einem Riesenleib, sondern lässt sie vier verschiedene Stoßachsen im Zielbereich erzeugen.",
+    "transformOut": "Die einzelnen Fragmente verschwinden in umgekehrter Materiallogik der Aktivierung. Existierende Projektile und Bodenobjekte folgen ihren normalen, deterministischen Laufzeitregeln."
+   },
+   "attacks": {
+    "forward": "Short: ein Pendel gibt einen konzentrierten Knall frei; Full: alle vier Stoßgewichte detonieren in getrennten Frontintervallen.",
+    "up": "Short: oberes Pendel schlägt hoch; Full: Gewichte werden zeitversetzt wie eine aufsteigende Schallleiter geschwungen.",
+    "down": "Short: tiefer Pendelhieb; Full: alle Gewichte entladen sich kreisförmig an vier Bodenmarken."
+   },
+   "exclusions": "Keine kleinen Dschinnwesen, Kronen oder identischen Satellitenkugeln."
+  },
+  "morphCategory": "Vier ungleich gewichtete Pendelknoten im asymmetrischen Orbit"
  },
  {
   "id": "T17",
@@ -2129,10 +2671,40 @@ export const BUFF_FORM_DATA = Object.freeze([
   "morphology": "energy_extension",
   "morphologyLabel": "Energy Extension",
   "states": {
-   "idle": "Energy Extension (bewegliche Schweife, Bänder und Peitschen aus der Körperkontur): Asymmetrische Streifen aus verkohlter Lichtkeramik lösen sich vom Rücken wie mausernde Schindeln.",
-   "action": "Sprint zieht die Bänder flach nach hinten, beim Sprung hängen sie unter dem Körper, Angriffe lassen sie nach vorn peitschen. Sprint Ember Flight, Jump Phoenix Bound, Defense Feather Veil.",
-   "peak": "Die Bänder schießen auf volle Länge aus und formen die Full-Attacke. Full: Phoenix Beak / Solar Ascension / Ash Rebirth."
-  }
+   "idle": "Verkohlte Ofenschindeln hängen nicht als Flügel, sondern reißen in schrägen, gestuften Bahnen vom Rücken ab, unterschiedliche Breite, 1,1–2,0 H.",
+   "action": "Idle schälen sich an der höchsten Stufe kleine Glutkacheln ab und wachsen am unteren Ende neu; das Schuppengerüst ist niemals statisch.",
+   "peak": "Full breitet die aufsteigenden Schindeln zu einem großen gerichteten Wärmesegel aus und löst es kontrolliert in Aschenschauer auf."
+  },
+  "v32": {
+   "category": "Abfallende Glutschindeln als diagonal wandernder Mauserstreifen",
+   "silhouette": "Verkohlte Ofenschindeln hängen nicht als Flügel, sondern reißen in schrägen, gestuften Bahnen vom Rücken ab, unterschiedliche Breite, 1,1–2,0 H.",
+   "anchors": [
+    "back_left",
+    "shoulder_left",
+    "feet_world",
+    "sprite_alpha"
+   ],
+   "idle": "Verkohlte Ofenschindeln hängen nicht als Flügel, sondern reißen in schrägen, gestuften Bahnen vom Rücken ab, unterschiedliche Breite, 1,1–2,0 H.",
+   "action": "Idle schälen sich an der höchsten Stufe kleine Glutkacheln ab und wachsen am unteren Ende neu; das Schuppengerüst ist niemals statisch.",
+   "peak": "Full breitet die aufsteigenden Schindeln zu einem großen gerichteten Wärmesegel aus und löst es kontrolliert in Aschenschauer auf.",
+   "anim": {
+    "transformIn": "Ein Ascheriss läuft über den Oberkörperrand, daraus werden Keramikschindeln nach hinten ausgestoßen, die in der Luft neue heiße Kanten ausbilden.",
+    "idle": "Verkohlte Ofenschindeln hängen nicht als Flügel, sondern reißen in schrägen, gestuften Bahnen vom Rücken ab, unterschiedliche Breite, 1,1–2,0 H.",
+    "sprint": "Idle schälen sich an der höchsten Stufe kleine Glutkacheln ab und wachsen am unteren Ende neu; das Schuppengerüst ist niemals statisch.",
+    "defense": "Schindeln legen sich als gestaffelter Hitzeschild vor die aktuelle Blickrichtung und splittern beim Kontakt.",
+    "grab": "Ein Schindelhaken hält das Nahziel nur kurz genug für den Treffer.",
+    "jump": "Aufstieg: Ascheschindeln fallen nach unten; Apex: kurze langsame Schwebe; Landung: entflammtes Neuverglasen von unten nach oben.",
+    "peak": "Full breitet die aufsteigenden Schindeln zu einem großen gerichteten Wärmesegel aus und löst es kontrolliert in Aschenschauer auf.",
+    "transformOut": "Die einzelnen Fragmente verschwinden in umgekehrter Materiallogik der Aktivierung. Existierende Projektile und Bodenobjekte folgen ihren normalen, deterministischen Laufzeitregeln."
+   },
+   "attacks": {
+    "forward": "Short: ein Schindelspan schlägt als Glutnadel vorwärts; Full: viele Schindeln bilden einen länglichen, schnabelfreien glühenden Frontkeil.",
+    "up": "Short: Wärmestich nach oben; Full: aufgerissene Schindelschichten ziehen einen großen senkrechten Lichtstrom.",
+    "down": "Short: Asche fegt am Boden; Full: die Schindeln veraschen und verglasen in einem großen Boden-Neubildungsfeld."
+   },
+   "exclusions": "Kein Phönixkörper, keine Vogelflügel, keine glühende Ganzkörperrüstung."
+  },
+  "morphCategory": "Abfallende Glutschindeln als diagonal wandernder Mauserstreifen"
  },
  {
   "id": "T18",
@@ -2240,10 +2812,40 @@ export const BUFF_FORM_DATA = Object.freeze([
   "morphology": "body_augmentation",
   "morphologyLabel": "Body Augmentation",
   "states": {
-   "idle": "Body Augmentation (Strukturen direkt am Körper, zusätzliche Glieder und Leitungen): Ein offenes Gitter aus beweglichen Prismenzellen verbindet vorhandene Gliedmaßen mit temporären Werkzeugformen.",
-   "action": "Leitungen pumpen entlang Armen und Beinen zwischen den Anbauten; bei Angriffen entfaltet sich ein zusätzliches Gelenkglied aus der hinteren Schulter und schlägt zu, bei Defense wächst eine Platte über den vorderen Unterarm. Sprint Chimera Trudge, Jump Soul Morph Hop, Defense Chimera Shell.",
-   "peak": "Die körpernahen Strukturen wachsen kurz als Stacheln aus dem Arenaboden. Full: Soul Cannon / Manticore Crown / Ancient Shellbreak."
-  }
+   "idle": "Bewegliche Prismenzellen schalten zwischen freien Körperankerpunkten und separaten Werkzeug-Enden; der Spieler steht in einer unvollständigen, flacheren technischen Gitterstruktur.",
+   "action": "Idle zeigt unregelmäßige Modulverschiebungen, manche Rasterzellen bleiben transparent; keine aufgesetzte vollständige Tier- oder Menschenfigur.",
+   "peak": "Full lässt das Gitter nur für den betreffenden Angriff zu einer Kanone, Hebeschiene oder Bodenpresse umstecken; danach öffnen sich wieder alle Verbindungen."
+  },
+  "v32": {
+   "category": "Offenes Werkzeug-Raster ohne stabile Kreatursilhouette",
+   "silhouette": "Bewegliche Prismenzellen schalten zwischen freien Körperankerpunkten und separaten Werkzeug-Enden; der Spieler steht in einer unvollständigen, flacheren technischen Gitterstruktur.",
+   "anchors": [
+    "hand_left/right",
+    "shoulder_left/right",
+    "hip",
+    "sprite_alpha"
+   ],
+   "idle": "Bewegliche Prismenzellen schalten zwischen freien Körperankerpunkten und separaten Werkzeug-Enden; der Spieler steht in einer unvollständigen, flacheren technischen Gitterstruktur.",
+   "action": "Idle zeigt unregelmäßige Modulverschiebungen, manche Rasterzellen bleiben transparent; keine aufgesetzte vollständige Tier- oder Menschenfigur.",
+   "peak": "Full lässt das Gitter nur für den betreffenden Angriff zu einer Kanone, Hebeschiene oder Bodenpresse umstecken; danach öffnen sich wieder alle Verbindungen.",
+   "anim": {
+    "transformIn": "Kleine Prismenzellen klicken zuerst an zwei Armnähten auf, schweben dann nach außen und bauen ein elastisches Raster zwischen vier freien Endpunkten.",
+    "idle": "Bewegliche Prismenzellen schalten zwischen freien Körperankerpunkten und separaten Werkzeug-Enden; der Spieler steht in einer unvollständigen, flacheren technischen Gitterstruktur.",
+    "sprint": "Idle zeigt unregelmäßige Modulverschiebungen, manche Rasterzellen bleiben transparent; keine aufgesetzte vollständige Tier- oder Menschenfigur.",
+    "defense": "Das Gitter faltet sich zu einem kurzen Schildbogen aus freien Zellen, nie zu einem durchgehenden Körperpanzer.",
+    "grab": "Eine Rasterzange entsteht kurz aus zwei frei gekoppelten Stäben beim validierten Grab.",
+    "jump": "Im Sprung lösen zwei Verbindungen ihre Spannung, Zellen schweben nach; im Landing schließen die Stecknasen wieder zusammen.",
+    "peak": "Full lässt das Gitter nur für den betreffenden Angriff zu einer Kanone, Hebeschiene oder Bodenpresse umstecken; danach öffnen sich wieder alle Verbindungen.",
+    "transformOut": "Die einzelnen Fragmente verschwinden in umgekehrter Materiallogik der Aktivierung. Existierende Projektile und Bodenobjekte folgen ihren normalen, deterministischen Laufzeitregeln."
+   },
+   "attacks": {
+    "forward": "Short: einzelne Zelle schießt als pfeilartige Spitze; Full: Gitter richtet eine mehrlagige modulare Frontkanone aus.",
+    "up": "Short: eine Zelle fährt wie Hebel hoch; Full: viele Module bilden eine offen gelassene Aufwärtsschiene.",
+    "down": "Short: kurze Rasterklappe nach unten; Full: Gitterplatte verankert sich als breite Bodenpresse und zerbricht in Module."
+   },
+   "exclusions": "Keine Chimärenhörner, kein Drachenkörper, kein Susanoo mit Rasterplatten."
+  },
+  "morphCategory": "Offenes Werkzeug-Raster ohne stabile Kreatursilhouette"
  },
  {
   "id": "T19",
@@ -2357,10 +2959,41 @@ export const BUFF_FORM_DATA = Object.freeze([
   "morphology": "body_augmentation",
   "morphologyLabel": "Body Augmentation",
   "states": {
-   "idle": "Body Augmentation (Strukturen direkt am Körper, zusätzliche Glieder und Leitungen): Drei schwere U-förmige Klammern schweben um Schulter, Hüfte und Unterarm; kein klassischer Schildritter.",
-   "action": "Leitungen pumpen entlang Armen und Beinen zwischen den Anbauten; bei Angriffen entfaltet sich ein zusätzliches Gelenkglied aus der hinteren Schulter und schlägt zu, bei Defense wächst eine Platte über den vorderen Unterarm. Sprint Iron March, Jump Armor Vault, Defense Oath Shield.",
-   "peak": "Die körpernahen Strukturen wachsen kurz als Stacheln aus dem Arenaboden. Full: Bastion Beam / Citadel Rise / Fortress Quake."
-  }
+   "idle": "Eine Klammer hängt über der linken Schulter, eine tiefer an der rechten Hüfte, eine vor dem Unterarm; deutlich negative Innenräume ohne riesigen Brustpanzer.",
+   "action": "Idle: die drei Bügel stehen schwer und nahezu still; beim Losrennen schleppen sie eine sichtbare verzögerte Bronze-Bewegung hinterher.",
+   "peak": "Full rasten die Bügel kurz zu einer gerichteten Ramme oder einem Bodenanker im Raum ein; außerhalb von Angriffen bleiben sie getrennt."
+  },
+  "v32": {
+   "category": "Drei schwere hufeisenförmige Ankerklammern",
+   "silhouette": "Eine Klammer hängt über der linken Schulter, eine tiefer an der rechten Hüfte, eine vor dem Unterarm; deutlich negative Innenräume ohne riesigen Brustpanzer.",
+   "anchors": [
+    "shoulder_left",
+    "hip_right",
+    "forearm_right",
+    "feet_world",
+    "sprite_alpha"
+   ],
+   "idle": "Eine Klammer hängt über der linken Schulter, eine tiefer an der rechten Hüfte, eine vor dem Unterarm; deutlich negative Innenräume ohne riesigen Brustpanzer.",
+   "action": "Idle: die drei Bügel stehen schwer und nahezu still; beim Losrennen schleppen sie eine sichtbare verzögerte Bronze-Bewegung hinterher.",
+   "peak": "Full rasten die Bügel kurz zu einer gerichteten Ramme oder einem Bodenanker im Raum ein; außerhalb von Angriffen bleiben sie getrennt.",
+   "anim": {
+    "transformIn": "Bronzene Klammerhälften steigen langsam von drei Richtungen auf und schließen im Leerlauf nicht vollständig, nur kurze Lichtnieten verbinden ihre Enden.",
+    "idle": "Eine Klammer hängt über der linken Schulter, eine tiefer an der rechten Hüfte, eine vor dem Unterarm; deutlich negative Innenräume ohne riesigen Brustpanzer.",
+    "sprint": "Idle: die drei Bügel stehen schwer und nahezu still; beim Losrennen schleppen sie eine sichtbare verzögerte Bronze-Bewegung hinterher.",
+    "defense": "Die oberste Klammer schnappt vor den Körper, die untere stabilisiert den Aufprall wie ein Gewicht.",
+    "grab": "Ein U-Bügel setzt nur beim bestätigten Nah-Grab an der gegnerischen Flanke an und zieht dann kurz zurück.",
+    "jump": "Beim Sprung bleiben Klammern tief, sie reagieren schwerfällig und schlagen beim Landen versetzt auf gedachte Anschläge.",
+    "peak": "Full rasten die Bügel kurz zu einer gerichteten Ramme oder einem Bodenanker im Raum ein; außerhalb von Angriffen bleiben sie getrennt.",
+    "transformOut": "Die einzelnen Fragmente verschwinden in umgekehrter Materiallogik der Aktivierung. Existierende Projektile und Bodenobjekte folgen ihren normalen, deterministischen Laufzeitregeln."
+   },
+   "attacks": {
+    "forward": "Short: eine Bronzeklammer stößt nach vorne; Full: drei Klammern rasten zur langen belichteten Rammschiene ein.",
+    "up": "Short: obere Klammer hebt; Full: zwei U-Bügel werden senkrecht wie ein offenes Burgtor hochgefahren.",
+    "down": "Short: tiefer Knie-Ankerstoß; Full: schwere Klammern verankern drei Bodenpunkte und verursachen eine wandernde Erschütterung."
+   },
+   "exclusions": "Kein kompletter goldener Schildritter oder externer Giant-Torso."
+  },
+  "morphCategory": "Drei schwere hufeisenförmige Ankerklammern"
  },
  {
   "id": "T20",
@@ -2463,10 +3096,40 @@ export const BUFF_FORM_DATA = Object.freeze([
   "morphology": "body_augmentation",
   "morphologyLabel": "Body Augmentation",
   "states": {
-   "idle": "Body Augmentation (Strukturen direkt am Körper, zusätzliche Glieder und Leitungen): Kurze Messerkanten aus leuchtenden Notenstrichen liegen an den Unterarmen; Fußspuren sind abstrakte Taktmarken.",
-   "action": "Leitungen pumpen entlang Armen und Beinen zwischen den Anbauten; bei Angriffen entfaltet sich ein zusätzliches Gelenkglied aus der hinteren Schulter und schlägt zu, bei Defense wächst eine Platte über den vorderen Unterarm. Sprint Dancer Step, Jump Dance Vault, Defense Counter Stance.",
-   "peak": "Die körpernahen Strukturen wachsen kurz als Stacheln aus dem Arenaboden. Full: Grand Pirouette / Rhapsody Rise / Falling Cadence."
-  }
+   "idle": "Kein großer statischer Avatar: zwei kurze facettierte Klingenränder markieren Unterarme, mehrere kleine Taktkerben blitzen ausschließlich an tatsächlichen Bewegungsenden der Füße.",
+   "action": "Im Idle fast unsichtbar, nur zwei wechselnde Nadelleuchten; Bewegung erzeugt taktgenaue Scherlicht-Konturen mit klar getrennten Nachleuchtfenstern.",
+   "peak": "Full Charge erweitert die existierende Angriffsbewegung um eine große rhythmische Folge aus gestaffelten Schnittwellen; keine Riesenmanifestation nötig."
+  },
+  "v32": {
+   "category": "Rhythmische Klingenkanten direkt an Bewegungsachsen",
+   "silhouette": "Kein großer statischer Avatar: zwei kurze facettierte Klingenränder markieren Unterarme, mehrere kleine Taktkerben blitzen ausschließlich an tatsächlichen Bewegungsenden der Füße.",
+   "anchors": [
+    "hand_left/right",
+    "feet_world",
+    "velocity",
+    "sprite_alpha"
+   ],
+   "idle": "Kein großer statischer Avatar: zwei kurze facettierte Klingenränder markieren Unterarme, mehrere kleine Taktkerben blitzen ausschließlich an tatsächlichen Bewegungsenden der Füße.",
+   "action": "Im Idle fast unsichtbar, nur zwei wechselnde Nadelleuchten; Bewegung erzeugt taktgenaue Scherlicht-Konturen mit klar getrennten Nachleuchtfenstern.",
+   "peak": "Full Charge erweitert die existierende Angriffsbewegung um eine große rhythmische Folge aus gestaffelten Schnittwellen; keine Riesenmanifestation nötig.",
+   "anim": {
+    "transformIn": "Bei Aktivierung laufen metallische Lichtstriche über den echten Körperrand; nur an Hand- und Fußregionen lösen sich zeitlich versetzte Kanten ab.",
+    "idle": "Kein großer statischer Avatar: zwei kurze facettierte Klingenränder markieren Unterarme, mehrere kleine Taktkerben blitzen ausschließlich an tatsächlichen Bewegungsenden der Füße.",
+    "sprint": "Im Idle fast unsichtbar, nur zwei wechselnde Nadelleuchten; Bewegung erzeugt taktgenaue Scherlicht-Konturen mit klar getrennten Nachleuchtfenstern.",
+    "defense": "Zwei Klingenkanten schließen sich als kurze X-Barriere direkt vor dem Guard.",
+    "grab": "Der bestätigte Grab löst einen einzigen harten Taktimpuls aus dem Unterarm aus und unterstützt den normalen Nahgriff.",
+    "jump": "Jump hat kleine Lichtimpulse beim Takeoff, Apex und Landing, keine schwebende Gestalt.",
+    "peak": "Full Charge erweitert die existierende Angriffsbewegung um eine große rhythmische Folge aus gestaffelten Schnittwellen; keine Riesenmanifestation nötig.",
+    "transformOut": "Die einzelnen Fragmente verschwinden in umgekehrter Materiallogik der Aktivierung. Existierende Projektile und Bodenobjekte folgen ihren normalen, deterministischen Laufzeitregeln."
+   },
+   "attacks": {
+    "forward": "Short: einzelner akzentuierter Pulse Cut; Full: mehrere rhythmisch versetzte Schneidbahnen begleiten die originale Vorwärtsaktion.",
+    "up": "Short: markierte Aufwärtsklinge; Full: mehrere zeitlich versetzte höhere Kanten treten nacheinander auf.",
+    "down": "Short: Bodentakt an einem Schritt; Full: eine gestufte Kaskade von Schritt-Schnittlinien läuft durch die Lane."
+   },
+   "exclusions": "Keine große Figur, keine schwebenden Schulterpanzer, keine Dauerpartikelwolke."
+  },
+  "morphCategory": "Rhythmische Klingenkanten direkt an Bewegungsachsen"
  },
  {
   "id": "T21",
@@ -2573,10 +3236,39 @@ export const BUFF_FORM_DATA = Object.freeze([
   "morphology": "orbital_construct",
   "morphologyLabel": "Orbital Construct",
   "states": {
-   "idle": "Orbital Construct (freischwebende Ringe, Objekte und Fragmente): Winzige scharfkantige Orbitkörper kreisen um die Hände und Ellbogen; Haare und Gesicht bleiben unverändert.",
-   "action": "Die Konstrukte kreisen auf eigenen, geneigten Bahnen; bei Angriffen rotieren sie schneller und schließen sich vor der Hand zur Speerspitze, bei Defense stapeln sie sich zur Wand, dem Sprung folgen sie träge. Sprint Star Dash, Jump Star Jump, Defense Aura Brace.",
-   "peak": "Beim Aufladen setzen sich die Konstrukte vor dem Spieler zu einer großen, verstrebten Form zusammen (Faust, Schild, Maschine …). Full: Nova Beam / Comet Ascend / Supernova Pulse."
-  }
+   "idle": "Nur einige scharfkantige Keramikbrocken umkreisen Hände und Ellenbogen in getrennten engen Bahnen; keine zweite Körperkontur, Höhe höchstens 1,4 H.",
+   "action": "Die Teilchen springen bei jedem Nahkampftreffer kurz auf, stehen danach wieder in zwei ungleichen Rotationsbahnen.",
+   "peak": "Full bündelt die kleinen Orbitkörper zu einer großen reinen Angriffsprojektion, beispielsweise einem Beam-Trichter, aber niemals einer permanenten großen Körperform."
+  },
+  "v32": {
+   "category": "Kompakter Schwarm aus porösen Orbitklauen",
+   "silhouette": "Nur einige scharfkantige Keramikbrocken umkreisen Hände und Ellenbogen in getrennten engen Bahnen; keine zweite Körperkontur, Höhe höchstens 1,4 H.",
+   "anchors": [
+    "hand_left/right",
+    "elbow_left/right",
+    "sprite_alpha"
+   ],
+   "idle": "Nur einige scharfkantige Keramikbrocken umkreisen Hände und Ellenbogen in getrennten engen Bahnen; keine zweite Körperkontur, Höhe höchstens 1,4 H.",
+   "action": "Die Teilchen springen bei jedem Nahkampftreffer kurz auf, stehen danach wieder in zwei ungleichen Rotationsbahnen.",
+   "peak": "Full bündelt die kleinen Orbitkörper zu einer großen reinen Angriffsprojektion, beispielsweise einem Beam-Trichter, aber niemals einer permanenten großen Körperform.",
+   "anim": {
+    "transformIn": "Porenlichter an den Handkanten treiben fünf kleine Kristallbrocken heraus, die sich zu einem offenen Orbit gruppieren.",
+    "idle": "Nur einige scharfkantige Keramikbrocken umkreisen Hände und Ellenbogen in getrennten engen Bahnen; keine zweite Körperkontur, Höhe höchstens 1,4 H.",
+    "sprint": "Die Teilchen springen bei jedem Nahkampftreffer kurz auf, stehen danach wieder in zwei ungleichen Rotationsbahnen.",
+    "defense": "Handnahe Kristallklauen schieben sich als dichte Schale auf die Angriffsseite, nach Treffer fliegen sie wieder auseinander.",
+    "grab": "Zwei orbitale Splitter greifen nur den Nahbereich an und verriegeln um das validierte Ziel.",
+    "jump": "Beim Sprung ziehen die Orbitkörper elliptische Spuren hinter den Händen und werden am Apex kurz langsam.",
+    "peak": "Full bündelt die kleinen Orbitkörper zu einer großen reinen Angriffsprojektion, beispielsweise einem Beam-Trichter, aber niemals einer permanenten großen Körperform.",
+    "transformOut": "Die einzelnen Fragmente verschwinden in umgekehrter Materiallogik der Aktivierung. Existierende Projektile und Bodenobjekte folgen ihren normalen, deterministischen Laufzeitregeln."
+   },
+   "attacks": {
+    "forward": "Short: kompakter Ki-Splitterstoß; Full: orbitale Klauen ordnen sich kurz zur facettierten Beam-Düse.",
+    "up": "Short: einzelne Kristallklaue schießt hoch; Full: Orbitkörper folgen einer gekrümmten Kometenbahn nach oben.",
+    "down": "Short: kurzer Sohlenpuls; Full: alle Partikel dehnen sich schlagartig zu einem radialen Keramikimpuls aus."
+   },
+   "exclusions": "Keine Aura-Dragonball-Faustgestalt, kein permanentes riesiges Humanoid."
+  },
+  "morphCategory": "Kompakter Schwarm aus porösen Orbitklauen"
  },
  {
   "id": "T22",
@@ -2688,10 +3380,40 @@ export const BUFF_FORM_DATA = Object.freeze([
   "morphology": "body_augmentation",
   "morphologyLabel": "Body Augmentation",
   "states": {
-   "idle": "Body Augmentation (Strukturen direkt am Körper, zusätzliche Glieder und Leitungen): Mattgrüne keramische Schuppenkacheln sitzen in unregelmäßigen Reihen nur an Gelenken, ohne Drachenkopf.",
-   "action": "Leitungen pumpen entlang Armen und Beinen zwischen den Anbauten; bei Angriffen entfaltet sich ein zusätzliches Gelenkglied aus der hinteren Schulter und schlägt zu, bei Defense wächst eine Platte über den vorderen Unterarm. Sprint Drake Runner, Jump Dragon Leap, Defense Fire Scale Guard.",
-   "peak": "Die körpernahen Strukturen wachsen kurz als Stacheln aus dem Arenaboden. Full: King Roar / Sky Dragon Coil / Scales of Ruin."
-  }
+   "idle": "Fünf bis sieben matte Schuppenkacheln sitzen mit Abstand an Knie, Handrücken und Schulter; jede besitzt eine sichtbare dünne Brandkerbe, aber kein durchgehendes Oberkörperkostüm.",
+   "action": "Idle: kleine Brandfunken bewegen sich wie Sicherungsdrähte von Kachel zu Kachel; die Kleidung bleibt klar sichtbar.",
+   "peak": "Full nimmt die lokalen Kacheln als Ausgang für großflächige Feuerbahnen; nur während Release bilden sich externe Angriffskonstrukte."
+  },
+  "v32": {
+   "category": "Lokal gezündete Gelenkplättchen, keine Schuppenhaut",
+   "silhouette": "Fünf bis sieben matte Schuppenkacheln sitzen mit Abstand an Knie, Handrücken und Schulter; jede besitzt eine sichtbare dünne Brandkerbe, aber kein durchgehendes Oberkörperkostüm.",
+   "anchors": [
+    "shoulder_left",
+    "hand_right",
+    "knee_left/right",
+    "sprite_alpha"
+   ],
+   "idle": "Fünf bis sieben matte Schuppenkacheln sitzen mit Abstand an Knie, Handrücken und Schulter; jede besitzt eine sichtbare dünne Brandkerbe, aber kein durchgehendes Oberkörperkostüm.",
+   "action": "Idle: kleine Brandfunken bewegen sich wie Sicherungsdrähte von Kachel zu Kachel; die Kleidung bleibt klar sichtbar.",
+   "peak": "Full nimmt die lokalen Kacheln als Ausgang für großflächige Feuerbahnen; nur während Release bilden sich externe Angriffskonstrukte.",
+   "anim": {
+    "transformIn": "Einzelne Zündpunkte laufen entlang der Sprite-Alphakontur und lassen nacheinander wenige grüne Keramik-Kacheln an Kontaktpunkten auskragen.",
+    "idle": "Fünf bis sieben matte Schuppenkacheln sitzen mit Abstand an Knie, Handrücken und Schulter; jede besitzt eine sichtbare dünne Brandkerbe, aber kein durchgehendes Oberkörperkostüm.",
+    "sprint": "Idle: kleine Brandfunken bewegen sich wie Sicherungsdrähte von Kachel zu Kachel; die Kleidung bleibt klar sichtbar.",
+    "defense": "Gelenkkacheln heben sich zu einer dreiteiligen gedämpften Stoßschicht unmittelbar vor dem Avatar.",
+    "grab": "Zwei Zündplatten verhaken für den Trefferframe eine nahe Zielkontur, ohne lange zusätzliche Gliedmaßen.",
+    "jump": "Beim Sprung brennen die Kacheln jeweils versetzt und der Landeimpuls zündet zuletzt die Sohlenplatten.",
+    "peak": "Full nimmt die lokalen Kacheln als Ausgang für großflächige Feuerbahnen; nur während Release bilden sich externe Angriffskonstrukte.",
+    "transformOut": "Die einzelnen Fragmente verschwinden in umgekehrter Materiallogik der Aktivierung. Existierende Projektile und Bodenobjekte folgen ihren normalen, deterministischen Laufzeitregeln."
+   },
+   "attacks": {
+    "forward": "Short: Knöchelglut beim einzelnen Schlag; Full: mehrere Kacheln entladen eine breite brennende Frontbahn.",
+    "up": "Short: glimmende Schulterkante schlägt aufwärts; Full: Kachelketten werfen eine schraubige vertikale Energiefräse.",
+    "down": "Short: kurzer Feuertritt; Full: Gelenkkacheln trennen sich und detonieren in einem weiten Bodenmuster."
+   },
+   "exclusions": "Keine Drachenrüstung, kein Reptilienkopf, kein biologisches Schuppenkostüm."
+  },
+  "morphCategory": "Lokal gezündete Gelenkplättchen, keine Schuppenhaut"
  },
  {
   "id": "T23",
@@ -2798,10 +3520,41 @@ export const BUFF_FORM_DATA = Object.freeze([
   "morphology": "orbital_construct",
   "morphologyLabel": "Orbital Construct",
   "states": {
-   "idle": "Orbital Construct (freischwebende Ringe, Objekte und Fragmente): Drei offene, farblose Negativräume schweben über Schulter und Hand. Licht und Partikel verschwinden innerhalb ihrer Kontur.",
-   "action": "Die Konstrukte kreisen auf eigenen, geneigten Bahnen; bei Angriffen rotieren sie schneller und schließen sich vor der Hand zur Speerspitze, bei Defense stapeln sie sich zur Wand, dem Sprung folgen sie träge. Sprint Void Rush, Jump Eclipse Jump, Defense Negation Guard.",
-   "peak": "Beim Aufladen setzen sich die Konstrukte vor dem Spieler zu einer großen, verstrebten Form zusammen (Faust, Schild, Maschine …). Full: Spell Eater / Eclipse Pillar / Silence Rift."
-  }
+   "idle": "Drei geometrisch ungleiche Löcher im Bildraum schweben neben Hand und Schulter; ihre Innenflächen zeigen Auslöschung von hinteren VFX-Layern und einen dünnen dithernden Lichtrand.",
+   "action": "Innen fehlt Inhalt, statt schwarz gefülltem Shader; minimale Randverzeichnung und vorbeiziehende Löschpunkte machen die Leere lesbar.",
+   "peak": "Full verbindet die Löcher nur als temporären breiten Auslöschungskorridor über der Angriffsbahn; keine Person entsteht daraus."
+  },
+  "v32": {
+   "category": "Negativräume und echter Lichtentzug",
+   "silhouette": "Drei geometrisch ungleiche Löcher im Bildraum schweben neben Hand und Schulter; ihre Innenflächen zeigen Auslöschung von hinteren VFX-Layern und einen dünnen dithernden Lichtrand.",
+   "anchors": [
+    "shoulder_left",
+    "hand_right",
+    "hip",
+    "sprite_alpha",
+    "scene_color"
+   ],
+   "idle": "Drei geometrisch ungleiche Löcher im Bildraum schweben neben Hand und Schulter; ihre Innenflächen zeigen Auslöschung von hinteren VFX-Layern und einen dünnen dithernden Lichtrand.",
+   "action": "Innen fehlt Inhalt, statt schwarz gefülltem Shader; minimale Randverzeichnung und vorbeiziehende Löschpunkte machen die Leere lesbar.",
+   "peak": "Full verbindet die Löcher nur als temporären breiten Auslöschungskorridor über der Angriffsbahn; keine Person entsteht daraus.",
+   "anim": {
+    "transformIn": "Entlang einzelner Konturpixel geht der Glanz aus, aus dieser Auslöschung falten sich drei offene, unregelmäßige Negativräume.",
+    "idle": "Drei geometrisch ungleiche Löcher im Bildraum schweben neben Hand und Schulter; ihre Innenflächen zeigen Auslöschung von hinteren VFX-Layern und einen dünnen dithernden Lichtrand.",
+    "sprint": "Innen fehlt Inhalt, statt schwarz gefülltem Shader; minimale Randverzeichnung und vorbeiziehende Löschpunkte machen die Leere lesbar.",
+    "defense": "Ein Negativraum deckt die Blickseite ab und verschluckt auftreffende Effektpartikel nach Gameplay-Freigabe.",
+    "grab": "Ein enger Negativfeldkragen erscheint nur am erreichbaren gegnerischen Kontaktpunkt; der Avatar selbst behält freie Kontur.",
+    "jump": "Beim Sprung zieht ein Loch nach unten, ein anderes läuft über den Kopf, bei Landung kollabieren beide zu kurzen Ditherpunkten.",
+    "peak": "Full verbindet die Löcher nur als temporären breiten Auslöschungskorridor über der Angriffsbahn; keine Person entsteht daraus.",
+    "transformOut": "Die einzelnen Fragmente verschwinden in umgekehrter Materiallogik der Aktivierung. Existierende Projektile und Bodenobjekte folgen ihren normalen, deterministischen Laufzeitregeln."
+   },
+   "attacks": {
+    "forward": "Short: dünner Löschschnitt direkt vor dem Angriff; Full: mehrere offene Löcher wachsen zu einem kurzlebigen gerichteten Zauberverzehrer.",
+    "up": "Short: schmale Nullkante nach oben; Full: ein Bildraumstreifen wird vertikal sichtbar ausgelöscht.",
+    "down": "Short: kleiner stiller Bodentritt; Full: die drei Negativräume verbinden sich zu einem flachen Störfeld entlang der Lane."
+   },
+   "exclusions": "Kein schwarzer Dämonenpanzer, keine invertierten Vollkörper-Flügel, kein reiner Schwarzkreis."
+  },
+  "morphCategory": "Negativräume und echter Lichtentzug"
  },
  {
   "id": "T24",
@@ -2909,10 +3662,39 @@ export const BUFF_FORM_DATA = Object.freeze([
   "morphology": "creature_manifestation",
   "morphologyLabel": "Creature Manifestation",
   "states": {
-   "idle": "Creature Manifestation (unabhängige Energiegeschöpfe): Zwei flache, gelenkige Schatten-Marionetten hängen an sichtbaren diagonalen Lichtfäden; keine Geistersoldaten-Armee.",
-   "action": "Die Geschöpfe bewegen sich auf eigenen Bahnen um den Spieler (Marionetten stehen am Boden und hängen an seinen Fäden), strecken sich im Sprint nach hinten und schnellen bei Angriffen vor. Sprint Shadow March, Jump King Step, Defense Royal Guard.",
-   "peak": "Die Geschöpfe lösen sich als eigenständige Angreifer vom Spieler. Full: Legion Spear / Kingdom Ascends / March of Shades."
-  }
+   "idle": "Zwei flache Schattenbühnen-Körper hängen versetzt links und rechts hinter dem Avatar an deutlich sichtbaren diagonalen Lichtfäden; nur flache Gelenkplatten, keine vollständigen Geistersoldaten.",
+   "action": "Idle: Die Figuren rucken wie von Schnüren gezogen, klappen ungleichmäßig und bleiben klar kleiner als der Spieler, nicht überlebensgroß.",
+   "peak": "Full mobilisiert temporär mehrere Schattenabzüge als Projektion auf den Boden, keine eigenständigen kompletten kämpfenden Riesenwesen."
+  },
+  "v32": {
+   "category": "Zwei gelenkige Schattenmarionetten an sichtbaren Zugfäden",
+   "silhouette": "Zwei flache Schattenbühnen-Körper hängen versetzt links und rechts hinter dem Avatar an deutlich sichtbaren diagonalen Lichtfäden; nur flache Gelenkplatten, keine vollständigen Geistersoldaten.",
+   "anchors": [
+    "back_left/right",
+    "shadow_contact",
+    "sprite_alpha"
+   ],
+   "idle": "Zwei flache Schattenbühnen-Körper hängen versetzt links und rechts hinter dem Avatar an deutlich sichtbaren diagonalen Lichtfäden; nur flache Gelenkplatten, keine vollständigen Geistersoldaten.",
+   "action": "Idle: Die Figuren rucken wie von Schnüren gezogen, klappen ungleichmäßig und bleiben klar kleiner als der Spieler, nicht überlebensgroß.",
+   "peak": "Full mobilisiert temporär mehrere Schattenabzüge als Projektion auf den Boden, keine eigenständigen kompletten kämpfenden Riesenwesen.",
+   "anim": {
+    "transformIn": "Aus zwei schmalen Schattenflecken wachsen diagonale Zugfäden nach oben; ihre kurzen Gelenkplatten klappen zu zwei getrennten, flachen Silhouetten aus.",
+    "idle": "Zwei flache Schattenbühnen-Körper hängen versetzt links und rechts hinter dem Avatar an deutlich sichtbaren diagonalen Lichtfäden; nur flache Gelenkplatten, keine vollständigen Geistersoldaten.",
+    "sprint": "Idle: Die Figuren rucken wie von Schnüren gezogen, klappen ungleichmäßig und bleiben klar kleiner als der Spieler, nicht überlebensgroß.",
+    "defense": "Eine der flachen Bühnenfiguren klappt vor den Guard und absorbiert mit ihrem breiten, matten Schattenrücken.",
+    "grab": "Die vordere Marionette fährt zum validierten Nahziel und klemmt es mit einem kurzen Scherengelenk fest.",
+    "jump": "Beim Springen bleiben die Lichtfäden hinter dem Charakter hängen und straffen sich bei Landung sichtbar.",
+    "peak": "Full mobilisiert temporär mehrere Schattenabzüge als Projektion auf den Boden, keine eigenständigen kompletten kämpfenden Riesenwesen.",
+    "transformOut": "Die einzelnen Fragmente verschwinden in umgekehrter Materiallogik der Aktivierung. Existierende Projektile und Bodenobjekte folgen ihren normalen, deterministischen Laufzeitregeln."
+   },
+   "attacks": {
+    "forward": "Short: eine Marionette wirft ein Schattenplättchen; Full: beide Figuren spannen ihre Fäden zu einem breiten Speerprojektil.",
+    "up": "Short: kleiner hochgezogener Gelenkhieb; Full: Zugfäden ziehen eine mehrteilige aufsteigende Schattenkulisse.",
+    "down": "Short: tiefer Schattenwischer; Full: Schattenabdrücke laufen wie marschierende Bühnenfiguren über mehrere Bodenpunkte."
+   },
+   "exclusions": "Keine Armee vollwertiger Schattenritter oder riesigen Susanoo-Schattenkörper."
+  },
+  "morphCategory": "Zwei gelenkige Schattenmarionetten an sichtbaren Zugfäden"
  },
  {
   "id": "T25",
@@ -3026,10 +3808,39 @@ export const BUFF_FORM_DATA = Object.freeze([
   "morphology": "body_augmentation",
   "morphologyLabel": "Body Augmentation",
   "states": {
-   "idle": "Body Augmentation (Strukturen direkt am Körper, zusätzliche Glieder und Leitungen): Dünne keramische Kapillaren liegen offen um die Unterarme und formen raue Mineralkanten.",
-   "action": "Leitungen pumpen entlang Armen und Beinen zwischen den Anbauten; bei Angriffen entfaltet sich ein zusätzliches Gelenkglied aus der hinteren Schulter und schlägt zu, bei Defense wächst eine Platte über den vorderen Unterarm. Sprint Crimson Run, Jump Blood Leap, Defense Hemo Shell.",
-   "peak": "Die körpernahen Strukturen wachsen kurz als Stacheln aus dem Arenaboden. Full: Hemal Lance / Crimson Gallows / Red Thorn Garden."
-  }
+   "idle": "Dünne blutrote Glasadern umranken nur Unterarm- und Handkonturen, von denen unregelmäßige kristalline Stacheln nach außen wachsen; geringe Idle-Breite.",
+   "action": "Idle pulsiert Flüssigkeit in den Kapillaren, doch keine Klingen schweben als riesiges Handpaar; die Adern härten periodisch zu matter Steinoberfläche aus.",
+   "peak": "Full treibt aus den Kapillararmen einzelne große extern entstehende Lanzen, Haken oder Bodenpflanzen und zerbricht diese nach dem Impact."
+  },
+  "v32": {
+   "category": "Mineralisierte Kapillarstacheln an Unterarmen",
+   "silhouette": "Dünne blutrote Glasadern umranken nur Unterarm- und Handkonturen, von denen unregelmäßige kristalline Stacheln nach außen wachsen; geringe Idle-Breite.",
+   "anchors": [
+    "forearm_left/right",
+    "hand_left/right",
+    "sprite_alpha"
+   ],
+   "idle": "Dünne blutrote Glasadern umranken nur Unterarm- und Handkonturen, von denen unregelmäßige kristalline Stacheln nach außen wachsen; geringe Idle-Breite.",
+   "action": "Idle pulsiert Flüssigkeit in den Kapillaren, doch keine Klingen schweben als riesiges Handpaar; die Adern härten periodisch zu matter Steinoberfläche aus.",
+   "peak": "Full treibt aus den Kapillararmen einzelne große extern entstehende Lanzen, Haken oder Bodenpflanzen und zerbricht diese nach dem Impact.",
+   "anim": {
+    "transformIn": "Eine einzelne rote Glasader zeichnet sich auf der wahren Armkontur nach, verästelt sich zu schmalen Kanälen und bildet abgeknickte Mineralkanten.",
+    "idle": "Dünne blutrote Glasadern umranken nur Unterarm- und Handkonturen, von denen unregelmäßige kristalline Stacheln nach außen wachsen; geringe Idle-Breite.",
+    "sprint": "Idle pulsiert Flüssigkeit in den Kapillaren, doch keine Klingen schweben als riesiges Handpaar; die Adern härten periodisch zu matter Steinoberfläche aus.",
+    "defense": "Rotmineralisierte Stacheln werden zu einer kurzen konischen Armbarriere vorgeschoben.",
+    "grab": "Kurze Kristallhaken greifen die Nähe, die Spielfigur verwendet weiterhin ihre vorhandene Grab-Pose.",
+    "jump": "Im Sprung folgen einzelne Glasstacheln der Armbewegung; beim Landen zerplatzen verschlissene Kristallkerben in Staub.",
+    "peak": "Full treibt aus den Kapillararmen einzelne große extern entstehende Lanzen, Haken oder Bodenpflanzen und zerbricht diese nach dem Impact.",
+    "transformOut": "Die einzelnen Fragmente verschwinden in umgekehrter Materiallogik der Aktivierung. Existierende Projektile und Bodenobjekte folgen ihren normalen, deterministischen Laufzeitregeln."
+   },
+   "attacks": {
+    "forward": "Short: Kapillarnadel aus der Hand; Full: minerale Adern formen eine schwere lineare Blutglaslanze.",
+    "up": "Short: kurzer hochschnellender Glasbogen; Full: mehrere Stacheln schließen sich zu einer hängenden kristallinen Fangstruktur.",
+    "down": "Short: Stacheltritt; Full: rote Mineraladern schießen unter mehreren Bodenzielen als Dornenbeet hervor."
+   },
+   "exclusions": "Keine dämonische rote Rüstung und keine doppelten Riesenarme."
+  },
+  "morphCategory": "Mineralisierte Kapillarstacheln an Unterarmen"
  },
  {
   "id": "T26",
@@ -3136,10 +3947,39 @@ export const BUFF_FORM_DATA = Object.freeze([
   "morphology": "temporal_projection",
   "morphologyLabel": "Temporal Projection",
   "states": {
-   "idle": "Temporal Projection (versetzte Abbilder und Bewegungsechos): Drei versetzte, halbtransparente Armaturelemente aus geflochtenen Schnüren folgen mit Zeitversatz, keine zweite humanoide Riesengestalt.",
-   "action": "Die Echos spielen die Bewegungen der letzten Augenblicke nach und greifen bei Angriffen versetzt mit an. Sprint Ancestor Glide, Jump Ancestor Leap, Defense Ancestor Brace.",
-   "peak": "Alle Echos verlassen ihre Ebenen und greifen synchron bzw. zeitlich versetzt an. Full: Ancestor Blade / Ancestor Ascension / Grave Oath."
-  }
+   "idle": "Drei halbtransparente, unterschiedlich lange Schnurrahmen hängen leicht seitlich hinter dem Avatar und reagieren wie gespannte Instrumentensaiten; keiner besitzt Hände, Schulter oder Kopf.",
+   "action": "Idle: langsame Schwebewellen über die Schnüre; bei Bewegung werden daraus kurze, nicht synchrone Wellenzüge mit staubigem Klanglicht.",
+   "peak": "Full spannt die Schnurflächen breit zu einer einmaligen vertikalen oder horizontalen Klangklinge und löst sie sofort wieder."
+  },
+  "v32": {
+   "category": "Klangarmatur aus drei frei versetzten Schnurflächen",
+   "silhouette": "Drei halbtransparente, unterschiedlich lange Schnurrahmen hängen leicht seitlich hinter dem Avatar und reagieren wie gespannte Instrumentensaiten; keiner besitzt Hände, Schulter oder Kopf.",
+   "anchors": [
+    "back_left/right",
+    "shoulder_left/right",
+    "sprite_alpha"
+   ],
+   "idle": "Drei halbtransparente, unterschiedlich lange Schnurrahmen hängen leicht seitlich hinter dem Avatar und reagieren wie gespannte Instrumentensaiten; keiner besitzt Hände, Schulter oder Kopf.",
+   "action": "Idle: langsame Schwebewellen über die Schnüre; bei Bewegung werden daraus kurze, nicht synchrone Wellenzüge mit staubigem Klanglicht.",
+   "peak": "Full spannt die Schnurflächen breit zu einer einmaligen vertikalen oder horizontalen Klangklinge und löst sie sofort wieder.",
+   "anim": {
+    "transformIn": "Kurze Lichtschläge auf der Spritekontur setzen drei hohlkeramische Stimmstege frei, zwischen denen gewobene Schnurflächen zu schwingen beginnen.",
+    "idle": "Drei halbtransparente, unterschiedlich lange Schnurrahmen hängen leicht seitlich hinter dem Avatar und reagieren wie gespannte Instrumentensaiten; keiner besitzt Hände, Schulter oder Kopf.",
+    "sprint": "Idle: langsame Schwebewellen über die Schnüre; bei Bewegung werden daraus kurze, nicht synchrone Wellenzüge mit staubigem Klanglicht.",
+    "defense": "Die vordere Schnurfläche wird gespannt wie ein schräges Membranschild, Hit erzeugt kurz eine konzentrische Klangkerbe auf der Fläche.",
+    "grab": "Eine kurz ausgezogene Schnur greift nur in Nahreichweite; die Zielreaktion wird als Druckstoß und nicht als Riesenhand sichtbar.",
+    "jump": "Jump: die Schnüre hängen elastisch nach, am Apex laufen umgekehrte Schwingwellen, bei Landung erklingt eine sichtbare Drucklinie.",
+    "peak": "Full spannt die Schnurflächen breit zu einer einmaligen vertikalen oder horizontalen Klangklinge und löst sie sofort wieder.",
+    "transformOut": "Die einzelnen Fragmente verschwinden in umgekehrter Materiallogik der Aktivierung. Existierende Projektile und Bodenobjekte folgen ihren normalen, deterministischen Laufzeitregeln."
+   },
+   "attacks": {
+    "forward": "Short: eine scharfe Klangkerbe sticht nach vorne; Full: alle Schnurflächen vereinigen sich zur großen messerscharfen Welle.",
+    "up": "Short: Einzelmembran hebt sich; Full: gestaffelte Klangstege steigen als resonierende Säule.",
+    "down": "Short: kurzer Resonanztritt; Full: ein schweres tiefes Klangfeld breitet sich aus der Membran über den Boden aus."
+   },
+   "exclusions": "Keine zweite Geisterperson und keine vollständig umhüllende Klangkuppel."
+  },
+  "morphCategory": "Klangarmatur aus drei frei versetzten Schnurflächen"
  },
  {
   "id": "T27",
@@ -3246,10 +4086,40 @@ export const BUFF_FORM_DATA = Object.freeze([
   "morphology": "body_augmentation",
   "morphologyLabel": "Body Augmentation",
   "states": {
-   "idle": "Body Augmentation (Strukturen direkt am Körper, zusätzliche Glieder und Leitungen): Rechteckige Raumfalze wie gefaltete Papierkanten liegen um beide Ellbogen, ohne Körper-Tattoos.",
-   "action": "Leitungen pumpen entlang Armen und Beinen zwischen den Anbauten; bei Angriffen entfaltet sich ein zusätzliches Gelenkglied aus der hinteren Schulter und schlägt zu, bei Defense wächst eine Platte über den vorderen Unterarm. Sprint Seam Step, Jump Portal Hop, Defense Seam Shield.",
-   "peak": "Die körpernahen Strukturen wachsen kurz als Stacheln aus dem Arenaboden. Full: Dimension Spear / Rift Pillar / Broken Compass."
-  }
+   "idle": "Mehrere rechteckige räumliche Knicklinien schweben nah an Ellenbogen und Hüfte; sie zeigen Hintergrundstreifen auf verschiedenen Tiefen, ohne Rahmenbildschirm.",
+   "action": "Bei Idle wechseln die Raumfalz-Streifen diskret ihre Tiefe; bei Sprint bleibt eine kurze umgeknickte Etappe im Weltkoordinatensystem zurück, bevor sie nachzieht.",
+   "peak": "Full legt eine breite Faltnaht zwischen Spieler und Angriffspunkt, über die Wirkung umgeleitet oder kurz versetzt abgegeben wird."
+  },
+  "v32": {
+   "category": "Bewegliche Raumfalten wie gestapelte Papierkanten",
+   "silhouette": "Mehrere rechteckige räumliche Knicklinien schweben nah an Ellenbogen und Hüfte; sie zeigen Hintergrundstreifen auf verschiedenen Tiefen, ohne Rahmenbildschirm.",
+   "anchors": [
+    "elbow_left/right",
+    "hip",
+    "root",
+    "sprite_alpha"
+   ],
+   "idle": "Mehrere rechteckige räumliche Knicklinien schweben nah an Ellenbogen und Hüfte; sie zeigen Hintergrundstreifen auf verschiedenen Tiefen, ohne Rahmenbildschirm.",
+   "action": "Bei Idle wechseln die Raumfalz-Streifen diskret ihre Tiefe; bei Sprint bleibt eine kurze umgeknickte Etappe im Weltkoordinatensystem zurück, bevor sie nachzieht.",
+   "peak": "Full legt eine breite Faltnaht zwischen Spieler und Angriffspunkt, über die Wirkung umgeleitet oder kurz versetzt abgegeben wird.",
+   "anim": {
+    "transformIn": "Ein kurzer Avatarumriss erscheint versetzt, klappt wie ein Papierfalz nach innen und hinterlässt drei zerknickte Wegmarken in verschiedenen Winkeln.",
+    "idle": "Mehrere rechteckige räumliche Knicklinien schweben nah an Ellenbogen und Hüfte; sie zeigen Hintergrundstreifen auf verschiedenen Tiefen, ohne Rahmenbildschirm.",
+    "sprint": "Bei Idle wechseln die Raumfalz-Streifen diskret ihre Tiefe; bei Sprint bleibt eine kurze umgeknickte Etappe im Weltkoordinatensystem zurück, bevor sie nachzieht.",
+    "defense": "Eine Falzkante dreht in die Blickrichtung und biegt sichtbare Projektile um die Außenfläche.",
+    "grab": "Die erste Papierfalte verbindet den Spieler mit einem nahen Gegner, aber die tatsächliche Versetzung erfolgt nur nach bestätigtem Grab.",
+    "jump": "Beim Sprung schiebt sich eine Falte kurz unter den Player-Root wie eine Stufe; sichtbare Sprunghöhe stammt weiter aus Physik.",
+    "peak": "Full legt eine breite Faltnaht zwischen Spieler und Angriffspunkt, über die Wirkung umgeleitet oder kurz versetzt abgegeben wird.",
+    "transformOut": "Die einzelnen Fragmente verschwinden in umgekehrter Materiallogik der Aktivierung. Existierende Projektile und Bodenobjekte folgen ihren normalen, deterministischen Laufzeitregeln."
+   },
+   "attacks": {
+    "forward": "Short: kleiner räumlicher Nadelstich; Full: ein langer gefalteter Raumspalt richtet die Vorwärtswirkung neu aus.",
+    "up": "Short: kurze Faltstufe hebt; Full: gestapelte Raumlaschen lassen einen vertikalen Spalt entstehen.",
+    "down": "Short: Falzlinie am Boden; Full: mehrere Richtungsmarken knicken die Bodenkoordinaten optisch auseinander."
+   },
+   "exclusions": "Kein Zeitportal mit Standardring, kein riesiges Bildfenster, keine humanoide Projektion."
+  },
+  "morphCategory": "Bewegliche Raumfalten wie gestapelte Papierkanten"
  },
  {
   "id": "T28",
@@ -3353,10 +4223,40 @@ export const BUFF_FORM_DATA = Object.freeze([
   "morphology": "environmental",
   "morphologyLabel": "Environmental State",
   "states": {
-   "idle": "Environmental State (der Spieler verändert einen größeren Bereich der Arena): Drei offene bauliche Rasterbögen setzen auf der Lane auf; keine geschlossene Anime-Domäne.",
-   "action": "Das Feld folgt dem Spieler und verdichtet sich bei Angriffen in Blickrichtung. Sprint Boundary Slide, Jump Threshold Leap, Defense Rule Aegis.",
-   "peak": "Das Feld überzieht einen großen Teil der Arena. Full: Edict Lance / Judgment Column / Court of Lines."
-  }
+   "idle": "Drei zerbrochene bauliche Bögen sitzen auf tatsächlichen Lane-Kontaktpunkten rund um den Spieler, nicht an Schultern oder Armen; sie stehen im Idle nur bis etwa 1,6 H hoch.",
+   "action": "Die Rasterbögen stehen weltverankert; bei Bewegung werden hintere Segmente abgebaut und vor der aktuellen Position neu gesetzt, ohne am Spieler wie eine Rüstung mitzuschweben.",
+   "peak": "Full baut aus den drei Bögen kurz einen dominanten begehbaren Regelkorridor mit klaren Zieltelegraphen, nie eine riesige schwebende Figur."
+  },
+  "v32": {
+   "category": "Lokale Bodenarchitektur aus drei Rasterbögen",
+   "silhouette": "Drei zerbrochene bauliche Bögen sitzen auf tatsächlichen Lane-Kontaktpunkten rund um den Spieler, nicht an Schultern oder Armen; sie stehen im Idle nur bis etwa 1,6 H hoch.",
+   "anchors": [
+    "feet_world",
+    "root",
+    "world_ground",
+    "sprite_alpha"
+   ],
+   "idle": "Drei zerbrochene bauliche Bögen sitzen auf tatsächlichen Lane-Kontaktpunkten rund um den Spieler, nicht an Schultern oder Armen; sie stehen im Idle nur bis etwa 1,6 H hoch.",
+   "action": "Die Rasterbögen stehen weltverankert; bei Bewegung werden hintere Segmente abgebaut und vor der aktuellen Position neu gesetzt, ohne am Spieler wie eine Rüstung mitzuschweben.",
+   "peak": "Full baut aus den drei Bögen kurz einen dominanten begehbaren Regelkorridor mit klaren Zieltelegraphen, nie eine riesige schwebende Figur.",
+   "anim": {
+    "transformIn": "Schraffierte Grundrisse zeichnen sich um die Fußpunkte, aus ihnen wachsen drei unvollständige geometrische Bögen mit gebrochenen Gitterrippen.",
+    "idle": "Drei zerbrochene bauliche Bögen sitzen auf tatsächlichen Lane-Kontaktpunkten rund um den Spieler, nicht an Schultern oder Armen; sie stehen im Idle nur bis etwa 1,6 H hoch.",
+    "sprint": "Die Rasterbögen stehen weltverankert; bei Bewegung werden hintere Segmente abgebaut und vor der aktuellen Position neu gesetzt, ohne am Spieler wie eine Rüstung mitzuschweben.",
+    "defense": "Ein Rasterbogen klappt auf der Angriffsseite zu einem lokalen Wall-Paneel, mit korrekt sortierten Projektildurchgängen.",
+    "grab": "Ein Bodenraster arretiert nahes Ziel kurz per kleinem Fangpolygon statt externem Arm.",
+    "jump": "Beim echten Jump bleiben Bögen auf World-Ground; nur eine feine Rasterlotlinie folgt der Höhe; neue Bögen entstehen erst nach Landung.",
+    "peak": "Full baut aus den drei Bögen kurz einen dominanten begehbaren Regelkorridor mit klaren Zieltelegraphen, nie eine riesige schwebende Figur.",
+    "transformOut": "Die einzelnen Fragmente verschwinden in umgekehrter Materiallogik der Aktivierung. Existierende Projektile und Bodenobjekte folgen ihren normalen, deterministischen Laufzeitregeln."
+   },
+   "attacks": {
+    "forward": "Short: kleiner Regelstich entlang eines einzelnen Gitters; Full: ein mehrteiliger Rune-Edikt-Korridor fährt nach vorne.",
+    "up": "Short: Rasterecke schiebt nach oben; Full: eine echte bauliche Säule wächst aus dem Boden und fällt nach Ablauf zusammen.",
+    "down": "Short: lokal gesetztes Bodensiegel; Full: drei Bögen schließen für eine begrenzte Zeit ein größeres Feld mit neuen Regeln ein."
+   },
+   "exclusions": "Keine Anime-Domänenkugel, keine Schultermechanik, kein bodenloser Riesenkäfig."
+  },
+  "morphCategory": "Lokale Bodenarchitektur aus drei Rasterbögen"
  },
  {
   "id": "T29",
@@ -3463,10 +4363,40 @@ export const BUFF_FORM_DATA = Object.freeze([
   "morphology": "orbital_construct",
   "morphologyLabel": "Orbital Construct",
   "states": {
-   "idle": "Orbital Construct (freischwebende Ringe, Objekte und Fragmente): Drei eigenwillige Apparate, Pendel, Zange und Spindel, kreisen um die Hüfte; keine Krone oder Edelsteinreliquien.",
-   "action": "Die Konstrukte kreisen auf eigenen, geneigten Bahnen; bei Angriffen rotieren sie schneller und schließen sich vor der Hand zur Speerspitze, bei Defense stapeln sie sich zur Wand, dem Sprung folgen sie träge. Sprint Relic Dash, Jump Artifact Leap, Defense Antique Ward.",
-   "peak": "Beim Aufladen setzen sich die Konstrukte vor dem Spieler zu einer großen, verstrebten Form zusammen (Faust, Schild, Maschine …). Full: Kingmaker Spear / Ascendant Vault / Relic Convergence."
-  }
+   "idle": "Eine Zange, ein freies Pendel und eine Spindel schweben unterhalb Brusthöhe um unterschiedliche Seiten des Avatars; sie bilden sichtbar keine Gliedmaßen.",
+   "action": "Jede Reliquie führt eigene langsame Prüfbewegungen aus: Zange klickt, Spindel rotiert, Pendel lotet; das Spieler-Sprite bleibt unverändert.",
+   "peak": "Full klicken die drei Werkzeuge zeitweilig zu einer externen Lanze oder einem Bodenbohrer zusammen und lösen sich danach wieder."
+  },
+  "v32": {
+   "category": "Drei autonome Werkzeugreliquien im ungleichen Orbit",
+   "silhouette": "Eine Zange, ein freies Pendel und eine Spindel schweben unterhalb Brusthöhe um unterschiedliche Seiten des Avatars; sie bilden sichtbar keine Gliedmaßen.",
+   "anchors": [
+    "hip_left/right",
+    "hand_right",
+    "root",
+    "sprite_alpha"
+   ],
+   "idle": "Eine Zange, ein freies Pendel und eine Spindel schweben unterhalb Brusthöhe um unterschiedliche Seiten des Avatars; sie bilden sichtbar keine Gliedmaßen.",
+   "action": "Jede Reliquie führt eigene langsame Prüfbewegungen aus: Zange klickt, Spindel rotiert, Pendel lotet; das Spieler-Sprite bleibt unverändert.",
+   "peak": "Full klicken die drei Werkzeuge zeitweilig zu einer externen Lanze oder einem Bodenbohrer zusammen und lösen sich danach wieder.",
+   "anim": {
+    "transformIn": "Aus schimmernden Abriebspuren steigen drei mechanische Werkzeuge frei auf; ihre abgesetzten Kanten schließen sich mit kleinen magnetartigen Impulsen.",
+    "idle": "Eine Zange, ein freies Pendel und eine Spindel schweben unterhalb Brusthöhe um unterschiedliche Seiten des Avatars; sie bilden sichtbar keine Gliedmaßen.",
+    "sprint": "Jede Reliquie führt eigene langsame Prüfbewegungen aus: Zange klickt, Spindel rotiert, Pendel lotet; das Spieler-Sprite bleibt unverändert.",
+    "defense": "Die Zange greift vor den Guard, Pendel und Spindel bleiben frei und reagieren sekundär.",
+    "grab": "Bei Nahgrab schließt die Zange um ein Ziel in Reach; das Pendel verstärkt den Zugmoment.",
+    "jump": "Jump: alle drei Werkzeuge schweben mit verzögerten Bahnen hinter dem Spieler, ohne eine Rüstung zu ergeben.",
+    "peak": "Full klicken die drei Werkzeuge zeitweilig zu einer externen Lanze oder einem Bodenbohrer zusammen und lösen sich danach wieder.",
+    "transformOut": "Die einzelnen Fragmente verschwinden in umgekehrter Materiallogik der Aktivierung. Existierende Projektile und Bodenobjekte folgen ihren normalen, deterministischen Laufzeitregeln."
+   },
+   "attacks": {
+    "forward": "Short: ein kurzer Abriebsplitter aus der Spindel; Full: Werkzeuge verbinden ihre Schneiden zu einer geraden externen Speerlänge.",
+    "up": "Short: Pendel stößt hoch; Full: die Spindel bohrt einen hohen vertikalen Werkzeugschacht frei.",
+    "down": "Short: schwere Zange tippt auf Boden; Full: drei Apparate rasten um ein Bodenziel in eine konvergente Arbeitseinheit ein."
+   },
+   "exclusions": "Keine Reliquienkrone, keine schwebenden Riesenarme oder gerüstartiger Rumpf."
+  },
+  "morphCategory": "Drei autonome Werkzeugreliquien im ungleichen Orbit"
  },
  {
   "id": "T30",
@@ -3570,10 +4500,40 @@ export const BUFF_FORM_DATA = Object.freeze([
   "morphology": "energy_extension",
   "morphologyLabel": "Energy Extension",
   "states": {
-   "idle": "Energy Extension (bewegliche Schweife, Bänder und Peitschen aus der Körperkontur): Nur ein einzelnes versetztes Schattenband löst sich beim Bewegen vom Körper; keine Katzenohren, kein Tierkopf.",
-   "action": "Sprint zieht die Bänder flach nach hinten, beim Sprung hängen sie unter dem Körper, Angriffe lassen sie nach vorn peitschen. Sprint Cat Slip, Jump Cat Jump, Defense Cat Veil.",
-   "peak": "Die Bänder schießen auf volle Länge aus und formen die Full-Attacke. Full: Nine Lives Lash / Night Chimera Rise / Dark Prowl."
-  }
+   "idle": "Nur ein schmales, nicht permanent sichtbares Band löst sich aus der Körperkontur und läuft mit einigen Pixeln Abstand neben ihr; der größte Teil des Sprites bleibt unbeeinflusst.",
+   "action": "Idle nahezu unsichtbar, sporadisch wird eine versetzte Konturstrecke sichtbar; beim schnellen Lauf reißt diese mehrfach ab.",
+   "peak": "Full bringt nur für eine kurze Aktion eine große Schatten-Schnittfläche aus der losen Saumspur hervor, niemals ein dauerhaft großes Monster."
+  },
+  "v32": {
+   "category": "Extrem reduzierte Stealth-Saumform mit einem Schattenband",
+   "silhouette": "Nur ein schmales, nicht permanent sichtbares Band löst sich aus der Körperkontur und läuft mit einigen Pixeln Abstand neben ihr; der größte Teil des Sprites bleibt unbeeinflusst.",
+   "anchors": [
+    "shoulder_right",
+    "hip",
+    "sprite_alpha",
+    "velocity"
+   ],
+   "idle": "Nur ein schmales, nicht permanent sichtbares Band löst sich aus der Körperkontur und läuft mit einigen Pixeln Abstand neben ihr; der größte Teil des Sprites bleibt unbeeinflusst.",
+   "action": "Idle nahezu unsichtbar, sporadisch wird eine versetzte Konturstrecke sichtbar; beim schnellen Lauf reißt diese mehrfach ab.",
+   "peak": "Full bringt nur für eine kurze Aktion eine große Schatten-Schnittfläche aus der losen Saumspur hervor, niemals ein dauerhaft großes Monster.",
+   "anim": {
+    "transformIn": "Eine einzelne dunkle Fuge öffnet an der Schulter, ein loser Faden löst sich und erscheint erst bei Bewegungsbeginn hinter dem Körper.",
+    "idle": "Nur ein schmales, nicht permanent sichtbares Band löst sich aus der Körperkontur und läuft mit einigen Pixeln Abstand neben ihr; der größte Teil des Sprites bleibt unbeeinflusst.",
+    "sprint": "Idle nahezu unsichtbar, sporadisch wird eine versetzte Konturstrecke sichtbar; beim schnellen Lauf reißt diese mehrfach ab.",
+    "defense": "Band verdichtet sich für einen Augenblick zu einem schmalen Gegenlichtschutz vor den Armen.",
+    "grab": "Die Schattennaht verhakt sich auf kurze Distanz am Zielschatten nach normalem Grab-Treffer.",
+    "jump": "Jump: das Band läuft ein Stück unter dem Originalsprite weiter und trifft erst später in der Luft wieder an ihm ein.",
+    "peak": "Full bringt nur für eine kurze Aktion eine große Schatten-Schnittfläche aus der losen Saumspur hervor, niemals ein dauerhaft großes Monster.",
+    "transformOut": "Die einzelnen Fragmente verschwinden in umgekehrter Materiallogik der Aktivierung. Existierende Projektile und Bodenobjekte folgen ihren normalen, deterministischen Laufzeitregeln."
+   },
+   "attacks": {
+    "forward": "Short: kurzes Ausfransen der Handkontur; Full: die eine Schattennaht wird für einen weiten, verzögerten Peitschenschnitt vervielfältigt.",
+    "up": "Short: kleiner Schattenhaken; Full: mehrere zeitversetzte Konturstreifen steigen über dem Avatar hoch.",
+    "down": "Short: bodennahe Fadenspur; Full: Schattenfaden zieht eine weitläufige, dunkle Laufbahn durch die Bodenebene."
+   },
+   "exclusions": "Kein Katzensprite, keine neun Tierleben-Schweife, keine Riesen-Schattenkonstrukte."
+  },
+  "morphCategory": "Extrem reduzierte Stealth-Saumform mit einem Schattenband"
  },
  {
   "id": "T31",
@@ -3674,10 +4634,40 @@ export const BUFF_FORM_DATA = Object.freeze([
   "morphology": "orbital_construct",
   "morphologyLabel": "Orbital Construct",
   "states": {
-   "idle": "Orbital Construct (freischwebende Ringe, Objekte und Fragmente): Ein Fächer aus flachen, dreieckigen Glimmer-Samen statt Blütenblättern umkreist ein leeres Waffenlager.",
-   "action": "Die Konstrukte kreisen auf eigenen, geneigten Bahnen; bei Angriffen rotieren sie schneller und schließen sich vor der Hand zur Speerspitze, bei Defense stapeln sie sich zur Wand, dem Sprung folgen sie träge. Sprint Petal Drift, Jump Petal Jump, Defense Petal Dome.",
-   "peak": "Beim Aufladen setzen sich die Konstrukte vor dem Spieler zu einer großen, verstrebten Form zusammen (Faust, Schild, Maschine …). Full: Thousand-Petal Wave / Blooming Vault / Royal Bloom."
-  }
+   "idle": "Ein offener Fächer aus flachen dreieckigen Glimmersamen kreist nicht gleichmäßig, sondern in zwei versetzten Gruppen um eine leere Waffenfassung hinter der Schulter.",
+   "action": "Bei Idle flattern die Samen mit unterschiedlich schweren Kanten, stellen sich zur Kamera und kippen wieder weg; die Mitte bleibt durchsichtig.",
+   "peak": "Full sammeln sich mehrere Samen nur für den Impact zu einer weiten Klingenwelle oder einer großen aufsteigenden Blätterfontäne."
+  },
+  "v32": {
+   "category": "Asymmetrischer Schwarm mineralischer Klingenkeime",
+   "silhouette": "Ein offener Fächer aus flachen dreieckigen Glimmersamen kreist nicht gleichmäßig, sondern in zwei versetzten Gruppen um eine leere Waffenfassung hinter der Schulter.",
+   "anchors": [
+    "back_left",
+    "shoulder_left",
+    "weapon_grip",
+    "sprite_alpha"
+   ],
+   "idle": "Ein offener Fächer aus flachen dreieckigen Glimmersamen kreist nicht gleichmäßig, sondern in zwei versetzten Gruppen um eine leere Waffenfassung hinter der Schulter.",
+   "action": "Bei Idle flattern die Samen mit unterschiedlich schweren Kanten, stellen sich zur Kamera und kippen wieder weg; die Mitte bleibt durchsichtig.",
+   "peak": "Full sammeln sich mehrere Samen nur für den Impact zu einer weiten Klingenwelle oder einer großen aufsteigenden Blätterfontäne.",
+   "anim": {
+    "transformIn": "Kristallstiele brechen aus wenigen Schulterpartikeln hervor; daraus lösen sich zehn unterschiedliche Glimmersamen und ziehen zwei separate Umlaufbahnen.",
+    "idle": "Ein offener Fächer aus flachen dreieckigen Glimmersamen kreist nicht gleichmäßig, sondern in zwei versetzten Gruppen um eine leere Waffenfassung hinter der Schulter.",
+    "sprint": "Bei Idle flattern die Samen mit unterschiedlich schweren Kanten, stellen sich zur Kamera und kippen wieder weg; die Mitte bleibt durchsichtig.",
+    "defense": "Einige Samen drehen ihre breiten Facetten zur Angriffsseite und bilden einen löchrigen, mehrschichtigen Messerschild.",
+    "grab": "Zwei Klingenkeime greifen als kurze Scheren gegen ein nahes, korrekt validiertes Ziel.",
+    "jump": "Im Sprung ziehen die Samen in einer gegenläufigen Schleppe hinterher, an der Landung wirbeln sie um die Füße zurück.",
+    "peak": "Full sammeln sich mehrere Samen nur für den Impact zu einer weiten Klingenwelle oder einer großen aufsteigenden Blätterfontäne.",
+    "transformOut": "Die einzelnen Fragmente verschwinden in umgekehrter Materiallogik der Aktivierung. Existierende Projektile und Bodenobjekte folgen ihren normalen, deterministischen Laufzeitregeln."
+   },
+   "attacks": {
+    "forward": "Short: einzelner mineralischer Samenstich; Full: beide Schwärme lösen sich als tausendfach geschichtete Klingenwelle nach vorne.",
+    "up": "Short: ein Keim steigt hoch; Full: gefächerte Samenbahnen schrauben sich als breite aufsteigende Säule.",
+    "down": "Short: einige Klingenkeime fallen senkrecht; Full: Schwarmspitze bildet eine bodennahe sternförmige Angriffsblüte."
+   },
+   "exclusions": "Keine Kirschblütenkopie, kein Ganzkörper-Pflanzenkostüm, keine starren Kreisschwärme."
+  },
+  "morphCategory": "Asymmetrischer Schwarm mineralischer Klingenkeime"
  },
  {
   "id": "T32",
@@ -3787,10 +4777,40 @@ export const BUFF_FORM_DATA = Object.freeze([
   "morphology": "body_augmentation",
   "morphologyLabel": "Body Augmentation",
   "states": {
-   "idle": "Body Augmentation (Strukturen direkt am Körper, zusätzliche Glieder und Leitungen): Abstrakte, rechteckige Akzentzeichen blitzen nur an den Fußgelenken bei tatsächlich getroffenen Schritten.",
-   "action": "Leitungen pumpen entlang Armen und Beinen zwischen den Anbauten; bei Angriffen entfaltet sich ein zusätzliches Gelenkglied aus der hinteren Schulter und schlägt zu, bei Defense wächst eine Platte über den vorderen Unterarm. Sprint Thunderstep, Jump Flash Jump, Defense Thunder Guard.",
-   "peak": "Die körpernahen Strukturen wachsen kurz als Stacheln aus dem Arenaboden. Full: Sixfold Flash / Heaven Tempo / Storm Cantata."
-  }
+   "idle": "Nur bei echten Bewegungsereignissen erscheinen kurze, scharfkantige Akzentpixel an Knöcheln und Waffenkontakt, die sonst leer bleiben.",
+   "action": "Idle: minimaler Fußpuls alle paar Takte; Sprint: kurze kantige Fußkometen; jeder Treffer erzeugt anders gerichtete Notch-Lichter.",
+   "peak": "Full verdichtet mehrere zeitlich getrennte Attack-Akzente zu einer einzigen hohen Entladung oder Staffelblitzfront."
+  },
+  "v32": {
+   "category": "Fuß- und handgebundener Impulsrhythmus statt Aurafigur",
+   "silhouette": "Nur bei echten Bewegungsereignissen erscheinen kurze, scharfkantige Akzentpixel an Knöcheln und Waffenkontakt, die sonst leer bleiben.",
+   "anchors": [
+    "feet_world",
+    "hand_left/right",
+    "weapon_tip",
+    "sprite_alpha"
+   ],
+   "idle": "Nur bei echten Bewegungsereignissen erscheinen kurze, scharfkantige Akzentpixel an Knöcheln und Waffenkontakt, die sonst leer bleiben.",
+   "action": "Idle: minimaler Fußpuls alle paar Takte; Sprint: kurze kantige Fußkometen; jeder Treffer erzeugt anders gerichtete Notch-Lichter.",
+   "peak": "Full verdichtet mehrere zeitlich getrennte Attack-Akzente zu einer einzigen hohen Entladung oder Staffelblitzfront.",
+   "anim": {
+    "transformIn": "Ein silbriggelber Taktfunke durchläuft die Körperkontur, teilt sich in drei Impulsknoten und verschwindet wieder nahezu vollständig.",
+    "idle": "Nur bei echten Bewegungsereignissen erscheinen kurze, scharfkantige Akzentpixel an Knöcheln und Waffenkontakt, die sonst leer bleiben.",
+    "sprint": "Idle: minimaler Fußpuls alle paar Takte; Sprint: kurze kantige Fußkometen; jeder Treffer erzeugt anders gerichtete Notch-Lichter.",
+    "defense": "Block erzeugt ein einzelnes hartes Impulskreuz unmittelbar am Kontaktpunkt, ohne zusätzlichen Schildkörper.",
+    "grab": "Ein gültiger Grab lässt einen rhythmischen Unterarmimpuls die Griffhaltung verstärken.",
+    "jump": "Jump: nur Takeoff-/Apex-/Landing-Akzente, keine Flügel, keine schwebenden Zusatzkörper.",
+    "peak": "Full verdichtet mehrere zeitlich getrennte Attack-Akzente zu einer einzigen hohen Entladung oder Staffelblitzfront.",
+    "transformOut": "Die einzelnen Fragmente verschwinden in umgekehrter Materiallogik der Aktivierung. Existierende Projektile und Bodenobjekte folgen ihren normalen, deterministischen Laufzeitregeln."
+   },
+   "attacks": {
+    "forward": "Short: einzelner seitlicher Blitzkerb-Schnitt; Full: eine rhythmisch geteilte Serie von sechs Lichtblitzen vorwärts.",
+    "up": "Short: einzelner senkrechter Tracer; Full: nacheinander höher tönende Kanten bilden eine vertikale Blitzstaffel.",
+    "down": "Short: Fuß-Knackpunkt; Full: die Taktimpulse fließen als flache gewitterartige Bodenpartitur aus."
+   },
+   "exclusions": "Keine Dauer-Elektrorüstung und kein riesiger humanoider Blitzavatar."
+  },
+  "morphCategory": "Fuß- und handgebundener Impulsrhythmus statt Aurafigur"
  },
  {
   "id": "T33",
@@ -3895,10 +4915,40 @@ export const BUFF_FORM_DATA = Object.freeze([
   "morphology": "body_augmentation",
   "morphologyLabel": "Body Augmentation",
   "states": {
-   "idle": "Body Augmentation (Strukturen direkt am Körper, zusätzliche Glieder und Leitungen): Zwei schmale schwenkbare Messzirkel-Bügel an Schultern und Knien bilden die Stealth-Silhouette.",
-   "action": "Leitungen pumpen entlang Armen und Beinen zwischen den Anbauten; bei Angriffen entfaltet sich ein zusätzliches Gelenkglied aus der hinteren Schulter und schlägt zu, bei Defense wächst eine Platte über den vorderen Unterarm. Sprint Shade Run, Jump Moon Vault, Defense Counter Veil.",
-   "peak": "Die körpernahen Strukturen wachsen kurz als Stacheln aus dem Arenaboden. Full: Crescent Chain / Midnight Split / Shadow Wheel."
-  }
+   "idle": "Ein kleiner Zirkelbogen schwebt nah an der Schulter, der zweite am gegenüberliegenden Knie; zwischen beiden flackern unregelmäßige matte Schattenfolien.",
+   "action": "Idle: feine Messbewegungen und kurze unscharfe Randverschiebungen; beim Sprint zeichnen die Zirkel abstrakte Zielbahnen, keine Personen-Doppelung.",
+   "peak": "Full spreizen die zwei Zirkel einen weiten sichelartigen Dunkel-Schnittkanal über eine Angriffsrichtung, der sofort wieder verschwindet."
+  },
+  "v32": {
+   "category": "Messzirkel-Stealth aus zwei frei schwenkbaren Bügeln",
+   "silhouette": "Ein kleiner Zirkelbogen schwebt nah an der Schulter, der zweite am gegenüberliegenden Knie; zwischen beiden flackern unregelmäßige matte Schattenfolien.",
+   "anchors": [
+    "shoulder_right",
+    "knee_left",
+    "facing",
+    "sprite_alpha"
+   ],
+   "idle": "Ein kleiner Zirkelbogen schwebt nah an der Schulter, der zweite am gegenüberliegenden Knie; zwischen beiden flackern unregelmäßige matte Schattenfolien.",
+   "action": "Idle: feine Messbewegungen und kurze unscharfe Randverschiebungen; beim Sprint zeichnen die Zirkel abstrakte Zielbahnen, keine Personen-Doppelung.",
+   "peak": "Full spreizen die zwei Zirkel einen weiten sichelartigen Dunkel-Schnittkanal über eine Angriffsrichtung, der sofort wieder verschwindet.",
+   "anim": {
+    "transformIn": "Von zwei realen Konturstellen fahren Messspitzen aus, schlagen ungleiche Winkel an und ziehen nur an ihren Rändern dunkle Kurzfäden.",
+    "idle": "Ein kleiner Zirkelbogen schwebt nah an der Schulter, der zweite am gegenüberliegenden Knie; zwischen beiden flackern unregelmäßige matte Schattenfolien.",
+    "sprint": "Idle: feine Messbewegungen und kurze unscharfe Randverschiebungen; beim Sprint zeichnen die Zirkel abstrakte Zielbahnen, keine Personen-Doppelung.",
+    "defense": "Zirkel schieben sich vor die Arme, verbinden sich mit einer dünnen Schattenmesslinie zur Parry-Kante.",
+    "grab": "Der untere Zirkel klappt an einem nahen Ziel für einen präzisen Spannkontakt zu.",
+    "jump": "Im Sprung wandert der Kniezirkel nach unten, der Schulterzirkel zeichnet versetzte Winkel und beide rasten nach Landung ein.",
+    "peak": "Full spreizen die zwei Zirkel einen weiten sichelartigen Dunkel-Schnittkanal über eine Angriffsrichtung, der sofort wieder verschwindet.",
+    "transformOut": "Die einzelnen Fragmente verschwinden in umgekehrter Materiallogik der Aktivierung. Existierende Projektile und Bodenobjekte folgen ihren normalen, deterministischen Laufzeitregeln."
+   },
+   "attacks": {
+    "forward": "Short: eine schmale Schattenmesserkante; Full: beide Messzirkel schneiden nacheinander über eine größere horizontale Bahn.",
+    "up": "Short: steigende Messlinie; Full: zwei Schattenebenen reißen einen breiten Vertikalspalt.",
+    "down": "Short: bodennaher Zirkelstreich; Full: Messlinien drehen sich zu einer flachen gezackten Schattenbahn."
+   },
+   "exclusions": "Keine Ninja-Stirnbänder, keine Schattenklonperson, keine dauerhafte Ganzkörperverschattung."
+  },
+  "morphCategory": "Messzirkel-Stealth aus zwei frei schwenkbaren Bügeln"
  },
  {
   "id": "T34",
@@ -4007,10 +5057,40 @@ export const BUFF_FORM_DATA = Object.freeze([
   "morphology": "levitation",
   "morphologyLabel": "Levitation State",
   "states": {
-   "idle": "Levitation State (schwebender Spieler mit kontrollierten Projektilen): Ein schwebender Projektionsapparat aus drei nach außen klappenden Segmenten trägt eine leere Werkzeugfassung.",
-   "action": "Der Spieler schwebt über seinem Schatten; die Projektile ordnen sich je nach Aktion neu: Halo im Idle, Zielreihe vor der Hand beim Angriff, Schildbogen bei Defense, Schleppe im Sprint, unter den Füßen im Sprung. Sprint Summoner Drift, Jump Star Hop, Defense Ward Sentinel.",
-   "peak": "Er steigt kurz höher, die Projektile fächern zur Full-Attacke aus. Full: Sentinel Volley / Constellation Lift / Orbit Fortress."
-  }
+   "idle": "Drei angewinkelte Keramiksegmente bilden einen unvollständigen Projektor hinter einer Schulter; in seinem Mittelpunkt schwebt eine leere, frei sichtbare Werkzeugfassung.",
+   "action": "Idle: kleine Justierschritte der drei Segmente, sternartige Einschlüsse drehen sich im Innenraum; ohne eigene Riesenarme und ohne separate Pet-Animationen.",
+   "peak": "Full stellt die Projektion temporär als mehrere kleine Effekte, Volleys oder Mine-Symbole ins Feld, nicht als Körperpanzer."
+  },
+  "v32": {
+   "category": "Externer Werkprojektor statt Geisterbegleiter",
+   "silhouette": "Drei angewinkelte Keramiksegmente bilden einen unvollständigen Projektor hinter einer Schulter; in seinem Mittelpunkt schwebt eine leere, frei sichtbare Werkzeugfassung.",
+   "anchors": [
+    "shoulder_left",
+    "back_left",
+    "hand_right",
+    "sprite_alpha"
+   ],
+   "idle": "Drei angewinkelte Keramiksegmente bilden einen unvollständigen Projektor hinter einer Schulter; in seinem Mittelpunkt schwebt eine leere, frei sichtbare Werkzeugfassung.",
+   "action": "Idle: kleine Justierschritte der drei Segmente, sternartige Einschlüsse drehen sich im Innenraum; ohne eigene Riesenarme und ohne separate Pet-Animationen.",
+   "peak": "Full stellt die Projektion temporär als mehrere kleine Effekte, Volleys oder Mine-Symbole ins Feld, nicht als Körperpanzer.",
+   "anim": {
+    "transformIn": "Aus drei Lichtpunkten entfalten sich Porzellanarme nach außen, schließen sich um ein offenes Werkzeugloch, das bei Idle leer bleibt.",
+    "idle": "Drei angewinkelte Keramiksegmente bilden einen unvollständigen Projektor hinter einer Schulter; in seinem Mittelpunkt schwebt eine leere, frei sichtbare Werkzeugfassung.",
+    "sprint": "Idle: kleine Justierschritte der drei Segmente, sternartige Einschlüsse drehen sich im Innenraum; ohne eigene Riesenarme und ohne separate Pet-Animationen.",
+    "defense": "Die offenen Segmente neigen sich zur Guard-Seite und projizieren einen lokalen facettierten Abwehrschirm.",
+    "grab": "Für bestätigten Grab rastet kurz ein instrumentenartiger Fangbügel aus der offenen Projektoröffnung zum Nahziel.",
+    "jump": "Beim Sprung schwenkt der Werkprojektor nach unten, richtet sich am Apex neu aus und schließt bei Landung kurz sein leeres Zentrum.",
+    "peak": "Full stellt die Projektion temporär als mehrere kleine Effekte, Volleys oder Mine-Symbole ins Feld, nicht als Körperpanzer.",
+    "transformOut": "Die einzelnen Fragmente verschwinden in umgekehrter Materiallogik der Aktivierung. Existierende Projektile und Bodenobjekte folgen ihren normalen, deterministischen Laufzeitregeln."
+   },
+   "attacks": {
+    "forward": "Short: kleines Projektorgeschoss; Full: die drei Segmente richten mehrere diskrete Frontsalven mit eigener Zielbahn aus.",
+    "up": "Short: ein Projektionsteil wirft ein Lichtstück hoch; Full: der Projektor baut eine gestaffelte Aufwärtsleiter aus Einzellichtern.",
+    "down": "Short: einzeln gesetzte Keramikmine; Full: alle drei Segmente bauen temporär eine orbitale kleine Festungszone auf dem Boden."
+   },
+   "exclusions": "Keine autonome Geisterarmee, keine zweite riesige Person, keine Sternenkrone."
+  },
+  "morphCategory": "Externer Werkprojektor statt Geisterbegleiter"
  },
  {
   "id": "T35",
@@ -4125,10 +5205,40 @@ export const BUFF_FORM_DATA = Object.freeze([
   "morphology": "environmental",
   "morphologyLabel": "Environmental State",
   "states": {
-   "idle": "Environmental State (der Spieler verändert einen größeren Bereich der Arena): Drei gebrochene, halbtransparente Kondensationsbänder liegen an Arm, Rücken und Hüfte; keine Zifferblätter.",
-   "action": "Das Feld folgt dem Spieler und verdichtet sich bei Angriffen in Blickrichtung. Sprint Cold Glide, Jump Clock Hop, Defense Frozen Clock.",
-   "peak": "Das Feld überzieht einen großen Teil der Arena. Full: Frozen Hour / Winter Pendulum / Clockwork Blizzard."
-  }
+   "idle": "Drei unterschiedlich lange gebrochene Glasbahnen liegen nah an Arm, Hüfte und Rücken, getrennt durch ruhige leere Bildräume; kein großer Zeitchronometer.",
+   "action": "Idle: jedes Band hält sporadisch für wenige Frames an und springt an seine physikalisch geglättete Position zurück, langsamer als echte Bewegung.",
+   "peak": "Full zieht die Bänder zu einer stotternden frostigen Zeitspur, die gegnerische Zonen verlangsamt; kein Stop-Time-Effekt ohne Gameplay-Mechanik."
+  },
+  "v32": {
+   "category": "Frostbeschlagene Kondensationsbänder mit Zeitstottern",
+   "silhouette": "Drei unterschiedlich lange gebrochene Glasbahnen liegen nah an Arm, Hüfte und Rücken, getrennt durch ruhige leere Bildräume; kein großer Zeitchronometer.",
+   "anchors": [
+    "hand_left",
+    "hip_right",
+    "back_left",
+    "sprite_alpha"
+   ],
+   "idle": "Drei unterschiedlich lange gebrochene Glasbahnen liegen nah an Arm, Hüfte und Rücken, getrennt durch ruhige leere Bildräume; kein großer Zeitchronometer.",
+   "action": "Idle: jedes Band hält sporadisch für wenige Frames an und springt an seine physikalisch geglättete Position zurück, langsamer als echte Bewegung.",
+   "peak": "Full zieht die Bänder zu einer stotternden frostigen Zeitspur, die gegnerische Zonen verlangsamt; kein Stop-Time-Effekt ohne Gameplay-Mechanik.",
+   "anim": {
+    "transformIn": "Frostkondensat beginnt an ausgewählten echten Kanten, zieht drei geknickte Zeitglasbahnen aus dem Hintergrund und hinterlässt kurze unbewegliche Ditherpartikel.",
+    "idle": "Drei unterschiedlich lange gebrochene Glasbahnen liegen nah an Arm, Hüfte und Rücken, getrennt durch ruhige leere Bildräume; kein großer Zeitchronometer.",
+    "sprint": "Idle: jedes Band hält sporadisch für wenige Frames an und springt an seine physikalisch geglättete Position zurück, langsamer als echte Bewegung.",
+    "defense": "Kondensationsbänder schichten sich kurz vor der Blickseite als frostige Verzögerungsfläche.",
+    "grab": "Ein Frostband fängt ein nahes Ziel bei bestätigtem Grab mit verzögerter Release-Geste.",
+    "jump": "Im Jump bleiben Bildreststreifen auf mehreren Höhen für kurze Zeit zurück, ohne den eigentlichen Player-Root einzufrieren.",
+    "peak": "Full zieht die Bänder zu einer stotternden frostigen Zeitspur, die gegnerische Zonen verlangsamt; kein Stop-Time-Effekt ohne Gameplay-Mechanik.",
+    "transformOut": "Die einzelnen Fragmente verschwinden in umgekehrter Materiallogik der Aktivierung. Existierende Projektile und Bodenobjekte folgen ihren normalen, deterministischen Laufzeitregeln."
+   },
+   "attacks": {
+    "forward": "Short: einzelner frostiger Zeitimpuls; Full: eine breite gefrorene Standbildspur läuft in Blickrichtung.",
+    "up": "Short: kurzer Glashaken nach oben; Full: mehrere Zeitglasstreifen fahren als verspätete Eis-Aufstiegsbahn hoch.",
+    "down": "Short: kleiner kalter Fußstopp; Full: frostige Zeitbahnen verwirbeln zur flachen Bodennebel-Verzögerungszone."
+   },
+   "exclusions": "Keine Uhrzeiger, Stop-Time-Kugel oder Eisplatten-Humanoid."
+  },
+  "morphCategory": "Frostbeschlagene Kondensationsbänder mit Zeitstottern"
  },
  {
   "id": "T36",
@@ -4246,10 +5356,40 @@ export const BUFF_FORM_DATA = Object.freeze([
   "morphology": "energy_extension",
   "morphologyLabel": "Energy Extension",
   "states": {
-   "idle": "Energy Extension (bewegliche Schweife, Bänder und Peitschen aus der Körperkontur): Drei geknickte, segelartige Paneele strahlen seitlich vom Rücken ab, ohne Federn oder Halo.",
-   "action": "Sprint zieht die Bänder flach nach hinten, beim Sprung hängen sie unter dem Körper, Angriffe lassen sie nach vorn peitschen. Sprint Beacon Flow, Jump Radiant Hop, Defense Halo Guard.",
-   "peak": "Die Bänder schießen auf volle Länge aus und formen die Full-Attacke. Full: Dawn Ray / Ascension Chorus / Sanctuary Anchor."
-  }
+   "idle": "Drei geknickte Leuchtsegel ragen in unterschiedlichen Winkeln von Rückenankern seitlich nach außen, mit deutlich offenen Zwischenräumen; sie tragen keine Federn oder Flügelarchitektur.",
+   "action": "Idle: jedes Segel hebt sich geringfügig mit anderem Rhythmus; beim Rennen rücken ihre Enden hinter den Avatar und nehmen den lokalen Schattenwurf mit.",
+   "peak": "Full richten sich die Segel zu einem breit ausgefächerten Lichtanker aus, der klare Angriffs- oder Schutzbahnen in die Lane zeichnet."
+  },
+  "v32": {
+   "category": "Drei seitliche Lichtsegel als ortsgebundene Stützen",
+   "silhouette": "Drei geknickte Leuchtsegel ragen in unterschiedlichen Winkeln von Rückenankern seitlich nach außen, mit deutlich offenen Zwischenräumen; sie tragen keine Federn oder Flügelarchitektur.",
+   "anchors": [
+    "back_left/right",
+    "shoulder_left",
+    "feet_world",
+    "sprite_alpha"
+   ],
+   "idle": "Drei geknickte Leuchtsegel ragen in unterschiedlichen Winkeln von Rückenankern seitlich nach außen, mit deutlich offenen Zwischenräumen; sie tragen keine Federn oder Flügelarchitektur.",
+   "action": "Idle: jedes Segel hebt sich geringfügig mit anderem Rhythmus; beim Rennen rücken ihre Enden hinter den Avatar und nehmen den lokalen Schattenwurf mit.",
+   "peak": "Full richten sich die Segel zu einem breit ausgefächerten Lichtanker aus, der klare Angriffs- oder Schutzbahnen in die Lane zeichnet.",
+   "anim": {
+    "transformIn": "Dünne seidig helle Linien laufen über die eigene Schulterkontur und werden zu drei abgenutzten Metallsegeln, deren matte Innenflächen nacheinander Licht tragen.",
+    "idle": "Drei geknickte Leuchtsegel ragen in unterschiedlichen Winkeln von Rückenankern seitlich nach außen, mit deutlich offenen Zwischenräumen; sie tragen keine Federn oder Flügelarchitektur.",
+    "sprint": "Idle: jedes Segel hebt sich geringfügig mit anderem Rhythmus; beim Rennen rücken ihre Enden hinter den Avatar und nehmen den lokalen Schattenwurf mit.",
+    "defense": "Zwei Paneele stellen sich als asymmetrische Schirme vor den Avatar, das dritte bleibt als Seitenanker.",
+    "grab": "Der kleinste Lichtanker fixiert kurz den Nahkontaktpunkt des Grab, bevor die Paneele wieder auseinandergehen.",
+    "jump": "Jump: Segel kippen nach unten, leiten nur VFX-Trails nach, sie verleihen keine neue Flugphysik.",
+    "peak": "Full richten sich die Segel zu einem breit ausgefächerten Lichtanker aus, der klare Angriffs- oder Schutzbahnen in die Lane zeichnet.",
+    "transformOut": "Die einzelnen Fragmente verschwinden in umgekehrter Materiallogik der Aktivierung. Existierende Projektile und Bodenobjekte folgen ihren normalen, deterministischen Laufzeitregeln."
+   },
+   "attacks": {
+    "forward": "Short: schmaler Ankerfunke nach vorn; Full: Segel richten einen breiten, seidigen Lichtstrahl aus.",
+    "up": "Short: kleine hochschlagende Lichtkante; Full: drei Paneele synchronisieren eine gestaffelte lichtdurchzogene Aufwärtsbahn.",
+    "down": "Short: kurzer Lichtpuls an den Füßen; Full: Segel verankern eine große temporäre Schutzzone im Boden."
+   },
+   "exclusions": "Keine Engelsflügel, Heiligenschein oder goldene Rittergestalt."
+  },
+  "morphCategory": "Drei seitliche Lichtsegel als ortsgebundene Stützen"
  },
  {
   "id": "T37",
@@ -4369,10 +5509,41 @@ export const BUFF_FORM_DATA = Object.freeze([
   "morphology": "body_augmentation",
   "morphologyLabel": "Body Augmentation",
   "states": {
-   "idle": "Lebendige Alchemie: transparente Katalysatorrohre umwickeln Arme, Rücken und Beine; unregelmäßige Ätzglasblasen schweben dicht am Körper; Säuredampf strömt über den Boden, Flüssigkeit wird zwischen den Kammern umgepumpt.",
-   "action": "Leitungen pumpen entlang Armen und Beinen zwischen den Anbauten; bei Angriffen entfaltet sich ein zusätzliches Gelenkglied aus der hinteren Schulter und schlägt zu, bei Defense wächst eine Platte über den vorderen Unterarm. Sprint Mire Glide, Jump Venom Jump, Defense Toxic Hide.",
-   "peak": "Down Full: ein großer Teil des Bodens wird zu einem aufsteigenden, mehrschichtigen Ätzglas-Reaktor; Angriffe lassen ätzende Strahlen und Kapillarfäden aus dem System wachsen."
-  }
+   "idle": "Kein Oberkörper: Zwei durchsichtige Unterarm-Katalysatorrohre und drei sechseckige Dosierkammern auf ungleichen Höhen, eine große seitliche Sammelblase hinter dem Avatar, insgesamt 1,3–2,6 H, viel negativer Raum.",
+   "action": "Flüssigkeit pulsiert vom linken in den rechten Arm; Luftblasen hängen und lösen sich an korrodierten Innenkanten; Tropfen fallen ausschließlich von tiefen Rohröffnungen, nicht vom ganzen Sprite.",
+   "peak": "Full öffnet den Kreislauf und baut einen großen horizontalen chemischen Dosierfächer oder ein bodenverankertes Ätzbecken, niemals einen humanoiden Körper."
+  },
+  "v32": {
+   "category": "Asymmetrisches Alchemie-Netzwerk mit Körperrohren und Weltbehältern",
+   "silhouette": "Kein Oberkörper: Zwei durchsichtige Unterarm-Katalysatorrohre und drei sechseckige Dosierkammern auf ungleichen Höhen, eine große seitliche Sammelblase hinter dem Avatar, insgesamt 1,3–2,6 H, viel negativer Raum.",
+   "anchors": [
+    "hand_left/right",
+    "elbow_left/right",
+    "hip_right",
+    "feet_world",
+    "sprite_alpha"
+   ],
+   "idle": "Kein Oberkörper: Zwei durchsichtige Unterarm-Katalysatorrohre und drei sechseckige Dosierkammern auf ungleichen Höhen, eine große seitliche Sammelblase hinter dem Avatar, insgesamt 1,3–2,6 H, viel negativer Raum.",
+   "action": "Flüssigkeit pulsiert vom linken in den rechten Arm; Luftblasen hängen und lösen sich an korrodierten Innenkanten; Tropfen fallen ausschließlich von tiefen Rohröffnungen, nicht vom ganzen Sprite.",
+   "peak": "Full öffnet den Kreislauf und baut einen großen horizontalen chemischen Dosierfächer oder ein bodenverankertes Ätzbecken, niemals einen humanoiden Körper.",
+   "anim": {
+    "transformIn": "Konturgenaue grünliche Adern bilden sich nur an Händen und Unterarmen, drei Hexkammern ploppen nacheinander wie Glasblasen auf und werden durch dünne Schlauchleitungen mit der Sammelblase verbunden.",
+    "idle": "Kein Oberkörper: Zwei durchsichtige Unterarm-Katalysatorrohre und drei sechseckige Dosierkammern auf ungleichen Höhen, eine große seitliche Sammelblase hinter dem Avatar, insgesamt 1,3–2,6 H, viel negativer Raum.",
+    "sprint": "Flüssigkeit pulsiert vom linken in den rechten Arm; Luftblasen hängen und lösen sich an korrodierten Innenkanten; Tropfen fallen ausschließlich von tiefen Rohröffnungen, nicht vom ganzen Sprite.",
+    "defense": "Kammern drehen ihre dicksten Glaswände blickseitig, Blasen im Inneren kollabieren und bilden eine kurzzeitige ätzende Schutzschicht.",
+    "grab": "Ein vorderes Rohr saugt den nahen Trefferkontakt an; der Anschluss wickelt sich nicht als großer Arm um das Ziel.",
+    "jump": "Beim Sprung bleiben Tropfen kurz unterhalb der Hand zurück, Sammelblase folgt schwer, Hexkammern federn auf Landung und stoßen Dunst nach unten aus.",
+    "peak": "Full öffnet den Kreislauf und baut einen großen horizontalen chemischen Dosierfächer oder ein bodenverankertes Ätzbecken, niemals einen humanoiden Körper.",
+    "transformOut": "Die einzelnen Fragmente verschwinden in umgekehrter Materiallogik der Aktivierung. Existierende Projektile und Bodenobjekte folgen ihren normalen, deterministischen Laufzeitregeln."
+   },
+   "attacks": {
+    "forward": "Short: ein scharfer Ätzglas-Tropfen; Full: Dosierkammern öffnen einen breiten mehrlagigen korrosiven Frontnebel.",
+    "up": "Short: eine Rohrdüse drückt Flüssigkeit hoch; Full: das Netzwerk zündet eine lange unregelmäßige Ätzsäule am Zielpunkt.",
+    "down": "Short: bodennaher Säuretropfenbogen; Full: Sammelblase entleert mehrere Hexkammern in ein weit geöffnetes Ätzbecken mit Randblasen."
+   },
+   "exclusions": "Kein Drachenkopf, grüner Riesen-Susanoo, symmetrisches Schulter-Flaschenrigg oder Chemie-Mecha."
+  },
+  "morphCategory": "Asymmetrisches Alchemie-Netzwerk mit Körperrohren und Weltbehältern"
  },
  {
   "id": "T38",
@@ -4482,10 +5653,41 @@ export const BUFF_FORM_DATA = Object.freeze([
   "morphology": "orbital_construct",
   "morphologyLabel": "Orbital Construct",
   "states": {
-   "idle": "Orbitale Steinarchitektur: fünf massive, zerbrochene Steinringe schweben in unterschiedlichen Winkeln um den Charakter, rotieren und verschieben sich — keine Arme, kein Kopf.",
-   "action": "Die Konstrukte kreisen auf eigenen, geneigten Bahnen; bei Angriffen rotieren sie schneller und schließen sich vor der Hand zur Speerspitze, bei Defense stapeln sie sich zur Wand, dem Sprung folgen sie träge. Sprint Golem March, Jump Crag Hop, Defense Stonewall.",
-   "peak": "Angriffe setzen die Ringe zu einer riesigen Faustprojektion (Forward), einem Ringturm (Up), einem Steinschild (Defense) oder einer rotierenden Zermalmungsmaschine (Down Full) zusammen."
-  }
+   "idle": "Keine Gelenkarme: Fünf verschieden große Bruchring-Abschnitte hängen um eine schräg geneigte vertikale Achse auf Schulter-, Hüft- und Bodenniveau, mit völlig offenen Innenräumen, insgesamt bis etwa 3,1 H.",
+   "action": "Schwere Fragmente folgen ihren eigenen langsamen Orbitalbahnen; Kristalladern laufen über die Bruchkanten, während Steinbrocken mit Trägheit nachkippen.",
+   "peak": "Full richten sich kurz mehrere Ringsegmente zu einer riesigen radialen Mühle, Fallpresse oder Steinkrone über dem Ziel, anschließend fallen sie in offene Orbits zurück."
+  },
+  "v32": {
+   "category": "Orbitale Steinarchitektur aus fünf ungeschlossenen Fragmentringen",
+   "silhouette": "Keine Gelenkarme: Fünf verschieden große Bruchring-Abschnitte hängen um eine schräg geneigte vertikale Achse auf Schulter-, Hüft- und Bodenniveau, mit völlig offenen Innenräumen, insgesamt bis etwa 3,1 H.",
+   "anchors": [
+    "root",
+    "feet_world",
+    "hip",
+    "shoulder_left/right",
+    "sprite_alpha"
+   ],
+   "idle": "Keine Gelenkarme: Fünf verschieden große Bruchring-Abschnitte hängen um eine schräg geneigte vertikale Achse auf Schulter-, Hüft- und Bodenniveau, mit völlig offenen Innenräumen, insgesamt bis etwa 3,1 H.",
+   "action": "Schwere Fragmente folgen ihren eigenen langsamen Orbitalbahnen; Kristalladern laufen über die Bruchkanten, während Steinbrocken mit Trägheit nachkippen.",
+   "peak": "Full richten sich kurz mehrere Ringsegmente zu einer riesigen radialen Mühle, Fallpresse oder Steinkrone über dem Ziel, anschließend fallen sie in offene Orbits zurück.",
+   "anim": {
+    "transformIn": "Einzelne mineralische Brocken steigen von den Fußpunkten und setzen sich nicht zum Torso, sondern zu fünf unvollständigen Kreisbahnen mit sichtbaren Lücken zusammen.",
+    "idle": "Keine Gelenkarme: Fünf verschieden große Bruchring-Abschnitte hängen um eine schräg geneigte vertikale Achse auf Schulter-, Hüft- und Bodenniveau, mit völlig offenen Innenräumen, insgesamt bis etwa 3,1 H.",
+    "sprint": "Schwere Fragmente folgen ihren eigenen langsamen Orbitalbahnen; Kristalladern laufen über die Bruchkanten, während Steinbrocken mit Trägheit nachkippen.",
+    "defense": "Zwei Ringschnitte rücken überlappend vor die Blickrichtung und stoppen an ihren massiven Bruchkanten, andere Ringe orbitieren weiter.",
+    "grab": "Ein einziges Ringsegment klammert beim bestätigten Nahkontakt an den Gegner, ohne riesige Hand nachzubauen.",
+    "jump": "Im Aufstieg bleiben die unteren Bruchringe tiefer, Apex: Orbit kippt horizontal; Landung: Brocken federn in drei unterschiedlichen schweren Einschlagtakten.",
+    "peak": "Full richten sich kurz mehrere Ringsegmente zu einer riesigen radialen Mühle, Fallpresse oder Steinkrone über dem Ziel, anschließend fallen sie in offene Orbits zurück.",
+    "transformOut": "Die einzelnen Fragmente verschwinden in umgekehrter Materiallogik der Aktivierung. Existierende Projektile und Bodenobjekte folgen ihren normalen, deterministischen Laufzeitregeln."
+   },
+   "attacks": {
+    "forward": "Short: ein konzentrierter Steinsplitter verlässt den Orbit; Full: mehrere Ringbrocken verdichten sich zum schweren freifliegenden Kristallkörper.",
+    "up": "Short: ein Segment führt einen Uppercut-ähnlichen Steinhub aus; Full: Orbit kippt vertikal und wirft eine gewaltige kristalline Zackenkrone hoch.",
+    "down": "Short: ein schweres Bruchstück stampft; Full: untere Ringe koppeln sich an Bodenfugen und erzeugen eine durchlaufende Bruchlinie."
+   },
+   "exclusions": "Kein gigantischer Steinmensch, kein Golem-Oberkörper, keine fünf Stein-Gelenkbügel in humanoider Haltung."
+  },
+  "morphCategory": "Orbitale Steinarchitektur aus fünf ungeschlossenen Fragmentringen"
  },
  {
   "id": "T39",
@@ -4590,10 +5792,42 @@ export const BUFF_FORM_DATA = Object.freeze([
   "morphology": "temporal_projection",
   "morphologyLabel": "Temporal Projection",
   "states": {
-   "idle": "Zeitversetzte Existenz: vier große, leicht transparente Zeitebenen stehen versetzt im Raum und zeigen zeitversetzte Bewegungen des eigenen Charakters.",
-   "action": "Bei Angriffen verlassen die Nachbilder kurz ihre Ebenen und greifen zeitlich versetzt mit an.",
-   "peak": "Alle Echos verlassen ihre Ebenen und greifen synchron bzw. zeitlich versetzt an. Full: Convergence Formula / Zodiac Ascent / Nebula Equation."
-  }
+   "idle": "Vier große asymmetrische Zeitglasebenen stehen versetzt hinter, vor und neben dem Avatar; die höchste misst 2,7–3,5 H, die breiteste steht seitlich. Ihre Konturen ergeben zusammen eine imposante temporale Architektur, aber niemals einen humanoiden Torso mit Armen.",
+   "action": "In jeder Fläche laufen unterschiedlich zeitversetzte Bewegungsränder des realen Charakters. Eine Fläche liegt um wenige Frames voraus, eine zurück, zwei zeigen geknickte Momentaufnahmen; Platten schwanken nicht wie Gelenkarme.",
+   "peak": "Bei Full legen sich alle vier Ebenen hintereinander entlang der Angriffsrichtung und öffnen einen großen mehrlagigen Zeitkanal aus versetzten Trefferzeitpunkten. Die Projektion wirkt dann wie ein 3,5 H hoher Zeitfächer, nicht wie vier kleine Monitore."
+  },
+  "v32": {
+   "category": "Räumlich gestaffelte Zeitprojektion mit vier großen gebrochenen Bildflächen",
+   "silhouette": "Vier große asymmetrische Zeitglasebenen stehen versetzt hinter, vor und neben dem Avatar; die höchste misst 2,7–3,5 H, die breiteste steht seitlich. Ihre Konturen ergeben zusammen eine imposante temporale Architektur, aber niemals einen humanoiden Torso mit Armen.",
+   "anchors": [
+    "back_left/right",
+    "root",
+    "facing",
+    "sprite_alpha",
+    "cached_pose_frames",
+    "world_to_screen"
+   ],
+   "idle": "Vier große asymmetrische Zeitglasebenen stehen versetzt hinter, vor und neben dem Avatar; die höchste misst 2,7–3,5 H, die breiteste steht seitlich. Ihre Konturen ergeben zusammen eine imposante temporale Architektur, aber niemals einen humanoiden Torso mit Armen.",
+   "action": "In jeder Fläche laufen unterschiedlich zeitversetzte Bewegungsränder des realen Charakters. Eine Fläche liegt um wenige Frames voraus, eine zurück, zwei zeigen geknickte Momentaufnahmen; Platten schwanken nicht wie Gelenkarme.",
+   "peak": "Bei Full legen sich alle vier Ebenen hintereinander entlang der Angriffsrichtung und öffnen einen großen mehrlagigen Zeitkanal aus versetzten Trefferzeitpunkten. Die Projektion wirkt dann wie ein 3,5 H hoher Zeitfächer, nicht wie vier kleine Monitore.",
+   "anim": {
+    "transformIn": "Eine goldmintfarbene Registriernaht wandert konturgenau über Sprite und Schatten, projiziert nacheinander vier gebrochene Standbildflächen in unterschiedliche Raumtiefen. In ihnen blitzen Teile früherer und folgender Posen auf, nicht dekorative Bedienoberflächen.",
+    "idle": "Vier große asymmetrische Zeitglasebenen stehen versetzt hinter, vor und neben dem Avatar; die höchste misst 2,7–3,5 H, die breiteste steht seitlich. Ihre Konturen ergeben zusammen eine imposante temporale Architektur, aber niemals einen humanoiden Torso mit Armen.",
+    "sprint": "In jeder Fläche laufen unterschiedlich zeitversetzte Bewegungsränder des realen Charakters. Eine Fläche liegt um wenige Frames voraus, eine zurück, zwei zeigen geknickte Momentaufnahmen; Platten schwanken nicht wie Gelenkarme.",
+    "defense": "Eine Bildfläche schiebt sich frontal als kurze Zeitversatzblende vor den Angriff; Gegner sieht klare Parry-/Blocktelegraphen.",
+    "grab": "Nur bei bestätigtem Grab bildet sich ein enger Standbildrahmen am Nahziel, der dessen Position kurz registriert, keine Riesenhand.",
+    "jump": "Im Jump zeigen die Flächen Takeoff/Ascend/Apex/Fall als vier gestaffelte Echo-Stellungen, ohne weitere Körper-Spritesheets zu verlangen: aktuelle Spriteframe-Textur temporär in VFX-Replays verwenden.",
+    "peak": "Bei Full legen sich alle vier Ebenen hintereinander entlang der Angriffsrichtung und öffnen einen großen mehrlagigen Zeitkanal aus versetzten Trefferzeitpunkten. Die Projektion wirkt dann wie ein 3,5 H hoher Zeitfächer, nicht wie vier kleine Monitore.",
+    "transformOut": "Die einzelnen Fragmente verschwinden in umgekehrter Materiallogik der Aktivierung. Existierende Projektile und Bodenobjekte folgen ihren normalen, deterministischen Laufzeitregeln."
+   },
+   "attacks": {
+    "forward": "Short: eine schmale zeitversetzte Projektionsmarke sticht frontal; Full: vier Zeitflächen schießen eine phasenverschobene Konvergenzbahn nach vorne.",
+    "up": "Short: ein Registriervektor hebt den Treffer; Full: vier aufeinanderfolgende Standbild-Ränder steigen in einer vertikalen, zeitlich versetzten Schichtfolge.",
+    "down": "Short: kleines Standbild am Boden; Full: die vier Ebenen senken ein umfassendes zeitliches Koordinatenfeld über das Areal."
+   },
+   "exclusions": "Keine vier UI-Karten im Leerraum, keine große humanoide Zeitgestalt, keine Uhrkrone, keine stillen rechteckigen Buff-Anzeigen."
+  },
+  "morphCategory": "Räumlich gestaffelte Zeitprojektion mit vier großen gebrochenen Bildflächen"
  },
  {
   "id": "T40",
@@ -4696,9 +5930,40 @@ export const BUFF_FORM_DATA = Object.freeze([
   "morphology": "creature_manifestation",
   "morphologyLabel": "Creature Manifestation",
   "states": {
-   "idle": "Zwei Energie-Wyrms aus rautenförmigen Obsidianschuppen mit Goldkanten umkreisen den Spieler; goldene Lanze in der Hand, Halo-Krone.",
-   "action": "Die Geschöpfe bewegen sich auf eigenen Bahnen um den Spieler (Marionetten stehen am Boden und hängen an seinen Fäden), strecken sich im Sprint nach hinten und schnellen bei Angriffen vor. Sprint Wyrmlauf, Jump Himmelslauf und konturtreue Air-Aura, Defense Drachengrat.",
-   "peak": "Zwillingswyrm-Jagd (zwei Drachen jagen über die Lane), Himmelswendel (Spiral-Wyrm), Wyrmportal-Ritual (Portale um ein Ziel)."
-  }
+   "idle": "Nur zwei verschieden lange Drachen-Lanzen-Konstrukte aus geschichtetem Schuppenglas schweben geschwungen hinter dem Avatar. Sie kreuzen sich dynamisch, lassen Brust und Kopf sichtbar; Idle 1,7–2,8 H.",
+   "action": "Die Bänder schwingen phasenversetzt, Schuppenfacetten drehen nach Kurvenkrümmung; beim Sprint strecken sie sich als lange zweiarmige Flugspur nach hinten.",
+   "peak": "Full: Forward entlässt zwei separat jagende Wyrmkonstrukte über die Lane; Down setzt mehrere weltverankerte Portale um ein Ziel, aus denen nacheinander eigenständige Wyrmangriffe kommen. Peak ist groß, aber niemals humanoid."
+  },
+  "v32": {
+   "category": "Zwei unabhängig animierte aurobsidianene Wyrmbänder, keine Körpergestalt",
+   "silhouette": "Nur zwei verschieden lange Drachen-Lanzen-Konstrukte aus geschichtetem Schuppenglas schweben geschwungen hinter dem Avatar. Sie kreuzen sich dynamisch, lassen Brust und Kopf sichtbar; Idle 1,7–2,8 H.",
+   "anchors": [
+    "weapon_tip",
+    "weapon_grip",
+    "hand_right",
+    "back_left/right",
+    "sprite_alpha"
+   ],
+   "idle": "Nur zwei verschieden lange Drachen-Lanzen-Konstrukte aus geschichtetem Schuppenglas schweben geschwungen hinter dem Avatar. Sie kreuzen sich dynamisch, lassen Brust und Kopf sichtbar; Idle 1,7–2,8 H.",
+   "action": "Die Bänder schwingen phasenversetzt, Schuppenfacetten drehen nach Kurvenkrümmung; beim Sprint strecken sie sich als lange zweiarmige Flugspur nach hinten.",
+   "peak": "Full: Forward entlässt zwei separat jagende Wyrmkonstrukte über die Lane; Down setzt mehrere weltverankerte Portale um ein Ziel, aus denen nacheinander eigenständige Wyrmangriffe kommen. Peak ist groß, aber niemals humanoid.",
+   "anim": {
+    "transformIn": "Zwei dünne champagnergoldene Konturnähte steigen von Hüfte und Schulter zu kleinen Schuppenkeilen auf, die sich zu zwei langen, gelenkig nachschwingenden Bändern verbinden, erst bei schweren Angriffen entstehen erkennbare Wyrmköpfe.",
+    "idle": "Nur zwei verschieden lange Drachen-Lanzen-Konstrukte aus geschichtetem Schuppenglas schweben geschwungen hinter dem Avatar. Sie kreuzen sich dynamisch, lassen Brust und Kopf sichtbar; Idle 1,7–2,8 H.",
+    "sprint": "Die Bänder schwingen phasenversetzt, Schuppenfacetten drehen nach Kurvenkrümmung; beim Sprint strecken sie sich als lange zweiarmige Flugspur nach hinten.",
+    "defense": "Schuppenbänder verschränken sich als gerichteter Schildbogen vor dem Charakter und teilen Einschlagsenergie entlang der Segmentadern auf.",
+    "grab": "Eine einzelne dünne Wyrmschlinge greift ein bestätigtes Nahziel und löst sich beim Kontaktende.",
+    "jump": "Jump: Körper springt normal; beide Bänder ziehen unterhalb nach, drehen sich am Apex auseinander und schlagen bei Landung leicht gegen den Boden.",
+    "peak": "Full: Forward entlässt zwei separat jagende Wyrmkonstrukte über die Lane; Down setzt mehrere weltverankerte Portale um ein Ziel, aus denen nacheinander eigenständige Wyrmangriffe kommen. Peak ist groß, aber niemals humanoid.",
+    "transformOut": "Die einzelnen Fragmente verschwinden in umgekehrter Materiallogik der Aktivierung. Existierende Projektile und Bodenobjekte folgen ihren normalen, deterministischen Laufzeitregeln."
+   },
+   "attacks": {
+    "forward": "Short: schmaler Lanzenimpuls aus nächstem Waffen-/Handanker; Full: beide Wyrme lösen sich separat und treffen mehrere Lanegegner auf unabhängigen Bahnen.",
+    "up": "Short: einzelne himmelwärts gerichtete Schneide; Full: ein geschichteter Wyrm steigt als spiralförmige vertikale Angriffskonstruktion auf.",
+    "down": "Short: flacher Glutring an den Füßen; Full: mehrlagige Portale um ein gültiges Ziel entlassen nacheinander mehrere Wyrmstoßbahnen."
+   },
+   "exclusions": "Keine Drachenflügel am Avatar, keine tierische Ganzkörperform, keine orange Allover-Aura."
+  },
+  "morphCategory": "Zwei unabhängig animierte aurobsidianene Wyrmbänder, keine Körpergestalt"
  }
 ]);

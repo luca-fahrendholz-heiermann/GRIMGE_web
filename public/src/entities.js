@@ -786,6 +786,7 @@ export class Player extends GroundEntity {
     const name = releaseFormTechnique(this, window.gameWorld, spells, this.chargeDir ?? 'forward', full);
     if (!name) return false;
     signatureEvent(this, 'heavy', { full, form: true });
+    if (this.buffForm) this.buffForm.lastTech = { dir: this.chargeDir ?? 'forward', full, at: this.buffForm.age };
     const recovery = { ninefold: full ? .42 : .2, eidolon: full ? .55 : .28, ascendant: full ? .45 : .24 }[form] ?? .3;
     this.state = this.chargeDir === 'up' ? 'uppercut' : 'attack3';
     this.stateTimer = recovery; this.canAttack = false; this.vx = 0;
@@ -806,6 +807,7 @@ export class Player extends GroundEntity {
       if (dist < closestDist) { closest = t; closestDist = dist; }
     }
     const grabForm = activeMoveset(this);
+    if (this.buffForm) { this.buffForm.grabAt = this.buffForm.age; this.buffForm.grabHit = !!closest; this.buffForm.grabX = closest?.x ?? null; }
     if (!closest) {
       // A form shows a short search pulse when the grab misses.
       if (grabForm && this.grabCooldown <= 0) { this.grabCooldown = .5; spells.addSpell(new FormGrabFx(this, null, grabForm), 'B'); }
@@ -1168,6 +1170,7 @@ export class Player extends GroundEntity {
     }
     setHitContext(null);
     if (sigHits.length) signatureEvent(this, 'hit', { hits: sigHits, heavy: this.state === 'heavyStrike' || isFinisher, facing: this.facing });
+    if (hitAny && this.buffForm) this.buffForm.hitAt = this.buffForm.age;
     if (hitMeta.shockwave) combat.spawnShockwave(this.x + this.facing * 40, this.y - 6, 70, '#b0bec5');
     // Conjured weapons wear out with every hit and finally shatter.
     if (hitAny && this.weaponDurability != null) {

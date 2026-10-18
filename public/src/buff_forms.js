@@ -15,10 +15,12 @@
 import { BUFF_FORM_DATA } from './buff_forms_data.js';
 import { FORM_MOVESETS, registerFormPalette, FormStrikeSpell } from './form_moves.js';
 import { FORM_SPRINT_ATTACKS, FORM_FX_HOOKS } from './form_actions.js';
-import { materialFor, renderManifestation, contourVeinPainter, plate, band, rgba } from './buff_vfx.js';
+import { materialFor, renderManifestation, contourVeinPainter, plate, band, rgba, hasFormRenderer } from './buff_vfx.js';
 import { BuffStrikeSpell, applyStatuses } from './buff_techniques.js';
 import './buff_signatures.js'; // signature renderers (T37–T40)
-import './buff_morphologies.js'; // morphology family renderers (all other states)
+import './buff_v32_a.js'; // V3.2 individual morphologies T01–T12
+import './buff_v32_b.js'; // T13–T24
+import './buff_v32_c.js'; // T25–T36
 import { combat } from './combat.js';
 import { groundYForDepth } from './world.js';
 
@@ -199,7 +201,7 @@ export function renderBuffManifestation(ctx, player, renderY, layer) {
   const form = currentBuffForm(player);
   if (!form) return false;
   // Temporal projections (other than Vorausschnitt's planes) trail echoes of the last moments.
-  if (layer === 'back' && form.morphology === 'temporal_projection' && form.id !== 'T39') {
+  if (layer === 'back' && form.morphology === 'temporal_projection' && form.id !== 'T39' && !hasFormRenderer(form.id)) {
     for (const d of [10, 20]) { const past = player._timeTrail?.[d]; if (past) ghostOf(ctx, player, past.x, past.y, past.state, past.animTime, past.facing, .3 * buffFade(player), form.mat.edge); }
   }
   renderManifestation(ctx, player, form, layer, renderY, buffFade(player), peakOf(player));
@@ -242,6 +244,8 @@ export function renderBuffGuard(ctx, player, renderY) {
   const form = currentBuffForm(player);
   if (!form || !player.isGuarding) return false;
   if (form.id === 'T38') { asterShield(ctx, player, renderY); return true; }
+  // V3.2: the form's own parts fold into its defense (drawn by its renderer).
+  if (hasFormRenderer(form.id)) return true;
   const m = form.mat; const f = player.facing || 1; const t = player.animTime ?? 0;
   const cx = player.x + f * 22; const cy = renderY - 46;
   const hold = Math.min(1, (player.guardHoldTime ?? 0) * 6 + .3);
@@ -258,6 +262,8 @@ export function renderBuffGuard(ctx, player, renderY) {
 FORM_FX_HOOKS.grab = (ctx, fx) => {
   const form = BUFF_FORMS[fx.form] ?? (fx.form === 'ninefold' ? BUFF_FORMS.B01 : fx.form === 'eidolon' ? BUFF_FORMS.B02 : null);
   if (!form) return false;
+  // V3.2: the form's own part reaches the target (its renderer); only a contact flash here.
+  if (hasFormRenderer(form.id)) { if (fx.target && fx.t > .28 && fx.t < .36) plate(ctx, [[fx.target.x - 4, (fx.target.y ?? 0) - 40], [fx.target.x + 4, (fx.target.y ?? 0) - 40], [fx.target.x + 4, (fx.target.y ?? 0) - 32], [fx.target.x - 4, (fx.target.y ?? 0) - 32]], form.mat, 720, { alpha: 1, core: 1 }); return true; }
   const p = fx.player; const m = form.mat;
   const hx = p.x + fx.facing * 12; const hy = p.y - 48;
   const k = Math.min(1, fx.t / .18);
@@ -452,6 +458,11 @@ export class EchoStrikeFx {
   render(ctx) {
     if (this.t < this.delay) return;
     const k = (this.t - this.delay) / (this.life - this.delay);
+    if (this.form.id !== 'T39') {
+      // Resonanzwache (V3.2): no humanoid echo — a travelling sound notch from the string frames.
+      for (let r = 0; r < 3; r++) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = this.mat.edge; ctx.lineWidth = 2 - r * .5; ctx.globalAlpha = (1 - k) * (1 - r * .25); ctx.beginPath(); ctx.ellipse(this.x + this.facing * (10 + r * 8), this.y - 44, 6 + r * 6, 16 + r * 8, 0, -1.2, 1.2); ctx.stroke(); ctx.restore(); }
+      return;
+    }
     ghostOf(ctx, this.player, this.x, this.y, this.state, this.t * 3, this.facing, .55 * (1 - k * .8), '#d6f5e2');
     if (this.struck && k < .8) {
       const sx = this.x1 + this.facing * 26; const sy = this.y - 44;
@@ -482,6 +493,9 @@ export function updateMorphology(player, form, dt) {
   b.act = approach(b.act ?? 0, acting ? 1 : 0, acting ? 18 : 5);
   b.guardK = approach(b.guardK ?? 0, player.isGuarding ? 1 : 0, 12);
   b.sprintK = approach(b.sprintK ?? 0, player.sprintActive ? 1 : 0, 7);
+  // Landing marker for the jump phases of the V3.2 morphologies.
+  if (b.wasAir && player.grounded) b.landAt = b.age;
+  b.wasAir = player.grounded === false;
   // Peak manifestation: a full release makes the form flare to its maximum.
   const wasFull = b.wasFull; const isFull = !!(player.formCharge && player.formCharge.elapsed >= 1.2);
   if (wasFull && !player.formCharge) b.peakAt = b.age;

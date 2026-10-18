@@ -2386,17 +2386,23 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   const P = game.player; P.x = 400; P.z = .5; P.facing = 1; game.battlefield.placeOnSurface(P);
   // A measuring context: counts drawn shapes, tracks how far right (forward) they reach and rejects negative radii.
   const probe = () => { const m = { shapes: 0, maxX: -1e9 }; const ctx = new Proxy({}, { get: (t, k) => k === 'ellipse' ? (x, y, rx, ry) => { if (rx < 0 || ry < 0) throw new Error('IndexSizeError'); m.maxX = Math.max(m.maxX, x + rx); } : (k === 'moveTo' || k === 'lineTo') ? (x) => { m.maxX = Math.max(m.maxX, x); } : (k === 'fill' || k === 'stroke' || k === 'fillRect') ? () => { m.shapes++; } : (k === 'canvas' ? undefined : () => {}), set: () => true }); return { ctx, m }; };
-  const draw = (state) => { const { ctx, m } = probe(); const b = P.buffForm; Object.assign(b, { act: 0, guardK: 0, sprintK: 0, peakAt: null }, state); buff.renderBuffManifestation(ctx, P, P.y, 'back'); buff.renderBuffManifestation(ctx, P, P.y, 'front'); return m; };
+  const draw = (state) => { const { ctx, m } = probe(); const b = P.buffForm; Object.assign(b, { act: 0, guardK: 0, sprintK: 0, peakAt: null, lastTech: null, grabAt: null, landAt: null }, state); buff.renderBuffManifestation(ctx, P, P.y, 'back'); buff.renderBuffManifestation(ctx, P, P.y, 'front'); return m; };
   let ok = true; let forward = 0; let generic = [];
   for (const id of Object.keys(buff.BUFF_FORMS)) {
     spells.clearRuntime(); buff.endBuffForm(P);
     spells.cast(P, spells.resolveSpell([{ id: 'buff_' + id }]), game); P.buffForm.age = 2;
-    const idle = draw({}); const act = draw({ act: 1 }); draw({ guardK: 1 }); draw({ sprintK: 1 }); const peak = draw({ peakAt: 2 });
+    const idle = draw({}); const act = draw({ act: 1, lastTech: { dir: 'forward', full: false, at: 1.9 } }); draw({ guardK: 1 }); draw({ sprintK: 1 }); draw({ grabAt: 1.8, grabHit: true }); draw({ landAt: 1.9 }); draw({ lastTech: { dir: 'up', full: true, at: 1.9 } }); draw({ lastTech: { dir: 'down', full: true, at: 1.9 } }); const peak = draw({ peakAt: 2, lastTech: { dir: 'forward', full: true, at: 1.9 } });
     if (!(idle.shapes > 0 && act.shapes > 0 && peak.shapes > 0)) { ok = false; generic.push(id); }
     if (act.maxX > idle.maxX + 8 || peak.maxX > idle.maxX + 8) forward++;
   }
   assert(ok, 'All 42 Arcane States draw an idle, action and peak silhouette ' + generic.join());
   assert(forward >= 34, 'Attacks and the peak reshape the silhouettes forward (' + forward + ' of 42)');
+  // V3.2 Morphologie-Overhaul: every form has its own profile and (T01–T36) its own renderer.
+  const vfx = await import('./public/src/buff_vfx.js');
+  const forms42 = Object.values(buff.BUFF_FORMS);
+  assert(forms42.every((f) => f.v32?.category && f.v32.anchors.length && f.v32.attacks.forward && f.v32.anim.grab && f.v32.anim.jump), 'V3.2: all 42 Arcane States carry their individual morphology profile (category, anchors, states, animations, heavy mapping)');
+  assert(forms42.filter((f) => /^T(0[1-9]|[12][0-9]|3[0-6])$/.test(f.id)).every((f) => vfx.hasFormRenderer(f.id)) && new Set(forms42.map((f) => f.v32.category)).size === 42, 'V3.2: T01–T36 are drawn by 36 individual renderers, every form has a distinct morphology category');
+  assert(buff.BUFF_FORMS.T24.v32.silhouette.includes('hinter dem Avatar') && buff.BUFF_FORMS.T28.v32.category.includes('Rasterbögen'), 'V3.2 silhouettes replace the old family look (hanging marionettes, ground arches)');
   buff.endBuffForm(P); spells.clearRuntime();
   // Resonanzwache (temporal projection) echoes strike with the Wizard.
   const dummy = game.trainingDummy; const neutral = { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false };
