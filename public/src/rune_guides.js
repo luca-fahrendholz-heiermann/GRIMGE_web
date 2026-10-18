@@ -25,6 +25,13 @@ const zig = (x0, y0, x1, y1, n, amp) => Array.from({ length: n + 1 }, (_, i) => 
 const wave = (x0, x1, y, amp, waves = 2, steps = 24) => Array.from({ length: steps + 1 }, (_, i) => { const u = i / steps; return [x0 + (x1 - x0) * u, y + Math.sin(u * Math.PI * 2 * waves) * amp]; });
 const spiralIn = (cx, cy, r, turns = 2, steps = 36) => Array.from({ length: steps + 1 }, (_, i) => { const u = i / steps; const a = -Math.PI / 2 + u * turns * Math.PI * 2; return [cx + Math.cos(a) * r * (1 - u * .85), cy + Math.sin(a) * r * (1 - u * .85)]; });
 export const SIGNATURE_GLYPHS = Object.freeze({
+  // S37–S42 (design rules 18 Oct 2026): ice spikes, stepped shafts, water drill, three breathings.
+  S37: [L(-.9, .65, .9, .65), [[-.8, .65], [-.55, -.1], [-.3, .65], [0, -.6], [.3, .65], [.55, -.1], [.8, .65]]],
+  S38: [L(-.6, .85, -.6, .35), L(0, .85, 0, -.15), L(.6, .85, .6, -.75), L(-.85, .85, .85, .85)],
+  S39: [ring(0, 0, .42), L(.3, -.3, .8, -.8), L(.3, .3, .8, .8), L(-.3, .3, -.8, .8), L(-.3, -.3, -.8, -.8)],
+  S40: [wave(-.85, .85, -.3, .22, 2), wave(-.85, .85, .35, .22, 2), L(-.6, .8, .6, .8)],
+  S41: [poly([[0, -.9], [.5, .1], [.3, .85], [-.3, .85], [-.5, .1]]), L(0, .55, 0, -.3)],
+  S42: [[[.35, -.9], [-.25, -.05], [.2, -.05], [-.35, .9]], L(-.85, .35, .85, -.35)],
   S01: [poly([[0, -.85], [.45, -.15], [-.45, -.15]]), L(-.75, .25, .75, .25), L(-.55, .6, -.2, .5), L(.2, .5, .55, .6)],
   S02: [ring(0, .1, .55), L(-.55, -.65, -.35, -.45), L(0, -.9, 0, -.62), L(.55, -.65, .35, -.45)],
   S03: [L(0, -.85, 0, .7), L(-.4, -.55, .4, -.55), arc(0, .25, .6, Math.PI * .1, Math.PI * .9)],

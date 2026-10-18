@@ -2453,7 +2453,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   const step = (n, dt = 1 / 60) => { for (let i = 0; i < n; i++) { P.update(dt, neutral, game.battlefield, game); game.updateProjectiles(dt); spells.update(dt, game); } };
   const cast = (id, target = null) => spells.cast(P, spells.resolveSpell([{ id: 'sig_' + id }]), game, null, target);
   const ids = Object.keys(core.SIGNATURES);
-  assert(ids.length === 36 && ids.every((id) => core.signatureImpl(id)?.cast) && sigMod.SIGNATURE_RUNE_IDS.every((id) => isSpecialRune(id) && runeManaCost(id) >= 28 && runeManaCost(id) <= 46), 'All 36 signature specials are special runes with their own mechanic and bound mana');
+  assert(ids.length === 42 && ids.every((id) => core.signatureImpl(id)?.cast) && sigMod.SIGNATURE_RUNE_IDS.every((id) => isSpecialRune(id) && runeManaCost(id) >= 28 && runeManaCost(id) <= 46), 'All 42 signature specials (atlas S01–S36 + S37–S42) are special runes with their own mechanic and bound mana');
   assert(ids.every((id) => spellHowTo('sig_' + id)?.effect?.length > 40) && !spells.resolveSpell([{ id: 'sig_S03' }, { id: 'ignis' }]), 'Signature specials explain themselves in the grimoire and never fuse');
   // Every special casts, runs and renders (strict canvas) without errors.
   const strict = new Proxy({}, { get: (t, k) => (k === 'ellipse' || k === 'arc') ? (x, y, rx, ry) => { if (rx < 0 || (k === 'ellipse' && ry < 0)) throw new Error('IndexSizeError ' + k); } : (k === 'canvas' ? undefined : () => {}), set: () => true });
@@ -2686,6 +2686,29 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   // Infusion: a flame blade burns on hit.
   reset(); spells.cast(P, SPELL_DEFINITIONS.flame_edge, game); dummy.homeX = dummy.x = P.x + 12; P.executeAttack(neutral, 'normal');
   assert(P.weaponInfusion?.element === 'fire' && P.weaponInfusion.hits === 1 && dummy.hp < dummy.maxHp, 'FLAMMENKLINGE: the infused weapon burns on hit');
+  reset();
+}
+
+// Block 4b: S37–S42 — own objects (ice spikes, stone shafts), water drill shell, breathing styles.
+{
+  const core = await import('./public/src/signature_core.js');
+  game.returnToHub(); game.setMatchMode('training'); game.startMatch(); game.selectTrainingMap('waterfalls');
+  const P = game.player; const dummy = game.trainingDummy;
+  const neutral = { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false };
+  const reset = () => { spells.clearRuntime(); if (P.signature) core.endStance(P, 'replaced'); P.x = 300; P.z = .5; P.facing = 1; P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.hp = P.maxHp; game.battlefield.placeOnSurface(P); dummy.homeX = dummy.x = 400; dummy.homeZ = dummy.z = .5; dummy.hp = dummy.maxHp; };
+  const step = (n) => { for (let i = 0; i < n; i++) { P.update(1 / 60, neutral, game.battlefield, game); spells.update(1 / 60, game); } };
+  const cast = (id, target = null) => spells.cast(P, spells.resolveSpell([{ id: 'sig_' + id }]), game, null, target);
+  reset(); cast('S37'); step(40);
+  assert((game.battlefield.dynamicSurfaces ?? []).filter((sf) => sf.label === 'Ice spike').length === 7 && dummy.hp < dummy.maxHp, 'S37 EISZACKEN: seven ice spikes erupt in a row (each a platform) and hit the foe');
+  reset(); cast('S38', { x: 360, z: .5 }); step(60);
+  const shafts = (game.battlefield.dynamicSurfaces ?? []).filter((sf) => sf.label === 'Stone shaft');
+  assert(shafts.length === 3 && shafts[0].heightAt(0) < shafts[1].heightAt(0) && shafts[1].heightAt(0) < shafts[2].heightAt(0), 'S38 SCHACHTWUCHS: three stepped stone shafts (low, middle, high) as platforms');
+  reset(); cast('S39'); const hp0 = P.hp; P.takeDamage(30, 0, 0, .1, false, 'spell'); step(60);
+  assert(P.signature?.id === 'S39' && hp0 - P.hp <= 21 && dummy.hp < dummy.maxHp, 'S39 TIDENBOHRER: the water shell takes a third of a hit and its jets hammer the foe');
+  reset(); cast('S40'); dummy.homeX = dummy.x = 360; for (let i = 0; i < 3; i++) { P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.executeAttack(neutral, 'normal'); step(4); }
+  step(40); assert(P.signature?.id === 'S40' && dummy.hp < dummy.maxHp, 'S40 WASSERATMUNG: water arcs on every swing, the finisher sends a wave');
+  reset(); cast('S42'); P.sprintActive = true; P.vx = 300; P.startSprintAttack();
+  assert(P.lastSprintAttack === 'BLITZSCHRITT' && P.sprintStrike?.variant?.pierce, 'S42 DONNERATMUNG: the sprint attack becomes a lightning dash through everyone in line');
   reset();
 }
 

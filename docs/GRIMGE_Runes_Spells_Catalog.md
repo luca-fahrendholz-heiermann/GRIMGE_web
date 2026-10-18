@@ -46,7 +46,7 @@
 | ◉ | **VOID IMPLOSION** `transform_implode` | Transformation | ◉ | `#b668ff` | 0 | Any gesture while Eidolon Mantle | — |
 | ⚡ | **INFERNO RAMPAGE** `transform_rampage` | Transformation | ⚡ | `#ff6f3b` | 0 | Any gesture while Ninefold Beast | — |
 | <img src="runes/buff_sigil.svg" width="48" alt="buff"> | **ARCANE-STATE-SIEGEL** `buff_*` (17 Runen) | Arcane State | ⧗ | je Form | 30 | Sanduhr ⧗ in einem geschlossenen Strich — **Tag: arcane-state · max-1-per-deck** | der Arcane State der Rune (Abschnitt 3.7) |
-| <img src="runes/sig_S01.svg" width="48" alt="sig"> | **SIGNATURE-SPEZIALRUNEN** `sig_*` (36 Runen) | Signature Special | ✦ | je Rune | 28–44 | **eigenes mehrstrichiges Symbol je Rune** (Abschnitt 3.8) — Tag: signature-special · je Rune 1× pro Deck | die Signature-Mechanik der Rune (Abschnitt 3.8) |
+| <img src="runes/sig_S01.svg" width="48" alt="sig"> | **SIGNATURE-SPEZIALRUNEN** `sig_*` (42 Runen) | Signature Special | ✦ | je Rune | 28–44 | **eigenes mehrstrichiges Symbol je Rune** (Abschnitt 3.8) — Tag: signature-special · je Rune 1× pro Deck | die Signature-Mechanik der Rune (Abschnitt 3.8) |
 
 ### Glyphen als ASCII (Ziffer = Startpunkt des Strichs)
 
@@ -1434,6 +1434,12 @@ Quelle: `docs/GRIMGE_Spezialrunen_Research_Designatlas_V1.md` (S01–S36). Spezi
 | S34 | <img src="runes/sig_S34.svg" width="48" alt="sig_S34"> | **Scherbenhandel** `sig_S34` | F · Offensiv-defensiver Tausch | `self` | 30 | Scales appear over your weapon hand: your next projectile pauses for a heartbeat. GUARD in that moment melts it into a frontal shard shield; otherwise it flies normally. | Mattgoldene Waagschalen, blaues Kernfeuer und schwach rotierende Messingfugen. | Nur gewöhnliche Projectile-Events, nie Beam oder Sonderattacke; Entscheidung vor Flugstart. |
 | S35 | <img src="runes/sig_S35.svg" width="48" alt="sig_S35"> | **Resonanzkorridor** `sig_S35` | F · Schallgelenkte Arena-Kette | `placement` | 34 | Swipe a line: three resonance plates stand along it. Hitting a plate (melee, shockwave, projectile) sends a sound pulse to the next plate, damaging enemies between — up to three relays. | Elfenbeinsilberne Membranen, rote Resonanzadern, gebrochene halboffene Schallmuscheln. | Alle Platten sichtbar; Gegner kann sie zerstören oder die Kette unterbrechen. |
 | S36 | <img src="runes/sig_S36.svg" width="48" alt="sig_S36"> | **Weltnaht** `sig_S36` | F · Bewegliche Risslinie | `placement` | 36 | Swipe a curved line: a rift wave rolls along it. For 7 s each side acts once on everyone crossing: enemies are shoved through, projectiles are bent sideways, crates tip over. One per player. | Schwarzes vulkanisches Glas mit smaragdgrünem Kernlicht, doppelte gezackte Außennaht. | Gut sichtbarer Verlauf vor Auslösung, maximal eine Risslinie pro Spieler. |
+| S37 | <img src="runes/sig_S37.svg" width="48" alt="sig_S37"> | **Eiszacken** `sig_S37` | G · Objekt · Bodenkontrolle · 3 s | `direction` | 34 | A row of ice spikes bursts out of the ground ahead, one after another (like a frost mage's ice line): each spike hits, launches and freezes briefly; they stay as obstacles for 3 s and you can stand on them. | Klare, gezackte Eisspitzen mit weißen Kanten — ein eigenes Objekt, keine Säule. |  |
+| S38 | <img src="runes/sig_S38.svg" width="48" alt="sig_S38"> | **Schachtwuchs** `sig_S38` | G · Arena · Plattformen · 8 s | `ground` | 38 | Three stone shafts grow at the target point like steps (low, middle, high): a shaft rising under a foe hits and launches it, a Wizard standing on the spot is carried up. They stay 8 s as platforms. | Gestufte Steinschächte mit Wachstumsringen und goldenen Fugen. |  |
+| S39 | <img src="runes/sig_S39.svg" width="48" alt="sig_S39"> | **Tidenbohrer** `sig_S39` | G · Buff · Rotationspanzer · 6 s | `self` | 40 | A spinning shell of water closes around you for 6 s: it takes a third of every hit, and its four nozzles hammer water jets at nearby foes while it turns. Heavy attacks fire all four jets at once. | Eine rotierende Wasserhülle mit vier Düsen — der Körper selbst wird zum Angriffsmodul. |  |
+| S40 | <img src="runes/sig_S40.svg" width="48" alt="sig_S40"> | **Wasseratmung** `sig_S40` | G · Atemtechnik · Kampfstil · 15 s | `self` | 32 | Water breathing for 15 s: every melee swing draws a flowing water arc, combo finishers send a water wave forward and charged attacks cut a wave across the lane. | Fließende Wasserbögen mit Gischtkanten folgen jeder Klinge. |  |
+| S41 | <img src="runes/sig_S41.svg" width="48" alt="sig_S41"> | **Flammenatmung** `sig_S41` | G · Atemtechnik · Kampfstil · 15 s | `self` | 34 | Flame breathing for 15 s: every melee swing leaves a fire arc, hits burn, combo finishers end in a rising flame wheel and charged attacks breathe a burst of fire. | Lodernde Feuerbögen und Glut folgen jeder Klinge. |  |
+| S42 | <img src="runes/sig_S42.svg" width="48" alt="sig_S42"> | **Donneratmung** `sig_S42` | G · Atemtechnik · Kampfstil · 15 s | `self` | 34 | Thunder breathing for 15 s: swings flash as lightning lines, the sprint attack becomes a lightning dash through everyone in line, and charged attacks drop a thunderbolt on the nearest foe. | Gelbe Zickzack-Blitze und Funken folgen jeder Bewegung. |  |
 
 Hinweis: `DRAGON INVOCATION` hat zwei Rezepte (Bestia+Ignis+Ventus und Fulgur+Ignis+Terra). Von den 220 möglichen Drei-Runen-Kombinationen der Basisrunen (mit Wiederholung) sind nur wenige belegt.
 
@@ -1464,16 +1470,16 @@ Ehemalige Transformations-Spells: ANNIHILATION BEAM (über Focus Ascendant Forwa
 | `cone` | DRAGON BREATH, POLLENSTURM |
 | `burrow` | BURROW STRIKE |
 | `area` | GALE SHOCKWAVE, ARC LIGHTNING, STONE SPIKES, FROST NOVA, HALO PULSE, AURA SHOCK, DORNENWUCHS, FLAMMENSAMEN, DRAGON INVOCATION, APOCALYPTIC HEAVENSURGE |
-| `zone` | VOID IMPLOSION, FIRESTORM VORTEX, MAGMA FISSURE, BLIZZARD SURGE, FROST MIRROR GATE, HEILQUELLE, GIFTSUMPF, WELTENBAUM, STERNENANKER, LUFTNÄHTE, SEKUNDENPFAND, STILLFUGE, SPLITTERGARTEN, SEISMISCHER STEG, FLUTSCHIENE, GLUTPUMPE, RAUMFALTER, GLASFELD, STRAHLENWEBER, RISSWEICHE, POLARISATIONSWERK, SCHWERELOSBAND, BRUCHKOLOSS, JÄGERGLOCKE, RUNENGERICHT, EXILKORRIDOR, ERNTEZIRKEL, RESONANZKORRIDOR, WELTNAHT |
+| `zone` | VOID IMPLOSION, FIRESTORM VORTEX, MAGMA FISSURE, BLIZZARD SURGE, FROST MIRROR GATE, HEILQUELLE, GIFTSUMPF, WELTENBAUM, STERNENANKER, LUFTNÄHTE, SEKUNDENPFAND, STILLFUGE, SPLITTERGARTEN, SEISMISCHER STEG, FLUTSCHIENE, GLUTPUMPE, RAUMFALTER, GLASFELD, STRAHLENWEBER, RISSWEICHE, POLARISATIONSWERK, SCHWERELOSBAND, BRUCHKOLOSS, JÄGERGLOCKE, RUNENGERICHT, EXILKORRIDOR, ERNTEZIRKEL, RESONANZKORRIDOR, WELTNAHT, SCHACHTWUCHS |
 | `wall` | CONSTRUCT BULWARK, STONE WALL |
 | `telekinesis` | GRAVITY LIFT |
 | `capture` | MIRROR WARD, SPIEGELVERSATZ, SCHICKSALSNADEL, MARIONETTENFADEN |
 | `slam` | SEISMIC SLAM |
 | `stomp` | TITAN STOMP, SHADOW STOMPER |
 | `summon` | BEAST FAMILIAR, SHADOW DOPPELGANGER, REVENANT CALL, STORM WOLF, VOID SPIDER, RUNE GOLEM, WORLD RUNE SERPENT, SPIRIT WOLF, SIEGE GOLEM |
-| `dash` | SHADOW STEP, INFERNO RAMPAGE, TEMPEST BLITZ, KOMETENTRÄGER |
+| `dash` | SHADOW STEP, INFERNO RAMPAGE, TEMPEST BLITZ, KOMETENTRÄGER, EISZACKEN |
 | `heavy_object` | METEOR CATACLYSM |
-| `self` | SANDSTORM BASTION, ARCANE AEGIS, SOLAR ORB, LUNAR ORB, ECLIPSE, THUNDERHEAD, BLOOD MOON, STARFALL, AURORA VEIL, HEILBLÜTE, GROSSE BLÜTE, SEGENSKREIS, FLAMMENKLINGE, FROSTKLINGE, STURMKLINGE, GIFTKLINGE, BLUTKLINGE, REISSKLINGE, ARKENGESTELL, RISSWILD, RISSWILD, ARKENGESTELL, SCHLACKENKERN, KORALLENSCHILD, BRUCHFLUG, IONSPINDEL, OSSUARIUM, FADENSCHLAG, NULLFELDTRÄGER, FADENREGENT, KÄLTESTILLSTAND, SÄUREGERÜST, ASTERGLIED, VORAUSSCHNITT, SONNENWYRM, GÖTTLICHER RIESE, MYSTISCHER AFFE, HIMMELSREGENT, AUREOLENSCHWARM, SCHWEBENDE BASTION, NACHHALLARCHIV, RÜCKSPRUNGNADEL, PRISMENHALTER, SCHWARMPROTOKOLL, KLINGENCHOR, RUNENSCHMIEDE, ECHOFAMULUS, SCHERBENHANDEL |
+| `self` | SANDSTORM BASTION, ARCANE AEGIS, SOLAR ORB, LUNAR ORB, ECLIPSE, THUNDERHEAD, BLOOD MOON, STARFALL, AURORA VEIL, HEILBLÜTE, GROSSE BLÜTE, SEGENSKREIS, FLAMMENKLINGE, FROSTKLINGE, STURMKLINGE, GIFTKLINGE, BLUTKLINGE, REISSKLINGE, ARKENGESTELL, RISSWILD, RISSWILD, ARKENGESTELL, SCHLACKENKERN, KORALLENSCHILD, BRUCHFLUG, IONSPINDEL, OSSUARIUM, FADENSCHLAG, NULLFELDTRÄGER, FADENREGENT, KÄLTESTILLSTAND, SÄUREGERÜST, ASTERGLIED, VORAUSSCHNITT, SONNENWYRM, GÖTTLICHER RIESE, MYSTISCHER AFFE, HIMMELSREGENT, AUREOLENSCHWARM, SCHWEBENDE BASTION, NACHHALLARCHIV, RÜCKSPRUNGNADEL, PRISMENHALTER, SCHWARMPROTOKOLL, KLINGENCHOR, RUNENSCHMIEDE, ECHOFAMULUS, SCHERBENHANDEL, TIDENBOHRER, WASSERATMUNG, FLAMMENATMUNG, DONNERATMUNG |
 
 **Zielmodi** (gleiche Regeln für Touch, Maus/Tastatur, Gamepad):
 
@@ -1493,9 +1499,9 @@ Ehemalige Transformations-Spells: ANNIHILATION BEAM (über Focus Ascendant Forwa
 
 ## 7. Statistik
 
-- Runen: 69 (davon 10 Basis, 2 Solo-Spezial, 36 Signature-Spezial, 17 Arcane States, 3 Transformation)
-- Spells: 123 — Fundamental 11, Solo 2, Compound 39, Himmelsfelder 7, Advanced 10, Transformation 1
-- Rezepte: 122 · freie Zwei-Runen-Paare: 17 von 55
+- Runen: 75 (davon 10 Basis, 2 Solo-Spezial, 42 Signature-Spezial, 17 Arcane States, 3 Transformation)
+- Spells: 129 — Fundamental 11, Solo 2, Compound 39, Himmelsfelder 7, Advanced 10, Transformation 1
+- Rezepte: 128 · freie Zwei-Runen-Paare: 17 von 55
 
 ## 8. Hinweise für den Research-Agenten
 

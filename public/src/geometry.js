@@ -69,7 +69,8 @@ export class GeoPlatform {
     const h = this.currentHeight; if (h <= .5) return;
     const m = this.mat; const yb = this.y; const top = yb - h; const w = this.halfW; const d = this.halfD * 150 * .32;
     // Front face (towards the camera), then the top face on it.
-    plate(ctx, [[this.x - w, yb + d], [this.x + w, yb + d], [this.x + w, top + d], [this.x - w, top + d]], m, this.seed, { alpha: 1, lit: .5, glowEdge: .4 });
+    // The front face keeps its cracks subtle (seams, not a bright scar across the pillar).
+    plate(ctx, [[this.x - w, yb + d], [this.x + w, yb + d], [this.x + w, top + d], [this.x - w, top + d]], { ...m, vein: m.kind === 'crystal' ? m.vein : m.dark }, this.seed, { alpha: 1, lit: .5, glowEdge: .4 });
     // Horizontal seams / growth rings.
     ctx.save(); ctx.strokeStyle = m.dark; ctx.globalAlpha = .55; ctx.lineWidth = 1;
     for (let yy = top + d + 10; yy < yb + d - 4; yy += 14) { ctx.beginPath(); ctx.moveTo(this.x - w + 3, yy); ctx.lineTo(this.x + w - 3, yy + (this.look === 'root' || this.look === 'bark' ? 2 : 0)); ctx.stroke(); }

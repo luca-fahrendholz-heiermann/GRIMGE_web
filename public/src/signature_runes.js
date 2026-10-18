@@ -13,6 +13,7 @@ import {
 import './signature_abilities_a.js';
 import './signature_abilities_b.js';
 import './signature_abilities_c.js';
+import './signature_abilities_d.js'; // S37–S42 (design rules: ice spikes, shafts, water drill, breathings)
 
 export { SIGNATURES, isSignatureRuneId, SIGNATURE_RUNE_IDS, SIG_PREFIX, setHitContext, startStance, endStance };
 
@@ -77,6 +78,11 @@ export function signatureMoveMult(player) {
   return typeof m === 'function' ? m(player, player.signature) : (m ?? 1);
 }
 export const signatureMoveset = (player) => player.signature?.impl.stance.moveset ?? null;
+// A stance may replace the plain sprint attack (Donneratmung: lightning dash).
+export function signatureSprintVariant(player) {
+  const st = player.signature;
+  return st?.impl.stance.sprint ? st.impl.stance.sprint(player, st) : null;
+}
 export function signatureDamageTaken(player, amount, kx, kind) {
   const st = player.signature;
   return st?.impl.stance.damageTaken ? st.impl.stance.damageTaken(player, st, amount, kx, kind) : amount;

@@ -17,7 +17,7 @@ import { hasWeaponDown, castWeaponDown, weaponUp, weaponDive, updateWeaponKit, w
 import { updatePrimalBond, bondMoveMultiplier, bondGainMultiplier, bondDisplacement, bondOnBlock, primalSprintVariant, renderPrimalBond, endPrimalBond, bondMelee, primalQuake } from './primals.js';
 import { createSegments, damageSegments, updateSegments, renderSegments } from './castle_segments.js';
 import { updateBuffForm, endBuffForm, isGenericBuff, currentBuffForm, renderBuffManifestation, buffVeinPainter, buffCloakColor, renderBuffGuard, levitationOffset, renderBuffCharge } from './buff_forms.js';
-import { updateSignatureStance, renderSignatureStance, signatureHover, signatureMoveMult, signatureEvent, signatureDamageTaken, setHitContext } from './signature_runes.js';
+import { updateSignatureStance, renderSignatureStance, signatureHover, signatureMoveMult, signatureEvent, signatureDamageTaken, setHitContext, signatureSprintVariant } from './signature_runes.js';
 
 // Every spell a rune deck can produce: single runes plus every valid two-
 // and three-rune recipe that its cards allow (copies respected).
@@ -1148,7 +1148,7 @@ export class Player extends GroundEntity {
     // Arcane State: the form's sprint attack is a special and costs mana (else a plain one).
     if (form && this.buffForm?.timer > 0) { if (this.freeMana >= FORM_SPECIAL_MANA.sprint) this.mp -= FORM_SPECIAL_MANA.sprint; else form = null; }
     // Primal Bond: the Unity sprint attack with the bond's carry / push.
-    const primal = form ? null : primalSprintVariant(this);
+    const primal = form ? null : (signatureSprintVariant(this) ?? primalSprintVariant(this));
     const variant = form ? FORM_SPRINT_ATTACKS[form]
       : primal ? { ...primal, windup: 0, active: SPRINT_ATTACK_ACTIVE_TIME, recovery: Math.max(.05, heavy.time - SPRINT_ATTACK_ACTIVE_TIME) } : null;
     const speed = Math.max(Math.abs(this.vx), this.moveSpeed * SPRINT_MULT);
