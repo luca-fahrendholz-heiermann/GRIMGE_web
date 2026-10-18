@@ -11,6 +11,7 @@ import { WEAPONS, ThrownWeaponSpell, drawHeldWeapon, weaponMotion, makeWeaponSho
 import { drawBeastBomb, drawSpiritBow } from './form_attacks.js';
 import { FULL_CHARGE_TIME, activeMoveset, releaseFormTechnique, FORM_PALETTES } from './form_moves.js';
 import { releaseWeaponReach, releaseFormPull, isOnCastle } from './hold_actions.js';
+import { formDive, FORM_SPECIAL_MANA, tickFormSpecials } from './form_specials.js';
 import { hasWeaponDown, castWeaponDown, weaponUp, weaponDive, updateWeaponKit, weaponMoveMult, weaponAttackSpeed, meleeBuffMods, targetDamageMult, onWeaponMeleeHit, afterWeaponSwing, weaponIncoming } from './weapon_kits.js';
 import { updatePrimalBond, bondMoveMultiplier, bondGainMultiplier, bondDisplacement, bondOnBlock, primalSprintVariant, renderPrimalBond, endPrimalBond, bondMelee, primalQuake } from './primals.js';
 import { createSegments, damageSegments, updateSegments, renderSegments } from './castle_segments.js';
@@ -380,6 +381,7 @@ export class Player extends GroundEntity {
     // Primal Bond: wind-up, merge, Focus drain (1.5/s × form), Fortified.
     updatePrimalBond(this, dt, FOCUS_TRANSFORM_DRAIN);
     updateWeaponKit(this, dt, window.gameWorld);
+    tickFormSpecials(dt);
     // Buff transformation (special rune): limited time, one at a time.
     updateBuffForm(this, dt);
     // Signature special stance (hover, lenses, blades, needles …).
@@ -1045,6 +1047,9 @@ export class Player extends GroundEntity {
       return true;
     }
     if (!this.grounded && (attackKind === 'dive' || move.z > 0.55)) {
+      // In a form / Arcane State the form dives its own way (mana in an Arcane State).
+      const diveForm = activeMoveset(this);
+      if (diveForm && formDive(this, diveForm, spells, { mana: this.buffForm?.timer > 0 })) return true;
       // Each weapon dives its own way (plunge, meteor, spin, arrow rain, orb drop, pounce, seal, downdraft).
       if (weaponDive(this, spells, window.gameWorld)) return true;
       this.state = 'dive'; this.stateTimer = MELEE_BASELINE.dive.time; this.vElevation = -850 * PLAYER_ARC_SCALE;
@@ -1138,7 +1143,9 @@ export class Player extends GroundEntity {
   startSprintAttack() {
     const weapon = this.weaponProfile;
     const heavy = weapon ? { ...MELEE_BASELINE.heavy, ...weapon.heavy } : MELEE_BASELINE.heavy;
-    const form = activeMoveset(this);
+    let form = activeMoveset(this);
+    // Arcane State: the form's sprint attack is a special and costs mana (else a plain one).
+    if (form && this.buffForm?.timer > 0) { if (this.freeMana >= FORM_SPECIAL_MANA.sprint) this.mp -= FORM_SPECIAL_MANA.sprint; else form = null; }
     // Primal Bond: the Unity sprint attack with the bond's carry / push.
     const primal = form ? null : primalSprintVariant(this);
     const variant = form ? FORM_SPRINT_ATTACKS[form]

@@ -19,6 +19,7 @@
 // Attachment-only: the Wizard's own sprite stays visible and unchanged.
 import { plate, band, fallout, mix, rgba, registerRenderer } from './buff_vfx.js';
 import { sprites } from './sprites.js';
+import { drawNinefoldSpirit } from './forms_fx.js';
 
 const TAU = Math.PI * 2;
 const snap = (v) => Math.round(v);
@@ -318,12 +319,14 @@ function saeuregeruest(ctx, s, pose, mat, form, layer) {
   }
 }
 
-// ── B01 Risswild — ENERGY EXTENSION ─────────────────────────────────────
-// No humanoid shape: three asymmetric, long energy whips break out of the
-// body contour (back shoulder, back hip, front hip) and move like living
-// lashes; when the Wizard attacks they snap forward over him.
+// ── B01 Risswild — animal: nine fox-flame tails (user, 18 Oct 2026: the
+// abstract whips were too abstract, the Kyubi tails looked better) ─────
+// The Kyubi spirit (nine tails, flame cloak, fox head) sits behind the
+// Wizard; when he attacks, three tails lash forward over him as rift whips.
 function risswildWhips(ctx, s, pose, mat, form, layer) {
   const f = s.f; const t = pose.t;
+  drawNinefoldSpirit(ctx, s.x, s.y, f, t, 2, pose.fade, layer, { lean: pose.lean ?? 0, bob: 0, air: pose.air ?? 0, guarding: pose.guardK > .5 });
+  if (!pose.attacking) return;
   const peak = pose.full ? 1.35 : 1;
   const whips = [
     { from: s.shoulderB, len: 220, w: 12, phase: 0, front: false, up: 1 },

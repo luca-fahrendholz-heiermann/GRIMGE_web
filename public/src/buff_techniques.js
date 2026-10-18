@@ -197,7 +197,8 @@ export class BuffStrikeSpell extends FormStrikeSpell {
           // Himmelswendel: a spiralling wyrm rising in front, head on top.
           const h = 220 * Math.min(1, p * 2.4); const spine = [];
           for (let i = 0; i < 18; i++) { const k = i / 17; spine.push([this.x + Math.cos(k * 12 + this.t * 6) * (26 - k * 8), y - h * (1 - k)]); }
-          drawWyrmBody(ctx, spine, m, this.seed, .5 * fade + .5, 1.1);
+          // Crisp, opaque wyrm (user: Sonnenwyrm attacks looked blurry / see-through).
+          drawWyrmBody(ctx, spine, m, this.seed, Math.min(1, fade * 3), 1.35);
           drawWyrmHead(ctx, spine[0][0], spine[0][1], spine[0][0] - spine[1][0], spine[0][1] - spine[1][1], 26, m, .5, 1, this.seed + 40);
           break;
         }
@@ -286,7 +287,7 @@ export class BuffStrikeSpell extends FormStrikeSpell {
         // Zwillingswyrm-Jagd: two scale dragons racing along their lanes.
         for (const [hi, h] of this.heads.entries()) {
           const spine = h.trail.map(([x, z], i) => [x, groundYForDepth(z) - 44 - Math.sin(this.t * 10 + i * .6 + hi * 3) * 12]);
-          if (spine.length > 2) drawWyrmBody(ctx, spine, m, this.seed + hi * 9, fade * .5 + .5, .9);
+          if (spine.length > 2) drawWyrmBody(ctx, spine, m, this.seed + hi * 9, Math.min(1, fade * 3), 1.15);
           if (spine.length > 1) drawWyrmHead(ctx, spine[0][0], spine[0][1], spine[0][0] - spine[1][0], spine[0][1] - spine[1][1], 22, m, .45, 1, this.seed + 30 + hi * 10);
         }
         break;
@@ -301,7 +302,7 @@ export class BuffStrikeSpell extends FormStrikeSpell {
             // A wyrm strikes out of the portal at the target.
             const k2 = Math.min(1, (this.t - pt.at) / .12); const tx = px + (this.focus.x - px) * k2; const ty = py + (fy - 30 - py) * k2;
             const spine = Array.from({ length: 8 }, (_, j) => [tx + (px - tx) * (j / 7), ty + (py - ty) * (j / 7) - Math.sin(j) * 4]);
-            if (this.buff.id === 'T40') { drawWyrmBody(ctx, spine, m, this.seed + 70, 1, .7); drawWyrmHead(ctx, tx, ty, this.focus.x - px, fy - 30 - py, 18, m, .6, 1, this.seed + 80); }
+            if (this.buff.id === 'T40') { drawWyrmBody(ctx, spine, m, this.seed + 70, 1, .95); drawWyrmHead(ctx, tx, ty, this.focus.x - px, fy - 30 - py, 18, m, .6, 1, this.seed + 80); }
             else band(ctx, spine, () => 4, m, this.seed + 70, { t: this.t, alpha: 1 });
           }
         }

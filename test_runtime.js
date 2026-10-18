@@ -2612,6 +2612,42 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   buff.endBuffForm(P); spells.clearRuntime();
 }
 
+// Block 3: every Arcane State has its own sprint attack (mechanic + look + impact) and its own air dive.
+{
+  const buff = await import('./public/src/buff_forms.js');
+  const FS = await import('./public/src/form_specials.js');
+  const { FORM_SPRINT_ATTACKS, FormSprintAttackFx } = await import('./public/src/form_actions.js');
+  game.returnToHub(); game.setMatchMode('training'); game.startMatch(); game.selectTrainingMap('waterfalls');
+  const P = game.player; const dummy = game.trainingDummy;
+  const neutral = { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false };
+  const strict = new Proxy({}, { get: (t, k) => (k === 'ellipse' || k === 'arc') ? (x, y, rx, ry) => { if (rx < 0 || (k === 'ellipse' && ry < 0)) throw new Error('IndexSizeError ' + k); } : (k === 'canvas' ? undefined : (k === 'measureText' ? () => ({ width: 10 }) : (k === 'createLinearGradient' ? () => ({ addColorStop() {} }) : () => {}))), set: () => true });
+  const ids = Object.keys(buff.BUFF_FORMS);
+  const impacts = ids.filter((id) => FS.FORM_SPRINTS[id]).map((id) => FS.FORM_SPRINTS[id].impact);
+  assert(new Set(impacts).size === impacts.length && impacts.length === 15, 'Every Arcane State (besides the B01 / B02 engines) has its own sprint impact');
+  assert(ids.every((id) => FS.FORM_DIVES[id]) && new Set(ids.map((id) => FS.FORM_DIVES[id].style)).size === ids.length && ['ninefold', 'eidolon', 'ascendant'].every((k) => FS.FORM_DIVES[k]), 'Every Arcane State and Focus transformation has its own air dive');
+  const broken = [];
+  for (const id of ids) {
+    try {
+      spells.clearRuntime(); buff.endBuffForm(P); P.weaponBuff = null; P.equipClassWeapon(null);
+      P.x = 300; P.z = .5; P.facing = 1; P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.mp = P.maxMp; P.reservedMana = 0; game.battlefield.placeOnSurface(P);
+      dummy.homeX = dummy.x = 370; dummy.homeZ = dummy.z = .5; dummy.hp = dummy.maxHp;
+      spells.cast(P, spells.resolveSpell([{ id: 'buff_' + id }]), game); P.buffForm.age = 2;
+      // Sprint attack: own variant, costs mana, renders.
+      const mp0 = P.mp; P.sprintActive = true; P.vx = 300; P.startSprintAttack();
+      if (P.lastSprintAttack !== FORM_SPRINT_ATTACKS[buff.BUFF_FORMS[id].moveset]?.name) broken.push(id + ': sprint name ' + P.lastSprintAttack);
+      if (mp0 - P.mp !== FS.FORM_SPECIAL_MANA.sprint) broken.push(id + ': sprint mana');
+      for (let i = 0; i < 40; i++) { P.update(1 / 60, neutral, game.battlefield, game); spells.update(1 / 60, game); if (i % 8 === 0) for (const sp of spells.activeSpells) sp.render?.(strict); }
+      // Air dive: own dive, costs mana, lands and renders.
+      P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.sprintStrike = null; P.grounded = false; P.elevation = 70; P.vElevation = 0; const mp1 = P.mp;
+      P.executeAttack(neutral, 'dive');
+      if (P.lastFormDive !== id || mp1 - P.mp !== FS.FORM_SPECIAL_MANA.dive) broken.push(id + ': dive');
+      for (let i = 0; i < 80; i++) { P.update(1 / 60, neutral, game.battlefield, game); spells.update(1 / 60, game); if (i % 10 === 0) for (const sp of spells.activeSpells) sp.render?.(strict); for (const layer of ['back', 'front']) buff.renderBuffManifestation(strict, P, P.y, layer); }
+    } catch (e) { broken.push(id + ': ' + e.message); }
+  }
+  assert(!broken.length, 'Every Arcane State sprint attack and air dive runs, costs mana and renders ' + broken.slice(0, 4).join(' | '));
+  buff.endBuffForm(P); spells.clearRuntime(); P.grounded = true; P.elevation = 0;
+}
+
 // Movement after the Unity original: rooted attacks, full combos on a target in front, long sprint jump, auto-run.
 {
   game.returnToHub(); game.setMatchMode('training'); game.startMatch(); game.selectTrainingMap('waterfalls');

@@ -92,6 +92,7 @@ export const FORM_FX_HOOKS = {};
 
 // Impact extras of a form sprint attack (hits = every target struck so far).
 export function formSprintImpact(player, form, hits, gameWorld) {
+  FORM_FX_HOOKS.impact?.(player, form, hits, gameWorld); // per-form impacts (form_specials.js)
   const pal = FORM_PALETTES[form];
   const f = player.facing || 1;
   const struck = [...hits].at(-1); // the latest target hit

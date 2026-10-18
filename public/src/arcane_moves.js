@@ -194,7 +194,7 @@ export const ARCANE_MOVES = {
   ],
   // ── T40 Sonnenwyrm: shorts (fulls = wyrm hunt / spiral wyrm / portal ritual) ──
   T40: [
-    (f, p) => strike(f, p, { dur: .4, area: ahead(160, 16), damage: 34, kx: 260, lift: 50, paint: (ctx, s, k) => { const y = gy(s) - 46; const L = 160 * Math.min(1, k * 4); plate(ctx, [[s.x + s.facing * 10, y - 2], [s.x + s.facing * (10 + L), y - 1], [s.x + s.facing * (24 + L), y], [s.x + s.facing * (10 + L), y + 1], [s.x + s.facing * 10, y + 2]], f.mat, 8400, { alpha: fade(k), core: 1, glowEdge: 1.5 }); } }),
+    (f, p) => strike(f, p, { dur: .4, area: ahead(160, 16), damage: 34, kx: 260, lift: 50, paint: (ctx, s, k) => { const y = gy(s) - 46; const L = 160 * Math.min(1, k * 4); plate(ctx, [[s.x + s.facing * 10, y - 6], [s.x + s.facing * (10 + L), y - 4], [s.x + s.facing * (30 + L), y], [s.x + s.facing * (10 + L), y + 4], [s.x + s.facing * 10, y + 6]], { ...f.mat, kind: 'crust' }, 8400, { alpha: Math.min(1, fade(k) * 2), core: 1, lit: 1, glowEdge: .8 }); line(ctx, [[s.x + s.facing * 12, y], [s.x + s.facing * (26 + L), y]], f.mat.core, 1.5, Math.min(1, fade(k) * 2)); } }),
     null,
     (f, p) => strike(f, p, { dur: .4, area: ahead(74, 26), damage: 28, kx: 40, lift: 540, paint: (ctx, s, k) => { const x = s.x + s.facing * 24; shape(ctx, [x, gy(s) - 20], -.15, s.facing, [[-6, 0], [0, 110 * Math.min(1, k * 4)], [6, 0]], f.mat, 8410, { alpha: fade(k), glowEdge: 1.4, core: .6 }); } }),
     null,
