@@ -2453,7 +2453,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   const step = (n, dt = 1 / 60) => { for (let i = 0; i < n; i++) { P.update(dt, neutral, game.battlefield, game); game.updateProjectiles(dt); spells.update(dt, game); } };
   const cast = (id, target = null) => spells.cast(P, spells.resolveSpell([{ id: 'sig_' + id }]), game, null, target);
   const ids = Object.keys(core.SIGNATURES);
-  assert(ids.length === 42 && ids.every((id) => core.signatureImpl(id)?.cast) && sigMod.SIGNATURE_RUNE_IDS.every((id) => isSpecialRune(id) && runeManaCost(id) >= 28 && runeManaCost(id) <= 46), 'All 42 signature specials (atlas S01–S36 + S37–S42) are special runes with their own mechanic and bound mana');
+  assert(ids.length === 44 && ids.every((id) => core.signatureImpl(id)?.cast) && sigMod.SIGNATURE_RUNE_IDS.every((id) => isSpecialRune(id) && runeManaCost(id) >= 28 && runeManaCost(id) <= 46), 'All 44 signature specials (atlas S01–S36 + S37–S44) are special runes with their own mechanic and bound mana');
   assert(ids.every((id) => spellHowTo('sig_' + id)?.effect?.length > 40) && !spells.resolveSpell([{ id: 'sig_S03' }, { id: 'ignis' }]), 'Signature specials explain themselves in the grimoire and never fuse');
   // Every special casts, runs and renders (strict canvas) without errors.
   const strict = new Proxy({}, { get: (t, k) => (k === 'ellipse' || k === 'arc') ? (x, y, rx, ry) => { if (rx < 0 || (k === 'ellipse' && ry < 0)) throw new Error('IndexSizeError ' + k); } : (k === 'canvas' ? undefined : () => {}), set: () => true });
@@ -2709,6 +2709,29 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   step(40); assert(P.signature?.id === 'S40' && dummy.hp < dummy.maxHp, 'S40 WASSERATMUNG: water arcs on every swing, the finisher sends a wave');
   reset(); cast('S42'); P.sprintActive = true; P.vx = 300; P.startSprintAttack();
   assert(P.lastSprintAttack === 'BLITZSCHRITT' && P.sprintStrike?.variant?.pierce, 'S42 DONNERATMUNG: the sprint attack becomes a lightning dash through everyone in line');
+  reset();
+}
+
+// Block 5: placement families look different; heal / buff special runes with their own objects.
+{
+  const core = await import('./public/src/signature_core.js');
+  const { SPELL_DEFINITIONS } = await import('./public/src/spell_catalog.js');
+  const K = await import('./public/src/weapon_kits.js');
+  game.returnToHub(); game.setMatchMode('training'); game.startMatch(); game.selectTrainingMap('waterfalls');
+  const P = game.player;
+  const neutral = { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false };
+  const strict = new Proxy({}, { get: (t, k) => (k === 'ellipse' || k === 'arc') ? (x, y, rx, ry) => { if (rx < 0 || (k === 'ellipse' && ry < 0)) throw new Error('IndexSizeError ' + k); } : (k === 'canvas' ? undefined : () => {}), set: () => true });
+  const reset = () => { spells.clearRuntime(); if (P.signature) core.endStance(P, 'replaced'); P.x = 300; P.z = .5; P.facing = 1; P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.hp = P.maxHp; game.battlefield.placeOnSurface(P); };
+  const step = (n) => { for (let i = 0; i < n; i++) { P.update(1 / 60, neutral, game.battlefield, game); spells.update(1 / 60, game); } };
+  const walls = [];
+  for (const id of ['stone_wall', 'construct_bulwark']) { reset(); spells.cast(P, SPELL_DEFINITIONS[id], game, null, { start: { x: 360, z: .4 }, end: { x: 360, z: .6 }, x: 360, z: .5, orientation: 'lateral', length: 80 }); step(20); walls.push(...spells.activeSpells.filter((w) => w.isStoneWall)); }
+  let wallRender = true; try { for (const w of walls) w.render(strict); } catch { wallRender = false; }
+  assert(walls.some((w) => w.style === 'masonry') && walls.some((w) => w.style === 'bulwark') && wallRender, 'Placed walls look different: masonry rampart (Stone Wall) vs. riveted steel bulwark (Construct)');
+  reset(); P.hp = P.maxHp - 80; spells.cast(P, spells.resolveSpell([{ id: 'sig_S43' }]), game, null, { x: 300, z: .5 }); step(120);
+  assert(P.hp > P.maxHp - 80 + 8 && spells.activeSpells.some((sp) => sp.isWorldProp && sp.radius === 100), 'S43 SANKTUARIUM: an obelisk in a magic circle heals allies inside (a breakable object)');
+  reset(); spells.cast(P, spells.resolveSpell([{ id: 'sig_S44' }]), game, null, { x: 320, z: .5 }); step(10);
+  assert(K.meleeBuffMods(P).dmg >= 1.2 && K.weaponMoveMult(P) >= 1.1, 'S44 KRIEGSBANNER: allies near the banner strike harder and move faster');
+  P.x = 700; assert(K.meleeBuffMods(P).dmg === 1, 'Away from the banner the bonus is gone');
   reset();
 }
 

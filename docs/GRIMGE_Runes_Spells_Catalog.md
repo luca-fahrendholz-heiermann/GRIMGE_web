@@ -46,7 +46,7 @@
 | ◉ | **VOID IMPLOSION** `transform_implode` | Transformation | ◉ | `#b668ff` | 0 | Any gesture while Eidolon Mantle | — |
 | ⚡ | **INFERNO RAMPAGE** `transform_rampage` | Transformation | ⚡ | `#ff6f3b` | 0 | Any gesture while Ninefold Beast | — |
 | <img src="runes/buff_sigil.svg" width="48" alt="buff"> | **ARCANE-STATE-SIEGEL** `buff_*` (17 Runen) | Arcane State | ⧗ | je Form | 30 | Sanduhr ⧗ in einem geschlossenen Strich — **Tag: arcane-state · max-1-per-deck** | der Arcane State der Rune (Abschnitt 3.7) |
-| <img src="runes/sig_S01.svg" width="48" alt="sig"> | **SIGNATURE-SPEZIALRUNEN** `sig_*` (42 Runen) | Signature Special | ✦ | je Rune | 28–44 | **eigenes mehrstrichiges Symbol je Rune** (Abschnitt 3.8) — Tag: signature-special · je Rune 1× pro Deck | die Signature-Mechanik der Rune (Abschnitt 3.8) |
+| <img src="runes/sig_S01.svg" width="48" alt="sig"> | **SIGNATURE-SPEZIALRUNEN** `sig_*` (44 Runen) | Signature Special | ✦ | je Rune | 28–44 | **eigenes mehrstrichiges Symbol je Rune** (Abschnitt 3.8) — Tag: signature-special · je Rune 1× pro Deck | die Signature-Mechanik der Rune (Abschnitt 3.8) |
 
 ### Glyphen als ASCII (Ziffer = Startpunkt des Strichs)
 
@@ -1440,6 +1440,8 @@ Quelle: `docs/GRIMGE_Spezialrunen_Research_Designatlas_V1.md` (S01–S36). Spezi
 | S40 | <img src="runes/sig_S40.svg" width="48" alt="sig_S40"> | **Wasseratmung** `sig_S40` | G · Atemtechnik · Kampfstil · 15 s | `self` | 32 | Water breathing for 15 s: every melee swing draws a flowing water arc, combo finishers send a water wave forward and charged attacks cut a wave across the lane. | Fließende Wasserbögen mit Gischtkanten folgen jeder Klinge. |  |
 | S41 | <img src="runes/sig_S41.svg" width="48" alt="sig_S41"> | **Flammenatmung** `sig_S41` | G · Atemtechnik · Kampfstil · 15 s | `self` | 34 | Flame breathing for 15 s: every melee swing leaves a fire arc, hits burn, combo finishers end in a rising flame wheel and charged attacks breathe a burst of fire. | Lodernde Feuerbögen und Glut folgen jeder Klinge. |  |
 | S42 | <img src="runes/sig_S42.svg" width="48" alt="sig_S42"> | **Donneratmung** `sig_S42` | G · Atemtechnik · Kampfstil · 15 s | `self` | 34 | Thunder breathing for 15 s: swings flash as lightning lines, the sprint attack becomes a lightning dash through everyone in line, and charged attacks drop a thunderbolt on the nearest foe. | Gelbe Zickzack-Blitze und Funken folgen jeder Bewegung. |  |
+| S43 | <img src="runes/sig_S43.svg" width="48" alt="sig_S43"> | **Sanktuarium** `sig_S43` | G · Objekt · Heilzone · 10 s | `ground` | 36 | A sanctuary obelisk rises at the target point inside a magic circle: allies standing in the circle heal and shake off slows for 10 s. Foes can smash the obelisk. | Ein heller Obelisk mit grünem Kristall über einem rotierenden Runenkreis. |  |
+| S44 | <img src="runes/sig_S44.svg" width="48" alt="sig_S44"> | **Kriegsbanner** `sig_S44` | G · Objekt · Buffzone · 10 s | `ground` | 32 | A war banner is planted at the target point: allies near it strike harder (+20 % melee damage) and move faster for 10 s. Foes can tear the banner down. | Ein rotes Banner mit goldenem Saum an einem Speerschaft, das im Wind flattert. |  |
 
 Hinweis: `DRAGON INVOCATION` hat zwei Rezepte (Bestia+Ignis+Ventus und Fulgur+Ignis+Terra). Von den 220 möglichen Drei-Runen-Kombinationen der Basisrunen (mit Wiederholung) sind nur wenige belegt.
 
@@ -1470,7 +1472,7 @@ Ehemalige Transformations-Spells: ANNIHILATION BEAM (über Focus Ascendant Forwa
 | `cone` | DRAGON BREATH, POLLENSTURM |
 | `burrow` | BURROW STRIKE |
 | `area` | GALE SHOCKWAVE, ARC LIGHTNING, STONE SPIKES, FROST NOVA, HALO PULSE, AURA SHOCK, DORNENWUCHS, FLAMMENSAMEN, DRAGON INVOCATION, APOCALYPTIC HEAVENSURGE |
-| `zone` | VOID IMPLOSION, FIRESTORM VORTEX, MAGMA FISSURE, BLIZZARD SURGE, FROST MIRROR GATE, HEILQUELLE, GIFTSUMPF, WELTENBAUM, STERNENANKER, LUFTNÄHTE, SEKUNDENPFAND, STILLFUGE, SPLITTERGARTEN, SEISMISCHER STEG, FLUTSCHIENE, GLUTPUMPE, RAUMFALTER, GLASFELD, STRAHLENWEBER, RISSWEICHE, POLARISATIONSWERK, SCHWERELOSBAND, BRUCHKOLOSS, JÄGERGLOCKE, RUNENGERICHT, EXILKORRIDOR, ERNTEZIRKEL, RESONANZKORRIDOR, WELTNAHT, SCHACHTWUCHS |
+| `zone` | VOID IMPLOSION, FIRESTORM VORTEX, MAGMA FISSURE, BLIZZARD SURGE, FROST MIRROR GATE, HEILQUELLE, GIFTSUMPF, WELTENBAUM, STERNENANKER, LUFTNÄHTE, SEKUNDENPFAND, STILLFUGE, SPLITTERGARTEN, SEISMISCHER STEG, FLUTSCHIENE, GLUTPUMPE, RAUMFALTER, GLASFELD, STRAHLENWEBER, RISSWEICHE, POLARISATIONSWERK, SCHWERELOSBAND, BRUCHKOLOSS, JÄGERGLOCKE, RUNENGERICHT, EXILKORRIDOR, ERNTEZIRKEL, RESONANZKORRIDOR, WELTNAHT, SCHACHTWUCHS, SANKTUARIUM, KRIEGSBANNER |
 | `wall` | CONSTRUCT BULWARK, STONE WALL |
 | `telekinesis` | GRAVITY LIFT |
 | `capture` | MIRROR WARD, SPIEGELVERSATZ, SCHICKSALSNADEL, MARIONETTENFADEN |
@@ -1499,9 +1501,9 @@ Ehemalige Transformations-Spells: ANNIHILATION BEAM (über Focus Ascendant Forwa
 
 ## 7. Statistik
 
-- Runen: 75 (davon 10 Basis, 2 Solo-Spezial, 42 Signature-Spezial, 17 Arcane States, 3 Transformation)
-- Spells: 129 — Fundamental 11, Solo 2, Compound 39, Himmelsfelder 7, Advanced 10, Transformation 1
-- Rezepte: 128 · freie Zwei-Runen-Paare: 17 von 55
+- Runen: 77 (davon 10 Basis, 2 Solo-Spezial, 44 Signature-Spezial, 17 Arcane States, 3 Transformation)
+- Spells: 131 — Fundamental 11, Solo 2, Compound 39, Himmelsfelder 7, Advanced 10, Transformation 1
+- Rezepte: 130 · freie Zwei-Runen-Paare: 17 von 55
 
 ## 8. Hinweise für den Research-Agenten
 

@@ -154,3 +154,47 @@ function breathStance(id) {
   };
 }
 for (const id of ['S40', 'S41', 'S42']) defineSignature(id, { cast(c) { startStance(c.caster, id, c.quality, { arcs: [], bolts: [] }); }, stance: breathStance(id) });
+
+// ── S43 Sanktuarium (heal obelisk) / S44 Kriegsbanner (buff banner) ──────
+// Both are breakable world props: foes can smash them (SigProp).
+import { SigProp } from './signature_core.js';
+import { BUFF_ZONES } from './zone_buffs.js';
+const alliesNear = (gw, team, x, z, r) => [gw?.player, gw?.enemyChampion, ...(gw?.minions ?? [])].filter((e) => e && e.team === team && (e.hp ?? 0) > 0 && !e.isDead && !e.isTrainingDummy && Math.hypot(e.x - x, ((e.z ?? z) - z) * DEPTH) < r);
+class Sanctuary extends SigProp {
+  constructor(sig, owner, x, z) { super(sig, owner, x, z, { hp: 120, size: 16, duration: 10 }); this.radius = 100; this.acc = 0; }
+  update(dt, gw) {
+    this.tick(dt); this.acc += dt;
+    if (this.acc >= .25) { for (const a of alliesNear(gw, this.team, this.x, this.z, this.radius)) { a.hp = Math.min(a.maxHp ?? a.hp, a.hp + 6 * this.acc); a.slowTimer = 0; } this.acc = 0; }
+  }
+  render(ctx) {
+    const y = this.y; const f = this.fade; const t = this.t; const R = this.radius;
+    ctx.save(); ctx.globalAlpha = f; ctx.lineWidth = 2.5; ctx.strokeStyle = '#9be36a'; ctx.beginPath(); ctx.ellipse(this.x, y, R, R * .32, 0, 0, TAU); ctx.stroke();
+    ctx.lineWidth = 1.2; ctx.strokeStyle = '#fff8d6'; ctx.beginPath(); ctx.ellipse(this.x, y, R * .82, R * .26, 0, 0, TAU); ctx.stroke();
+    for (const off of [0, Math.PI / 3]) { ctx.beginPath(); for (let i = 0; i <= 3; i++) { const a = off + t * .6 + i * TAU / 3; const qx = this.x + Math.cos(a) * R * .78; const qy = y + Math.sin(a) * R * .25; i ? ctx.lineTo(qx, qy) : ctx.moveTo(qx, qy); } ctx.stroke(); }
+    ctx.fillStyle = '#fff8d6'; for (let i = 0; i < 12; i++) { const a = i / 12 * TAU - t; ctx.fillRect(this.x + Math.cos(a) * R * .91 - 1, y + Math.sin(a) * R * .29 - 1, 3, 2); }
+    ctx.restore();
+    const rise = Math.min(1, this.t / .4); const h = 70 * rise;
+    plate(ctx, [[this.x - 11, y], [this.x + 11, y], [this.x + 7, y - h], [this.x, y - h - 12], [this.x - 7, y - h]], { kind: 'crust', dark: '#3a3a30', body: this.hitFlash ? '#ffffff' : '#d8d2bc', facet: '#f2ecd6', vein: '#9be36a', edge: '#ffffff', spark: '#e6ffd0', core: '#ffffff', glow: 'rgba(155,227,106,', edgeGlow: 'rgba(255,255,255,' }, this.seed, { alpha: f, lit: .8, glowEdge: .6 });
+    plate(ctx, [[this.x, y - h + 4], [this.x + 5, y - h + 14], [this.x, y - h + 24], [this.x - 5, y - h + 14]], { kind: 'crystal', dark: '#1e3a14', body: '#9be36a', facet: '#e6ffd0', vein: '#d8ffb0', edge: '#ffffff', spark: '#ffffff', core: '#ffffff', glow: 'rgba(155,227,106,', edgeGlow: 'rgba(255,255,255,' }, this.seed + 1, { alpha: f, core: .8, glowEdge: 1.2 });
+    for (let i = 0; i < 6; i++) { const ph = (t * .8 + i / 6) % 1; ctx.save(); ctx.globalAlpha = f * (1 - ph); ctx.fillStyle = '#e6ffd0'; ctx.fillRect(this.x + Math.cos(i * 2.1) * R * .6, y + Math.sin(i * 2.1) * R * .18 - ph * 50, 3, 3); ctx.restore(); }
+  }
+}
+class WarBanner extends SigProp {
+  constructor(sig, owner, x, z) { super(sig, owner, x, z, { hp: 80, size: 12, duration: 10 }); this.radius = 110; this.dmg = 1.2; this.move = 1.1; BUFF_ZONES.add(this); }
+  update(dt, gw) { this.tick(dt); if (this.isFinished || this.isDead) BUFF_ZONES.delete(this); }
+  render(ctx) {
+    const y = this.y; const f = this.fade; const t = this.t; const rise = Math.min(1, this.t / .3);
+    ctx.save(); ctx.globalAlpha = f * .7; ctx.strokeStyle = '#ffd27a'; ctx.lineWidth = 2; ctx.setLineDash?.([6, 4]); ctx.beginPath(); ctx.ellipse(this.x, y, this.radius, this.radius * .32, 0, 0, TAU); ctx.stroke(); ctx.setLineDash?.([]); ctx.restore();
+    const top = y - 96 * rise;
+    ctx.save(); ctx.globalAlpha = f; ctx.strokeStyle = '#5d4037'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(this.x, y); ctx.lineTo(this.x, top); ctx.stroke();
+    ctx.fillStyle = '#ffd27a'; ctx.beginPath(); ctx.moveTo(this.x - 3, top); ctx.lineTo(this.x, top - 9); ctx.lineTo(this.x + 3, top); ctx.closePath(); ctx.fill();
+    // The cloth flutters (a waving quad strip).
+    const pts = Array.from({ length: 7 }, (_, i) => { const u = i / 6; return [this.x + 2 + u * 34 * rise, top + 4 + Math.sin(t * 6 - u * 4) * 3 * u]; });
+    ctx.fillStyle = this.hitFlash ? '#ffffff' : '#c62828'; ctx.beginPath(); pts.forEach(([x, yy], i) => (i ? ctx.lineTo(x, yy) : ctx.moveTo(x, yy))); for (let i = pts.length - 1; i >= 0; i--) ctx.lineTo(pts[i][0], pts[i][1] + 26 - (i === pts.length - 1 ? 6 : 0)); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#ffd27a'; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.fillStyle = '#ffd27a'; ctx.fillRect(this.x + 12 * rise, top + 12, 8 * rise, 8);
+    ctx.restore();
+  }
+}
+defineSignature('S43', { cast(c) { emit(new Sanctuary(c.sig, c.caster, c.target?.x ?? c.caster.x + (c.caster.facing || 1) * 90, c.target?.z ?? c.caster.z), c.quality); } });
+defineSignature('S44', { cast(c) { emit(new WarBanner(c.sig, c.caster, c.target?.x ?? c.caster.x + (c.caster.facing || 1) * 60, c.target?.z ?? c.caster.z), c.quality); } });

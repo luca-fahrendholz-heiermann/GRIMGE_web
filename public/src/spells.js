@@ -10,6 +10,7 @@ import { raiseMirrorGate } from './portal.js';
 import { activateBuffForm } from './buff_forms.js';
 import { castSignature, signatureProjectileSpawned, updateSignatureWorld } from './signature_runes.js';
 import { castNatureSpell, isNatureOrInfusion } from './nature_spells.js';
+import { renderWallLook } from './wall_looks.js';
 import { BeamSpell, BeamClash, resolveBeamInteractions, MirrorWardSpell, GravityLiftSpell, TitanStompSpell, SoulSeekerBolt, SeismicSlamSpell, ConeBreathSpell, BurrowStrikeSpell, ShieldBubbleSpell, renderPixelated } from './abilities.js';
 
 export { BeamClash };
@@ -476,7 +477,7 @@ export class SpellSystem {
         // Terrain impact: short-lived rock pillars reuse the Stone Wall
         // obstacle rules (movement + projectile blocking).
         const spawnPillar = (x, z, surfaceHeight) => this.addSpell(new StoneWallSpell(x, z, caster.team, surfaceHeight, {
-          halfX: 10, halfZ: .08, wallHeight: 52, life: 2.2, color: '#8d6e63', hp: 40, isPillar: true
+          halfX: 10, halfZ: .08, wallHeight: 52, life: 2.2, color: '#8d6e63', hp: 40, isPillar: true, style: 'rock'
         }), castQuality);
         this.addSpell(new SeismicSlamSpell(caster, spawnPillar), castQuality);
         combat.shakeCamera(8, .35);
@@ -696,7 +697,7 @@ export class SpellSystem {
   castStoneWall(caster, gameWorld, quality = RUNE_GRADE_PROFILES.B, target = null) {
     const mods = caster.buildModifiers ?? {};
     const blocks = this.placeWall(caster, gameWorld, quality, target, 'stone_wall', {
-      halfX: 13, halfZ: .075, wallHeight: 72, life: 16 * (mods.wallDuration ?? 1), hp: Math.round(110 * (mods.wallHp ?? 1))
+      halfX: 13, halfZ: .075, wallHeight: 72, life: 16 * (mods.wallDuration ?? 1), hp: Math.round(110 * (mods.wallHp ?? 1)), style: 'masonry'
     });
     audio.playSpell('stone_spikes');
     combat.shakeCamera(5, 0.2);
@@ -710,7 +711,7 @@ export class SpellSystem {
   castConstructBulwark(caster, gameWorld, quality = RUNE_GRADE_PROFILES.B, target = null) {
     const mods = caster.buildModifiers ?? {};
     const blocks = this.placeWall(caster, gameWorld, quality, target, 'construct_bulwark', {
-      halfX: 12, halfZ: .07, wallHeight: 66, life: 9 * (mods.wallDuration ?? 1), hp: Math.round(80 * (mods.wallHp ?? 1)), color: '#90a4ae'
+      halfX: 12, halfZ: .07, wallHeight: 66, life: 9 * (mods.wallDuration ?? 1), hp: Math.round(80 * (mods.wallHp ?? 1)), color: '#90a4ae', style: 'bulwark'
     });
     audio.playSpell('stone_spikes');
     for (const wall of blocks) combat.spawnElementalParticles(wall.x, wall.y, 'construct', Math.round(5 * quality.particles));
@@ -1801,6 +1802,7 @@ class StoneWallSpell {
     this.color = options.color ?? '#4e342e';
     this.isStoneWall = true;
     this.isPillar = !!options.isPillar;
+    this.style = options.style ?? null; // wall_looks.js: masonry / bulwark / rock
     this.blocksMovement = true;
     this.blocksProjectiles = true;
     this.isFinished = false;
@@ -1832,7 +1834,7 @@ class StoneWallSpell {
   }
 
   update(dt, gameWorld) {
-    this.life -= dt;
+    this.life -= dt; this._age = (this._age ?? 0) + dt;
     this.hitFlash = Math.max(0, this.hitFlash - dt);
     for (const projectile of gameWorld.projectiles) {
       if (!this.blocksProjectile(projectile)) continue;
@@ -1848,6 +1850,7 @@ class StoneWallSpell {
   }
 
   render(ctx) {
+    if (this.style && renderWallLook(ctx, this)) return;
     const fade = Math.min(1, this.life / .45);
     // A stone block: front face at the near edge, a lit top face behind it.
     const front = groundYForDepth(this.z + this.halfZ) - this.surfaceHeight;

@@ -18,6 +18,7 @@ import { groundYForDepth } from './world.js';
 import { WEAPONS, astralHue, makeWeaponShots } from './weapons.js';
 import { projectilesOf, currentAttacker } from './signature_core.js';
 import { infusionOnHit, updateInfusion } from './nature_spells.js';
+import { zoneBuffOf } from './zone_buffs.js';
 
 const TAU = Math.PI * 2;
 const D = (name, kind, mana, extra = {}) => Object.freeze({ name, kind, mana, ...extra });
@@ -287,11 +288,11 @@ export function updateWeaponKit(player, dt, game) {
     if (b.def.cut) { b.next -= dt; if (b.next <= 0) { b.next = .3; for (const t of foes(player, game)) if (Math.abs(t.x - player.x) < 46 && Math.abs(((t.z ?? player.z) - player.z) * 150) < 22) t.takeDamage?.(b.def.cut, Math.sign(t.x - player.x || 1) * 80, 10, .1, false, 'melee'); } }
   }
 }
-export const weaponMoveMult = (player) => (player.weaponBuff?.kind === 'tailwind' ? player.weaponBuff.def.move : 1);
+export const weaponMoveMult = (player) => (player.weaponBuff?.kind === 'tailwind' ? player.weaponBuff.def.move : 1) * zoneBuffOf(player).move;
 export const weaponAttackSpeed = (player) => (player.weaponBuff?.kind === 'haste' ? player.weaponBuff.def.speed : 1);
 // Outgoing melee: global multipliers for this swing.
 export function meleeBuffMods(player) {
-  const b = player.weaponBuff; const m = { dmg: 1, kx: 1, reach: 0, guardBreak: 0, crit: false };
+  const b = player.weaponBuff; const m = { dmg: zoneBuffOf(player).dmg, kx: 1, reach: 0, guardBreak: 0, crit: false }; // Kriegsbanner zone
   if (!b) return m;
   if (b.kind === 'rage') { m.dmg *= 1.3; m.guardBreak += 25; }
   if (b.kind === 'warcry') m.dmg *= b.def.mult;
