@@ -2169,9 +2169,9 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   const { MageProfile, BUFF_RUNE_IDS } = await import('./public/src/progression.js');
   const neutral = { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false };
   const ids = buff.BUFF_FORM_IDS;
-  assert(ids.length === 15 && ids[0] === 'B01' && ids[1] === 'B02' && ids.includes('T40'), 'The 15 curated Arcane States are registered (B01, B02 and 13 atlas forms)');
-  const tForms = ids.filter((id) => id.startsWith('T'));
-  assert(tForms.every((id) => ['forward', 'up', 'down'].every((d) => FORM_MOVESETS[id]?.[d]?.short?.make && FORM_MOVESETS[id][d].full?.make) && FORM_SPRINT_ATTACKS[id]?.name), 'Every T form has six charged techniques and its own sprint attack');
+  assert(ids.length === 17 && ids[0] === 'B01' && ids[1] === 'B02' && ids.includes('T40') && ids.includes('A01') && ids.includes('A02'), 'The 17 curated Arcane States are registered (B01, B02, 13 atlas forms, A01 Göttlicher Riese, A02 Mystischer Affe)');
+  const tForms = ids.filter((id) => /^[TA]/.test(id));
+  assert(tForms.every((id) => ['forward', 'up', 'down'].every((d) => FORM_MOVESETS[id]?.[d]?.short?.make && FORM_MOVESETS[id][d].full?.make) && FORM_SPRINT_ATTACKS[id]?.name), 'Every T / A form has six charged techniques and its own sprint attack');
   assert(FORM_MOVESETS.T13.forward.short.name === 'THREAD NEEDLE' && FORM_MOVESETS.T13.forward.full.name === 'HUNDRED FILAMENTS' && FORM_SPRINT_ATTACKS.T13.name === 'SILK STRIKE', 'Technique names come straight from the atlas (T13 Fadenschlag)');
   assert(FORM_MOVESETS.ninefold.forward.short.name === 'VERDICHTETER RISSKERN' && FORM_MOVESETS.ninefold.forward.full.name === 'RISSSTRAHL' && FORM_MOVESETS.eidolon.up.full.name === 'LICHTSPALTER', 'B01 Risswild / B02 Arkengestell carry the atlas technique names');
   assert(ids.every((id) => { const r = recognizer.runes.find((x) => x.id === 'buff_' + id); const d = SPELL_DEFINITIONS['buff_' + id]; return r?.isBuffForm && r.tags.includes('max-1-per-deck') && d?.isBuffForm && d.tags.includes('arcane-state') && isSpecialRune('buff_' + id); }), 'Each form is an Arcane State special rune tagged "arcane-state · max-1-per-deck", never fusable');
@@ -2182,7 +2182,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   const second = profile.addRuneToDeck('buff_B01');
   assert(!second.ok && /ONE ARCANE STATE/.test(second.reason), 'A second buff rune is refused (one per deck)');
   assert(profile.sanitizeDeck(['ignis', 'buff_T13', 'buff_T08', 'aqua']).filter((id) => id.startsWith('buff_')).length === 1, 'Loading a deck keeps only one buff rune');
-  assert(BUFF_RUNE_IDS.length === 15, 'All 15 Arcane State runes are offered in the deck builder');
+  assert(BUFF_RUNE_IDS.length === 17, 'All 17 Arcane State runes are offered in the deck builder');
   // The shared hourglass sigil.
   const hand = ['ignis', 'fulgur', 'doppel', 'buff_T13'];
   const sigil = recognizer.recognize(guideStrokes('buff_T13', 400, 300, 120), hand);
@@ -2536,6 +2536,37 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   P.beginCharge('up', 'key'); P.formCharge.elapsed = .3; const fired = P.releaseCharge();
   assert(!fired && P.mp === 3 && !spells.activeSpells.length, 'Without free mana the technique fizzles (NO MANA)');
   P.mp = P.maxMp; buff.endBuffForm(P); spells.clearRuntime();
+}
+
+// User reference art (18 Oct 2026): A01 Göttlicher Riese and A02 Mystischer Affe — six techniques that hit, own renderer, own charge ritual.
+{
+  const buff = await import('./public/src/buff_forms.js');
+  const { FORM_MOVESETS } = await import('./public/src/form_moves.js');
+  const { hasFormRenderer } = await import('./public/src/buff_vfx.js');
+  const { ARCANE_MOVES, ARCANE_CHARGE } = await import('./public/src/arcane_moves.js');
+  game.returnToHub(); game.setMatchMode('training'); game.startMatch(); game.selectTrainingMap('waterfalls');
+  const P = game.player; const dummy = game.trainingDummy;
+  const neutral = { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false };
+  const strict = new Proxy({}, { get: (t, k) => (k === 'ellipse' || k === 'arc') ? (x, y, rx, ry) => { if (rx < 0 || (k === 'ellipse' && ry < 0)) throw new Error('IndexSizeError ' + k); } : (k === 'canvas' ? undefined : () => {}), set: () => true });
+  const slots = [['forward', 'short'], ['forward', 'full'], ['up', 'short'], ['up', 'full'], ['down', 'short'], ['down', 'full']];
+  const missed = []; const broken = [];
+  for (const id of ['A01', 'A02']) for (const [dir, variant] of slots) {
+    spells.clearRuntime(); buff.endBuffForm(P);
+    P.x = 400; P.z = .5; P.facing = 1; P.state = 'idle'; P.stateTimer = 0; game.battlefield.placeOnSurface(P);
+    dummy.homeX = dummy.x = 470; dummy.homeZ = dummy.z = .5; dummy.hp = dummy.maxHp;
+    spells.cast(P, spells.resolveSpell([{ id: 'buff_' + id }]), game); P.buffForm.age = 2;
+    try {
+      spells.addSpell(FORM_MOVESETS[id][dir][variant].make(P), 'B');
+      for (let i = 0; i < 90; i++) { P.update(1 / 60, neutral, game.battlefield, game); spells.update(1 / 60, game); if (i % 10 === 0) for (const sp of spells.activeSpells) sp.render?.(strict); }
+      if (!(dummy.hp < dummy.maxHp)) missed.push(id + ' ' + dir + ' ' + variant);
+    } catch (e) { broken.push(id + ' ' + dir + ' ' + variant + ': ' + e.message); }
+  }
+  assert(ARCANE_MOVES.A01?.length === 6 && ARCANE_MOVES.A02?.length === 6 && ARCANE_MOVES.A01.every(Boolean) && ARCANE_MOVES.A02.every(Boolean), 'A01 Göttlicher Riese and A02 Mystischer Affe have six techniques of their own');
+  assert(!broken.length && !missed.length, 'All twelve A01 / A02 techniques run, render and hit a foe in front ' + [...broken, ...missed].slice(0, 3).join(' | '));
+  let charged = true;
+  for (const id of ['A01', 'A02']) for (const dir of ['forward', 'up', 'down']) { try { ARCANE_CHARGE[id](strict, { x: 400, y: 300, f: 1 }, buff.BUFF_FORMS[id].mat, dir, .7, 1.2); } catch { charged = false; } }
+  assert(charged && hasFormRenderer('A01') && hasFormRenderer('A02') && buff.BUFF_FORMS.A01.mat.kind === 'crystal', 'A01 / A02 have their own renderer and a charge ritual in every direction');
+  buff.endBuffForm(P); spells.clearRuntime();
 }
 
 // Movement after the Unity original: rooted attacks, full combos on a target in front, long sprint jump, auto-run.

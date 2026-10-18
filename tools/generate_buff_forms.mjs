@@ -301,11 +301,11 @@ for (const f of forms) {
 }
 
 // ── Curated roster (user, 18 Oct 2026: "alle sollen unique sein, zur Not welche
-// entfernen"): 15 Arcane States, one per element / fantasy, each with six unique
+// entfernen"): 15 Arcane States (+ A01 / A02 from reference art, EXTRA_FORMS), one per element / fantasy, each with six unique
 // techniques, a charge-up ritual and its own vivid palette (arcane_moves.js). The
 // other 27 atlas forms stay parsed and are listed as ARCHIVED in the morphology
 // doc — adding an id here brings one back.
-const ACTIVE = ['B01', 'B02', 'T02', 'T04', 'T05', 'T06', 'T08', 'T13', 'T23', 'T24', 'T35', 'T37', 'T38', 'T39', 'T40'];
+const ACTIVE = ['B01', 'B02', 'T02', 'T04', 'T05', 'T06', 'T08', 'T13', 'T23', 'T24', 'T35', 'T37', 'T38', 'T39', 'T40', 'A01', 'A02'];
 const PALETTES = {
   T02: ['#2a1210', '#ff5a1f', '#ffd27a', '#ff2a00'], T04: ['#1d3c48', '#ff8fa3', '#bff6ff', '#5ff0d8'], T05: ['#120c1e', '#b04dff', '#e9c8ff', '#ff4fd8'],
   T06: ['#10222a', '#d4ff3a', '#f6ffd0', '#7af7ff'], T08: ['#22302c', '#e8dcc0', '#fff8e6', '#4fe0a8'], T13: ['#1c1420', '#ff7a3d', '#ffd0a8', '#ff3d6e'],
@@ -316,6 +316,60 @@ for (const f of forms) if (PALETTES[f.id]) f.palette = PALETTES[f.id];
 
 const merge = (a, b) => { for (const [k, v] of Object.entries(b)) a[k] = v && typeof v === 'object' && !Array.isArray(v) ? merge(a[k] ?? {}, v) : v; return a; };
 for (const f of forms) if (OVERRIDES[f.id]) merge(f, OVERRIDES[f.id]);
+
+// ── Additional Arcane States from user reference art (18 Oct 2026), not in the atlas ──
+const tech = (o) => o;
+const v32 = (category, silhouette, anchors, action, peak, anim, attacks, exclusions) => ({ category, silhouette, anchors, idle: silhouette, action, peak, anim: { transformIn: anim[0], idle: silhouette, sprint: action, defense: anim[1], grab: anim[2], jump: anim[3], peak, transformOut: anim[4] }, attacks, exclusions });
+const EXTRA_FORMS = [
+  {
+    id: 'A01', name: 'Göttlicher Riese', title: 'Silberner Himmelskörper', ref: 'Divine Giant (Referenz: leuchtende Riesengestalt, die ein Ziel packt)',
+    palette: ['#14204a', '#8fc4ff', '#f2f8ff', '#6ad8ff'], material: 'leuchtendes Silberlicht mit Gewitterkristall-Adern.', quality: 'transluzente Lichtschichten, gezackte Silberkanten, wandernde Blitzadern.', motion: 'eine riesige, leuchtende Spiegelgestalt des eigenen Körpers bewegt sich zeitgleich mit.',
+    silhouette: 'Eine 2,4–2,8 H große, transluzente silberblaue Lichtgestalt des eigenen Charakters steht hinter ihm und spiegelt jede Pose; Blitzadern laufen über die Kontur, silberne Lichtflammen lodern über dem Kopf.',
+    avoid: 'Kein Skelett, keine Rüstung, keine fremde Figur — es ist immer das vergrößerte Lichtbild des eigenen Sprites.',
+    archetype: 'divine_giant', count: 1, item: null,
+    tech: tech({
+      sprint: { name: 'Himmelsschritt', text: 'silberne Nachbilder des Riesen ziehen hinterher.' },
+      sprintHeavy: { name: 'Göttlicher Ansturm', text: 'der Riese rammt mit der Schulter voraus.' },
+      defense: { name: 'Silberpanzer', text: 'die Riesenhände schließen sich vor dem Körper; Perfect Block entlädt einen Stromstoß.', counter: 'shock', status: [] },
+      grab: { name: 'Riesengriff', text: 'die riesige Lichthand packt das Ziel und schmettert es zu Boden.', throw: 'slam', status: [] },
+      jump: { name: 'Sternensprung', text: 'der Riese federt mit und stampft bei der Landung.', landing: 'stomp' },
+      forward: { short: { name: 'Riesenhandstreich', text: 'die Lichthand fegt flach nach vorn.', kind: 'cone', status: [] }, full: { name: 'Himmelsfaust', text: 'die Riesenfaust schlägt als gewaltige Lichtfaust über die Lane.', kind: 'projectile', status: [] } },
+      up: { short: { name: 'Himmelsheber', text: 'riesiger Aufwärtshaken.', kind: 'burst', status: ['launch'] }, full: { name: 'Göttlicher Griff', text: 'die Riesenhand packt das nächste Ziel, hebt es hoch und schleudert es zu Boden.', kind: 'pillar', status: [] } },
+      down: { short: { name: 'Riesentritt', text: 'der Riese stampft, der Boden bebt.', kind: 'ring', status: ['stun'] }, full: { name: 'Doppelfaust-Gericht', text: 'beide Riesenfäuste schmettern nacheinander auf den Boden.', kind: 'sequence', status: [] } }
+    }),
+    statusAll: [], morphology: 'divine_projection', morphologyLabel: 'Divine Projection',
+    v32: v32('Vergrößertes Lichtbild des eigenen Körpers (Göttlicher Riese)', 'Eine 2,4–2,8 H große, transluzente silberblaue Lichtgestalt des eigenen Charakters steht hinter ihm und spiegelt jede Pose.', ['sprite_alpha', 'root', 'hand_right', 'hand_left', 'head_center'],
+      'Der Riese folgt jeder Pose zeitgleich, nur größer und mit Lichtträgheit; beim Sprint ziehen silberne Nachbilder, Blitzadern laufen über die Kontur.', 'Bei Full tritt der Riese aus dem Hintergrund und führt die Technik mit seinen eigenen Riesenhänden aus.',
+      ['Silberlicht steigt aus der Kontur auf und wächst zur riesigen Spiegelgestalt.', 'Die Riesenhände schließen sich vor dem Körper zu einem Lichtschild.', 'Die riesige Lichthand packt das Ziel (wie in der Referenz) und schmettert es zu Boden.', 'Der Riese federt mit; bei der Landung stampft er und der Boden bebt.', 'Die Gestalt zerfällt von außen nach innen in Silberfunken.'],
+      { forward: 'Short: die Riesenhand fegt flach nach vorn; Full: eine gewaltige Lichtfaust schlägt über die Lane.', up: 'Short: riesiger Aufwärtshaken; Full: die Riesenhand packt das Ziel, hebt es hoch und schmettert es herunter.', down: 'Short: Riesenstampfer; Full: beide Fäuste schmettern nacheinander auf den Boden.' },
+      'Keine fremde Figur, keine Rüstung, kein Skelett — immer das eigene vergrößerte Lichtbild.')
+  },
+  {
+    id: 'A02', name: 'Mystischer Affe', title: 'Silberfell-Urgeist', ref: 'Mystical Ape (Referenz: weißer Geisteraffe hinter dem Charakter, violette Kristallflammen)',
+    palette: ['#1c1030', '#c9a8ff', '#ffffff', '#b06cff'], material: 'silberweißes Geisterfell in violetten Kristallflammen.', quality: 'dichte Fellsträhnen, glühende Augen, violett-blaue Kristallzungen.', motion: 'ein riesiger weißer Geisteraffe kauert hinter dem Spieler, Kristallflammen wirbeln spiralförmig um beide.',
+    silhouette: 'Ein riesiger silberweißer Geisteraffe (Kopf mit Reißzähnen, breite Schultern, gewaltige Arme und Fäuste seitlich) erhebt sich hinter dem Spieler, umwirbelt von violett-blauen Kristallflammen.',
+    avoid: 'Kein realistischer Gorilla, keine Rüstung — ein Geisterwesen aus Fell und Kristallflammen.',
+    archetype: 'mystic_ape', count: 1, item: null,
+    tech: tech({
+      sprint: { name: 'Urgeistlauf', text: 'der Affe läuft auf allen vieren mit.' },
+      sprintHeavy: { name: 'Affensturm', text: 'der Affe stürmt mit beiden Fäusten voran.' },
+      defense: { name: 'Fellwall', text: 'die riesigen Arme kreuzen sich vor dem Spieler; Perfect Block schlägt eine Klinge aus Kristallflammen.', counter: 'riposte', status: [] },
+      grab: { name: 'Affengriff', text: 'die Affenhand packt das Ziel und schleudert es über die Schulter.', throw: 'over', status: [] },
+      jump: { name: 'Baumsprung', text: 'der Affe springt mit und trommelt bei der Landung.', landing: 'stomp' },
+      forward: { short: { name: 'Urfaust', text: 'eine gewaltige Affenfaust schlägt nach vorn.', kind: 'cone', status: [] }, full: { name: 'Urgebrüll', text: 'das Gebrüll des Affen rollt als violette Schallwelle über die Lane.', kind: 'cone', status: ['stun'] } },
+      up: { short: { name: 'Affenhaken', text: 'Aufwärtshaken der Riesenfaust.', kind: 'burst', status: ['launch'] }, full: { name: 'Himmelssprung', text: 'der Affe springt hoch und kracht vor dem Spieler zu Boden.', kind: 'pillar', status: [] } },
+      down: { short: { name: 'Bodenschlag', text: 'die Faust schlägt auf den Boden.', kind: 'ring', status: [] }, full: { name: 'Brusttrommel-Beben', text: 'der Affe trommelt auf die Brust, jede Trommel sendet eine Bebenwelle.', kind: 'sequence', status: ['stun'] } }
+    }),
+    statusAll: [], morphology: 'creature_manifestation', morphologyLabel: 'Creature Manifestation',
+    v32: v32('Silberweißer Geisteraffe in Kristallflammen', 'Ein riesiger silberweißer Geisteraffe erhebt sich hinter dem Spieler, umwirbelt von violett-blauen Kristallflammen.', ['back_left', 'back_right', 'root', 'feet_world', 'sprite_alpha'],
+      'Der Affe atmet schwer, die Flammen wirbeln; beim Sprint läuft er geduckt mit, die Fäuste schleifen über den Boden.', 'Bei Full schlägt der Affe selbst zu: Gebrüll, Sprung oder Trommelbeben.',
+      ['Violette Kristallflammen schießen aus dem Boden, aus ihnen formt sich der weiße Geisteraffe.', 'Die riesigen Arme kreuzen sich vor dem Spieler.', 'Die Affenhand packt das Ziel und schleudert es über die Schulter.', 'Der Affe springt mit und trommelt bei der Landung.', 'Fell und Flammen zerstieben in violette Funken.'],
+      { forward: 'Short: Riesenfaust nach vorn; Full: violettes Gebrüll als Schallwelle.', up: 'Short: Affenhaken; Full: Sprung mit krachender Landung vor dem Spieler.', down: 'Short: Faustschlag auf den Boden; Full: Brusttrommeln mit Bebenwellen.' },
+      'Kein realistischer Gorilla, keine Rüstung.')
+  }
+];
+for (const f of EXTRA_FORMS) { f.states = { idle: f.v32.idle, action: f.v32.action, peak: f.v32.peak }; f.morphCategory = f.v32.category; forms.push(f); }
+if (!MORPH.divine_projection) MORPH.divine_projection = { label: 'Divine Projection', what: 'vergrößertes Lichtbild des eigenen Körpers', action: '', peak: '' };
 
 const ARCHIVED = forms.filter((f) => !ACTIVE.includes(f.id));
 for (let i = forms.length - 1; i >= 0; i--) if (!ACTIVE.includes(forms[i].id)) forms.splice(i, 1);

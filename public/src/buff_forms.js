@@ -22,6 +22,7 @@ import { ARCANE_MOVES, ARCANE_CHARGE } from './arcane_moves.js';
 import './buff_v32_a.js'; // V3.2 individual morphologies T01–T12
 import './buff_v32_b.js'; // T13–T24
 import './buff_v32_c.js'; // T25–T36
+import './buff_v32_extra.js'; // A01 / A02 from user reference art
 import { combat } from './combat.js';
 import { groundYForDepth } from './world.js';
 

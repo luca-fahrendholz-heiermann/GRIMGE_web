@@ -14,11 +14,12 @@
 | **Body Augmentation** | Strukturen direkt am Körper, zusätzliche Glieder und Leitungen | T13 Fadenschlag, T37 Säuregerüst |
 | **Orbital Construct** | freischwebende Ringe, Objekte und Fragmente | T02 Schlackenkern, T06 Ionspindel, T08 Ossuarium, T23 Nullfeldträger, T38 Asterglied |
 | **Temporal Projection** | versetzte Abbilder und Bewegungsechos | T39 Vorausschnitt |
-| **Creature Manifestation** | unabhängige Energiegeschöpfe | T24 Fadenregent, T40 Sonnenwyrm |
+| **Creature Manifestation** | unabhängige Energiegeschöpfe | T24 Fadenregent, T40 Sonnenwyrm, A02 Mystischer Affe |
 | **Levitation State** | schwebender Spieler mit kontrollierten Projektilen | T05 Bruchflug |
 | **Environmental State** | der Spieler verändert einen größeren Bereich der Arena | T35 Kältestillstand |
+| **Divine Projection** | vergrößertes Lichtbild des eigenen Körpers | A01 Göttlicher Riese |
 
-## Die 15 aktiven Arcane States (kuratiert: je eigene Techniken, Lade-Ritual und Palette)
+## Die 17 aktiven Arcane States (kuratiert: je eigene Techniken, Lade-Ritual und Palette)
 
 ### B01 Risswild · *Energy Extension* · V3.2: Dynamische Bruchbänder, asymmetrischer Dreifach-Streamer
 
@@ -199,6 +200,30 @@
 - **Heavies (V3.2-Abbildung):** Forward — Short: schmaler Lanzenimpuls aus nächstem Waffen-/Handanker; Full: beide Wyrme lösen sich separat und treffen mehrere Lanegegner auf unabhängigen Bahnen. · Up — Short: einzelne himmelwärts gerichtete Schneide; Full: ein geschichteter Wyrm steigt als spiralförmige vertikale Angriffskonstruktion auf. · Down — Short: flacher Glutring an den Füßen; Full: mehrlagige Portale um ein gültiges Ziel entlassen nacheinander mehrere Wyrmstoßbahnen.
 - **Ausschlüsse:** Keine Drachenflügel am Avatar, keine tierische Ganzkörperform, keine orange Allover-Aura.
 - Palette: `#f6cb6a` `#ed7b32` `#29212b` `#69d0c2` · Material: geschichtetes aurisches Schuppenglas und glühende Lanzenschneiden mit dunklen Obsidianzwischenräumen. Die Drachen sind energiegefertigte Angriffskonstrukte, keine vorgerenderten 2D-Kreaturen.
+
+### A01 Göttlicher Riese — Silberner Himmelskörper · *Divine Projection* · V3.2: Vergrößertes Lichtbild des eigenen Körpers (Göttlicher Riese)
+
+- **Anker:** `sprite_alpha`, `root`, `hand_right`, `hand_left`, `head_center`
+- **Idle-Silhouette:** Eine 2,4–2,8 H große, transluzente silberblaue Lichtgestalt des eigenen Charakters steht hinter ihm und spiegelt jede Pose.
+- **Action-Silhouette:** Der Riese folgt jeder Pose zeitgleich, nur größer und mit Lichtträgheit; beim Sprint ziehen silberne Nachbilder, Blitzadern laufen über die Kontur.
+- **Peak Manifestation:** Bei Full tritt der Riese aus dem Hintergrund und führt die Technik mit seinen eigenen Riesenhänden aus.
+- **Transform-In / Out:** Silberlicht steigt aus der Kontur auf und wächst zur riesigen Spiegelgestalt. / Die Gestalt zerfällt von außen nach innen in Silberfunken.
+- **Defense · Grab · Jump:** Die Riesenhände schließen sich vor dem Körper zu einem Lichtschild. · Die riesige Lichthand packt das Ziel (wie in der Referenz) und schmettert es zu Boden. · Der Riese federt mit; bei der Landung stampft er und der Boden bebt.
+- **Heavies (V3.2-Abbildung):** Forward — Short: die Riesenhand fegt flach nach vorn; Full: eine gewaltige Lichtfaust schlägt über die Lane. · Up — Short: riesiger Aufwärtshaken; Full: die Riesenhand packt das Ziel, hebt es hoch und schmettert es herunter. · Down — Short: Riesenstampfer; Full: beide Fäuste schmettern nacheinander auf den Boden.
+- **Ausschlüsse:** Keine fremde Figur, keine Rüstung, kein Skelett — immer das eigene vergrößerte Lichtbild.
+- Palette: `#14204a` `#8fc4ff` `#f2f8ff` `#6ad8ff` · Material: leuchtendes Silberlicht mit Gewitterkristall-Adern.
+
+### A02 Mystischer Affe — Silberfell-Urgeist · *Creature Manifestation* · V3.2: Silberweißer Geisteraffe in Kristallflammen
+
+- **Anker:** `back_left`, `back_right`, `root`, `feet_world`, `sprite_alpha`
+- **Idle-Silhouette:** Ein riesiger silberweißer Geisteraffe erhebt sich hinter dem Spieler, umwirbelt von violett-blauen Kristallflammen.
+- **Action-Silhouette:** Der Affe atmet schwer, die Flammen wirbeln; beim Sprint läuft er geduckt mit, die Fäuste schleifen über den Boden.
+- **Peak Manifestation:** Bei Full schlägt der Affe selbst zu: Gebrüll, Sprung oder Trommelbeben.
+- **Transform-In / Out:** Violette Kristallflammen schießen aus dem Boden, aus ihnen formt sich der weiße Geisteraffe. / Fell und Flammen zerstieben in violette Funken.
+- **Defense · Grab · Jump:** Die riesigen Arme kreuzen sich vor dem Spieler. · Die Affenhand packt das Ziel und schleudert es über die Schulter. · Der Affe springt mit und trommelt bei der Landung.
+- **Heavies (V3.2-Abbildung):** Forward — Short: Riesenfaust nach vorn; Full: violettes Gebrüll als Schallwelle. · Up — Short: Affenhaken; Full: Sprung mit krachender Landung vor dem Spieler. · Down — Short: Faustschlag auf den Boden; Full: Brusttrommeln mit Bebenwellen.
+- **Ausschlüsse:** Kein realistischer Gorilla, keine Rüstung.
+- Palette: `#1c1030` `#c9a8ff` `#ffffff` `#b06cff` · Material: silberweißes Geisterfell in violetten Kristallflammen.
 
 
 ## Archiviert (aus dem Spiel genommen, im Atlas erhalten)

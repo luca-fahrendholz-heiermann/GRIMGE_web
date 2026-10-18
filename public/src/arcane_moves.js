@@ -2,7 +2,8 @@
 // charge-up rituals (user, 18 Oct 2026: "alle sollen unique sein, zur Not
 // welche entfernen und dafür die anderen optimieren").
 //
-// The roster is reduced to 15 Arcane States, one per element / fantasy, and
+// The roster is 15 curated atlas Arcane States plus A01 / A02 from user
+// reference art, one per element / fantasy, and
 // each gets SIX techniques of its own (forward / up / down × short / full)
 // with its own mechanic and its own painter, plus a charge-up ritual that
 // changes with the charge direction and flashes at the FULL threshold.
@@ -12,6 +13,7 @@ import { SigSequence, SigBolt, foesOf, groundDist, hit, massOf, DEPTH } from './
 import { plate, band, fallout, shard, orbitItem, hashStr, TAU, lerp, clamp01, frame, shape, line, specks, groundRing, channel, column } from './buff_v32_kit.js';
 import { stoneRing, STONE, ACID_GLASS, drawWyrmHead, ghostOf } from './buff_signatures.js';
 import { applyStatuses } from './buff_techniques.js';
+import { giantHand } from './buff_v32_extra.js';
 import { environment } from './environment.js';
 import { combat } from './combat.js';
 import { groundYForDepth } from './world.js';
@@ -198,8 +200,48 @@ export const ARCANE_MOVES = {
     null,
     (f, p) => strike(f, p, { dur: .45, area: around(86), damage: 26, kx: 220, lift: 50, st: ['burn'], paint: (ctx, s, k) => groundRing(ctx, s.x, gy(s), 20 + k * 66, f.mat, s.t * 2, fade(k), 14, 8420, 5, .55) }),
     null
+  ],
+  // ── A01 Göttlicher Riese: the giant's own silver hands (grab, fist, judgment) ──
+  A01: [
+    // Riesenhandstreich: the open hand sweeps flat across the lane.
+    (f, p) => strike(f, p, { dur: .45, area: ahead(150, 40), damage: 30, kx: 320, lift: 60, stun: .4, paint: (ctx, s, k) => { const a = lerp(-1.3, .2, Math.min(1, k * 2.4)); giantHand(ctx, [s.x + s.facing * (40 + 70 * Math.min(1, k * 2.4)), gy(s) - 60], a, s.facing, 34, .1, { ...f.mat, kind: 'crystal' }, 9901, fade(k)); line(ctx, Array.from({ length: 8 }, (_, i) => { const u = -1.3 + i / 7 * 1.5 * Math.min(1, k * 2.4); return [s.x + s.facing * Math.cos(u) * 110, gy(s) - 50 + Math.sin(u) * 50]; }), f.mat.core, 2, fade(k) * .7); } }),
+    // Himmelsfaust: a huge fist of light travels down the lane, hitting each foe once.
+    (f, p) => new SigSequence(sigOf(f), p, { dur: .8, data: { fx: 30 }, tick: (s, dt, gw) => { s.fx = 30 + 440 * clamp01(s.t / .65); s.strike(gw, (t, dx, dz) => Math.abs(dx - s.facing * s.fx) < 46 && Math.abs(dz) < 38, 60, (t, dx) => s.facing * 440, 130, .55); }, draw: (ctx, s, k) => { const x = s.x + s.facing * s.fx; const y = gy(s) - 56; channel(ctx, s.x + s.facing * 20, y, s.facing, s.fx - 20, 10, { ...f.mat, kind: 'crystal' }, 9910, fade(k) * .35, 6); giantHand(ctx, [x, y], 0, s.facing, 44, 1, { ...f.mat, kind: 'crystal' }, 9911, fade(k, .05, .2)); line(ctx, zig(x - s.facing * 60, y - 30, x, y - 8, 4, 6, Math.floor(s.t * 20)), f.mat.spark, 2, fade(k)); } }),
+    // Himmelsheber: a giant uppercut.
+    (f, p) => strike(f, p, { dur: .45, area: ahead(96, 34), damage: 32, kx: 60, lift: 580, stun: .5, paint: (ctx, s, k) => { const e = Math.min(1, k * 2.5); giantHand(ctx, [s.x + s.facing * 34, gy(s) - 30 - 110 * e], -1.4, s.facing, 32, 1, { ...f.mat, kind: 'crystal' }, 9920, fade(k)); line(ctx, [[s.x + s.facing * 34, gy(s)], [s.x + s.facing * 34, gy(s) - 110 * e]], f.mat.core, 3, fade(k) * .5); } }),
+    // Göttlicher Griff (reference pose): the hand seizes the nearest foe ahead, lifts it, slams it down.
+    (f, p) => new SigSequence(sigOf(f), p, { dur: 1.1, data: { victim: null, hx: p.x + p.facing * 60, hz: p.z }, steps: [
+      { at: .12, fn: (s, gw) => { const v = foesOf(gw, s.team).filter((t) => (t.x - s.x) * s.facing > -10 && groundDist(t, s) < 280).sort((a, b) => groundDist(a, s) - groundDist(b, s))[0]; if (!v) return; s.victim = v; hit(v, 22, 0, 640, 1.1); } },
+      { at: .7, fn: (s, gw) => { const v = s.victim; if (v) { hit(v, 64, s.facing * 260, -560, .9, true); s.hx = v.x; s.hz = v.z ?? s.z; } s.x = s.hx; s.z = s.hz; s.strike(gw, (t, dx, dz) => t !== v && Math.hypot(dx, dz) < 90, 28, (t, dx) => Math.sign(dx || s.facing) * 300, 160, .4); combat.shakeCamera(9, .25); } }
+    ], tick: (s) => { if (s.victim && s.t < .7) { s.hx = s.victim.x; s.hz = s.victim.z ?? s.z; } }, draw: (ctx, s, k) => { const y = groundYForDepth(s.hz); const tt = s.t; const reach = clamp01(tt / .12); const lift = tt < .7 ? Math.sin(clamp01((tt - .12) / .58) * Math.PI / 2) * 110 : 110 * (1 - clamp01((tt - .7) / .08)); const hx = lerp(s.caster.x + s.facing * 30, s.hx, reach); giantHand(ctx, [hx, y - 46 - lift - (1 - reach) * 80], tt < .12 ? -1 : -.3, s.facing, 38, tt < .12 ? .3 : 1, { ...f.mat, kind: 'crystal' }, 9930, fade(k, .05, .2)); if (tt > .7) groundRing(ctx, s.hx, y, 30 + (tt - .7) * 200, { ...f.mat, kind: 'crystal' }, 0, 1 - (tt - .7) / .4, 14, 9931, 4); } }),
+    // Riesentritt: the giant stamps, the ground quakes.
+    (f, p) => strike(f, p, { dur: .5, at: .14, area: around(112), damage: 28, kx: 260, lift: 90, stun: .5, st: ['stun'], after: () => combat.shakeCamera(7, .2), paint: (ctx, s, k) => { const y = gy(s); const e = Math.min(1, k / .28); plate(ctx, [[s.x - 30, y - 150 * (1 - e) - 20], [s.x + 34, y - 150 * (1 - e) - 24], [s.x + 40, y - 150 * (1 - e)], [s.x - 36, y - 150 * (1 - e)]], { ...f.mat, kind: 'crystal' }, 9940, { alpha: fade(k) * .8, glowEdge: 1 }); if (k > .28) for (let r = 0; r < 2; r++) groundRing(ctx, s.x, y, 30 + (k - .28) * 160 * (1 - r * .3), { ...f.mat, kind: 'crystal' }, 0, 1 - k, 12, 9941 + r * 12, 3); } }),
+    // Doppelfaust-Gericht: both giant fists hammer down one after another.
+    (f, p) => new SigSequence(sigOf(f), p, { dur: 1.2, steps: [
+      { at: .42, fn: (s, gw) => { s.strike(gw, around(72, 42)(s), 40, (t, dx) => Math.sign(dx || s.facing) * 160, 200, .5); combat.shakeCamera(6, .15); } },
+      { at: .82, fn: (s, gw) => { s.strike(gw, around(100, 96)(s), 66, (t, dx) => Math.sign(dx - s.facing * 96 || s.facing) * 400, 280, .6, { again: true }); combat.shakeCamera(12, .3); } }
+    ], draw: (ctx, s, k) => { const y = gy(s); [[.42, 42, 34], [.82, 96, 42]].forEach(([at, ox, size], i) => { const e = clamp01((s.t - at + .32) / .32); if (e <= 0) return; const x = s.x + s.facing * ox; giantHand(ctx, [x, y - 24 - 140 * (1 - e)], 1.57, s.facing, size, 1, { ...f.mat, kind: 'crystal' }, 9950 + i * 20, fade(k, .1, .2)); if (s.t > at) { const q = (s.t - at) / .4; groundRing(ctx, x, y, size + q * 90, { ...f.mat, kind: 'crystal' }, 0, 1 - q, 12, 9951 + i * 20, 4); line(ctx, zig(x, y, x + s.facing * 120 * q, y + 6, 5, 3, i), f.mat.spark, 1.5, 1 - q); } }); } })
+  ],
+  // ── A02 Mystischer Affe: spirit-ape fists, roar and drumming quakes ──
+  A02: [
+    // Urfaust: one huge fur fist punches forward.
+    (f, p) => strike(f, p, { dur: .42, area: ahead(130, 36), damage: 32, kx: 420, lift: 70, stun: .4, paint: (ctx, s, k) => { const e = Math.min(1, k * 3); const x = s.x + s.facing * (30 + 90 * e); const y = gy(s) - 58; plate(ctx, Array.from({ length: 8 }, (_, i) => [x + Math.cos(i / 8 * TAU) * 20, y + Math.sin(i / 8 * TAU) * 17]), APE_FUR, 9960, { alpha: fade(k), lit: 1 }); if (e >= 1) groundRing(ctx, x + s.facing * 16, y + 10, 14 + k * 30, apeFlame(f), 0, 1 - k, 8, 9961, 3); } }),
+    // Urgebrüll: a violet roar wave rolls over the lane; the last wave throws foes back.
+    (f, p) => ticking(f, p, { dur: .9, n: 4, area: (s) => (t, dx, dz) => dx * s.facing > 10 && dx * s.facing < 300 && Math.abs(dz) < 22 + dx * s.facing * .35, damage: 9, kx: 140, lift: 10, st: ['stun'], final: { area: (s) => (t, dx, dz) => dx * s.facing > 10 && dx * s.facing < 320 && Math.abs(dz) < 30 + dx * s.facing * .35, damage: 28, kx: 420, lift: 120 }, paint: (ctx, s, k) => { const y = gy(s) - 64; for (let r = 0; r < 4; r++) { const ph = (k * 2 + r / 4) % 1; const R = 30 + ph * 270; line(ctx, Array.from({ length: 9 }, (_, i) => { const a = -.7 + i / 8 * 1.4; return [s.x + s.facing * (Math.cos(a) * R), y + Math.sin(a) * R * .55 + (i % 2 ? 4 : -4)]; }), r % 2 ? '#efe6ff' : f.mat.spark, 3 - ph * 2, fade(k) * (1 - ph)); } } }),
+    // Affenhaken: rising fist.
+    (f, p) => strike(f, p, { dur: .42, area: ahead(86, 30), damage: 34, kx: 60, lift: 600, stun: .5, paint: (ctx, s, k) => { const e = Math.min(1, k * 2.6); const x = s.x + s.facing * 30; const y = gy(s) - 30 - 100 * e; plate(ctx, Array.from({ length: 8 }, (_, i) => [x + Math.cos(i / 8 * TAU) * 18, y + Math.sin(i / 8 * TAU) * 16]), APE_FUR, 9970, { alpha: fade(k), lit: 1 }); band(ctx, [[x, gy(s)], [x, y + 20]], () => 6, apeFlame(f), 9971, { t: s.t, alpha: fade(k) * .7 }); } }),
+    // Himmelssprung: the ape leaps and crashes down in front of the player.
+    (f, p) => new SigSequence(sigOf(f), p, { dur: 1.05, x: p.x + p.facing * 120, steps: [{ at: .7, fn: (s, gw) => { s.strike(gw, around(115)(s), 66, (t, dx) => Math.sign(dx || s.facing) * 360, 240, .6); combat.shakeCamera(12, .3); } }], draw: (ctx, s, k) => { const y = gy(s); const e = clamp01(s.t / .7); ctx.save(); ctx.globalAlpha = .35 * e; ctx.fillStyle = '#1c1030'; ctx.beginPath(); ctx.ellipse(s.x, y, 30 + 40 * e, 9 + 12 * e, 0, 0, TAU); ctx.fill(); ctx.restore(); if (s.t > .35 && s.t < .74) { const d = clamp01((s.t - .35) / .35); for (const sg of [-1, 1]) plate(ctx, Array.from({ length: 8 }, (_, i) => [s.x + sg * 26 + Math.cos(i / 8 * TAU) * 20, y - 240 * (1 - d) - 20 + Math.sin(i / 8 * TAU) * 17]), APE_FUR, 9980 + sg, { alpha: 1, lit: 1 }); } if (s.t >= .7) { const q = (s.t - .7) / .35; groundRing(ctx, s.x, y, 40 + q * 110, apeFlame(f), 0, 1 - q, 14, 9983, 5); fallout(ctx, [[s.x, y - 6]], apeFlame(f), s.t, 9984, { count: 10, alpha: 1 - q }); } } }),
+    // Bodenschlag: the fist hits the ground and pops foes up.
+    (f, p) => strike(f, p, { dur: .45, at: .12, x: p.x + p.facing * 56, area: around(74), damage: 30, kx: 120, lift: 300, stun: .4, paint: (ctx, s, k) => { const y = gy(s); const e = Math.min(1, k / .26); plate(ctx, Array.from({ length: 8 }, (_, i) => [s.x + Math.cos(i / 8 * TAU) * 20, y - 18 - 90 * (1 - e) + Math.sin(i / 8 * TAU) * 17]), APE_FUR, 9990, { alpha: fade(k), lit: 1 }); if (k > .26) for (let i = 0; i < 5; i++) { const a = i / 5 * Math.PI + .3; line(ctx, zig(s.x, y, s.x + Math.cos(a) * 70, y + Math.sin(a) * 20 - 10, 4, 3, i), f.mat.spark, 2, 1 - k); } } }),
+    // Brusttrommel-Beben: four chest drums, each sends a widening quake ring.
+    (f, p) => new SigSequence(sigOf(f), p, { dur: 1.35, steps: [0, 1, 2, 3].map((i) => ({ at: .18 + i * .26, fn: (s, gw) => { const R = 80 + i * 40; s.strike(gw, (t, dx, dz) => Math.hypot(dx, dz) < R, i === 3 ? 34 : 14, (t, dx) => Math.sign(dx || s.facing) * (i === 3 ? 380 : 120), i === 3 ? 220 : 70, .35, { again: true, onHit: i === 3 ? status(s, ['stun']) : undefined }); combat.shakeCamera(4 + i * 2, .12); } })), draw: (ctx, s, k) => { const y = gy(s); for (let i = 0; i < 4; i++) { const at = .18 + i * .26; if (s.t < at) continue; const q = clamp01((s.t - at) / .45); groundRing(ctx, s.x, y, 30 + q * (80 + i * 40), apeFlame(f), i * .4, (1 - q) * fade(k, .05, .2), 14, 10000 + i * 14, 3 + (i === 3 ? 2 : 0)); } } })
   ]
 };
+
+// Spirit-ape materials (shared by the ape techniques).
+const APE_FUR = { kind: 'crust', dark: '#3d2f5c', body: '#e8e3f4', facet: '#ffffff', vein: '#b06cff', edge: '#ffffff', spark: '#b06cff', core: '#ffffff', glow: 'rgba(176,108,255,', edgeGlow: 'rgba(255,255,255,' };
+const apeFlame = (f) => ({ ...f.mat, kind: 'crystal', body: '#7f66ff', facet: '#c3b4ff', vein: '#5f86ff', edge: '#efe6ff' });
 
 // ── Charge-up rituals (one per form; direction-aware, FULL switch flash) ──
 const chargeAt = (s, dir) => (dir === 'up' ? [s.x + s.f * 10, s.y - 96] : dir === 'down' ? [s.x + s.f * 10, s.y - 4] : [s.x + s.f * 34, s.y - 50]);
@@ -218,6 +260,10 @@ export const ARCANE_CHARGE = {
   T37: (ctx, s, mat, dir, k, t) => { const [x, y] = chargeAt(s, dir); for (let i = 0; i < 5; i++) { const ph = (t * 1.5 + i / 5) % 1; plate(ctx, [[x - 3, y - ph * 30], [x + 3, y - ph * 30], [x, y - ph * 30 + 5]], ACID_GLASS, 9100 + i, { alpha: 1 - ph, core: .6 }); } plate(ctx, Array.from({ length: 6 }, (_, i) => [x + Math.cos(i * TAU / 6) * (6 + k * 8), y + Math.sin(i * TAU / 6) * (6 + k * 8)]), ACID_GLASS, 9105, { alpha: .9, glowEdge: 1 }); },
   T38: (ctx, s, mat, dir, k, t) => { const [x, y] = chargeAt(s, dir); stoneRing(ctx, x, y, 10 + (1 - k) * 18, .7, Math.PI / 2, t * 6, 5, 9110, 1); stoneRing(ctx, x, y, 6 + (1 - k) * 10, .2, 0, -t * 8, 4, 9120, 1); },
   T39: (ctx, s, mat, dir, k, t) => { const [x, y] = chargeAt(s, dir); for (let i = 0; i < 3; i++) { const o = (1 - k) * (i + 1) * 10; plate(ctx, [[x - 10 + o * s.f, y - 16], [x + 10 + o * s.f, y - 14], [x + 9 + o * s.f, y + 16], [x - 9 + o * s.f, y + 14]], { ...mat, kind: 'crystal' }, 9130 + i, { alpha: .35 + k * .3, glowEdge: .8 }); } },
-  T40: (ctx, s, mat, dir, k, t) => { const [x, y] = chargeAt(s, dir); for (let i = 0; i < 6; i++) { const a = t * 3 + i * TAU / 6; plate(ctx, [[x + Math.cos(a) * 20 * (1 - k * .5), y + Math.sin(a) * 12], [x + Math.cos(a + .3) * 26 * (1 - k * .5), y + Math.sin(a + .3) * 16], [x + Math.cos(a + .15) * 14, y + Math.sin(a + .15) * 8]], mat, 9140 + i, { alpha: .9, glowEdge: 1.3 }); } if (k > .5) drawWyrmHead(ctx, x, y, s.f, 0, 10 + k * 10, mat, .2 + k * .4, .8, 9150); }
+  T40: (ctx, s, mat, dir, k, t) => { const [x, y] = chargeAt(s, dir); for (let i = 0; i < 6; i++) { const a = t * 3 + i * TAU / 6; plate(ctx, [[x + Math.cos(a) * 20 * (1 - k * .5), y + Math.sin(a) * 12], [x + Math.cos(a + .3) * 26 * (1 - k * .5), y + Math.sin(a + .3) * 16], [x + Math.cos(a + .15) * 14, y + Math.sin(a + .15) * 8]], mat, 9140 + i, { alpha: .9, glowEdge: 1.3 }); } if (k > .5) drawWyrmHead(ctx, x, y, s.f, 0, 10 + k * 10, mat, .2 + k * .4, .8, 9150); },
+  // A01: the giant's hand gathers above the player from silver light and lightning.
+  A01: (ctx, s, mat, dir, k, t) => { const [x, y] = chargeAt(s, dir); const light = { ...mat, kind: 'crystal' }; giantHand(ctx, [x, y - (dir === 'down' ? 40 : 10)], dir === 'up' ? -1.5 : dir === 'down' ? 1.57 : 0, s.f, 12 + 18 * k, k > .8 ? 1 : .2 + k * .6, light, 9201, .35 + .5 * k); for (let i = 0; i < 3; i++) { const a = t * 4 + i * TAU / 3; line(ctx, zig(x + Math.cos(a) * 40, y + Math.sin(a) * 26, x, y, 4, 3, Math.floor(t * 20) + i), i % 2 ? mat.spark : mat.core, 1.5, .5 + .5 * k); } },
+  // A02: violet flames spiral into a spirit fist that pulses like a drum beat.
+  A02: (ctx, s, mat, dir, k, t) => { const [x, y] = chargeAt(s, dir); const fl = { ...mat, kind: 'crystal', body: '#7f66ff', facet: '#c3b4ff', vein: '#5f86ff', edge: '#efe6ff' }; for (let i = 0; i < 2; i++) { const pts = Array.from({ length: 7 }, (_, q) => { const a = t * 5 + i * Math.PI + q * .6; const r = (36 - q * 5) * (1 - k * .4); return [x + Math.cos(a) * r, y + Math.sin(a) * r * .6]; }); band(ctx, pts, (q, n) => 2 + 4 * k * (1 - q / n), fl, 9211 + i, { t, alpha: .85 }); } const beat = Math.pow(Math.max(0, Math.sin(t * (6 + 10 * k))), 6); const r = 8 + 8 * k + 3 * beat; plate(ctx, Array.from({ length: 8 }, (_, i) => [x + Math.cos(i / 8 * TAU) * r, y + Math.sin(i / 8 * TAU) * r * .85]), APE_FUR, 9213, { alpha: .5 + .5 * k, lit: 1 }); if (beat > .5) groundRing(ctx, s.x, s.y, 24 + 10 * k, fl, 0, beat * .6, 10, 9214, 2); }
 };
-export const CURATED_ARCANE_STATES = Object.freeze(['B01', 'B02', 'T02', 'T04', 'T05', 'T06', 'T08', 'T13', 'T23', 'T24', 'T35', 'T37', 'T38', 'T39', 'T40']);
+export const CURATED_ARCANE_STATES = Object.freeze(['B01', 'B02', 'T02', 'T04', 'T05', 'T06', 'T08', 'T13', 'T23', 'T24', 'T35', 'T37', 'T38', 'T39', 'T40', 'A01', 'A02']);
