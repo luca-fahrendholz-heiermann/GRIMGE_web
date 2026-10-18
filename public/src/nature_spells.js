@@ -178,6 +178,8 @@ export class WorldTree {
   fell() { this.hp = 0; this.isDead = true; for (const b of this.branches) b.shatter(); this.life = Math.min(this.life, this.t + .6); combat.spawnShockwave(this.x, this.y - 60, 80, '#9be36a'); }
   update(dt, game = this.game) {
     this.t += dt; this.acc += dt; this.hitFlash = Math.max(0, this.hitFlash - dt); this.grow = Math.min(1, this.t / 1.2);
+    // The branches live exactly as long as the tree (its life may be scaled by the rune grade).
+    if (!this.synced) { this.synced = true; for (const b of this.branches) b.life = this.life; }
     for (const b of this.branches) b.update(dt, game);
     // Roots burst out while it grows: foes at the trunk are thrown off.
     if (this.t < .4) for (const t of foesOf(this.caster, game)) if (dist(t, this.x, this.z) < 40 && !t._wtHit) { t._wtHit = true; t.takeDamage?.(30, Math.sign(t.x - this.x || 1) * 320, 220, .5, false, 'spell'); }
