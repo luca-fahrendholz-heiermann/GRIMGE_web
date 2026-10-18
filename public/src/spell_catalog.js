@@ -280,7 +280,7 @@ function buffHowTo(definition) {
   const t = form.tech;
   const dir = (d, label) => (t[d] ? `${label} + HEAVY: ${t[d].short.name} (short) — ${t[d].short.text} · ${t[d].full.name} (full, hold 1.2 s) — ${t[d].full.text}` : '');
   return [
-    `ARCANE STATE · MAX 1 PER DECK · lasts 16 s, stacks with the Focus transformation; your sprite stays unchanged.`,
+    `ARCANE STATE · MAX 1 PER DECK · lasts 16 s, stacks with the Focus transformation; your sprite stays unchanged. Its heavy techniques cost mana (short 5 / full 12) from your free mana — the same pool your runes bind.`,
     form.silhouette,
     t.sprint ? `SPRINT: ${t.sprint.name} — ${t.sprint.text}` : '',
     t.sprintHeavy ? `SPRINT + ATTACK: ${t.sprintHeavy.name} — ${t.sprintHeavy.text}` : '',

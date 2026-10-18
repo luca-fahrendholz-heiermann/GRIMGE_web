@@ -1490,14 +1490,14 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
   }
   assert(released.length === 18, `Every transformation / manifest has six charged techniques (forward / up / down × short / full): ${released.length}/18`);
   resetForm(); P.ninefoldTimer = 8;
-  chargeAndRelease('forward', false);
-  assert(spellSystem.activeSpells.some((s) => (s.constructor.name === 'FormStrikeSpell' || s.constructor.name === 'BuffStrikeSpell') && s.kind === 'cone'), 'A short forward heavy in Risswild is the Rissimpuls pressure wave (atlas material)');
+  chargeAndRelease('forward', true);
+  assert(spellSystem.activeSpells.some((s) => s.isBeam && s.profile?.vfx === 'rift'), 'A full forward heavy in Risswild fires the broad rift beam');
   resetForm(); P.ninefoldTimer = 8;
   const hpBeforeBomb = formTarget.hp;
-  chargeAndRelease('forward', true);
+  chargeAndRelease('forward', false);
   const bomb = spellSystem.activeSpells.find((s) => s.constructor.name === 'BeastBombSpell');
   for (let i = 0; i < 90 && bomb && !bomb.exploded; i++) spellSystem.update(1 / 60, game);
-  assert(bomb?.exploded && formTarget.hp < hpBeforeBomb, 'A full forward heavy hurls the beast bomb, which detonates on the first enemy');
+  assert(bomb?.exploded && formTarget.hp < hpBeforeBomb, 'A short forward heavy hurls the rift core, which explodes on the first enemy');
   resetForm(); P.eidolonTimer = 8;
   chargeAndRelease('forward', false);
   const shortArrow = spellSystem.activeSpells.find((s) => s.constructor.name === 'SpiritArrowSpell');
@@ -2171,7 +2171,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   const tForms = ids.filter((id) => id.startsWith('T'));
   assert(tForms.every((id) => ['forward', 'up', 'down'].every((d) => FORM_MOVESETS[id]?.[d]?.short?.make && FORM_MOVESETS[id][d].full?.make) && FORM_SPRINT_ATTACKS[id]?.name), 'Every T form has six charged techniques and its own sprint attack');
   assert(FORM_MOVESETS.T07.forward.short.name === 'CRESCENT SWIPE' && FORM_MOVESETS.T07.forward.full.name === 'MOON HOWL' && FORM_SPRINT_ATTACKS.T07.name === 'PREDATOR BREAK', 'Technique names come straight from the atlas (T07 Dämmerlauf)');
-  assert(FORM_MOVESETS.ninefold.forward.short.name === 'RISSIMPULS' && FORM_MOVESETS.eidolon.up.full.name === 'LICHTSPALTER', 'B01 Risswild / B02 Arkengestell carry the atlas technique names');
+  assert(FORM_MOVESETS.ninefold.forward.short.name === 'VERDICHTETER RISSKERN' && FORM_MOVESETS.ninefold.forward.full.name === 'RISSSTRAHL' && FORM_MOVESETS.eidolon.up.full.name === 'LICHTSPALTER', 'B01 Risswild / B02 Arkengestell carry the atlas technique names');
   assert(ids.every((id) => { const r = recognizer.runes.find((x) => x.id === 'buff_' + id); const d = SPELL_DEFINITIONS['buff_' + id]; return r?.isBuffForm && r.tags.includes('max-1-per-deck') && d?.isBuffForm && d.tags.includes('arcane-state') && isSpecialRune('buff_' + id); }), 'Each form is an Arcane State special rune tagged "arcane-state · max-1-per-deck", never fusable');
   // Deck rule: at most one buff rune.
   const profile = new MageProfile(); profile.level = 20;
@@ -2516,6 +2516,22 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   ready(); dummy.hp = dummy.maxHp; P.beginCharge('down', 'key'); P.chargeTimer = P.chargeMaxTime * .3; P.chargeDir = 'down'; P.releaseCharge();
   assert(P.state === 'heavyStrike' && dummy.hp < dummy.maxHp, 'Base DOWN charged heavy: a low sweep');
   ready(); dummy.homeX = dummy.x = 512;
+}
+
+// Arcane State heavies cost mana (trade-off with runes and the Focus form).
+{
+  const buff = await import('./public/src/buff_forms.js');
+  const { ARCANE_TECH_MANA } = await import('./public/src/entities.js');
+  game.returnToHub(); game.setMatchMode('training'); game.startMatch(); game.selectTrainingMap('waterfalls');
+  const P = game.player; spells.clearRuntime();
+  spells.cast(P, spells.resolveSpell([{ id: 'buff_T04' }]), game); P.buffForm.age = 2;
+  P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.grounded = true; P.mp = P.maxMp; P.reservedMana = 0; P.runeSlots?.fill?.(null);
+  const before = P.mp; P.beginCharge('forward', 'key'); P.formCharge.elapsed = 1.3; P.releaseCharge();
+  assert(before - P.mp === ARCANE_TECH_MANA.full, 'A full Arcane State technique costs 12 mana');
+  P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.mp = 3; spells.clearRuntime();
+  P.beginCharge('up', 'key'); P.formCharge.elapsed = .3; const fired = P.releaseCharge();
+  assert(!fired && P.mp === 3 && !spells.activeSpells.length, 'Without free mana the technique fizzles (NO MANA)');
+  P.mp = P.maxMp; buff.endBuffForm(P); spells.clearRuntime();
 }
 
 const frameCallback = nextFrame;

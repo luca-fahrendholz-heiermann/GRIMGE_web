@@ -176,7 +176,8 @@ for (const block of blocks) {
 // pierce = passes through targets).
 const T = (fs, ff, us, uf, ds, df) => ({ tech: { forward: { short: fs ?? {}, full: ff ?? {} }, up: { short: us ?? {}, full: uf ?? {} }, down: { short: ds ?? {}, full: df ?? {} } } });
 const OVERRIDES = {
-  B01: { tech: { forward: { full: { kind: 'bomb' } }, up: { full: { kind: 'pillar' } }, down: { full: { kind: 'sequence' } } } },
+  // Risswild (user, 18 Oct 2026): short charge = the exploding rift core, full charge = a broad rift beam.
+  B01: { tech: { forward: { short: { name: 'Verdichteter Risskern', text: 'ein komprimierter Risskern fliegt geradeaus und explodiert beim Treffer oder am Ende seiner Bahn.', kind: 'bomb' }, full: { name: 'Rissstrahl', text: 'ein breiter, gebrochener Schmelzstrahl aus obsidiangoldenen Bändern brennt über die Lane (Beam Clash möglich).', kind: 'beam' } }, up: { full: { kind: 'pillar' } }, down: { full: { kind: 'sequence' } } } },
   B02: { tech: { forward: { short: { kind: 'arrow' }, full: { kind: 'arrow' } }, up: { full: { kind: 'wall' } } } },
   T01: T(null, { kind: 'beam', status: ['burn'] }, null, null, { status: ['stun'] }, null),
   T02: T(null, null, { status: ['launch'] }, { kind: 'pillar', status: [] }, null, { status: ['burn'] }),

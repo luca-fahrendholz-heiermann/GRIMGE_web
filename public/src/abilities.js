@@ -9,6 +9,7 @@ import { audio } from './audio.js';
 import { combat } from './combat.js';
 import { groundDistance, groundYForDepth } from './world.js';
 import { environment } from './environment.js';
+import { plate as materialPlate } from './buff_vfx.js';
 
 function withinHeight(target, sourceHeight, tolerance = 110) {
   return Math.abs((target.worldHeight ?? 0) - sourceHeight) < (target.hitHeightTolerance ?? tolerance);
@@ -28,11 +29,30 @@ export const BEAM_PROFILES = Object.freeze({
   thunder: Object.freeze({ vfx: 'lightning', element: 'fulgur', color: '#ffeb3b', core: '#fffde7', glow: '#ffd600', length: 470, width: 14, extendSpeed: 2400, chargeTime: .2, sustainTime: 1.0, tick: .15, damage: 12, knockback: 50, clashPower: .95 }),
   null: Object.freeze({ vfx: 'void', element: 'void', color: '#d500f9', core: '#f3e5f5', glow: '#6a1b9a', length: 420, width: 20, extendSpeed: 1300, chargeTime: .4, sustainTime: 1.5, tick: .2, damage: 12, knockback: -70, clashPower: 1.05 }),
   radiant: Object.freeze({ vfx: 'light', element: 'lux', color: '#ffe082', core: '#ffffff', glow: '#ffca28', length: 450, width: 16, extendSpeed: 2000, chargeTime: .3, sustainTime: 1.2, tick: .18, damage: 12, knockback: 40, slow: Object.freeze({ duration: .5, factor: .6 }), clashPower: 1.0 }),
+  // Risswild full charge: a broad, cracked molten beam of obsidian-gold bands.
+  rift: Object.freeze({ vfx: 'rift', element: 'ignis', color: '#ff9a2e', core: '#fff1c4', glow: '#ff5b25', length: 500, width: 42, extendSpeed: 1700, chargeTime: .22, sustainTime: 1.1, tick: .16, damage: 17, knockback: 90, clashPower: 1.3 }),
   annihilation: Object.freeze({ vfx: 'arcane', element: 'ignis', color: '#ff4cff', core: '#ffffff', glow: '#ff4cff', length: 480, width: 26, extendSpeed: 1600, chargeTime: 1.2, sustainTime: 1.6, tick: .2, damage: 22, knockback: 80, clashPower: 1.5 })
 });
 
 // Pure presentation: (ctx, beam, x0, y0, x1, y1, intensity) → draws one look.
+const RIFT_MAT = { kind: 'crust', dark: '#241623', body: '#3a2230', facet: '#5a3438', vein: '#f29b35', edge: '#ffd774', spark: '#ff5b25', core: '#fff1c4', glow: 'rgba(242,155,53,', edgeGlow: 'rgba(255,215,116,' };
 const BEAM_VFX = {
+  // Risswild: three twisted molten bands of cracked obsidian plates with glowing seams.
+  rift(ctx, beam, x0, y0, x1, y1, k) {
+    const t = performance.now() * .01; const len = Math.hypot(x1 - x0, y1 - y0) || 1; const dir = Math.sign(x1 - x0) || 1; const w = beam.width;
+    drawBeamBody(ctx, x0, y0, x1, y1, w * 1.25, beam.profile.glow, .45 * k);
+    drawBeamBody(ctx, x0, y0, x1, y1, w * .3, beam.profile.core, .9 * k);
+    for (let band = 0; band < 3; band++) {
+      const off = (band - 1) * w * .32; const seg = 22;
+      for (let d = 0; d < len - 4; d += seg) {
+        const a = x0 + dir * d; const b = x0 + dir * Math.min(len, d + seg - 3);
+        const wob = Math.sin(t * 1.6 + d * .05 + band * 2) * w * .1; const h = w * (.16 - band * .02) * (1 - d / len * .25);
+        materialPlate(ctx, [[a, y0 + off + wob - h], [b, y0 + off + wob - h * .7 + 1], [b, y0 + off + wob + h * .8], [a, y0 + off + wob + h]], RIFT_MAT, 9100 + band * 40 + Math.round(d / seg), { alpha: k, glowEdge: 1.2, pulse: .5 + .5 * Math.sin(t * 2 + d * .1 + band) });
+      }
+    }
+    ctx.fillStyle = `rgba(255,215,116,${.8 * k})`;
+    for (let d = 10; d < len; d += 18) { const fy = y0 + Math.sin(t * 2.3 + d) * w * .6; ctx.fillRect(Math.round(x0 + dir * d), Math.round(fy), 2, 2); }
+  },
   fire(ctx, beam, x0, y0, x1, y1, k) {
     const p = beam.profile;
     const t = performance.now() * 0.012;

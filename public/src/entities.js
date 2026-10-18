@@ -33,6 +33,8 @@ export function deckSpellOptions(ids = []) {
   return [...options.values()];
 }
 
+// Mana price of an Arcane State heavy technique (short / full release).
+export const ARCANE_TECH_MANA = Object.freeze({ short: 5, full: 12 });
 const ACTION_STATES = new Set(['attack1', 'attack2', 'attack3', 'uppercut', 'heavyStrike', 'dive', 'dash', 'hurt']);
 // Deliberately the shared prototype baseline, not the future weapon system.
 // Every future weapon may replace this table, but must retain its timing and
@@ -805,6 +807,18 @@ export class Player extends GroundEntity {
   // Recovery per form and tier (moveset doc: Kyubi fast, Susanoo heavy).
   releaseFormTechnique(full) {
     const form = activeMoveset(this);
+    // Arcane State techniques cost mana from the free pool (runes bind theirs when drawn,
+    // the Focus transformation burns Focus): combining both forms has a real price.
+    if (this.buffForm?.timer > 0 && form === (this.buffForm.id === 'B01' ? 'ninefold' : this.buffForm.id === 'B02' ? 'eidolon' : this.buffForm.id)) {
+      const cost = full ? ARCANE_TECH_MANA.full : ARCANE_TECH_MANA.short;
+      if (this.freeMana < cost) {
+        combat.spawnDamageText(this.x, this.y - 70, 'NO MANA', { color: '#64b5f6' });
+        combat.spawnShockwave(this.x + (this.facing || 1) * 20, this.y - 40, 22, '#64b5f6');
+        this.state = 'attack1'; this.stateTimer = .2; this.canAttack = false;
+        return false;
+      }
+      this.mp -= cost;
+    }
     const name = releaseFormTechnique(this, window.gameWorld, spells, this.chargeDir ?? 'forward', full);
     if (!name) return false;
     signatureEvent(this, 'heavy', { full, form: true });

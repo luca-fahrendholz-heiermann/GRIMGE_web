@@ -223,8 +223,9 @@ export const FORM_MOVESETS = {
   ninefold: {
     name: 'NINEFOLD BEAST',
     forward: {
-      short: { name: 'BEAST PULSE', make: (p) => new FormStrikeSpell(p, { form: 'ninefold', kind: 'cone', range: 230, damage: 34, kx: 300, lift: 60, life: .45, offset: 20 }) },
-      full: { name: 'BEAST BOMB', recoil: 160, make: (p) => new BeastBombSpell(p, 1) }
+      // Risswild: short = the exploding rift core, full = the broad rift beam.
+      short: { name: 'RIFT CORE', recoil: 90, make: (p) => new BeastBombSpell(p, .45) },
+      full: { name: 'RIFT BEAM', beam: 'rift_beam' }
     },
     up: {
       short: { name: 'CHAKRA UPPERCUT', make: (p) => new FormStrikeSpell(p, { form: 'ninefold', kind: 'burst', reach: 70, damage: 30, kx: 60, lift: 520, stun: .55, arcFrom: -2.2, arcTo: .2, arcY: 60, claws: 3, life: .3 }) },

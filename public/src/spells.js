@@ -419,6 +419,13 @@ export class SpellSystem {
         break;
       }
 
+      case 'rift_beam': {
+        // Risswild full-charge forward: the broad rift beam.
+        this.addSpell(new BeamSpell(caster, 'rift', 'rift_beam'), castQuality);
+        combat.shakeCamera(5, .3);
+        break;
+      }
+
       case 'annihilation_beam': {
         this.addSpell(new BeamSpell(caster, 'annihilation', 'annihilation_beam'), castQuality);
         audio.playSpell('focus_ascendant');

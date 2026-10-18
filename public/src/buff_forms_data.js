@@ -48,17 +48,17 @@ export const BUFF_FORM_DATA = Object.freeze([
    },
    "forward": {
     "short": {
-     "name": "Rissimpuls",
-     "text": "breite, kurze frontale Druckwelle und Knockback.",
+     "name": "Verdichteter Risskern",
+     "text": "ein komprimierter Risskern fliegt geradeaus und explodiert beim Treffer oder am Ende seiner Bahn.",
      "action": "einen kompakten Materialstoß mit scharfem Einschlagspunkt und kurzem Nachziehen",
-     "kind": "cone",
+     "kind": "bomb",
      "status": []
     },
     "full": {
-     "name": "Verdichteter Risskern",
-     "text": "komprimierter Risskern fliegt geradeaus und implodiert beim Treffer in versetzten Druckringen.",
+     "name": "Rissstrahl",
+     "text": "ein breiter, gebrochener Schmelzstrahl aus obsidiangoldenen Bändern brennt über die Lane (Beam Clash möglich).",
      "action": "eine verzahnte Abfolge von Boden- oder Luftfeldern mit ungleichzeitigen Impakten und klar begrenztem AoE",
-     "kind": "bomb",
+     "kind": "beam",
      "status": []
     }
    },
