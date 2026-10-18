@@ -143,7 +143,7 @@ assert(sArcaneAegis && sArcaneAegis.id === 'arcane_aegis', 'Spell: Aqua + Terra 
 
 // The former 3-rune manifests are buff-transformation special runes now
 // (atlas: max. one buff per deck), so the old recipes are gone.
-assert(!spells.resolveSpell([rBestia, rTerra, rVoid]) && !spells.resolveSpell([rBestia, rIgnis, rVoid]), 'Bestia + Terra/Ignis + Void no longer fuse (Arkengestell / Risswild are buff runes)');
+assert(spells.resolveSpell([rBestia, rTerra, rVoid])?.id === 'void_implosion' && spells.resolveSpell([rBestia, rIgnis, rVoid])?.id === 'inferno_rampage', 'Bestia + Terra + Void = VOID IMPLOSION, Bestia + Ignis + Void = INFERNO RAMPAGE (former transformation runes, now combinations)');
 const sEidolonMantle = spells.resolveSpell([{ id: 'buff_B02' }]);
 assert(sEidolonMantle && sEidolonMantle.isBuffForm && sEidolonMantle.buffFormId === 'B02', 'Buff rune B02 -> ARKENGESTELL buff transformation');
 

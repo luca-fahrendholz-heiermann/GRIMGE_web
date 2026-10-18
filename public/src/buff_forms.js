@@ -1,7 +1,8 @@
-// GRIMGE Prototype — special-rune buff transformations (runtime).
+// GRIMGE Prototype — ARCANE STATES: the special-rune buff transformations (runtime).
 //
 // docs/GRIMGE_Transformations_Atlas_V3_1_Sonnenwyrm.md §1.9: the 42 forms
-// (B01 Risswild, B02 Arkengestell, T01–T40) are BUFF TRANSFORMATIONS. At
+// (B01 Risswild, B02 Arkengestell, T01–T40) are buff transformations — in
+// GRIMGE called ARCANE STATES. At
 // most ONE buff rune may be in a deck; it is cast like a spell, lasts a
 // limited time, never changes the character sprite and may run together
 // with the primary Focus transformation. Only one buff is active at a time.
@@ -21,7 +22,7 @@ import { groundYForDepth } from './world.js';
 
 export const BUFF_RUNE_PREFIX = 'buff_';
 export const BUFF_DURATION = 16;            // seconds at grade B (× rune quality)
-export const BUFF_TAG = 'BUFF TRANSFORMATION · MAX 1 PER DECK';
+export const BUFF_TAG = 'ARCANE STATE · MAX 1 PER DECK';
 export const isBuffRuneId = (id) => String(id ?? '').startsWith(BUFF_RUNE_PREFIX);
 export const buffIdOfRune = (id) => (isBuffRuneId(id) ? String(id).slice(BUFF_RUNE_PREFIX.length) : null);
 
@@ -150,7 +151,7 @@ export function activateBuffForm(player, id, quality = { duration: 1, power: 1, 
   setBuffSpellSink(spells);
   const active = currentBuffForm(player);
   if (active && active.id !== id) {
-    window.gameWorld?.showAnnouncement?.(`${active.name.toUpperCase()} IS STILL ACTIVE — ONE BUFF TRANSFORMATION AT A TIME`, 1.4);
+    window.gameWorld?.showAnnouncement?.(`${active.name.toUpperCase()} IS STILL ACTIVE — ONE ARCANE STATE AT A TIME`, 1.4);
     return false;
   }
   const duration = BUFF_DURATION * (quality.duration ?? 1);

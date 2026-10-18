@@ -2172,13 +2172,13 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   assert(tForms.every((id) => ['forward', 'up', 'down'].every((d) => FORM_MOVESETS[id]?.[d]?.short?.make && FORM_MOVESETS[id][d].full?.make) && FORM_SPRINT_ATTACKS[id]?.name), 'Every T form has six charged techniques and its own sprint attack');
   assert(FORM_MOVESETS.T07.forward.short.name === 'CRESCENT SWIPE' && FORM_MOVESETS.T07.forward.full.name === 'MOON HOWL' && FORM_SPRINT_ATTACKS.T07.name === 'PREDATOR BREAK', 'Technique names come straight from the atlas (T07 Dämmerlauf)');
   assert(FORM_MOVESETS.ninefold.forward.short.name === 'RISSIMPULS' && FORM_MOVESETS.eidolon.up.full.name === 'LICHTSPALTER', 'B01 Risswild / B02 Arkengestell carry the atlas technique names');
-  assert(ids.every((id) => { const r = recognizer.runes.find((x) => x.id === 'buff_' + id); const d = SPELL_DEFINITIONS['buff_' + id]; return r?.isBuffForm && r.tags.includes('max-1-per-deck') && d?.isBuffForm && d.tags.includes('buff-transformation') && isSpecialRune('buff_' + id); }), 'Each form is a tagged special rune: "buff-transformation · max-1-per-deck", never fusable');
+  assert(ids.every((id) => { const r = recognizer.runes.find((x) => x.id === 'buff_' + id); const d = SPELL_DEFINITIONS['buff_' + id]; return r?.isBuffForm && r.tags.includes('max-1-per-deck') && d?.isBuffForm && d.tags.includes('arcane-state') && isSpecialRune('buff_' + id); }), 'Each form is an Arcane State special rune tagged "arcane-state · max-1-per-deck", never fusable');
   // Deck rule: at most one buff rune.
   const profile = new MageProfile(); profile.level = 20;
   profile.matchDeck = ['ignis', 'ventus', 'fulgur', 'terra', 'aqua', 'ignis', 'ventus', 'fulgur'];
   assert(profile.addRuneToDeck('buff_T07').ok, 'A buff rune can join the deck');
   const second = profile.addRuneToDeck('buff_B01');
-  assert(!second.ok && /ONE BUFF/.test(second.reason), 'A second buff rune is refused (one per deck)');
+  assert(!second.ok && /ONE ARCANE STATE/.test(second.reason), 'A second buff rune is refused (one per deck)');
   assert(profile.sanitizeDeck(['ignis', 'buff_T07', 'buff_T08', 'aqua']).filter((id) => id.startsWith('buff_')).length === 1, 'Loading a deck keeps only one buff rune');
   assert(BUFF_RUNE_IDS.length === 42, 'All buff runes are offered in the deck builder');
   // The shared hourglass sigil.
@@ -2322,6 +2322,21 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   for (let i = 0; i < 150; i++) castle.update(1 / 60);
   assert(castle.segments.every((s) => s.destroyed), 'The rest of the castle comes down with it (staggered: tower tops, keep, front wall)');
   game.render();
+}
+
+// Void Implosion and Inferno Rampage are combination spells now.
+{
+  game.returnToHub(); game.setMatchMode('training'); game.startMatch();
+  const P = game.player; P.x = 400; P.z = .5; game.battlefield.placeOnSurface(P);
+  spells.clearRuntime();
+  const implode = spells.resolveSpell([{ id: 'bestia' }, { id: 'terra' }, { id: 'void' }]);
+  const rampage = spells.resolveSpell([{ id: 'bestia' }, { id: 'ignis' }, { id: 'void' }]);
+  assert(implode?.id === 'void_implosion' && !implode.isSpecial && rampage?.id === 'inferno_rampage' && !rampage.isSpecial, 'Bestia+Terra+Void and Bestia+Ignis+Void fuse into Void Implosion and Inferno Rampage');
+  spells.cast(P, implode, game, null, { x: 520, z: .5 }); spells.cast(P, rampage, game);
+  assert(spells.activeSpells.length >= 2, 'Both combination spells cast in the match');
+  for (let i = 0; i < 30; i++) spells.update(1 / 60, game);
+  game.render();
+  spells.clearRuntime();
 }
 
 const frameCallback = nextFrame;

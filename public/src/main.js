@@ -1723,8 +1723,8 @@ export class GameWorld {
     else if (action === 'add') {
       if (!ALL_RUNE_IDS.includes(runeId) || !this.trainingDeckSource().isRuneUnlocked(runeId)) return false;
       if (deck.length >= MATCH_DECK_SIZE || deck.filter((id) => id === runeId).length >= MAX_RUNE_COPIES) return false;
-      // Only one buff transformation rune per deck.
-      if (!deckAccepts(deck, runeId)) { this.showAnnouncement('ONE BUFF TRANSFORMATION PER DECK', 1.2); return false; }
+      // Only one Arcane State rune per deck.
+      if (!deckAccepts(deck, runeId)) { this.showAnnouncement('ONE ARCANE STATE PER DECK', 1.2); return false; }
       deck.push(runeId);
     } else if (action === 'remove') {
       const index = deck.lastIndexOf(runeId);

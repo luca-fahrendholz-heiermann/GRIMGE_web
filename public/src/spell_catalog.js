@@ -49,7 +49,7 @@ export const RUNE_MANA_COSTS = Object.freeze({
   bestia: 18, construct: 16, void: 16, lux: 12, umbra: 12,
   // Solo special runes: one hard glyph, a full spell on its own, never fused.
   doppel: 22, mortis: 26,
-  // Buff-transformation special runes (max. one per deck) share one cost.
+  // Arcane State special runes (max. one per deck) share one cost.
   // Transformation runes are granted by an active transformation.
   transform_beam: 0, transform_implode: 0, transform_rampage: 0
 });
@@ -82,8 +82,9 @@ const SPELL_DEFINITIONS_EXT = {
 
   // ── Special (transformation) runes: standalone, never fusable ─────────
   annihilation_beam: def('annihilation_beam', { name: 'ANNIHILATION BEAM', tier: 3, manaCost: 0, color: '#ff4cff', deliveryType: DELIVERY.BEAM, interactionTags: ['clashable', 'blockable'], beamProfile: 'annihilation', isSpecial: true, desc: 'Charges a massive energy sphere then fires a devastating beam across half the lane.' }),
-  void_implosion: def('void_implosion', { name: 'VOID IMPLOSION', tier: 3, manaCost: 0, color: '#b668ff', deliveryType: DELIVERY.ZONE, isSpecial: true, desc: 'Creates a void singularity that pulls enemies in and crushes them with dimensional collapse.' }),
-  inferno_rampage: def('inferno_rampage', { name: 'INFERNO RAMPAGE', tier: 3, manaCost: 0, color: '#ff6f3b', deliveryType: DELIVERY.DASH, isSpecial: true, desc: 'Blazing fire dash that scorches everything in its path across the lane.' }),
+  // Former transformation runes, now 3-rune combinations (Bestia + Terra / Ignis + Void).
+  void_implosion: def('void_implosion', { name: 'VOID IMPLOSION', tier: 3, color: '#b668ff', deliveryType: DELIVERY.ZONE, desc: 'Creates a void singularity that pulls enemies in and crushes them with dimensional collapse.' }),
+  inferno_rampage: def('inferno_rampage', { name: 'INFERNO RAMPAGE', tier: 3, color: '#ff6f3b', deliveryType: DELIVERY.DASH, desc: 'Blazing fire dash that scorches everything in its path across the lane.' }),
 
   // ── Compound (two runes) ───────────────────────────────────────────────
   summon_storm_wolf: def('summon_storm_wolf', { name: 'STORM WOLF', tier: 2, manaCost: 26, color: '#ffd54f', deliveryType: DELIVERY.SUMMON, desc: 'A lightning Hunter that bypasses the minion line to chase the Wizard.' }),
@@ -142,7 +143,7 @@ const SPELL_RECIPES_EXT = {
   ignis: 'fireball', ventus: 'gale_blast', fulgur: 'chain_lightning', terra: 'stone_spikes',
   aqua: 'frost_nova', bestia: 'summon_lesser_beast', construct: 'construct_bulwark', void: 'void_bolt',
   lux: 'halo_pulse', umbra: 'shadow_step', doppel: 'shadow_doppelganger', mortis: 'revenant_call',
-  transform_beam: 'annihilation_beam', transform_implode: 'void_implosion', transform_rampage: 'inferno_rampage',
+  transform_beam: 'annihilation_beam',
 
   'bestia+fulgur': 'summon_storm_wolf', 'bestia+void': 'summon_void_spider', 'construct+terra': 'summon_rune_golem',
   'ignis+ventus': 'firestorm', 'fulgur+ignis': 'meteor_cataclysm', 'fulgur+ventus': 'tempest_blitz',
@@ -156,12 +157,13 @@ const SPELL_RECIPES_EXT = {
   'ignis+lux': 'solar_orb', 'aqua+umbra': 'lunar_orb', 'lux+umbra': 'eclipse', 'fulgur+umbra': 'thunderhead',
   'ignis+umbra': 'blood_moon', 'lux+ventus': 'starfall', 'aqua+lux': 'aurora_veil',
 
+  'bestia+terra+void': 'void_implosion', 'bestia+ignis+void': 'inferno_rampage',
   'bestia+ignis+ventus': 'dragon_invocation', 'bestia+terra+ventus': 'summon_rune_snake',
   'aqua+terra+ventus': 'summon_spirit_wolf', 'fulgur+terra+terra': 'summon_siege_golem',
   'fulgur+ignis+terra': 'dragon_invocation', 'fulgur+ignis+ventus': 'apocalyptic_heavensurge'
 };
 
-// Buff transformations (atlas B01, B02, T01–T40): one special rune each.
+// Arcane States (atlas buff transformations B01, B02, T01–T40): one special rune each.
 // Every buff rune is drawn with the same hourglass sigil — only one can be
 // in a deck, so the sigil always resolves to that deck's buff.
 export const BUFF_SPELL_IDS = Object.freeze(BUFF_FORM_DATA.map((form) => 'buff_' + form.id));
@@ -170,8 +172,8 @@ for (const form of BUFF_FORM_DATA) {
   SPELL_DEFINITIONS_EXT[id] = def(id, {
     name: form.name.toUpperCase(), tier: 3, manaCost: 30, color: form.palette?.[1] ?? '#ffd27a',
     deliveryType: DELIVERY.SELF, targetingMode: TARGETING.SELF, isSpecial: true, isBuffForm: true, buffFormId: form.id,
-    tags: Object.freeze(['buff-transformation', 'max-1-per-deck']),
-    desc: `Buff transformation (max. 1 per deck): ${form.silhouette}`
+    tags: Object.freeze(['arcane-state', 'max-1-per-deck']),
+    desc: `Arcane State (max. 1 per deck): ${form.silhouette}`
   });
   SPELL_RECIPES_EXT[id] = id;
 }
@@ -258,7 +260,7 @@ function buffHowTo(definition) {
   const t = form.tech;
   const dir = (d, label) => (t[d] ? `${label} + HEAVY: ${t[d].short.name} (short) — ${t[d].short.text} · ${t[d].full.name} (full, hold 1.2 s) — ${t[d].full.text}` : '');
   return [
-    `BUFF TRANSFORMATION · MAX 1 PER DECK · lasts 16 s, stacks with the Focus transformation; your sprite stays unchanged.`,
+    `ARCANE STATE · MAX 1 PER DECK · lasts 16 s, stacks with the Focus transformation; your sprite stays unchanged.`,
     form.silhouette,
     t.sprint ? `SPRINT: ${t.sprint.name} — ${t.sprint.text}` : '',
     t.sprintHeavy ? `SPRINT + ATTACK: ${t.sprintHeavy.name} — ${t.sprintHeavy.text}` : '',

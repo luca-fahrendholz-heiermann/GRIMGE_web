@@ -13,7 +13,7 @@
 - **3 Spell-Slots:** Jede gezeichnete Rune liegt als fertiger 1-Runen-Spell in einem Slot (Tasten Z/X/C, Gamepad LB/RB/RT, Touch: Slot antippen).
 - **Fusion:** Zwei oder drei Slots gleichzeitig halten (bzw. von Slot zu Slot wischen) → Rezept-Lookup (reihenfolgeunabhängig, Schlüssel = sortierte Rune-IDs). Gibt es kein Rezept, bleibt im Match nur **ein zufälliger** der Slots übrig (Training: nichts geht verloren). Fusionierte Spells und Spezial-Runen können **nicht erneut** fusioniert werden.
 - **Solo-Spezialrunen** (`doppel`, `mortis`): schwere Glyphe, sind allein ein vollständiger Spell, nie fusionierbar.
-- **Transformations-Runen** (`transform_*`): Altbestand — werden aktuell **nicht mehr vergeben** (die Erkenner-Texte „Any gesture while …“ sind veraltet). ANNIHILATION BEAM kommt jetzt als Form-Technik (Focus Ascendant, Heavy-Charge vorwärts voll); VOID IMPLOSION und INFERNO RAMPAGE sind derzeit ohne Zugang (Kandidaten für Neuzuordnung).
+- **Transformations-Runen** (`transform_*`): Altbestand — werden nicht mehr vergeben. ANNIHILATION BEAM kommt als Form-Technik (Focus Ascendant, Heavy-Charge vorwärts voll); VOID IMPLOSION (Bestia+Terra+Void) und INFERNO RAMPAGE (Bestia+Ignis+Void) sind jetzt 3-Runen-Kombinationen.
 - **Castle Siege:** Runen werden nur auf der eigenen Burg-Plattform gezeichnet; geslottete Spells wirken überall.
 
 **Qualitätsstufen** (`RUNE_GRADE_PROFILES`):
@@ -42,13 +42,13 @@
 | <img src="runes/doppel.svg" width="48" alt="doppel"> | **DOPPEL** `doppel` | Shadow | ♊ | `#5e35b1` | 22 | Special: one closed figure-eight (∞) — your shadow double | SHADOW DOPPELGANGER |
 | <img src="runes/mortis.svg" width="48" alt="mortis"> | **MORTIS** `mortis` | Death | ☠ | `#9ccc65` | 26 | Special: a five-pointed star in one stroke — raise the fallen | REVENANT CALL |
 | ★ | **ANNIHILATION BEAM** `transform_beam` | Transformation | ★ | `#ff4cff` | 0 | Any gesture while Focus Ascendant | ANNIHILATION BEAM |
-| ◉ | **VOID IMPLOSION** `transform_implode` | Transformation | ◉ | `#b668ff` | 0 | Any gesture while Eidolon Mantle | VOID IMPLOSION |
-| ⚡ | **INFERNO RAMPAGE** `transform_rampage` | Transformation | ⚡ | `#ff6f3b` | 0 | Any gesture while Ninefold Beast | INFERNO RAMPAGE |
-| <img src="runes/buff_sigil.svg" width="48" alt="buff"> | **BUFF-SIEGEL** `buff_*` (42 Runen) | Buff-Transformation | ⧗ | je Form | 30 | Sanduhr ⧗ in einem geschlossenen Strich — **Tag: buff-transformation · max-1-per-deck** | die Buff-Form der Rune (Abschnitt 3.7) |
+| ◉ | **VOID IMPLOSION** `transform_implode` | Transformation | ◉ | `#b668ff` | 0 | Any gesture while Eidolon Mantle | — |
+| ⚡ | **INFERNO RAMPAGE** `transform_rampage` | Transformation | ⚡ | `#ff6f3b` | 0 | Any gesture while Ninefold Beast | — |
+| <img src="runes/buff_sigil.svg" width="48" alt="buff"> | **ARCANE-STATE-SIEGEL** `buff_*` (42 Runen) | Arcane State | ⧗ | je Form | 30 | Sanduhr ⧗ in einem geschlossenen Strich — **Tag: arcane-state · max-1-per-deck** | der Arcane State der Rune (Abschnitt 3.7) |
 
 ### Glyphen als ASCII (Ziffer = Startpunkt des Strichs)
 
-**⧗ BUFF-SIEGEL** — Sanduhr in einem geschlossenen Strich (gilt für alle Buff-Transformations-Runen)
+**⧗ ARCANE-STATE-SIEGEL** — Sanduhr in einem geschlossenen Strich (gilt für alle Arcane-State-Runen)
 ```
 
    1##########
@@ -256,6 +256,8 @@
 | **BLOOD MOON** | 🔥 IGNIS + ☾ UMBRA | `self` | `self` | A red moon: all spells hit harder, healing is halved, shadows turn red. Your doubles and revenants grow savage. |
 | **STARFALL** | ☀ LUX + 💨 VENTUS | `self` | `self` | A night sky of falling stars that rain down on your enemies. |
 | **AURORA VEIL** | ❄️ AQUA + ☀ LUX | `self` | `self` | Northern lights: your side slowly regenerates health and mana, ice grows stronger. |
+| **VOID IMPLOSION** | 🐺 BESTIA + 🪨 TERRA + 🕳️ VOID | `zone` | `ground` | Creates a void singularity that pulls enemies in and crushes them with dimensional collapse. |
+| **INFERNO RAMPAGE** | 🐺 BESTIA + 🔥 IGNIS + 🕳️ VOID | `dash` | `direction` | Blazing fire dash that scorches everything in its path across the lane. |
 | **ARKENGESTELL** |  | `self` | `self` | An open arcane force frame around the Wizard: damage resistance, knockback resistance and empowered melee. |
 | **RISSWILD** |  | `self` | `self` | Three cracked molten energy bands: faster movement, savage melee and light damage resistance. |
 | **DRAGON INVOCATION** | 🐺 BESTIA + 🔥 IGNIS + 💨 VENTUS / ⚡ FULGUR + 🔥 IGNIS + 🪨 TERRA | `area` | `direction` | Calls a temporary fire dragon to scorch a battlefield zone. |
@@ -264,8 +266,6 @@
 | **SIEGE GOLEM** | ⚡ FULGUR + 🪨 TERRA + 🪨 TERRA | `summon` | `direction` | Summons a slow, durable golem that presses objectives. |
 | **APOCALYPTIC HEAVENSURGE** | ⚡ FULGUR + 🔥 IGNIS + 💨 VENTUS | `area` | `direction` | Cataclysmic storm of Fire, Wind, and Thunder engulfing the battlefield! |
 | **ANNIHILATION BEAM** | ★ ANNIHILATION BEAM | `beam` | `direction` | Charges a massive energy sphere then fires a devastating beam across half the lane. |
-| **VOID IMPLOSION** | ◉ VOID IMPLOSION | `zone` | `ground` | Creates a void singularity that pulls enemies in and crushes them with dimensional collapse. |
-| **INFERNO RAMPAGE** | ⚡ INFERNO RAMPAGE | `dash` | `direction` | Blazing fire dash that scorches everything in its path across the lane. |
 
 ### 3.1 Fundamental — eine Rune
 
@@ -946,6 +946,36 @@
 
 ### 3.5 Advanced — drei Runen
 
+#### VOID IMPLOSION `void_implosion`
+
+| | |
+|---|---|
+| **Rezept** | <img src="runes/bestia.svg" width="32" alt="bestia"> <img src="runes/terra.svg" width="32" alt="terra"> <img src="runes/void.svg" width="32" alt="void"> 🐺 BESTIA + 🪨 TERRA + 🕳️ VOID |
+| **Tier** | 3 | 
+| **Mana (gebunden)** | 44 |
+| **Delivery** | `zone` |
+| **Zielmodus** | `ground` |
+| **Interaktions-Tags** | — |
+| **Farbe** | `#b668ff` |
+| **Beschreibung** | Creates a void singularity that pulls enemies in and crushes them with dimensional collapse. |
+| **Wirkung im Spiel** | A void singularity at the chosen spot pulls enemies in and crushes them. |
+| **Visualisierung** | A pulsing dark sphere with a black center fading to violet, with dashed rotating violet arcs and orbiting lilac dots, then a solid violet flash that shrinks away. |
+
+#### INFERNO RAMPAGE `inferno_rampage`
+
+| | |
+|---|---|
+| **Rezept** | <img src="runes/bestia.svg" width="32" alt="bestia"> <img src="runes/ignis.svg" width="32" alt="ignis"> <img src="runes/void.svg" width="32" alt="void"> 🐺 BESTIA + 🔥 IGNIS + 🕳️ VOID |
+| **Tier** | 3 | 
+| **Mana (gebunden)** | 44 |
+| **Delivery** | `dash` |
+| **Zielmodus** | `direction` |
+| **Interaktions-Tags** | — |
+| **Farbe** | `#ff6f3b` |
+| **Beschreibung** | Blazing fire dash that scorches everything in its path across the lane. |
+| **Wirkung im Spiel** | A blazing dash across the lane that scorches everything on the way. |
+| **Visualisierung** | A big pulsing fireball head races along the ground trailing alternating orange and yellow fire blobs, orbiting yellow sparks and scorch marks. |
+
 #### ARKENGESTELL `eidolon_mantle`
 
 | | |
@@ -1066,39 +1096,9 @@
 | **Wirkung im Spiel** | Charges a sphere, then fires a huge beam across half the lane. Wins most Beam Clashes. |
 | **Visualisierung** | A long charge into a glowing magenta orb, then a thick pulsing magenta-pink beam with a white core and a flare at the hand, plus a camera shake. |
 
-#### VOID IMPLOSION `void_implosion`
+### 3.7 Arcane States — Buff-Transformationen (Spezialrunen · Tag: arcane-state · max. 1 pro Deck)
 
-| | |
-|---|---|
-| **Rezept** | ◉ ◉ VOID IMPLOSION |
-| **Tier** | 3 | 
-| **Mana (gebunden)** | 0 |
-| **Delivery** | `zone` · Spezial (nicht fusionierbar) |
-| **Zielmodus** | `ground` |
-| **Interaktions-Tags** | — |
-| **Farbe** | `#b668ff` |
-| **Beschreibung** | Creates a void singularity that pulls enemies in and crushes them with dimensional collapse. |
-| **Wirkung im Spiel** | A void singularity at the chosen spot pulls enemies in and crushes them. |
-| **Visualisierung** | A pulsing dark sphere with a black center fading to violet, with dashed rotating violet arcs and orbiting lilac dots, then a solid violet flash that shrinks away. |
-
-#### INFERNO RAMPAGE `inferno_rampage`
-
-| | |
-|---|---|
-| **Rezept** | ⚡ ⚡ INFERNO RAMPAGE |
-| **Tier** | 3 | 
-| **Mana (gebunden)** | 0 |
-| **Delivery** | `dash` · Spezial (nicht fusionierbar) |
-| **Zielmodus** | `direction` |
-| **Interaktions-Tags** | — |
-| **Farbe** | `#ff6f3b` |
-| **Beschreibung** | Blazing fire dash that scorches everything in its path across the lane. |
-| **Wirkung im Spiel** | A blazing dash across the lane that scorches everything on the way. |
-| **Visualisierung** | A big pulsing fireball head races along the ground trailing alternating orange and yellow fire blobs, orbiting yellow sparks and scorch marks. |
-
-### 3.7 Buff-Transformationen (Spezialrunen · Tag: buff-transformation · max. 1 pro Deck)
-
-Quelle: `docs/GRIMGE_Transformations_Atlas_V3_1_Sonnenwyrm.md`. Jede Form ist eine Spezialrune mit dem gemeinsamen Sanduhr-Siegel ⧗, läuft 16 s (× Runenqualität), ist mit der primären Fokus-Transformation kombinierbar und verändert den Charakter-Sprite nie (nur VFX/Attachments). Es ist immer nur eine Buff-Form aktiv und nur eine Buff-Rune im Deck erlaubt.
+Quelle: `docs/GRIMGE_Transformations_Atlas_V3_1_Sonnenwyrm.md`. Jede Form ist eine Spezialrune mit dem gemeinsamen Sanduhr-Siegel ⧗, läuft 16 s (× Runenqualität), ist mit der primären Fokus-Transformation kombinierbar und verändert den Charakter-Sprite nie (nur VFX/Attachments). Es ist immer nur ein Arcane State aktiv und nur eine Arcane-State-Rune im Deck erlaubt.
 
 | ID | Form | Archetyp der Manifestation | Palette | Sprint + Heavy | Forward kurz / voll | Up kurz / voll | Down kurz / voll | Defense · Grab · Jump |
 |---|---|---|---|---|---|---|---|---|
@@ -1168,6 +1168,8 @@ Zwei-Runen-Kombinationen der 10 Basisrunen (symmetrisch, Diagonale = doppelte Ru
 
 | Rezept | Spell |
 |---|---|
+| 🐺 BESTIA + 🪨 TERRA + 🕳️ VOID | **VOID IMPLOSION** |
+| 🐺 BESTIA + 🔥 IGNIS + 🕳️ VOID | **INFERNO RAMPAGE** |
 | 🐺 BESTIA + 🔥 IGNIS + 💨 VENTUS | **DRAGON INVOCATION** (als „INFERNO DRAGON INVOCATION“) |
 | 🐺 BESTIA + 🪨 TERRA + 💨 VENTUS | **WORLD RUNE SERPENT** |
 | ❄️ AQUA + 🪨 TERRA + 💨 VENTUS | **SPIRIT WOLF** |
@@ -1183,13 +1185,13 @@ Transformationen geben kein zusätzliches Rune-Deck; ihre Techniken liegen auf *
 
 | Form | Quelle | Forward kurz / voll | Up kurz / voll | Down kurz / voll | Sprint + Angriff |
 |---|---|---|---|---|---|
-| **B01 Risswild** (drei gebrochene Schmelzbänder, Splitterkrone; ehem. Ninefold) | Buff-Rune `buff_B01` (⧗, max. 1 pro Deck, 16 s) | Rissimpuls / Verdichteter Risskern | Bruchheber / Doppelter Rissaufstieg | Scherfeger / Rissfeld-Einschlag | Beast Pounce |
-| **B02 Arkengestell** (offenes Kristall-Kraftgestell mit Halo und Bogen; ehem. Eidolon) | Buff-Rune `buff_B02` (⧗, max. 1 pro Deck, 16 s) | Glyphenbolzen / Belagerungspfeil (Bogen) | Trägerheber / Lichtspalter | Ankerstampfer / Gericht des Gestells | Kolossstoß |
-| **T01–T40** (40 weitere Buff-Formen, siehe 3.7) | je eine Buff-Rune `buff_Txx` | aus dem Atlas | aus dem Atlas | aus dem Atlas | aus dem Atlas |
+| **B01 Risswild** (drei gebrochene Schmelzbänder, Splitterkrone; ehem. Ninefold) | Arcane-State-Rune `buff_B01` (⧗, max. 1 pro Deck, 16 s) | Rissimpuls / Verdichteter Risskern | Bruchheber / Doppelter Rissaufstieg | Scherfeger / Rissfeld-Einschlag | Beast Pounce |
+| **B02 Arkengestell** (offenes Kristall-Kraftgestell mit Halo und Bogen; ehem. Eidolon) | Arcane-State-Rune `buff_B02` (⧗, max. 1 pro Deck, 16 s) | Glyphenbolzen / Belagerungspfeil (Bogen) | Trägerheber / Lichtspalter | Ankerstampfer / Gericht des Gestells | Kolossstoß |
+| **T01–T40** (40 weitere Arcane States, siehe 3.7) | je eine Arcane-State-Rune `buff_Txx` | aus dem Atlas | aus dem Atlas | aus dem Atlas | aus dem Atlas |
 | **Focus Ascendant** | Focus 100 % → T / Tippen auf den Wizard (ohne Primal) | Radiant Wave / Annihilation Beam | Ascending Strike / Heaven Pillar | Light Nova / Starfall Crash | Radiant Lunge (goldener Durchstoß) |
 | **Primal Bond** (Wolf / Schildkröte) | Focus 100 % → T mit Primal in der Nähe | — (Buff-Form: Tempo bzw. Panzerung) | — | — | Primal Pounce / Shell Rush |
 
-Transformations-Spells (Spezial, 0 Mana): ANNIHILATION BEAM (über Focus Ascendant Forward voll). VOID IMPLOSION und INFERNO RAMPAGE sind definiert, aber aktuell ohne Zugang.
+Ehemalige Transformations-Spells: ANNIHILATION BEAM (über Focus Ascendant Forward voll); VOID IMPLOSION = Bestia+Terra+Void, INFERNO RAMPAGE = Bestia+Ignis+Void (normale Kombinationen).
 
 ## 6. Glossar: Delivery, Zielmodi, Tags
 
@@ -1234,7 +1236,7 @@ Transformations-Spells (Spezial, 0 Mana): ANNIHILATION BEAM (über Focus Ascenda
 ## 7. Statistik
 
 - Runen: 57 (davon 10 Basis, 2 Solo-Spezial, 3 Transformation)
-- Spells: 97 — Fundamental 10, Solo 2, Compound 26, Himmelsfelder 7, Advanced 7, Transformation 3
+- Spells: 97 — Fundamental 10, Solo 2, Compound 26, Himmelsfelder 7, Advanced 9, Transformation 1
 - Rezepte: 96 · freie Zwei-Runen-Paare: 22 von 55
 
 ## 8. Hinweise für den Research-Agenten

@@ -65,7 +65,7 @@ export const STARTER_RUNES = Object.freeze(['ignis', 'ventus', 'fulgur', 'terra'
 export const MATCH_DECK_SIZE = 10;
 export const MAX_RUNE_COPIES = 2;
 import { BUFF_FORM_DATA } from './buff_forms_data.js';
-// Buff transformation special runes: max. ONE of them per deck (atlas §1.9).
+// Arcane States (buff transformation special runes): max. ONE per deck (atlas §1.9).
 export const BUFF_RUNE_IDS = Object.freeze(BUFF_FORM_DATA.map((form) => 'buff_' + form.id));
 export const MAX_BUFF_RUNES = 1;
 export const isBuffRuneId = (id) => String(id).startsWith('buff_');
@@ -165,7 +165,7 @@ export class MageProfile {
     if (!this.isRuneUnlocked(id)) return { ok: false, reason: 'LOCKED' };
     if (this.matchDeck.length >= MATCH_DECK_SIZE) return { ok: false, reason: 'DECK FULL' };
     if (this.getRuneCopies(id) >= MAX_RUNE_COPIES) return { ok: false, reason: 'COPY LIMIT' };
-    if (!deckAccepts(this.matchDeck, id)) return { ok: false, reason: 'ONE BUFF TRANSFORMATION PER DECK' };
+    if (!deckAccepts(this.matchDeck, id)) return { ok: false, reason: 'ONE ARCANE STATE PER DECK' };
     this.matchDeck.push(id); this.save();
     return { ok: true };
   }
@@ -195,7 +195,7 @@ export class MageProfile {
     this.announcedBuffLevel ??= 0;
     if (this.level > this.announcedBuffLevel) {
       const fresh = BUFF_RUNE_IDS.filter((id) => buffUnlockLevel(id) > this.announcedBuffLevel && buffUnlockLevel(id) <= this.level);
-      if (fresh.length && this.announcedBuffLevel > 0) unlocked.push({ level: this.level, runeId: fresh[0], title: `${fresh.length} BUFF TRANSFORMATION RUNE${fresh.length > 1 ? 'S' : ''} UNLOCKED` });
+      if (fresh.length && this.announcedBuffLevel > 0) unlocked.push({ level: this.level, runeId: fresh[0], title: `${fresh.length} ARCANE STATE RUNE${fresh.length > 1 ? 'S' : ''} UNLOCKED` });
       this.announcedBuffLevel = this.level;
     }
     return unlocked;

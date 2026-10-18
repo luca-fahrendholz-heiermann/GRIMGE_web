@@ -725,18 +725,18 @@ export class UIManager {
       const unlocked = profile.isRuneUnlocked(rune.id);
       const copies = profile.getRuneCopies(rune.id);
       const lockedText = runeUnlockLabel(rune.id);
-      // Buff transformation runes: max. one of all of them in the deck.
+      // Arcane State runes: max. one of all of them in the deck.
       const buff = isBuffRuneId(rune.id);
       const buffTaken = buff && !copies && profile.matchDeck.some(isBuffRuneId);
       const status = !unlocked ? `LOCKED · ${lockedText}`
-        : buff ? (copies ? 'IN DECK · BUFF TRANSFORMATION' : buffTaken ? 'ANOTHER BUFF IS IN THE DECK' : 'BUFF TRANSFORMATION · MAX 1 PER DECK')
+        : buff ? (copies ? 'IN DECK · ARCANE STATE' : buffTaken ? 'ANOTHER ARCANE STATE IS IN THE DECK' : 'ARCANE STATE · MAX 1 PER DECK')
         : `${copies}/2 IN DECK · RUNE LV.${profile.runeLevel(rune.id)}`;
       const blocked = !unlocked || copies >= (buff ? 1 : 2) || profile.matchDeck.length >= 10 || buffTaken;
-      return `<article class="deck-rune ${unlocked ? '' : 'locked'} ${buff ? 'is-buff' : ''}" style="--rune-color:${rune.color}"><b>${rune.glyph} ${rune.name}${buff ? ' <i class="buff-tag">BUFF</i>' : ''}</b><span>${status}</span><div><button data-deck-action="remove" data-rune-id="${rune.id}" ${copies ? '' : 'disabled'}>−</button><button data-deck-action="add" data-rune-id="${rune.id}" ${blocked ? 'disabled' : ''}>+</button></div></article>`;
+      return `<article class="deck-rune ${unlocked ? '' : 'locked'} ${buff ? 'is-buff' : ''}" style="--rune-color:${rune.color}"><b>${rune.glyph} ${rune.name}${buff ? ' <i class="buff-tag">ARCANE</i>' : ''}</b><span>${status}</span><div><button data-deck-action="remove" data-rune-id="${rune.id}" ${copies ? '' : 'disabled'}>−</button><button data-deck-action="add" data-rune-id="${rune.id}" ${blocked ? 'disabled' : ''}>+</button></div></article>`;
     };
     const deckRunes = recognizer.runes.filter((rune) => ALL_RUNE_IDS.includes(rune.id));
     this.deckBuilderContent.innerHTML = deckRunes.filter((rune) => !isBuffRuneId(rune.id)).map(card).join('')
-      + '<h4 class="deck-section-title">⧗ BUFF TRANSFORMATIONS — SPECIAL RUNES · MAX 1 PER DECK · ONE HOURGLASS SIGIL</h4>'
+      + '<h4 class="deck-section-title">⧗ ARCANE STATES — SPECIAL RUNES · MAX 1 PER DECK · ONE HOURGLASS SIGIL</h4>'
       + deckRunes.filter((rune) => isBuffRuneId(rune.id)).map(card).join('');
   }
 
@@ -756,7 +756,7 @@ export class UIManager {
     };
     const glyphs = document.getElementById('rune-glyph-guide');
     if (glyphs) {
-      glyphs.innerHTML = deckRunes.map((rune) => `<div class="g-item"><span class="r-icon">${rune.icon}</span><strong>${rune.name} (${rune.element})</strong>: ${rune.desc}${SOLO_RUNES.includes(rune.id) ? ' <span class="g-note">· special rune, no fusion</span>' : ''}${isBuffRuneId(rune.id) ? ' <span class="g-note buff-tag">· BUFF TRANSFORMATION · MAX 1 PER DECK</span>' : ''}</div>`).join('');
+      glyphs.innerHTML = deckRunes.map((rune) => `<div class="g-item"><span class="r-icon">${rune.icon}</span><strong>${rune.name} (${rune.element})</strong>: ${rune.desc}${SOLO_RUNES.includes(rune.id) ? ' <span class="g-note">· special rune, no fusion</span>' : ''}${isBuffRuneId(rune.id) ? ' <span class="g-note buff-tag">· ARCANE STATE · MAX 1 PER DECK</span>' : ''}</div>`).join('');
     }
     const fusions = document.getElementById('fusion-guide');
     if (!fusions) return;

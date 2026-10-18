@@ -153,18 +153,18 @@ export class RuneRecognizer {
         icon: '⚡',
         desc: 'Any gesture while Ninefold Beast'
       },
-      // Buff transformations: one special rune per form, one hourglass sigil.
+      // Arcane States: one special rune per form, one hourglass sigil.
       ...BUFF_FORM_DATA.map((form) => ({
         id: 'buff_' + form.id,
         name: form.name.toUpperCase(),
-        element: 'Buff Transformation',
+        element: 'Arcane State',
         glyph: '⧗',
         color: form.palette?.[1] ?? '#ffd27a',
         glowColor: form.palette?.[2] ?? '#fff3c4',
         icon: '⧗',
         isBuffForm: true,
-        tags: ['buff-transformation', 'max-1-per-deck'],
-        desc: 'Special: the hourglass sigil ⧗ in one closed stroke — BUFF TRANSFORMATION, max. 1 per deck'
+        tags: ['arcane-state', 'max-1-per-deck'],
+        desc: 'Special: the hourglass sigil ⧗ in one closed stroke — ARCANE STATE, max. 1 per deck'
       }))
     ];
   }

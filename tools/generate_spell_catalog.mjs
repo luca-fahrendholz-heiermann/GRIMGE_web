@@ -122,7 +122,7 @@ P('- **Mana** wird beim Zeichnen **gebunden** (nicht beim Wirken). Fusionierte S
 P('- **3 Spell-Slots:** Jede gezeichnete Rune liegt als fertiger 1-Runen-Spell in einem Slot (Tasten Z/X/C, Gamepad LB/RB/RT, Touch: Slot antippen).');
 P('- **Fusion:** Zwei oder drei Slots gleichzeitig halten (bzw. von Slot zu Slot wischen) → Rezept-Lookup (reihenfolgeunabhängig, Schlüssel = sortierte Rune-IDs). Gibt es kein Rezept, bleibt im Match nur **ein zufälliger** der Slots übrig (Training: nichts geht verloren). Fusionierte Spells und Spezial-Runen können **nicht erneut** fusioniert werden.');
 P('- **Solo-Spezialrunen** (`doppel`, `mortis`): schwere Glyphe, sind allein ein vollständiger Spell, nie fusionierbar.');
-P('- **Transformations-Runen** (`transform_*`): Altbestand — werden aktuell **nicht mehr vergeben** (die Erkenner-Texte „Any gesture while …“ sind veraltet). ANNIHILATION BEAM kommt jetzt als Form-Technik (Focus Ascendant, Heavy-Charge vorwärts voll); VOID IMPLOSION und INFERNO RAMPAGE sind derzeit ohne Zugang (Kandidaten für Neuzuordnung).');
+P('- **Transformations-Runen** (`transform_*`): Altbestand — werden nicht mehr vergeben. ANNIHILATION BEAM kommt als Form-Technik (Focus Ascendant, Heavy-Charge vorwärts voll); VOID IMPLOSION (Bestia+Terra+Void) und INFERNO RAMPAGE (Bestia+Ignis+Void) sind jetzt 3-Runen-Kombinationen.');
 P('- **Castle Siege:** Runen werden nur auf der eigenen Burg-Plattform gezeichnet; geslottete Spells wirken überall.');
 P('');
 P('**Qualitätsstufen** (`RUNE_GRADE_PROFILES`):');
@@ -144,11 +144,11 @@ for (const r of runes.filter((x) => !x.isBuffForm)) {
   P(`| ${img} | **${r.name}** \`${r.id}\` | ${r.element} | ${r.icon} | \`${r.color}\` | ${RUNE_MANA_COSTS[r.id] ?? 10} | ${r.desc} | ${solo} |`);
 }
 const buffRuneCount = runes.filter((x) => x.isBuffForm).length;
-P(`| <img src="runes/buff_sigil.svg" width="48" alt="buff"> | **BUFF-SIEGEL** \`buff_*\` (${buffRuneCount} Runen) | Buff-Transformation | ⧗ | je Form | 30 | Sanduhr ⧗ in einem geschlossenen Strich — **Tag: buff-transformation · max-1-per-deck** | die Buff-Form der Rune (Abschnitt 3.7) |`);
+P(`| <img src="runes/buff_sigil.svg" width="48" alt="buff"> | **ARCANE-STATE-SIEGEL** \`buff_*\` (${buffRuneCount} Runen) | Arcane State | ⧗ | je Form | 30 | Sanduhr ⧗ in einem geschlossenen Strich — **Tag: arcane-state · max-1-per-deck** | der Arcane State der Rune (Abschnitt 3.7) |`);
 P('');
 P('### Glyphen als ASCII (Ziffer = Startpunkt des Strichs)');
 P('');
-P('**⧗ BUFF-SIEGEL** — Sanduhr in einem geschlossenen Strich (gilt für alle Buff-Transformations-Runen)');
+P('**⧗ ARCANE-STATE-SIEGEL** — Sanduhr in einem geschlossenen Strich (gilt für alle Arcane-State-Runen)');
 P('```');
 P(runeAscii('buff_sigil'));
 P('```');
@@ -188,9 +188,9 @@ for (const [key, title] of sections) {
 
 // Buff transformations: compact, one row per form (atlas V3.1).
 const { BUFF_FORM_DATA } = await load('public/src/buff_forms_data.js');
-P('### 3.7 Buff-Transformationen (Spezialrunen · Tag: buff-transformation · max. 1 pro Deck)');
+P('### 3.7 Arcane States — Buff-Transformationen (Spezialrunen · Tag: arcane-state · max. 1 pro Deck)');
 P('');
-P('Quelle: `docs/GRIMGE_Transformations_Atlas_V3_1_Sonnenwyrm.md`. Jede Form ist eine Spezialrune mit dem gemeinsamen Sanduhr-Siegel ⧗, läuft 16 s (× Runenqualität), ist mit der primären Fokus-Transformation kombinierbar und verändert den Charakter-Sprite nie (nur VFX/Attachments). Es ist immer nur eine Buff-Form aktiv und nur eine Buff-Rune im Deck erlaubt.');
+P('Quelle: `docs/GRIMGE_Transformations_Atlas_V3_1_Sonnenwyrm.md`. Jede Form ist eine Spezialrune mit dem gemeinsamen Sanduhr-Siegel ⧗, läuft 16 s (× Runenqualität), ist mit der primären Fokus-Transformation kombinierbar und verändert den Charakter-Sprite nie (nur VFX/Attachments). Es ist immer nur ein Arcane State aktiv und nur eine Arcane-State-Rune im Deck erlaubt.');
 P('');
 P('| ID | Form | Archetyp der Manifestation | Palette | Sprint + Heavy | Forward kurz / voll | Up kurz / voll | Down kurz / voll | Defense · Grab · Jump |');
 P('|---|---|---|---|---|---|---|---|---|');
@@ -238,13 +238,13 @@ P('Transformationen geben kein zusätzliches Rune-Deck; ihre Techniken liegen au
 P('');
 P('| Form | Quelle | Forward kurz / voll | Up kurz / voll | Down kurz / voll | Sprint + Angriff |');
 P('|---|---|---|---|---|---|');
-P('| **B01 Risswild** (drei gebrochene Schmelzbänder, Splitterkrone; ehem. Ninefold) | Buff-Rune `buff_B01` (⧗, max. 1 pro Deck, 16 s) | Rissimpuls / Verdichteter Risskern | Bruchheber / Doppelter Rissaufstieg | Scherfeger / Rissfeld-Einschlag | Beast Pounce |');
-P('| **B02 Arkengestell** (offenes Kristall-Kraftgestell mit Halo und Bogen; ehem. Eidolon) | Buff-Rune `buff_B02` (⧗, max. 1 pro Deck, 16 s) | Glyphenbolzen / Belagerungspfeil (Bogen) | Trägerheber / Lichtspalter | Ankerstampfer / Gericht des Gestells | Kolossstoß |');
-P('| **T01–T40** (40 weitere Buff-Formen, siehe 3.7) | je eine Buff-Rune `buff_Txx` | aus dem Atlas | aus dem Atlas | aus dem Atlas | aus dem Atlas |');
+P('| **B01 Risswild** (drei gebrochene Schmelzbänder, Splitterkrone; ehem. Ninefold) | Arcane-State-Rune `buff_B01` (⧗, max. 1 pro Deck, 16 s) | Rissimpuls / Verdichteter Risskern | Bruchheber / Doppelter Rissaufstieg | Scherfeger / Rissfeld-Einschlag | Beast Pounce |');
+P('| **B02 Arkengestell** (offenes Kristall-Kraftgestell mit Halo und Bogen; ehem. Eidolon) | Arcane-State-Rune `buff_B02` (⧗, max. 1 pro Deck, 16 s) | Glyphenbolzen / Belagerungspfeil (Bogen) | Trägerheber / Lichtspalter | Ankerstampfer / Gericht des Gestells | Kolossstoß |');
+P('| **T01–T40** (40 weitere Arcane States, siehe 3.7) | je eine Arcane-State-Rune `buff_Txx` | aus dem Atlas | aus dem Atlas | aus dem Atlas | aus dem Atlas |');
 P('| **Focus Ascendant** | Focus 100 % → T / Tippen auf den Wizard (ohne Primal) | Radiant Wave / Annihilation Beam | Ascending Strike / Heaven Pillar | Light Nova / Starfall Crash | Radiant Lunge (goldener Durchstoß) |');
 P('| **Primal Bond** (Wolf / Schildkröte) | Focus 100 % → T mit Primal in der Nähe | — (Buff-Form: Tempo bzw. Panzerung) | — | — | Primal Pounce / Shell Rush |');
 P('');
-P('Transformations-Spells (Spezial, 0 Mana): ANNIHILATION BEAM (über Focus Ascendant Forward voll). VOID IMPLOSION und INFERNO RAMPAGE sind definiert, aber aktuell ohne Zugang.');
+P('Ehemalige Transformations-Spells: ANNIHILATION BEAM (über Focus Ascendant Forward voll); VOID IMPLOSION = Bestia+Terra+Void, INFERNO RAMPAGE = Bestia+Ignis+Void (normale Kombinationen).');
 P('');
 
 P('## 6. Glossar: Delivery, Zielmodi, Tags');
