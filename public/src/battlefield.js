@@ -80,6 +80,8 @@ export class Battlefield {
       this.blueCastle.isVulnerable = true;
       this.redCastle.isDestroyed = true;
       this.redCastle.showSegments = false;
+      // Invasion paints its own keep: the segment overlays match only arena_bg.jpg.
+      this.blueCastle.showSegments = false;
       this.blueTower.isDead = true;
       this.redTower.isDead = true;
       this.defenseTowers.forEach((tower) => { tower.maxHp = tower.hp = 560; tower.range = 245; });
