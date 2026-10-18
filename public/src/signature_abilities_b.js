@@ -294,6 +294,8 @@ defineSignature('S20', {
   cast(c) { startStance(c.caster, 'S20', c.quality, { stored: null, loadedAt: 0 }); },
   stance: {
     duration: 8,
+    hint: (p, st) => (st.stored ? 'GELADEN · ANGRIFF: KRISTALLSALVE' : 'FÄNGT DAS NÄCHSTE FEINDGESCHOSS VON VORN'),
+    counter: (p, st) => ({ n: st.stored ? 1 : 0, max: 1 }),
     update(p, st, dt, gw) {
       const f = p.facing || 1;
       if (!st.stored) {
@@ -329,15 +331,24 @@ defineSignature('S20', {
 // ═════════════════════════════════════════════════════════════════════════
 const WINDOWS = (p, ry) => { const f = p.facing || 1; return [[p.x + f * 10, ry - 66], [p.x - f * 12, ry - 62], [p.x + f * 18, ry - 46], [p.x - f * 9, ry - 48]]; };
 defineSignature('S21', {
-  cast(c) { startStance(c.caster, 'S21', c.quality, { mark: null, shots: 0, cool: 0 }); },
+  cast(c) {
+    const p = c.caster; let mark = null; let best = 340;
+    for (const t of foesOf(c.gw, p.team)) { const d = groundDist(t, p); if (d < best && (t.x - p.x) * (p.facing || 1) > -20) { best = d; mark = t; } }
+    startStance(p, 'S21', c.quality, { mark, shots: 0, cool: 0 });
+  },
   stance: {
     duration: 7,
+    hint: 'ANGRIFF: SUCHNADEL AUFS MARKIERTE ZIEL · TREFFER MARKIERT NEU',
+    counter: (p, st) => ({ n: 4 - st.shots, max: 4 }),
     update(p, st, dt) { st.cool = Math.max(0, st.cool - dt); if (st.mark && !aliveFoe(st.mark)) st.mark = null; },
     onEvent(p, st, type, info) {
-      if (type !== 'hit') return;
-      const foe = info.hits?.find((h) => !h.target.isProp)?.target; if (!foe) return;
-      if (!st.mark) { st.mark = foe; combat.spawnShockwave(foe.x, foe.y - 50, 22, st.sig.mat.vein); return; }
-      if (st.shots >= 4 || st.cool > 0) return;
+      if (type === 'hit') {
+        const foe = info.hits?.find((h) => !h.target.isProp)?.target;
+        if (foe && foe !== st.mark) { st.mark = foe; combat.spawnShockwave(foe.x, foe.y - 50, 22, st.sig.mat.vein); }
+        return;
+      }
+      if (type !== 'attack' && type !== 'heavy') return;
+      if (!st.mark || st.shots >= 4 || st.cool > 0) return;
       const [wx] = WINDOWS(p, p.y)[st.shots];
       emit(new SigBolt({ x: wx, z: p.z, height: 60 - st.shots * 6, vx: (p.facing || 1) * 420, vz: (st.shots % 2 ? .3 : -.3), team: p.team, damage: 12, mat: st.sig.mat, size: 5, life: 1.8, turn: 3.5, homing: st.mark, seed: 2100 + st.shots }), st.quality);
       st.shots++; st.cool = .4;

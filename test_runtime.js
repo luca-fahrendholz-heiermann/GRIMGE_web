@@ -2483,6 +2483,11 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   reset(); cast('S21'); dummy.x = dummy.homeX = P.x + 14;
   for (let k = 0; k < 3; k++) { P.x = dummy.x - 14; P.vx = 0; P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.executeAttack(neutral, 'normal'); step(30); }
   assert(P.signature?.mark === dummy && P.signature.shots >= 1, 'Schwarmprotokoll: the first hit marks, further hits launch homing needles');
+  // Orbs fire on command: Aureolenschwarm lenses shoot on every attack, even without a hit.
+  reset(); cast('S02'); dummy.x = dummy.homeX = 900; P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.executeAttack(neutral, 'normal');
+  assert(P.signature?.charged === 2 && spells.activeSpells.some((sp) => sp.isSigProjectile), 'Aureolenschwarm: an attack fires a lens right away (no hit needed)');
+  reset(); cast('S25'); P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.executeAttack(neutral, 'heavy');
+  assert(spells.activeSpells.filter((sp) => sp.isSigProjectile).length === 3, 'Klingenchor: a heavy hurls all three blades');
   reset();
   // Deck rules: elemental ×2, special runes ×1 each, Arcane States one of all.
   const deck = ['ignis', 'ignis', 'sig_S01', 'sig_S13', 'buff_T05'];

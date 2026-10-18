@@ -48,6 +48,28 @@ export function updateSignatureStance(player, dt, gameWorld) {
 export function renderSignatureStance(ctx, player, renderY, layer) {
   const st = player.signature;
   if (st?.impl.stance.render) st.impl.stance.render(ctx, player, st, renderY, layer);
+  if (st && layer === 'front') renderStanceHud(ctx, player, st, renderY);
+}
+// What the orbiting objects are for: a short how-to for the first seconds and
+// a charge counter (pips) for as long as the stance lasts.
+function renderStanceHud(ctx, player, st, renderY) {
+  const stance = st.impl.stance; const mat = st.sig.mat; const y = renderY - 122;
+  const c = stance.counter?.(player, st);
+  if (c && c.max > 0) {
+    const w = 7; const x0 = player.x - (c.max * w) / 2;
+    for (let i = 0; i < c.max; i++) {
+      ctx.save(); ctx.translate(x0 + i * w + 3, y + 8); ctx.rotate(Math.PI / 4);
+      ctx.fillStyle = i < c.n ? mat.edge : 'rgba(0,0,0,.55)'; ctx.fillRect(-2.5, -2.5, 5, 5);
+      ctx.strokeStyle = mat.vein; ctx.lineWidth = 1; ctx.strokeRect(-2.5, -2.5, 5, 5); ctx.restore();
+    }
+  }
+  if (stance.hint && st.t < 3.2) {
+    ctx.save(); ctx.globalAlpha = Math.min(1, (3.2 - st.t) * 2); ctx.font = 'bold 8px monospace'; ctx.textAlign = 'center';
+    const text = typeof stance.hint === 'function' ? stance.hint(player, st) : stance.hint;
+    const w = (ctx.measureText?.(text)?.width ?? text.length * 5) + 8;
+    ctx.fillStyle = 'rgba(8,8,14,.8)'; ctx.fillRect(player.x - w / 2, y - 12, w, 11);
+    ctx.fillStyle = mat.edge; ctx.fillText(text, player.x, y - 4); ctx.restore();
+  }
 }
 export function signatureHover(player) { const st = player.signature; return st?.impl.stance.hover ? Math.max(0, st.impl.stance.hover(player, st)) : 0; }
 export function signatureMoveMult(player) {

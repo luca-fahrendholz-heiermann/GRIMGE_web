@@ -23,6 +23,8 @@ defineSignature('S25', {
   cast(c) { startStance(c.caster, 'S25', c.quality, { blades: [0, 1, 2].map(() => ({ charged: false, gone: false })), blocks: 3, lag: 0 }); },
   stance: {
     duration: 7,
+    hint: 'HEAVY: ALLE KLINGEN SCHLEUDERN · TREFFER LADEN SIE AUF · BLOCKEN KLEINE GESCHOSSE',
+    counter: (p, st) => ({ n: st.blades.filter((b) => !b.gone && b.charged).length, max: st.blades.filter((b) => !b.gone).length }),
     update(p, st, dt, gw) {
       st.lag += ((p.vx ?? 0) / 300 * (p.facing || 1) - st.lag) * Math.min(1, dt * 4); // inertia behind the facing
       for (const q of projectilesOf(gw)) {
@@ -37,7 +39,7 @@ defineSignature('S25', {
       if (type === 'heavy') {
         // Only charged blades fly at the target.
         const tgt = info.target ?? nearestFoe(gw, p.team, p.x + (p.facing || 1) * 100, p.z, 320);
-        st.blades.forEach((b, i) => { if (!b.charged || b.gone) return; b.gone = true; const bp = bladePos(p, st, i, p.y); emit(new SigBolt({ x: bp.x, z: p.z, height: p.y - bp.y, vx: (p.facing || 1) * 520, vz: (i - 1) * .3, team: p.team, damage: 20, mat: st.sig.mat, size: 9, life: 1.6, turn: 6, homing: tgt, delay: i * .08, kx: 200, lift: 90, seed: 2500 + i }), st.quality); });
+        st.blades.forEach((b, i) => { if (b.gone) return; b.gone = true; const bp = bladePos(p, st, i, p.y); emit(new SigBolt({ x: bp.x, z: p.z, height: p.y - bp.y, vx: (p.facing || 1) * 520, vz: (i - 1) * .3, team: p.team, damage: b.charged ? 24 : 12, mat: st.sig.mat, size: 9, life: 1.6, turn: 6, homing: tgt, delay: i * .08, kx: 200, lift: 90, seed: 2500 + i }), st.quality); });
         if (st.blades.every((b) => b.gone)) st.timer = Math.min(st.timer, .3);
       }
     },
@@ -116,6 +118,7 @@ defineSignature('S27', {
   cast(c) { startStance(c.caster, 'S27', c.quality, { tool: null, cand: null }); },
   stance: {
     duration: 8,
+    hint: (p, st) => (st.tool ? 'HEAVY: WERKZEUG EINSETZEN' : 'EIGENE WAND ODER KISTE IN DER NÄHE WIRD ZUM WERKZEUG'),
     update(p, st) {
       if (st.tool) { if (st.shieldUntil && st.t > st.shieldUntil) st.timer = 0; return; }
       st.cand = forgeCandidate(p);
@@ -161,9 +164,11 @@ defineSignature('S28', {
   cast(c) { startStance(c.caster, 'S28', c.quality, { actions: 0, vz: 0, fired: false }); },
   stance: {
     duration: 5,
+    hint: 'NACH 2 ANGRIFFEN STICHT DIE PLATTE EINMAL NACH',
+    counter: (p, st) => ({ n: Math.min(2, st.actions), max: 2 }),
     onEvent(p, st, type, info) {
       if (st.fired) return;
-      if (type === 'hit' && info.hits?.some((h) => !h.target.isProp)) { st.actions++; st.vz = 0; }
+      if (type === 'attack' || type === 'heavy') { st.actions++; st.vz = 0; }
       else if (type === 'projectile') { st.actions++; st.vz = info.p?._vz ?? 0; }
       else return;
       if (st.actions >= 2) {
@@ -342,6 +347,7 @@ defineSignature('S34', {
   cast(c) { startStance(c.caster, 'S34', c.quality, { hold: null, decided: false, shieldUntil: 0 }); },
   stance: {
     duration: 8,
+    hint: 'NÄCHSTER EIGENER ZAUBER-SCHUSS: BLOCK = SCHERBENSCHILD, SONST FLIEGT ER',
     onEvent(p, st, type, info) {
       if (type !== 'projectile' || st.decided || st.hold || !info.p?.isCapturableProjectile) return;
       // The decision happens before the flight starts.

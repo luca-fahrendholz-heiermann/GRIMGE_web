@@ -36,6 +36,7 @@ defineSignature('S01', {
   cast(c) { startStance(c.caster, 'S01', c.quality); c.caster.cancelSprint?.(); c.caster.rootTimer = Math.max(c.caster.rootTimer ?? 0, .7); },
   stance: {
     duration: 9, moveset: 'sig_S01', moveMult: .7,
+    hint: 'HEAVY ← → ↑ ↓: HOVER-TECHNIKEN · BLOCK: SCHOLLENSCHILD',
     hover: hoverOf,
     render(ctx, p, st, ry, layer) {
       const mat = st.sig.mat; const f = p.facing || 1; const t = st.t; const h = hoverOf(p, st); const fade = Math.min(1, st.t / .4, st.timer / .5 + .2);
@@ -102,13 +103,15 @@ registerFormPalette('sig_S01', { core: '#ffffff', main: S('S01').mat.vein, edge:
 // S02 AUREOLENSCHWARM — six garnet lenses, charged by hits, fired by attacks.
 // ═════════════════════════════════════════════════════════════════════════
 defineSignature('S02', {
-  cast(c) { startStance(c.caster, 'S02', c.quality, { charged: 0, hits: 0, cool: 0, emerge: 0 }); },
+  cast(c) { startStance(c.caster, 'S02', c.quality, { charged: 3, hits: 0, cool: 0, emerge: 0 }); },
   stance: {
     duration: 8,
+    hint: 'ANGRIFF: LINSE FEUERN · HEAVY: 2 SUCHKRISTALLE · TREFFER LADEN',
+    counter: (p, st) => ({ n: st.charged, max: 6 }),
     update(p, st, dt) { st.cool = Math.max(0, st.cool - dt); },
     onEvent(p, st, type, info, gw) {
       const mat = st.sig.mat; const f = p.facing || 1;
-      if (type === 'hit' && info.hits?.some((h) => !h.target.isProp)) { st.hits++; if (st.hits % 2 === 0) st.charged = Math.min(6, st.charged + 1); }
+      if (type === 'hit' && info.hits?.some((h) => !h.target.isProp)) { st.hits++; st.charged = Math.min(6, st.charged + 1); }
       if (type === 'attack' && st.charged > 0 && st.cool <= 0) {
         // One lens fires one fast bolt — never all at once.
         const tgt = nearestFoe(gw, p.team, p.x + f * 120, p.z, 260, (t) => (t.x - p.x) * f > 0);
@@ -186,6 +189,8 @@ defineSignature('S04', {
   cast(c) { startStance(c.caster, 'S04', c.quality, { front: 4, side: 4 }); },
   stance: {
     duration: 7, moveMult: .6,
+    hint: 'PLATTEN BLOCKEN GESCHOSSE VON VORN · BLOCK LENKT AB',
+    counter: (p, st) => ({ n: st.front + st.side, max: 8 }),
     hover: (p, st) => 8 * Math.min(1, st.t / .3) * Math.min(1, st.timer / .4),
     update(p, st, dt, gw) {
       const f = p.facing || 1; const attacking = /^attack|heavyStrike/.test(p.state ?? '') && p.stateTimer > 0;
@@ -334,6 +339,8 @@ defineSignature('S07', {
   cast(c) { startStance(c.caster, 'S07', c.quality, { recorded: 0, played: 0 }); },
   stance: {
     duration: 6,
+    hint: 'DEINE NÄCHSTEN 2 ANGRIFFE WIEDERHOLEN SICH ALS ECHO',
+    counter: (p, st) => ({ n: 2 - st.recorded, max: 2 }),
     onEvent(p, st, type) {
       if (type !== 'attack' || st.recorded >= 2) return;
       st.recorded++; const sig = st.sig; const f = p.facing || 1; const x = p.x; const z = p.z; const power = st.quality?.power ?? 1;
@@ -442,6 +449,7 @@ defineSignature('S10', {
   cast(c) { const n = emit(new RecallNeedle(c.sig, c.caster, c.caster.x, c.caster.z)); startStance(c.caster, 'S10', c.quality, { needle: n, anchor: { x: c.caster.x, z: c.caster.z }, guardWas: false, lastTap: -9 }); },
   stance: {
     duration: 5,
+    hint: 'NACH 5 S ODER 2× BLOCK: ZURÜCK ZUR NADEL',
     update(p, st) {
       if (st.needle.isDead) { st.cancelled = true; st.timer = 0; return; }
       // Double-tap DEFENSE: jump back early.
