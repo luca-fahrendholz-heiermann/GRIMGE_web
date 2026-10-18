@@ -30,6 +30,7 @@ import { audio } from './audio.js';
 import { combat } from './combat.js';
 import { GroundEntity, groundDistance } from './world.js';
 import { SIEGE_ZONES } from './siege_match.js';
+import { renderBondOverlay } from './primal_bond_vfx.js';
 
 const U = 24;                 // px per Unity unit (lateral)
 const UZ = 1 / 6;             // z per Unity unit (depth)
@@ -489,11 +490,14 @@ export function primalSprintVariant(player) {
     : { name: 'SHELL RUSH', primal: true, carryMult: 1, recoilMult: bond.form.shellRushPush, color: PRIMAL_ARCHETYPES.turtle.variant };
 }
 
-// Bond aura: three rising streaks (wider in the full-replacement stages)
-// and a horizontal flash in front during a Pounce / Shell Rush.
-export function renderPrimalBond(ctx, player, renderY) {
+// Bond Form ENERGY OVERLAY (stage I; stages II / III reuse it at higher intensity):
+// layered spirit-fur / shell-plate VFX from primal_bond_vfx.js, plus the old
+// rising aura streaks as a faint base.
+export function renderPrimalBond(ctx, player, renderY, layer = 'back') {
   const bond = player.primalBond;
   if (!bond) return;
+  renderBondOverlay(ctx, player, renderY, layer, bond);
+  if (layer !== 'back') return;
   const info = PRIMAL_ARCHETYPES[bond.archetype];
   const intensity = bond.active ? 1 : .65;
   const width = bond.form.presentation === 'replacement' ? 6 : 2.5;

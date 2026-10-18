@@ -1591,6 +1591,7 @@ export class Player extends GroundEntity {
     // Buff transformation manifestation in front of the body (P5).
     if (this.isAlive) renderBuffManifestation(ctx, this, renderY, 'front');
     if (this.isAlive) renderSignatureStance(ctx, this, renderY, 'front');
+    if (this.isAlive && this.primalBond) renderPrimalBond(ctx, this, renderY, 'front');
     if (this.isAlive) {
       const ratio = Math.max(0, this.hp / this.maxHp);
       ctx.save();
