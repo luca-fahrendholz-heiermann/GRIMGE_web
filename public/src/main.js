@@ -25,6 +25,7 @@ import { castleBlocksAt, castleGateDoor, castleDeckEntry, castleDeckHeight } fro
 import { WeaponArmory, WEAPONS } from './weapons.js';
 import { SiegeMatch } from './siege_match.js';
 import { segmentStatus } from './castle_segments.js';
+import { HOLD_MIN_TIME } from './hold_actions.js';
 import { PrimalCompanion, normalizePrimalChoice, startPrimalBond, endPrimalBond, bondForm, PRIMAL_ARCHETYPES } from './primals.js';
 
 // LF2-style Dungeon rooms. Each room is a wide scrolling stretch: the camera
@@ -447,10 +448,12 @@ export class GameWorld {
       // K (hold): charge the heavy attack — in a body form the beast bomb /
       // spirit bow. Releasing K lets it fly.
       if (e.code === 'KeyK' && !e.repeat && this.isMatchRunning() && !this.drawing.active) {
-        // Direction of the charged attack: K + W = up, K + S = down.
-        const keys = this.input.keys;
-        // (The direction keeps following W / S while K is held — see Player.update.)
-        const dir = keys.KeyW || keys.ArrowUp ? 'up' : keys.KeyS || keys.ArrowDown ? 'down' : 'forward';
+        // Direction of the charged attack: K + W = up, K + S = down, K + toward
+        // the facing = forward; K alone = the HOLD slot (weapon reach / form pull).
+        const keys = this.input.keys; const f = this.player?.facing || 1;
+        // (The direction keeps following the keys while K is held — see Player.update.)
+        const ahead = f < 0 ? keys.KeyA || keys.ArrowLeft : keys.KeyD || keys.ArrowRight;
+        const dir = keys.KeyW || keys.ArrowUp ? 'up' : keys.KeyS || keys.ArrowDown ? 'down' : ahead ? 'forward' : 'hold';
         this.player?.beginCharge(dir, 'key');
       }
 
@@ -755,6 +758,8 @@ export class GameWorld {
         return;
       }
       chargeArmed = false;
+      // Held without a drag: the HOLD slot (weapon reach / form pull).
+      if (performance.now() - attackStartTime >= HOLD_MIN_TIME * 1000 && Math.hypot(dx, dy) < 34 && this.player?.holdAttack?.()) return;
       this.performTouchAttackGesture(dx, dy);
     };
 

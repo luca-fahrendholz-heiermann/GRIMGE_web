@@ -102,7 +102,8 @@ export class GamepadController {
     }
     if (this.xHeld && pressed[BUTTON.X]) {
       this.xHeld.t += dt;
-      if (!this.xHeld.charging && this.xHeld.t > .2) this.xHeld.charging = player.beginCharge(ly < -.6 ? 'up' : ly > .6 ? 'down' : 'forward', 'pad') || 'failed';
+      // Stick up / down / toward the facing picks the charge; a neutral stick is the HOLD slot.
+      if (!this.xHeld.charging && this.xHeld.t > .2) this.xHeld.charging = player.beginCharge(ly < -.6 ? 'up' : ly > .6 ? 'down' : lx * (player.facing || 1) > .6 ? 'forward' : 'hold', 'pad') || 'failed';
     }
     if (up(BUTTON.X) && this.xHeld) {
       const held = this.xHeld; this.xHeld = null;

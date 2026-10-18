@@ -209,7 +209,7 @@ export const EXT_PIECES = {
 // ── Projectiles of the ranged / magic weapons ───────────────────────────
 // Spread is lateral (depth) spread; every shot is a real projectile with its
 // own collision (capturable / reflectable like spell projectiles).
-const PIECE_OF_SHOT = { arrow: 'arrow', bolt: 'bolt', knife: 'knife', chakram: 'chakram', card: 'card', orb: 'orb', rune: 'rune', hex: 'hex', light: 'light', note: 'note', talisman: 'talisman', gust: 'gust' };
+const PIECE_OF_SHOT = { arrow: 'arrow', bolt: 'bolt', knife: 'knife', chakram: 'chakram', card: 'card', orb: 'orb', rune: 'rune', hex: 'hex', light: 'light', note: 'note', talisman: 'talisman', gust: 'gust', wave: 'gust' };
 export class WeaponShot {
   constructor(owner, shot, hue, drawPiece, { power = 1, index = 0, count = 1, vzExtra = 0, height = null } = {}) {
     const f = owner.facing || 1;
@@ -268,6 +268,7 @@ export class WeaponShot {
     else ctx.rotate(a);
     const sc = this.shot.size ?? 1; ctx.scale(sc, sc);
     if (this.kind === 'note' || this.kind === 'gust') ctx.globalAlpha = Math.min(1, this.life * 3);
+    else if (this.kind === 'wave') ctx.globalAlpha = Math.min(1, this.life * 8); // air slash: crisp until the very end
     this.drawPiece(ctx, PIECE_OF_SHOT[this.kind] ?? 'rune', this.joker ? '#ffffff' : this.hue, { intensity: 1.1 });
     ctx.restore();
     if (this.sealed != null) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = this.hue; ctx.globalAlpha = .7; ctx.beginPath(); ctx.ellipse(this.x, groundYForDepth(this.z), (this.shot.explode ?? 50) * (1 - this.sealed / (this.shot.seal || 1) * .5), (this.shot.explode ?? 50) * .3, 0, 0, Math.PI * 2); ctx.stroke(); ctx.restore(); }

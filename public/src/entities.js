@@ -10,6 +10,7 @@ import { formGuardCounter, updateFormSprint, FormGrabFx, formJumpFx, FORM_SPRINT
 import { WEAPONS, ThrownWeaponSpell, drawHeldWeapon, weaponMotion, makeWeaponShots } from './weapons.js';
 import { drawBeastBomb, drawSpiritBow } from './form_attacks.js';
 import { FULL_CHARGE_TIME, activeMoveset, releaseFormTechnique, FORM_PALETTES } from './form_moves.js';
+import { releaseWeaponReach, releaseFormPull, isOnCastle } from './hold_actions.js';
 import { updatePrimalBond, bondMoveMultiplier, bondGainMultiplier, bondDisplacement, bondOnBlock, primalSprintVariant, renderPrimalBond, endPrimalBond, bondMelee, primalQuake } from './primals.js';
 import { createSegments, damageSegments, updateSegments, renderSegments } from './castle_segments.js';
 import { updateBuffForm, endBuffForm, isGenericBuff, currentBuffForm, renderBuffManifestation, buffVeinPainter, buffCloakColor, renderBuffGuard, levitationOffset, renderBuffCharge } from './buff_forms.js';
@@ -397,8 +398,10 @@ export class Player extends GroundEntity {
     // Charged heavy direction follows the held direction until release
     // (K first, then W / S works as well as W / S first; stick up / down on a pad).
     if (this.chargeTimer > 0 && input && this.chargeSource !== 'touch') {
-      const k = input.keys ?? {}; const pz = input.padMove?.z ?? 0;
-      this.chargeDir = k.KeyW || k.ArrowUp || pz < -.6 ? 'up' : k.KeyS || k.ArrowDown || pz > .6 ? 'down' : 'forward';
+      const k = input.keys ?? {}; const pz = input.padMove?.z ?? 0; const px = (input.padMove?.x ?? 0) * (this.facing || 1);
+      const ahead = this.facing < 0 ? k.KeyA || k.ArrowLeft : k.KeyD || k.ArrowRight;
+      // A charge without a direction is the HOLD slot (weapon reach / form pull).
+      this.chargeDir = k.KeyW || k.ArrowUp || pz < -.6 ? 'up' : k.KeyS || k.ArrowDown || pz > .6 ? 'down' : ahead || px > .6 ? 'forward' : 'hold';
     }
     if (this.chargeTimer > 0 && this.formCharge) {
       // Form charge: no auto release at the threshold (safety cap 4 s).
@@ -766,15 +769,31 @@ export class Player extends GroundEntity {
     return true;
   }
 
+  // HOLD slot (attack held without a direction): weapon reach in the normal
+  // mode, the PULL in an Arcane State / transformation (hold_actions.js).
+  holdAttack(charge = 0) {
+    if (!this.isAlive || !this.grounded || this.isGuarding || ACTION_STATES.has(this.state) && this.state !== 'guard') return false;
+    const game = window.gameWorld;
+    if (activeMoveset(this)) {
+      // Every Arcane State special costs mana; the Focus transformations burn Focus instead.
+      const form = currentBuffForm(this);
+      const mat = form?.mat;
+      return releaseFormPull(this, game, spells, { color: mat?.vein ?? '#c9a8ff', core: mat?.edge ?? '#ffffff', mana: !!(this.buffForm?.timer > 0) });
+    }
+    return releaseWeaponReach(this, spells, charge);
+  }
+
   releaseCharge() {
-    // Transformations / manifests: one of six form techniques.
+    // Transformations / manifests: one of six form techniques (or the HOLD pull).
     if (this.formCharge) {
       const charge = this.formCharge; this.formCharge = null; this.chargeTimer = 0;
       if (!this.isAlive || charge.elapsed < .08) return false;
+      if (this.chargeDir === 'hold') { this.state = 'idle'; return this.holdAttack(); }
       return this.releaseFormTechnique(charge.elapsed >= FULL_CHARGE_TIME);
     }
     const chargeRatio = 1 - (this.chargeTimer / this.chargeMaxTime);
     this.chargeTimer = 0;
+    if (this.chargeDir === 'hold') { if (this.isAlive) this.state = 'idle'; return this.isAlive ? this.holdAttack(chargeRatio) : false; }
     if (!this.isAlive || chargeRatio < 0.05) return false;
     const heavy = MELEE_BASELINE.heavy;
     signatureEvent(this, 'heavy', { charge: chargeRatio });
@@ -783,7 +802,7 @@ export class Player extends GroundEntity {
     const dir = this.chargeDir ?? 'forward';
     // Ranged weapons: the charged heavy is a stronger shot — UP a volley, DOWN a low pinning shot.
     const weaponHeavy = this.weaponProfile?.heavy;
-    if (weaponHeavy?.shot) {
+    if (weaponHeavy?.shot && dir !== 'forward') {
       this.state = 'heavyStrike'; this.stateTimer = heavy.time; this._weaponSwingTime = heavy.time; this.setWeaponMotion('heavy'); this.vx = 0; this.canAttack = false;
       const shots = makeWeaponShots(this, { ...weaponHeavy.shot, pierce: weaponHeavy.shot.pierce || chargeRatio > .7 }, this.weapon ?? this.classWeapon, { power: 1 + chargeRatio * .8, volley: dir === 'up' ? 2 : 0, low: dir === 'down' });
       for (const shot of shots) spells.addSpell(shot, 'B');
@@ -814,7 +833,7 @@ export class Player extends GroundEntity {
     const radius = 58 + chargeRatio * 20;
     combat.spawnSlashArc(this.x + this.facing * 28, this.y - 25, this.facing, { radius, angleStart: -0.9, angleEnd: 0.9, color: chargeRatio > 0.5 ? '#ff6d00' : '#ffd54f', glow: '#ff3d00', width: 7 + chargeRatio * 5 });
     if (chargeRatio > 0.6) combat.spawnShockwave(this.x + this.facing * 30, this.y - 25, 35, '#ffab00');
-    this.triggerMeleeHitbox(heavy.damage * dmgMult, this.facing * heavy.knockback * kbMult, heavy.lift * (1 + chargeRatio * 0.4), 0.48 + chargeRatio * 0.2, chargeRatio > 0.7, { hitstopTicks: Math.round(4 + chargeRatio * 4), hitReaction: chargeRatio > 0.7 ? 'finisher' : 'strong', isCharged: true, chargeRatio });
+    this.triggerMeleeHitbox(heavy.damage * dmgMult, this.facing * heavy.knockback * kbMult, heavy.lift * (1 + chargeRatio * 0.4), 0.48 + chargeRatio * 0.2, chargeRatio > 0.7, { guardBreak: 30 + chargeRatio * 70, hitstopTicks: Math.round(4 + chargeRatio * 4), hitReaction: chargeRatio > 0.7 ? 'finisher' : 'strong', isCharged: true, chargeRatio });
     return true;
   }
 
@@ -1057,11 +1076,22 @@ export class Player extends GroundEntity {
       combat.shakeCamera(6, 0.18);
     }
     // Ranged / magic weapons: the step fires real projectiles instead of a melee hitbox.
+    // Ranged steps shoot only from the castle battlements (1 mana per shot, no spam);
+    // on the lane every tap is melee — the weapon's ranged move is the HOLD slot.
+    const castle = isOnCastle(this);
+    const ranged = attack.shot ?? attack.bolt;
+    if (ranged && castle && this.freeMana >= 1) {
+      this.mp -= 1;
+      for (const shot of makeWeaponShots(this, ranged, this.weapon ?? this.classWeapon)) spells.addSpell(shot, 'B');
+      if (attack.shot) return true;
+    }
     if (attack.shot) {
-      for (const shot of makeWeaponShots(this, attack.shot, this.weapon ?? this.classWeapon)) spells.addSpell(shot, 'B');
+      // A bow / staff / card on the lane: a short melee bash with the weapon.
+      const dmg = Math.max(14, Math.round((attack.shot.damage ?? 16) * (attack.shot.count ?? 1) * .7));
+      const bash = this.triggerMeleeHitbox(dmg, this.facing * (attack.finisher ? 320 : 170) * (attack.finisher ? 1 : .3), attack.finisher ? 160 : 10, attack.finisher ? .6 : .35, !!attack.finisher, { hitstopTicks: 3, hitReaction: attack.finisher ? 'finisher' : 'light', reach: 66 });
+      if (!bash && !attack.finisher) this._whiffRecovery = attack.time * .5;
       return true;
     }
-    if (attack.bolt) for (const shot of makeWeaponShots(this, attack.bolt, this.weapon ?? this.classWeapon)) spells.addSpell(shot, 'B');
     // Chain steps barely push (the target stays in front for the next hit); only the finisher sends it away.
     const push = attack.finisher ? 1 : .3; const pop = attack.finisher ? 1 : .2;
     const connected = this.triggerMeleeHitbox(attack.damage, this.facing * attack.knockback * push, attack.lift * pop, attack.finisher ? 0.6 : 0.4, !!attack.finisher, { hitstopTicks: attack.hitstopTicks, hitReaction: attack.hitReaction, reach: attack.reach, behind: attack.behind, crit: attack.crit, freeze: attack.freeze, guardBreak: attack.guardBreak, shockwave: attack.shockwave });

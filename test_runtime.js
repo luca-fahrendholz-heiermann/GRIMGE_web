@@ -2558,6 +2558,16 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.mp = 3; spells.clearRuntime();
   P.beginCharge('up', 'key'); P.formCharge.elapsed = .3; const fired = P.releaseCharge();
   assert(!fired && P.mp === 3 && !spells.activeSpells.length, 'Without free mana the technique fizzles (NO MANA)');
+  // HOLD in an Arcane State: the pull drags the nearest foe in front close (and costs mana like every special).
+  {
+    const { HOLD_MANA } = await import('./public/src/hold_actions.js');
+    const dummy = game.trainingDummy; P.mp = P.maxMp; P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.x = 300; P.z = .5; P.facing = 1; game.battlefield.placeOnSurface(P);
+    dummy.homeX = dummy.x = 520; dummy.homeZ = dummy.z = .5; dummy.hp = dummy.maxHp; spells.clearRuntime();
+    const before = P.mp; P.beginCharge('hold', 'key'); P.formCharge.elapsed = .3; P.releaseCharge();
+    for (let i = 0; i < 40; i++) spells.update(1 / 60, game);
+    assert(P.lastHoldAction === 'PULL' && before - P.mp === HOLD_MANA.pull && Math.abs(dummy.x - (P.x + 46)) < 12, 'Arcane State HOLD: the pull drags the foe in front of the Wizard (5 mana)');
+    dummy.homeX = dummy.x = 512;
+  }
   P.mp = P.maxMp; buff.endBuffForm(P); spells.clearRuntime();
 }
 
@@ -2629,13 +2639,32 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   const ready = () => { P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.vx = 0; P.grounded = true; P.sprintActive = false; P.comboStep = 0; };
   P.x = 300; P.z = .5; P.facing = 1; game.battlefield.placeOnSurface(P);
   dummy.homeX = dummy.x = 520; dummy.homeZ = dummy.z = .5; dummy.hp = dummy.maxHp;
+  // Slot model: tap = melee on the lane, ranged only on the castle; HOLD = the weapon's ranged move everywhere.
+  const { HOLD_MANA } = await import('./public/src/hold_actions.js');
+  P.mp = P.maxMp; P.reservedMana = 0;
   P.equipClassWeapon('bow'); ready(); P.executeAttack(neutral, 'normal');
-  assert(spells.activeSpells.some((s) => s.isWeaponShot && s.kind === 'arrow'), 'The bow fires an arrow on attack');
+  assert(!spells.activeSpells.some((s) => s.isWeaponShot), 'On the lane a bow tap is melee (no arrow)');
+  spells.clearRuntime(); ready(); let mp0 = P.mp; P.surfaceId = 'blueCastleUpperPlatform'; P.executeAttack(neutral, 'normal');
+  assert(spells.activeSpells.some((s) => s.isWeaponShot && s.kind === 'arrow') && mp0 - P.mp === 1, 'On the castle the bow tap fires an arrow for 1 mana');
+  spells.clearRuntime(); P.surfaceId = null; ready(); mp0 = P.mp; P.beginCharge('hold', 'key'); P.chargeTimer = P.chargeMaxTime * .5; P.releaseCharge();
+  assert(spells.activeSpells.some((s) => s.isWeaponShot && s.kind === 'arrow' && s.pierce) && mp0 - P.mp === HOLD_MANA.lane && P.lastHoldAction === 'REACH', 'HOLD on the lane: the bow shoots its charged piercing arrow (2 mana)');
   for (let i = 0; i < 40; i++) spells.update(1 / 60, game);
   assert(dummy.hp < dummy.maxHp, 'The arrow hits a target at range');
+  spells.clearRuntime(); P.surfaceId = 'blueCastleUpperPlatform'; ready(); mp0 = P.mp; P.holdAttack();
+  assert(spells.activeSpells.filter((s) => s.isWeaponShot).length >= 3 && mp0 - P.mp === HOLD_MANA.castle && P.lastHoldAction === 'CASTLE SHOT', 'HOLD on the castle: the bigger ranged attack (volley, 4 mana)');
+  P.surfaceId = null;
+  spells.clearRuntime(); P.equipClassWeapon('sword_shield'); ready(); P.holdAttack();
+  assert(spells.activeSpells.some((s) => s.isWeaponShot && s.kind === 'wave'), 'HOLD with a sword: an air slash flies out');
+  spells.clearRuntime(); P.equipClassWeapon('daggers'); ready(); P.holdAttack();
+  assert(spells.activeSpells.filter((s) => s.isWeaponShot && s.kind === 'knife').length === 3, 'HOLD with daggers: three thrown knives');
+  spells.clearRuntime(); ready(); P.mp = 1; assert(!P.holdAttack() && !spells.activeSpells.length, 'HOLD without mana fizzles');
+  P.mp = P.maxMp; P.equipClassWeapon('bow');
+  P.chargeTimer = 1; P.chargeSource = 'key'; P.update(1 / 60, neutral, game.battlefield, game); const holdDir = P.chargeDir;
+  P.update(1 / 60, { ...neutral, keys: { KeyD: true } }, game.battlefield, game); const fwdDir = P.chargeDir; P.chargeTimer = 0; P.formCharge = null;
+  assert(holdDir === 'hold' && fwdDir === 'forward', 'K alone charges the HOLD slot, K + toward the facing the forward charge');
   spells.clearRuntime(); ready(); P.beginCharge('up', 'key'); P.chargeTimer = P.chargeMaxTime * .2; P.chargeDir = 'up'; P.releaseCharge();
   assert(spells.activeSpells.filter((s) => s.isWeaponShot).length === 3, 'Charged UP with the bow: a three-arrow volley');
-  spells.clearRuntime(); P.equipClassWeapon('chakrams'); ready(); P.executeAttack(neutral, 'normal');
+  spells.clearRuntime(); P.equipClassWeapon('chakrams'); ready(); P.surfaceId = 'blueCastleUpperPlatform'; P.executeAttack(neutral, 'normal'); P.surfaceId = null;
   assert(spells.activeSpells.some((s) => s.isWeaponShot && s.ricochet > 0), 'Chakrams ricochet');
   // Every weapon attacks without errors (melee hitbox or projectiles) and renders.
   const strict = new Proxy({}, { get: (t, k) => (k === 'canvas' ? undefined : (k === 'measureText' ? () => ({ width: 10 }) : () => {})), set: () => true });
