@@ -2380,6 +2380,37 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   dummy.homeX = dummy.x = 512;
 }
 
+// Morphology family renderers: every Arcane State has idle / action / peak silhouettes.
+{
+  const buff = await import('./public/src/buff_forms.js');
+  const P = game.player; P.x = 400; P.z = .5; P.facing = 1; game.battlefield.placeOnSurface(P);
+  // A measuring context: counts drawn shapes, tracks how far right (forward) they reach and rejects negative radii.
+  const probe = () => { const m = { shapes: 0, maxX: -1e9 }; const ctx = new Proxy({}, { get: (t, k) => k === 'ellipse' ? (x, y, rx, ry) => { if (rx < 0 || ry < 0) throw new Error('IndexSizeError'); m.maxX = Math.max(m.maxX, x + rx); } : (k === 'moveTo' || k === 'lineTo') ? (x) => { m.maxX = Math.max(m.maxX, x); } : (k === 'fill' || k === 'stroke' || k === 'fillRect') ? () => { m.shapes++; } : (k === 'canvas' ? undefined : () => {}), set: () => true }); return { ctx, m }; };
+  const draw = (state) => { const { ctx, m } = probe(); const b = P.buffForm; Object.assign(b, { act: 0, guardK: 0, sprintK: 0, peakAt: null }, state); buff.renderBuffManifestation(ctx, P, P.y, 'back'); buff.renderBuffManifestation(ctx, P, P.y, 'front'); return m; };
+  let ok = true; let forward = 0; let generic = [];
+  for (const id of Object.keys(buff.BUFF_FORMS)) {
+    spells.clearRuntime(); buff.endBuffForm(P);
+    spells.cast(P, spells.resolveSpell([{ id: 'buff_' + id }]), game); P.buffForm.age = 2;
+    const idle = draw({}); const act = draw({ act: 1 }); draw({ guardK: 1 }); draw({ sprintK: 1 }); const peak = draw({ peakAt: 2 });
+    if (!(idle.shapes > 0 && act.shapes > 0 && peak.shapes > 0)) { ok = false; generic.push(id); }
+    if (act.maxX > idle.maxX + 8 || peak.maxX > idle.maxX + 8) forward++;
+  }
+  assert(ok, 'All 42 Arcane States draw an idle, action and peak silhouette ' + generic.join());
+  assert(forward >= 34, 'Attacks and the peak reshape the silhouettes forward (' + forward + ' of 42)');
+  buff.endBuffForm(P); spells.clearRuntime();
+  // Resonanzwache (temporal projection) echoes strike with the Wizard.
+  const dummy = game.trainingDummy; const neutral = { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false };
+  P.state = 'idle'; P.stateTimer = 0;
+  spells.cast(P, spells.resolveSpell([{ id: 'buff_T26' }]), game);
+  for (let i = 0; i < 12; i++) P.update(1 / 60, neutral, game.battlefield, game);
+  spells.clearRuntime();
+  P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.comboStep = 0;
+  P.executeAttack(neutral, 'normal'); P.update(1 / 60, neutral, game.battlefield, game);
+  assert(spells.activeSpells.filter((sp) => sp.constructor.name === 'EchoStrikeFx').length === 2, 'Resonanzwache sends two resonance echoes into an attack');
+  assert(P.buffForm.act > .2, 'The action weight rises while attacking');
+  buff.endBuffForm(P); spells.clearRuntime(); dummy.homeX = dummy.x = 512;
+}
+
 const frameCallback = nextFrame;
 frameCallback(game.lastFrameTime + 16);
 game.debugVisible = true;

@@ -44,14 +44,14 @@
 ### T02 Schlackenkern · *Orbital Construct*
 
 - **Idle-Silhouette:** Orbital Construct (freischwebende Ringe, Objekte und Fragmente): Schwebender Keramikofen als asymmetrisches Rippenband um Taille und Schulter; glühende Öffnung an der linken Hüfte.
-- **Action-Silhouette:** Die Konstrukte rotieren schneller, ziehen sich bei Defense vor die Blickrichtung und folgen dem Sprung träge. Sprint Lava Tread, Jump Magma Bound, Defense Basalt Shell.
-- **Peak Manifestation:** Die Konstrukte setzen sich zu einer großen Form zusammen (Faust, Schild, Maschine …). Full: Volcano Lance / Eruption Crown / Crater Heart.
+- **Action-Silhouette:** Die Konstrukte kreisen auf eigenen, geneigten Bahnen; bei Angriffen rotieren sie schneller und schließen sich vor der Hand zur Speerspitze, bei Defense stapeln sie sich zur Wand, dem Sprung folgen sie träge. Sprint Lava Tread, Jump Magma Bound, Defense Basalt Shell.
+- **Peak Manifestation:** Beim Aufladen setzen sich die Konstrukte vor dem Spieler zu einer großen, verstrebten Form zusammen (Faust, Schild, Maschine …). Full: Volcano Lance / Eruption Crown / Crater Heart.
 - Palette: `#292c33` `#e4a357` `#ab78c0` · Material: verglaste Ofenkeramik.
 
 ### T03 Reliktkiefer · *Creature Manifestation*
 
 - **Idle-Silhouette:** Creature Manifestation (unabhängige Energiegeschöpfe): Drei freischwebende, winkelige Kieferbögen aus Fossilglas bilden einen offenen Greifapparat neben dem Avatar.
-- **Action-Silhouette:** Die Geschöpfe umkreisen den Spieler, strecken sich im Sprint und schnappen bei Angriffen zu. Sprint Wyrm Skitter, Jump Wyrm Leap, Defense Scale Veil.
+- **Action-Silhouette:** Die Geschöpfe bewegen sich auf eigenen Bahnen um den Spieler (Marionetten stehen am Boden und hängen an seinen Fäden), strecken sich im Sprint nach hinten und schnellen bei Angriffen vor. Sprint Wyrm Skitter, Jump Wyrm Leap, Defense Scale Veil.
 - **Peak Manifestation:** Die Geschöpfe lösen sich als eigenständige Angreifer vom Spieler. Full: Ancestral Breath / Sky Maw / Primal Coil.
 - Palette: `#556261` `#e0d2aa` `#36a49c` · Material: mineralisches Fossilglas.
 
@@ -65,43 +65,43 @@
 ### T05 Bruchflug · *Levitation State*
 
 - **Idle-Silhouette:** Levitation State (schwebender Spieler mit kontrollierten Projektilen): Drei gebrochene, schwebende Gravitätsfinnen statt zwei biologischer Flügel; keine Hörner.
-- **Action-Silhouette:** Der Spieler schwebt über seinem Schatten; Projektile ordnen sich je nach Aktion neu. Sprint Fel Skim, Jump Double Vault, Defense Fiend Wings.
+- **Action-Silhouette:** Der Spieler schwebt über seinem Schatten; die Projektile ordnen sich je nach Aktion neu: Halo im Idle, Zielreihe vor der Hand beim Angriff, Schildbogen bei Defense, Schleppe im Sprint, unter den Füßen im Sprung. Sprint Fel Skim, Jump Double Vault, Defense Fiend Wings.
 - **Peak Manifestation:** Er steigt kurz höher, die Projektile fächern zur Full-Attacke aus. Full: Annihilation Ray / Infernal Ascent / Abyss Crash.
 - Palette: `#161d29` `#2fa89c` `#d77d9d` · Material: dunkler Gravitätsstein.
 
 ### T06 Ionspindel · *Orbital Construct*
 
 - **Idle-Silhouette:** Orbital Construct (freischwebende Ringe, Objekte und Fragmente): Drei schmale Magnetspulen rotieren diagonal um Hüfte, Ellbogen und Schulter.
-- **Action-Silhouette:** Die Konstrukte rotieren schneller, ziehen sich bei Defense vor die Blickrichtung und folgen dem Sprung träge. Sprint Arc Sprint, Jump Ion Hop, Defense Faraday Veil.
-- **Peak Manifestation:** Die Konstrukte setzen sich zu einer großen Form zusammen (Faust, Schild, Maschine …). Full: Tempest Chain / Storm Spire / Cyclone Ground.
+- **Action-Silhouette:** Die Konstrukte kreisen auf eigenen, geneigten Bahnen; bei Angriffen rotieren sie schneller und schließen sich vor der Hand zur Speerspitze, bei Defense stapeln sie sich zur Wand, dem Sprung folgen sie träge. Sprint Arc Sprint, Jump Ion Hop, Defense Faraday Veil.
+- **Peak Manifestation:** Beim Aufladen setzen sich die Konstrukte vor dem Spieler zu einer großen, verstrebten Form zusammen (Faust, Schild, Maschine …). Full: Tempest Chain / Storm Spire / Cyclone Ground.
 - Palette: `#254e59` `#b6d46b` `#f29a70` · Material: elektrisch leitendes Glasfasergeflecht.
 
 ### T07 Dämmerlauf · *Body Augmentation*
 
 - **Idle-Silhouette:** Body Augmentation (Strukturen direkt am Körper, zusätzliche Glieder und Leitungen): Vier asymmetrische Rauchsicheln entlang Unterarmen und Waden verlängern die Körperkontur; kein Fell, kein Wolfsmaul.
-- **Action-Silhouette:** Die Strukturen pumpen, spannen sich und folgen jeder Pose eng am Körper. Sprint Lunar Hunt, Jump Moonbound, Defense Hide Guard.
-- **Peak Manifestation:** Die körpernahen Strukturen wachsen kurz zu einer großen Arena-Struktur aus. Full: Moon Howl / Silver Ascension / Lunar Ravage.
+- **Action-Silhouette:** Leitungen pumpen entlang Armen und Beinen zwischen den Anbauten; bei Angriffen entfaltet sich ein zusätzliches Gelenkglied aus der hinteren Schulter und schlägt zu, bei Defense wächst eine Platte über den vorderen Unterarm. Sprint Lunar Hunt, Jump Moonbound, Defense Hide Guard.
+- **Peak Manifestation:** Die körpernahen Strukturen wachsen kurz als Stacheln aus dem Arenaboden. Full: Moon Howl / Silver Ascension / Lunar Ravage.
 - Palette: `#414d51` `#a7ba87` `#e6af8c` · Material: halbtransparentes Rauchmetall.
 
 ### T08 Ossuarium · *Orbital Construct*
 
 - **Idle-Silhouette:** Orbital Construct (freischwebende Ringe, Objekte und Fragmente): Hängende Keramikglocken und geknickte Grabplatten bilden ein bewegliches, hohles Rüstungskarussell.
-- **Action-Silhouette:** Die Konstrukte rotieren schneller, ziehen sich bei Defense vor die Blickrichtung und folgen dem Sprung träge. Sprint Grave Drift, Jump Skeletal Hop, Defense Ossified Ward.
-- **Peak Manifestation:** Die Konstrukte setzen sich zu einer großen Form zusammen (Faust, Schild, Maschine …). Full: Sarcophagus Lance / Ossuary Bloom / Bone Cathedral.
+- **Action-Silhouette:** Die Konstrukte kreisen auf eigenen, geneigten Bahnen; bei Angriffen rotieren sie schneller und schließen sich vor der Hand zur Speerspitze, bei Defense stapeln sie sich zur Wand, dem Sprung folgen sie träge. Sprint Grave Drift, Jump Skeletal Hop, Defense Ossified Ward.
+- **Peak Manifestation:** Beim Aufladen setzen sich die Konstrukte vor dem Spieler zu einer großen, verstrebten Form zusammen (Faust, Schild, Maschine …). Full: Sarcophagus Lance / Ossuary Bloom / Bone Cathedral.
 - Palette: `#323c40` `#f2e7cc` `#8ebf97` · Material: antike Glockenkeramik.
 
 ### T09 Prismabruch · *Orbital Construct*
 
 - **Idle-Silhouette:** Orbital Construct (freischwebende Ringe, Objekte und Fragmente): Ein einseitig schwebendes Prisma aus fünf ungleichen Spiegelplatten; keine Dämonenhörner und keine vollständigen Doppelgänger.
-- **Action-Silhouette:** Die Konstrukte rotieren schneller, ziehen sich bei Defense vor die Blickrichtung und folgen dem Sprung träge. Sprint Mirror Drift, Jump Split Leap, Defense Refractive Guard.
-- **Peak Manifestation:** Die Konstrukte setzen sich zu einer großen Form zusammen (Faust, Schild, Maschine …). Full: Fractured Volley / Prism Ascension / Reflection Rift.
+- **Action-Silhouette:** Die Konstrukte kreisen auf eigenen, geneigten Bahnen; bei Angriffen rotieren sie schneller und schließen sich vor der Hand zur Speerspitze, bei Defense stapeln sie sich zur Wand, dem Sprung folgen sie träge. Sprint Mirror Drift, Jump Split Leap, Defense Refractive Guard.
+- **Peak Manifestation:** Beim Aufladen setzen sich die Konstrukte vor dem Spieler zu einer großen, verstrebten Form zusammen (Faust, Schild, Maschine …). Full: Fractured Volley / Prism Ascension / Reflection Rift.
 - Palette: `#21343a` `#e6a36d` `#84c9ae` · Material: alteriertes Spiegelglas.
 
 ### T10 Aderarchon · *Body Augmentation*
 
 - **Idle-Silhouette:** Body Augmentation (Strukturen direkt am Körper, zusätzliche Glieder und Leitungen): Vier hohle Wurzelröhren verlaufen außen um Torso und Arme, ohne Fledermausflügel.
-- **Action-Silhouette:** Die Strukturen pumpen, spannen sich und folgen jeder Pose eng am Körper. Sprint Sanguine Drift, Jump Bloodborne Jump, Defense Wing Cocoon.
-- **Peak Manifestation:** Die körpernahen Strukturen wachsen kurz zu einer großen Arena-Struktur aus. Full: Eclipse Lance / Crimson Ascension / Demonflare.
+- **Action-Silhouette:** Leitungen pumpen entlang Armen und Beinen zwischen den Anbauten; bei Angriffen entfaltet sich ein zusätzliches Gelenkglied aus der hinteren Schulter und schlägt zu, bei Defense wächst eine Platte über den vorderen Unterarm. Sprint Sanguine Drift, Jump Bloodborne Jump, Defense Wing Cocoon.
+- **Peak Manifestation:** Die körpernahen Strukturen wachsen kurz als Stacheln aus dem Arenaboden. Full: Eclipse Lance / Crimson Ascension / Demonflare.
 - Palette: `#543544` `#c07a78` `#e8cfbd` · Material: organisches Wurzelglas.
 
 ### T11 Polartrick · *Energy Extension*
@@ -114,22 +114,22 @@
 ### T12 Stratospalter · *Body Augmentation*
 
 - **Idle-Silhouette:** Body Augmentation (Strukturen direkt am Körper, zusätzliche Glieder und Leitungen): Vier offene Prankenbügel schweben als externe Exoskelett-Stützen um Hüfte und Schultern.
-- **Action-Silhouette:** Die Strukturen pumpen, spannen sich und folgen jeder Pose eng am Körper. Sprint Paw Gallop, Jump Prowler Leap, Defense Paw Bastion.
-- **Peak Manifestation:** Die körpernahen Strukturen wachsen kurz zu einer großen Arena-Struktur aus. Full: Tiger Roar / Heaven Prowl / Imperial Roar.
+- **Action-Silhouette:** Leitungen pumpen entlang Armen und Beinen zwischen den Anbauten; bei Angriffen entfaltet sich ein zusätzliches Gelenkglied aus der hinteren Schulter und schlägt zu, bei Defense wächst eine Platte über den vorderen Unterarm. Sprint Paw Gallop, Jump Prowler Leap, Defense Paw Bastion.
+- **Peak Manifestation:** Die körpernahen Strukturen wachsen kurz als Stacheln aus dem Arenaboden. Full: Tiger Roar / Heaven Prowl / Imperial Roar.
 - Palette: `#285060` `#e7e9dd` `#eead6b` · Material: poliertes Luftdruck-Exometall.
 
 ### T13 Fadenschlag · *Body Augmentation*
 
 - **Idle-Silhouette:** Body Augmentation (Strukturen direkt am Körper, zusätzliche Glieder und Leitungen): Sichtbare metallische Fadenspule nahe der Schulter; vier Spannseile führen zu der vorhandenen Waffe.
-- **Action-Silhouette:** Die Strukturen pumpen, spannen sich und folgen jeder Pose eng am Körper. Sprint Lightning Thread, Jump Loom Jump, Defense Silk Parry.
-- **Peak Manifestation:** Die körpernahen Strukturen wachsen kurz zu einer großen Arena-Struktur aus. Full: Hundred Filaments / Heaven Loom / Thunder Weave.
+- **Action-Silhouette:** Leitungen pumpen entlang Armen und Beinen zwischen den Anbauten; bei Angriffen entfaltet sich ein zusätzliches Gelenkglied aus der hinteren Schulter und schlägt zu, bei Defense wächst eine Platte über den vorderen Unterarm. Sprint Lightning Thread, Jump Loom Jump, Defense Silk Parry.
+- **Peak Manifestation:** Die körpernahen Strukturen wachsen kurz als Stacheln aus dem Arenaboden. Full: Hundred Filaments / Heaven Loom / Thunder Weave.
 - Palette: `#193e53` `#d7a856` `#e77b62` · Material: gesponnene Metallfäden.
 
 ### T14 Glyphenschmied · *Orbital Construct*
 
 - **Idle-Silhouette:** Orbital Construct (freischwebende Ringe, Objekte und Fragmente): Drei schiefe, gestanzte Glyphenplatten hängen an einer zentralen Klemme statt generischer Magiekreise.
-- **Action-Silhouette:** Die Konstrukte rotieren schneller, ziehen sich bei Defense vor die Blickrichtung und folgen dem Sprung träge. Sprint Glyph Flow, Jump Glyph Step, Defense Script Ward.
-- **Peak Manifestation:** Die Konstrukte setzen sich zu einer großen Form zusammen (Faust, Schild, Maschine …). Full: Grand Script / Runic Obelisk / Circle Codex.
+- **Action-Silhouette:** Die Konstrukte kreisen auf eigenen, geneigten Bahnen; bei Angriffen rotieren sie schneller und schließen sich vor der Hand zur Speerspitze, bei Defense stapeln sie sich zur Wand, dem Sprung folgen sie träge. Sprint Glyph Flow, Jump Glyph Step, Defense Script Ward.
+- **Peak Manifestation:** Beim Aufladen setzen sich die Konstrukte vor dem Spieler zu einer großen, verstrebten Form zusammen (Faust, Schild, Maschine …). Full: Grand Script / Runic Obelisk / Circle Codex.
 - Palette: `#25383d` `#d4b482` `#8ad1be` · Material: gestanzte Glyphenbleche.
 
 ### T15 Spektralweiche · *Energy Extension*
@@ -142,8 +142,8 @@
 ### T16 Vierknoten · *Orbital Construct*
 
 - **Idle-Silhouette:** Orbital Construct (freischwebende Ringe, Objekte und Fragmente): Vier mechanische Pendelknoten hängen in asymmetrischem Orbit um den Rücken statt kleiner humanoider Dschinn.
-- **Action-Silhouette:** Die Konstrukte rotieren schneller, ziehen sich bei Defense vor die Blickrichtung und folgen dem Sprung träge. Sprint Djinn Parade, Jump Summoner Hop, Defense Djinn Halo.
-- **Peak Manifestation:** Die Konstrukte setzen sich zu einer großen Form zusammen (Faust, Schild, Maschine …). Full: Conclave Burst / Ascendant Choir / Summoners Ring.
+- **Action-Silhouette:** Die Konstrukte kreisen auf eigenen, geneigten Bahnen; bei Angriffen rotieren sie schneller und schließen sich vor der Hand zur Speerspitze, bei Defense stapeln sie sich zur Wand, dem Sprung folgen sie träge. Sprint Djinn Parade, Jump Summoner Hop, Defense Djinn Halo.
+- **Peak Manifestation:** Beim Aufladen setzen sich die Konstrukte vor dem Spieler zu einer großen, verstrebten Form zusammen (Faust, Schild, Maschine …). Full: Conclave Burst / Ascendant Choir / Summoners Ring.
 - Palette: `#5f596b` `#d1ba84` `#8faeaa` · Material: mineralische Pendelmetalle.
 
 ### T17 Glutmauser · *Energy Extension*
@@ -156,57 +156,57 @@
 ### T18 Morphgitter · *Body Augmentation*
 
 - **Idle-Silhouette:** Body Augmentation (Strukturen direkt am Körper, zusätzliche Glieder und Leitungen): Ein offenes Gitter aus beweglichen Prismenzellen verbindet vorhandene Gliedmaßen mit temporären Werkzeugformen.
-- **Action-Silhouette:** Die Strukturen pumpen, spannen sich und folgen jeder Pose eng am Körper. Sprint Chimera Trudge, Jump Soul Morph Hop, Defense Chimera Shell.
-- **Peak Manifestation:** Die körpernahen Strukturen wachsen kurz zu einer großen Arena-Struktur aus. Full: Soul Cannon / Manticore Crown / Ancient Shellbreak.
+- **Action-Silhouette:** Leitungen pumpen entlang Armen und Beinen zwischen den Anbauten; bei Angriffen entfaltet sich ein zusätzliches Gelenkglied aus der hinteren Schulter und schlägt zu, bei Defense wächst eine Platte über den vorderen Unterarm. Sprint Chimera Trudge, Jump Soul Morph Hop, Defense Chimera Shell.
+- **Peak Manifestation:** Die körpernahen Strukturen wachsen kurz als Stacheln aus dem Arenaboden. Full: Soul Cannon / Manticore Crown / Ancient Shellbreak.
 - Palette: `#4d6052` `#e3bb85` `#6d97a4` · Material: prismatische Rasterzellen.
 
 ### T19 Schwuranker · *Body Augmentation*
 
 - **Idle-Silhouette:** Body Augmentation (Strukturen direkt am Körper, zusätzliche Glieder und Leitungen): Drei schwere U-förmige Klammern schweben um Schulter, Hüfte und Unterarm; kein klassischer Schildritter.
-- **Action-Silhouette:** Die Strukturen pumpen, spannen sich und folgen jeder Pose eng am Körper. Sprint Iron March, Jump Armor Vault, Defense Oath Shield.
-- **Peak Manifestation:** Die körpernahen Strukturen wachsen kurz zu einer großen Arena-Struktur aus. Full: Bastion Beam / Citadel Rise / Fortress Quake.
+- **Action-Silhouette:** Leitungen pumpen entlang Armen und Beinen zwischen den Anbauten; bei Angriffen entfaltet sich ein zusätzliches Gelenkglied aus der hinteren Schulter und schlägt zu, bei Defense wächst eine Platte über den vorderen Unterarm. Sprint Iron March, Jump Armor Vault, Defense Oath Shield.
+- **Peak Manifestation:** Die körpernahen Strukturen wachsen kurz als Stacheln aus dem Arenaboden. Full: Bastion Beam / Citadel Rise / Fortress Quake.
 - Palette: `#303940` `#bd986a` `#a6c2b0` · Material: schweres Ankerbronze-Glas.
 
 ### T20 Taktklinge · *Body Augmentation*
 
 - **Idle-Silhouette:** Body Augmentation (Strukturen direkt am Körper, zusätzliche Glieder und Leitungen): Kurze Messerkanten aus leuchtenden Notenstrichen liegen an den Unterarmen; Fußspuren sind abstrakte Taktmarken.
-- **Action-Silhouette:** Die Strukturen pumpen, spannen sich und folgen jeder Pose eng am Körper. Sprint Dancer Step, Jump Dance Vault, Defense Counter Stance.
-- **Peak Manifestation:** Die körpernahen Strukturen wachsen kurz zu einer großen Arena-Struktur aus. Full: Grand Pirouette / Rhapsody Rise / Falling Cadence.
+- **Action-Silhouette:** Leitungen pumpen entlang Armen und Beinen zwischen den Anbauten; bei Angriffen entfaltet sich ein zusätzliches Gelenkglied aus der hinteren Schulter und schlägt zu, bei Defense wächst eine Platte über den vorderen Unterarm. Sprint Dancer Step, Jump Dance Vault, Defense Counter Stance.
+- **Peak Manifestation:** Die körpernahen Strukturen wachsen kurz als Stacheln aus dem Arenaboden. Full: Grand Pirouette / Rhapsody Rise / Falling Cadence.
 - Palette: `#244451` `#efba7a` `#87c7b0` · Material: geschliffene Takt-Schneiden.
 
 ### T21 Orbitpranke · *Orbital Construct*
 
 - **Idle-Silhouette:** Orbital Construct (freischwebende Ringe, Objekte und Fragmente): Winzige scharfkantige Orbitkörper kreisen um die Hände und Ellbogen; Haare und Gesicht bleiben unverändert.
-- **Action-Silhouette:** Die Konstrukte rotieren schneller, ziehen sich bei Defense vor die Blickrichtung und folgen dem Sprung träge. Sprint Star Dash, Jump Star Jump, Defense Aura Brace.
-- **Peak Manifestation:** Die Konstrukte setzen sich zu einer großen Form zusammen (Faust, Schild, Maschine …). Full: Nova Beam / Comet Ascend / Supernova Pulse.
+- **Action-Silhouette:** Die Konstrukte kreisen auf eigenen, geneigten Bahnen; bei Angriffen rotieren sie schneller und schließen sich vor der Hand zur Speerspitze, bei Defense stapeln sie sich zur Wand, dem Sprung folgen sie träge. Sprint Star Dash, Jump Star Jump, Defense Aura Brace.
+- **Peak Manifestation:** Beim Aufladen setzen sich die Konstrukte vor dem Spieler zu einer großen, verstrebten Form zusammen (Faust, Schild, Maschine …). Full: Nova Beam / Comet Ascend / Supernova Pulse.
 - Palette: `#1e3853` `#f2b16f` `#b9cfd6` · Material: poröse Orbitkeramik.
 
 ### T22 Zündschuppe · *Body Augmentation*
 
 - **Idle-Silhouette:** Body Augmentation (Strukturen direkt am Körper, zusätzliche Glieder und Leitungen): Mattgrüne keramische Schuppenkacheln sitzen in unregelmäßigen Reihen nur an Gelenken, ohne Drachenkopf.
-- **Action-Silhouette:** Die Strukturen pumpen, spannen sich und folgen jeder Pose eng am Körper. Sprint Drake Runner, Jump Dragon Leap, Defense Fire Scale Guard.
-- **Peak Manifestation:** Die körpernahen Strukturen wachsen kurz zu einer großen Arena-Struktur aus. Full: King Roar / Sky Dragon Coil / Scales of Ruin.
+- **Action-Silhouette:** Leitungen pumpen entlang Armen und Beinen zwischen den Anbauten; bei Angriffen entfaltet sich ein zusätzliches Gelenkglied aus der hinteren Schulter und schlägt zu, bei Defense wächst eine Platte über den vorderen Unterarm. Sprint Drake Runner, Jump Dragon Leap, Defense Fire Scale Guard.
+- **Peak Manifestation:** Die körpernahen Strukturen wachsen kurz als Stacheln aus dem Arenaboden. Full: King Roar / Sky Dragon Coil / Scales of Ruin.
 - Palette: `#4b4b45` `#c0d0a0` `#d66f52` · Material: geprägte Zündschuppen.
 
 ### T23 Nullfeldträger · *Orbital Construct*
 
 - **Idle-Silhouette:** Orbital Construct (freischwebende Ringe, Objekte und Fragmente): Drei offene, farblose Negativräume schweben über Schulter und Hand. Licht und Partikel verschwinden innerhalb ihrer Kontur.
-- **Action-Silhouette:** Die Konstrukte rotieren schneller, ziehen sich bei Defense vor die Blickrichtung und folgen dem Sprung träge. Sprint Void Rush, Jump Eclipse Jump, Defense Negation Guard.
-- **Peak Manifestation:** Die Konstrukte setzen sich zu einer großen Form zusammen (Faust, Schild, Maschine …). Full: Spell Eater / Eclipse Pillar / Silence Rift.
+- **Action-Silhouette:** Die Konstrukte kreisen auf eigenen, geneigten Bahnen; bei Angriffen rotieren sie schneller und schließen sich vor der Hand zur Speerspitze, bei Defense stapeln sie sich zur Wand, dem Sprung folgen sie träge. Sprint Void Rush, Jump Eclipse Jump, Defense Negation Guard.
+- **Peak Manifestation:** Beim Aufladen setzen sich die Konstrukte vor dem Spieler zu einer großen, verstrebten Form zusammen (Faust, Schild, Maschine …). Full: Spell Eater / Eclipse Pillar / Silence Rift.
 - Palette: `#333743` `#e8e2d9` `#a9d77f` · Material: lichtabsorbierendes Negativfeld.
 
 ### T24 Fadenregent · *Creature Manifestation*
 
 - **Idle-Silhouette:** Creature Manifestation (unabhängige Energiegeschöpfe): Zwei flache, gelenkige Schatten-Marionetten hängen an sichtbaren diagonalen Lichtfäden; keine Geistersoldaten-Armee.
-- **Action-Silhouette:** Die Geschöpfe umkreisen den Spieler, strecken sich im Sprint und schnappen bei Angriffen zu. Sprint Shadow March, Jump King Step, Defense Royal Guard.
+- **Action-Silhouette:** Die Geschöpfe bewegen sich auf eigenen Bahnen um den Spieler (Marionetten stehen am Boden und hängen an seinen Fäden), strecken sich im Sprint nach hinten und schnellen bei Angriffen vor. Sprint Shadow March, Jump King Step, Defense Royal Guard.
 - **Peak Manifestation:** Die Geschöpfe lösen sich als eigenständige Angreifer vom Spieler. Full: Legion Spear / Kingdom Ascends / March of Shades.
 - Palette: `#293d5b` `#e0cba5` `#ce945e` · Material: schattengefärbte Fadenmarionetten.
 
 ### T25 Hämolith · *Body Augmentation*
 
 - **Idle-Silhouette:** Body Augmentation (Strukturen direkt am Körper, zusätzliche Glieder und Leitungen): Dünne keramische Kapillaren liegen offen um die Unterarme und formen raue Mineralkanten.
-- **Action-Silhouette:** Die Strukturen pumpen, spannen sich und folgen jeder Pose eng am Körper. Sprint Crimson Run, Jump Blood Leap, Defense Hemo Shell.
-- **Peak Manifestation:** Die körpernahen Strukturen wachsen kurz zu einer großen Arena-Struktur aus. Full: Hemal Lance / Crimson Gallows / Red Thorn Garden.
+- **Action-Silhouette:** Leitungen pumpen entlang Armen und Beinen zwischen den Anbauten; bei Angriffen entfaltet sich ein zusätzliches Gelenkglied aus der hinteren Schulter und schlägt zu, bei Defense wächst eine Platte über den vorderen Unterarm. Sprint Crimson Run, Jump Blood Leap, Defense Hemo Shell.
+- **Peak Manifestation:** Die körpernahen Strukturen wachsen kurz als Stacheln aus dem Arenaboden. Full: Hemal Lance / Crimson Gallows / Red Thorn Garden.
 - Palette: `#5a4551` `#b88483` `#d4b0a7` · Material: mineralisiertes Aderglas.
 
 ### T26 Resonanzwache · *Temporal Projection*
@@ -219,8 +219,8 @@
 ### T27 Faltspur · *Body Augmentation*
 
 - **Idle-Silhouette:** Body Augmentation (Strukturen direkt am Körper, zusätzliche Glieder und Leitungen): Rechteckige Raumfalze wie gefaltete Papierkanten liegen um beide Ellbogen, ohne Körper-Tattoos.
-- **Action-Silhouette:** Die Strukturen pumpen, spannen sich und folgen jeder Pose eng am Körper. Sprint Seam Step, Jump Portal Hop, Defense Seam Shield.
-- **Peak Manifestation:** Die körpernahen Strukturen wachsen kurz zu einer großen Arena-Struktur aus. Full: Dimension Spear / Rift Pillar / Broken Compass.
+- **Action-Silhouette:** Leitungen pumpen entlang Armen und Beinen zwischen den Anbauten; bei Angriffen entfaltet sich ein zusätzliches Gelenkglied aus der hinteren Schulter und schlägt zu, bei Defense wächst eine Platte über den vorderen Unterarm. Sprint Seam Step, Jump Portal Hop, Defense Seam Shield.
+- **Peak Manifestation:** Die körpernahen Strukturen wachsen kurz als Stacheln aus dem Arenaboden. Full: Dimension Spear / Rift Pillar / Broken Compass.
 - Palette: `#273b57` `#9fcdbd` `#e9ab7e` · Material: gefaltete Wegmarkenfolie.
 
 ### T28 Rasterdom · *Environmental State*
@@ -233,8 +233,8 @@
 ### T29 Werkgestalt · *Orbital Construct*
 
 - **Idle-Silhouette:** Orbital Construct (freischwebende Ringe, Objekte und Fragmente): Drei eigenwillige Apparate, Pendel, Zange und Spindel, kreisen um die Hüfte; keine Krone oder Edelsteinreliquien.
-- **Action-Silhouette:** Die Konstrukte rotieren schneller, ziehen sich bei Defense vor die Blickrichtung und folgen dem Sprung träge. Sprint Relic Dash, Jump Artifact Leap, Defense Antique Ward.
-- **Peak Manifestation:** Die Konstrukte setzen sich zu einer großen Form zusammen (Faust, Schild, Maschine …). Full: Kingmaker Spear / Ascendant Vault / Relic Convergence.
+- **Action-Silhouette:** Die Konstrukte kreisen auf eigenen, geneigten Bahnen; bei Angriffen rotieren sie schneller und schließen sich vor der Hand zur Speerspitze, bei Defense stapeln sie sich zur Wand, dem Sprung folgen sie träge. Sprint Relic Dash, Jump Artifact Leap, Defense Antique Ward.
+- **Peak Manifestation:** Beim Aufladen setzen sich die Konstrukte vor dem Spieler zu einer großen, verstrebten Form zusammen (Faust, Schild, Maschine …). Full: Kingmaker Spear / Ascendant Vault / Relic Convergence.
 - Palette: `#515852` `#d2a06d` `#a8c7b9` · Material: wandernde Werkzeugkeramik.
 
 ### T30 Leisefaden · *Energy Extension*
@@ -247,28 +247,28 @@
 ### T31 Klingenherbarium · *Orbital Construct*
 
 - **Idle-Silhouette:** Orbital Construct (freischwebende Ringe, Objekte und Fragmente): Ein Fächer aus flachen, dreieckigen Glimmer-Samen statt Blütenblättern umkreist ein leeres Waffenlager.
-- **Action-Silhouette:** Die Konstrukte rotieren schneller, ziehen sich bei Defense vor die Blickrichtung und folgen dem Sprung träge. Sprint Petal Drift, Jump Petal Jump, Defense Petal Dome.
-- **Peak Manifestation:** Die Konstrukte setzen sich zu einer großen Form zusammen (Faust, Schild, Maschine …). Full: Thousand-Petal Wave / Blooming Vault / Royal Bloom.
+- **Action-Silhouette:** Die Konstrukte kreisen auf eigenen, geneigten Bahnen; bei Angriffen rotieren sie schneller und schließen sich vor der Hand zur Speerspitze, bei Defense stapeln sie sich zur Wand, dem Sprung folgen sie träge. Sprint Petal Drift, Jump Petal Jump, Defense Petal Dome.
+- **Peak Manifestation:** Beim Aufladen setzen sich die Konstrukte vor dem Spieler zu einer großen, verstrebten Form zusammen (Faust, Schild, Maschine …). Full: Thousand-Petal Wave / Blooming Vault / Royal Bloom.
 - Palette: `#2d5a52` `#d7bb99` `#c06f66` · Material: mineralisierte Pflanzenklingen.
 
 ### T32 Taktfunke · *Body Augmentation*
 
 - **Idle-Silhouette:** Body Augmentation (Strukturen direkt am Körper, zusätzliche Glieder und Leitungen): Abstrakte, rechteckige Akzentzeichen blitzen nur an den Fußgelenken bei tatsächlich getroffenen Schritten.
-- **Action-Silhouette:** Die Strukturen pumpen, spannen sich und folgen jeder Pose eng am Körper. Sprint Thunderstep, Jump Flash Jump, Defense Thunder Guard.
-- **Peak Manifestation:** Die körpernahen Strukturen wachsen kurz zu einer großen Arena-Struktur aus. Full: Sixfold Flash / Heaven Tempo / Storm Cantata.
+- **Action-Silhouette:** Leitungen pumpen entlang Armen und Beinen zwischen den Anbauten; bei Angriffen entfaltet sich ein zusätzliches Gelenkglied aus der hinteren Schulter und schlägt zu, bei Defense wächst eine Platte über den vorderen Unterarm. Sprint Thunderstep, Jump Flash Jump, Defense Thunder Guard.
+- **Peak Manifestation:** Die körpernahen Strukturen wachsen kurz als Stacheln aus dem Arenaboden. Full: Sixfold Flash / Heaven Tempo / Storm Cantata.
 - Palette: `#363b42` `#d8bc6b` `#78baaf` · Material: rhythmische Funkenmetallkanten.
 
 ### T33 Nachtmaß · *Body Augmentation*
 
 - **Idle-Silhouette:** Body Augmentation (Strukturen direkt am Körper, zusätzliche Glieder und Leitungen): Zwei schmale schwenkbare Messzirkel-Bügel an Schultern und Knien bilden die Stealth-Silhouette.
-- **Action-Silhouette:** Die Strukturen pumpen, spannen sich und folgen jeder Pose eng am Körper. Sprint Shade Run, Jump Moon Vault, Defense Counter Veil.
-- **Peak Manifestation:** Die körpernahen Strukturen wachsen kurz zu einer großen Arena-Struktur aus. Full: Crescent Chain / Midnight Split / Shadow Wheel.
+- **Action-Silhouette:** Leitungen pumpen entlang Armen und Beinen zwischen den Anbauten; bei Angriffen entfaltet sich ein zusätzliches Gelenkglied aus der hinteren Schulter und schlägt zu, bei Defense wächst eine Platte über den vorderen Unterarm. Sprint Shade Run, Jump Moon Vault, Defense Counter Veil.
+- **Peak Manifestation:** Die körpernahen Strukturen wachsen kurz als Stacheln aus dem Arenaboden. Full: Crescent Chain / Midnight Split / Shadow Wheel.
 - Palette: `#3b4359` `#c1b6a1` `#94b8b7` · Material: gedämpfte Schattenfolien.
 
 ### T34 Sternwerk · *Levitation State*
 
 - **Idle-Silhouette:** Levitation State (schwebender Spieler mit kontrollierten Projektilen): Ein schwebender Projektionsapparat aus drei nach außen klappenden Segmenten trägt eine leere Werkzeugfassung.
-- **Action-Silhouette:** Der Spieler schwebt über seinem Schatten; Projektile ordnen sich je nach Aktion neu. Sprint Summoner Drift, Jump Star Hop, Defense Ward Sentinel.
+- **Action-Silhouette:** Der Spieler schwebt über seinem Schatten; die Projektile ordnen sich je nach Aktion neu: Halo im Idle, Zielreihe vor der Hand beim Angriff, Schildbogen bei Defense, Schleppe im Sprint, unter den Füßen im Sprung. Sprint Summoner Drift, Jump Star Hop, Defense Ward Sentinel.
 - **Peak Manifestation:** Er steigt kurz höher, die Projektile fächern zur Full-Attacke aus. Full: Sentinel Volley / Constellation Lift / Orbit Fortress.
 - Palette: `#2d4766` `#cbaa77` `#b5c4ba` · Material: stellare Werkkeramik.
 
@@ -289,14 +289,14 @@
 ### T37 Säuregerüst · *Body Augmentation*
 
 - **Idle-Silhouette:** Lebendige Alchemie: transparente Katalysatorrohre umwickeln Arme, Rücken und Beine; unregelmäßige Ätzglasblasen schweben dicht am Körper; Säuredampf strömt über den Boden, Flüssigkeit wird zwischen den Kammern umgepumpt.
-- **Action-Silhouette:** Die Strukturen pumpen, spannen sich und folgen jeder Pose eng am Körper. Sprint Mire Glide, Jump Venom Jump, Defense Toxic Hide.
+- **Action-Silhouette:** Leitungen pumpen entlang Armen und Beinen zwischen den Anbauten; bei Angriffen entfaltet sich ein zusätzliches Gelenkglied aus der hinteren Schulter und schlägt zu, bei Defense wächst eine Platte über den vorderen Unterarm. Sprint Mire Glide, Jump Venom Jump, Defense Toxic Hide.
 - **Peak Manifestation:** Down Full: ein großer Teil des Bodens wird zu einem aufsteigenden, mehrschichtigen Ätzglas-Reaktor; Angriffe lassen ätzende Strahlen und Kapillarfäden aus dem System wachsen.
 - Palette: `#385a58` `#cfb76c` `#9c9c87` · Material: korrodiertes Ätzglas.
 
 ### T38 Asterglied · *Orbital Construct*
 
 - **Idle-Silhouette:** Orbitale Steinarchitektur: fünf massive, zerbrochene Steinringe schweben in unterschiedlichen Winkeln um den Charakter, rotieren und verschieben sich — keine Arme, kein Kopf.
-- **Action-Silhouette:** Die Konstrukte rotieren schneller, ziehen sich bei Defense vor die Blickrichtung und folgen dem Sprung träge. Sprint Golem March, Jump Crag Hop, Defense Stonewall.
+- **Action-Silhouette:** Die Konstrukte kreisen auf eigenen, geneigten Bahnen; bei Angriffen rotieren sie schneller und schließen sich vor der Hand zur Speerspitze, bei Defense stapeln sie sich zur Wand, dem Sprung folgen sie träge. Sprint Golem March, Jump Crag Hop, Defense Stonewall.
 - **Peak Manifestation:** Angriffe setzen die Ringe zu einer riesigen Faustprojektion (Forward), einem Ringturm (Up), einem Steinschild (Defense) oder einer rotierenden Zermalmungsmaschine (Down Full) zusammen.
 - Palette: `#5e5b55` `#9ca992` `#d8b68c` · Material: schwebende Gesteinskristalle.
 
@@ -310,6 +310,6 @@
 ### T40 Sonnenwyrm — Eid der Drachenlanze · *Creature Manifestation*
 
 - **Idle-Silhouette:** Zwei Energie-Wyrms aus rautenförmigen Obsidianschuppen mit Goldkanten umkreisen den Spieler; goldene Lanze in der Hand, Halo-Krone.
-- **Action-Silhouette:** Die Geschöpfe umkreisen den Spieler, strecken sich im Sprint und schnappen bei Angriffen zu. Sprint Wyrmlauf, Jump Himmelslauf und konturtreue Air-Aura, Defense Drachengrat.
+- **Action-Silhouette:** Die Geschöpfe bewegen sich auf eigenen Bahnen um den Spieler (Marionetten stehen am Boden und hängen an seinen Fäden), strecken sich im Sprint nach hinten und schnellen bei Angriffen vor. Sprint Wyrmlauf, Jump Himmelslauf und konturtreue Air-Aura, Defense Drachengrat.
 - **Peak Manifestation:** Zwillingswyrm-Jagd (zwei Drachen jagen über die Lane), Himmelswendel (Spiral-Wyrm), Wyrmportal-Ritual (Portale um ein Ziel).
 - Palette: `#f6cb6a` `#ed7b32` `#29212b` `#69d0c2` · Material: geschichtetes aurisches Schuppenglas und glühende Lanzenschneiden mit dunklen Obsidianzwischenräumen. Die Drachen sind energiegefertigte Angriffskonstrukte, keine vorgerenderten 2D-Kreaturen.

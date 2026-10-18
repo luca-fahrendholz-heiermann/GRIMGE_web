@@ -18,6 +18,7 @@ import { FORM_SPRINT_ATTACKS, FORM_FX_HOOKS } from './form_actions.js';
 import { materialFor, renderManifestation, contourVeinPainter, plate, band, rgba } from './buff_vfx.js';
 import { BuffStrikeSpell, applyStatuses } from './buff_techniques.js';
 import './buff_signatures.js'; // signature renderers (T37–T40)
+import './buff_morphologies.js'; // morphology family renderers (all other states)
 import { combat } from './combat.js';
 import { groundYForDepth } from './world.js';
 
@@ -425,7 +426,8 @@ const ATTACK_STATE = /^(attack[123]|heavyStrike|uppercut)$/;
 
 // Vorausschnitt: an echo leaves its time plane and strikes a moment later.
 export class EchoStrikeFx {
-  constructor(player, form, delay, fromDx) {
+  constructor(player, form, delay, fromDx, damage = 6) {
+    this.damage = damage;
     this.player = player; this.form = form; this.mat = form.mat; this.team = player.team;
     this.delay = delay; this.fromDx = fromDx; this.t = 0; this.life = delay + .42; this.isFinished = false;
     this.facing = player.facing || 1; this.state = player.state; this.struck = false;
@@ -442,7 +444,7 @@ export class EchoStrikeFx {
         if (!t || t.isDead || t.isObjective || t.isProp || (t.lifeState && t.lifeState !== 'Alive')) continue;
         const dx = (t.x - this.x1) * this.facing;
         if (dx < -10 || dx > 60 || Math.abs(((t.z ?? this.z) - this.z) * 150) > 30) continue;
-        t.takeDamage(6, this.facing * 120, 30, .2, false, 'melee');
+        t.takeDamage(this.damage, this.facing * 120, 30, .2, false, 'melee');
       }
     }
     if (this.t >= this.life) this.isFinished = true;
@@ -466,12 +468,20 @@ export function updateMorphology(player, form, dt) {
     player._timeTrail.unshift({ x: player.x, y: player.y, z: player.z, state: player.state, animTime: player.animTime, facing: player.facing });
     if (player._timeTrail.length > 60) player._timeTrail.length = 60;
   }
-  if (form.id === 'T39') {
+  if (form.morphology === 'temporal_projection') {
+    // Echoes strike delayed on every fresh attack: Vorausschnitt's three
+    // planes, Resonanzwache's two resonance echoes.
     const attacking = ATTACK_STATE.test(player.state) && player.stateTimer > 0;
     const fresh = attacking && (b.lastState !== player.state || b.lastCombo !== player.comboStep);
-    if (fresh) [-150, -75, 70].forEach((dx, i) => emit(new EchoStrikeFx(player, form, .08 + i * .08, dx)));
+    if (fresh) (form.id === 'T39' ? [-150, -75, 70] : [-60, -30]).forEach((dx, i) => emit(new EchoStrikeFx(player, form, .08 + i * .08, dx, form.id === 'T39' ? 6 : 5)));
     b.lastState = attacking ? player.state : null; b.lastCombo = player.comboStep;
   }
+  // Smoothed action weights the morphology renderers blend between.
+  const approach = (v, target, rate) => v + (target - v) * Math.min(1, dt * rate);
+  const acting = /^(attack|heavyStrike|uppercut|dive)/.test(player.state ?? '') && player.stateTimer > 0;
+  b.act = approach(b.act ?? 0, acting ? 1 : 0, acting ? 18 : 5);
+  b.guardK = approach(b.guardK ?? 0, player.isGuarding ? 1 : 0, 12);
+  b.sprintK = approach(b.sprintK ?? 0, player.sprintActive ? 1 : 0, 7);
   // Peak manifestation: a full release makes the form flare to its maximum.
   const wasFull = b.wasFull; const isFull = !!(player.formCharge && player.formCharge.elapsed >= 1.2);
   if (wasFull && !player.formCharge) b.peakAt = b.age;

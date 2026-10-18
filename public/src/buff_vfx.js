@@ -34,7 +34,7 @@ export function rng(seed) {
   let s = (seed >>> 0) || 1;
   return () => { s = (s + 0x6D2B79F5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
 }
-const hashStr = (s) => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
+export const hashStr = (s) => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
 const snap = (v) => Math.round(v);
 
 // Material of a form from its palette (dark · body · accent [· spark]).
@@ -207,7 +207,7 @@ export function fallout(ctx, origins, mat, t, seed, opts = {}) {
 }
 
 // A small spinning shard (triangle) of material.
-function shard(ctx, x, y, size, rot, mat, seed, alpha = 1) {
+export function shard(ctx, x, y, size, rot, mat, seed, alpha = 1) {
   const pts = [[0, -size], [size * .55, size * .4], [-size * .45, size * .55]].map(([px, py]) => [x + px * Math.cos(rot) - py * Math.sin(rot), y + px * Math.sin(rot) + py * Math.cos(rot)]);
   plate(ctx, pts, mat, seed, { alpha, pulse: .6 });
 }
@@ -228,6 +228,8 @@ export function sockets(player, y) {
 // Pose state the manifestations react to.
 export function poseOf(player) {
   const speed = Math.abs(player.vx ?? 0);
+  const attacking = /^(attack|heavyStrike|uppercut|dive)/.test(player.state ?? '') && (player.stateTimer ?? 0) > 0;
+  const b = player.buffForm;
   return {
     t: player.animTime ?? 0,
     run: Math.min(1, speed / 260),
@@ -238,7 +240,11 @@ export function poseOf(player) {
     charge: player.formCharge ? Math.min(1, player.formCharge.elapsed / 1.2) : player.chargeTimer > 0 ? .5 : 0,
     chargeDir: player.chargeDir ?? 'forward',
     full: !!(player.formCharge && player.formCharge.elapsed >= 1.2),
-    attacking: /^(attack|heavyStrike|uppercut|dive)/.test(player.state ?? '') && (player.stateTimer ?? 0) > 0,
+    attacking,
+    // Smoothed action weights (updateMorphology) for the morphology blends.
+    act: b?.act ?? (attacking ? 1 : 0),
+    guardK: b?.guardK ?? (player.isGuarding ? 1 : 0),
+    sprintK: b?.sprintK ?? (player.sprintActive ? 1 : 0),
     lean: player.formLean ?? 0,
     fade: 1
   };
@@ -371,7 +377,7 @@ function arkengestell(ctx, s, pose, mat, form, layer) {
 }
 
 // A spring-jointed limb segment: a faceted plate between two joints.
-function limbSegment(ctx, a, b, w, mat, seed, pose) {
+export function limbSegment(ctx, a, b, w, mat, seed, pose) {
   const dx = b[0] - a[0]; const dy = b[1] - a[1]; const len = Math.hypot(dx, dy) || 1;
   const nx = -dy / len * w * .5; const ny = dx / len * w * .5;
   plate(ctx, [[a[0] + nx, a[1] + ny], [a[0] + dx * .5 + nx * 1.25, a[1] + dy * .5 + ny * 1.25], [b[0] + nx * .8, b[1] + ny * .8], [b[0] - nx * .8, b[1] - ny * .8], [a[0] + dx * .5 - nx * 1.25, a[1] + dy * .5 - ny * 1.25], [a[0] - nx, a[1] - ny]], mat, seed, { alpha: pose.fade, pulse: .5 + .5 * Math.sin(pose.t * 2 + seed) });
@@ -452,7 +458,7 @@ function fins(ctx, s, pose, mat, form, layer) {
 }
 
 // Orbit items (coils, knots, mirrors, frames, voids, glyph plates, seeds …).
-function orbitItem(ctx, item, x, y, size, rot, mat, seed, alpha, t) {
+export function orbitItem(ctx, item, x, y, size, rot, mat, seed, alpha, t) {
   const c = Math.cos(rot); const sn = Math.sin(rot);
   const P = (px, py) => [x + px * c - py * sn, y + px * sn + py * c];
   switch (item) {
@@ -765,6 +771,11 @@ function wyrm(ctx, s, pose, mat, form, layer) {
 const RENDERERS = { risswild, arkengestell, bands, fins, orbit, limbs, girdle, frame, jaws, puppets, arches, wyrm };
 // Signature renderers (forms with their own reference art) register here.
 export function registerRenderer(name, fn, scale = 1) { RENDERERS[name] = fn; ARCHETYPE_SCALE[name] = scale; }
+export const archetypeRenderer = (name) => RENDERERS[name] ?? fins;
+// Morphology family renderers (buff_morphologies.js) draw every Arcane State
+// without signature art; they handle idle / action / peak themselves.
+const MORPHOLOGY = {};
+export function registerMorphology(name, fn, scale = 1) { MORPHOLOGY[name] = { fn, scale }; }
 // Presence of the generic archetypes (the atlas asks for 2.2–4.5 × H large
 // manifestations; anchored pieces stay closer to the body).
 const ARCHETYPE_SCALE = { bands: 1.5, fins: 1.6, arches: 1.25, puppets: 1.45, jaws: 1.5, orbit: 1.45, frame: 1.4, girdle: 1.35, limbs: 1.3, arkengestell: 1.3, wyrm: 1.35, risswild: 1 };
@@ -787,8 +798,9 @@ function environmentField(ctx, s, pose, mat, form) {
 }
 
 // Levitation state: a hover ring under the floating Wizard and controlled shards.
-function levitationExtras(ctx, s, pose, mat, form, layer) {
+function levitationExtras(ctx, s, pose, mat, form, layer, ring = false) {
   const t = pose.t;
+  if (ring) { if (layer === 'back') for (let i = 0; i < 10; i++) { const a = i / 10 * TAU + t; plate(ctx, [[s.x + Math.cos(a) * 20, s.y + Math.sin(a) * 5 - 2], [s.x + Math.cos(a + .3) * 26, s.y + Math.sin(a + .3) * 6 - 2], [s.x + Math.cos(a + .15) * 18, s.y + Math.sin(a + .15) * 4]], mat, 7400 + i, { alpha: pose.fade * .7, glowEdge: .6 }); } return; }
   if (layer === 'back') { for (let i = 0; i < 10; i++) { const a = i / 10 * TAU + t; plate(ctx, [[s.x + Math.cos(a) * 20, s.y + Math.sin(a) * 5 - 2], [s.x + Math.cos(a + .3) * 26, s.y + Math.sin(a + .3) * 6 - 2], [s.x + Math.cos(a + .15) * 18, s.y + Math.sin(a + .15) * 4]], mat, 7400 + i, { alpha: pose.fade * .7, glowEdge: .6 }); } }
   for (let i = 0; i < 3; i++) { const a = t * 1.4 + i * TAU / 3; const back = Math.sin(a) < 0; if ((layer === 'back') !== back) continue; const x = s.x + Math.cos(a) * 40; const y = s.y - 60 + Math.sin(a) * 14; plate(ctx, [[x, y - 6], [x + 4, y], [x, y + 6], [x - 4, y]], mat, 7450 + i, { alpha: pose.fade, core: 1 }); }
 }
@@ -805,7 +817,8 @@ function groundSigil(ctx, s, pose, mat, seed) {
 
 // Draws a form's manifestation on one layer.
 export function renderManifestation(ctx, player, form, layer, renderY, fade = 1, peak = 0) {
-  const draw = RENDERERS[form.archetype] ?? fins;
+  const morph = !SIGNATURE.has(form.archetype) && form.morphology !== 'astral_avatar' ? MORPHOLOGY[form.morphology] : null;
+  const draw = morph?.fn ?? RENDERERS[form.archetype] ?? fins;
   const mat = form.mat ?? (form.mat = materialFor(form));
   const s = sockets(player, renderY);
   const pose = poseOf(player); pose.fade = fade; pose.player = player; pose.peak = peak;
@@ -813,10 +826,10 @@ export function renderManifestation(ctx, player, form, layer, renderY, fade = 1,
   ctx.save();
   ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
   if (layer === 'back' && !pose.airborne) groundSigil(ctx, s, pose, mat, hashStr(form.id) + 7000);
-  if (layer === 'back' && form.morphology === 'environmental') environmentField(ctx, s, pose, mat, form);
-  if (form.morphology === 'levitation') levitationExtras(ctx, s, pose, mat, form, layer);
+  if (layer === 'back' && form.morphology === 'environmental' && !morph) environmentField(ctx, s, pose, mat, form);
+  if (form.morphology === 'levitation') levitationExtras(ctx, s, pose, mat, form, layer, !!morph);
   // Peak manifestation (full charge / full release): the form flares to its maximum.
-  const k = (ARCHETYPE_SCALE[form.archetype] ?? 1.3) * (1 + .3 * Math.max(peak, pose.full && !SIGNATURE.has(form.archetype) ? .6 : 0));
+  const k = morph ? morph.scale : (ARCHETYPE_SCALE[form.archetype] ?? 1.3) * (1 + .3 * Math.max(peak, pose.full && !SIGNATURE.has(form.archetype) ? .6 : 0));
   // Scale around the chest so anchored pieces keep hugging the body.
   if (k !== 1) { ctx.translate(s.chest[0], s.chest[1]); ctx.scale(k, k); ctx.translate(-s.chest[0], -s.chest[1]); }
   draw(ctx, s, pose, mat, form, layer);
