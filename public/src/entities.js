@@ -12,7 +12,7 @@ import { drawBeastBomb, drawSpiritBow } from './form_attacks.js';
 import { FULL_CHARGE_TIME, activeMoveset, releaseFormTechnique, FORM_PALETTES } from './form_moves.js';
 import { updatePrimalBond, bondMoveMultiplier, bondGainMultiplier, bondDisplacement, bondOnBlock, primalSprintVariant, renderPrimalBond, endPrimalBond } from './primals.js';
 import { createSegments, damageSegments, updateSegments, renderSegments } from './castle_segments.js';
-import { updateBuffForm, endBuffForm, isGenericBuff, currentBuffForm, renderBuffManifestation, buffVeinPainter, buffCloakColor, renderBuffGuard } from './buff_forms.js';
+import { updateBuffForm, endBuffForm, isGenericBuff, currentBuffForm, renderBuffManifestation, buffVeinPainter, buffCloakColor, renderBuffGuard, levitationOffset } from './buff_forms.js';
 
 // Every spell a rune deck can produce: single runes plus every valid two-
 // and three-rune recipe that its cards allow (copies respected).
@@ -1374,7 +1374,8 @@ export class Player extends GroundEntity {
   render(ctx) {
     // Burrowed: only the travelling dirt mound (drawn by the spell) is visible.
     if (this.burrowed) return;
-    const renderY = this.y - (this.isMounted ? (this.mountedSummon.definition.riderOffsetY ?? 42) : 0);
+    // Levitation-state Arcane States let the Wizard hover above his shadow.
+    const renderY = this.y - (this.isMounted ? (this.mountedSummon.definition.riderOffsetY ?? 42) : 0) - levitationOffset(this);
     // Prepared spell components trail behind the Wizard in world space. They
     // are a gameplay indicator, not a DOM overlay or a baked reference image.
     if (this.isAlive && this.slottedSpells.length) {

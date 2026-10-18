@@ -238,6 +238,7 @@ export function poseOf(player) {
     charge: player.formCharge ? Math.min(1, player.formCharge.elapsed / 1.2) : player.chargeTimer > 0 ? .5 : 0,
     chargeDir: player.chargeDir ?? 'forward',
     full: !!(player.formCharge && player.formCharge.elapsed >= 1.2),
+    attacking: /^(attack|heavyStrike|uppercut|dive)/.test(player.state ?? '') && (player.stateTimer ?? 0) > 0,
     lean: player.formLean ?? 0,
     fade: 1
   };
@@ -762,9 +763,35 @@ function wyrm(ctx, s, pose, mat, form, layer) {
 }
 
 const RENDERERS = { risswild, arkengestell, bands, fins, orbit, limbs, girdle, frame, jaws, puppets, arches, wyrm };
+// Signature renderers (forms with their own reference art) register here.
+export function registerRenderer(name, fn, scale = 1) { RENDERERS[name] = fn; ARCHETYPE_SCALE[name] = scale; }
 // Presence of the generic archetypes (the atlas asks for 2.2–4.5 × H large
 // manifestations; anchored pieces stay closer to the body).
 const ARCHETYPE_SCALE = { bands: 1.5, fins: 1.6, arches: 1.25, puppets: 1.45, jaws: 1.5, orbit: 1.45, frame: 1.4, girdle: 1.35, limbs: 1.3, arkengestell: 1.3, wyrm: 1.35, risswild: 1 };
+
+const SIGNATURE = new Set(['wyrm', 'asterglied', 'vorausschnitt', 'saeuregeruest', 'risswild']);
+
+// Environmental state: the Wizard reshapes a wider patch of the arena.
+function environmentField(ctx, s, pose, mat, form) {
+  const t = pose.t; const R = 170 * (1 + .3 * (pose.peak || 0));
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  for (let i = -6; i <= 6; i++) {
+    const k = 1 - Math.abs(i) / 7;
+    ctx.globalAlpha = pose.fade * .28 * k; ctx.strokeStyle = mat.edge; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(s.x - R * k, s.y + i * 6); ctx.lineTo(s.x + R * k, s.y + i * 6); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(s.x + i * R / 6, s.y - 36 * k); ctx.lineTo(s.x + i * R / 6, s.y + 36 * k); ctx.stroke();
+  }
+  ctx.globalAlpha = pose.fade * (.35 + .25 * Math.sin(t * 2)); ctx.strokeStyle = mat.vein; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.ellipse(s.x, s.y, R, R * .22, 0, 0, TAU); ctx.stroke();
+  ctx.restore();
+}
+
+// Levitation state: a hover ring under the floating Wizard and controlled shards.
+function levitationExtras(ctx, s, pose, mat, form, layer) {
+  const t = pose.t;
+  if (layer === 'back') { for (let i = 0; i < 10; i++) { const a = i / 10 * TAU + t; plate(ctx, [[s.x + Math.cos(a) * 20, s.y + Math.sin(a) * 5 - 2], [s.x + Math.cos(a + .3) * 26, s.y + Math.sin(a + .3) * 6 - 2], [s.x + Math.cos(a + .15) * 18, s.y + Math.sin(a + .15) * 4]], mat, 7400 + i, { alpha: pose.fade * .7, glowEdge: .6 }); } }
+  for (let i = 0; i < 3; i++) { const a = t * 1.4 + i * TAU / 3; const back = Math.sin(a) < 0; if ((layer === 'back') !== back) continue; const x = s.x + Math.cos(a) * 40; const y = s.y - 60 + Math.sin(a) * 14; plate(ctx, [[x, y - 6], [x + 4, y], [x, y + 6], [x - 4, y]], mat, 7450 + i, { alpha: pose.fade, core: 1 }); }
+}
 
 // P0: a segmented material sigil on the ground under the feet.
 function groundSigil(ctx, s, pose, mat, seed) {
@@ -777,15 +804,19 @@ function groundSigil(ctx, s, pose, mat, seed) {
 }
 
 // Draws a form's manifestation on one layer.
-export function renderManifestation(ctx, player, form, layer, renderY, fade = 1) {
+export function renderManifestation(ctx, player, form, layer, renderY, fade = 1, peak = 0) {
   const draw = RENDERERS[form.archetype] ?? fins;
   const mat = form.mat ?? (form.mat = materialFor(form));
   const s = sockets(player, renderY);
-  const pose = poseOf(player); pose.fade = fade;
+  const pose = poseOf(player); pose.fade = fade; pose.player = player; pose.peak = peak;
+  if (peak > 0) pose.full = true;
   ctx.save();
   ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
   if (layer === 'back' && !pose.airborne) groundSigil(ctx, s, pose, mat, hashStr(form.id) + 7000);
-  const k = ARCHETYPE_SCALE[form.archetype] ?? 1.3;
+  if (layer === 'back' && form.morphology === 'environmental') environmentField(ctx, s, pose, mat, form);
+  if (form.morphology === 'levitation') levitationExtras(ctx, s, pose, mat, form, layer);
+  // Peak manifestation (full charge / full release): the form flares to its maximum.
+  const k = (ARCHETYPE_SCALE[form.archetype] ?? 1.3) * (1 + .3 * Math.max(peak, pose.full && !SIGNATURE.has(form.archetype) ? .6 : 0));
   // Scale around the chest so anchored pieces keep hugging the body.
   if (k !== 1) { ctx.translate(s.chest[0], s.chest[1]); ctx.scale(k, k); ctx.translate(-s.chest[0], -s.chest[1]); }
   draw(ctx, s, pose, mat, form, layer);

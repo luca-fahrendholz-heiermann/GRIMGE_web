@@ -17,6 +17,7 @@ import { FORM_MOVESETS, registerFormPalette, FormStrikeSpell } from './form_move
 import { FORM_SPRINT_ATTACKS, FORM_FX_HOOKS } from './form_actions.js';
 import { materialFor, renderManifestation, contourVeinPainter, plate, band, rgba } from './buff_vfx.js';
 import { BuffStrikeSpell, applyStatuses } from './buff_techniques.js';
+import './buff_signatures.js'; // signature renderers (T37–T40)
 import { combat } from './combat.js';
 import { groundYForDepth } from './world.js';
 
@@ -175,6 +176,7 @@ export function updateBuffForm(player, dt) {
   if (b.id === 'B01') b.timer = player.ninefoldTimer;
   else if (b.id === 'B02') b.timer = player.eidolonTimer;
   else b.timer = Math.max(0, b.timer - dt);
+  updateMorphology(player, BUFF_FORMS[b.id], dt);
   if (b.timer <= 0 || !player.isAlive) endBuffForm(player);
 }
 
@@ -194,7 +196,11 @@ export const isGenericBuff = (player) => !!(player.buffForm?.timer > 0 && player
 export function renderBuffManifestation(ctx, player, renderY, layer) {
   const form = currentBuffForm(player);
   if (!form) return false;
-  renderManifestation(ctx, player, form, layer, renderY, buffFade(player));
+  // Temporal projections (other than Vorausschnitt's planes) trail echoes of the last moments.
+  if (layer === 'back' && form.morphology === 'temporal_projection' && form.id !== 'T39') {
+    for (const d of [10, 20]) { const past = player._timeTrail?.[d]; if (past) ghostOf(ctx, player, past.x, past.y, past.state, past.animTime, past.facing, .3 * buffFade(player), form.mat.edge); }
+  }
+  renderManifestation(ctx, player, form, layer, renderY, buffFade(player), peakOf(player));
   if (layer === 'front') renderBuffTimer(ctx, player, form, renderY);
   return true;
 }
@@ -233,6 +239,7 @@ function renderBuffTimer(ctx, player, form, renderY) {
 export function renderBuffGuard(ctx, player, renderY) {
   const form = currentBuffForm(player);
   if (!form || !player.isGuarding) return false;
+  if (form.id === 'T38') { asterShield(ctx, player, renderY); return true; }
   const m = form.mat; const f = player.facing || 1; const t = player.animTime ?? 0;
   const cx = player.x + f * 22; const cy = renderY - 46;
   const hold = Math.min(1, (player.guardHoldTime ?? 0) * 6 + .3);
@@ -408,4 +415,79 @@ FORM_FX_HOOKS.jump = (player, phase, key) => {
 // Transform-in / -out instances (called from activate / end).
 export function buffTransformFx(player, form, phase) {
   emit(new BuffBurstFx(form, player.x, player.y - 46, phase === 'in' ? 'assemble' : 'scatter', { life: phase === 'in' ? .5 : .55, size: 1.2 }));
+}
+
+// ── Morphology runtime: time echoes (T39), peak manifestation, levitation ──
+import { ghostOf, stoneRing, STONE } from './buff_signatures.js';
+
+const ATTACK_STATE = /^(attack[123]|heavyStrike|uppercut)$/;
+
+// Vorausschnitt: an echo leaves its time plane and strikes a moment later.
+export class EchoStrikeFx {
+  constructor(player, form, delay, fromDx) {
+    this.player = player; this.form = form; this.mat = form.mat; this.team = player.team;
+    this.delay = delay; this.fromDx = fromDx; this.t = 0; this.life = delay + .42; this.isFinished = false;
+    this.facing = player.facing || 1; this.state = player.state; this.struck = false;
+    this.x0 = player.x + fromDx * this.facing; this.z = player.z;
+    this.x1 = player.x + this.facing * 34;
+  }
+  get x() { return this.x0 + (this.x1 - this.x0) * Math.min(1, Math.max(0, (this.t - this.delay) / .14)); }
+  get y() { return groundYForDepth(this.z); }
+  update(dt, gameWorld) {
+    this.t += dt;
+    if (!this.struck && this.t >= this.delay + .14) {
+      this.struck = true;
+      for (const t of gameWorld?.getHostileTargets(this.team) ?? []) {
+        if (!t || t.isDead || t.isObjective || t.isProp || (t.lifeState && t.lifeState !== 'Alive')) continue;
+        const dx = (t.x - this.x1) * this.facing;
+        if (dx < -10 || dx > 60 || Math.abs(((t.z ?? this.z) - this.z) * 150) > 30) continue;
+        t.takeDamage(6, this.facing * 120, 30, .2, false, 'melee');
+      }
+    }
+    if (this.t >= this.life) this.isFinished = true;
+  }
+  render(ctx) {
+    if (this.t < this.delay) return;
+    const k = (this.t - this.delay) / (this.life - this.delay);
+    ghostOf(ctx, this.player, this.x, this.y, this.state, this.t * 3, this.facing, .55 * (1 - k * .8), '#d6f5e2');
+    if (this.struck && k < .8) {
+      const sx = this.x1 + this.facing * 26; const sy = this.y - 44;
+      for (let i = 0; i < 4; i++) { const a = -1 + i * .6; plate(ctx, [[sx, sy], [sx + this.facing * Math.cos(a) * 26, sy + Math.sin(a) * 26], [sx + this.facing * Math.cos(a + .25) * 18, sy + Math.sin(a + .25) * 18]], this.mat, 950 + i, { alpha: 1 - k, pulse: 1 }); }
+    }
+  }
+}
+
+// Per frame from updateBuffForm: trail, echoes, peak flag.
+export function updateMorphology(player, form, dt) {
+  const b = player.buffForm; if (!b || !form) return;
+  if (form.morphology === 'temporal_projection') {
+    player._timeTrail ??= [];
+    player._timeTrail.unshift({ x: player.x, y: player.y, z: player.z, state: player.state, animTime: player.animTime, facing: player.facing });
+    if (player._timeTrail.length > 60) player._timeTrail.length = 60;
+  }
+  if (form.id === 'T39') {
+    const attacking = ATTACK_STATE.test(player.state) && player.stateTimer > 0;
+    const fresh = attacking && (b.lastState !== player.state || b.lastCombo !== player.comboStep);
+    if (fresh) [-150, -75, 70].forEach((dx, i) => emit(new EchoStrikeFx(player, form, .08 + i * .08, dx)));
+    b.lastState = attacking ? player.state : null; b.lastCombo = player.comboStep;
+  }
+  // Peak manifestation: a full release makes the form flare to its maximum.
+  const wasFull = b.wasFull; const isFull = !!(player.formCharge && player.formCharge.elapsed >= 1.2);
+  if (wasFull && !player.formCharge) b.peakAt = b.age;
+  b.wasFull = isFull;
+}
+
+export const peakOf = (player) => { const b = player.buffForm; return b?.peakAt != null && b.age - b.peakAt < .7 ? 1 - (b.age - b.peakAt) / .7 : 0; };
+
+// Levitation state: the Wizard hovers a little above his shadow.
+export function levitationOffset(player) {
+  const form = currentBuffForm(player);
+  if (!form || form.morphology !== 'levitation' || !player.grounded) return 0;
+  return (10 + Math.sin((player.animTime ?? 0) * 2.2) * 3) * buffFade(player);
+}
+
+// Asterglied guard: the rings stack in front as a stone shield.
+export function asterShield(ctx, player, renderY) {
+  const f = player.facing || 1; const t = player.animTime ?? 0;
+  for (let i = 0; i < 4; i++) stoneRing(ctx, player.x + f * (30 + i * 3), renderY - 30 - i * 16, 18 - i, .95, Math.PI / 2, t * (i % 2 ? .8 : -.8), 10, 5900 + i * 30, buffFade(player));
 }

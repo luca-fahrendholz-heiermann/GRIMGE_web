@@ -2339,6 +2339,47 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   spells.clearRuntime();
 }
 
+// Arcane State morphologies (design note): distinct silhouette families, idle / action / peak.
+{
+  const buff = await import('./public/src/buff_forms.js');
+  const forms = Object.values(buff.BUFF_FORMS);
+  assert(forms.every((f) => f.morphology && f.states?.idle && f.states.action && f.states.peak), 'Every Arcane State has a morphology and idle / action / peak silhouettes');
+  assert(forms.filter((f) => f.morphology === 'astral_avatar').map((f) => f.id).join() === 'B02', 'Only Arkengestell is a giant humanoid astral avatar');
+  assert(buff.BUFF_FORMS.T37.morphology === 'body_augmentation' && buff.BUFF_FORMS.T38.morphology === 'orbital_construct' && buff.BUFF_FORMS.T39.morphology === 'temporal_projection' && buff.BUFF_FORMS.B01.morphology === 'energy_extension' && buff.BUFF_FORMS.T40.morphology === 'creature_manifestation', 'Säuregerüst, Asterglied, Vorausschnitt, Risswild and Sonnenwyrm have their own morphologies');
+  game.returnToHub(); game.setMatchMode('training'); game.startMatch(); game.selectTrainingMap('waterfalls');
+  const P = game.player; const dummy = game.trainingDummy;
+  const neutral = { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false };
+  P.x = 400; P.z = .5; P.facing = 1; game.battlefield.placeOnSurface(P);
+  spells.clearRuntime();
+  spells.cast(P, spells.resolveSpell([{ id: 'buff_T39' }]), game);
+  for (let i = 0; i < 20; i++) P.update(1 / 60, neutral, game.battlefield, game);
+  assert((P._timeTrail?.length ?? 0) >= 15, 'Vorausschnitt records the last moments for its time planes');
+  dummy.homeX = dummy.x = P.x + 40; dummy.homeZ = dummy.z = P.z; dummy.hp = dummy.maxHp;
+  P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.comboStep = 0;
+  P.executeAttack(neutral, 'normal'); P.update(1 / 60, neutral, game.battlefield, game);
+  assert(spells.activeSpells.filter((sp) => sp.constructor.name === 'EchoStrikeFx').length === 3, 'On an attack three echoes leave their time planes');
+  const hpBefore = dummy.hp;
+  for (let i = 0; i < 40; i++) spells.update(1 / 60, game);
+  assert(dummy.hp < hpBefore, 'The echoes strike a moment later');
+  game.render();
+  buff.endBuffForm(P); spells.clearRuntime();
+  // Asterglied: guard stacks the rings into a stone shield; Bruchflug levitates.
+  spells.cast(P, spells.resolveSpell([{ id: 'buff_T38' }]), game); P.buffForm.age = 2;
+  P.isGuarding = true; P.guardHoldTime = .2;
+  assert(buff.renderBuffGuard(game.ctx, P, P.y), 'Asterglied guards with its rings stacked into a stone shield');
+  P.isGuarding = false; buff.endBuffForm(P); spells.clearRuntime();
+  spells.cast(P, spells.resolveSpell([{ id: 'buff_T05' }]), game); P.buffForm.age = 2;
+  assert(buff.levitationOffset(P) > 5, 'Levitation state: Bruchflug lets the Wizard hover above his shadow');
+  // Peak: a full release flares the manifestation.
+  P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.grounded = true;
+  P.beginCharge('forward'); P.formCharge.elapsed = 1.3; P.update(1 / 60, neutral, game.battlefield, game);
+  P.releaseCharge(); P.update(1 / 60, neutral, game.battlefield, game);
+  assert(buff.peakOf(P) > 0, 'A full release triggers the peak manifestation');
+  game.render();
+  buff.endBuffForm(P); spells.clearRuntime();
+  dummy.homeX = dummy.x = 512;
+}
+
 const frameCallback = nextFrame;
 frameCallback(game.lastFrameTime + 16);
 game.debugVisible = true;

@@ -103,7 +103,14 @@ export const BUFF_FORM_DATA = Object.freeze([
   },
   "statusAll": [
    "launch"
-  ]
+  ],
+  "morphology": "energy_extension",
+  "morphologyLabel": "Energy Extension",
+  "states": {
+   "idle": "Entfesselte Energiebänder: drei asymmetrische, lange Energiebänder brechen aus der Körperkontur hervor und bewegen sich wie lebendige Peitschen — keine humanoide Gestalt.",
+   "action": "Beim Angriff peitschen die Bänder nach vorn und verändern ihre Form; die Silhouette bleibt dynamisch und ungleichmäßig.",
+   "peak": "Die Bänder schießen auf volle Länge aus und formen die Full-Attacke. Full: Verdichteter Risskern / Doppelter Rissaufstieg / Rissfeld-Einschlag."
+  }
  },
  {
   "id": "B02",
@@ -206,7 +213,14 @@ export const BUFF_FORM_DATA = Object.freeze([
   },
   "statusAll": [
    "slow"
-  ]
+  ],
+  "morphology": "astral_avatar",
+  "morphologyLabel": "Astral Avatar",
+  "states": {
+   "idle": "Astralkoloss: riesige Arme, Panzersegmente, Brustkorb-Architektur und ein spiritueller Bogen bilden einen eigenständigen Kampfavatar — als einzige Form humanoid.",
+   "action": "Die Gestalt beugt sich mit, Arme und Panzer falten sich bei Defense vor die Blickrichtung. Sprint Trägeransturm, Jump Trägersprung, Defense Schildtrichter.",
+   "peak": "Der Avatar entfaltet sich zur vollen Kampfgestalt; Waffe und Arme setzen die Full-Attacke um. Full: Belagerungspfeil / Lichtspalter / Gericht des Gestells."
+  }
  },
  {
   "id": "T01",
@@ -316,7 +330,14 @@ export const BUFF_FORM_DATA = Object.freeze([
   "statusAll": [
    "burn",
    "launch"
-  ]
+  ],
+  "morphology": "energy_extension",
+  "morphologyLabel": "Energy Extension",
+  "states": {
+   "idle": "Energy Extension (bewegliche Schweife, Bänder und Peitschen aus der Körperkontur): Vier gestaffelte, breitkantige Rückenlamellen aus Porzellanmetall statt Drachenstacheln.",
+   "action": "Sprint zieht die Bänder flach nach hinten, beim Sprung hängen sie unter dem Körper, Angriffe lassen sie nach vorn peitschen. Sprint Scale Charge, Jump Drake Hop, Defense Scale Aegis.",
+   "peak": "Die Bänder schießen auf volle Länge aus und formen die Full-Attacke. Full: Drake Maw / Draconic Eruption / Molten Mantle."
+  }
  },
  {
   "id": "T02",
@@ -423,7 +444,14 @@ export const BUFF_FORM_DATA = Object.freeze([
   },
   "statusAll": [
    "burn"
-  ]
+  ],
+  "morphology": "orbital_construct",
+  "morphologyLabel": "Orbital Construct",
+  "states": {
+   "idle": "Orbital Construct (freischwebende Ringe, Objekte und Fragmente): Schwebender Keramikofen als asymmetrisches Rippenband um Taille und Schulter; glühende Öffnung an der linken Hüfte.",
+   "action": "Die Konstrukte rotieren schneller, ziehen sich bei Defense vor die Blickrichtung und folgen dem Sprung träge. Sprint Lava Tread, Jump Magma Bound, Defense Basalt Shell.",
+   "peak": "Die Konstrukte setzen sich zu einer großen Form zusammen (Faust, Schild, Maschine …). Full: Volcano Lance / Eruption Crown / Crater Heart."
+  }
  },
  {
   "id": "T03",
@@ -525,7 +553,14 @@ export const BUFF_FORM_DATA = Object.freeze([
   },
   "statusAll": [
    "launch"
-  ]
+  ],
+  "morphology": "creature_manifestation",
+  "morphologyLabel": "Creature Manifestation",
+  "states": {
+   "idle": "Creature Manifestation (unabhängige Energiegeschöpfe): Drei freischwebende, winkelige Kieferbögen aus Fossilglas bilden einen offenen Greifapparat neben dem Avatar.",
+   "action": "Die Geschöpfe umkreisen den Spieler, strecken sich im Sprint und schnappen bei Angriffen zu. Sprint Wyrm Skitter, Jump Wyrm Leap, Defense Scale Veil.",
+   "peak": "Die Geschöpfe lösen sich als eigenständige Angreifer vom Spieler. Full: Ancestral Breath / Sky Maw / Primal Coil."
+  }
  },
  {
   "id": "T04",
@@ -639,7 +674,14 @@ export const BUFF_FORM_DATA = Object.freeze([
    "slow",
    "heal",
    "shield"
-  ]
+  ],
+  "morphology": "energy_extension",
+  "morphologyLabel": "Energy Extension",
+  "states": {
+   "idle": "Energy Extension (bewegliche Schweife, Bänder und Peitschen aus der Körperkontur): Zwei fächerförmige Schutzsegel aus Korallenlamellen stehen seitlich statt klassischer Drachenflügel.",
+   "action": "Sprint zieht die Bänder flach nach hinten, beim Sprung hängen sie unter dem Körper, Angriffe lassen sie nach vorn peitschen. Sprint Ruby Glide, Jump Bloom Flight, Defense Queen Mantle.",
+   "peak": "Die Bänder schießen auf volle Länge aus und formen die Full-Attacke. Full: Queenfire Stream / Crown Ascent / Sanctuary Bloom."
+  }
  },
  {
   "id": "T05",
@@ -740,7 +782,14 @@ export const BUFF_FORM_DATA = Object.freeze([
   },
   "statusAll": [
    "launch"
-  ]
+  ],
+  "morphology": "levitation",
+  "morphologyLabel": "Levitation State",
+  "states": {
+   "idle": "Levitation State (schwebender Spieler mit kontrollierten Projektilen): Drei gebrochene, schwebende Gravitätsfinnen statt zwei biologischer Flügel; keine Hörner.",
+   "action": "Der Spieler schwebt über seinem Schatten; Projektile ordnen sich je nach Aktion neu. Sprint Fel Skim, Jump Double Vault, Defense Fiend Wings.",
+   "peak": "Er steigt kurz höher, die Projektile fächern zur Full-Attacke aus. Full: Annihilation Ray / Infernal Ascent / Abyss Crash."
+  }
  },
  {
   "id": "T06",
@@ -850,7 +899,14 @@ export const BUFF_FORM_DATA = Object.freeze([
     }
    }
   },
-  "statusAll": []
+  "statusAll": [],
+  "morphology": "orbital_construct",
+  "morphologyLabel": "Orbital Construct",
+  "states": {
+   "idle": "Orbital Construct (freischwebende Ringe, Objekte und Fragmente): Drei schmale Magnetspulen rotieren diagonal um Hüfte, Ellbogen und Schulter.",
+   "action": "Die Konstrukte rotieren schneller, ziehen sich bei Defense vor die Blickrichtung und folgen dem Sprung träge. Sprint Arc Sprint, Jump Ion Hop, Defense Faraday Veil.",
+   "peak": "Die Konstrukte setzen sich zu einer großen Form zusammen (Faust, Schild, Maschine …). Full: Tempest Chain / Storm Spire / Cyclone Ground."
+  }
  },
  {
   "id": "T07",
@@ -957,7 +1013,14 @@ export const BUFF_FORM_DATA = Object.freeze([
   },
   "statusAll": [
    "slow"
-  ]
+  ],
+  "morphology": "body_augmentation",
+  "morphologyLabel": "Body Augmentation",
+  "states": {
+   "idle": "Body Augmentation (Strukturen direkt am Körper, zusätzliche Glieder und Leitungen): Vier asymmetrische Rauchsicheln entlang Unterarmen und Waden verlängern die Körperkontur; kein Fell, kein Wolfsmaul.",
+   "action": "Die Strukturen pumpen, spannen sich und folgen jeder Pose eng am Körper. Sprint Lunar Hunt, Jump Moonbound, Defense Hide Guard.",
+   "peak": "Die körpernahen Strukturen wachsen kurz zu einer großen Arena-Struktur aus. Full: Moon Howl / Silver Ascension / Lunar Ravage."
+  }
  },
  {
   "id": "T08",
@@ -1063,7 +1126,14 @@ export const BUFF_FORM_DATA = Object.freeze([
   },
   "statusAll": [
    "shield"
-  ]
+  ],
+  "morphology": "orbital_construct",
+  "morphologyLabel": "Orbital Construct",
+  "states": {
+   "idle": "Orbital Construct (freischwebende Ringe, Objekte und Fragmente): Hängende Keramikglocken und geknickte Grabplatten bilden ein bewegliches, hohles Rüstungskarussell.",
+   "action": "Die Konstrukte rotieren schneller, ziehen sich bei Defense vor die Blickrichtung und folgen dem Sprung träge. Sprint Grave Drift, Jump Skeletal Hop, Defense Ossified Ward.",
+   "peak": "Die Konstrukte setzen sich zu einer großen Form zusammen (Faust, Schild, Maschine …). Full: Sarcophagus Lance / Ossuary Bloom / Bone Cathedral."
+  }
  },
  {
   "id": "T09",
@@ -1162,7 +1232,14 @@ export const BUFF_FORM_DATA = Object.freeze([
     }
    }
   },
-  "statusAll": []
+  "statusAll": [],
+  "morphology": "orbital_construct",
+  "morphologyLabel": "Orbital Construct",
+  "states": {
+   "idle": "Orbital Construct (freischwebende Ringe, Objekte und Fragmente): Ein einseitig schwebendes Prisma aus fünf ungleichen Spiegelplatten; keine Dämonenhörner und keine vollständigen Doppelgänger.",
+   "action": "Die Konstrukte rotieren schneller, ziehen sich bei Defense vor die Blickrichtung und folgen dem Sprung träge. Sprint Mirror Drift, Jump Split Leap, Defense Refractive Guard.",
+   "peak": "Die Konstrukte setzen sich zu einer großen Form zusammen (Faust, Schild, Maschine …). Full: Fractured Volley / Prism Ascension / Reflection Rift."
+  }
  },
  {
   "id": "T10",
@@ -1267,7 +1344,14 @@ export const BUFF_FORM_DATA = Object.freeze([
   },
   "statusAll": [
    "heal"
-  ]
+  ],
+  "morphology": "body_augmentation",
+  "morphologyLabel": "Body Augmentation",
+  "states": {
+   "idle": "Body Augmentation (Strukturen direkt am Körper, zusätzliche Glieder und Leitungen): Vier hohle Wurzelröhren verlaufen außen um Torso und Arme, ohne Fledermausflügel.",
+   "action": "Die Strukturen pumpen, spannen sich und folgen jeder Pose eng am Körper. Sprint Sanguine Drift, Jump Bloodborne Jump, Defense Wing Cocoon.",
+   "peak": "Die körpernahen Strukturen wachsen kurz zu einer großen Arena-Struktur aus. Full: Eclipse Lance / Crimson Ascension / Demonflare."
+  }
  },
  {
   "id": "T11",
@@ -1375,7 +1459,14 @@ export const BUFF_FORM_DATA = Object.freeze([
   "statusAll": [
    "freeze",
    "slow"
-  ]
+  ],
+  "morphology": "energy_extension",
+  "morphologyLabel": "Energy Extension",
+  "states": {
+   "idle": "Energy Extension (bewegliche Schweife, Bänder und Peitschen aus der Körperkontur): Drei flache Kometenbänder aus Frostpapier mit fächerartigen Enden; keine Fuchsohren oder biologischen Schweife.",
+   "action": "Sprint zieht die Bänder flach nach hinten, beim Sprung hängen sie unter dem Körper, Angriffe lassen sie nach vorn peitschen. Sprint Snow Track, Jump Foxbound, Defense Frost Tail Guard.",
+   "peak": "Die Bänder schießen auf volle Länge aus und formen die Full-Attacke. Full: Aurora Foxfire / Nine-Star Leap / Whiteout Veil."
+  }
  },
  {
   "id": "T12",
@@ -1478,7 +1569,14 @@ export const BUFF_FORM_DATA = Object.freeze([
     }
    }
   },
-  "statusAll": []
+  "statusAll": [],
+  "morphology": "body_augmentation",
+  "morphologyLabel": "Body Augmentation",
+  "states": {
+   "idle": "Body Augmentation (Strukturen direkt am Körper, zusätzliche Glieder und Leitungen): Vier offene Prankenbügel schweben als externe Exoskelett-Stützen um Hüfte und Schultern.",
+   "action": "Die Strukturen pumpen, spannen sich und folgen jeder Pose eng am Körper. Sprint Paw Gallop, Jump Prowler Leap, Defense Paw Bastion.",
+   "peak": "Die körpernahen Strukturen wachsen kurz zu einer großen Arena-Struktur aus. Full: Tiger Roar / Heaven Prowl / Imperial Roar."
+  }
  },
  {
   "id": "T13",
@@ -1580,7 +1678,14 @@ export const BUFF_FORM_DATA = Object.freeze([
     }
    }
   },
-  "statusAll": []
+  "statusAll": [],
+  "morphology": "body_augmentation",
+  "morphologyLabel": "Body Augmentation",
+  "states": {
+   "idle": "Body Augmentation (Strukturen direkt am Körper, zusätzliche Glieder und Leitungen): Sichtbare metallische Fadenspule nahe der Schulter; vier Spannseile führen zu der vorhandenen Waffe.",
+   "action": "Die Strukturen pumpen, spannen sich und folgen jeder Pose eng am Körper. Sprint Lightning Thread, Jump Loom Jump, Defense Silk Parry.",
+   "peak": "Die körpernahen Strukturen wachsen kurz zu einer großen Arena-Struktur aus. Full: Hundred Filaments / Heaven Loom / Thunder Weave."
+  }
  },
  {
   "id": "T14",
@@ -1679,7 +1784,14 @@ export const BUFF_FORM_DATA = Object.freeze([
     }
    }
   },
-  "statusAll": []
+  "statusAll": [],
+  "morphology": "orbital_construct",
+  "morphologyLabel": "Orbital Construct",
+  "states": {
+   "idle": "Orbital Construct (freischwebende Ringe, Objekte und Fragmente): Drei schiefe, gestanzte Glyphenplatten hängen an einer zentralen Klemme statt generischer Magiekreise.",
+   "action": "Die Konstrukte rotieren schneller, ziehen sich bei Defense vor die Blickrichtung und folgen dem Sprung träge. Sprint Glyph Flow, Jump Glyph Step, Defense Script Ward.",
+   "peak": "Die Konstrukte setzen sich zu einer großen Form zusammen (Faust, Schild, Maschine …). Full: Grand Script / Runic Obelisk / Circle Codex."
+  }
  },
  {
   "id": "T15",
@@ -1791,7 +1903,14 @@ export const BUFF_FORM_DATA = Object.freeze([
   },
   "statusAll": [
    "launch"
-  ]
+  ],
+  "morphology": "energy_extension",
+  "morphologyLabel": "Energy Extension",
+  "states": {
+   "idle": "Energy Extension (bewegliche Schweife, Bänder und Peitschen aus der Körperkontur): Vier verflochtene Leitbänder verlaufen von Rücken zur Hand und wechseln ihre Reihenfolge beim Elementwechsel.",
+   "action": "Sprint zieht die Bänder flach nach hinten, beim Sprung hängen sie unter dem Körper, Angriffe lassen sie nach vorn peitschen. Sprint Element Cycle, Jump Prism Jump, Defense Wave Guard.",
+   "peak": "Die Bänder schießen auf volle Länge aus und formen die Full-Attacke. Full: Quadra Torrent / Prismatic Rise / Flux Basin."
+  }
  },
  {
   "id": "T16",
@@ -1892,7 +2011,14 @@ export const BUFF_FORM_DATA = Object.freeze([
   },
   "statusAll": [
    "freeze"
-  ]
+  ],
+  "morphology": "orbital_construct",
+  "morphologyLabel": "Orbital Construct",
+  "states": {
+   "idle": "Orbital Construct (freischwebende Ringe, Objekte und Fragmente): Vier mechanische Pendelknoten hängen in asymmetrischem Orbit um den Rücken statt kleiner humanoider Dschinn.",
+   "action": "Die Konstrukte rotieren schneller, ziehen sich bei Defense vor die Blickrichtung und folgen dem Sprung träge. Sprint Djinn Parade, Jump Summoner Hop, Defense Djinn Halo.",
+   "peak": "Die Konstrukte setzen sich zu einer großen Form zusammen (Faust, Schild, Maschine …). Full: Conclave Burst / Ascendant Choir / Summoners Ring."
+  }
  },
  {
   "id": "T17",
@@ -1999,7 +2125,14 @@ export const BUFF_FORM_DATA = Object.freeze([
   "statusAll": [
    "burn",
    "heal"
-  ]
+  ],
+  "morphology": "energy_extension",
+  "morphologyLabel": "Energy Extension",
+  "states": {
+   "idle": "Energy Extension (bewegliche Schweife, Bänder und Peitschen aus der Körperkontur): Asymmetrische Streifen aus verkohlter Lichtkeramik lösen sich vom Rücken wie mausernde Schindeln.",
+   "action": "Sprint zieht die Bänder flach nach hinten, beim Sprung hängen sie unter dem Körper, Angriffe lassen sie nach vorn peitschen. Sprint Ember Flight, Jump Phoenix Bound, Defense Feather Veil.",
+   "peak": "Die Bänder schießen auf volle Länge aus und formen die Full-Attacke. Full: Phoenix Beak / Solar Ascension / Ash Rebirth."
+  }
  },
  {
   "id": "T18",
@@ -2103,7 +2236,14 @@ export const BUFF_FORM_DATA = Object.freeze([
   },
   "statusAll": [
    "stun"
-  ]
+  ],
+  "morphology": "body_augmentation",
+  "morphologyLabel": "Body Augmentation",
+  "states": {
+   "idle": "Body Augmentation (Strukturen direkt am Körper, zusätzliche Glieder und Leitungen): Ein offenes Gitter aus beweglichen Prismenzellen verbindet vorhandene Gliedmaßen mit temporären Werkzeugformen.",
+   "action": "Die Strukturen pumpen, spannen sich und folgen jeder Pose eng am Körper. Sprint Chimera Trudge, Jump Soul Morph Hop, Defense Chimera Shell.",
+   "peak": "Die körpernahen Strukturen wachsen kurz zu einer großen Arena-Struktur aus. Full: Soul Cannon / Manticore Crown / Ancient Shellbreak."
+  }
  },
  {
   "id": "T19",
@@ -2213,7 +2353,14 @@ export const BUFF_FORM_DATA = Object.freeze([
   "statusAll": [
    "shield",
    "launch"
-  ]
+  ],
+  "morphology": "body_augmentation",
+  "morphologyLabel": "Body Augmentation",
+  "states": {
+   "idle": "Body Augmentation (Strukturen direkt am Körper, zusätzliche Glieder und Leitungen): Drei schwere U-förmige Klammern schweben um Schulter, Hüfte und Unterarm; kein klassischer Schildritter.",
+   "action": "Die Strukturen pumpen, spannen sich und folgen jeder Pose eng am Körper. Sprint Iron March, Jump Armor Vault, Defense Oath Shield.",
+   "peak": "Die körpernahen Strukturen wachsen kurz zu einer großen Arena-Struktur aus. Full: Bastion Beam / Citadel Rise / Fortress Quake."
+  }
  },
  {
   "id": "T20",
@@ -2312,7 +2459,14 @@ export const BUFF_FORM_DATA = Object.freeze([
     }
    }
   },
-  "statusAll": []
+  "statusAll": [],
+  "morphology": "body_augmentation",
+  "morphologyLabel": "Body Augmentation",
+  "states": {
+   "idle": "Body Augmentation (Strukturen direkt am Körper, zusätzliche Glieder und Leitungen): Kurze Messerkanten aus leuchtenden Notenstrichen liegen an den Unterarmen; Fußspuren sind abstrakte Taktmarken.",
+   "action": "Die Strukturen pumpen, spannen sich und folgen jeder Pose eng am Körper. Sprint Dancer Step, Jump Dance Vault, Defense Counter Stance.",
+   "peak": "Die körpernahen Strukturen wachsen kurz zu einer großen Arena-Struktur aus. Full: Grand Pirouette / Rhapsody Rise / Falling Cadence."
+  }
  },
  {
   "id": "T21",
@@ -2415,7 +2569,14 @@ export const BUFF_FORM_DATA = Object.freeze([
   },
   "statusAll": [
    "shock"
-  ]
+  ],
+  "morphology": "orbital_construct",
+  "morphologyLabel": "Orbital Construct",
+  "states": {
+   "idle": "Orbital Construct (freischwebende Ringe, Objekte und Fragmente): Winzige scharfkantige Orbitkörper kreisen um die Hände und Ellbogen; Haare und Gesicht bleiben unverändert.",
+   "action": "Die Konstrukte rotieren schneller, ziehen sich bei Defense vor die Blickrichtung und folgen dem Sprung träge. Sprint Star Dash, Jump Star Jump, Defense Aura Brace.",
+   "peak": "Die Konstrukte setzen sich zu einer großen Form zusammen (Faust, Schild, Maschine …). Full: Nova Beam / Comet Ascend / Supernova Pulse."
+  }
  },
  {
   "id": "T22",
@@ -2523,7 +2684,14 @@ export const BUFF_FORM_DATA = Object.freeze([
   "statusAll": [
    "burn",
    "shock"
-  ]
+  ],
+  "morphology": "body_augmentation",
+  "morphologyLabel": "Body Augmentation",
+  "states": {
+   "idle": "Body Augmentation (Strukturen direkt am Körper, zusätzliche Glieder und Leitungen): Mattgrüne keramische Schuppenkacheln sitzen in unregelmäßigen Reihen nur an Gelenken, ohne Drachenkopf.",
+   "action": "Die Strukturen pumpen, spannen sich und folgen jeder Pose eng am Körper. Sprint Drake Runner, Jump Dragon Leap, Defense Fire Scale Guard.",
+   "peak": "Die körpernahen Strukturen wachsen kurz zu einer großen Arena-Struktur aus. Full: King Roar / Sky Dragon Coil / Scales of Ruin."
+  }
  },
  {
   "id": "T23",
@@ -2626,7 +2794,14 @@ export const BUFF_FORM_DATA = Object.freeze([
     }
    }
   },
-  "statusAll": []
+  "statusAll": [],
+  "morphology": "orbital_construct",
+  "morphologyLabel": "Orbital Construct",
+  "states": {
+   "idle": "Orbital Construct (freischwebende Ringe, Objekte und Fragmente): Drei offene, farblose Negativräume schweben über Schulter und Hand. Licht und Partikel verschwinden innerhalb ihrer Kontur.",
+   "action": "Die Konstrukte rotieren schneller, ziehen sich bei Defense vor die Blickrichtung und folgen dem Sprung träge. Sprint Void Rush, Jump Eclipse Jump, Defense Negation Guard.",
+   "peak": "Die Konstrukte setzen sich zu einer großen Form zusammen (Faust, Schild, Maschine …). Full: Spell Eater / Eclipse Pillar / Silence Rift."
+  }
  },
  {
   "id": "T24",
@@ -2730,7 +2905,14 @@ export const BUFF_FORM_DATA = Object.freeze([
     }
    }
   },
-  "statusAll": []
+  "statusAll": [],
+  "morphology": "creature_manifestation",
+  "morphologyLabel": "Creature Manifestation",
+  "states": {
+   "idle": "Creature Manifestation (unabhängige Energiegeschöpfe): Zwei flache, gelenkige Schatten-Marionetten hängen an sichtbaren diagonalen Lichtfäden; keine Geistersoldaten-Armee.",
+   "action": "Die Geschöpfe umkreisen den Spieler, strecken sich im Sprint und schnappen bei Angriffen zu. Sprint Shadow March, Jump King Step, Defense Royal Guard.",
+   "peak": "Die Geschöpfe lösen sich als eigenständige Angreifer vom Spieler. Full: Legion Spear / Kingdom Ascends / March of Shades."
+  }
  },
  {
   "id": "T25",
@@ -2840,7 +3022,14 @@ export const BUFF_FORM_DATA = Object.freeze([
   },
   "statusAll": [
    "launch"
-  ]
+  ],
+  "morphology": "body_augmentation",
+  "morphologyLabel": "Body Augmentation",
+  "states": {
+   "idle": "Body Augmentation (Strukturen direkt am Körper, zusätzliche Glieder und Leitungen): Dünne keramische Kapillaren liegen offen um die Unterarme und formen raue Mineralkanten.",
+   "action": "Die Strukturen pumpen, spannen sich und folgen jeder Pose eng am Körper. Sprint Crimson Run, Jump Blood Leap, Defense Hemo Shell.",
+   "peak": "Die körpernahen Strukturen wachsen kurz zu einer großen Arena-Struktur aus. Full: Hemal Lance / Crimson Gallows / Red Thorn Garden."
+  }
  },
  {
   "id": "T26",
@@ -2943,7 +3132,14 @@ export const BUFF_FORM_DATA = Object.freeze([
   },
   "statusAll": [
    "shield"
-  ]
+  ],
+  "morphology": "temporal_projection",
+  "morphologyLabel": "Temporal Projection",
+  "states": {
+   "idle": "Temporal Projection (versetzte Abbilder und Bewegungsechos): Drei versetzte, halbtransparente Armaturelemente aus geflochtenen Schnüren folgen mit Zeitversatz, keine zweite humanoide Riesengestalt.",
+   "action": "Die Echos spielen die Bewegungen der letzten Augenblicke nach und greifen bei Angriffen versetzt mit an. Sprint Ancestor Glide, Jump Ancestor Leap, Defense Ancestor Brace.",
+   "peak": "Alle Echos verlassen ihre Ebenen und greifen synchron bzw. zeitlich versetzt an. Full: Ancestor Blade / Ancestor Ascension / Grave Oath."
+  }
  },
  {
   "id": "T27",
@@ -3046,7 +3242,14 @@ export const BUFF_FORM_DATA = Object.freeze([
   },
   "statusAll": [
    "pull"
-  ]
+  ],
+  "morphology": "body_augmentation",
+  "morphologyLabel": "Body Augmentation",
+  "states": {
+   "idle": "Body Augmentation (Strukturen direkt am Körper, zusätzliche Glieder und Leitungen): Rechteckige Raumfalze wie gefaltete Papierkanten liegen um beide Ellbogen, ohne Körper-Tattoos.",
+   "action": "Die Strukturen pumpen, spannen sich und folgen jeder Pose eng am Körper. Sprint Seam Step, Jump Portal Hop, Defense Seam Shield.",
+   "peak": "Die körpernahen Strukturen wachsen kurz zu einer großen Arena-Struktur aus. Full: Dimension Spear / Rift Pillar / Broken Compass."
+  }
  },
  {
   "id": "T28",
@@ -3146,7 +3349,14 @@ export const BUFF_FORM_DATA = Object.freeze([
     }
    }
   },
-  "statusAll": []
+  "statusAll": [],
+  "morphology": "environmental",
+  "morphologyLabel": "Environmental State",
+  "states": {
+   "idle": "Environmental State (der Spieler verändert einen größeren Bereich der Arena): Drei offene bauliche Rasterbögen setzen auf der Lane auf; keine geschlossene Anime-Domäne.",
+   "action": "Das Feld folgt dem Spieler und verdichtet sich bei Angriffen in Blickrichtung. Sprint Boundary Slide, Jump Threshold Leap, Defense Rule Aegis.",
+   "peak": "Das Feld überzieht einen großen Teil der Arena. Full: Edict Lance / Judgment Column / Court of Lines."
+  }
  },
  {
   "id": "T29",
@@ -3249,7 +3459,14 @@ export const BUFF_FORM_DATA = Object.freeze([
   },
   "statusAll": [
    "stun"
-  ]
+  ],
+  "morphology": "orbital_construct",
+  "morphologyLabel": "Orbital Construct",
+  "states": {
+   "idle": "Orbital Construct (freischwebende Ringe, Objekte und Fragmente): Drei eigenwillige Apparate, Pendel, Zange und Spindel, kreisen um die Hüfte; keine Krone oder Edelsteinreliquien.",
+   "action": "Die Konstrukte rotieren schneller, ziehen sich bei Defense vor die Blickrichtung und folgen dem Sprung träge. Sprint Relic Dash, Jump Artifact Leap, Defense Antique Ward.",
+   "peak": "Die Konstrukte setzen sich zu einer großen Form zusammen (Faust, Schild, Maschine …). Full: Kingmaker Spear / Ascendant Vault / Relic Convergence."
+  }
  },
  {
   "id": "T30",
@@ -3349,7 +3566,14 @@ export const BUFF_FORM_DATA = Object.freeze([
     }
    }
   },
-  "statusAll": []
+  "statusAll": [],
+  "morphology": "energy_extension",
+  "morphologyLabel": "Energy Extension",
+  "states": {
+   "idle": "Energy Extension (bewegliche Schweife, Bänder und Peitschen aus der Körperkontur): Nur ein einzelnes versetztes Schattenband löst sich beim Bewegen vom Körper; keine Katzenohren, kein Tierkopf.",
+   "action": "Sprint zieht die Bänder flach nach hinten, beim Sprung hängen sie unter dem Körper, Angriffe lassen sie nach vorn peitschen. Sprint Cat Slip, Jump Cat Jump, Defense Cat Veil.",
+   "peak": "Die Bänder schießen auf volle Länge aus und formen die Full-Attacke. Full: Nine Lives Lash / Night Chimera Rise / Dark Prowl."
+  }
  },
  {
   "id": "T31",
@@ -3446,7 +3670,14 @@ export const BUFF_FORM_DATA = Object.freeze([
     }
    }
   },
-  "statusAll": []
+  "statusAll": [],
+  "morphology": "orbital_construct",
+  "morphologyLabel": "Orbital Construct",
+  "states": {
+   "idle": "Orbital Construct (freischwebende Ringe, Objekte und Fragmente): Ein Fächer aus flachen, dreieckigen Glimmer-Samen statt Blütenblättern umkreist ein leeres Waffenlager.",
+   "action": "Die Konstrukte rotieren schneller, ziehen sich bei Defense vor die Blickrichtung und folgen dem Sprung träge. Sprint Petal Drift, Jump Petal Jump, Defense Petal Dome.",
+   "peak": "Die Konstrukte setzen sich zu einer großen Form zusammen (Faust, Schild, Maschine …). Full: Thousand-Petal Wave / Blooming Vault / Royal Bloom."
+  }
  },
  {
   "id": "T32",
@@ -3552,7 +3783,14 @@ export const BUFF_FORM_DATA = Object.freeze([
     }
    }
   },
-  "statusAll": []
+  "statusAll": [],
+  "morphology": "body_augmentation",
+  "morphologyLabel": "Body Augmentation",
+  "states": {
+   "idle": "Body Augmentation (Strukturen direkt am Körper, zusätzliche Glieder und Leitungen): Abstrakte, rechteckige Akzentzeichen blitzen nur an den Fußgelenken bei tatsächlich getroffenen Schritten.",
+   "action": "Die Strukturen pumpen, spannen sich und folgen jeder Pose eng am Körper. Sprint Thunderstep, Jump Flash Jump, Defense Thunder Guard.",
+   "peak": "Die körpernahen Strukturen wachsen kurz zu einer großen Arena-Struktur aus. Full: Sixfold Flash / Heaven Tempo / Storm Cantata."
+  }
  },
  {
   "id": "T33",
@@ -3653,7 +3891,14 @@ export const BUFF_FORM_DATA = Object.freeze([
   },
   "statusAll": [
    "launch"
-  ]
+  ],
+  "morphology": "body_augmentation",
+  "morphologyLabel": "Body Augmentation",
+  "states": {
+   "idle": "Body Augmentation (Strukturen direkt am Körper, zusätzliche Glieder und Leitungen): Zwei schmale schwenkbare Messzirkel-Bügel an Schultern und Knien bilden die Stealth-Silhouette.",
+   "action": "Die Strukturen pumpen, spannen sich und folgen jeder Pose eng am Körper. Sprint Shade Run, Jump Moon Vault, Defense Counter Veil.",
+   "peak": "Die körpernahen Strukturen wachsen kurz zu einer großen Arena-Struktur aus. Full: Crescent Chain / Midnight Split / Shadow Wheel."
+  }
  },
  {
   "id": "T34",
@@ -3758,7 +4003,14 @@ export const BUFF_FORM_DATA = Object.freeze([
   },
   "statusAll": [
    "launch"
-  ]
+  ],
+  "morphology": "levitation",
+  "morphologyLabel": "Levitation State",
+  "states": {
+   "idle": "Levitation State (schwebender Spieler mit kontrollierten Projektilen): Ein schwebender Projektionsapparat aus drei nach außen klappenden Segmenten trägt eine leere Werkzeugfassung.",
+   "action": "Der Spieler schwebt über seinem Schatten; Projektile ordnen sich je nach Aktion neu. Sprint Summoner Drift, Jump Star Hop, Defense Ward Sentinel.",
+   "peak": "Er steigt kurz höher, die Projektile fächern zur Full-Attacke aus. Full: Sentinel Volley / Constellation Lift / Orbit Fortress."
+  }
  },
  {
   "id": "T35",
@@ -3869,7 +4121,14 @@ export const BUFF_FORM_DATA = Object.freeze([
   "statusAll": [
    "freeze",
    "slow"
-  ]
+  ],
+  "morphology": "environmental",
+  "morphologyLabel": "Environmental State",
+  "states": {
+   "idle": "Environmental State (der Spieler verändert einen größeren Bereich der Arena): Drei gebrochene, halbtransparente Kondensationsbänder liegen an Arm, Rücken und Hüfte; keine Zifferblätter.",
+   "action": "Das Feld folgt dem Spieler und verdichtet sich bei Angriffen in Blickrichtung. Sprint Cold Glide, Jump Clock Hop, Defense Frozen Clock.",
+   "peak": "Das Feld überzieht einen großen Teil der Arena. Full: Frozen Hour / Winter Pendulum / Clockwork Blizzard."
+  }
  },
  {
   "id": "T36",
@@ -3983,7 +4242,14 @@ export const BUFF_FORM_DATA = Object.freeze([
   "statusAll": [
    "heal",
    "shield"
-  ]
+  ],
+  "morphology": "energy_extension",
+  "morphologyLabel": "Energy Extension",
+  "states": {
+   "idle": "Energy Extension (bewegliche Schweife, Bänder und Peitschen aus der Körperkontur): Drei geknickte, segelartige Paneele strahlen seitlich vom Rücken ab, ohne Federn oder Halo.",
+   "action": "Sprint zieht die Bänder flach nach hinten, beim Sprung hängen sie unter dem Körper, Angriffe lassen sie nach vorn peitschen. Sprint Beacon Flow, Jump Radiant Hop, Defense Halo Guard.",
+   "peak": "Die Bänder schießen auf volle Länge aus und formen die Full-Attacke. Full: Dawn Ray / Ascension Chorus / Sanctuary Anchor."
+  }
  },
  {
   "id": "T37",
@@ -4000,7 +4266,7 @@ export const BUFF_FORM_DATA = Object.freeze([
   "motion": "chemisch wirkende Kantenauflösung ohne Flächentextur auf der Kleidung.",
   "silhouette": "Durchsichtige Katalysatorrohre und sechseckige Dosierkammern ziehen sich um die Unterarme; kein Drachenkopf.",
   "avoid": "Giftatem aus Drachenmaul, grünes Drachenkomplettkostüm. Keine flachen, glatten Ein-Farb-Primitiven als endgültige VFX-Optik.",
-  "archetype": "limbs",
+  "archetype": "saeuregeruest",
   "count": 3,
   "item": "tube",
   "tech": {
@@ -4099,7 +4365,14 @@ export const BUFF_FORM_DATA = Object.freeze([
   "statusAll": [
    "stun",
    "acid"
-  ]
+  ],
+  "morphology": "body_augmentation",
+  "morphologyLabel": "Body Augmentation",
+  "states": {
+   "idle": "Lebendige Alchemie: transparente Katalysatorrohre umwickeln Arme, Rücken und Beine; unregelmäßige Ätzglasblasen schweben dicht am Körper; Säuredampf strömt über den Boden, Flüssigkeit wird zwischen den Kammern umgepumpt.",
+   "action": "Die Strukturen pumpen, spannen sich und folgen jeder Pose eng am Körper. Sprint Mire Glide, Jump Venom Jump, Defense Toxic Hide.",
+   "peak": "Down Full: ein großer Teil des Bodens wird zu einem aufsteigenden, mehrschichtigen Ätzglas-Reaktor; Angriffe lassen ätzende Strahlen und Kapillarfäden aus dem System wachsen."
+  }
  },
  {
   "id": "T38",
@@ -4116,7 +4389,7 @@ export const BUFF_FORM_DATA = Object.freeze([
   "motion": "träge verzögertes Schweben verschieden schwerer Partikelplatten.",
   "silhouette": "Fünf frei schwebende Stein-Gelenkbügel bilden eine offene Architektur um Arme und Beine.",
   "avoid": "klassischer massiver Steingolem mit sichtbarem leuchtenden Brustkristall. Keine flachen, glatten Ein-Farb-Primitiven als endgültige VFX-Optik.",
-  "archetype": "frame",
+  "archetype": "asterglied",
   "count": 5,
   "item": "brace",
   "tech": {
@@ -4205,7 +4478,14 @@ export const BUFF_FORM_DATA = Object.freeze([
   "statusAll": [
    "shield",
    "launch"
-  ]
+  ],
+  "morphology": "orbital_construct",
+  "morphologyLabel": "Orbital Construct",
+  "states": {
+   "idle": "Orbitale Steinarchitektur: fünf massive, zerbrochene Steinringe schweben in unterschiedlichen Winkeln um den Charakter, rotieren und verschieben sich — keine Arme, kein Kopf.",
+   "action": "Die Konstrukte rotieren schneller, ziehen sich bei Defense vor die Blickrichtung und folgen dem Sprung träge. Sprint Golem March, Jump Crag Hop, Defense Stonewall.",
+   "peak": "Angriffe setzen die Ringe zu einer riesigen Faustprojektion (Forward), einem Ringturm (Up), einem Steinschild (Defense) oder einer rotierenden Zermalmungsmaschine (Down Full) zusammen."
+  }
  },
  {
   "id": "T39",
@@ -4222,7 +4502,7 @@ export const BUFF_FORM_DATA = Object.freeze([
   "motion": "vier ungleiche Bildfenster mit nichtlinear springenden Bildrest-Kanten.",
   "silhouette": "Vier dünne schwebende Bildrahmen zeigen nur abstrakte Bewegungsvektoren; keine Sternenkrone oder Himmelszeichen.",
   "avoid": "klassisches Orakel mit schwebenden Sternen, standardmäßige goldene Zauberkrone. Keine flachen, glatten Ein-Farb-Primitiven als endgültige VFX-Optik.",
-  "archetype": "orbit",
+  "archetype": "vorausschnitt",
   "count": 4,
   "item": "frame",
   "tech": {
@@ -4306,7 +4586,14 @@ export const BUFF_FORM_DATA = Object.freeze([
     }
    }
   },
-  "statusAll": []
+  "statusAll": [],
+  "morphology": "temporal_projection",
+  "morphologyLabel": "Temporal Projection",
+  "states": {
+   "idle": "Zeitversetzte Existenz: vier große, leicht transparente Zeitebenen stehen versetzt im Raum und zeigen zeitversetzte Bewegungen des eigenen Charakters.",
+   "action": "Bei Angriffen verlassen die Nachbilder kurz ihre Ebenen und greifen zeitlich versetzt mit an.",
+   "peak": "Alle Echos verlassen ihre Ebenen und greifen synchron bzw. zeitlich versetzt an. Full: Convergence Formula / Zodiac Ascent / Nebula Equation."
+  }
  },
  {
   "id": "T40",
@@ -4405,6 +4692,13 @@ export const BUFF_FORM_DATA = Object.freeze([
     }
    }
   },
-  "statusAll": []
+  "statusAll": [],
+  "morphology": "creature_manifestation",
+  "morphologyLabel": "Creature Manifestation",
+  "states": {
+   "idle": "Zwei Energie-Wyrms aus rautenförmigen Obsidianschuppen mit Goldkanten umkreisen den Spieler; goldene Lanze in der Hand, Halo-Krone.",
+   "action": "Die Geschöpfe umkreisen den Spieler, strecken sich im Sprint und schnappen bei Angriffen zu. Sprint Wyrmlauf, Jump Himmelslauf und konturtreue Air-Aura, Defense Drachengrat.",
+   "peak": "Zwillingswyrm-Jagd (zwei Drachen jagen über die Lane), Himmelswendel (Spiral-Wyrm), Wyrmportal-Ritual (Portale um ein Ziel)."
+  }
  }
 ]);

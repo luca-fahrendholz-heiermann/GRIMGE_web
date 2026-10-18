@@ -212,14 +212,58 @@ const OVERRIDES = {
   T34: T({ kind: 'projectile' }, { pierce: true }, { status: ['launch'] }),
   T35: T({ status: ['slow'] }),
   T36: T(null, { kind: 'beam', status: ['heal'] }, null, null, { status: ['stun'] }, null),
-  T37: T({ kind: 'projectile', status: ['acid'] }, { kind: 'cone', status: ['acid', 'slow'] }, null, { status: ['acid'] }, { status: ['slow', 'acid'] }, { status: ['acid'] }),
-  T38: T({ kind: 'projectile' }),
-  T39: T({ kind: 'projectile' }, null, null, null, null, { status: ['slow'] }),
+  T37: { archetype: 'saeuregeruest', ...T({ kind: 'projectile', status: ['acid'] }, { kind: 'cone', status: ['acid', 'slow'] }, null, { status: ['acid'] }, { status: ['slow', 'acid'] }, { status: ['acid'] }) },
+  T38: { archetype: 'asterglied', ...T({ kind: 'projectile' }) },
+  T39: { archetype: 'vorausschnitt', ...T({ kind: 'projectile' }, null, null, null, null, { status: ['slow'] }) },
   T40: { tech: { forward: { short: { kind: 'beam', text: 'Schneller, geradliniger Verstärkungsimpuls (Lanzenstich).' }, full: { kind: 'wyrms', text: 'Zwei unabhängig jagende Drachen treffen mehrere Ziele entlang der Lane.' } }, up: { full: { kind: 'pillar', status: ['launch'] } }, down: { short: { status: ['burn'] }, full: { kind: 'portals', text: 'Portale um einen anvisierten Gegner, aus denen Wyrme in zeitlicher Folge einschlagen.' } },
     defense: { counter: 'spike', text: 'Drachengrat: Schuppenkamm blockt; Perfect Block stößt einen Grat aus Schuppen nach vorn.' },
     grab: { throw: 'spin', text: 'Wyrmfang: nur bestätigtes Nahziel; ein Wyrmkopf packt und schleudert es im Bogen.' },
     jump: { landing: 'fan', text: 'Himmelslauf: Wyrmbänder folgen der Sprungphase und fächern bei der Landung auf.' } } }
 };
+// ── Morphology (silhouette family) and the three visual states ──────────
+// Only Arkengestell is a giant humanoid; every other Arcane State relates to
+// the Wizard and the arena in its own way (design note, 18 Oct 2026).
+const MORPH = {
+  astral_avatar: { label: 'Astral Avatar', what: 'riesige externe Kampfgestalt', action: 'Die Gestalt beugt sich mit, Arme und Panzer falten sich bei Defense vor die Blickrichtung.', peak: 'Der Avatar entfaltet sich zur vollen Kampfgestalt; Waffe und Arme setzen die Full-Attacke um.' },
+  energy_extension: { label: 'Energy Extension', what: 'bewegliche Schweife, Bänder und Peitschen aus der Körperkontur', action: 'Sprint zieht die Bänder flach nach hinten, beim Sprung hängen sie unter dem Körper, Angriffe lassen sie nach vorn peitschen.', peak: 'Die Bänder schießen auf volle Länge aus und formen die Full-Attacke.' },
+  body_augmentation: { label: 'Body Augmentation', what: 'Strukturen direkt am Körper, zusätzliche Glieder und Leitungen', action: 'Die Strukturen pumpen, spannen sich und folgen jeder Pose eng am Körper.', peak: 'Die körpernahen Strukturen wachsen kurz zu einer großen Arena-Struktur aus.' },
+  orbital_construct: { label: 'Orbital Construct', what: 'freischwebende Ringe, Objekte und Fragmente', action: 'Die Konstrukte rotieren schneller, ziehen sich bei Defense vor die Blickrichtung und folgen dem Sprung träge.', peak: 'Die Konstrukte setzen sich zu einer großen Form zusammen (Faust, Schild, Maschine …).' },
+  temporal_projection: { label: 'Temporal Projection', what: 'versetzte Abbilder und Bewegungsechos', action: 'Die Echos spielen die Bewegungen der letzten Augenblicke nach und greifen bei Angriffen versetzt mit an.', peak: 'Alle Echos verlassen ihre Ebenen und greifen synchron bzw. zeitlich versetzt an.' },
+  creature_manifestation: { label: 'Creature Manifestation', what: 'unabhängige Energiegeschöpfe', action: 'Die Geschöpfe umkreisen den Spieler, strecken sich im Sprint und schnappen bei Angriffen zu.', peak: 'Die Geschöpfe lösen sich als eigenständige Angreifer vom Spieler.' },
+  levitation: { label: 'Levitation State', what: 'schwebender Spieler mit kontrollierten Projektilen', action: 'Der Spieler schwebt über seinem Schatten; Projektile ordnen sich je nach Aktion neu.', peak: 'Er steigt kurz höher, die Projektile fächern zur Full-Attacke aus.' },
+  environmental: { label: 'Environmental State', what: 'der Spieler verändert einen größeren Bereich der Arena', action: 'Das Feld folgt dem Spieler und verdichtet sich bei Angriffen in Blickrichtung.', peak: 'Das Feld überzieht einen großen Teil der Arena.' }
+};
+const MORPH_OF = {
+  B01: 'energy_extension', B02: 'astral_avatar',
+  T01: 'energy_extension', T02: 'orbital_construct', T03: 'creature_manifestation', T04: 'energy_extension', T05: 'levitation',
+  T06: 'orbital_construct', T07: 'body_augmentation', T08: 'orbital_construct', T09: 'orbital_construct', T10: 'body_augmentation',
+  T11: 'energy_extension', T12: 'body_augmentation', T13: 'body_augmentation', T14: 'orbital_construct', T15: 'energy_extension',
+  T16: 'orbital_construct', T17: 'energy_extension', T18: 'body_augmentation', T19: 'body_augmentation', T20: 'body_augmentation',
+  T21: 'orbital_construct', T22: 'body_augmentation', T23: 'orbital_construct', T24: 'creature_manifestation', T25: 'body_augmentation',
+  T26: 'temporal_projection', T27: 'body_augmentation', T28: 'environmental', T29: 'orbital_construct', T30: 'energy_extension',
+  T31: 'orbital_construct', T32: 'body_augmentation', T33: 'body_augmentation', T34: 'levitation', T35: 'environmental',
+  T36: 'energy_extension', T37: 'body_augmentation', T38: 'orbital_construct', T39: 'temporal_projection', T40: 'creature_manifestation'
+};
+// Explicit three-state descriptions for the forms the design note names.
+const STATES = {
+  B02: { idle: 'Astralkoloss: riesige Arme, Panzersegmente, Brustkorb-Architektur und ein spiritueller Bogen bilden einen eigenständigen Kampfavatar — als einzige Form humanoid.' },
+  T37: { idle: 'Lebendige Alchemie: transparente Katalysatorrohre umwickeln Arme, Rücken und Beine; unregelmäßige Ätzglasblasen schweben dicht am Körper; Säuredampf strömt über den Boden, Flüssigkeit wird zwischen den Kammern umgepumpt.', peak: 'Down Full: ein großer Teil des Bodens wird zu einem aufsteigenden, mehrschichtigen Ätzglas-Reaktor; Angriffe lassen ätzende Strahlen und Kapillarfäden aus dem System wachsen.' },
+  T39: { idle: 'Zeitversetzte Existenz: vier große, leicht transparente Zeitebenen stehen versetzt im Raum und zeigen zeitversetzte Bewegungen des eigenen Charakters.', action: 'Bei Angriffen verlassen die Nachbilder kurz ihre Ebenen und greifen zeitlich versetzt mit an.' },
+  T38: { idle: 'Orbitale Steinarchitektur: fünf massive, zerbrochene Steinringe schweben in unterschiedlichen Winkeln um den Charakter, rotieren und verschieben sich — keine Arme, kein Kopf.', peak: 'Angriffe setzen die Ringe zu einer riesigen Faustprojektion (Forward), einem Ringturm (Up), einem Steinschild (Defense) oder einer rotierenden Zermalmungsmaschine (Down Full) zusammen.' },
+  B01: { idle: 'Entfesselte Energiebänder: drei asymmetrische, lange Energiebänder brechen aus der Körperkontur hervor und bewegen sich wie lebendige Peitschen — keine humanoide Gestalt.', action: 'Beim Angriff peitschen die Bänder nach vorn und verändern ihre Form; die Silhouette bleibt dynamisch und ungleichmäßig.' },
+  T40: { idle: 'Zwei Energie-Wyrms aus rautenförmigen Obsidianschuppen mit Goldkanten umkreisen den Spieler; goldene Lanze in der Hand, Halo-Krone.', peak: 'Zwillingswyrm-Jagd (zwei Drachen jagen über die Lane), Himmelswendel (Spiral-Wyrm), Wyrmportal-Ritual (Portale um ein Ziel).' }
+};
+for (const f of forms) {
+  f.morphology = MORPH_OF[f.id] ?? 'body_augmentation';
+  const m = MORPH[f.morphology]; const t = f.tech; const ex = STATES[f.id] ?? {};
+  f.morphologyLabel = m.label;
+  f.states = {
+    idle: ex.idle ?? `${m.label} (${m.what}): ${f.silhouette}`,
+    action: ex.action ?? `${m.action} Sprint ${t.sprint?.name ?? '—'}, Jump ${t.jump?.name ?? '—'}, Defense ${t.defense?.name ?? '—'}.`,
+    peak: ex.peak ?? `${m.peak} Full: ${['forward', 'up', 'down'].map((d) => t[d]?.full.name).filter(Boolean).join(' / ')}.`
+  };
+}
+
 const merge = (a, b) => { for (const [k, v] of Object.entries(b)) a[k] = v && typeof v === 'object' && !Array.isArray(v) ? merge(a[k] ?? {}, v) : v; return a; };
 for (const f of forms) if (OVERRIDES[f.id]) merge(f, OVERRIDES[f.id]);
 
@@ -229,6 +273,26 @@ const banner = `// GENERATED by tools/generate_buff_forms.mjs from
 `;
 const out = `${banner}export const BUFF_FORM_DATA = Object.freeze(${JSON.stringify(forms, null, 1)});\n`;
 fs.writeFileSync(path.join(root, 'public', 'src', 'buff_forms_data.js'), out);
+
+// ── docs/GRIMGE_Arcane_States_Morphologien.md ───────────────────────────
+{
+  const L = [];
+  L.push('# GRIMGE — Arcane States: Morphologien und drei visuelle Zustände', '');
+  L.push('> Generiert von `tools/generate_buff_forms.mjs` aus dem Transformations-Atlas V3.1 plus Design-Notiz vom 18.10.2026.');
+  L.push('> **Regel:** Nur **Arkengestell** ist eine riesige humanoide Manifestation (Astral Avatar). Alle anderen Arcane States unterscheiden sich schon an der Silhouette — durch die Art, wie sich die Effekte zum Charakter und zur Welt verhalten. Umsetzung weiterhin ausschließlich mit VFX/Attachments, der Charakter-Sprite bleibt unverändert.', '');
+  L.push('> **Nicht jeder State braucht eine große permanente Manifestation.** Jeder hat drei Zustände: **Idle-Silhouette** (Erkennungsbild während der Aktivierung), **Action-Silhouette** (Sprint, Jump, Defense, Heavy) und **Peak Manifestation** (maximale Ausprägung, z. B. Full Charge).', '');
+  L.push('## Morphologie-Typen', '', '| Morphologie | Aufbau | Formen |', '|---|---|---|');
+  for (const [key, m] of Object.entries(MORPH)) L.push(`| **${m.label}** | ${m.what} | ${forms.filter((f) => f.morphology === key).map((f) => `${f.id} ${f.name}`).join(', ') || '—'} |`);
+  L.push('', '## Alle 42 Arcane States', '');
+  for (const f of forms) {
+    L.push(`### ${f.id} ${f.name}${f.title ? ' — ' + f.title : ''} · *${f.morphologyLabel}*`, '');
+    L.push(`- **Idle-Silhouette:** ${f.states.idle}`);
+    L.push(`- **Action-Silhouette:** ${f.states.action}`);
+    L.push(`- **Peak Manifestation:** ${f.states.peak}`);
+    L.push(`- Palette: ${f.palette.map((c) => '`' + c + '`').join(' ')} · Material: ${f.material}`, '');
+  }
+  fs.writeFileSync(path.join(root, 'docs', 'GRIMGE_Arcane_States_Morphologien.md'), L.join('\n'));
+}
 console.log(`${forms.length} forms → public/src/buff_forms_data.js (${Math.round(out.length / 1024)} KB)`);
 const tally = (fn) => forms.reduce((m, f) => { const k = fn(f); m[k] = (m[k] ?? 0) + 1; return m; }, {});
 console.log('archetypes', tally((f) => f.archetype));

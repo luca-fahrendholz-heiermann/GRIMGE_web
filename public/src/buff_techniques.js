@@ -12,6 +12,7 @@ import { combat } from './combat.js';
 import { groundYForDepth } from './world.js';
 import { FormStrikeSpell } from './form_moves.js';
 import { plate, band, fallout, rng } from './buff_vfx.js';
+import { drawWyrmBody, drawWyrmHead, stoneRing, STONE, ACID_GLASS } from './buff_signatures.js';
 
 const DEPTH_PX = 150;
 const TAU = Math.PI * 2;
@@ -186,6 +187,20 @@ export class BuffStrikeSpell extends FormStrikeSpell {
         break;
       }
       case 'pillar': {
+        if (this.buff.id === 'T38') {
+          // The rings stack into a rising tower that lifts the targets.
+          const grow = Math.min(1, p * 2.4);
+          for (let i = 0; i < 6; i++) stoneRing(ctx, this.x, y - 12 - i * 32 * grow, 24 - i, .2, 0, this.t * (i % 2 ? 2.4 : -2.4), 10, this.seed + i * 20, .6 * fade + .4);
+          break;
+        }
+        if (this.buff.id === 'T40') {
+          // Himmelswendel: a spiralling wyrm rising in front, head on top.
+          const h = 220 * Math.min(1, p * 2.4); const spine = [];
+          for (let i = 0; i < 18; i++) { const k = i / 17; spine.push([this.x + Math.cos(k * 12 + this.t * 6) * (26 - k * 8), y - h * (1 - k)]); }
+          drawWyrmBody(ctx, spine, m, this.seed, .5 * fade + .5, 1.1);
+          drawWyrmHead(ctx, spine[0][0], spine[0][1], spine[0][0] - spine[1][0], spine[0][1] - spine[1][1], 26, m, .5, 1, this.seed + 40);
+          break;
+        }
         // A shear column of stacked plates rising in front.
         const h = 210 * Math.min(1, p * 3); const w = c.width ?? 34;
         for (let k = 0; k < 9; k++) {
@@ -206,6 +221,18 @@ export class BuffStrikeSpell extends FormStrikeSpell {
       }
       case 'ring':
       case 'sequence': {
+        if (this.buff.id === 'T38' && this.kind === 'sequence') {
+          // Crushing machine: the rings lie flat and grind around the Wizard.
+          for (let i = 0; i < 3; i++) stoneRing(ctx, this.x, y - 4 - i * 6, (50 + i * 38) * Math.min(1, p * 2), .08, 0, this.t * (i % 2 ? 3 : -3.6), 12, this.seed + i * 30, .5 * fade + .5, null, 3);
+        }
+        if (this.buff.id === 'T37' && this.kind === 'sequence') {
+          // Peak: the ground turns into a rising, layered acid-glass reactor.
+          for (let L = 0; L < 3; L++) {
+            const R = 50 + L * 38; const h = (26 + L * 14) * Math.min(1, p * 2.2);
+            for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2 + L * .4; const x = this.x + Math.cos(a) * R; const gy = y + Math.sin(a) * R * .28; plate(ctx, [[x - 6, gy], [x - 4, gy - h], [x + 4, gy - h - 4], [x + 6, gy]], ACID_GLASS, this.seed + L * 20 + i, { alpha: .5 * fade + .3, core: .4 }); }
+          }
+          for (let i = 0; i < 8; i++) { const ph = (this.t * .9 + i / 8) % 1; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = (1 - ph) * .8; ctx.fillStyle = '#9dff7a'; ctx.fillRect(this.x + Math.cos(i * 2.3) * 80, y - 10 - ph * 70, 3, 3); ctx.restore(); }
+        }
         for (const e of this.events) {
           const ex = this.x + (e.dx ?? 0) * f; const ez = this.z + (e.dz ?? 0); const gy = groundYForDepth(ez) - this.surfaceHeight;
           const rad = e.radius ?? 30;
@@ -227,6 +254,16 @@ export class BuffStrikeSpell extends FormStrikeSpell {
       }
       case 'projectile': {
         const x = this.px; const yy = y - 34;
+        if (!this.exploded && this.buff.id === 'T38') {
+          // The rings assemble into a giant stone fist flying forward.
+          const s2 = this.cfg.explode ? 1.3 : 1;
+          plate(ctx, [[x - f * 18 * s2, yy - 16 * s2], [x + f * 10 * s2, yy - 18 * s2], [x + f * 14 * s2, yy + 14 * s2], [x - f * 16 * s2, yy + 16 * s2]], STONE, this.seed, { alpha: 1, glowEdge: .5 });
+          for (let i = 0; i < 4; i++) plate(ctx, [[x + f * 10 * s2, yy - 16 * s2 + i * 8 * s2], [x + f * 22 * s2, yy - 15 * s2 + i * 8 * s2], [x + f * 22 * s2, yy - 9 * s2 + i * 8 * s2], [x + f * 10 * s2, yy - 9 * s2 + i * 8 * s2]], STONE, this.seed + 1 + i, { alpha: 1, glowEdge: .5 });
+          plate(ctx, [[x - f * 6 * s2, yy - 22 * s2], [x + f * 8 * s2, yy - 24 * s2], [x + f * 6 * s2, yy - 16 * s2], [x - f * 6 * s2, yy - 16 * s2]], STONE, this.seed + 6, { alpha: 1, glowEdge: .5 });
+          stoneRing(ctx, x - f * 22 * s2, yy, 12 * s2, .9, Math.PI / 2, this.t * 6, 6, this.seed + 10, .9);
+          fallout(ctx, [[x - f * 20, yy]], STONE, this.t * 3, this.seed + 7, { count: 8, driftX: -f * 50 });
+          break;
+        }
         if (!this.exploded) {
           // A faceted core of rotating plates with a trail of shards.
           for (let k = 0; k < 5; k++) { const a = this.t * 8 + k * TAU / 5; plate(ctx, [[x, yy], [x + Math.cos(a) * 13, yy + Math.sin(a) * 13], [x + Math.cos(a + .9) * 9, yy + Math.sin(a + .9) * 9]], m, this.seed + k, { alpha: 1, pulse: 1, core: 1 }); }
@@ -246,11 +283,11 @@ export class BuffStrikeSpell extends FormStrikeSpell {
         break;
       }
       case 'wyrms': {
+        // Zwillingswyrm-Jagd: two scale dragons racing along their lanes.
         for (const [hi, h] of this.heads.entries()) {
           const spine = h.trail.map(([x, z], i) => [x, groundYForDepth(z) - 44 - Math.sin(this.t * 10 + i * .6 + hi * 3) * 12]);
-          if (spine.length > 2) band(ctx, spine, (i, nn) => 7 - (i / nn) * 4, m, this.seed + hi * 9, { t: this.t, alpha: fade * .5 + .5 });
-          const [hx, hy] = spine[0] ?? [h.x, y - 44];
-          plate(ctx, [[hx - f * 4, hy - 7], [hx + f * 26, hy], [hx - f * 4, hy + 7]], m, this.seed + 30 + hi, { alpha: 1, core: 1 });
+          if (spine.length > 2) drawWyrmBody(ctx, spine, m, this.seed + hi * 9, fade * .5 + .5, .9);
+          if (spine.length > 1) drawWyrmHead(ctx, spine[0][0], spine[0][1], spine[0][0] - spine[1][0], spine[0][1] - spine[1][1], 22, m, .45, 1, this.seed + 30 + hi * 10);
         }
         break;
       }
@@ -260,7 +297,13 @@ export class BuffStrikeSpell extends FormStrikeSpell {
           const px = this.focus.x + Math.cos(pt.a) * 76; const py = fy - 60 + Math.sin(pt.a) * 30;
           const k = Math.min(1, this.t / pt.at);
           for (let i = 0; i < 10; i++) { const a = i / 10 * TAU + this.t * 3; plate(ctx, [[px + Math.cos(a) * 14 * k, py + Math.sin(a) * 20 * k], [px + Math.cos(a + .4) * 18 * k, py + Math.sin(a + .4) * 25 * k], [px + Math.cos(a + .2) * 10 * k, py + Math.sin(a + .2) * 14 * k]], m, this.seed + i, { alpha: pt.done ? .4 : .9 }); }
-          if (pt.done && this.t - pt.at < .18) band(ctx, [[px, py], [(px + this.focus.x) / 2, (py + fy - 30) / 2 - 10], [this.focus.x, fy - 30]], () => 4, m, this.seed + 70, { t: this.t, alpha: 1 });
+          if (pt.done && this.t - pt.at < .25) {
+            // A wyrm strikes out of the portal at the target.
+            const k2 = Math.min(1, (this.t - pt.at) / .12); const tx = px + (this.focus.x - px) * k2; const ty = py + (fy - 30 - py) * k2;
+            const spine = Array.from({ length: 8 }, (_, j) => [tx + (px - tx) * (j / 7), ty + (py - ty) * (j / 7) - Math.sin(j) * 4]);
+            if (this.buff.id === 'T40') { drawWyrmBody(ctx, spine, m, this.seed + 70, 1, .7); drawWyrmHead(ctx, tx, ty, this.focus.x - px, fy - 30 - py, 18, m, .6, 1, this.seed + 80); }
+            else band(ctx, spine, () => 4, m, this.seed + 70, { t: this.t, alpha: 1 });
+          }
         }
         break;
       }
