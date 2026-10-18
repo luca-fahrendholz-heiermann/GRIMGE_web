@@ -758,6 +758,8 @@ export class Player extends GroundEntity {
     this.chargeSource = source;
     if (!this.isAlive || this.isGuarding || !this.grounded || this.chargeTimer > 0) return false;
     if (ACTION_STATES.has(this.state)) return false;
+    // Normal mode: no ground charge-down (reserved for the weapon-specific buff / debuff).
+    if (direction === 'down' && !activeMoveset(this)) return false;
     // Inside a transformation / manifest the charge feeds a form technique:
     // held for FULL_CHARGE_TIME it becomes the FULL version and can be held.
     this.formCharge = activeMoveset(this) ? { elapsed: 0 } : null;
@@ -776,9 +778,9 @@ export class Player extends GroundEntity {
     const game = window.gameWorld;
     if (activeMoveset(this)) {
       // Every Arcane State special costs mana; the Focus transformations burn Focus instead.
+      // The look is the form's own (pull_looks.js): Arcane State id, else the transformation moveset.
       const form = currentBuffForm(this);
-      const mat = form?.mat;
-      return releaseFormPull(this, game, spells, { color: mat?.vein ?? '#c9a8ff', core: mat?.edge ?? '#ffffff', mana: !!(this.buffForm?.timer > 0) });
+      return releaseFormPull(this, game, spells, { look: form?.id ?? activeMoveset(this), mat: form?.mat, mana: !!(this.buffForm?.timer > 0) });
     }
     return releaseWeaponReach(this, spells, charge);
   }
@@ -794,33 +796,33 @@ export class Player extends GroundEntity {
     const chargeRatio = 1 - (this.chargeTimer / this.chargeMaxTime);
     this.chargeTimer = 0;
     if (this.chargeDir === 'hold') { if (this.isAlive) this.state = 'idle'; return this.isAlive ? this.holdAttack(chargeRatio) : false; }
+    // Ground charge-down has no generic move in the normal mode (the low sweep is gone;
+    // the slot is reserved for the weapon-specific buff / debuff).
+    if (this.chargeDir === 'down') { this.state = 'idle'; return false; }
     if (!this.isAlive || chargeRatio < 0.05) return false;
     const heavy = MELEE_BASELINE.heavy;
     signatureEvent(this, 'heavy', { charge: chargeRatio });
     const dmgMult = 1 + chargeRatio * 0.8;
     const kbMult = 1 + chargeRatio * 0.6;
     const dir = this.chargeDir ?? 'forward';
-    // Ranged weapons: the charged heavy is a stronger shot — UP a volley, DOWN a low pinning shot.
+    // Ranged weapons: the charged UP is a lifting volley.
     const weaponHeavy = this.weaponProfile?.heavy;
-    if (weaponHeavy?.shot && dir !== 'forward') {
+    if (weaponHeavy?.shot && dir === 'up') {
       this.state = 'heavyStrike'; this.stateTimer = heavy.time; this._weaponSwingTime = heavy.time; this.setWeaponMotion('heavy'); this.vx = 0; this.canAttack = false;
-      const shots = makeWeaponShots(this, { ...weaponHeavy.shot, pierce: weaponHeavy.shot.pierce || chargeRatio > .7 }, this.weapon ?? this.classWeapon, { power: 1 + chargeRatio * .8, volley: dir === 'up' ? 2 : 0, low: dir === 'down' });
+      const shots = makeWeaponShots(this, { ...weaponHeavy.shot, pierce: weaponHeavy.shot.pierce || chargeRatio > .7 }, this.weapon ?? this.classWeapon, { power: 1 + chargeRatio * .8, volley: 2 });
       for (const shot of shots) spells.addSpell(shot, 'B');
       audio.playSlash(.9 - chargeRatio * .2);
       return true;
     }
-    if (dir !== 'forward') {
-      // Up: a rising launcher that lifts the target high (air follow-ups);
-      // Down: a low sweep along the ground that breaks guards and trips.
-      const up = dir === 'up';
-      this.state = up ? 'uppercut' : 'heavyStrike'; this.stateTimer = heavy.time; this._weaponSwingTime = heavy.time;
-      this.setWeaponMotion(up ? 'uppercut' : 'heavy');
+    if (dir === 'up') {
+      // A rising launcher that lifts the target high (air follow-ups).
+      this.state = 'uppercut'; this.stateTimer = heavy.time; this._weaponSwingTime = heavy.time;
+      this.setWeaponMotion('uppercut');
       this.vx = 0; this.canAttack = false;
-      if (up) this.vElevation = 180 * PLAYER_ARC_SCALE;
-      audio.playSlash(up ? 1.05 : .7);
-      combat.spawnSlashArc(this.x + this.facing * 20, this.y - (up ? 30 : 8), this.facing, up ? { radius: 56 + chargeRatio * 16, angleStart: -1.5, angleEnd: .5, color: '#ffea00', glow: '#ff9800', width: 6 + chargeRatio * 4 } : { radius: 64 + chargeRatio * 18, angleStart: .1, angleEnd: 1.2, color: '#ffd54f', glow: '#ff6d00', width: 6 + chargeRatio * 4 });
-      if (!up) combat.spawnShockwave(this.x + this.facing * 34, this.y - 2, 40 + chargeRatio * 20, '#ffab00');
-      this.triggerMeleeHitbox(heavy.damage * dmgMult * (up ? .9 : .85), this.facing * heavy.knockback * (up ? .35 : .7) * kbMult, up ? 420 + chargeRatio * 160 : 40, up ? .55 : .5 + chargeRatio * .2, chargeRatio > 0.7, { hitstopTicks: Math.round(4 + chargeRatio * 4), hitReaction: up ? 'launch' : 'trip', isCharged: true, chargeRatio, guardBreak: up ? 0 : 18 + chargeRatio * 20 });
+      this.vElevation = 180 * PLAYER_ARC_SCALE;
+      audio.playSlash(1.05);
+      combat.spawnSlashArc(this.x + this.facing * 20, this.y - 30, this.facing, { radius: 56 + chargeRatio * 16, angleStart: -1.5, angleEnd: .5, color: '#ffea00', glow: '#ff9800', width: 6 + chargeRatio * 4 });
+      this.triggerMeleeHitbox(heavy.damage * dmgMult * .9, this.facing * heavy.knockback * .35 * kbMult, 420 + chargeRatio * 160, .55, chargeRatio > 0.7, { hitstopTicks: Math.round(4 + chargeRatio * 4), hitReaction: 'launch', isCharged: true, chargeRatio, guardBreak: 0 });
       return true;
     }
     this.state = 'heavyStrike';

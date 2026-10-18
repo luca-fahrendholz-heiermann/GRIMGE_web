@@ -13,6 +13,7 @@
 import { audio } from './audio.js';
 import { combat } from './combat.js';
 import { makeWeaponShots, WEAPONS } from './weapons.js';
+import { PULL_LOOKS, defaultPullLook } from './pull_looks.js';
 
 export const HOLD_MANA = Object.freeze({ lane: 2, castle: 4, pull: 5 });
 export const HOLD_MIN_TIME = .3;          // touch: a hold shorter than this stays a tap
@@ -57,9 +58,9 @@ export function releaseWeaponReach(player, spells, charge = 0) {
 
 // The pull tether: reaches the target, then drags it in front of the caster.
 export class PullTetherFx {
-  constructor(player, target, color, core) {
+  constructor(player, target, mat, look = null) {
     this.player = player; this.owner = player; this.team = player.team; this.target = target;
-    this.color = color; this.core = core; this.t = 0; this.reach = .14; this.drag = .3; this.isFinished = false;
+    this.mat = mat; this.look = look; this.t = 0; this.reach = .14; this.drag = .3; this.isFinished = false;
     this.fromX = target?.x ?? player.x;
   }
   update(dt) {
@@ -79,17 +80,15 @@ export class PullTetherFx {
     const k = Math.min(1, this.t / this.reach);
     const tx = hx + ((t.x) - hx) * k; const ty = hy + ((t.y ?? p.y) - 40 - hy) * k;
     const fade = this.t > this.reach + this.drag ? Math.max(0, 1 - (this.t - this.reach - this.drag) / .12) : 1;
-    ctx.save(); ctx.globalAlpha = fade; ctx.lineCap = 'round';
-    ctx.strokeStyle = this.color; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(tx, ty); ctx.stroke();
-    ctx.strokeStyle = this.core; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(tx, ty); ctx.stroke();
-    // A clamp at the tip: two hooked plates closing on the target.
-    for (const sg of [-1, 1]) { ctx.fillStyle = this.core; ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(tx + f * 9, ty + sg * 8); ctx.lineTo(tx + f * 3, ty + sg * 3); ctx.closePath(); ctx.fill(); }
-    ctx.restore();
+    // Each form draws its own pull (pull_looks.js); the mechanic stays the same.
+    const q = { hx, hy, tx, ty, k, d: Math.max(0, Math.min(1, (this.t - this.reach) / this.drag)), a: fade, f, t: (p.animTime ?? 0) + this.t, mat: this.mat, target: t, player: p, fromX: this.fromX };
+    ctx.save(); (PULL_LOOKS[this.look] ?? defaultPullLook)(ctx, q); ctx.restore();
   }
 }
 
 // Arcane State / transformation: pull the nearest foe in front close.
-export function releaseFormPull(player, game, spells, { color = '#c9a8ff', core = '#ffffff', mana = true } = {}) {
+const PULL_MAT = { kind: 'crystal', dark: '#2a1f44', body: '#b9a3f0', facet: '#e6dcff', vein: '#c9a8ff', edge: '#ffffff', spark: '#e9dcff', core: '#ffffff', glow: 'rgba(201,168,255,', edgeGlow: 'rgba(255,255,255,' };
+export function releaseFormPull(player, game, spells, { look = null, mat = PULL_MAT, mana = true } = {}) {
   if (mana && player.freeMana < HOLD_MANA.pull) return noMana(player);
   const f = player.facing || 1;
   const target = (game?.getHostileTargets?.(player.team) ?? [])
@@ -99,9 +98,9 @@ export function releaseFormPull(player, game, spells, { color = '#c9a8ff', core 
   if (mana) player.mp -= HOLD_MANA.pull;
   player.state = 'attack3'; player.stateTimer = .36; player.canAttack = false; player.vx = 0; player.vz = 0;
   player.lastHoldAction = 'PULL';
-  if (!target) { combat.spawnShockwave(player.x + f * 60, player.y - 40, 20, color); return true; }
+  if (!target) { combat.spawnShockwave(player.x + f * 60, player.y - 40, 20, mat.vein); return true; }
   target.takeDamage?.(6, 0, 0, .75, false, 'spell');
-  spells.addSpell(new PullTetherFx(player, target, color, core), 'B');
+  spells.addSpell(new PullTetherFx(player, target, mat, look), 'B');
   audio.playSlash(1.3);
   return true;
 }

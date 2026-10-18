@@ -2540,8 +2540,9 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   dummy.homeX = dummy.x = P.x + 14; dummy.homeZ = dummy.z = P.z; dummy.hp = dummy.maxHp;
   P.beginCharge('up', 'key'); P.chargeTimer = P.chargeMaxTime * .3; P.chargeDir = 'up'; P.releaseCharge();
   assert(P.state === 'uppercut' && dummy.hp < dummy.maxHp, 'Base UP charged heavy: a rising launcher');
-  ready(); dummy.hp = dummy.maxHp; P.beginCharge('down', 'key'); P.chargeTimer = P.chargeMaxTime * .3; P.chargeDir = 'down'; P.releaseCharge();
-  assert(P.state === 'heavyStrike' && dummy.hp < dummy.maxHp, 'Base DOWN charged heavy: a low sweep');
+  ready(); dummy.hp = dummy.maxHp; const downStarted = P.beginCharge('down', 'key');
+  P.chargeTimer = P.chargeMaxTime * .3; P.chargeDir = 'down'; const downFired = P.releaseCharge();
+  assert(!downStarted && !downFired && dummy.hp === dummy.maxHp, 'Normal mode: no generic ground charge-down (the low sweep is gone)');
   ready(); dummy.homeX = dummy.x = 512;
 }
 
@@ -2566,6 +2567,15 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
     const before = P.mp; P.beginCharge('hold', 'key'); P.formCharge.elapsed = .3; P.releaseCharge();
     for (let i = 0; i < 40; i++) spells.update(1 / 60, game);
     assert(P.lastHoldAction === 'PULL' && before - P.mp === HOLD_MANA.pull && Math.abs(dummy.x - (P.x + 46)) < 12, 'Arcane State HOLD: the pull drags the foe in front of the Wizard (5 mana)');
+    // Every Arcane State (and each Focus transformation) pulls with its own look.
+    const { PULL_LOOKS } = await import('./public/src/pull_looks.js');
+    const strictPull = new Proxy({}, { get: (t, k) => (k === 'ellipse' || k === 'arc') ? (x, y, rx, ry) => { if (rx < 0 || (k === 'ellipse' && ry < 0)) throw new Error('IndexSizeError ' + k); } : (k === 'canvas' ? undefined : () => {}), set: () => true });
+    const missingLook = []; const brokenLook = [];
+    for (const id of [...Object.keys(buff.BUFF_FORMS), 'ninefold', 'eidolon', 'ascendant']) {
+      if (!PULL_LOOKS[id]) { missingLook.push(id); continue; }
+      for (const [k, d] of [[.5, 0], [1, .5], [1, 1]]) { try { PULL_LOOKS[id](strictPull, { hx: 300, hy: 250, tx: 300 + 200 * k * (1 - d * .8), ty: 260, k, d, a: 1, f: 1, t: 1.3, mat: buff.BUFF_FORMS[id]?.mat ?? buff.BUFF_FORMS.B02.mat, target: dummy, player: P, fromX: 500 }); } catch (e) { brokenLook.push(id + ': ' + e.message); } }
+    }
+    assert(!missingLook.length && !brokenLook.length && new Set(Object.values(PULL_LOOKS)).size >= 19, 'Every Arcane State and Focus transformation has its own pull look ' + [...missingLook, ...brokenLook].slice(0, 3).join(' | '));
     dummy.homeX = dummy.x = 512;
   }
   P.mp = P.maxMp; buff.endBuffForm(P); spells.clearRuntime();
