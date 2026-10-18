@@ -2169,34 +2169,34 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   const { MageProfile, BUFF_RUNE_IDS } = await import('./public/src/progression.js');
   const neutral = { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false };
   const ids = buff.BUFF_FORM_IDS;
-  assert(ids.length === 42 && ids[0] === 'B01' && ids[1] === 'B02' && ids.includes('T40'), 'All 42 atlas buff transformations are registered (B01, B02, T01–T40)');
+  assert(ids.length === 15 && ids[0] === 'B01' && ids[1] === 'B02' && ids.includes('T40'), 'The 15 curated Arcane States are registered (B01, B02 and 13 atlas forms)');
   const tForms = ids.filter((id) => id.startsWith('T'));
   assert(tForms.every((id) => ['forward', 'up', 'down'].every((d) => FORM_MOVESETS[id]?.[d]?.short?.make && FORM_MOVESETS[id][d].full?.make) && FORM_SPRINT_ATTACKS[id]?.name), 'Every T form has six charged techniques and its own sprint attack');
-  assert(FORM_MOVESETS.T07.forward.short.name === 'CRESCENT SWIPE' && FORM_MOVESETS.T07.forward.full.name === 'MOON HOWL' && FORM_SPRINT_ATTACKS.T07.name === 'PREDATOR BREAK', 'Technique names come straight from the atlas (T07 Dämmerlauf)');
+  assert(FORM_MOVESETS.T13.forward.short.name === 'THREAD NEEDLE' && FORM_MOVESETS.T13.forward.full.name === 'HUNDRED FILAMENTS' && FORM_SPRINT_ATTACKS.T13.name === 'SILK STRIKE', 'Technique names come straight from the atlas (T13 Fadenschlag)');
   assert(FORM_MOVESETS.ninefold.forward.short.name === 'VERDICHTETER RISSKERN' && FORM_MOVESETS.ninefold.forward.full.name === 'RISSSTRAHL' && FORM_MOVESETS.eidolon.up.full.name === 'LICHTSPALTER', 'B01 Risswild / B02 Arkengestell carry the atlas technique names');
   assert(ids.every((id) => { const r = recognizer.runes.find((x) => x.id === 'buff_' + id); const d = SPELL_DEFINITIONS['buff_' + id]; return r?.isBuffForm && r.tags.includes('max-1-per-deck') && d?.isBuffForm && d.tags.includes('arcane-state') && isSpecialRune('buff_' + id); }), 'Each form is an Arcane State special rune tagged "arcane-state · max-1-per-deck", never fusable');
   // Deck rule: at most one buff rune.
   const profile = new MageProfile(); profile.level = 20;
   profile.matchDeck = ['ignis', 'ventus', 'fulgur', 'terra', 'aqua', 'ignis', 'ventus', 'fulgur'];
-  assert(profile.addRuneToDeck('buff_T07').ok, 'A buff rune can join the deck');
+  assert(profile.addRuneToDeck('buff_T13').ok, 'A buff rune can join the deck');
   const second = profile.addRuneToDeck('buff_B01');
   assert(!second.ok && /ONE ARCANE STATE/.test(second.reason), 'A second buff rune is refused (one per deck)');
-  assert(profile.sanitizeDeck(['ignis', 'buff_T07', 'buff_T08', 'aqua']).filter((id) => id.startsWith('buff_')).length === 1, 'Loading a deck keeps only one buff rune');
-  assert(BUFF_RUNE_IDS.length === 42, 'All buff runes are offered in the deck builder');
+  assert(profile.sanitizeDeck(['ignis', 'buff_T13', 'buff_T08', 'aqua']).filter((id) => id.startsWith('buff_')).length === 1, 'Loading a deck keeps only one buff rune');
+  assert(BUFF_RUNE_IDS.length === 15, 'All 15 Arcane State runes are offered in the deck builder');
   // The shared hourglass sigil.
-  const hand = ['ignis', 'fulgur', 'doppel', 'buff_T07'];
-  const sigil = recognizer.recognize(guideStrokes('buff_T07', 400, 300, 120), hand);
-  assert(sigil?.rune.id === 'buff_T07' && sigil.grade === 'S', 'The hourglass sigil resolves to the buff rune in the hand');
+  const hand = ['ignis', 'fulgur', 'doppel', 'buff_T13'];
+  const sigil = recognizer.recognize(guideStrokes('buff_T13', 400, 300, 120), hand);
+  assert(sigil?.rune.id === 'buff_T13' && sigil.grade === 'S', 'The hourglass sigil resolves to the buff rune in the hand');
   assert(recognizer.recognize(guideStrokes('fulgur', 400, 300, 120), hand)?.rune.id === 'fulgur' && recognizer.recognize(guideStrokes('doppel', 400, 300, 120), hand)?.rune.id === 'doppel', 'The open Z stays FULGUR and the wide ∞ stays DOPPEL');
   // Activation in Training, together with the Focus transformation.
   game.returnToHub(); game.setMatchMode('training'); game.startMatch(); game.selectTrainingMap('waterfalls');
   const P = game.player; const dummy = game.trainingDummy;
   P.x = 400; P.z = .5; game.battlefield.placeOnSurface(P);
   P.focus = P.maxFocus; game.activateFocusTransformation();
-  spells.cast(P, spells.resolveSpell([{ id: 'buff_T07' }]), game);
-  assert(P.buffForm?.id === 'T07' && P.focusTransformTimer > 0 && activeMoveset(P) === 'T07', 'A buff runs together with the Focus transformation and owns the charged heavy');
+  spells.cast(P, spells.resolveSpell([{ id: 'buff_T13' }]), game);
+  assert(P.buffForm?.id === 'T13' && P.focusTransformTimer > 0 && activeMoveset(P) === 'T13', 'A buff runs together with the Focus transformation and owns the charged heavy');
   spells.cast(P, spells.resolveSpell([{ id: 'buff_T08' }]), game);
-  assert(P.buffForm.id === 'T07', 'Only one buff transformation can be active at a time');
+  assert(P.buffForm.id === 'T13', 'Only one buff transformation can be active at a time');
   // Render the manifestation in every pose.
   for (const pose of [{}, { sprintActive: true, vx: 300 }, { grounded: false, vElevation: 150 }, { grounded: false, vElevation: -20 }, { isGuarding: true, guardHoldTime: .2 }]) {
     Object.assign(P, { sprintActive: false, vx: 0, grounded: true, vElevation: 0, isGuarding: false }, pose);
@@ -2226,21 +2226,18 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
       fired++;
     }
   }
-  assert(fired === 240, `All 240 T-form techniques release, update and render (${fired}/240)`);
+  assert(fired === tForms.length * 6, `Every technique of every curated T form releases, updates and renders (${fired})`);
   // The new kinds hit.
   const hitBy = (id, d, v, dx) => { spells.clearRuntime(); dummy.homeX = dummy.x = P.x + dx; dummy.hp = dummy.maxHp; P.buffForm = { id, timer: 10, total: 16, age: 1, power: 1 }; spells.addSpell(FORM_MOVESETS[id][d][v].make(P), 'B'); for (let i = 0; i < 90; i++) spells.update(1 / 60, game); return dummy.maxHp - dummy.hp; };
-  const kindOf = (id, d, v) => FORM_MOVESETS[id][d][v].make(P).kind;
-  const projectileForm = tForms.find((id) => kindOf(id, 'forward', 'full') === 'projectile');
-  const beamForm = tForms.find((id) => kindOf(id, 'forward', 'full') === 'beam');
-  assert(projectileForm && hitBy(projectileForm, 'forward', 'full', 200) > 0, `A travelling core hits and implodes (${projectileForm})`);
-  assert(beamForm && hitBy(beamForm, 'forward', 'full', 160) > 0, `A lane beam hits (${beamForm})`);
+  assert(hitBy('T04', 'forward', 'short', 160) > 0, 'Korallenschild: the pearl bolt travels and hits');
+  assert(hitBy('T02', 'forward', 'full', 160) > 0 && hitBy('T06', 'forward', 'full', 120) > 0, 'Unique full techniques hit: Schlackenkern lava lance, Ionspindel chain lightning');
   assert(hitBy('T40', 'forward', 'full', 220) > 0 && hitBy('T40', 'down', 'full', 180) > 0, 'T40 Sonnenwyrm: the twin wyrms hunt along the lane and the portal ritual strikes its target');
   spells.clearRuntime();
   // Sprint attack and grab use the form's material.
-  P.buffForm = { id: 'T07', timer: 10, total: 16, age: 1, power: 1 };
+  P.buffForm = { id: 'T13', timer: 10, total: 16, age: 1, power: 1 };
   P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.grounded = true; P.sprintActive = true; P.facing = 1;
   P.executeAttack(neutral, 'normal');
-  assert(P.lastSprintAttack === 'PREDATOR BREAK', 'Sprint + attack is the form\'s own sprint heavy (Predator Break)');
+  assert(P.lastSprintAttack === 'SILK STRIKE', 'Sprint + attack is the form\'s own sprint heavy (Silk Strike)');
   game.render();
   P.state = 'idle'; P.stateTimer = 0; P.sprintStrike = null;
   // Timer runs out → the buff ends.
@@ -2254,9 +2251,9 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
 {
   const { MageProfile, buffUnlockLevel, runeUnlockLabel } = await import('./public/src/progression.js');
   const fresh = new MageProfile(); fresh.level = 1;
-  assert(!fresh.isRuneUnlocked('buff_B01') && buffUnlockLevel('buff_B01') === 3 && buffUnlockLevel('buff_T01') === 4 && buffUnlockLevel('buff_T40') === 13 && runeUnlockLabel('buff_T40') === 'MAGE LV.13', 'Buff runes unlock with the Mage level (B01/B02 at 3, T01–T40 in groups of four up to 13)');
+  assert(!fresh.isRuneUnlocked('buff_B01') && buffUnlockLevel('buff_B01') === 3 && buffUnlockLevel('buff_T02') === 4 && buffUnlockLevel('buff_T40') === 7 && runeUnlockLabel('buff_T40') === 'MAGE LV.7', 'Arcane State runes unlock with the Mage level (B01/B02 at 3, the rest in groups of four up to 7)');
   fresh.level = 3;
-  assert(fresh.isRuneUnlocked('buff_B02') && !fresh.isRuneUnlocked('buff_T01'), 'At level 3 the first two buff runes are available');
+  assert(fresh.isRuneUnlocked('buff_B02') && !fresh.isRuneUnlocked('buff_T02'), 'At level 3 the first two buff runes are available');
   game.returnToHub(); game.setMatchMode('training'); game.startMatch();
   const first = game.cycleClassWeapon();
   assert(first && game.player.classWeapon === first && !game.player.weapon, 'V cycles a class weapon in Training (fixed, not a pickup)');
@@ -2270,14 +2267,14 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   const { formGuardCounter, formJumpFx, FormGrabFx } = await import('./public/src/form_actions.js');
   const data = buff.BUFF_FORMS;
   assert(Object.values(data).every((f) => f.tech.defense?.counter && f.tech.grab?.throw && f.tech.jump?.landing), 'Every buff form has its own counter, throw and landing from the atlas text');
-  assert(data.T01.tech.defense.counter === 'spike' && data.T06.tech.defense.counter === 'shock' && data.T07.tech.grab.throw === 'over' && data.T02.tech.grab.throw === 'slam', 'Examples: Kammwacht thorn plate, Ionspindel current, Dämmerlauf throw over the back, Schlackenkern slam into the ground');
-  assert(data.T02.tech.up.full.status.length === 0 && data.T05.tech.forward.full.kind === 'beam' && data.T11.tech.forward.full.kind === 'cone', 'Reviewed mechanics: no lightning from "Positionen", Annihilation Ray is a beam, Aurora Foxfire a frost cone');
+  assert(data.T06.tech.defense.counter === 'shock' && data.T02.tech.grab.throw === 'slam', 'Examples: Ionspindel current counter, Schlackenkern slam into the ground');
+  assert(data.T02.tech.up.full.status.length === 0 && data.T05.tech.forward.full.kind === 'beam', 'Reviewed mechanics: no lightning from "Positionen", Annihilation Ray is a beam');
   game.returnToHub(); game.setMatchMode('training'); game.startMatch(); game.selectTrainingMap('waterfalls');
   const P = game.player; const E = game.enemyChampion;
   game.toggleSparringPartner(); game.toggleSparringPassive();
   const place = (dx) => { P.x = 400; P.z = .5; P.facing = 1; game.battlefield.placeOnSurface(P); E.x = P.x + dx; E.z = .5; E.hp = E.maxHp; E.elevation = 0; E.vx = 0; E.kbVelX = 0; E.state = 'idle'; game.battlefield.placeOnSurface(E); };
   spells.clearRuntime();
-  spells.cast(P, spells.resolveSpell([{ id: 'buff_T01' }]), game);
+  spells.cast(P, spells.resolveSpell([{ id: 'buff_T02' }]), game);
   assert(spells.activeSpells.some((sp) => sp.constructor.name === 'BuffBurstFx' && sp.kind === 'assemble'), 'Transform-in: the form assembles from material shards');
   P.buffForm.age = .3;
   const painter = buff.buffVeinPainter(P);
@@ -2287,10 +2284,10 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   assert(formGuardCounter(P, game) && E.hp < E.maxHp && spells.activeSpells.some((sp) => sp.kind === 'spike'), 'Kammwacht perfect block: a thorn plate strikes back');
   // Grab: Dämmerlauf throws over the back (target ends up behind).
   spells.clearRuntime();
-  P.buffForm = { id: 'T07', timer: 10, total: 16, age: 2, power: 1 }; place(30);
-  const grab = new FormGrabFx(P, E, 'T07'); spells.addSpell(grab, 'B');
+  P.buffForm = { id: 'T08', timer: 10, total: 16, age: 2, power: 1 }; place(30);
+  const grab = new FormGrabFx(P, E, 'T08'); spells.addSpell(grab, 'B');
   for (let i = 0; i < 40; i++) { spells.update(1 / 60, game); E.update(1 / 60, game, game.battlefield); }
-  assert(E.hp < E.maxHp && E.x < P.x + 10, `Dämmerlauf grab throws the target over the back (${Math.round(E.x - P.x)} px)`);
+  assert(E.hp < E.maxHp && E.x < P.x + 10, `Ossuarium grab throws the target over the back (${Math.round(E.x - P.x)} px)`);
   // Jump: takeoff and the form's own landing.
   spells.clearRuntime();
   assert(formJumpFx(P, 'takeoff') && formJumpFx(P, 'land') && spells.activeSpells.filter((sp) => sp.constructor.name === 'BuffBurstFx').length >= 2, 'Jump: material takeoff burst and form-specific landing');
@@ -2397,24 +2394,24 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
     if (!(idle.shapes > 0 && act.shapes > 0 && peak.shapes > 0)) { ok = false; generic.push(id); }
     if (act.maxX > idle.maxX + 8 || peak.maxX > idle.maxX + 8) forward++;
   }
-  assert(ok, 'All 42 Arcane States draw an idle, action and peak silhouette ' + generic.join());
-  assert(forward >= 34, 'Attacks and the peak reshape the silhouettes forward (' + forward + ' of 42)');
+  assert(ok, 'All Arcane States draw an idle, action and peak silhouette ' + generic.join());
+  assert(forward >= 12, 'Attacks and the peak reshape the silhouettes forward (' + forward + ' of 15)');
   // V3.2 Morphologie-Overhaul: every form has its own profile and (T01–T36) its own renderer.
   const vfx = await import('./public/src/buff_vfx.js');
   const forms42 = Object.values(buff.BUFF_FORMS);
   assert(forms42.every((f) => f.v32?.category && f.v32.anchors.length && f.v32.attacks.forward && f.v32.anim.grab && f.v32.anim.jump), 'V3.2: all 42 Arcane States carry their individual morphology profile (category, anchors, states, animations, heavy mapping)');
-  assert(forms42.filter((f) => /^T(0[1-9]|[12][0-9]|3[0-6])$/.test(f.id)).every((f) => vfx.hasFormRenderer(f.id)) && new Set(forms42.map((f) => f.v32.category)).size === 42, 'V3.2: T01–T36 are drawn by 36 individual renderers, every form has a distinct morphology category');
-  assert(buff.BUFF_FORMS.T24.v32.silhouette.includes('hinter dem Avatar') && buff.BUFF_FORMS.T28.v32.category.includes('Rasterbögen'), 'V3.2 silhouettes replace the old family look (hanging marionettes, ground arches)');
+  assert(forms42.filter((f) => !['T37', 'T38', 'T39', 'T40'].includes(f.id) && f.id.startsWith('T')).every((f) => vfx.hasFormRenderer(f.id)) && new Set(forms42.map((f) => f.v32.category)).size === forms42.length, 'V3.2: every curated T form has its individual renderer and a distinct morphology category');
+  assert(buff.BUFF_FORMS.T24.v32.silhouette.includes('hinter dem Avatar'), 'V3.2 silhouettes replace the old family look (hanging marionettes)');
   buff.endBuffForm(P); spells.clearRuntime();
-  // Resonanzwache (temporal projection) echoes strike with the Wizard.
+  // Vorausschnitt (temporal projection) echoes strike with the Wizard.
   const dummy = game.trainingDummy; const neutral = { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false };
   P.state = 'idle'; P.stateTimer = 0;
-  spells.cast(P, spells.resolveSpell([{ id: 'buff_T26' }]), game);
+  spells.cast(P, spells.resolveSpell([{ id: 'buff_T39' }]), game);
   for (let i = 0; i < 12; i++) P.update(1 / 60, neutral, game.battlefield, game);
   spells.clearRuntime();
   P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.comboStep = 0;
   P.executeAttack(neutral, 'normal'); P.update(1 / 60, neutral, game.battlefield, game);
-  assert(spells.activeSpells.filter((sp) => sp.constructor.name === 'EchoStrikeFx').length === 2, 'Resonanzwache sends two resonance echoes into an attack');
+  assert(spells.activeSpells.filter((sp) => sp.constructor.name === 'EchoStrikeFx').length === 3, 'Vorausschnitt sends three time echoes into an attack');
   assert(P.buffForm.act > .2, 'The action weight rises while attacking');
   buff.endBuffForm(P); spells.clearRuntime(); dummy.homeX = dummy.x = 512;
 }
@@ -2491,7 +2488,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   reset();
   // Deck rules: elemental ×2, special runes ×1 each, Arcane States one of all.
   const deck = ['ignis', 'ignis', 'sig_S01', 'sig_S13', 'buff_T05'];
-  assert(!prog.deckAccepts(deck, 'ignis') && !prog.deckAccepts(deck, 'sig_S01') && prog.deckAccepts(deck, 'sig_S02') && !prog.deckAccepts(deck, 'buff_T07') && !prog.deckAccepts(['doppel'], 'doppel'), 'Deck: elemental runes twice, every special rune once, several signature specials but only one Arcane State');
+  assert(!prog.deckAccepts(deck, 'ignis') && !prog.deckAccepts(deck, 'sig_S01') && prog.deckAccepts(deck, 'sig_S02') && !prog.deckAccepts(deck, 'buff_T13') && !prog.deckAccepts(['doppel'], 'doppel'), 'Deck: elemental runes twice, every special rune once, several signature specials but only one Arcane State');
   assert(prog.signatureUnlockLevel('sig_S01') === 5 && prog.signatureUnlockLevel('sig_S36') === 13, 'Signature specials unlock from Mage level 5 to 13');
   dummy.homeX = dummy.x = 512;
 }
@@ -2504,7 +2501,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   const inp = (keys = {}, pz = 0) => ({ keys, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: pz }, justPressed: () => false });
   const ready = () => { spells.clearRuntime(); P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.grounded = true; P.chargeTimer = 0; P.formCharge = null; P.isGuarding = false; };
   // Keyboard: K first, W afterwards still selects UP (and S DOWN) in an Arcane State.
-  ready(); spells.cast(P, spells.resolveSpell([{ id: 'buff_T01' }]), game); P.buffForm.age = 2;
+  ready(); spells.cast(P, spells.resolveSpell([{ id: 'buff_T02' }]), game); P.buffForm.age = 2;
   P.beginCharge('forward', 'key'); P.update(1 / 60, inp({ KeyW: true }), game.battlefield, game);
   assert(P.chargeDir === 'up', 'K held, then W: the charged heavy switches to UP');
   P.formCharge.elapsed = 1.3; P.releaseCharge();

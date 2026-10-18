@@ -18,6 +18,7 @@ import { FORM_SPRINT_ATTACKS, FORM_FX_HOOKS } from './form_actions.js';
 import { materialFor, renderManifestation, contourVeinPainter, plate, band, rgba, hasFormRenderer } from './buff_vfx.js';
 import { BuffStrikeSpell, applyStatuses } from './buff_techniques.js';
 import './buff_signatures.js'; // signature renderers (T37–T40)
+import { ARCANE_MOVES, ARCANE_CHARGE } from './arcane_moves.js';
 import './buff_v32_a.js'; // V3.2 individual morphologies T01–T12
 import './buff_v32_b.js'; // T13–T24
 import './buff_v32_c.js'; // T25–T36
@@ -128,6 +129,33 @@ for (const data of BUFF_FORM_DATA) {
     renameMoveset(form.moveset, form);
     if (FORM_SPRINT_ATTACKS[form.moveset]) FORM_SPRINT_ATTACKS[form.moveset] = { ...FORM_SPRINT_ATTACKS[form.moveset], name: (form.tech.sprintHeavy?.name ?? FORM_SPRINT_ATTACKS[form.moveset].name).toUpperCase() };
   }
+}
+
+// Unique techniques of the curated roster (arcane_moves.js) replace the generic
+// strike primitives: [fs, ff, us, uf, ds, df] for T forms, { up, down } for the
+// B01 / B02 engines (their forward techniques stay: rift core / beam, astral bow).
+for (const [id, moves] of Object.entries(ARCANE_MOVES)) {
+  const form = BUFF_FORMS[id]; if (!form) continue;
+  const set = FORM_MOVESETS[form.moveset]; if (!set) continue;
+  const slots = Array.isArray(moves) ? [['forward', 'short'], ['forward', 'full'], ['up', 'short'], ['up', 'full'], ['down', 'short'], ['down', 'full']].map((d, i) => [d, moves[i]])
+    : [...['up', 'down'].flatMap((dir) => (moves[dir] ?? []).map((m, i) => [[dir, i ? 'full' : 'short'], m]))];
+  for (const [[dir, variant], make] of slots) if (make && set[dir]?.[variant]) set[dir][variant].make = (p) => make(form, p);
+}
+
+// Charge-up ritual of the active Arcane State (direction-aware); true when drawn.
+export function renderBuffCharge(ctx, player, renderY, dir, k, full) {
+  const form = currentBuffForm(player); const draw = form && ARCANE_CHARGE[form.id];
+  if (!draw) return false;
+  const s = { x: player.x, y: renderY, f: player.facing || 1 };
+  ctx.save(); draw(ctx, s, form.mat, dir, k, player.animTime ?? 0); ctx.restore();
+  if (full) {
+    // FULL threshold: a clear switch flash in the form's own colours.
+    const pulse = .5 + .5 * Math.sin((player.animTime ?? 0) * 14);
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = form.mat.edge; ctx.globalAlpha = .6 + .4 * pulse; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.ellipse(player.x, renderY, 28 + 6 * pulse, 8 + 2 * pulse, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = form.mat.vein; ctx.beginPath(); ctx.ellipse(player.x, renderY, 18, 5, 0, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+  }
+  return true;
 }
 
 // ── Runtime ─────────────────────────────────────────────────────────────

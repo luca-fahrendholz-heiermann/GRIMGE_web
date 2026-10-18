@@ -12,7 +12,7 @@ import { drawBeastBomb, drawSpiritBow } from './form_attacks.js';
 import { FULL_CHARGE_TIME, activeMoveset, releaseFormTechnique, FORM_PALETTES } from './form_moves.js';
 import { updatePrimalBond, bondMoveMultiplier, bondGainMultiplier, bondDisplacement, bondOnBlock, primalSprintVariant, renderPrimalBond, endPrimalBond } from './primals.js';
 import { createSegments, damageSegments, updateSegments, renderSegments } from './castle_segments.js';
-import { updateBuffForm, endBuffForm, isGenericBuff, currentBuffForm, renderBuffManifestation, buffVeinPainter, buffCloakColor, renderBuffGuard, levitationOffset } from './buff_forms.js';
+import { updateBuffForm, endBuffForm, isGenericBuff, currentBuffForm, renderBuffManifestation, buffVeinPainter, buffCloakColor, renderBuffGuard, levitationOffset, renderBuffCharge } from './buff_forms.js';
 import { updateSignatureStance, renderSignatureStance, signatureHover, signatureMoveMult, signatureEvent, signatureDamageTaken, setHitContext } from './signature_runes.js';
 
 // Every spell a rune deck can produce: single runes plus every valid two-
@@ -1669,6 +1669,8 @@ export class Player extends GroundEntity {
     const charge = Math.min(1, this.formCharge.elapsed / FULL_CHARGE_TIME);
     const full = this.formCharge.elapsed >= FULL_CHARGE_TIME;
     const dir = this.chargeDir ?? 'forward';
+    // Arcane States: each charges with its own ritual.
+    if (renderBuffCharge(ctx, this, renderY, dir, charge, full)) return;
     const pal = FORM_PALETTES[form];
     if (dir === 'forward' && form === 'ninefold') drawBeastBomb(ctx, this.x + this.facing * (34 + 10 * charge), renderY - 52, 6 + 24 * charge, this.animTime);
     else if (dir === 'forward' && form === 'eidolon') drawSpiritBow(ctx, this.x + this.facing * 40, renderY - 84, this.facing, charge, this.animTime);
