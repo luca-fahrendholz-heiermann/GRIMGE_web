@@ -11,11 +11,20 @@
 //    bracers, a ripple ring at the feet; on guard the plates fold forward
 //    into a hex shield, Fortified makes them flare, Shell Rush rams a shell
 //    plate ahead.
+//  • Ape (Spirit Rage, prototype archetype after the Mystischer Affe art):
+//    a mane of white spirit fur over the shoulders, a spectral ape head over
+//    the back shoulder (dark face, violet eyes, roars on attacks), violet
+//    crystal flames curling at the feet; stage II+ adds huge spirit forearms
+//    resting on their knuckles beside the Wizard. Attacks throw a spirit fist,
+//    Spirit Slam hammers both fists down ahead.
 import { plate, band, fallout, sockets } from './buff_vfx.js';
 
 const TAU = Math.PI * 2;
 const WOLF = { kind: 'crystal', dark: '#16341a', body: '#5fd36a', facet: '#c8f5b0', vein: '#73eb47', edge: '#f2d12e', spark: '#fff07a', core: '#fffde0', glow: 'rgba(115,235,71,', edgeGlow: 'rgba(242,209,46,' };
 const WOLF_SMOKE = { ...WOLF, kind: 'smoke', body: '#3fae4a', facet: '#9be38a' };
+const APE = { kind: 'crust', dark: '#3d2f5c', body: '#dcd6ec', facet: '#f4f1fb', vein: '#9c7ae0', edge: '#efeaff', spark: '#c9a8ff', core: '#ffffff', glow: 'rgba(176,108,255,', edgeGlow: 'rgba(239,234,255,' };
+const APE_FACE = { ...APE, body: '#5e4f86', facet: '#7a6aa6' };
+const APE_FLAME = { kind: 'crystal', dark: '#1c1030', body: '#7f66ff', facet: '#c3b4ff', vein: '#5f86ff', edge: '#efe6ff', spark: '#b06cff', core: '#ffffff', glow: 'rgba(127,102,255,', edgeGlow: 'rgba(239,230,255,' };
 const SHELL = { kind: 'crust', dark: '#0e2a33', body: '#2f6f80', facet: '#4f97a8', vein: '#57e0f0', edge: '#bff6ff', spark: '#9ff3ff', core: '#ffffff', glow: 'rgba(56,173,209,', edgeGlow: 'rgba(191,246,255,' };
 
 const attacking = (p) => /^(attack|heavyStrike|uppercut|dive)/.test(p.state ?? '') && (p.stateTimer ?? 0) > 0;
@@ -84,10 +93,54 @@ function turtleOverlay(ctx, p, s, k, layer, bond) {
   }
 }
 
+const fist = (ctx, x, y, r, seed, alpha) => plate(ctx, Array.from({ length: 8 }, (_, i) => [x + Math.cos(i / 8 * TAU) * r, y + Math.sin(i / 8 * TAU) * r * .82]), APE, seed, { alpha, lit: 1, glowEdge: .6 });
+function apeOverlay(ctx, p, s, k, layer, bond) {
+  const f = s.f; const t = p.animTime ?? 0; const atk = attacking(p); const run = Math.min(1, Math.abs(p.vx ?? 0) / 220);
+  const arms = bond.stage >= 2;
+  if (layer === 'back') {
+    // Violet crystal flames curling up around the feet.
+    for (let i = 0; i < 2; i++) {
+      const pts = Array.from({ length: 12 }, (_, q) => { const a = t * 3 + i * Math.PI + q * .3; return [s.x + Math.cos(a) * (22 + q), s.y - 2 - q * 3.2 + Math.sin(a) * 6]; });
+      band(ctx, pts, (q, n) => 3 * (1 - q / n) + 1, APE_FLAME, 9800 + i, { t, alpha: .6 });
+    }
+    // Spirit forearms (stage II+): knuckles on the ground beside the Wizard.
+    if (arms) for (const sg of [-1, 1]) {
+      // Shoulder high behind the back, elbow bent outward, knuckles on the ground.
+      const sh = [s.x + f * (sg > 0 ? 2 : -12), s.y - 64 * k]; const el = [s.x + f * sg * 36 * k, s.y - 38 * k]; const kn = [s.x + f * sg * 30 * k, s.y - 6];
+      for (const [a, b, w] of [[sh, el, 13 * k], [el, kn, 15 * k]]) { const dx = b[0] - a[0]; const dy = b[1] - a[1]; const l = Math.hypot(dx, dy) || 1; const nx = -dy / l * w / 2; const ny = dx / l * w / 2; plate(ctx, [[a[0] + nx, a[1] + ny], [b[0] + nx, b[1] + ny], [b[0] - nx, b[1] - ny], [a[0] - nx, a[1] - ny]], APE, 9805 + sg, { alpha: .7, lit: .4, glowEdge: .35 }); }
+      fist(ctx, kn[0], kn[1] - 4, 8 * k, 9807 + sg, .8);
+    }
+    // White spirit-fur mane over the shoulders and back.
+    for (let i = 0; i < 6; i++) {
+      const base = [s.back[0] - f * (i * 3 - 4), s.back[1] - 6 + i * 6]; const L = (14 + (i % 2) * 6) * k * (1 + run * .3); const w = Math.sin(t * 4 + i) * 2;
+      plate(ctx, [[base[0], base[1] - 4], [base[0] - f * (L * .8 + run * 8) + w, base[1] - L * .55], [base[0], base[1] + 4]], APE, 9810 + i, { alpha: .8, glowEdge: .5 });
+    }
+    // Spectral ape head over the back shoulder, looking forward; roars on attacks.
+    const hx = s.shoulderB[0] - f * 14; const hy = s.shoulderB[1] - 14 * k + Math.sin(t * 2.2) * 1.5; const sc = 1.05 * k; const roar = atk ? 1 : 0;
+    const P = (u, v) => [hx + f * u * sc, hy + v * sc];
+    for (let i = 0; i < 3; i++) plate(ctx, [P(-8 + i * 6, -10), P(-12 + i * 6, -20 - (i % 2) * 4), P(-4 + i * 6, -11)], APE, 9820 + i, { alpha: .9, glowEdge: .5 });
+    plate(ctx, [P(-12, 2), P(-10, -10), P(4, -13), P(14, -8), P(15, 2), P(6, 9), P(-6, 9)], APE, 9824, { alpha: .92, lit: .7, glowEdge: .7 });
+    plate(ctx, [P(0, -3), P(16, -3), P(18, 6 + roar * 3), P(2, 7 + roar * 2)], APE_FACE, 9825, { alpha: .95, glowEdge: .3 });
+    plate(ctx, [P(-4, -8), P(16, -8), P(16, -4), P(-4, -4)], APE, 9826, { alpha: .95, lit: .6, glowEdge: .3 });
+    if (roar) for (let i = 0; i < 2; i++) plate(ctx, [P(6 + i * 6, 6), P(9 + i * 6, 6), P(7.5 + i * 6, 10)], { ...APE, body: '#ffffff' }, 9827 + i, { alpha: 1, glowEdge: .2 });
+    plate(ctx, [P(5, -3), P(8, -3), P(6.5, -1)], { ...APE_FLAME, body: '#c9a8ff' }, 9829, { alpha: 1, core: 1 });
+    plate(ctx, [P(11, -3), P(14, -3), P(12.5, -1)], { ...APE_FLAME, body: '#c9a8ff' }, 9830, { alpha: 1, core: 1 });
+  } else {
+    // A spirit fist punches ahead of the front hand on every attack.
+    if (atk) { const [x, y] = s.handF; const d = 14 + 10 * Math.abs(Math.sin(t * 20)); fist(ctx, x + f * d * k, y - 2, 9 * k, 9840, .9); band(ctx, [[x - f * 4, y], [x + f * (d - 6) * k, y - 2]], () => 2, APE_FLAME, 9841, { t, alpha: .7 }); }
+    // Spirit Slam: both spirit fists hammer down ahead, the ground ripples.
+    if (bond.flash > 0) {
+      const a = bond.flash; const x = p.x + f * 36; const drop = (1 - Math.min(1, (1 - a) * 3)) * 50;
+      fist(ctx, x - f * 10, s.y - 14 - drop, 12 * k, 9850, a); fist(ctx, x + f * 16, s.y - 16 - drop * 1.2, 12 * k, 9851, a);
+      for (let i = 0; i < 10; i++) { const a0 = i / 10 * TAU; const R = 20 + (1 - a) * 60; plate(ctx, [[x + Math.cos(a0) * R, s.y + Math.sin(a0) * R * .3], [x + Math.cos(a0 + .35) * R, s.y + Math.sin(a0 + .35) * R * .3], [x + Math.cos(a0 + .35) * (R + 4), s.y + Math.sin(a0 + .35) * (R + 4) * .3], [x + Math.cos(a0) * (R + 4), s.y + Math.sin(a0) * (R + 4) * .3]], APE_FLAME, 9852 + i, { alpha: a * .9, glowEdge: .8 }); }
+    }
+  }
+}
+
 // Wind-up: spirit motes spiral from the Primal into the Wizard.
 function windup(ctx, p, s, bond, layer) {
   if (layer !== 'front') return;
-  const mat = bond.archetype === 'wolf' ? WOLF : SHELL; const t = p.animTime ?? 0; const k = 1 - Math.max(0, bond.windup) / .5;
+  const mat = bond.archetype === 'wolf' ? WOLF : bond.archetype === 'ape' ? APE_FLAME : SHELL; const t = p.animTime ?? 0; const k = 1 - Math.max(0, bond.windup) / .5;
   for (let i = 0; i < 10; i++) { const a = t * 8 + i * TAU / 10; const r = 50 * (1 - k) + 6; plate(ctx, [[s.chest[0] + Math.cos(a) * r, s.chest[1] + Math.sin(a) * r * .6 - 3], [s.chest[0] + Math.cos(a) * r + 3, s.chest[1] + Math.sin(a) * r * .6], [s.chest[0] + Math.cos(a) * r, s.chest[1] + Math.sin(a) * r * .6 + 3]], mat, 9790 + i, { alpha: .9, core: 1 }); }
 }
 
@@ -97,6 +150,7 @@ export function renderBondOverlay(ctx, player, renderY, layer, bond) {
   const k = 1 + (bond.stage - 1) * .18;
   ctx.save();
   if (bond.archetype === 'wolf') wolfOverlay(ctx, player, s, k, layer, bond);
+  else if (bond.archetype === 'ape') apeOverlay(ctx, player, s, k, layer, bond);
   else turtleOverlay(ctx, player, s, k, layer, bond);
   ctx.restore();
 }

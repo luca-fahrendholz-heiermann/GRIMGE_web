@@ -2427,9 +2427,9 @@ export class GameWorld {
     return this.primal;
   }
 
-  // Training: cycle NONE → WOLF I–III → TURTLE I–III (B / PRIMAL button).
+  // Training: cycle NONE → WOLF I–III → TURTLE I–III → APE I–III (B / PRIMAL button).
   cyclePrimal() {
-    const order = ['none', 'wolf:1', 'wolf:2', 'wolf:3', 'turtle:1', 'turtle:2', 'turtle:3'];
+    const order = ['none', 'wolf:1', 'wolf:2', 'wolf:3', 'turtle:1', 'turtle:2', 'turtle:3', 'ape:1', 'ape:2', 'ape:3'];
     const current = this.primalChoice === 'none' ? 'none' : `${this.primalChoice}:${this.primalStage}`;
     const next = order[(order.indexOf(current) + 1) % order.length];
     const [choice, stage] = next.split(':');

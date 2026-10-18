@@ -6,8 +6,9 @@
 // PrimalBondRuntime.cs, WolfBondProfile.cs, TurtleBondProfile.cs and the
 // BondForms/*.asset values.
 //
-// A Primal is a supernatural spirit creature, not a pet: two archetypes
-// (Wolf, Turtle) with three evolution stages each.
+// A Primal is a supernatural spirit creature, not a pet: three archetypes
+// (Wolf, Turtle and the prototype's own Ape after the Mystischer Affe
+// reference art) with three evolution stages each.
 //  • Castle Siege: it waits on the castle platform; when the Wizard deploys
 //    it comes along. A tap on it sends it to the lane alone. After 24 s on
 //    the lane it returns to the platform (the timer ignores the Wizard's
@@ -22,7 +23,9 @@
 //    the form's drain multiplier and gains are halved; T again releases it.
 //    Wolf: faster, Primal Pounce (longer sprint-attack carry). Turtle: shell
 //    guard (less displacement taken), Fortified after a block, Shell Rush
-//    (sprint attack pushes further).
+//    (sprint attack pushes further). Ape (prototype only): heavier fists —
+//    melee damage and knockback up, Spirit Slam sprint attack that sends a
+//    chest-drum quake around the impact; the Ape itself punches instead of biting.
 // Distances: 24 px per Unity unit, 6 u lane depth = z 0…1. Health and bite
 // damage are scaled ×3 to the prototype's health scale (Wizard 320 HP vs.
 // Unity 100).
@@ -38,7 +41,8 @@ const HP_SCALE = 3;
 
 export const PRIMAL_ARCHETYPES = Object.freeze({
   wolf: Object.freeze({ id: 'wolf', name: 'PRIMAL WOLF', role: 'HUNTER', aura: 'rgba(115,235,71,', variant: '#f2d12e' }),
-  turtle: Object.freeze({ id: 'turtle', name: 'PRIMAL TURTLE', role: 'BULWARK', aura: 'rgba(56,173,209,', variant: '#57e0f0' })
+  turtle: Object.freeze({ id: 'turtle', name: 'PRIMAL TURTLE', role: 'BULWARK', aura: 'rgba(56,173,209,', variant: '#57e0f0' }),
+  ape: Object.freeze({ id: 'ape', name: 'PRIMAL APE', role: 'BRAWLER', aura: 'rgba(176,108,255,', variant: '#c9a8ff' })
 });
 
 // BondForms/*.asset — index = evolution stage − 1.
@@ -52,6 +56,13 @@ export const BOND_FORMS = Object.freeze({
     Object.freeze({ name: 'Shell Sync', stage: 1, presentation: 'overlay', drain: 1.0, move: 1, pounceCarry: 1, shellGuard: .7, fortified: .4, fortifiedDuration: .75, shellRushPush: 1.35 }),
     Object.freeze({ name: 'Bulwark', stage: 2, presentation: 'replacement', drain: 1.0, move: 1, pounceCarry: 1, shellGuard: .55, fortified: .3, fortifiedDuration: 1.15, shellRushPush: 1.5 }),
     Object.freeze({ name: 'Ironclad', stage: 3, presentation: 'replacement', drain: 1.0, move: 1, pounceCarry: 1, shellGuard: .4, fortified: .2, fortifiedDuration: 1.5, shellRushPush: 1.65 })
+  ]),
+  // Prototype archetype (no Unity asset): punch = melee damage, knock = melee
+  // knockback, slam = Spirit Slam push, quake = chest-drum quake (damage, radius px).
+  ape: Object.freeze([
+    Object.freeze({ name: 'Spirit Rage', stage: 1, presentation: 'overlay', drain: 1.1, move: 1, pounceCarry: 1, shellGuard: 1, fortified: 1, fortifiedDuration: 0, shellRushPush: 1, punch: 1.15, knock: 1.2, slam: 1.25, quake: Object.freeze({ damage: 14, radius: 80 }) }),
+    Object.freeze({ name: 'Silverback', stage: 2, presentation: 'replacement', drain: 1.3, move: 1.05, pounceCarry: 1, shellGuard: .85, fortified: 1, fortifiedDuration: 0, shellRushPush: 1, punch: 1.25, knock: 1.3, slam: 1.4, quake: Object.freeze({ damage: 20, radius: 100 }) }),
+    Object.freeze({ name: 'Mystic Titan', stage: 3, presentation: 'replacement', drain: 1.5, move: 1.1, pounceCarry: 1, shellGuard: .7, fortified: 1, fortifiedDuration: 0, shellRushPush: 1, punch: 1.4, knock: 1.45, slam: 1.6, quake: Object.freeze({ damage: 28, radius: 125 }) })
   ])
 });
 
@@ -59,6 +70,8 @@ export const PRIMAL_STATS = Object.freeze({
   hp: 55 * HP_SCALE,
   speedX: 5.3 * U, speedZ: 3.4 * UZ,
   bite: Object.freeze({ damage: 6 * HP_SCALE, windup: .1, active: .08, recovery: .42 }),
+  // The Ape punches: slower, harder, more knockback.
+  punch: Object.freeze({ damage: 9 * HP_SCALE, windup: .18, active: .08, recovery: .52, kx: 220, lift: 60 }),
   attackReachX: .72 * U + 14, attackReachZ: .34 * UZ,
   searchRadius: 3.5 * U,
   // Unity follows at −0.75 u; the prototype hero sprite is much wider, so
@@ -332,13 +345,13 @@ export class PrimalCompanion extends GroundEntity {
   }
 
   updateAttack(dt, game) {
-    const a = this.attack; const bite = PRIMAL_STATS.bite;
+    const a = this.attack; const bite = this.archetype === 'ape' ? PRIMAL_STATS.punch : PRIMAL_STATS.bite;
     a.t += dt;
     if (!a.struck && a.t >= bite.windup) {
       a.struck = true;
       const t = a.target;
       if (t && !t.isDead && t.lifeState !== 'Dead' && Math.abs(t.x - this.x) <= PRIMAL_STATS.attackReachX + 20 + (t.isObjective ? 40 : 0)) {
-        t.takeDamage(bite.damage, this.facing * 120, 30, .2, false, 'melee');
+        t.takeDamage(bite.damage, this.facing * (bite.kx ?? 120), bite.lift ?? 30, .2, false, 'melee');
         combat.spawnHitSparks(t.x, (t.y ?? this.y) - 24, this.facing, this.info.variant, 6);
         audio.playSlash?.(1.7);
       }
@@ -370,6 +383,7 @@ export class PrimalCompanion extends GroundEntity {
     ctx.globalCompositeOperation = 'source-over';
     ctx.translate(x, y - bob); ctx.scale(f * 1.35, 1.35);
     if (this.archetype === 'wolf') drawWolf(ctx, this.hitFlash > 0, this.state === 'attack', this.animTime);
+    else if (this.archetype === 'ape') drawApe(ctx, this.hitFlash > 0, this.state === 'attack', this.animTime);
     else drawTurtle(ctx, this.hitFlash > 0, this.state === 'attack', this.animTime);
     ctx.restore();
     // Health.
@@ -411,6 +425,26 @@ function drawTurtle(ctx, flash, biting, t) {
   ctx.beginPath(); ctx.moveTo(-10, -14); ctx.lineTo(-4, -22); ctx.lineTo(4, -22); ctx.lineTo(10, -14); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(-18, -14); ctx.lineTo(18, -14); ctx.stroke();
   ctx.fillStyle = '#0d2b33'; ctx.fillRect(22, -14, 2, 2);
+}
+
+// Spirit ape: hunched white body, knuckle-walking arms, dark face, violet eyes;
+// the front fist swings forward on a punch.
+function drawApe(ctx, flash, punching, t) {
+  const fur = flash ? '#ffffff' : '#e6e0f4'; const shade = flash ? '#ffffff' : '#b3a8d4'; const face = flash ? '#ffffff' : '#5e4f86';
+  const step = Math.sin(t * 10) * 2;
+  ctx.fillStyle = shade;
+  ctx.fillRect(-12, -9, 5, 9 + step * .3); ctx.fillRect(-4, -9, 5, 9 - step * .3);   // hind legs
+  ctx.fillRect(-16, -26, 6, 24);                                                     // back arm
+  ctx.fillStyle = fur;
+  ctx.beginPath(); ctx.moveTo(-16, -12); ctx.quadraticCurveTo(-18, -34, -2, -36); ctx.quadraticCurveTo(14, -34, 14, -22); ctx.lineTo(4, -10); ctx.closePath(); ctx.fill(); // hunched torso
+  for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.moveTo(-12 + i * 6, -32 - (i === 1 ? 2 : 0)); ctx.lineTo(-14 + i * 6, -40 - (i % 2) * 3); ctx.lineTo(-8 + i * 6, -33); ctx.closePath(); ctx.fill(); } // fur spikes
+  // Front arm: knuckles on the ground, or a punch forward.
+  ctx.save(); ctx.translate(10, -24); ctx.rotate(punching ? -1.35 : 0); ctx.fillRect(-3, 0, 7, 20); ctx.beginPath(); ctx.arc(0.5, 22, 5.5, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+  // Head low and forward: white brow, dark face, glowing eyes.
+  ctx.beginPath(); ctx.ellipse(14, -28, 7, 6.5, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = face; ctx.beginPath(); ctx.ellipse(17, -25, 5, 4, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = flash ? '#ffffff' : '#c9a8ff'; ctx.fillRect(15, -29, 2, 2); ctx.fillRect(19, -29, 2, 2);
+  if (punching) { ctx.fillStyle = '#ffffff'; ctx.fillRect(16, -23, 4, 1); }
 }
 
 // ── Primal Bond on the Wizard ────────────────────────────────────────────
@@ -470,6 +504,24 @@ export function updatePrimalBond(player, dt, drainPerSecond) {
 const activeBond = (player) => (player.primalBond?.active ? player.primalBond : null);
 export const bondMoveMultiplier = (player) => activeBond(player)?.form.move ?? 1;
 export const bondGainMultiplier = (player) => (player.primalBond ? .5 : 1);
+// Ape: heavier fists while bonded (melee damage / knockback multipliers).
+export function bondMelee(player) {
+  const bond = activeBond(player);
+  return bond?.archetype === 'ape' ? { dmg: bond.form.punch, kx: bond.form.knock } : null;
+}
+// Ape Spirit Slam: a chest-drum quake around the impact hits every foe nearby.
+export function primalQuake(player, quake, game = window.gameWorld) {
+  const x = player.x + (player.facing || 1) * 30; let n = 0;
+  for (const t of game?.getHostileTargets?.(player.team, true) ?? []) {
+    if (t.isDead || t.lifeState === 'Dead' || (t.hp ?? 1) <= 0) continue;
+    if (Math.hypot(t.x - x, ((t.z ?? player.z) - player.z) * 150) > quake.radius) continue;
+    t.takeDamage(quake.damage, Math.sign(t.x - x || player.facing || 1) * 260, 160, .45, false, 'spell'); n++;
+  }
+  combat.spawnShockwave(x, player.y - 4, quake.radius, PRIMAL_ARCHETYPES.ape.variant);
+  combat.spawnShockwave(x, player.y - 4, quake.radius * .6, '#ffffff');
+  combat.shakeCamera?.(6, .18);
+  return n;
+}
 // Turtle: less displacement taken (Fortified after a block is stronger still).
 export function bondDisplacement(player) {
   const bond = activeBond(player);
@@ -480,11 +532,12 @@ export function bondOnBlock(player) {
   const bond = activeBond(player);
   if (bond && bond.form.fortifiedDuration > 0) bond.fortified = bond.form.fortifiedDuration;
 }
-// Sprint attack variant: Primal Pounce (wolf) / Shell Rush (turtle).
+// Sprint attack variant: Primal Pounce (wolf) / Shell Rush (turtle) / Spirit Slam (ape).
 export function primalSprintVariant(player) {
   const bond = activeBond(player);
   if (!bond) return null;
   bond.flash = 1;
+  if (bond.archetype === 'ape') return { name: 'SPIRIT SLAM', primal: true, carryMult: 1, recoilMult: bond.form.slam, lift: 80, quake: bond.form.quake, color: PRIMAL_ARCHETYPES.ape.variant };
   return bond.archetype === 'wolf'
     ? { name: 'PRIMAL POUNCE', primal: true, carryMult: bond.form.pounceCarry, recoilMult: 1, color: PRIMAL_ARCHETYPES.wolf.variant }
     : { name: 'SHELL RUSH', primal: true, carryMult: 1, recoilMult: bond.form.shellRushPush, color: PRIMAL_ARCHETYPES.turtle.variant };

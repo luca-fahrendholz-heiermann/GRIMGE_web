@@ -10,7 +10,7 @@ import { formGuardCounter, updateFormSprint, FormGrabFx, formJumpFx, FORM_SPRINT
 import { WEAPONS, ThrownWeaponSpell, drawHeldWeapon, weaponMotion, makeWeaponShots } from './weapons.js';
 import { drawBeastBomb, drawSpiritBow } from './form_attacks.js';
 import { FULL_CHARGE_TIME, activeMoveset, releaseFormTechnique, FORM_PALETTES } from './form_moves.js';
-import { updatePrimalBond, bondMoveMultiplier, bondGainMultiplier, bondDisplacement, bondOnBlock, primalSprintVariant, renderPrimalBond, endPrimalBond } from './primals.js';
+import { updatePrimalBond, bondMoveMultiplier, bondGainMultiplier, bondDisplacement, bondOnBlock, primalSprintVariant, renderPrimalBond, endPrimalBond, bondMelee, primalQuake } from './primals.js';
 import { createSegments, damageSegments, updateSegments, renderSegments } from './castle_segments.js';
 import { updateBuffForm, endBuffForm, isGenericBuff, currentBuffForm, renderBuffManifestation, buffVeinPainter, buffCloakColor, renderBuffGuard, levitationOffset, renderBuffCharge } from './buff_forms.js';
 import { updateSignatureStance, renderSignatureStance, signatureHover, signatureMoveMult, signatureEvent, signatureDamageTaken, setHitContext } from './signature_runes.js';
@@ -1157,6 +1157,7 @@ export class Player extends GroundEntity {
     if (!hit) return;
     if (variant && !variant.primal) formSprintImpact(this, strike.form, strike.hits, window.gameWorld);
     else if (variant?.primal) combat.spawnShockwave(this.x + this.facing * 30, this.y - 26, 50, variant.color);
+    if (variant?.quake) primalQuake(this, variant.quake);
     // A piercing lunge keeps going and hits every enemy on its path once.
     if (variant?.pierce) return;
     strike.connected = true;
@@ -1209,6 +1210,9 @@ export class Player extends GroundEntity {
       kx *= 1.14;
       lift *= 1.10;
     }
+    // Ape bond: heavier fists.
+    const apeBond = bondMelee(this);
+    if (apeBond) { dmg *= apeBond.dmg; kx *= apeBond.kx; }
     const targets = window.gameWorld?.getHostileTargets(this.team, true) ?? [];
     let hitAny = false; let hitCount = 0; const sigHits = [];
     setHitContext(this);

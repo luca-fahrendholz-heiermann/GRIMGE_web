@@ -2035,7 +2035,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
 
 // Primals (Unity PetCompanionRuntime / PrimalBondRuntime).
 {
-  const { PRIMAL_STATS, BOND_FORMS, bondMoveMultiplier, bondDisplacement } = await import('./public/src/primals.js');
+  const { PRIMAL_STATS, BOND_FORMS, bondMoveMultiplier, bondDisplacement, bondMelee, primalQuake } = await import('./public/src/primals.js');
   const { SIEGE_ZONES } = await import('./public/src/siege_match.js');
   const neutral = { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false };
   globalThis.localStorage?.setItem?.('grimge-primal-stage', '1');
@@ -2115,6 +2115,29 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   P.executeAttack(neutral, 'normal');
   assert(P.lastSprintAttack === 'SHELL RUSH', 'Turtle bond: the sprint attack becomes the Shell Rush');
   P.state = 'idle'; P.stateTimer = 0; P.sprintStrike = null;
+  // Ape (after the Mystischer Affe art): heavier fists, Spirit Slam with a chest-drum quake, a punching companion.
+  game.activateFocusTransformation();
+  game.cyclePrimal(); game.cyclePrimal(); game.cyclePrimal();
+  W = game.primal;
+  assert(W.archetype === 'ape' && W.stage === 1 && BOND_FORMS.ape.length === 3, 'The ape can be chosen (three bond stages)');
+  const dummyFoe = () => ({ x: W.x + 20, z: W.z, y: W.y, hp: 100, dmg: 0, kx: 0, takeDamage(d, kx) { this.dmg += d; this.kx = kx; } });
+  const foe = dummyFoe(); W.facing = 1; W.attack = { target: foe, t: 0, struck: false }; W.updateAttack(.2, game);
+  assert(foe.dmg === PRIMAL_STATS.punch.damage && foe.dmg > PRIMAL_STATS.bite.damage && foe.kx === PRIMAL_STATS.punch.kx, 'The ape companion punches harder than the wolf bites');
+  W.attack = null; W.state = 'idle';
+  P.focus = P.maxFocus; P.grounded = true; W.place(game, P.x - 20, P.z);
+  game.activateFocusTransformation(); step(PRIMAL_STATS.bondWindup + .05);
+  assert(P.primalBond?.active && bondMelee(P)?.dmg === BOND_FORMS.ape[0].punch && bondMelee(P).kx === BOND_FORMS.ape[0].knock, 'Ape bond (Spirit Rage): melee damage ×1.15, knockback ×1.2');
+  P.isGuarding = false; P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.sprintActive = true; P.grounded = true;
+  P.executeAttack(neutral, 'normal');
+  assert(P.lastSprintAttack === 'SPIRIT SLAM' && P.sprintStrike?.variant?.quake === BOND_FORMS.ape[0].quake, 'Ape bond: the sprint attack becomes the Spirit Slam');
+  const near = { x: P.x + 40, z: P.z, hp: 50, dmg: 0, takeDamage(d) { this.dmg += d; } }; const far = { x: P.x + 400, z: P.z, hp: 50, dmg: 0, takeDamage(d) { this.dmg += d; } };
+  assert(primalQuake(P, BOND_FORMS.ape[0].quake, { getHostileTargets: () => [near, far] }) === 1 && near.dmg === 14 && far.dmg === 0, 'Spirit Slam: the chest-drum quake hits every foe around the impact');
+  const { renderBondOverlay } = await import('./public/src/primal_bond_vfx.js');
+  const strictBond = new Proxy({}, { get: (t, k) => (k === 'ellipse' || k === 'arc') ? (x, y, rx, ry) => { if (rx < 0 || (k === 'ellipse' && ry < 0)) throw new Error('IndexSizeError'); } : (k === 'canvas' ? undefined : () => {}), set: () => true });
+  let apeDrawn = true;
+  try { for (const stage of [1, 2, 3]) for (const layer of ['back', 'front']) renderBondOverlay(strictBond, { ...P, state: 'attack1', stateTimer: .2, animTime: 1.3 }, P.y, layer, { ...P.primalBond, stage, flash: .6 }); game.render(); } catch { apeDrawn = false; }
+  assert(apeDrawn, 'The ape bond overlay (spirit mane, ape head, spirit arms, spirit fist, slam) renders at every stage');
+  P.state = 'idle'; P.stateTimer = 0; P.sprintStrike = null; game.activateFocusTransformation();
   // Siege: waits on the platform, comes along on deploy, returns after 24 s.
   ui.setHubCompanion('wolf');
   game.returnToHub(); game.siegeDeployRules = true; game.setMatchMode('siege'); game.startMatch();

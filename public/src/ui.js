@@ -1103,7 +1103,7 @@ export class UIManager {
     if (this.trainingPrimalBtn) {
       const game = window.gameWorld;
       const choice = game?.primalChoice ?? 'none';
-      this.trainingPrimalBtn.textContent = choice === 'none' ? '✧ PRIMAL: NONE' : `${choice === 'wolf' ? '🐺' : '🐢'} PRIMAL: ${choice.toUpperCase()} ${'I'.repeat(game?.primalStage ?? 1)}`;
+      this.trainingPrimalBtn.textContent = choice === 'none' ? '✧ PRIMAL: NONE' : `${choice === 'wolf' ? '🐺' : choice === 'ape' ? '🦍' : '🐢'} PRIMAL: ${choice.toUpperCase()} ${'I'.repeat(game?.primalStage ?? 1)}`;
       this.trainingPrimalBtn.classList.toggle('is-on', choice !== 'none');
     }
     const siege = window.gameWorld?.siegeMatch;
