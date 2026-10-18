@@ -1505,7 +1505,7 @@ export class GameWorld {
       const map = getTrainingMap(this.trainingMapId);
       environment.setMap(map, map.zones.map(zoneToWorld));
       for (const [kind, x, z] of map.props) environment.addProp(kind, x, z);
-      this.trainingDecks ??= { player: this.profile.getMatchDeck(), opponent: [...DEFAULT_MATCH_DECK] };
+      this.trainingDecks ??= { player: this.profile.topUpDeck(this.profile.getMatchDeck()), opponent: [...DEFAULT_MATCH_DECK] };
       this.applyTrainingDecks();
       // Field weapons: crates with a weapon inside appear now and then.
       this.armory.clear();
@@ -2454,7 +2454,8 @@ export class GameWorld {
     // follow-up click rebuild a just-started match and do not restart an
     // already live game through an accidental overlay tap.
     if (this.matchState === 'Running' || this.matchState === 'Ending') return;
-    if (this.activeMode.progression === 'profile' && !this.profile.isDeckReady()) {
+    // Training is a sandbox with its own decks: it never waits for a complete profile deck.
+    if (this.activeMode.progression === 'profile' && this.activeMode.id !== 'training' && !this.profile.isDeckReady()) {
       this.showAnnouncement(`BUILD A ${10}-CARD RUNE DECK FIRST`, 1.8);
       ui.showHub(true);
       return;
@@ -2468,7 +2469,7 @@ export class GameWorld {
   }
 
   restartMatch() {
-    if (this.activeMode.progression === 'profile' && !this.profile.isDeckReady()) return false;
+    if (this.activeMode.progression === 'profile' && this.activeMode.id !== 'training' && !this.profile.isDeckReady()) return false;
     this.resetMatch();
     this.matchState = 'Running';
     this.syncOrientationState();

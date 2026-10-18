@@ -133,6 +133,14 @@ export class MageProfile {
     this.syncRuneUnlocks();
     const savedDeck = Array.isArray(source?.matchDeck) ? source.matchDeck : DEFAULT_MATCH_DECK;
     this.matchDeck = this.sanitizeDeck(savedDeck);
+    // A saved deck can lose cards when runes are retired (e.g. the archived
+    // Arcane States): top it up so the deck stays playable (bug: Training
+    // refused to start with a 9-card deck).
+    if (Array.isArray(source?.matchDeck) && source.matchDeck.length >= MATCH_DECK_SIZE && this.matchDeck.length < MATCH_DECK_SIZE) {
+      this.matchDeck = this.topUpDeck(this.matchDeck);
+      this.deckRepaired = true;
+      this.save();
+    }
   }
 
   readLocal() {
@@ -170,6 +178,16 @@ export class MageProfile {
       copies.set(id, count + 1);
       return true;
     }).slice(0, MATCH_DECK_SIZE);
+  }
+
+  // Fill a deck up to MATCH_DECK_SIZE with default / unlocked elemental runes (deck rules kept).
+  topUpDeck(deck) {
+    const out = [...deck];
+    for (const id of [...DEFAULT_MATCH_DECK, ...this.unlockedRunes]) {
+      if (out.length >= MATCH_DECK_SIZE) break;
+      if (this.sanitizeDeck([...out, id]).length === out.length + 1) out.push(id);
+    }
+    return out;
   }
 
   getMatchDeck() { return [...this.matchDeck]; }

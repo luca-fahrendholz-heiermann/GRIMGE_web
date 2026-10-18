@@ -111,4 +111,10 @@ test('SHADOW passives add Shadow Stomper targets, doubles and revenants; light/s
   assert.ok(fresh.isRuneUnlocked('lux') && !fresh.isRuneUnlocked('umbra') && !fresh.isRuneUnlocked('mortis'));
 });
 
+test('A saved deck that lost a retired rune (archived Arcane State) is topped up to 10 cards', () => {
+  const profile = new MageProfile({ level: 20, matchDeck: ['ignis', 'ignis', 'aqua', 'aqua', 'terra', 'terra', 'ventus', 'ventus', 'fulgur', 'buff_T26'] });
+  assert.equal(profile.matchDeck.length, 10);
+  assert.ok(profile.isDeckReady() && profile.deckRepaired && !profile.matchDeck.includes('buff_T26'));
+});
+
 console.log(`\nProgression results: ${passed} passed, ${process.exitCode ? 1 : 0} failed.`);
