@@ -234,6 +234,7 @@ export class BeamSpell {
   interactWithHeavyObjects(dt) {
     for (const spell of this.system?.activeSpells ?? []) {
       if (!spell.isHeavyObject || spell.isFinished || spell.isLanded) continue;
+      if (spell.ignoresBeam?.(this)) continue; // e.g. a friendly signature construct
       if (Math.abs((spell.targetZ ?? spell.z) - this.z) > .25) continue;
       if (spell.heightAboveGround > 260) continue;
       const { min, max } = this.segmentBounds();

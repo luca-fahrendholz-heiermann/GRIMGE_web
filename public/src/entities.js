@@ -13,6 +13,7 @@ import { FULL_CHARGE_TIME, activeMoveset, releaseFormTechnique, FORM_PALETTES } 
 import { updatePrimalBond, bondMoveMultiplier, bondGainMultiplier, bondDisplacement, bondOnBlock, primalSprintVariant, renderPrimalBond, endPrimalBond } from './primals.js';
 import { createSegments, damageSegments, updateSegments, renderSegments } from './castle_segments.js';
 import { updateBuffForm, endBuffForm, isGenericBuff, currentBuffForm, renderBuffManifestation, buffVeinPainter, buffCloakColor, renderBuffGuard, levitationOffset } from './buff_forms.js';
+import { updateSignatureStance, renderSignatureStance, signatureHover, signatureMoveMult, signatureEvent, signatureDamageTaken, setHitContext } from './signature_runes.js';
 
 // Every spell a rune deck can produce: single runes plus every valid two-
 // and three-rune recipe that its cards allow (copies respected).
@@ -374,6 +375,9 @@ export class Player extends GroundEntity {
     updatePrimalBond(this, dt, FOCUS_TRANSFORM_DRAIN);
     // Buff transformation (special rune): limited time, one at a time.
     updateBuffForm(this, dt);
+    // Signature special stance (hover, lenses, blades, needles …).
+    updateSignatureStance(this, dt, window.gameWorld);
+    if (this._sigBoost) { this._sigBoost.t -= dt; if (this._sigBoost.t <= 0) this._sigBoost = null; }
     this.attackBufferTimer = Math.max(0, this.attackBufferTimer - dt);
     if (this.attackBufferTimer <= 0) this.queuedAttack = null;
     this.guardBreakTimer = Math.max(0, this.guardBreakTimer - dt);
@@ -596,7 +600,9 @@ export class Player extends GroundEntity {
     const clashMult = this.activeClash ? CLASH_MOVE_MULT : 1;
     const burrowMult = this.burrowed ? 1.35 : 1;
     const bondMult = bondMoveMultiplier(this) * (isGenericBuff(this) ? 1.08 : 1); // Wolf bond: SpeedBoost; buff forms move a little faster
-    const combinedMult = this.slowFactor * guardMult * beastMult * focusMult * sprintMult * clashMult * burrowMult * bondMult;
+    // Signature specials: hover stances glide slower, walkways / currents speed up.
+    const sigMult = signatureMoveMult(this) * (this._sigBoost?.k ?? 1);
+    const combinedMult = this.slowFactor * guardMult * beastMult * focusMult * sprintMult * clashMult * burrowMult * bondMult * sigMult;
 
     const baseSpeed = this.moveSpeed;
     const baseDepth = this.depthSpeed;
@@ -757,6 +763,7 @@ export class Player extends GroundEntity {
     this.chargeTimer = 0;
     if (!this.isAlive || chargeRatio < 0.05) return false;
     const heavy = MELEE_BASELINE.heavy;
+    signatureEvent(this, 'heavy', { charge: chargeRatio });
     const dmgMult = 1 + chargeRatio * 0.8;
     const kbMult = 1 + chargeRatio * 0.6;
     this.state = 'heavyStrike';
@@ -778,6 +785,7 @@ export class Player extends GroundEntity {
     const form = activeMoveset(this);
     const name = releaseFormTechnique(this, window.gameWorld, spells, this.chargeDir ?? 'forward', full);
     if (!name) return false;
+    signatureEvent(this, 'heavy', { full, form: true });
     const recovery = { ninefold: full ? .42 : .2, eidolon: full ? .55 : .28, ascendant: full ? .45 : .24 }[form] ?? .3;
     this.state = this.chargeDir === 'up' ? 'uppercut' : 'attack3';
     this.stateTimer = recovery; this.canAttack = false; this.vx = 0;
@@ -970,6 +978,7 @@ export class Player extends GroundEntity {
     if (attackKind === 'heavy') {
       const heavy = weapon ? { ...MELEE_BASELINE.heavy, ...weapon.heavy } : MELEE_BASELINE.heavy;
       this.state = 'heavyStrike'; this.stateTimer = heavy.time; this._weaponSwingTime = heavy.time; this.vx = this.facing * 360;
+      signatureEvent(this, 'heavy', { charge: 0 });
       this.setWeaponMotion('heavy');
       audio.playSlash(0.78);
       if (!weapon) combat.spawnSlashArc(this.x + this.facing * 28, this.y - 25, this.facing, { radius: 58, angleStart: -0.9, angleEnd: 0.9, color: '#ffd54f', glow: '#ff6d00', width: 7 });
@@ -982,6 +991,7 @@ export class Player extends GroundEntity {
     this.comboResetTimer = 0.65;
     const attack = combo[this.comboStep - 1];
     this.state = attack.state; this.stateTimer = attack.time; this._weaponSwingTime = attack.time; this.vx = this.facing * attack.vx;
+    signatureEvent(this, 'attack', { step: this.comboStep, damage: attack.damage });
     this.setWeaponMotion('combo', this.comboStep);
     audio.playSlash(attack.finisher ? 0.85 : 1 + this.comboStep * 0.1);
     if (!weapon) combat.spawnSlashArc(this.x + this.facing * 22, this.y - 28, this.facing, { radius: attack.radius, color: attack.color, glow: attack.glow, width: attack.finisher ? 7 : 4 });
@@ -1133,7 +1143,8 @@ export class Player extends GroundEntity {
       lift *= 1.10;
     }
     const targets = window.gameWorld?.getHostileTargets(this.team, true) ?? [];
-    let hitAny = false; let hitCount = 0;
+    let hitAny = false; let hitCount = 0; const sigHits = [];
+    setHitContext(this);
     // Weapon reach / sweeps behind (scythe); the default reach stays 78 px.
     const reach = hitMeta.reach ?? null;
     if (hitMeta.crit && Math.random() < hitMeta.crit) { dmg *= 1.5; isFinisher = true; }
@@ -1146,7 +1157,8 @@ export class Player extends GroundEntity {
       const heightDifference = Math.abs((target.worldHeight ?? target.elevation ?? 0) - this.worldHeight);
       const verticalReach = target.hitHeightTolerance ?? (target.isObjective ? 120 : 70);
       if (inFront && closeDepth && heightDifference <= verticalReach) {
-        target.takeDamage(dmg, kx, lift, stunDuration, isFinisher, 'melee');
+        const outcome = target.takeDamage(dmg, kx, lift, stunDuration, isFinisher, 'melee');
+        sigHits.push({ target, blocked: !!outcome?.blocked || (!!target.isGuarding && Math.sign(-kx) === (target.facing || 0)) });
         hitMeta.hitSet?.add(target);
         combat.spawnHitSparks(target.x, target.y - 25, this.facing, isFinisher ? '#ffea00' : '#fff', isFinisher ? 16 : 8);
         if (hitMeta.freeze) target.freeze?.(hitMeta.freeze);
@@ -1154,6 +1166,8 @@ export class Player extends GroundEntity {
         hitAny = true; hitCount++;
       }
     }
+    setHitContext(null);
+    if (sigHits.length) signatureEvent(this, 'hit', { hits: sigHits, heavy: this.state === 'heavyStrike' || isFinisher, facing: this.facing });
     if (hitMeta.shockwave) combat.spawnShockwave(this.x + this.facing * 40, this.y - 6, 70, '#b0bec5');
     // Conjured weapons wear out with every hit and finally shatter.
     if (hitAny && this.weaponDurability != null) {
@@ -1183,6 +1197,8 @@ export class Player extends GroundEntity {
     // attacker's approach direction. Only an attack from the held shield's
     // front receives the physical guard reduction.
     const incomingFromFront = Math.abs(kx) > 0.01 && Math.sign(-kx) === this.facing;
+    // Signature stances (floe plates, forge shield, shard shield) soften hits.
+    amount = signatureDamageTaken(this, amount, kx, hitKind);
     if (this.isGuarding && incomingFromFront && hitKind === 'spell' && this.guardHoldTime <= 0.18) {
       // The first fraction of a held guard is a precise parry moment.  The
       // caller receives this result and reverses a reflectable projectile.
@@ -1375,7 +1391,7 @@ export class Player extends GroundEntity {
     // Burrowed: only the travelling dirt mound (drawn by the spell) is visible.
     if (this.burrowed) return;
     // Levitation-state Arcane States let the Wizard hover above his shadow.
-    const renderY = this.y - (this.isMounted ? (this.mountedSummon.definition.riderOffsetY ?? 42) : 0) - levitationOffset(this);
+    const renderY = this.y - (this.isMounted ? (this.mountedSummon.definition.riderOffsetY ?? 42) : 0) - levitationOffset(this) - signatureHover(this);
     // Prepared spell components trail behind the Wizard in world space. They
     // are a gameplay indicator, not a DOM overlay or a baked reference image.
     if (this.isAlive && this.slottedSpells.length) {
@@ -1411,6 +1427,7 @@ export class Player extends GroundEntity {
     else if (this.isAlive) this.renderFocusCharge(ctx, renderY);
     // Buff transformation manifestation behind the body (P1/P2).
     const buffActive = this.isAlive && renderBuffManifestation(ctx, this, renderY, 'back');
+    if (this.isAlive) renderSignatureStance(ctx, this, renderY, 'back');
     if (this.isAlive && this.chargeTimer > 0 && !buffActive) this.renderChargeAura(ctx, renderY);
     // Body forms glow along the Wizard's own silhouette (chakra cloak).
     const formCloak = this.isAlive ? this.formCloakColor() : null;
@@ -1521,6 +1538,7 @@ export class Player extends GroundEntity {
     // Front layers of the body forms (ribs, claws) wrap around the Wizard.
     // Buff transformation manifestation in front of the body (P5).
     if (this.isAlive) renderBuffManifestation(ctx, this, renderY, 'front');
+    if (this.isAlive) renderSignatureStance(ctx, this, renderY, 'front');
     if (this.isAlive) {
       const ratio = Math.max(0, this.hp / this.maxHp);
       ctx.save();

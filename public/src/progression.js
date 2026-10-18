@@ -65,15 +65,29 @@ export const STARTER_RUNES = Object.freeze(['ignis', 'ventus', 'fulgur', 'terra'
 export const MATCH_DECK_SIZE = 10;
 export const MAX_RUNE_COPIES = 2;
 import { BUFF_FORM_DATA } from './buff_forms_data.js';
+import { SIGNATURE_RUNE_DATA } from './signature_runes_data.js';
 // Arcane States (buff transformation special runes): max. ONE per deck (atlas §1.9).
 export const BUFF_RUNE_IDS = Object.freeze(BUFF_FORM_DATA.map((form) => 'buff_' + form.id));
 export const MAX_BUFF_RUNES = 1;
 export const isBuffRuneId = (id) => String(id).startsWith('buff_');
-export const ALL_RUNE_IDS = Object.freeze(['ignis', 'ventus', 'fulgur', 'terra', 'aqua', 'bestia', 'construct', 'void', 'lux', 'umbra', 'doppel', 'mortis', ...BUFF_RUNE_IDS]);
-// A deck may take this rune (copy limit, and only one buff rune at all).
+// Signature specials (research atlas S01–S36): special runes with their own
+// glyph — NOT Arcane States. Each may be in a deck once; several different ones are fine.
+export const SIGNATURE_RUNE_IDS = Object.freeze(SIGNATURE_RUNE_DATA.map((d) => 'sig_' + d.id));
+export const isSignatureRuneId = (id) => String(id).startsWith('sig_');
+export const ALL_RUNE_IDS = Object.freeze(['ignis', 'ventus', 'fulgur', 'terra', 'aqua', 'bestia', 'construct', 'void', 'lux', 'umbra', 'doppel', 'mortis', ...BUFF_RUNE_IDS, ...SIGNATURE_RUNE_IDS]);
+// Elemental runes combine and may be in a deck twice. Special runes (DOPPEL,
+// MORTIS, signature specials, Arcane States) need no combination but have a
+// harder glyph: each only once — and of all Arcane States only one at all.
+export const isSpecialDeckRune = (id) => id === 'doppel' || id === 'mortis' || isBuffRuneId(id) || isSignatureRuneId(id);
+export const maxRuneCopies = (id) => (isSpecialDeckRune(id) ? 1 : MAX_RUNE_COPIES);
 export function deckAccepts(deck, id) {
-  if (isBuffRuneId(id)) return deck.filter(isBuffRuneId).length < MAX_BUFF_RUNES;
-  return deck.filter((entry) => entry === id).length < MAX_RUNE_COPIES;
+  if (isBuffRuneId(id) && deck.filter(isBuffRuneId).length >= MAX_BUFF_RUNES) return false;
+  return deck.filter((entry) => entry === id).length < maxRuneCopies(id);
+}
+// Signature specials unlock with the Mage level: S01–S04 at 5, then four more per level (S33–S36 at 13).
+export function signatureUnlockLevel(runeId) {
+  const index = SIGNATURE_RUNE_IDS.indexOf(runeId);
+  return index < 0 ? Infinity : 5 + Math.floor(index / 4);
 }
 // The first deck deliberately contains two copies of every starter rune.
 // It is a legal 10-card deck and guarantees a varied initial three-card hand.
@@ -98,6 +112,7 @@ export function buffUnlockLevel(runeId) {
 }
 export function runeUnlockLabel(runeId) {
   if (isBuffRuneId(runeId)) return `MAGE LV.${buffUnlockLevel(runeId)}`;
+  if (isSignatureRuneId(runeId)) return `MAGE LV.${signatureUnlockLevel(runeId)}`;
   const entry = MAGE_LEVEL_RUNE_UNLOCKS.find((unlock) => unlock.runeId === runeId);
   return entry ? `MAGE LV.${entry.level}` : 'STARTER';
 }
@@ -143,14 +158,14 @@ export class MageProfile {
   xpToNextLevel() { return 70 + (this.level - 1) * 35; }
   runeLevel(id) { return 1 + Math.floor((this.runeXp[id] ?? 0) / 60); }
   runeXpIntoLevel(id) { return (this.runeXp[id] ?? 0) % 60; }
-  isRuneUnlocked(id) { return isBuffRuneId(id) ? this.level >= buffUnlockLevel(id) : this.unlockedRunes.has(id); }
+  isRuneUnlocked(id) { return isBuffRuneId(id) ? this.level >= buffUnlockLevel(id) : isSignatureRuneId(id) ? this.level >= signatureUnlockLevel(id) : this.unlockedRunes.has(id); }
 
   sanitizeDeck(ids = []) {
     const copies = new Map();
     return ids.filter((id) => {
       if (!ALL_RUNE_IDS.includes(id) || !this.isRuneUnlocked(id)) return false;
       const count = copies.get(id) ?? 0;
-      if (count >= MAX_RUNE_COPIES || copies.size > ALL_RUNE_IDS.length) return false;
+      if (count >= maxRuneCopies(id) || copies.size > ALL_RUNE_IDS.length) return false;
       if (isBuffRuneId(id) && [...copies.keys()].some(isBuffRuneId)) return false;
       copies.set(id, count + 1);
       return true;
@@ -164,7 +179,7 @@ export class MageProfile {
   addRuneToDeck(id) {
     if (!this.isRuneUnlocked(id)) return { ok: false, reason: 'LOCKED' };
     if (this.matchDeck.length >= MATCH_DECK_SIZE) return { ok: false, reason: 'DECK FULL' };
-    if (this.getRuneCopies(id) >= MAX_RUNE_COPIES) return { ok: false, reason: 'COPY LIMIT' };
+    if (this.getRuneCopies(id) >= maxRuneCopies(id)) return { ok: false, reason: 'COPY LIMIT' };
     if (!deckAccepts(this.matchDeck, id)) return { ok: false, reason: 'ONE ARCANE STATE PER DECK' };
     this.matchDeck.push(id); this.save();
     return { ok: true };

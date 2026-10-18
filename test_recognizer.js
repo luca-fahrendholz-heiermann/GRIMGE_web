@@ -208,7 +208,8 @@ const BASE_HAND = ['ignis', 'ventus', 'fulgur', 'terra', 'aqua', 'bestia', 'cons
 const guideMisses = Object.keys(RUNE_GUIDES).filter((key) => {
   // The buff sigil resolves to whichever buff rune is in the hand.
   const id = key === 'buff_sigil' ? 'buff_T07' : key;
-  const free = recognizer.recognize(guideStrokes(id, 400, 300, 150), key === 'buff_sigil' ? [...BASE_HAND, id] : null);
+  // Special glyphs (buff sigil, signature specials) are matched when that rune is in the hand.
+  const free = recognizer.recognize(guideStrokes(id, 400, 300, 150), key === 'buff_sigil' || key.startsWith('sig_') ? [...BASE_HAND, id] : null);
   const own = recognizer.recognize(guideStrokes(id, 400, 300, 110), [id]);
   return free?.rune.id !== id || own?.grade !== 'S';
 });
@@ -227,6 +228,21 @@ const cQuality = spells.qualityForRunes([{ id: 'ignis', grade: 'C' }]);
 const sQuality = spells.qualityForRunes([{ id: 'ignis', grade: 'S' }]);
 assert(cQuality.power < 1 && cQuality.area < 1 && cQuality.duration < 1, 'C-grade rune casts intentionally trade power, area, and duration for leniency');
 assert(sQuality.power > 1 && sQuality.area > 1 && sQuality.duration > 1, 'S-grade rune casts improve power, area, and duration');
+
+// Signature specials: each has its own multi-stroke glyph, recognised against the hand.
+{
+  const SIG = Object.keys(RUNE_GUIDES).filter((k) => k.startsWith('sig_'));
+  let seed = 11; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const rough = (id, size = 120) => guideStrokes(id, 400, 300, size).map((st, i) => (i % 2 ? st.slice().reverse() : st).map((pt) => ({ x: pt.x + (rnd() - .5) * 10, y: pt.y + (rnd() - .5) * 10 }))).reverse();
+  const misses = SIG.filter((id) => recognizer.recognize(rough(id), ['ignis', 'aqua', 'terra', id])?.rune.id !== id);
+  assert(SIG.length === 36 && !misses.length, 'Every signature glyph, drawn roughly in any stroke order, is recognised from the hand' + (misses.length ? ' (' + misses.join(',') + ')' : ''));
+  const pairs = [['sig_S01', 'sig_S02'], ['sig_S18', 'sig_S35'], ['sig_S23', 'sig_S27'], ['sig_S09', 'sig_S31']];
+  assert(pairs.every(([a, b]) => recognizer.recognize(rough(a), [a, b, 'fulgur'])?.rune.id === a && recognizer.recognize(rough(b), [a, b, 'fulgur'])?.rune.id === b), 'Two signature specials in one hand are told apart by their glyphs');
+  const elems = ['ignis', 'ventus', 'fulgur', 'terra', 'aqua', 'construct', 'void', 'lux', 'umbra', 'doppel', 'mortis'];
+  const stolen = elems.filter((e) => { const r = recognizer.recognize(guideStrokes(e, 400, 300, 120), [...elems, 'sig_S09', 'sig_S18', 'sig_S33', 'sig_S35']); return r?.rune.id?.startsWith('sig_'); });
+  assert(!stolen.length, 'Simple rune symbols are never taken for a signature glyph' + (stolen.length ? ' (' + stolen.join(',') + ')' : ''));
+  assert(recognizer.recognize(rough('sig_S12'), ['ignis', 'aqua'])?.rune.id !== 'sig_S12', 'A signature glyph only counts when that rune is in the hand');
+}
 
 console.log(`\nResults: ${passed} passed, ${failed} failed.`);
 if (failed > 0) process.exit(1);

@@ -269,6 +269,9 @@ export const FORM_MOVESETS = {
 
 // Which moveset is active: a manifest overrides the transformation.
 export function activeMoveset(player) {
+  // A signature stance with its own heavies (Himmelsregent) leads while it lasts.
+  const sigSet = player.signature?.impl?.stance?.moveset;
+  if (sigSet && FORM_MOVESETS[sigSet]) return sigSet;
   // A generic buff transformation (T01–T40) owns the moveset while it lasts.
   if (player.buffForm?.timer > 0 && FORM_MOVESETS[player.buffForm.id]) return player.buffForm.id;
   if (player.ninefoldTimer > 0) return 'ninefold';

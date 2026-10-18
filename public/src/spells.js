@@ -8,6 +8,7 @@ import { sky, isSkyField } from './sky.js';
 import { ShadowStomperSpell, HaloPulseSpell, castShadowStep, alliesOf } from './light_shadow.js';
 import { raiseMirrorGate } from './portal.js';
 import { activateBuffForm } from './buff_forms.js';
+import { castSignature, signatureProjectileSpawned, updateSignatureWorld } from './signature_runes.js';
 import { BeamSpell, BeamClash, resolveBeamInteractions, MirrorWardSpell, GravityLiftSpell, TitanStompSpell, SoulSeekerBolt, SeismicSlamSpell, ConeBreathSpell, BurrowStrikeSpell, ShieldBubbleSpell, renderPixelated } from './abilities.js';
 
 export { BeamClash };
@@ -150,6 +151,7 @@ export class SpellSystem {
     if (typeof spell.craterLife === 'number') spell.craterLife *= spell.quality.duration;
     spell.system = this;
     this.activeSpells.push(spell);
+    if (spell.isCapturableProjectile) signatureProjectileSpawned(spell);
     return spell;
   }
 
@@ -236,6 +238,8 @@ export class SpellSystem {
 
     // Buff transformation special runes (one per deck, one active at a time).
     if (spellDef.isBuffForm) { activateBuffForm(caster, spellDef.buffFormId, castQuality, this); return; }
+    // Signature special runes (own glyph, own mechanic; not Arcane States).
+    if (spellDef.isSignature) { castSignature(this, caster, spellDef, castQuality, target, gameWorld); return; }
 
     switch (spellDef.id) {
       case 'fireball': {
@@ -716,6 +720,7 @@ export class SpellSystem {
   }
 
   update(dt, gameWorld) {
+    updateSignatureWorld(dt, gameWorld);
     for (let i = this.activeSpells.length - 1; i >= 0; i--) {
       const spell = this.activeSpells[i];
       spell.update(dt, gameWorld);
@@ -1906,6 +1911,8 @@ class SummonedCreature extends GroundEntity {
     }
   }
   chooseTarget(gameWorld) {
+    // A Hunter Bell (signature special) points own summons at marked enemy summons.
+    if (this.priorityTarget && !this.priorityTarget.isDead && this.priorityTarget.team !== this.team) return this.priorityTarget;
     const candidates = gameWorld.getHostileTargets(this.team).filter((target) => !target.isDead && !target.isDestroyed);
     if (!candidates.length) return null;
     const sortNearest = (list) => list.sort((a, b) => groundDistance(this, a) - groundDistance(this, b));
@@ -1972,6 +1979,7 @@ class SummonedCreature extends GroundEntity {
     }
     this.rider = null;
     if (!this.isFlying) this.integrateElevation(dt, 1350);
+    if (this.priorityTarget && this.target !== this.priorityTarget && !this.priorityTarget.isDead) this.target = this.priorityTarget;
     if (!this.target || this.target.isDead || this.target.isDestroyed || this.target.team === this.team) this.target = this.chooseTarget(gameWorld);
     if (!this.target) {
       if (!this.isFlying) gameWorld.battlefield.resolveEntityCollision(this);

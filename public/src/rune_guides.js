@@ -11,6 +11,58 @@ const circle = (turns = 1, start = -Math.PI / 2, steps = 40) => Array.from({ len
   return [Math.cos(a) * .8, Math.sin(a) * .8];
 });
 
+// ── Signature special glyphs (S01–S36) ───────────────────────────────────
+// Special runes trade drawing time for power: each signature special has its
+// own multi-stroke glyph composed of several primitives (more than one simple
+// symbol), themed after its mechanic. They are recognised by point-cloud
+// matching against these templates (glyph_match.js).
+const L = (x0, y0, x1, y1) => [[x0, y0], [x1, y1]];
+const arc = (cx, cy, r, a0, a1, steps = 16, ry = r) => Array.from({ length: steps + 1 }, (_, i) => { const a = a0 + (a1 - a0) * i / steps; return [cx + Math.cos(a) * r, cy + Math.sin(a) * ry]; });
+const ring = (cx, cy, r, ry = r) => arc(cx, cy, r, -Math.PI / 2, Math.PI * 1.5, 24, ry);
+const poly = (pts, closed = true) => (closed ? [...pts, pts[0]] : pts);
+const ngon = (cx, cy, r, n, rot = -Math.PI / 2) => poly(Array.from({ length: n }, (_, i) => [cx + Math.cos(rot + i * Math.PI * 2 / n) * r, cy + Math.sin(rot + i * Math.PI * 2 / n) * r]));
+const zig = (x0, y0, x1, y1, n, amp) => Array.from({ length: n + 1 }, (_, i) => { const u = i / n; const dx = x1 - x0; const dy = y1 - y0; const l = Math.hypot(dx, dy) || 1; const o = (i % 2 ? 1 : -1) * amp * (i && i < n ? 1 : 0); return [x0 + dx * u - dy / l * o, y0 + dy * u + dx / l * o]; });
+const wave = (x0, x1, y, amp, waves = 2, steps = 24) => Array.from({ length: steps + 1 }, (_, i) => { const u = i / steps; return [x0 + (x1 - x0) * u, y + Math.sin(u * Math.PI * 2 * waves) * amp]; });
+const spiralIn = (cx, cy, r, turns = 2, steps = 36) => Array.from({ length: steps + 1 }, (_, i) => { const u = i / steps; const a = -Math.PI / 2 + u * turns * Math.PI * 2; return [cx + Math.cos(a) * r * (1 - u * .85), cy + Math.sin(a) * r * (1 - u * .85)]; });
+export const SIGNATURE_GLYPHS = Object.freeze({
+  S01: [poly([[0, -.85], [.45, -.15], [-.45, -.15]]), L(-.75, .25, .75, .25), L(-.55, .6, -.2, .5), L(.2, .5, .55, .6)],
+  S02: [ring(0, .1, .55), L(-.55, -.65, -.35, -.45), L(0, -.9, 0, -.62), L(.55, -.65, .35, -.45)],
+  S03: [L(0, -.85, 0, .7), L(-.4, -.55, .4, -.55), arc(0, .25, .6, Math.PI * .1, Math.PI * .9)],
+  S04: [poly([[-.7, -.7], [-.15, -.7], [-.15, .55], [-.7, .55]]), poly([[.15, -.7], [.7, -.7], [.7, .55], [.15, .55]]), L(-.85, .8, .85, .8)],
+  S05: [L(-.75, .75, .45, -.45), ring(.55, -.55, .25), L(-.4, .1, -.4, .45), L(-.1, -.2, -.1, .15)],
+  S06: [ring(-.65, .35, .18), ring(.65, .35, .18), arc(0, .35, .47, Math.PI, Math.PI * 2, 16, .9)],
+  S07: [arc(0, .1, .45, Math.PI * 1.1, Math.PI * 1.9), arc(0, .1, .8, Math.PI * 1.1, Math.PI * 1.9), L(0, -.85, 0, .85)],
+  S08: [arc(0, 0, .8, Math.PI * .25, Math.PI * 1.95, 28), L(-.3, -.3, -.3, .3), L(0, -.35, 0, .35), L(.3, -.3, .3, .3)],
+  S09: [ngon(0, 0, .8, 6, 0), L(-.8, 0, .8, 0), L(-.25, -.35, -.25, .35), L(.25, -.35, .25, .35)],
+  S10: [L(0, -.9, 0, .5), L(-.3, -.5, .3, -.5), arc(.25, .55, .35, Math.PI, Math.PI * 2.3)],
+  S11: [L(-.75, .8, -.35, -.8), L(.35, .8, .75, -.8), poly([[-.2, -.4], [0, .4], [.2, -.4]], false)],
+  S12: [zig(-.85, .5, .85, .5, 6, .25), L(0, -.9, 0, .15), L(-.35, -.75, -.35, -.1)],
+  S13: [L(-.85, .8, .85, .8), L(-.45, .8, -.45, .1), L(0, .8, 0, -.6), L(.45, .8, .45, -.15), poly([[-.25, -.8], [0, -.6], [.25, -.8]], false)],
+  S14: [L(-.85, 0, .85, 0), L(-.6, 0, -.6, -.45), L(-.2, 0, -.2, -.45), L(.2, 0, .2, -.45), L(.6, 0, .6, -.45), zig(-.8, .45, .8, .45, 6, .15)],
+  S15: [wave(-.85, .85, -.3, .18), wave(-.85, .85, .3, .18), L(.55, .65, .85, .3)],
+  S16: [poly([[0, .85], [-.7, .85], [-.35, .3]], false), poly([[.35, .3], [.7, .85], [0, .85]], false), L(0, .6, 0, -.4), ring(0, -.6, .2)],
+  S17: [arc(-.3, 0, .55, -Math.PI / 2, Math.PI / 2), arc(.3, 0, .55, Math.PI * 1.5, Math.PI / 2, 16), L(-.75, -.75, -.5, -.5), L(.5, .5, .75, .75)],
+  S18: [L(-.85, -.3, .85, -.3), L(-.85, .3, .85, .3), L(-.3, -.85, -.3, .85), L(.3, -.85, .3, .85)],
+  S19: [L(-.9, 0, -.1, 0), L(-.1, 0, .85, -.6), L(-.1, 0, .85, .6), poly([[-.25, -.18], [.05, 0], [-.25, .18]])],
+  S20: [poly([[-.2, -.7], [-.75, 0], [-.2, .7]], false), poly([[.2, -.7], [.75, 0], [.2, .7]], false), ring(0, 0, .14)],
+  S21: [poly([[-.8, -.8], [-.3, -.8], [-.3, -.3], [-.8, -.3]]), L(-.1, .2, .5, -.4), L(.1, .55, .7, -.05), L(.3, .85, .85, .3)],
+  S22: [poly([[-.5, -.8], [-.8, -.8], [-.8, .8], [-.5, .8]], false), poly([[.5, -.8], [.8, -.8], [.8, .8], [.5, .8]], false), L(-.45, 0, .45, 0), poly([[.25, -.2], [.45, 0], [.25, .2]], false)],
+  S23: [ring(0, 0, .3), arc(0, 0, .7, Math.PI * .6, Math.PI * 1.4), arc(0, 0, .7, -Math.PI * .4, Math.PI * .4), L(0, -.9, 0, -.35)],
+  S24: [L(-.6, -.85, -.6, .85), L(.6, -.85, .6, .85), poly([[-.3, .35], [0, .05], [.3, .35]], false), poly([[-.3, -.15], [0, -.45], [.3, -.15]], false)],
+  S25: [ring(0, 0, .28), L(-.85, -.2, -.4, -.7), L(.4, -.7, .85, -.2), L(-.25, .85, .25, .85)],
+  S26: [L(-.8, -.75, .8, -.75), L(-.5, -.75, -.5, .2), L(0, -.75, 0, .7), L(.5, -.75, .5, .35)],
+  S27: [poly([[-.85, .15], [.85, .15], [.5, .75], [-.5, .75]]), ring(0, -.4, .32), L(-.95, .15, -.7, -.15)],
+  S28: [arc(0, .5, .85, Math.PI * 1.2, Math.PI * 1.8, 16, .9), arc(0, -.5, .85, Math.PI * .2, Math.PI * .8, 16, .9), L(0, -.6, 0, .6)],
+  S29: [poly([[.2, -.45], [.85, -.45], [.85, .25], [.2, .25]]), L(-.85, .65, -.45, .35), L(-.45, .35, -.1, .2), L(-.1, .2, .2, -.1)],
+  S30: [poly([[-.55, .35], [-.4, -.55], [0, -.8], [.4, -.55], [.55, .35]], false), L(-.75, .35, .75, .35), L(-.3, .55, -.35, .85), L(0, .55, 0, .9), L(.3, .55, .35, .85)],
+  S31: [poly([[-.75, -.75], [.75, -.75], [.75, .75], [-.75, .75]]), L(-.75, 0, .75, 0), ring(0, 0, .2)],
+  S32: [L(-.9, -.4, .9, -.4), L(-.9, .4, .9, .4), L(-.5, -.15, -.5, .15), L(0, -.15, 0, .15), L(.5, -.15, .5, .15)],
+  S33: [ring(0, 0, .85), spiralIn(0, 0, .55, 1.6)],
+  S34: [L(0, -.85, 0, .85), L(-.75, -.45, .75, -.45), poly([[-.75, -.45], [-.95, .1], [-.55, .1]]), poly([[.75, -.45], [.55, .1], [.95, .1]])],
+  S35: [L(-.7, -.6, -.7, .6), L(-.3, -.6, -.3, .6), arc(0, 0, .45, -Math.PI / 3, Math.PI / 3), arc(0, 0, .8, -Math.PI / 3, Math.PI / 3)],
+  S36: [arc(0, .9, 1.1, Math.PI * 1.2, Math.PI * 1.8, 20), zig(-.8, .45, .8, .45, 8, .12)]
+});
+
 export const RUNE_GUIDES = Object.freeze({
   ignis: [[[-.8, .7], [0, -.8], [.8, .7], [-.8, .7]]],
   ventus: [[[-1, 0], [1, 0]]],
@@ -25,7 +77,8 @@ export const RUNE_GUIDES = Object.freeze({
   doppel: [Array.from({ length: 61 }, (_, i) => { const t = i / 60 * Math.PI * 2; return [Math.sin(t) * .95, Math.sin(t) * Math.cos(t) * .9]; })],
   mortis: [Array.from({ length: 6 }, (_, k) => { const a = -Math.PI / 2 + k * Math.PI * 4 / 5; return [Math.cos(a) * .85, Math.sin(a) * .85]; })],
   // Buff transformation sigil: a closed hourglass in one stroke.
-  buff_sigil: [[[-.6, -.85], [.6, -.85], [-.6, .85], [.6, .85], [-.6, -.85]]]
+  buff_sigil: [[[-.6, -.85], [.6, -.85], [-.6, .85], [.6, .85], [-.6, -.85]]],
+  ...Object.fromEntries(Object.entries(SIGNATURE_GLYPHS).map(([id, strokes]) => ['sig_' + id, strokes]))
 });
 const guideKey = (runeId) => (String(runeId).startsWith('buff_') ? 'buff_sigil' : runeId);
 

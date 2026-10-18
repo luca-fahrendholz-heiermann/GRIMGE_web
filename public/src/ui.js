@@ -1,6 +1,6 @@
 // GRIMGE Prototype — UI & HUD Controller matching Setup Mockup Exactly
 import { spells } from './spells.js';
-import { MAGE_SKILL_TREE, ALL_RUNE_IDS, runeUnlockLabel, isBuffRuneId } from './progression.js';
+import { MAGE_SKILL_TREE, ALL_RUNE_IDS, runeUnlockLabel, isBuffRuneId, isSignatureRuneId, maxRuneCopies } from './progression.js';
 import { recognizer } from './recognizer.js';
 import { sprites } from './sprites.js';
 import { runeManaCost, SPELL_RECIPES, lookupRecipe, SOLO_RUNES, spellHowTo } from './spell_catalog.js';
@@ -719,7 +719,7 @@ export class UIManager {
     }
     this.deckBuilderSummary.textContent = training
       ? `${profile.target === 'player' ? 'YOUR' : 'SPARRING PARTNER'} TRAINING DECK ${profile.matchDeck.length}/10 · DEBUG: ALL RUNES AVAILABLE`
-      : `MATCH DECK ${profile.matchDeck.length}/10 · MAX 2 COPIES PER RUNE`;
+      : `MATCH DECK ${profile.matchDeck.length}/10 · ELEMENTAL RUNES ×2 · SPECIAL RUNES ×1`;
     // Only real deck runes; transformation runes are granted in battle.
     const card = (rune) => {
       const unlocked = profile.isRuneUnlocked(rune.id);
@@ -728,15 +728,19 @@ export class UIManager {
       // Arcane State runes: max. one of all of them in the deck.
       const buff = isBuffRuneId(rune.id);
       const buffTaken = buff && !copies && profile.matchDeck.some(isBuffRuneId);
+      const sig = isSignatureRuneId(rune.id); const max = maxRuneCopies(rune.id);
       const status = !unlocked ? `LOCKED · ${lockedText}`
         : buff ? (copies ? 'IN DECK · ARCANE STATE' : buffTaken ? 'ANOTHER ARCANE STATE IS IN THE DECK' : 'ARCANE STATE · MAX 1 PER DECK')
-        : `${copies}/2 IN DECK · RUNE LV.${profile.runeLevel(rune.id)}`;
-      const blocked = !unlocked || copies >= (buff ? 1 : 2) || profile.matchDeck.length >= 10 || buffTaken;
-      return `<article class="deck-rune ${unlocked ? '' : 'locked'} ${buff ? 'is-buff' : ''}" style="--rune-color:${rune.color}"><b>${rune.glyph} ${rune.name}${buff ? ' <i class="buff-tag">ARCANE</i>' : ''}</b><span>${status}</span><div><button data-deck-action="remove" data-rune-id="${rune.id}" ${copies ? '' : 'disabled'}>−</button><button data-deck-action="add" data-rune-id="${rune.id}" ${blocked ? 'disabled' : ''}>+</button></div></article>`;
+        : sig ? (copies ? 'IN DECK · SIGNATURE SPECIAL' : `SIGNATURE SPECIAL · ONCE PER DECK · ${rune.desc.split(' — ')[1] ?? ''}`)
+        : `${copies}/${max} IN DECK · RUNE LV.${profile.runeLevel(rune.id)}`;
+      const blocked = !unlocked || copies >= max || profile.matchDeck.length >= 10 || buffTaken;
+      return `<article class="deck-rune ${unlocked ? '' : 'locked'} ${buff ? 'is-buff' : ''} ${sig ? 'is-signature' : ''}" style="--rune-color:${rune.color}"><b>${rune.glyph} ${rune.name}${buff ? ' <i class="buff-tag">ARCANE</i>' : sig ? ' <i class="buff-tag sig-tag">SIGNATURE</i>' : ''}</b><span>${status}</span><div><button data-deck-action="remove" data-rune-id="${rune.id}" ${copies ? '' : 'disabled'}>−</button><button data-deck-action="add" data-rune-id="${rune.id}" ${blocked ? 'disabled' : ''}>+</button></div></article>`;
     };
     const deckRunes = recognizer.runes.filter((rune) => ALL_RUNE_IDS.includes(rune.id));
-    this.deckBuilderContent.innerHTML = deckRunes.filter((rune) => !isBuffRuneId(rune.id)).map(card).join('')
-      + '<h4 class="deck-section-title">⧗ ARCANE STATES — SPECIAL RUNES · MAX 1 PER DECK · ONE HOURGLASS SIGIL</h4>'
+    this.deckBuilderContent.innerHTML = deckRunes.filter((rune) => !isBuffRuneId(rune.id) && !isSignatureRuneId(rune.id)).map(card).join('')
+      + '<h4 class="deck-section-title">✦ SIGNATURE SPECIALS — SPECIAL RUNES · EACH ONCE PER DECK · OWN MULTI-STROKE GLYPH · NO COMBINATION</h4>'
+      + deckRunes.filter((rune) => isSignatureRuneId(rune.id)).map(card).join('')
+      + '<h4 class="deck-section-title">⧗ ARCANE STATES — SPECIAL RUNES · ONLY ONE OF ALL PER DECK · ONE HOURGLASS SIGIL</h4>'
       + deckRunes.filter((rune) => isBuffRuneId(rune.id)).map(card).join('');
   }
 
@@ -756,7 +760,7 @@ export class UIManager {
     };
     const glyphs = document.getElementById('rune-glyph-guide');
     if (glyphs) {
-      glyphs.innerHTML = deckRunes.map((rune) => `<div class="g-item"><span class="r-icon">${rune.icon}</span><strong>${rune.name} (${rune.element})</strong>: ${rune.desc}${SOLO_RUNES.includes(rune.id) ? ' <span class="g-note">· special rune, no fusion</span>' : ''}${isBuffRuneId(rune.id) ? ' <span class="g-note buff-tag">· ARCANE STATE · MAX 1 PER DECK</span>' : ''}</div>`).join('');
+      glyphs.innerHTML = deckRunes.map((rune) => `<div class="g-item"><span class="r-icon">${rune.icon}</span><strong>${rune.name} (${rune.element})</strong>: ${rune.desc}${SOLO_RUNES.includes(rune.id) ? ' <span class="g-note">· special rune, no fusion</span>' : ''}${isBuffRuneId(rune.id) ? ' <span class="g-note buff-tag">· ARCANE STATE · MAX 1 PER DECK</span>' : ''}${isSignatureRuneId(rune.id) ? ' <span class="g-note buff-tag">· SIGNATURE SPECIAL · ONCE PER DECK · NO FUSION</span>' : ''}</div>`).join('');
     }
     const fusions = document.getElementById('fusion-guide');
     if (!fusions) return;

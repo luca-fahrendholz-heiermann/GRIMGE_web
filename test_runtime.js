@@ -2411,6 +2411,78 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   buff.endBuffForm(P); spells.clearRuntime(); dummy.homeX = dummy.x = 512;
 }
 
+// Signature specials (research atlas S01–S36): special runes with their own glyph and mechanic — not Arcane States.
+{
+  const sigMod = await import('./public/src/signature_runes.js');
+  const core = await import('./public/src/signature_core.js');
+  const prog = await import('./public/src/progression.js');
+  const { activeMoveset } = await import('./public/src/form_moves.js');
+  const { spellHowTo, runeManaCost, isSpecialRune } = await import('./public/src/spell_catalog.js');
+  game.returnToHub(); game.setMatchMode('training'); game.startMatch(); game.selectTrainingMap('waterfalls');
+  const P = game.player; const dummy = game.trainingDummy;
+  const neutral = { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false };
+  const reset = () => { spells.clearRuntime(); if (P.signature) core.endStance(P, 'replaced'); P.x = 400; P.z = .5; P.facing = 1; P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.hp = P.maxHp; game.battlefield.placeOnSurface(P); dummy.homeX = dummy.x = 470; dummy.homeZ = dummy.z = .5; dummy.hp = dummy.maxHp; };
+  const step = (n, dt = 1 / 60) => { for (let i = 0; i < n; i++) { P.update(dt, neutral, game.battlefield, game); game.updateProjectiles(dt); spells.update(dt, game); } };
+  const cast = (id, target = null) => spells.cast(P, spells.resolveSpell([{ id: 'sig_' + id }]), game, null, target);
+  const ids = Object.keys(core.SIGNATURES);
+  assert(ids.length === 36 && ids.every((id) => core.signatureImpl(id)?.cast) && sigMod.SIGNATURE_RUNE_IDS.every((id) => isSpecialRune(id) && runeManaCost(id) >= 28 && runeManaCost(id) <= 46), 'All 36 signature specials are special runes with their own mechanic and bound mana');
+  assert(ids.every((id) => spellHowTo('sig_' + id)?.effect?.length > 40) && !spells.resolveSpell([{ id: 'sig_S03' }, { id: 'ignis' }]), 'Signature specials explain themselves in the grimoire and never fuse');
+  // Every special casts, runs and renders (strict canvas) without errors.
+  const strict = new Proxy({}, { get: (t, k) => (k === 'ellipse' || k === 'arc') ? (x, y, rx, ry) => { if (rx < 0 || (k === 'ellipse' && ry < 0)) throw new Error('IndexSizeError ' + k); } : (k === 'canvas' ? undefined : () => {}), set: () => true });
+  const broken = [];
+  for (const id of ids) {
+    reset();
+    try {
+      const d = core.SIGNATURES[id];
+      const target = d.targeting === 'dual' ? { a: { x: 450, z: .4 }, b: { x: 560, z: .6 } } : d.targeting === 'placement' ? { x: 470, z: .5, orientation: 'lateral', length: 200, start: { x: 380, z: .5 }, end: { x: 560, z: .5 } } : { x: 470, z: .5 };
+      cast(id, target);
+      for (let k = 0; k < 12; k++) { step(10); for (const sp of spells.activeSpells) sp.render?.(strict); for (const layer of ['back', 'front']) sigMod.renderSignatureStance(strict, P, P.y, layer); }
+    } catch (e) { broken.push(id + ': ' + e.message); }
+  }
+  assert(!broken.length, 'Every signature special casts, runs and renders for 2 s without errors ' + broken.slice(0, 3).join(' | '));
+  // S01 Himmelsregent: the Wizard really rises and the six hover heavies take over.
+  reset(); cast('S01'); step(60);
+  assert(sigMod.signatureHover(P) > 50 && P.isHovering && activeMoveset(P) === 'sig_S01', 'Himmelsregent: the Wizard hovers ~0.7 hero heights and owns the hover heavies');
+  P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.grounded = true;
+  P.beginCharge('forward'); P.formCharge.elapsed = 1.3; P.releaseCharge(); step(40);
+  assert(dummy.hp < dummy.maxHp, 'Himmelsregent: Wanderchor floes hunt and hit the target');
+  core.endStance(P); assert(sigMod.signatureHover(P) === 0 && !P.isHovering, 'The hover ends with the stance');
+  // S03 Sternenanker: telegraph, then pull and tip outward.
+  reset(); dummy.x = dummy.homeX = 520; cast('S03', { x: 470, z: .5 }); step(30);
+  assert(dummy.hp === dummy.maxHp, 'Sternenanker: nothing happens during the 0.65 s warning');
+  step(40); assert(dummy.hp < dummy.maxHp, 'Sternenanker: the anchor lands and tips the enemy outward');
+  // S08 Sekundenpfand: pillars strike the recorded spots.
+  reset(); cast('S08', { x: 470, z: .5 }); step(40); const marks = spells.activeSpells.find((sp) => sp.marks)?.marks.length ?? 0; step(60);
+  assert(marks >= 1 && dummy.hp < dummy.maxHp, 'Sekundenpfand: recorded positions are struck by pillars');
+  // S09 Stillfuge: projectiles inside the dome crawl.
+  reset(); cast('S09', { x: 470, z: .5 }); step(55); game.spawnMinionBolt(520, .5, -1, 'red', 10, .5, 18); step(3);
+  const bolt = game.projectiles[game.projectiles.length - 1];
+  assert(bolt && Math.abs(bolt.vx) < 150, 'Stillfuge: an enemy bolt inside the dome is slowed');
+  // S20 Prismenhalter: catch an enemy bolt, fire it back on the next attack.
+  reset(); cast('S20'); game.spawnMinionBolt(P.x + 70, P.z, -1, 'red', 18, P.z, 18); step(10);
+  const caught = P.signature?.stored;
+  P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.executeAttack(neutral, 'normal'); step(2);
+  assert(caught && spells.activeSpells.filter((sp) => sp.isSigProjectile).length === 3, 'Prismenhalter: the bolt is caught and fired back as a three-crystal salvo');
+  // S29 Bruchkoloss: wind-up, then a horizontal punch.
+  reset(); cast('S29', { x: 430, z: .5 }); step(60); const before = dummy.hp; step(20);
+  assert(before === dummy.maxHp && dummy.hp < before, 'Bruchkoloss: the fist only hits after its clear wind-up');
+  // S13 Splittergarten: hitting a blossom sprays splinters.
+  reset(); cast('S13', { x: 440, z: .5 }); step(70);
+  const blossom = spells.activeSpells.find((sp) => sp.constructor.name === 'Blossom');
+  P.x = blossom.x - 10; P.z = blossom.z; P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.executeAttack(neutral, 'normal');
+  assert(spells.activeSpells.some((sp) => sp.isSigProjectile), 'Splittergarten: an own hit makes a blossom spray splinters');
+  // Hit events feed stances: S21 marks with the first hit and launches needles after.
+  reset(); cast('S21'); dummy.x = dummy.homeX = P.x + 14;
+  for (let k = 0; k < 3; k++) { P.x = dummy.x - 14; P.vx = 0; P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.executeAttack(neutral, 'normal'); step(30); }
+  assert(P.signature?.mark === dummy && P.signature.shots >= 1, 'Schwarmprotokoll: the first hit marks, further hits launch homing needles');
+  reset();
+  // Deck rules: elemental ×2, special runes ×1 each, Arcane States one of all.
+  const deck = ['ignis', 'ignis', 'sig_S01', 'sig_S13', 'buff_T05'];
+  assert(!prog.deckAccepts(deck, 'ignis') && !prog.deckAccepts(deck, 'sig_S01') && prog.deckAccepts(deck, 'sig_S02') && !prog.deckAccepts(deck, 'buff_T07') && !prog.deckAccepts(['doppel'], 'doppel'), 'Deck: elemental runes twice, every special rune once, several signature specials but only one Arcane State');
+  assert(prog.signatureUnlockLevel('sig_S01') === 5 && prog.signatureUnlockLevel('sig_S36') === 13, 'Signature specials unlock from Mage level 5 to 13');
+  dummy.homeX = dummy.x = 512;
+}
+
 const frameCallback = nextFrame;
 frameCallback(game.lastFrameTime + 16);
 game.debugVisible = true;

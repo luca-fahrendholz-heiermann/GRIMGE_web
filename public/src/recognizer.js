@@ -1,5 +1,11 @@
 // GRIMGE Prototype — Rune Gesture Recognition System (High-Tolerance Radial & Angular Engine)
 import { BUFF_FORM_DATA } from './buff_forms_data.js';
+import { SIGNATURE_RUNE_DATA } from './signature_runes_data.js';
+import { RUNE_GUIDES } from './rune_guides.js';
+import { cloudOf, glyphDistance } from './glyph_match.js';
+const guideIdOf = (id) => (String(id).startsWith('buff_') ? 'buff_sigil' : String(id));
+const TEMPLATE_CACHE = new Map();
+const templateOf = (id) => { const key = guideIdOf(id); if (!RUNE_GUIDES[key]) return null; if (!TEMPLATE_CACHE.has(key)) TEMPLATE_CACHE.set(key, cloudOf(RUNE_GUIDES[key])); return TEMPLATE_CACHE.get(key); };
 export class RuneRecognizer {
   constructor() {
     this.runes = [
@@ -165,12 +171,52 @@ export class RuneRecognizer {
         isBuffForm: true,
         tags: ['arcane-state', 'max-1-per-deck'],
         desc: 'Special: the hourglass sigil ⧗ in one closed stroke — ARCANE STATE, max. 1 per deck'
+      })),
+      // Signature specials: one special rune each, each with its own complex
+      // multi-stroke glyph (rune_guides.js SIGNATURE_GLYPHS). Not Arcane States.
+      ...SIGNATURE_RUNE_DATA.map((d) => ({
+        id: 'sig_' + d.id,
+        name: d.name.toUpperCase(),
+        element: 'Signature Special',
+        glyph: '✦',
+        color: d.palette[2],
+        glowColor: d.palette[3],
+        icon: '✦',
+        isSignature: true,
+        tags: ['signature-special', 'special-rune'],
+        desc: `Special: its own multi-stroke glyph (see the trace guide) — ${d.systemType}`
       }))
     ];
   }
 
+  // Complex special glyphs are matched as point clouds against their
+  // templates and weighed against the templates of every other rune that
+  // could be meant (the hand): the special glyph must be clearly closer.
+  matchSignature(strokes, allowedRuneIds) {
+    const pts = strokes.flat();
+    if (pts.length < 8) return null;
+    let minX = Infinity; let maxX = -Infinity; let minY = Infinity; let maxY = -Infinity;
+    for (const p of pts) { minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x); minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y); }
+    if (Math.max(maxX - minX, maxY - minY) < 24) return null;
+    const cloud = cloudOf(strokes);
+    let best = null; let bestD = Infinity; let other = Infinity;
+    for (const id of new Set(allowedRuneIds)) {
+      const tmpl = templateOf(id); if (!tmpl) continue;
+      const d = glyphDistance(cloud, tmpl);
+      if (String(id).startsWith('sig_')) { if (d < bestD) { if (best) other = Math.min(other, bestD); best = id; bestD = d; } else other = Math.min(other, d); }
+      else other = Math.min(other, d);
+    }
+    if (!best || bestD > .085 || bestD > other * .8) return null;
+    const confidence = Math.max(.6, Math.min(.98, 1.05 - bestD * 5.2));
+    return { rune: this.runes.find((r) => r.id === best), confidence, grade: this.gradeForConfidence(confidence), bounds: { minX, maxX, minY, maxY, width: maxX - minX, height: maxY - minY } };
+  }
+
   recognize(strokes, allowedRuneIds = null) {
     if (!strokes || strokes.length === 0) return null;
+    if (allowedRuneIds?.some((id) => String(id).startsWith('sig_'))) {
+      const special = this.matchSignature(strokes, allowedRuneIds);
+      if (special) return special;
+    }
 
     const starScore = this.crossingStarScore(strokes);
     const rawPoints = [];

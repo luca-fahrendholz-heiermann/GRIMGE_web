@@ -11,6 +11,7 @@
 // rules in main.js, never by inventing a random spell).
 
 import { BUFF_FORM_DATA } from './buff_forms_data.js';
+import { SIGNATURE_RUNE_DATA } from './signature_runes_data.js';
 
 export const DELIVERY = Object.freeze({
   PROJECTILE: 'projectile', SALVO: 'salvo', HOMING: 'homing', BEAM: 'beam', CONE: 'cone', BURROW: 'burrow',
@@ -55,9 +56,12 @@ export const RUNE_MANA_COSTS = Object.freeze({
 });
 
 export const BUFF_RUNE_MANA = 30;
+// Signature specials bind their own mana (atlas suggestion 28–46).
+const SIGNATURE_MANA = Object.freeze(Object.fromEntries(SIGNATURE_RUNE_DATA.map((d) => ['sig_' + d.id, d.mana])));
 export function runeManaCost(runeOrId) {
   const id = typeof runeOrId === 'string' ? runeOrId : runeOrId?.id;
   if (String(id).startsWith('buff_')) return BUFF_RUNE_MANA;
+  if (SIGNATURE_MANA[id]) return SIGNATURE_MANA[id];
   return RUNE_MANA_COSTS[id] ?? 10;
 }
 
@@ -178,6 +182,22 @@ for (const form of BUFF_FORM_DATA) {
   SPELL_RECIPES_EXT[id] = id;
 }
 
+// Signature specials (research atlas S01–S36): special runes with their own
+// complex glyph, no combination, once per deck — NOT Arcane States. Their
+// mechanics live in signature_abilities_*.js (cast via signature_runes.js).
+const SIGNATURE_DELIVERY = { self: DELIVERY.SELF, ground: DELIVERY.ZONE, placement: DELIVERY.ZONE, dual: DELIVERY.ZONE, aim: DELIVERY.CAPTURE, direction: DELIVERY.DASH };
+export const SIGNATURE_SPELL_IDS = Object.freeze(SIGNATURE_RUNE_DATA.map((d) => 'sig_' + d.id));
+for (const d of SIGNATURE_RUNE_DATA) {
+  const id = 'sig_' + d.id;
+  SPELL_DEFINITIONS_EXT[id] = def(id, {
+    name: d.name.toUpperCase(), tier: 3, manaCost: d.mana, color: d.palette[2],
+    deliveryType: SIGNATURE_DELIVERY[d.targeting] ?? DELIVERY.SELF, targetingMode: d.targeting, isSpecial: true, isSignature: true, signatureId: d.id,
+    tags: Object.freeze(['signature-special', 'special-rune', 'max-1-copy']),
+    desc: d.howTo
+  });
+  SPELL_RECIPES_EXT[id] = id;
+}
+
 export const SPELL_DEFINITIONS = Object.freeze(SPELL_DEFINITIONS_EXT);
 export const SPELL_RECIPES = Object.freeze(SPELL_RECIPES_EXT);
 
@@ -275,6 +295,10 @@ export function spellHowTo(spellId) {
   const definition = SPELL_DEFINITIONS[spellId];
   if (!definition) return null;
   if (definition.isBuffForm) return { targeting: 'Draw the hourglass sigil ⧗ (the buff rune in your hand), then tap its slot: the form takes shape around you at once.', effect: buffHowTo(definition), summon: null };
+  if (definition.isSignature) {
+    const d = SIGNATURE_RUNE_DATA.find((x) => x.id === definition.signatureId);
+    return { targeting: `SIGNATURE SPECIAL · once per deck · draw its own multi-stroke glyph (Training shows the trace guide). ${TARGETING_HOW_TO[definition.targetingMode] ?? TARGETING_HOW_TO.self}`, effect: `${d.howTo} ¶ Counterplay: ${d.counterplay}`, summon: null };
+  }
   return {
     targeting: TARGETING_HOW_TO[definition.targetingMode] ?? TARGETING_HOW_TO.direction,
     effect: SPELL_HOW_TO[spellId] ?? definition.desc,
@@ -289,8 +313,9 @@ export const SOLO_RUNES = Object.freeze(['doppel', 'mortis']);
 
 export function isSpecialRune(rune) {
   const id = String(typeof rune === 'string' ? rune : rune?.id);
-  return id.startsWith('transform_') || id.startsWith('buff_') || SOLO_RUNES.includes(id);
+  return id.startsWith('transform_') || id.startsWith('buff_') || id.startsWith('sig_') || SOLO_RUNES.includes(id);
 }
+export const isSignatureRune = (rune) => String(typeof rune === 'string' ? rune : rune?.id).startsWith('sig_');
 export const isBuffRune = (rune) => String(typeof rune === 'string' ? rune : rune?.id).startsWith('buff_');
 
 // The runes a spell is made of (first recipe that forms it). Sky fields use

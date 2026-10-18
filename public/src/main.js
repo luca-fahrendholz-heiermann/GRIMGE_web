@@ -1722,9 +1722,9 @@ export class GameWorld {
     if (action === 'reset') deck.splice(0, deck.length, ...(target === 'player' ? this.profile.getMatchDeck() : DEFAULT_MATCH_DECK));
     else if (action === 'add') {
       if (!ALL_RUNE_IDS.includes(runeId) || !this.trainingDeckSource().isRuneUnlocked(runeId)) return false;
-      if (deck.length >= MATCH_DECK_SIZE || deck.filter((id) => id === runeId).length >= MAX_RUNE_COPIES) return false;
-      // Only one Arcane State rune per deck.
-      if (!deckAccepts(deck, runeId)) { this.showAnnouncement('ONE ARCANE STATE PER DECK', 1.2); return false; }
+      if (deck.length >= MATCH_DECK_SIZE) return false;
+      // Elemental runes twice, special runes once each; of all Arcane States only one.
+      if (!deckAccepts(deck, runeId)) { this.showAnnouncement(deck.includes(runeId) ? (deck.filter((id) => id === runeId).length >= 2 ? 'MAX 2 COPIES' : 'SPECIAL RUNES: ONCE PER DECK') : 'ONE ARCANE STATE PER DECK', 1.2); return false; }
       deck.push(runeId);
     } else if (action === 'remove') {
       const index = deck.lastIndexOf(runeId);
@@ -2136,6 +2136,11 @@ export class GameWorld {
     // Hostile walls can be worn down by melee, spells and projectiles.
     for (const spell of spells.activeSpells) {
       if (spell.isStoneWall && !spell.isDead && spell.team !== myTeam) targets.push(spell);
+    }
+    // Signature world instruments (anchors, plates, prisms …) can be broken
+    // by the other side; "hittableByAll" ones also react to their owner's hits.
+    for (const spell of spells.activeSpells) {
+      if (spell.isWorldProp && !spell.isDead && !spell.isFinished && (spell.team !== myTeam || spell.hittableByAll)) targets.push(spell);
     }
     // Breakable crates / barrels are neutral: every team can hit them.
     for (const prop of environment.livingProps()) targets.push(prop);

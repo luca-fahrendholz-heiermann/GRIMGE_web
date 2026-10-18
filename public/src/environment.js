@@ -345,7 +345,7 @@ export class EnvironmentSystem {
     const actors = [gameWorld.player, gameWorld.enemyChampion, ...(gameWorld.minions ?? []), ...summons].filter((actor) => actor && !actor.isDead && actor.lifeState !== 'Dead');
     for (const actor of actors) {
       actor.onIce = false;
-      if ((actor.elevation ?? 0) > 10 || actor.burrowed) {
+      if ((actor.elevation ?? 0) > 10 || actor.burrowed || actor.isHovering) {
         actor._inWater = false;
         continue;
       }

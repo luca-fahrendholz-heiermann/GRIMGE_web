@@ -69,6 +69,7 @@ function spellGroup(id) {
   const def = SPELL_DEFINITIONS[id];
   const recs = recipesFor(id);
   if (def.isBuffForm) return 'buff';
+  if (def.isSignature) return 'sig';
   if (recs.some((r) => r.some((x) => x.startsWith('transform_')))) return 'transform';
   if (recs.some((r) => r.length === 1 && SOLO_RUNES.includes(r[0]))) return 'solo';
   if (def.isSkyField) return 'sky';
@@ -76,7 +77,7 @@ function spellGroup(id) {
   return n === 1 ? 't1' : n === 2 ? 't2' : 't3';
 }
 
-const groups = { t1: [], solo: [], transform: [], t2: [], sky: [], t3: [], buff: [] };
+const groups = { t1: [], solo: [], transform: [], t2: [], sky: [], t3: [], buff: [], sig: [] };
 for (const id of Object.keys(SPELL_DEFINITIONS)) groups[spellGroup(id)].push(id);
 
 function spellBlock(id) {
@@ -138,13 +139,14 @@ P('## 2. Runen');
 P('');
 P('| Glyphe | Rune | Element | Icon | Farbe | Mana | Zeichnen | Allein ergibt |');
 P('|---|---|---|---|---|---|---|---|');
-for (const r of runes.filter((x) => !x.isBuffForm)) {
+for (const r of runes.filter((x) => !x.isBuffForm && !x.isSignature)) {
   const solo = SPELL_RECIPES[r.id] ? SPELL_DEFINITIONS[SPELL_RECIPES[r.id]]?.name : '—';
   const img = RUNE_GUIDES[r.id] ? `<img src="runes/${r.id}.svg" width="48" alt="${r.id}">` : r.glyph;
   P(`| ${img} | **${r.name}** \`${r.id}\` | ${r.element} | ${r.icon} | \`${r.color}\` | ${RUNE_MANA_COSTS[r.id] ?? 10} | ${r.desc} | ${solo} |`);
 }
 const buffRuneCount = runes.filter((x) => x.isBuffForm).length;
 P(`| <img src="runes/buff_sigil.svg" width="48" alt="buff"> | **ARCANE-STATE-SIEGEL** \`buff_*\` (${buffRuneCount} Runen) | Arcane State | ⧗ | je Form | 30 | Sanduhr ⧗ in einem geschlossenen Strich — **Tag: arcane-state · max-1-per-deck** | der Arcane State der Rune (Abschnitt 3.7) |`);
+P(`| <img src="runes/sig_S01.svg" width="48" alt="sig"> | **SIGNATURE-SPEZIALRUNEN** \`sig_*\` (${runes.filter((x) => x.isSignature).length} Runen) | Signature Special | ✦ | je Rune | 28–44 | **eigenes mehrstrichiges Symbol je Rune** (Abschnitt 3.8) — Tag: signature-special · je Rune 1× pro Deck | die Signature-Mechanik der Rune (Abschnitt 3.8) |`);
 P('');
 P('### Glyphen als ASCII (Ziffer = Startpunkt des Strichs)');
 P('');
@@ -153,6 +155,7 @@ P('```');
 P(runeAscii('buff_sigil'));
 P('```');
 for (const r of runes.filter((x) => !x.isBuffForm)) {
+  if (r.isSignature) continue; // drawn in section 3.8
   const ascii = runeAscii(r.id);
   if (!ascii) continue;
   P(`**${r.icon} ${r.name}** — ${r.desc}`);
@@ -229,6 +232,16 @@ for (const [key, spell] of Object.entries(SPELL_RECIPES)) {
   if (parts.length === 3) P(`| ${recipeLabel(parts)} | **${SPELL_DEFINITIONS[spell].name}**${key === 'bestia+ignis+ventus' ? ' (als „INFERNO DRAGON INVOCATION“)' : ''} |`);
 }
 P('');
+// Signature specials (research atlas): own glyph, own mechanic, once per deck.
+const { SIGNATURE_RUNE_DATA } = await load('public/src/signature_runes_data.js');
+P('### 3.8 Signature-Spezialrunen (Spezialrunen · Tag: signature-special · je Rune 1× pro Deck · keine Arcane States)');
+P('');
+P('Quelle: `docs/GRIMGE_Spezialrunen_Research_Designatlas_V1.md` (S01–S36). Spezialrunen tauschen Zeichenzeit gegen Stärke: **jede hat ein eigenes, komplexeres Symbol aus mehreren Strichen** (Punktwolken-Erkennung gegen die Vorlage, Strichreihenfolge und -richtung egal) und braucht keine Kombination. Elementarrunen dürfen 2× ins Deck, jede Spezialrune 1×; mehrere verschiedene Signature-Runen sind erlaubt. Sie verwandeln den Wizard nie (keine Arcane States) — nur VFX/Attachments und eigene Welt-Instanzen. Nicht jede ist übermächtig; einige sind bewusst kleine Fanmade-Spells.');
+P('');
+P('| ID | Glyphe | Rune | Gruppe · Typ | Ziel | Mana | Wirkung im Spiel | Visuelle Identität | Counterplay |');
+P('|---|---|---|---|---|---|---|---|---|');
+for (const d of SIGNATURE_RUNE_DATA) P(`| ${d.id} | <img src="runes/sig_${d.id}.svg" width="48" alt="sig_${d.id}"> | **${d.name}** \`sig_${d.id}\` | ${d.group.split(' · ')[0]} · ${d.systemType}${d.duration ? ` · ${d.duration} s` : ''} | \`${d.targeting}\` | ${d.mana} | ${d.howTo} | ${d.identity} | ${d.counterplay} |`);
+P('');
 P('Hinweis: `DRAGON INVOCATION` hat zwei Rezepte (Bestia+Ignis+Ventus und Fulgur+Ignis+Terra). Von den 220 möglichen Drei-Runen-Kombinationen der Basisrunen (mit Wiederholung) sind nur wenige belegt.');
 P('');
 
@@ -273,7 +286,7 @@ P('');
 P('## 7. Statistik');
 P('');
 const counts = Object.fromEntries(Object.entries(groups).map(([k, v]) => [k, v.length]));
-P(`- Runen: ${runes.length} (davon 10 Basis, 2 Solo-Spezial, 3 Transformation)`);
+P(`- Runen: ${runes.length} (davon 10 Basis, 2 Solo-Spezial, ${groups.sig.length} Signature-Spezial, ${groups.buff.length} Arcane States, 3 Transformation)`);
 P(`- Spells: ${Object.keys(SPELL_DEFINITIONS).length} — Fundamental ${counts.t1}, Solo ${counts.solo}, Compound ${counts.t2}, Himmelsfelder ${counts.sky}, Advanced ${counts.t3}, Transformation ${counts.transform}`);
 P(`- Rezepte: ${Object.keys(SPELL_RECIPES).length} · freie Zwei-Runen-Paare: ${freePairs.length} von 55`);
 P('');
