@@ -12,6 +12,7 @@ import { drawBeastBomb, drawSpiritBow } from './form_attacks.js';
 import { FULL_CHARGE_TIME, activeMoveset, releaseFormTechnique, FORM_PALETTES } from './form_moves.js';
 import { releaseWeaponReach, releaseFormPull, isOnCastle } from './hold_actions.js';
 import { formDive, FORM_SPECIAL_MANA, tickFormSpecials } from './form_specials.js';
+import { renderInfusion } from './nature_spells.js';
 import { hasWeaponDown, castWeaponDown, weaponUp, weaponDive, updateWeaponKit, weaponMoveMult, weaponAttackSpeed, meleeBuffMods, targetDamageMult, onWeaponMeleeHit, afterWeaponSwing, weaponIncoming } from './weapon_kits.js';
 import { updatePrimalBond, bondMoveMultiplier, bondGainMultiplier, bondDisplacement, bondOnBlock, primalSprintVariant, renderPrimalBond, endPrimalBond, bondMelee, primalQuake } from './primals.js';
 import { createSegments, damageSegments, updateSegments, renderSegments } from './castle_segments.js';
@@ -1669,6 +1670,7 @@ export class Player extends GroundEntity {
     if (this.isAlive) renderBuffManifestation(ctx, this, renderY, 'front');
     if (this.isAlive) renderSignatureStance(ctx, this, renderY, 'front');
     if (this.isAlive && this.primalBond) renderPrimalBond(ctx, this, renderY, 'front');
+    if (this.isAlive && this.weaponInfusion) renderInfusion(ctx, this, renderY);
     if (this.isAlive) {
       const ratio = Math.max(0, this.hp / this.maxHp);
       ctx.save();

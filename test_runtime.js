@@ -2648,6 +2648,47 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   buff.endBuffForm(P); spells.clearRuntime(); P.grounded = true; P.elevation = 0;
 }
 
+// Block 4a: NATURA, heal circles, the world tree (platforms), spell geometry and weapon infusions.
+{
+  const NS = await import('./public/src/nature_spells.js');
+  const G = await import('./public/src/geometry.js');
+  const { lookupRecipe, SPELL_DEFINITIONS } = await import('./public/src/spell_catalog.js');
+  const { ALL_RUNE_IDS } = await import('./public/src/progression.js');
+  game.returnToHub(); game.setMatchMode('training'); game.startMatch(); game.selectTrainingMap('waterfalls');
+  const P = game.player; const dummy = game.trainingDummy;
+  const neutral = { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false };
+  const strict = new Proxy({}, { get: (t, k) => (k === 'ellipse' || k === 'arc') ? (x, y, rx, ry) => { if (rx < 0 || (k === 'ellipse' && ry < 0)) throw new Error('IndexSizeError ' + k); } : (k === 'canvas' ? undefined : (k === 'measureText' ? () => ({ width: 10 }) : () => {})), set: () => true });
+  const R = (ids) => lookupRecipe(ids.map((id) => ({ id })))?.id;
+  assert(ALL_RUNE_IDS.includes('natura') && R(['natura']) === 'heal_bloom' && R(['natura', 'terra']) === 'thorn_growth' && R(['terra', 'aqua', 'natura']) === 'world_tree' && R(['construct', 'ignis']) === 'flame_edge', 'NATURA is an elemental rune with its own combinations (Weltenbaum = Terra + Aqua + Natura, infusions = Konstrukt + element)');
+  const reset = () => { spells.clearRuntime(); P.x = 300; P.z = .5; P.facing = 1; P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.hp = P.maxHp; P.weaponInfusion = null; game.battlefield.placeOnSurface(P); dummy.homeX = dummy.x = 380; dummy.homeZ = dummy.z = .5; dummy.hp = dummy.maxHp; };
+  const step = (n) => { for (let i = 0; i < n; i++) { P.update(1 / 60, neutral, game.battlefield, game); spells.update(1 / 60, game); } };
+  const broken = [];
+  for (const id of [...NS.NATURE_SPELL_IDS, ...Object.keys(NS.INFUSION_SPELLS)]) {
+    try { reset(); spells.cast(P, SPELL_DEFINITIONS[id], game, null, { x: 420, z: .5 }); for (let i = 0; i < 90; i++) { step(1); if (i % 15 === 0) for (const sp of spells.activeSpells) sp.render?.(strict); } } catch (e) { broken.push(id + ': ' + e.message); }
+  }
+  assert(!broken.length, 'Every NATURA spell and weapon infusion casts, runs and renders ' + broken.slice(0, 3).join(' | '));
+  reset(); P.hp = P.maxHp - 100; spells.cast(P, SPELL_DEFINITIONS.heal_bloom, game); step(185);
+  assert(P.hp > P.maxHp - 100 + 30, 'HEILBLÜTE: the magic circle heals over time');
+  reset(); spells.cast(P, SPELL_DEFINITIONS.thorn_growth, game); step(30);
+  assert(dummy.hp < dummy.maxHp, 'DORNENWUCHS: the brambles catch the foe ahead');
+  // World tree: branches are real platforms — the Wizard lands on one and stands there.
+  reset(); spells.cast(P, SPELL_DEFINITIONS.world_tree, game, null, { x: 520, z: .5 }); step(150);
+  const tree = spells.activeSpells.find((s) => s.isWorldTree);
+  assert(tree && (game.battlefield.dynamicSurfaces ?? []).length === 2 && game.getHostileTargets('red').includes(tree) && !game.getHostileTargets('blue').includes(tree), 'WELTENBAUM grows with two branch platforms; it is breakable only by the other team');
+  const branch = tree.branches[0];
+  P.x = branch.x; P.z = branch.z; P.grounded = false; P.elevation = 0; P.surfaceHeight = 0; P.vElevation = 0;
+  P.elevation = branch.height + 20; step(60);
+  assert(P.grounded && P.surfaceId === branch.surface.id && Math.abs(P.worldHeight - branch.height) < 4, 'A Wizard falling onto a world-tree branch lands and stands on it');
+  // A spell pillar emerging under a foe: hit, and a hero standing in it rides it up.
+  reset(); const pillar = G.spawnPlatform(spells, P, game, { x: 300, z: .5, height: 80, life: 2, look: 'stone', damage: 0 }); step(30);
+  assert(Math.abs(P.worldHeight - 80) < 4 && P.surfaceId === pillar.surface.id, 'A pillar rising under the Wizard carries him up (platform)');
+  step(120); assert(P.worldHeight < 4 && !(game.battlefield.dynamicSurfaces ?? []).includes(pillar.surface), 'When the pillar decays the Wizard comes down and the surface is gone');
+  // Infusion: a flame blade burns on hit.
+  reset(); spells.cast(P, SPELL_DEFINITIONS.flame_edge, game); dummy.homeX = dummy.x = P.x + 12; P.executeAttack(neutral, 'normal');
+  assert(P.weaponInfusion?.element === 'fire' && P.weaponInfusion.hits === 1 && dummy.hp < dummy.maxHp, 'FLAMMENKLINGE: the infused weapon burns on hit');
+  reset();
+}
+
 // Movement after the Unity original: rooted attacks, full combos on a target in front, long sprint jump, auto-run.
 {
   game.returnToHub(); game.setMatchMode('training'); game.startMatch(); game.selectTrainingMap('waterfalls');

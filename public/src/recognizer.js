@@ -6,6 +6,8 @@ import { cloudOf, glyphDistance } from './glyph_match.js';
 const guideIdOf = (id) => (String(id).startsWith('buff_') ? 'buff_sigil' : String(id));
 const TEMPLATE_CACHE = new Map();
 const templateOf = (id) => { const key = guideIdOf(id); if (!RUNE_GUIDES[key]) return null; if (!TEMPLATE_CACHE.has(key)) TEMPLATE_CACHE.set(key, cloudOf(RUNE_GUIDES[key])); return TEMPLATE_CACHE.get(key); };
+// Runes recognised by point-cloud template (complex glyphs): signature specials and NATURA's leaf.
+const isTemplateRune = (id) => String(id).startsWith('sig_') || id === 'natura';
 export class RuneRecognizer {
   constructor() {
     this.runes = [
@@ -98,6 +100,16 @@ export class RuneRecognizer {
         glowColor: '#fff8e1',
         icon: '☀',
         desc: 'Star: four crossing lines (+ then ×)'
+      },
+      {
+        id: 'natura',
+        name: 'NATURA',
+        element: 'Nature',
+        glyph: '❦',
+        color: '#7ddc5a',
+        glowColor: '#d8f5b0',
+        icon: '🌿',
+        desc: 'Leaf: a closed leaf outline, then its midrib'
       },
       {
         id: 'umbra',
@@ -203,7 +215,7 @@ export class RuneRecognizer {
     for (const id of new Set(allowedRuneIds)) {
       const tmpl = templateOf(id); if (!tmpl) continue;
       const d = glyphDistance(cloud, tmpl);
-      if (String(id).startsWith('sig_')) { if (d < bestD) { if (best) other = Math.min(other, bestD); best = id; bestD = d; } else other = Math.min(other, d); }
+      if (isTemplateRune(id)) { if (d < bestD) { if (best) other = Math.min(other, bestD); best = id; bestD = d; } else other = Math.min(other, d); }
       else other = Math.min(other, d);
     }
     if (!best || bestD > .085 || bestD > other * .8) return null;
@@ -213,7 +225,7 @@ export class RuneRecognizer {
 
   recognize(strokes, allowedRuneIds = null) {
     if (!strokes || strokes.length === 0) return null;
-    if (allowedRuneIds?.some((id) => String(id).startsWith('sig_'))) {
+    if (allowedRuneIds?.some(isTemplateRune)) {
       const special = this.matchSignature(strokes, allowedRuneIds);
       if (special) return special;
     }

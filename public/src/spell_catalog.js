@@ -47,7 +47,7 @@ export const SHADOW_STOMP = Object.freeze({ range: 320, halfAngle: .62 });
 // Values are first playtest numbers (concept doc §11 keeps them open).
 export const RUNE_MANA_COSTS = Object.freeze({
   ignis: 10, ventus: 10, fulgur: 12, terra: 10, aqua: 10,
-  bestia: 18, construct: 16, void: 16, lux: 12, umbra: 12,
+  bestia: 18, construct: 16, void: 16, lux: 12, umbra: 12, natura: 12,
   // Solo special runes: one hard glyph, a full spell on its own, never fused.
   doppel: 22, mortis: 26,
   // Arcane State special runes (max. one per deck) share one cost.
@@ -129,6 +129,24 @@ const SPELL_DEFINITIONS_EXT = {
   mirror_gate: def('mirror_gate', { name: 'FROST MIRROR GATE', tier: 2, color: '#80deea', deliveryType: DELIVERY.ZONE, desc: 'Set two points: an ice mirror rises at each. Step into one to come out of the other — an escape route back to the entrance of a long Dungeon room, or a sudden flank.' }),
   soul_seekers: def('soul_seekers', { name: 'SOUL SEEKERS', tier: 2, color: '#ea80fc', deliveryType: DELIVERY.HOMING, interactionTags: ['reflectable', 'capturable', 'blockable'], desc: 'A salvo of three homing void flames that steer toward enemies within a turn limit.' }),
 
+  // NATURA (nature) and heal circles, persistent growth (nature_spells.js).
+  heal_bloom: def('heal_bloom', { name: 'HEILBLÜTE', color: '#9be36a', deliveryType: DELIVERY.SELF, targetingMode: TARGETING.SELF, desc: 'A magic circle of blossoms at your feet heals you and nearby allies over 3 s and washes slows away.' }),
+  great_bloom: def('great_bloom', { name: 'GROSSE BLÜTE', tier: 2, color: '#b2ff59', deliveryType: DELIVERY.SELF, targetingMode: TARGETING.SELF, desc: 'A wide blossom circle: strong healing over 4 s and a light shield for every ally inside.' }),
+  healing_spring: def('healing_spring', { name: 'HEILQUELLE', tier: 2, color: '#81d4fa', deliveryType: DELIVERY.ZONE, targetingMode: TARGETING.SELF, desc: 'A spring wells up: allies standing in it heal and regain mana for 6 s.' }),
+  blessing_circle: def('blessing_circle', { name: 'SEGENSKREIS', tier: 2, color: '#ffe082', deliveryType: DELIVERY.SELF, targetingMode: TARGETING.SELF, desc: 'A golden circle: allies inside heal at once and take 25 % less damage for 5 s.' }),
+  thorn_growth: def('thorn_growth', { name: 'DORNENWUCHS', tier: 2, color: '#8d6e63', deliveryType: DELIVERY.AREA, desc: 'Brambles burst out along the ground ahead: they root whoever they catch and stay as a thorny hazard for 6 s.' }),
+  poison_swamp: def('poison_swamp', { name: 'GIFTSUMPF', tier: 2, color: '#7cb342', deliveryType: DELIVERY.ZONE, targetingMode: TARGETING.GROUND, desc: 'A poisonous swamp at the target point slows and poisons foes for 7 s.' }),
+  pollen_storm: def('pollen_storm', { name: 'POLLENSTURM', tier: 2, color: '#f0f4c3', deliveryType: DELIVERY.CONE, desc: 'A cone of drifting spores puts foes to sleep for a moment and slows them.' }),
+  wildfire_seeds: def('wildfire_seeds', { name: 'FLAMMENSAMEN', tier: 2, color: '#ff7043', deliveryType: DELIVERY.AREA, desc: 'Four seeds are planted ahead; after a moment each bursts into fire and scorches the ground.' }),
+  world_tree: def('world_tree', { name: 'WELTENBAUM', tier: 3, color: '#7ddc5a', deliveryType: DELIVERY.ZONE, targetingMode: TARGETING.GROUND, desc: 'A giant tree grows and stays until it is cut down (or 25 s): it heals allies around it, swallows hostile projectiles, and its branches are platforms to stand on.' }),
+  // Weapon infusions (CONSTRUCT = the weapon rune + an element).
+  flame_edge: def('flame_edge', { name: 'FLAMMENKLINGE', tier: 2, color: '#ff7043', deliveryType: DELIVERY.SELF, targetingMode: TARGETING.SELF, desc: 'Your weapon (or fists) burns for 12 s: melee hits set foes on fire.' }),
+  frost_edge: def('frost_edge', { name: 'FROSTKLINGE', tier: 2, color: '#80deea', deliveryType: DELIVERY.SELF, targetingMode: TARGETING.SELF, desc: 'Frost weapon for 12 s: hits slow, every third hit freezes.' }),
+  storm_edge: def('storm_edge', { name: 'STURMKLINGE', tier: 2, color: '#ffee58', deliveryType: DELIVERY.SELF, targetingMode: TARGETING.SELF, desc: 'Storm weapon for 12 s: hits shock and a spark jumps to a second foe.' }),
+  venom_edge: def('venom_edge', { name: 'GIFTKLINGE', tier: 2, color: '#9ccc65', deliveryType: DELIVERY.SELF, targetingMode: TARGETING.SELF, desc: 'Venom weapon for 12 s: hits poison foes for 4 s.' }),
+  blood_edge: def('blood_edge', { name: 'BLUTKLINGE', tier: 2, color: '#e53935', deliveryType: DELIVERY.SELF, targetingMode: TARGETING.SELF, desc: 'Blood weapon for 12 s: every melee hit heals you for a fifth of its damage.' }),
+  rending_edge: def('rending_edge', { name: 'REISSKLINGE', tier: 2, color: '#d84315', deliveryType: DELIVERY.SELF, targetingMode: TARGETING.SELF, desc: 'Rending weapon for 12 s: hits make foes bleed for 3 s.' }),
+
   // ── Advanced (three runes) ─────────────────────────────────────────────
   // Engines of the buff runes B02 / B01 (formerly 3-rune recipes).
   eidolon_mantle: def('eidolon_mantle', { name: 'ARKENGESTELL', tier: 3, manaCost: 45, cooldown: 18, color: '#8e67f0', deliveryType: DELIVERY.SELF, desc: 'An open arcane force frame around the Wizard: damage resistance, knockback resistance and empowered melee.' }),
@@ -160,11 +178,15 @@ const SPELL_RECIPES_EXT = {
   'aqua+void': 'mirror_gate', 'terra+umbra': 'shadow_stomper', 'lux+lux': 'radiant_lance',
   'ignis+lux': 'solar_orb', 'aqua+umbra': 'lunar_orb', 'lux+umbra': 'eclipse', 'fulgur+umbra': 'thunderhead',
   'ignis+umbra': 'blood_moon', 'lux+ventus': 'starfall', 'aqua+lux': 'aurora_veil',
+  natura: 'heal_bloom', 'natura+natura': 'great_bloom', 'aqua+natura': 'healing_spring', 'lux+natura': 'blessing_circle',
+  'natura+terra': 'thorn_growth', 'natura+umbra': 'poison_swamp', 'natura+ventus': 'pollen_storm', 'ignis+natura': 'wildfire_seeds',
+  'construct+ignis': 'flame_edge', 'aqua+construct': 'frost_edge', 'construct+fulgur': 'storm_edge', 'construct+natura': 'venom_edge', 'construct+umbra': 'blood_edge', 'bestia+construct': 'rending_edge',
 
   'bestia+terra+void': 'void_implosion', 'bestia+ignis+void': 'inferno_rampage',
   'bestia+ignis+ventus': 'dragon_invocation', 'bestia+terra+ventus': 'summon_rune_snake',
   'aqua+terra+ventus': 'summon_spirit_wolf', 'fulgur+terra+terra': 'summon_siege_golem',
-  'fulgur+ignis+terra': 'dragon_invocation', 'fulgur+ignis+ventus': 'apocalyptic_heavensurge'
+  'fulgur+ignis+terra': 'dragon_invocation', 'fulgur+ignis+ventus': 'apocalyptic_heavensurge',
+  'aqua+natura+terra': 'world_tree'
 };
 
 // Arcane States (atlas buff transformations B01, B02, T01–T40): one special rune each.

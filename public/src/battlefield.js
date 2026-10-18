@@ -300,7 +300,8 @@ export class Battlefield {
     // Main arena is the fallback; elevated authored surfaces take priority.
     // A landing-only Arena platform is never a walk-up ledge. A character
     // must be falling from at least its top height, or already stand on it.
-    const candidates = [...this.surfaces].reverse().filter((surface) => surfaceContains(surface, x, z));
+    // Spell geometry (geometry.js: pillars, platforms, the world tree) is checked first.
+    const candidates = [...this.surfaces, ...(this.dynamicSurfaces ?? [])].reverse().filter((surface) => surfaceContains(surface, x, z));
     for (const surface of candidates) {
       if (!surface.landingOnly || !entity) return surface;
       if (entity.surfaceId === surface.id) return surface;

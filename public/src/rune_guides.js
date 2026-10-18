@@ -73,6 +73,8 @@ export const RUNE_GUIDES = Object.freeze({
   construct: [[[0, -1], [0, 1]]],
   void: [Array.from({ length: 41 }, (_, i) => { const a = i / 40 * Math.PI * 3; const r = .1 + i / 40 * .8; return [Math.cos(a) * r, Math.sin(a) * r]; })],
   lux: [[[-.9, 0], [.9, 0]], [[0, -.9], [0, .9]], [[-.65, -.65], [.65, .65]], [[.65, -.65], [-.65, .65]]],
+  // NATURA: a leaf — closed pointed outline (bottom → right → top → left), then the midrib with its stem.
+  natura: [[...Array.from({ length: 13 }, (_, i) => { const u = i / 12; return [Math.sin(u * Math.PI) * .55, .8 - u * 1.65]; }), ...Array.from({ length: 12 }, (_, i) => { const u = (i + 1) / 12; return [-Math.sin(u * Math.PI) * .55, -.85 + u * 1.65]; })], [[0, 1], [0, .45], [0, -.1], [0, -.7]]],
   umbra: [Array.from({ length: 31 }, (_, i) => { const a = Math.PI * .3 + i / 30 * Math.PI * 1.4; return [Math.cos(a) * .8, Math.sin(a) * .8]; })],
   doppel: [Array.from({ length: 61 }, (_, i) => { const t = i / 60 * Math.PI * 2; return [Math.sin(t) * .95, Math.sin(t) * Math.cos(t) * .9]; })],
   mortis: [Array.from({ length: 6 }, (_, k) => { const a = -Math.PI / 2 + k * Math.PI * 4 / 5; return [Math.cos(a) * .85, Math.sin(a) * .85]; })],

@@ -9,6 +9,7 @@ import { ShadowStomperSpell, HaloPulseSpell, castShadowStep, alliesOf } from './
 import { raiseMirrorGate } from './portal.js';
 import { activateBuffForm } from './buff_forms.js';
 import { castSignature, signatureProjectileSpawned, updateSignatureWorld } from './signature_runes.js';
+import { castNatureSpell, isNatureOrInfusion } from './nature_spells.js';
 import { BeamSpell, BeamClash, resolveBeamInteractions, MirrorWardSpell, GravityLiftSpell, TitanStompSpell, SoulSeekerBolt, SeismicSlamSpell, ConeBreathSpell, BurrowStrikeSpell, ShieldBubbleSpell, renderPixelated } from './abilities.js';
 
 export { BeamClash };
@@ -166,6 +167,8 @@ export class SpellSystem {
     this.activeClashes = [];
     this.graves = [];
     sky.clear();
+    // Spell geometry dies with its spells.
+    if (globalThis.window?.gameWorld?.battlefield) globalThis.window.gameWorld.battlefield.dynamicSurfaces = [];
   }
 
   // A fallen fighter leaves a grave a Revenant Call can raise for a while.
@@ -240,6 +243,8 @@ export class SpellSystem {
     if (spellDef.isBuffForm) { activateBuffForm(caster, spellDef.buffFormId, castQuality, this); return; }
     // Signature special runes (own glyph, own mechanic; not Arcane States).
     if (spellDef.isSignature) { castSignature(this, caster, spellDef, castQuality, target, gameWorld); return; }
+    // NATURA spells, heal circles, the world tree and weapon infusions (nature_spells.js).
+    if (isNatureOrInfusion(spellDef.id)) { castNatureSpell(this, caster, spellDef.id, castQuality, target, gameWorld); return; }
 
     switch (spellDef.id) {
       case 'fireball': {

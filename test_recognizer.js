@@ -205,11 +205,17 @@ assert(recognizer.recognize(starLines.slice(0, 3))?.rune.id === 'lux', 'Recogniz
 assert(recognizer.recognize([lineStroke(100, 150, 300, 150), lineStroke(100, 250, 300, 250)], ['lux', 'ventus'])?.rune.id !== 'lux', 'Recognize: two parallel lines are not a LUX star');
 const { RUNE_GUIDES, guideStrokes } = await import('./public/src/rune_guides.js');
 const BASE_HAND = ['ignis', 'ventus', 'fulgur', 'terra', 'aqua', 'bestia', 'construct', 'void', 'lux', 'umbra', 'doppel', 'mortis'];
+// NATURA's leaf glyph (template rune): found with its hand, never steals a circle or a line.
+{
+  const hand = ['aqua', 'construct', 'natura', 'terra', 'ignis'];
+  assert(recognizer.recognize(guideStrokes('natura', 400, 300, 130), hand)?.rune.id === 'natura', 'Recognize: the leaf glyph is NATURA');
+  assert(recognizer.recognize(guideStrokes('aqua', 400, 300, 130), hand)?.rune.id === 'aqua' && recognizer.recognize(guideStrokes('construct', 400, 300, 130), hand)?.rune.id === 'construct', 'Recognize: a circle stays AQUA and a line stays KONSTRUKT next to NATURA');
+}
 const guideMisses = Object.keys(RUNE_GUIDES).filter((key) => {
   // The buff sigil resolves to whichever buff rune is in the hand.
   const id = key === 'buff_sigil' ? 'buff_T13' : key;
   // Special glyphs (buff sigil, signature specials) are matched when that rune is in the hand.
-  const free = recognizer.recognize(guideStrokes(id, 400, 300, 150), key === 'buff_sigil' || key.startsWith('sig_') ? [...BASE_HAND, id] : null);
+  const free = recognizer.recognize(guideStrokes(id, 400, 300, 150), key === 'buff_sigil' || key.startsWith('sig_') || key === 'natura' ? [...BASE_HAND, id] : null);
   const own = recognizer.recognize(guideStrokes(id, 400, 300, 110), [id]);
   return free?.rune.id !== id || own?.grade !== 'S';
 });

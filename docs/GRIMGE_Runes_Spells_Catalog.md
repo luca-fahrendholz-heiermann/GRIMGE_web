@@ -38,6 +38,7 @@
 | <img src="runes/construct.svg" width="48" alt="construct"> | **KONSTRUKT** `construct` | Construct | ⚙️ | `#b0bec5` | 16 | Tall Pillar / Tower Stroke | CONSTRUCT BULWARK |
 | <img src="runes/void.svg" width="48" alt="void"> | **VOID** `void` | Void | 🕳️ | `#8e24aa` | 16 | Open Spiral / Void Eye | VOID BOLT |
 | <img src="runes/lux.svg" width="48" alt="lux"> | **LUX** `lux` | Light | ☀ | `#ffe082` | 12 | Star: four crossing lines (+ then ×) | HALO PULSE |
+| <img src="runes/natura.svg" width="48" alt="natura"> | **NATURA** `natura` | Nature | 🌿 | `#7ddc5a` | 12 | Leaf: a closed leaf outline, then its midrib | HEILBLÜTE |
 | <img src="runes/umbra.svg" width="48" alt="umbra"> | **UMBRA** `umbra` | Shadow | ☾ | `#7e57c2` | 12 | Open crescent arc (C shape) | SHADOW STEP |
 | <img src="runes/doppel.svg" width="48" alt="doppel"> | **DOPPEL** `doppel` | Shadow | ♊ | `#5e35b1` | 22 | Special: one closed figure-eight (∞) — your shadow double | SHADOW DOPPELGANGER |
 | <img src="runes/mortis.svg" width="48" alt="mortis"> | **MORTIS** `mortis` | Death | ☠ | `#9ccc65` | 26 | Special: a five-pointed star in one stroke — raise the fallen | REVENANT CALL |
@@ -169,6 +170,18 @@
    #    #    #
         #
 ```
+**🌿 NATURA** — Leaf: a closed leaf outline, then its midrib
+```
+
+      #####
+     ## # ##
+    ##  #  ##
+    #   #   #
+    ##  #  ##
+     ## # ##
+       #1#
+        2
+```
 **☾ UMBRA** — Open crescent arc (C shape)
 ```
 
@@ -222,6 +235,7 @@
 | **VOID BOLT** | 🕳️ VOID | `projectile` | `direction` | Fires a void projectile that slows the first target hit. |
 | **HALO PULSE** | ☀ LUX | `area` | `self` | A ring of sunlight: heals you and nearby allies, sears and dazzles nearby enemies. |
 | **SHADOW STEP** | ☾ UMBRA | `dash` | `direction` | Sink into your shadow and rise behind the nearest enemy ahead and strike it from its shadow. |
+| **HEILBLÜTE** | 🌿 NATURA | `self` | `self` | A magic circle of blossoms at your feet heals you and nearby allies over 3 s and washes slows away. |
 | **SHADOW DOPPELGANGER** | ♊ DOPPEL | `summon` | `self` | Your shadow rises as a weaker double with its own health and fights beside you. Casting again replaces the oldest double (Shadow passives keep more at once). |
 | **REVENANT CALL** | ☠ MORTIS | `summon` | `self` | A forbidden seal raises the nearest fallen fighter as a bound revenant; when its borrowed body breaks it bursts. Casting again replaces the oldest revenant. |
 | **STORM WOLF** | 🐺 BESTIA + ⚡ FULGUR | `summon` | `direction` | A lightning Hunter that bypasses the minion line to chase the Wizard. |
@@ -250,6 +264,19 @@
 | **RADIANT LANCE** | ☀ LUX + ☀ LUX | `beam` | `direction` | A blinding beam of light that dazzles what it touches. Clashable. |
 | **FROST MIRROR GATE** | ❄️ AQUA + 🕳️ VOID | `zone` | `dual` | Set two points: an ice mirror rises at each. Step into one to come out of the other — an escape route back to the entrance of a long Dungeon room, or a sudden flank. |
 | **SOUL SEEKERS** | 🔥 IGNIS + 🕳️ VOID | `homing` | `direction` | A salvo of three homing void flames that steer toward enemies within a turn limit. |
+| **GROSSE BLÜTE** | 🌿 NATURA + 🌿 NATURA | `self` | `self` | A wide blossom circle: strong healing over 4 s and a light shield for every ally inside. |
+| **HEILQUELLE** | ❄️ AQUA + 🌿 NATURA | `zone` | `self` | A spring wells up: allies standing in it heal and regain mana for 6 s. |
+| **SEGENSKREIS** | ☀ LUX + 🌿 NATURA | `self` | `self` | A golden circle: allies inside heal at once and take 25 % less damage for 5 s. |
+| **DORNENWUCHS** | 🌿 NATURA + 🪨 TERRA | `area` | `direction` | Brambles burst out along the ground ahead: they root whoever they catch and stay as a thorny hazard for 6 s. |
+| **GIFTSUMPF** | 🌿 NATURA + ☾ UMBRA | `zone` | `ground` | A poisonous swamp at the target point slows and poisons foes for 7 s. |
+| **POLLENSTURM** | 🌿 NATURA + 💨 VENTUS | `cone` | `direction` | A cone of drifting spores puts foes to sleep for a moment and slows them. |
+| **FLAMMENSAMEN** | 🔥 IGNIS + 🌿 NATURA | `area` | `direction` | Four seeds are planted ahead; after a moment each bursts into fire and scorches the ground. |
+| **FLAMMENKLINGE** | ⚙️ KONSTRUKT + 🔥 IGNIS | `self` | `self` | Your weapon (or fists) burns for 12 s: melee hits set foes on fire. |
+| **FROSTKLINGE** | ❄️ AQUA + ⚙️ KONSTRUKT | `self` | `self` | Frost weapon for 12 s: hits slow, every third hit freezes. |
+| **STURMKLINGE** | ⚙️ KONSTRUKT + ⚡ FULGUR | `self` | `self` | Storm weapon for 12 s: hits shock and a spark jumps to a second foe. |
+| **GIFTKLINGE** | ⚙️ KONSTRUKT + 🌿 NATURA | `self` | `self` | Venom weapon for 12 s: hits poison foes for 4 s. |
+| **BLUTKLINGE** | ⚙️ KONSTRUKT + ☾ UMBRA | `self` | `self` | Blood weapon for 12 s: every melee hit heals you for a fifth of its damage. |
+| **REISSKLINGE** | 🐺 BESTIA + ⚙️ KONSTRUKT | `self` | `self` | Rending weapon for 12 s: hits make foes bleed for 3 s. |
 | **SOLAR ORB** | 🔥 IGNIS + ☀ LUX | `self` | `self` | Summons a sun: bright light, short shadows. Fire and light grow stronger, ice melts fast, shadow magic weakens. |
 | **LUNAR ORB** | ❄️ AQUA + ☾ UMBRA | `self` | `self` | Summons a moon: long shadows and a rising tide. Water, ice and shadow grow stronger, puddles slow and conduct harder, fire weakens. |
 | **ECLIPSE** | ☀ LUX + ☾ UMBRA | `self` | `self` | Sun and moon meet: light and shadow magic surge, every other element dims, shadows grow huge. |
@@ -259,6 +286,7 @@
 | **AURORA VEIL** | ❄️ AQUA + ☀ LUX | `self` | `self` | Northern lights: your side slowly regenerates health and mana, ice grows stronger. |
 | **VOID IMPLOSION** | 🐺 BESTIA + 🪨 TERRA + 🕳️ VOID | `zone` | `ground` | Creates a void singularity that pulls enemies in and crushes them with dimensional collapse. |
 | **INFERNO RAMPAGE** | 🐺 BESTIA + 🔥 IGNIS + 🕳️ VOID | `dash` | `direction` | Blazing fire dash that scorches everything in its path across the lane. |
+| **WELTENBAUM** | ❄️ AQUA + 🌿 NATURA + 🪨 TERRA | `zone` | `ground` | A giant tree grows and stays until it is cut down (or 25 s): it heals allies around it, swallows hostile projectiles, and its branches are platforms to stand on. |
 | **ARKENGESTELL** |  | `self` | `self` | An open arcane force frame around the Wizard: damage resistance, knockback resistance and empowered melee. |
 | **RISSWILD** |  | `self` | `self` | Three cracked molten energy bands: faster movement, savage melee and light damage resistance. |
 | **DRAGON INVOCATION** | 🐺 BESTIA + 🔥 IGNIS + 💨 VENTUS / ⚡ FULGUR + 🔥 IGNIS + 🪨 TERRA | `area` | `direction` | Calls a temporary fire dragon to scorch a battlefield zone. |
@@ -413,6 +441,20 @@
 | **Beschreibung** | Sink into your shadow and rise behind the nearest enemy ahead and strike it from its shadow. |
 | **Wirkung im Spiel** | You sink into your shadow and rise behind the nearest enemy ahead, striking it from behind. |
 | **Visualisierung** | No dedicated visual: the caster teleports instantly, with small dark-purple shockwave rings where they leave and where they appear. |
+
+#### HEILBLÜTE `heal_bloom`
+
+| | |
+|---|---|
+| **Rezept** | <img src="runes/natura.svg" width="32" alt="natura"> 🌿 NATURA |
+| **Tier** | 1 | 
+| **Mana (gebunden)** | 12 |
+| **Delivery** | `self` |
+| **Zielmodus** | `self` |
+| **Interaktions-Tags** | — |
+| **Farbe** | `#9be36a` |
+| **Beschreibung** | A magic circle of blossoms at your feet heals you and nearby allies over 3 s and washes slows away. |
+| **Visualisierung** | — |
 
 ### 3.2 Solo-Spezialrunen
 
@@ -838,6 +880,188 @@
 | **Wirkung im Spiel** | Three homing flames fan out and steer toward the nearest enemies. They can be reflected, captured or blocked. |
 | **Visualisierung** | Three small glowing pink-violet orbs with white cores fan out a moment apart and curve toward enemies, trailing void particles. |
 
+#### GROSSE BLÜTE `great_bloom`
+
+| | |
+|---|---|
+| **Rezept** | <img src="runes/natura.svg" width="32" alt="natura"> <img src="runes/natura.svg" width="32" alt="natura"> 🌿 NATURA + 🌿 NATURA |
+| **Tier** | 2 | 
+| **Mana (gebunden)** | 24 |
+| **Delivery** | `self` |
+| **Zielmodus** | `self` |
+| **Interaktions-Tags** | — |
+| **Farbe** | `#b2ff59` |
+| **Beschreibung** | A wide blossom circle: strong healing over 4 s and a light shield for every ally inside. |
+| **Visualisierung** | — |
+
+#### HEILQUELLE `healing_spring`
+
+| | |
+|---|---|
+| **Rezept** | <img src="runes/aqua.svg" width="32" alt="aqua"> <img src="runes/natura.svg" width="32" alt="natura"> ❄️ AQUA + 🌿 NATURA |
+| **Tier** | 2 | 
+| **Mana (gebunden)** | 22 |
+| **Delivery** | `zone` |
+| **Zielmodus** | `self` |
+| **Interaktions-Tags** | — |
+| **Farbe** | `#81d4fa` |
+| **Beschreibung** | A spring wells up: allies standing in it heal and regain mana for 6 s. |
+| **Visualisierung** | — |
+
+#### SEGENSKREIS `blessing_circle`
+
+| | |
+|---|---|
+| **Rezept** | <img src="runes/lux.svg" width="32" alt="lux"> <img src="runes/natura.svg" width="32" alt="natura"> ☀ LUX + 🌿 NATURA |
+| **Tier** | 2 | 
+| **Mana (gebunden)** | 24 |
+| **Delivery** | `self` |
+| **Zielmodus** | `self` |
+| **Interaktions-Tags** | — |
+| **Farbe** | `#ffe082` |
+| **Beschreibung** | A golden circle: allies inside heal at once and take 25 % less damage for 5 s. |
+| **Visualisierung** | — |
+
+#### DORNENWUCHS `thorn_growth`
+
+| | |
+|---|---|
+| **Rezept** | <img src="runes/natura.svg" width="32" alt="natura"> <img src="runes/terra.svg" width="32" alt="terra"> 🌿 NATURA + 🪨 TERRA |
+| **Tier** | 2 | 
+| **Mana (gebunden)** | 22 |
+| **Delivery** | `area` |
+| **Zielmodus** | `direction` |
+| **Interaktions-Tags** | — |
+| **Farbe** | `#8d6e63` |
+| **Beschreibung** | Brambles burst out along the ground ahead: they root whoever they catch and stay as a thorny hazard for 6 s. |
+| **Visualisierung** | — |
+
+#### GIFTSUMPF `poison_swamp`
+
+| | |
+|---|---|
+| **Rezept** | <img src="runes/natura.svg" width="32" alt="natura"> <img src="runes/umbra.svg" width="32" alt="umbra"> 🌿 NATURA + ☾ UMBRA |
+| **Tier** | 2 | 
+| **Mana (gebunden)** | 24 |
+| **Delivery** | `zone` |
+| **Zielmodus** | `ground` |
+| **Interaktions-Tags** | — |
+| **Farbe** | `#7cb342` |
+| **Beschreibung** | A poisonous swamp at the target point slows and poisons foes for 7 s. |
+| **Visualisierung** | — |
+
+#### POLLENSTURM `pollen_storm`
+
+| | |
+|---|---|
+| **Rezept** | <img src="runes/natura.svg" width="32" alt="natura"> <img src="runes/ventus.svg" width="32" alt="ventus"> 🌿 NATURA + 💨 VENTUS |
+| **Tier** | 2 | 
+| **Mana (gebunden)** | 22 |
+| **Delivery** | `cone` |
+| **Zielmodus** | `direction` |
+| **Interaktions-Tags** | — |
+| **Farbe** | `#f0f4c3` |
+| **Beschreibung** | A cone of drifting spores puts foes to sleep for a moment and slows them. |
+| **Visualisierung** | — |
+
+#### FLAMMENSAMEN `wildfire_seeds`
+
+| | |
+|---|---|
+| **Rezept** | <img src="runes/ignis.svg" width="32" alt="ignis"> <img src="runes/natura.svg" width="32" alt="natura"> 🔥 IGNIS + 🌿 NATURA |
+| **Tier** | 2 | 
+| **Mana (gebunden)** | 22 |
+| **Delivery** | `area` |
+| **Zielmodus** | `direction` |
+| **Interaktions-Tags** | — |
+| **Farbe** | `#ff7043` |
+| **Beschreibung** | Four seeds are planted ahead; after a moment each bursts into fire and scorches the ground. |
+| **Visualisierung** | — |
+
+#### FLAMMENKLINGE `flame_edge`
+
+| | |
+|---|---|
+| **Rezept** | <img src="runes/construct.svg" width="32" alt="construct"> <img src="runes/ignis.svg" width="32" alt="ignis"> ⚙️ KONSTRUKT + 🔥 IGNIS |
+| **Tier** | 2 | 
+| **Mana (gebunden)** | 26 |
+| **Delivery** | `self` |
+| **Zielmodus** | `self` |
+| **Interaktions-Tags** | — |
+| **Farbe** | `#ff7043` |
+| **Beschreibung** | Your weapon (or fists) burns for 12 s: melee hits set foes on fire. |
+| **Visualisierung** | — |
+
+#### FROSTKLINGE `frost_edge`
+
+| | |
+|---|---|
+| **Rezept** | <img src="runes/aqua.svg" width="32" alt="aqua"> <img src="runes/construct.svg" width="32" alt="construct"> ❄️ AQUA + ⚙️ KONSTRUKT |
+| **Tier** | 2 | 
+| **Mana (gebunden)** | 26 |
+| **Delivery** | `self` |
+| **Zielmodus** | `self` |
+| **Interaktions-Tags** | — |
+| **Farbe** | `#80deea` |
+| **Beschreibung** | Frost weapon for 12 s: hits slow, every third hit freezes. |
+| **Visualisierung** | — |
+
+#### STURMKLINGE `storm_edge`
+
+| | |
+|---|---|
+| **Rezept** | <img src="runes/construct.svg" width="32" alt="construct"> <img src="runes/fulgur.svg" width="32" alt="fulgur"> ⚙️ KONSTRUKT + ⚡ FULGUR |
+| **Tier** | 2 | 
+| **Mana (gebunden)** | 28 |
+| **Delivery** | `self` |
+| **Zielmodus** | `self` |
+| **Interaktions-Tags** | — |
+| **Farbe** | `#ffee58` |
+| **Beschreibung** | Storm weapon for 12 s: hits shock and a spark jumps to a second foe. |
+| **Visualisierung** | — |
+
+#### GIFTKLINGE `venom_edge`
+
+| | |
+|---|---|
+| **Rezept** | <img src="runes/construct.svg" width="32" alt="construct"> <img src="runes/natura.svg" width="32" alt="natura"> ⚙️ KONSTRUKT + 🌿 NATURA |
+| **Tier** | 2 | 
+| **Mana (gebunden)** | 28 |
+| **Delivery** | `self` |
+| **Zielmodus** | `self` |
+| **Interaktions-Tags** | — |
+| **Farbe** | `#9ccc65` |
+| **Beschreibung** | Venom weapon for 12 s: hits poison foes for 4 s. |
+| **Visualisierung** | — |
+
+#### BLUTKLINGE `blood_edge`
+
+| | |
+|---|---|
+| **Rezept** | <img src="runes/construct.svg" width="32" alt="construct"> <img src="runes/umbra.svg" width="32" alt="umbra"> ⚙️ KONSTRUKT + ☾ UMBRA |
+| **Tier** | 2 | 
+| **Mana (gebunden)** | 28 |
+| **Delivery** | `self` |
+| **Zielmodus** | `self` |
+| **Interaktions-Tags** | — |
+| **Farbe** | `#e53935` |
+| **Beschreibung** | Blood weapon for 12 s: every melee hit heals you for a fifth of its damage. |
+| **Visualisierung** | — |
+
+#### REISSKLINGE `rending_edge`
+
+| | |
+|---|---|
+| **Rezept** | <img src="runes/bestia.svg" width="32" alt="bestia"> <img src="runes/construct.svg" width="32" alt="construct"> 🐺 BESTIA + ⚙️ KONSTRUKT |
+| **Tier** | 2 | 
+| **Mana (gebunden)** | 34 |
+| **Delivery** | `self` |
+| **Zielmodus** | `self` |
+| **Interaktions-Tags** | — |
+| **Farbe** | `#d84315` |
+| **Beschreibung** | Rending weapon for 12 s: hits make foes bleed for 3 s. |
+| **Visualisierung** | — |
+
 ### 3.4 Himmelsfelder (Compound, nur eines gleichzeitig aktiv)
 
 #### SOLAR ORB `solar_orb`
@@ -976,6 +1200,20 @@
 | **Beschreibung** | Blazing fire dash that scorches everything in its path across the lane. |
 | **Wirkung im Spiel** | A blazing dash across the lane that scorches everything on the way. |
 | **Visualisierung** | A big pulsing fireball head races along the ground trailing alternating orange and yellow fire blobs, orbiting yellow sparks and scorch marks. |
+
+#### WELTENBAUM `world_tree`
+
+| | |
+|---|---|
+| **Rezept** | <img src="runes/aqua.svg" width="32" alt="aqua"> <img src="runes/natura.svg" width="32" alt="natura"> <img src="runes/terra.svg" width="32" alt="terra"> ❄️ AQUA + 🌿 NATURA + 🪨 TERRA |
+| **Tier** | 3 | 
+| **Mana (gebunden)** | 32 |
+| **Delivery** | `zone` |
+| **Zielmodus** | `ground` |
+| **Interaktions-Tags** | — |
+| **Farbe** | `#7ddc5a` |
+| **Beschreibung** | A giant tree grows and stays until it is cut down (or 25 s): it heals allies around it, swallows hostile projectiles, and its branches are platforms to stand on. |
+| **Visualisierung** | — |
 
 #### ARKENGESTELL `eidolon_mantle`
 
@@ -1127,18 +1365,18 @@ Zwei-Runen-Kombinationen der 10 Basisrunen (symmetrisch, Diagonale = doppelte Ru
 
 | | 🔥 IGNIS | 💨 VENTUS | ⚡ FULGUR | 🪨 TERRA | ❄️ AQUA | 🐺 BESTIA | ⚙️ KONSTRUKT | 🕳️ VOID | ☀ LUX | ☾ UMBRA |
 |---|---|---|---|---|---|---|---|---|---|---|
-| **🔥 IGNIS** | INFERNO BEAM | FIRESTORM VORTEX | METEOR CATACLYSM | MAGMA FISSURE | — | DRAGON BREATH | — | SOUL SEEKERS | SOLAR ORB | BLOOD MOON |
+| **🔥 IGNIS** | INFERNO BEAM | FIRESTORM VORTEX | METEOR CATACLYSM | MAGMA FISSURE | — | DRAGON BREATH | FLAMMENKLINGE | SOUL SEEKERS | SOLAR ORB | BLOOD MOON |
 | **💨 VENTUS** | FIRESTORM VORTEX | — | TEMPEST BLITZ | SANDSTORM BASTION | BLIZZARD SURGE | — | MIRROR WARD | GRAVITY LIFT | STARFALL | — |
-| **⚡ FULGUR** | METEOR CATACLYSM | TEMPEST BLITZ | THUNDER LANCE | SEISMIC SLAM | AURA SHOCK | STORM WOLF | — | — | — | THUNDERHEAD |
+| **⚡ FULGUR** | METEOR CATACLYSM | TEMPEST BLITZ | THUNDER LANCE | SEISMIC SLAM | AURA SHOCK | STORM WOLF | STURMKLINGE | — | — | THUNDERHEAD |
 | **🪨 TERRA** | MAGMA FISSURE | SANDSTORM BASTION | SEISMIC SLAM | STONE WALL | ARCANE AEGIS | TITAN STOMP | RUNE GOLEM | BURROW STRIKE | — | SHADOW STOMPER |
-| **❄️ AQUA** | — | BLIZZARD SURGE | AURA SHOCK | ARCANE AEGIS | GLACIAL RAY | — | — | FROST MIRROR GATE | AURORA VEIL | LUNAR ORB |
-| **🐺 BESTIA** | DRAGON BREATH | — | STORM WOLF | TITAN STOMP | — | — | — | VOID SPIDER | — | — |
-| **⚙️ KONSTRUKT** | — | MIRROR WARD | — | RUNE GOLEM | — | — | — | — | — | — |
+| **❄️ AQUA** | — | BLIZZARD SURGE | AURA SHOCK | ARCANE AEGIS | GLACIAL RAY | — | FROSTKLINGE | FROST MIRROR GATE | AURORA VEIL | LUNAR ORB |
+| **🐺 BESTIA** | DRAGON BREATH | — | STORM WOLF | TITAN STOMP | — | — | REISSKLINGE | VOID SPIDER | — | — |
+| **⚙️ KONSTRUKT** | FLAMMENKLINGE | MIRROR WARD | STURMKLINGE | RUNE GOLEM | FROSTKLINGE | REISSKLINGE | — | — | — | BLUTKLINGE |
 | **🕳️ VOID** | SOUL SEEKERS | GRAVITY LIFT | — | BURROW STRIKE | FROST MIRROR GATE | VOID SPIDER | — | NULL RAY | — | — |
 | **☀ LUX** | SOLAR ORB | STARFALL | — | — | AURORA VEIL | — | — | — | RADIANT LANCE | ECLIPSE |
-| **☾ UMBRA** | BLOOD MOON | — | THUNDERHEAD | SHADOW STOMPER | LUNAR ORB | — | — | — | ECLIPSE | — |
+| **☾ UMBRA** | BLOOD MOON | — | THUNDERHEAD | SHADOW STOMPER | LUNAR ORB | — | BLUTKLINGE | — | ECLIPSE | — |
 
-**Freie Zwei-Runen-Kombinationen (22):** IGNIS+AQUA, IGNIS+KONSTRUKT, VENTUS+VENTUS, VENTUS+BESTIA, VENTUS+UMBRA, FULGUR+KONSTRUKT, FULGUR+VOID, FULGUR+LUX, TERRA+LUX, AQUA+BESTIA, AQUA+KONSTRUKT, BESTIA+BESTIA, BESTIA+KONSTRUKT, BESTIA+LUX, BESTIA+UMBRA, KONSTRUKT+KONSTRUKT, KONSTRUKT+VOID, KONSTRUKT+LUX, KONSTRUKT+UMBRA, VOID+LUX, VOID+UMBRA, UMBRA+UMBRA
+**Freie Zwei-Runen-Kombinationen (17):** IGNIS+AQUA, VENTUS+VENTUS, VENTUS+BESTIA, VENTUS+UMBRA, FULGUR+VOID, FULGUR+LUX, TERRA+LUX, AQUA+BESTIA, BESTIA+BESTIA, BESTIA+LUX, BESTIA+UMBRA, KONSTRUKT+KONSTRUKT, KONSTRUKT+VOID, KONSTRUKT+LUX, VOID+LUX, VOID+UMBRA, UMBRA+UMBRA
 
 ### Drei-Runen-Rezepte
 
@@ -1152,6 +1390,7 @@ Zwei-Runen-Kombinationen der 10 Basisrunen (symmetrisch, Diagonale = doppelte Ru
 | ⚡ FULGUR + 🪨 TERRA + 🪨 TERRA | **SIEGE GOLEM** |
 | ⚡ FULGUR + 🔥 IGNIS + 🪨 TERRA | **DRAGON INVOCATION** |
 | ⚡ FULGUR + 🔥 IGNIS + 💨 VENTUS | **APOCALYPTIC HEAVENSURGE** |
+| ❄️ AQUA + 🌿 NATURA + 🪨 TERRA | **WELTENBAUM** |
 
 ### 3.8 Signature-Spezialrunen (Spezialrunen · Tag: signature-special · je Rune 1× pro Deck · keine Arcane States)
 
@@ -1222,10 +1461,10 @@ Ehemalige Transformations-Spells: ANNIHILATION BEAM (über Focus Ascendant Forwa
 | `salvo` | — (noch ungenutzt) |
 | `homing` | SOUL SEEKERS |
 | `beam` | ANNIHILATION BEAM, INFERNO BEAM, GLACIAL RAY, THUNDER LANCE, NULL RAY, RADIANT LANCE |
-| `cone` | DRAGON BREATH |
+| `cone` | DRAGON BREATH, POLLENSTURM |
 | `burrow` | BURROW STRIKE |
-| `area` | GALE SHOCKWAVE, ARC LIGHTNING, STONE SPIKES, FROST NOVA, HALO PULSE, AURA SHOCK, DRAGON INVOCATION, APOCALYPTIC HEAVENSURGE |
-| `zone` | VOID IMPLOSION, FIRESTORM VORTEX, MAGMA FISSURE, BLIZZARD SURGE, FROST MIRROR GATE, STERNENANKER, LUFTNÄHTE, SEKUNDENPFAND, STILLFUGE, SPLITTERGARTEN, SEISMISCHER STEG, FLUTSCHIENE, GLUTPUMPE, RAUMFALTER, GLASFELD, STRAHLENWEBER, RISSWEICHE, POLARISATIONSWERK, SCHWERELOSBAND, BRUCHKOLOSS, JÄGERGLOCKE, RUNENGERICHT, EXILKORRIDOR, ERNTEZIRKEL, RESONANZKORRIDOR, WELTNAHT |
+| `area` | GALE SHOCKWAVE, ARC LIGHTNING, STONE SPIKES, FROST NOVA, HALO PULSE, AURA SHOCK, DORNENWUCHS, FLAMMENSAMEN, DRAGON INVOCATION, APOCALYPTIC HEAVENSURGE |
+| `zone` | VOID IMPLOSION, FIRESTORM VORTEX, MAGMA FISSURE, BLIZZARD SURGE, FROST MIRROR GATE, HEILQUELLE, GIFTSUMPF, WELTENBAUM, STERNENANKER, LUFTNÄHTE, SEKUNDENPFAND, STILLFUGE, SPLITTERGARTEN, SEISMISCHER STEG, FLUTSCHIENE, GLUTPUMPE, RAUMFALTER, GLASFELD, STRAHLENWEBER, RISSWEICHE, POLARISATIONSWERK, SCHWERELOSBAND, BRUCHKOLOSS, JÄGERGLOCKE, RUNENGERICHT, EXILKORRIDOR, ERNTEZIRKEL, RESONANZKORRIDOR, WELTNAHT |
 | `wall` | CONSTRUCT BULWARK, STONE WALL |
 | `telekinesis` | GRAVITY LIFT |
 | `capture` | MIRROR WARD, SPIEGELVERSATZ, SCHICKSALSNADEL, MARIONETTENFADEN |
@@ -1234,7 +1473,7 @@ Ehemalige Transformations-Spells: ANNIHILATION BEAM (über Focus Ascendant Forwa
 | `summon` | BEAST FAMILIAR, SHADOW DOPPELGANGER, REVENANT CALL, STORM WOLF, VOID SPIDER, RUNE GOLEM, WORLD RUNE SERPENT, SPIRIT WOLF, SIEGE GOLEM |
 | `dash` | SHADOW STEP, INFERNO RAMPAGE, TEMPEST BLITZ, KOMETENTRÄGER |
 | `heavy_object` | METEOR CATACLYSM |
-| `self` | SANDSTORM BASTION, ARCANE AEGIS, SOLAR ORB, LUNAR ORB, ECLIPSE, THUNDERHEAD, BLOOD MOON, STARFALL, AURORA VEIL, ARKENGESTELL, RISSWILD, RISSWILD, ARKENGESTELL, SCHLACKENKERN, KORALLENSCHILD, BRUCHFLUG, IONSPINDEL, OSSUARIUM, FADENSCHLAG, NULLFELDTRÄGER, FADENREGENT, KÄLTESTILLSTAND, SÄUREGERÜST, ASTERGLIED, VORAUSSCHNITT, SONNENWYRM, GÖTTLICHER RIESE, MYSTISCHER AFFE, HIMMELSREGENT, AUREOLENSCHWARM, SCHWEBENDE BASTION, NACHHALLARCHIV, RÜCKSPRUNGNADEL, PRISMENHALTER, SCHWARMPROTOKOLL, KLINGENCHOR, RUNENSCHMIEDE, ECHOFAMULUS, SCHERBENHANDEL |
+| `self` | SANDSTORM BASTION, ARCANE AEGIS, SOLAR ORB, LUNAR ORB, ECLIPSE, THUNDERHEAD, BLOOD MOON, STARFALL, AURORA VEIL, HEILBLÜTE, GROSSE BLÜTE, SEGENSKREIS, FLAMMENKLINGE, FROSTKLINGE, STURMKLINGE, GIFTKLINGE, BLUTKLINGE, REISSKLINGE, ARKENGESTELL, RISSWILD, RISSWILD, ARKENGESTELL, SCHLACKENKERN, KORALLENSCHILD, BRUCHFLUG, IONSPINDEL, OSSUARIUM, FADENSCHLAG, NULLFELDTRÄGER, FADENREGENT, KÄLTESTILLSTAND, SÄUREGERÜST, ASTERGLIED, VORAUSSCHNITT, SONNENWYRM, GÖTTLICHER RIESE, MYSTISCHER AFFE, HIMMELSREGENT, AUREOLENSCHWARM, SCHWEBENDE BASTION, NACHHALLARCHIV, RÜCKSPRUNGNADEL, PRISMENHALTER, SCHWARMPROTOKOLL, KLINGENCHOR, RUNENSCHMIEDE, ECHOFAMULUS, SCHERBENHANDEL |
 
 **Zielmodi** (gleiche Regeln für Touch, Maus/Tastatur, Gamepad):
 
@@ -1254,9 +1493,9 @@ Ehemalige Transformations-Spells: ANNIHILATION BEAM (über Focus Ascendant Forwa
 
 ## 7. Statistik
 
-- Runen: 68 (davon 10 Basis, 2 Solo-Spezial, 36 Signature-Spezial, 17 Arcane States, 3 Transformation)
-- Spells: 108 — Fundamental 10, Solo 2, Compound 26, Himmelsfelder 7, Advanced 9, Transformation 1
-- Rezepte: 107 · freie Zwei-Runen-Paare: 22 von 55
+- Runen: 69 (davon 10 Basis, 2 Solo-Spezial, 36 Signature-Spezial, 17 Arcane States, 3 Transformation)
+- Spells: 123 — Fundamental 11, Solo 2, Compound 39, Himmelsfelder 7, Advanced 10, Transformation 1
+- Rezepte: 122 · freie Zwei-Runen-Paare: 17 von 55
 
 ## 8. Hinweise für den Research-Agenten
 

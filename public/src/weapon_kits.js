@@ -17,6 +17,7 @@ import { combat } from './combat.js';
 import { groundYForDepth } from './world.js';
 import { WEAPONS, astralHue, makeWeaponShots } from './weapons.js';
 import { projectilesOf, currentAttacker } from './signature_core.js';
+import { infusionOnHit, updateInfusion } from './nature_spells.js';
 
 const TAU = Math.PI * 2;
 const D = (name, kind, mana, extra = {}) => Object.freeze({ name, kind, mana, ...extra });
@@ -268,6 +269,7 @@ function orbitTick(d) {
 
 // ── Per-frame upkeep and hooks used by the Player ────────────────────────
 export function updateWeaponKit(player, dt, game) {
+  updateInfusion(player, dt, game); // rune weapon infusions + venom / bleed on foes
   const b = player.weaponBuff; if (!b) return;
   b.t -= dt;
   if (b.t <= 0 || (b.kind !== 'warcry' && kitOf(player)?.down?.kind !== b.kind && !(b.kind === 'stacked'))) { player.weaponBuff = null; return; }
@@ -306,6 +308,7 @@ export function targetDamageMult(player, target) {
 }
 // After a melee hit landed on a target.
 export function onWeaponMeleeHit(player, target, damage, spells) {
+  infusionOnHit(player, target, damage);
   const b = player.weaponBuff;
   const reap = marked(target, 'reap'); if (reap && reap.by === player) player.hp = Math.min(player.maxHp, player.hp + reap.heal);
   if (!b) return;
@@ -324,6 +327,7 @@ export function weaponIncoming(player, amount, kx, stun, hitKind, spells) {
   const b = player.weaponBuff; const out = { amount, kx, stun, parried: false };
   const attacker = currentAttacker();
   const curse = marked(attacker, 'curse'); if (curse) out.amount *= curse.mult;
+  if (player._blessT > 0) out.amount *= .75; // Segenskreis
   if (!b) return out;
   if (b.kind === 'counter' && hitKind === 'melee') {
     out.parried = true; player.weaponBuff = null;

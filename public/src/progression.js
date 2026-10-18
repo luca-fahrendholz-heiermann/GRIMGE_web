@@ -74,7 +74,7 @@ export const isBuffRuneId = (id) => String(id).startsWith('buff_');
 // glyph — NOT Arcane States. Each may be in a deck once; several different ones are fine.
 export const SIGNATURE_RUNE_IDS = Object.freeze(SIGNATURE_RUNE_DATA.map((d) => 'sig_' + d.id));
 export const isSignatureRuneId = (id) => String(id).startsWith('sig_');
-export const ALL_RUNE_IDS = Object.freeze(['ignis', 'ventus', 'fulgur', 'terra', 'aqua', 'bestia', 'construct', 'void', 'lux', 'umbra', 'doppel', 'mortis', ...BUFF_RUNE_IDS, ...SIGNATURE_RUNE_IDS]);
+export const ALL_RUNE_IDS = Object.freeze(['ignis', 'ventus', 'fulgur', 'terra', 'aqua', 'bestia', 'construct', 'void', 'lux', 'umbra', 'natura', 'doppel', 'mortis', ...BUFF_RUNE_IDS, ...SIGNATURE_RUNE_IDS]);
 // Elemental runes combine and may be in a deck twice. Special runes (DOPPEL,
 // MORTIS, signature specials, Arcane States) need no combination but have a
 // harder glyph: each only once — and of all Arcane States only one at all.
@@ -99,6 +99,7 @@ export const MAGE_LEVEL_RUNE_UNLOCKS = Object.freeze([
   { level: 3, runeId: 'construct', title: 'KONSTRUKT RUNE UNLOCKED' },
   { level: 4, runeId: 'void', title: 'VOID RUNE UNLOCKED' },
   { level: 5, runeId: 'lux', title: 'LUX RUNE UNLOCKED' },
+  { level: 5, runeId: 'natura', title: 'NATURA RUNE UNLOCKED' },
   { level: 6, runeId: 'umbra', title: 'UMBRA RUNE UNLOCKED' },
   { level: 8, runeId: 'doppel', title: 'DOPPEL SPECIAL RUNE UNLOCKED' },
   { level: 10, runeId: 'mortis', title: 'MORTIS SPECIAL RUNE UNLOCKED' }
