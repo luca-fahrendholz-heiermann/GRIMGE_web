@@ -21,16 +21,16 @@
 
 ## Die 17 aktiven Arcane States (kuratiert: je eigene Techniken, Lade-Ritual und Palette)
 
-### B01 Risswild · *Energy Extension* · V3.2: Dynamische Bruchbänder, asymmetrischer Dreifach-Streamer
+### B01 Risswild · *Energy Extension* · V3.2: Tiergeist (Kyubi): neun Fuchsflammen-Schweife
 
 - **Anker:** `back_left`, `hip_right`, `shoulder_right`, `sprite_alpha`
-- **Idle-Silhouette:** Drei grobe obsidiangoldene Zungen bilden keine Schulterbreite, sondern eine S-förmige Diagonale vom linken Becken bis deutlich über die rechte Schulter; Größenfolge 0,7/1,5/2,4 H, keine Kopf- oder Armsilhouette.
+- **Idle-Silhouette:** Kyubi-Geist: neun Fuchsflammen-Schweife fächern sich hinter dem Wizard auf, darüber ein Flammenmantel und ein Fuchskopf; beim Angriff peitschen drei Riss-Schweife nach vorn.
 - **Action-Silhouette:** Bei Sprint werden alle drei Zungen stromlinienförmig nach hinten gezogen; beim Richtungswechsel bricht ihre Mitte und heilt mit zeitversetztem Goldlauf; bei Schlägen schnalzt nur ein Band zielwärts.
 - **Peak Manifestation:** Full Charge ordnet die drei Bänder zum asymmetrischen gebrochenen Trichter, danach zerreißt die Spitze in kantige Risskerne; kein vollständiger Tierkörper.
 - **Transform-In / Out:** Eine dünne Glutnaht rast die echte Spritekontur ab, drei dunkle Plattenbänder platzen nacheinander am Rücken auf, werden durch goldene Schmelzkanten zusammengehalten und schwingen auseinander. / Die einzelnen Fragmente verschwinden in umgekehrter Materiallogik der Aktivierung. Existierende Projektile und Bodenobjekte folgen ihren normalen, deterministischen Laufzeitregeln.
 - **Defense · Grab · Jump:** Die drei Bänder falten sich als versetzte, keilförmige Panzerschichten vor die Blickrichtung; Blockwucht läuft als helle Rissader nach außen. · Ein einziger dünner Rissfaden schießt aus der unteren Bandkante zum nahen Ziel und verhakt sich nur beim bestätigten Kontakt. · Beim Absprung sacken die breiten Platten erst nach unten, folgen dann federnd; am Scheitelpunkt stehen sie horizontal, bei Landung schlagen die Enden auf den Boden.
 - **Heavies (V3.2-Abbildung):** Forward — Short: eine einzelne spitze Bruchzunge schnellt geradlinig vor; Full: die Zungen verdichten ihre Rissadern zum explodierenden dunklen Projektilkern. · Up — Short: eine schmale Kante hebelt ein Ziel hoch; Full: zwei gegenläufige Risssäulen spiralen über dem Avatar und stoßen nach oben. · Down — Short: bodennaher Kreisschlag aus einer Zunge; Full: versetzte Scherbenanker schlagen über mehrere Bodenpunkte ein und entladen ein Rissfeld.
-- **Ausschlüsse:** Keine Füchse, neun Schweife, symmetrischen Schultergelenke oder großen Fäuste.
+- **Ausschlüsse:** Keine abstrakten Bänder mehr als Hauptform.
 - Palette: `#241623` `#f29b35` `#ffd774` `#ff5b25` · Material: schwarzglasige, glühende Risskruste.
 
 ### B02 Arkengestell · *Astral Avatar* · V3.2: Einziger großer humanoid lesbarer Außenavatar: offenes astrales Kraftgestell

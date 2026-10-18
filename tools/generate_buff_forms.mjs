@@ -368,6 +368,14 @@ const EXTRA_FORMS = [
       'Kein realistischer Gorilla, keine Rüstung.')
   }
 ];
+// B01 Risswild is animal again (user, 18 Oct 2026: the Kyubi tails looked better than the abstract bands).
+{
+  const b01 = forms.find((f) => f.id === 'B01');
+  if (b01) {
+    b01.silhouette = 'Kyubi-Geist: neun Fuchsflammen-Schweife fächern sich hinter dem Wizard auf, darüber ein Flammenmantel und ein Fuchskopf; beim Angriff peitschen drei Riss-Schweife nach vorn.';
+    if (b01.v32) { b01.v32.silhouette = b01.silhouette; b01.v32.idle = b01.silhouette; b01.v32.category = 'Tiergeist (Kyubi): neun Fuchsflammen-Schweife'; b01.v32.exclusions = 'Keine abstrakten Bänder mehr als Hauptform.'; b01.morphCategory = b01.v32.category; b01.states = { ...(b01.states ?? {}), idle: b01.silhouette }; }
+  }
+}
 for (const f of EXTRA_FORMS) { f.states = { idle: f.v32.idle, action: f.v32.action, peak: f.v32.peak }; f.morphCategory = f.v32.category; forms.push(f); }
 if (!MORPH.divine_projection) MORPH.divine_projection = { label: 'Divine Projection', what: 'vergrößertes Lichtbild des eigenen Körpers', action: '', peak: '' };
 

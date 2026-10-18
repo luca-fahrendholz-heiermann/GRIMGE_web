@@ -16,7 +16,7 @@ export const BUFF_FORM_DATA = Object.freeze([
   "material": "schwarzglasige, glühende Risskruste.",
   "quality": "unregelmäßige bernsteinfarbene Schmelzadern, dunkle Kerninseln, scharfkantige Glanzschichten und abplatzende goldene Pixelkerben.",
   "motion": "gezackte Plattenränder mit innenliegenden Rissbahnen, dreifache asynchrone Pulsbrechung.",
-  "silhouette": "Drei ungleich breite, kantige Energiebänder entstehen versetzt an Hüfte und Schulter; keine Fuchsohren und keine neun Schweife. Die Bänder fließen wie zähe, in Platten brechende Flüssigkeit.",
+  "silhouette": "Kyubi-Geist: neun Fuchsflammen-Schweife fächern sich hinter dem Wizard auf, darüber ein Flammenmantel und ein Fuchskopf; beim Angriff peitschen drei Riss-Schweife nach vorn.",
   "avoid": "Fuchs, neun Schweife, Naruto-Jinchūriki-Siegel, orange Fuchsaura, Bijūdama-Optik. Keine flachen, glatten Ein-Farb-Primitiven als endgültige VFX-Optik.",
   "archetype": "risswild",
   "count": 3,
@@ -107,20 +107,20 @@ export const BUFF_FORM_DATA = Object.freeze([
   "morphology": "energy_extension",
   "morphologyLabel": "Energy Extension",
   "states": {
-   "idle": "Drei grobe obsidiangoldene Zungen bilden keine Schulterbreite, sondern eine S-förmige Diagonale vom linken Becken bis deutlich über die rechte Schulter; Größenfolge 0,7/1,5/2,4 H, keine Kopf- oder Armsilhouette.",
+   "idle": "Kyubi-Geist: neun Fuchsflammen-Schweife fächern sich hinter dem Wizard auf, darüber ein Flammenmantel und ein Fuchskopf; beim Angriff peitschen drei Riss-Schweife nach vorn.",
    "action": "Bei Sprint werden alle drei Zungen stromlinienförmig nach hinten gezogen; beim Richtungswechsel bricht ihre Mitte und heilt mit zeitversetztem Goldlauf; bei Schlägen schnalzt nur ein Band zielwärts.",
    "peak": "Full Charge ordnet die drei Bänder zum asymmetrischen gebrochenen Trichter, danach zerreißt die Spitze in kantige Risskerne; kein vollständiger Tierkörper."
   },
   "v32": {
-   "category": "Dynamische Bruchbänder, asymmetrischer Dreifach-Streamer",
-   "silhouette": "Drei grobe obsidiangoldene Zungen bilden keine Schulterbreite, sondern eine S-förmige Diagonale vom linken Becken bis deutlich über die rechte Schulter; Größenfolge 0,7/1,5/2,4 H, keine Kopf- oder Armsilhouette.",
+   "category": "Tiergeist (Kyubi): neun Fuchsflammen-Schweife",
+   "silhouette": "Kyubi-Geist: neun Fuchsflammen-Schweife fächern sich hinter dem Wizard auf, darüber ein Flammenmantel und ein Fuchskopf; beim Angriff peitschen drei Riss-Schweife nach vorn.",
    "anchors": [
     "back_left",
     "hip_right",
     "shoulder_right",
     "sprite_alpha"
    ],
-   "idle": "Drei grobe obsidiangoldene Zungen bilden keine Schulterbreite, sondern eine S-förmige Diagonale vom linken Becken bis deutlich über die rechte Schulter; Größenfolge 0,7/1,5/2,4 H, keine Kopf- oder Armsilhouette.",
+   "idle": "Kyubi-Geist: neun Fuchsflammen-Schweife fächern sich hinter dem Wizard auf, darüber ein Flammenmantel und ein Fuchskopf; beim Angriff peitschen drei Riss-Schweife nach vorn.",
    "action": "Bei Sprint werden alle drei Zungen stromlinienförmig nach hinten gezogen; beim Richtungswechsel bricht ihre Mitte und heilt mit zeitversetztem Goldlauf; bei Schlägen schnalzt nur ein Band zielwärts.",
    "peak": "Full Charge ordnet die drei Bänder zum asymmetrischen gebrochenen Trichter, danach zerreißt die Spitze in kantige Risskerne; kein vollständiger Tierkörper.",
    "anim": {
@@ -138,9 +138,9 @@ export const BUFF_FORM_DATA = Object.freeze([
     "up": "Short: eine schmale Kante hebelt ein Ziel hoch; Full: zwei gegenläufige Risssäulen spiralen über dem Avatar und stoßen nach oben.",
     "down": "Short: bodennaher Kreisschlag aus einer Zunge; Full: versetzte Scherbenanker schlagen über mehrere Bodenpunkte ein und entladen ein Rissfeld."
    },
-   "exclusions": "Keine Füchse, neun Schweife, symmetrischen Schultergelenke oder großen Fäuste."
+   "exclusions": "Keine abstrakten Bänder mehr als Hauptform."
   },
-  "morphCategory": "Dynamische Bruchbänder, asymmetrischer Dreifach-Streamer"
+  "morphCategory": "Tiergeist (Kyubi): neun Fuchsflammen-Schweife"
  },
  {
   "id": "B02",
