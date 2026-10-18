@@ -449,8 +449,9 @@ export class GameWorld {
       if (e.code === 'KeyK' && !e.repeat && this.isMatchRunning() && !this.drawing.active) {
         // Direction of the charged attack: K + W = up, K + S = down.
         const keys = this.input.keys;
+        // (The direction keeps following W / S while K is held — see Player.update.)
         const dir = keys.KeyW || keys.ArrowUp ? 'up' : keys.KeyS || keys.ArrowDown ? 'down' : 'forward';
-        this.player?.beginCharge(dir);
+        this.player?.beginCharge(dir, 'key');
       }
 
       // Earned Focus is a match-only transformation resource. It deliberately
@@ -794,13 +795,19 @@ export class GameWorld {
         const pt = this.getCanvasCoords(event.clientX, event.clientY);
         const dx = pt.x - attackStart.x;
         const elapsed = performance.now() - attackStartTime;
+        const dy = pt.y - attackStart.y;
         const facingDx = dx * this.player.facing;
-        if (facingDx > 34 && Math.abs(dx) >= Math.abs(pt.y - attackStart.y) && elapsed > 180) {
-          let dir = 'forward';
-          if (pt.y - attackStart.y < -34) dir = 'up';
-          else if (pt.y - attackStart.y > 34) dir = 'down';
-          if (this.player.beginCharge(dir)) chargeArmed = true;
+        // Hold, then drag (by angle): toward the facing = forward, up = up, down = down.
+        if (elapsed > 180 && Math.hypot(dx, dy) > 34 && facingDx > -12) {
+          const ahead = Math.max(facingDx, 0) * .8;
+          const dir = -dy > ahead ? 'up' : dy > ahead ? 'down' : 'forward';
+          if (this.player.beginCharge(dir, 'touch')) chargeArmed = true;
         }
+      } else if (attackPointerId === event.pointerId && attackStart && chargeArmed && this.player?.chargeTimer > 0) {
+        // While charging, the drag direction can still be changed until release.
+        const pt = this.getCanvasCoords(event.clientX, event.clientY);
+        const dx = pt.x - attackStart.x; const dy = pt.y - attackStart.y; const ahead = Math.max(dx * this.player.facing, 0) * .8;
+        if (Math.hypot(dx, dy) > 34) this.player.chargeDir = -dy > ahead ? 'up' : dy > ahead ? 'down' : 'forward';
       }
     }, { passive: false });
     window.addEventListener('pointerup', (event) => {

@@ -2,7 +2,9 @@
 //
 //   Left stick   move (double-flick = sprint / backdash, like the keyboard)
 //   A            jump                      B   block (hold)
-//   X            melee (stick up = uppercut, forward = heavy, air+down = dive)
+//   X            melee: tap (stick up = uppercut, forward = heavy, air+down = dive);
+//                hold = charged heavy, stick up / down / neutral = UP / DOWN / FORWARD
+//                (in a form: its six techniques, release after 1.2 s = FULL)
 //   Y            DRAW / lock rune
 //   LB / RB / RT spell slot 1 / 2 / 3  — tap casts, hold two or three = fuse
 //   LT           transformation            D-pad down  mount   D-pad up  deploy (Siege)
@@ -90,14 +92,22 @@ export class GamepadController {
     if (down(BUTTON.A)) game.input.justPressedKeys.Space = true;
     if (down(BUTTON.B)) game.setGuardHeld(true);
     if (up(BUTTON.B)) game.setGuardHeld(false);
+    // X: in the air it strikes at once; on the ground a tap attacks on release,
+    // holding it past 0.2 s charges the heavy (direction from the stick, live until release).
+    const player = game.player;
+    const tapKind = () => { const forward = lx * (player.facing || 1); return ly < -.6 ? 'uppercut' : forward > .6 ? 'heavy' : 'normal'; };
     if (down(BUTTON.X)) {
-      const player = game.player;
-      const forward = lx * (player.facing || 1);
-      let kind = 'normal';
-      if (!player.grounded && ly > .6) kind = 'dive';
-      else if (ly < -.6) kind = 'uppercut';
-      else if (forward > .6) kind = 'heavy';
-      player.executeAttack(game.input, kind);
+      if (!player.grounded) player.executeAttack(game.input, ly > .6 ? 'dive' : 'normal');
+      else this.xHeld = { t: 0, charging: false };
+    }
+    if (this.xHeld && pressed[BUTTON.X]) {
+      this.xHeld.t += dt;
+      if (!this.xHeld.charging && this.xHeld.t > .2) this.xHeld.charging = player.beginCharge(ly < -.6 ? 'up' : ly > .6 ? 'down' : 'forward', 'pad') || 'failed';
+    }
+    if (up(BUTTON.X) && this.xHeld) {
+      const held = this.xHeld; this.xHeld = null;
+      if (held.charging === true && player.chargeTimer > 0) player.releaseCharge();
+      else if (held.charging !== true) player.executeAttack(game.input, tapKind());
     }
     if (down(BUTTON.Y)) game.startRuneDrawing();
     if (down(BUTTON.LT)) game.activateFocusTransformation();

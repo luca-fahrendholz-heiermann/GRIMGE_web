@@ -390,6 +390,12 @@ export class Player extends GroundEntity {
     if (this.slowTimer <= 0) this.slowFactor = 1;
     this.comboResetTimer = Math.max(0, this.comboResetTimer - dt);
     if (this.comboResetTimer <= 0) this.comboStep = 0;
+    // Charged heavy direction follows the held direction until release
+    // (K first, then W / S works as well as W / S first; stick up / down on a pad).
+    if (this.chargeTimer > 0 && input && this.chargeSource !== 'touch') {
+      const k = input.keys ?? {}; const pz = input.padMove?.z ?? 0;
+      this.chargeDir = k.KeyW || k.ArrowUp || pz < -.6 ? 'up' : k.KeyS || k.ArrowDown || pz > .6 ? 'down' : 'forward';
+    }
     if (this.chargeTimer > 0 && this.formCharge) {
       // Form charge: no auto release at the threshold (safety cap 4 s).
       this.formCharge.elapsed += dt;
@@ -738,7 +744,8 @@ export class Player extends GroundEntity {
     if (this.touchSprint) this.touchSprint.held = false;
   }
 
-  beginCharge(direction = 'forward') {
+  beginCharge(direction = 'forward', source = 'key') {
+    this.chargeSource = source;
     if (!this.isAlive || this.isGuarding || !this.grounded || this.chargeTimer > 0) return false;
     if (ACTION_STATES.has(this.state)) return false;
     // Inside a transformation / manifest the charge feeds a form technique:
@@ -766,6 +773,21 @@ export class Player extends GroundEntity {
     signatureEvent(this, 'heavy', { charge: chargeRatio });
     const dmgMult = 1 + chargeRatio * 0.8;
     const kbMult = 1 + chargeRatio * 0.6;
+    const dir = this.chargeDir ?? 'forward';
+    if (dir !== 'forward') {
+      // Up: a rising launcher that lifts the target high (air follow-ups);
+      // Down: a low sweep along the ground that breaks guards and trips.
+      const up = dir === 'up';
+      this.state = up ? 'uppercut' : 'heavyStrike'; this.stateTimer = heavy.time; this._weaponSwingTime = heavy.time;
+      this.setWeaponMotion(up ? 'uppercut' : 'heavy');
+      this.vx = this.facing * (up ? 120 : 260); this.canAttack = false;
+      if (up) this.vElevation = 180 * PLAYER_ARC_SCALE;
+      audio.playSlash(up ? 1.05 : .7);
+      combat.spawnSlashArc(this.x + this.facing * 20, this.y - (up ? 30 : 8), this.facing, up ? { radius: 56 + chargeRatio * 16, angleStart: -1.5, angleEnd: .5, color: '#ffea00', glow: '#ff9800', width: 6 + chargeRatio * 4 } : { radius: 64 + chargeRatio * 18, angleStart: .1, angleEnd: 1.2, color: '#ffd54f', glow: '#ff6d00', width: 6 + chargeRatio * 4 });
+      if (!up) combat.spawnShockwave(this.x + this.facing * 34, this.y - 2, 40 + chargeRatio * 20, '#ffab00');
+      this.triggerMeleeHitbox(heavy.damage * dmgMult * (up ? .9 : .85), this.facing * heavy.knockback * (up ? .35 : .7) * kbMult, up ? 420 + chargeRatio * 160 : 40, up ? .55 : .5 + chargeRatio * .2, chargeRatio > 0.7, { hitstopTicks: Math.round(4 + chargeRatio * 4), hitReaction: up ? 'launch' : 'trip', isCharged: true, chargeRatio, guardBreak: up ? 0 : 18 + chargeRatio * 20 });
+      return true;
+    }
     this.state = 'heavyStrike';
     this.stateTimer = heavy.time;
     this._weaponSwingTime = heavy.time;

@@ -2489,6 +2489,35 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   dummy.homeX = dummy.x = 512;
 }
 
+// Charged heavies: UP / DOWN work on every device (direction live until release).
+{
+  const buff = await import('./public/src/buff_forms.js');
+  game.returnToHub(); game.setMatchMode('training'); game.startMatch(); game.selectTrainingMap('waterfalls');
+  const P = game.player; const dummy = game.trainingDummy;
+  const inp = (keys = {}, pz = 0) => ({ keys, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: pz }, justPressed: () => false });
+  const ready = () => { spells.clearRuntime(); P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.grounded = true; P.chargeTimer = 0; P.formCharge = null; P.isGuarding = false; };
+  // Keyboard: K first, W afterwards still selects UP (and S DOWN) in an Arcane State.
+  ready(); spells.cast(P, spells.resolveSpell([{ id: 'buff_T01' }]), game); P.buffForm.age = 2;
+  P.beginCharge('forward', 'key'); P.update(1 / 60, inp({ KeyW: true }), game.battlefield, game);
+  assert(P.chargeDir === 'up', 'K held, then W: the charged heavy switches to UP');
+  P.formCharge.elapsed = 1.3; P.releaseCharge();
+  assert(P.buffForm.lastTech?.dir === 'up' && P.buffForm.lastTech.full && spells.activeSpells.length > 0, 'The form releases its UP FULL technique');
+  ready(); P.state = 'idle'; P.beginCharge('forward', 'pad'); P.update(1 / 60, inp({}, .9), game.battlefield, game); P.formCharge.elapsed = .3; P.releaseCharge();
+  assert(P.buffForm.lastTech?.dir === 'down' && !P.buffForm.lastTech.full, 'Gamepad stick down while charging: DOWN SHORT technique');
+  buff.endBuffForm(P);
+  // Touch charges keep their gesture direction (no keyboard override).
+  ready(); P.beginCharge('up', 'touch'); P.update(1 / 60, inp({}), game.battlefield, game);
+  assert(P.chargeDir === 'up', 'A touch-armed UP charge keeps its direction');
+  P.releaseCharge(); ready();
+  // Without a form the charged heavy is directional too: UP launches, DOWN sweeps low.
+  dummy.homeX = dummy.x = P.x + 14; dummy.homeZ = dummy.z = P.z; dummy.hp = dummy.maxHp;
+  P.beginCharge('up', 'key'); P.chargeTimer = P.chargeMaxTime * .3; P.chargeDir = 'up'; P.releaseCharge();
+  assert(P.state === 'uppercut' && dummy.hp < dummy.maxHp, 'Base UP charged heavy: a rising launcher');
+  ready(); dummy.hp = dummy.maxHp; P.beginCharge('down', 'key'); P.chargeTimer = P.chargeMaxTime * .3; P.chargeDir = 'down'; P.releaseCharge();
+  assert(P.state === 'heavyStrike' && dummy.hp < dummy.maxHp, 'Base DOWN charged heavy: a low sweep');
+  ready(); dummy.homeX = dummy.x = 512;
+}
+
 const frameCallback = nextFrame;
 frameCallback(game.lastFrameTime + 16);
 game.debugVisible = true;
