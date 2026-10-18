@@ -79,6 +79,7 @@ export class Battlefield {
     if (invasion) {
       this.blueCastle.isVulnerable = true;
       this.redCastle.isDestroyed = true;
+      this.redCastle.showSegments = false;
       this.blueTower.isDead = true;
       this.redTower.isDead = true;
       this.defenseTowers.forEach((tower) => { tower.maxHp = tower.hp = 560; tower.range = 245; });

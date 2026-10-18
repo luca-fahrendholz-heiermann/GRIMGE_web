@@ -24,6 +24,7 @@ import { renderRuneGuide } from './rune_guides.js';
 import { castleBlocksAt, castleGateDoor, castleDeckEntry, castleDeckHeight } from './castles.js';
 import { WeaponArmory, WEAPONS } from './weapons.js';
 import { SiegeMatch } from './siege_match.js';
+import { segmentStatus } from './castle_segments.js';
 import { PrimalCompanion, normalizePrimalChoice, startPrimalBond, endPrimalBond, bondForm, PRIMAL_ARCHETYPES } from './primals.js';
 
 // LF2-style Dungeon rooms. Each room is a wide scrolling stretch: the camera
@@ -2280,7 +2281,7 @@ export class GameWorld {
     const tower = this.battlefield.redTower;
     const castle = this.battlefield.redCastle;
     if (!tower.isDead) return `DESTROY ENEMY TOWER ${Math.ceil(tower.hp)}/${tower.maxHp}`;
-    if (!castle.isDestroyed) return `DESTROY ENEMY CASTLE ${Math.ceil(castle.hp)}/${castle.maxHp}`;
+    if (!castle.isDestroyed) return `DESTROY ENEMY CASTLE ${Math.ceil(castle.hp)}/${castle.maxHp} · ${segmentStatus(castle)}`;
     return 'DEFEAT ENEMY WIZARD';
   }
 

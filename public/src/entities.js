@@ -11,6 +11,7 @@ import { WEAPONS, ThrownWeaponSpell, drawHeldWeapon, weaponMotion } from './weap
 import { drawBeastBomb, drawSpiritBow } from './form_attacks.js';
 import { FULL_CHARGE_TIME, activeMoveset, releaseFormTechnique, FORM_PALETTES } from './form_moves.js';
 import { updatePrimalBond, bondMoveMultiplier, bondGainMultiplier, bondDisplacement, bondOnBlock, primalSprintVariant, renderPrimalBond, endPrimalBond } from './primals.js';
+import { createSegments, damageSegments, updateSegments, renderSegments } from './castle_segments.js';
 import { updateBuffForm, endBuffForm, isGenericBuff, currentBuffForm, renderBuffManifestation, buffVeinPainter, buffCloakColor, renderBuffGuard } from './buff_forms.js';
 
 // Every spell a rune deck can produce: single runes plus every valid two-
@@ -1904,16 +1905,22 @@ export class Castle extends GroundEntity {
     // than being rejected as an impossible vertical hit.
     this.hitHeightTolerance = 210;
     this.hitFlash = 0; this.corePulse = 0; this.onDestroyed = onDestroyed; this.onProtectedHit = onProtectedHit; this.protectedFeedbackTimer = 0;
+    // Unity structure: seven segments, three load-bearing (castle_segments.js).
+    this.segments = createSegments(team); this.loadBearingLost = 0; this.showSegments = true;
   }
-  takeDamage(amount) {
+  takeDamage(amount, kx = 0, lift = 0, stun = 0, isCrit = false, hitKind = 'melee') {
     if (this.isDestroyed) return;
     if (!this.isVulnerable) { if (this.protectedFeedbackTimer <= 0) { this.protectedFeedbackTimer = .8; this.onProtectedHit?.(this); } return; }
-    this.hp = Math.max(0, this.hp - amount); this.hitFlash = .15;
+    this.hitFlash = .15;
     combat.spawnDamageText(this.x, this.y - 95, amount, { isCrit: true, color: this.team === 'blue' ? '#81d4fa' : '#ff8a80' });
-    if (!this.hp) { this.isDestroyed = true; this.isVulnerable = false; audio.playImpact(true); combat.shakeCamera(20, 1); combat.spawnShockwave(this.x, this.y - 55, 130, '#ffd740'); combat.spawnShockwave(this.x, this.y - 55, 72, '#ff6d00'); combat.spawnHitSparks(this.x, this.y - 55, 1, '#ff9100', 56); combat.spawnElementalParticles(this.x, this.y - 55, 'fire', 24); this.onDestroyed?.(this); }
+    // The struck segment and the global health lose the same amount; the castle
+    // collapses at zero health or when 2 of its 3 load-bearing segments fall.
+    damageSegments(this, amount, hitKind);
+    if (this.isDestroyed) { combat.spawnShockwave(this.x, this.y - 55, 130, '#ffd740'); combat.spawnShockwave(this.x, this.y - 55, 72, '#ff6d00'); combat.spawnHitSparks(this.x, this.y - 55, 1, '#ff9100', 56); combat.spawnElementalParticles(this.x, this.y - 55, 'fire', 24); }
   }
-  update(dt) { this.corePulse += dt * 2; this.hitFlash = Math.max(0, this.hitFlash - dt); this.protectedFeedbackTimer = Math.max(0, this.protectedFeedbackTimer - dt); }
+  update(dt) { this.corePulse += dt * 2; this.hitFlash = Math.max(0, this.hitFlash - dt); this.protectedFeedbackTimer = Math.max(0, this.protectedFeedbackTimer - dt); updateSegments(this, dt); }
   render(ctx) {
+    if (this.showSegments) renderSegments(ctx, this);
     const color = this.team === 'blue' ? '#29b6f6' : '#ef5350'; const y = this.y - 58;
     ctx.save(); ctx.globalAlpha = this.isDestroyed ? .2 : 1; ctx.strokeStyle = this.isVulnerable ? color : '#b0bec5'; ctx.lineWidth = 3; ctx.setLineDash(this.isVulnerable ? [] : [6, 5]);
     ctx.beginPath(); ctx.ellipse(this.x, y, this.hitRadiusX, 18, 0, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);

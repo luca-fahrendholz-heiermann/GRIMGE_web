@@ -2301,6 +2301,29 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   spells.clearRuntime();
 }
 
+// Castle structure (Unity Tower.cs): segments, load-bearing collapse.
+{
+  const { SEGMENT_SPECS, COLLAPSE_THRESHOLD } = await import('./public/src/castle_segments.js');
+  game.returnToHub(); game.siegeDeployRules = false; game.setMatchMode('siege'); game.startMatch();
+  const castle = game.battlefield.redCastle;
+  assert(castle.segments.length === 7 && castle.segments.filter((s) => s.loadBearing).map((s) => s.id).join(',') === 'A3,B1,B2' && COLLAPSE_THRESHOLD === .6 && SEGMENT_SPECS.find((s) => s.id === 'A1').durability === 432, 'The castle has seven segments (A1–A3, B1–B2, C1–C2), three load-bearing, Unity values scaled to 1800 HP');
+  castle.takeDamage(50);
+  assert(castle.hp === castle.maxHp && castle.segments.every((s) => s.hp === s.max), 'Before its tower falls the castle stays protected');
+  castle.isVulnerable = true;
+  castle.takeDamage(100, -100, 0, .1, false, 'melee');
+  const a1 = castle.segments.find((s) => s.id === 'A1');
+  assert(a1.hp === a1.max - 100 && castle.hp === castle.maxHp - 100, 'A lane strike hits the front wall at the lane edge (A1) and the global health by the same amount');
+  castle.takeDamage(100, 0, 0, .1, false, 'spell');
+  assert(castle.segments.find((s) => s.id === 'B1').hp === castle.segments.find((s) => s.id === 'B1').max - 100, 'Spells strike the keep (B row) first');
+  let guard = 0;
+  while (!castle.segments.find((s) => s.id === 'B2').destroyed && guard++ < 50) castle.takeDamage(120, 0, 0, .1, false, 'spell');
+  assert(castle.isDestroyed && castle.collapsedStructurally && castle.hpAtCollapse > 0, `Two of three load-bearing segments down: the castle collapses before its health runs out (${Math.round(castle.hpAtCollapse)} HP left)`);
+  assert(game.objectivePhase === 'FinalWizardPhase', 'The collapse ends the castle phase like a destroyed castle');
+  for (let i = 0; i < 150; i++) castle.update(1 / 60);
+  assert(castle.segments.every((s) => s.destroyed), 'The rest of the castle comes down with it (staggered: tower tops, keep, front wall)');
+  game.render();
+}
+
 const frameCallback = nextFrame;
 frameCallback(game.lastFrameTime + 16);
 game.debugVisible = true;
