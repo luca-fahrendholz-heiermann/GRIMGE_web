@@ -2673,7 +2673,8 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   P.update(1 / 60, { ...neutral, keys: { KeyD: true } }, game.battlefield, game); const fwdDir = P.chargeDir; P.chargeTimer = 0; P.formCharge = null;
   assert(holdDir === 'hold' && fwdDir === 'forward', 'K alone charges the HOLD slot, K + toward the facing the forward charge');
   spells.clearRuntime(); ready(); P.beginCharge('up', 'key'); P.chargeTimer = P.chargeMaxTime * .2; P.chargeDir = 'up'; P.releaseCharge();
-  assert(spells.activeSpells.filter((s) => s.isWeaponShot).length === 3, 'Charged UP with the bow: a three-arrow volley');
+  const skyArrow = spells.activeSpells.filter((s) => s.isWeaponShot);
+  assert(skyArrow.length === 1 && skyArrow[0].kind === 'arrow' && skyArrow[0].shot.lift > 400 && P.lastWeaponUp === 'HIMMELSPFEIL', 'Charged UP with the bow: the sky arrow that lifts the target');
   spells.clearRuntime(); P.equipClassWeapon('chakrams'); ready(); P.surfaceId = 'blueCastleUpperPlatform'; P.executeAttack(neutral, 'normal'); P.surfaceId = null;
   assert(spells.activeSpells.some((s) => s.isWeaponShot && s.ricochet > 0), 'Chakrams ricochet');
   // Every weapon attacks without errors (melee hitbox or projectiles) and renders.
@@ -2681,6 +2682,44 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   const broken = [];
   for (const id of need) { try { spells.clearRuntime(); P.equipClassWeapon(id); for (const kind of ['normal', 'normal', 'normal', 'heavy']) { ready(); P.executeAttack(neutral, kind); for (let i = 0; i < 6; i++) { P.update(1 / 60, neutral, game.battlefield, game); spells.update(1 / 60, game); } W.drawHeldWeapon(strict, P, P.y, 'front'); W.drawHeldWeapon(strict, P, P.y, 'back'); for (const s of spells.activeSpells) s.render?.(strict); } } catch (e) { broken.push(id + ': ' + e.message); } }
   assert(!broken.length, 'Every weapon attacks and renders without errors ' + broken.slice(0, 3).join(' | '));
+  // Weapon kits: every weapon has its own ground charge-down buff / debuff (mana), launcher and dive.
+  {
+    const K = await import('./public/src/weapon_kits.js');
+    const ids = Object.keys(W.WEAPONS);
+    assert(ids.every((id) => K.WEAPON_KITS[id]?.down?.mana > 0 && K.WEAPON_KITS[id].up && K.WEAPON_KITS[id].dive), 'Every weapon has a kit: charge-down buff / debuff, launcher, dive');
+    assert(new Set(ids.map((id) => K.WEAPON_KITS[id].down.name)).size === ids.length, 'Every weapon names its own charge-down move');
+    const kitBroken = []; const strictKit = new Proxy({}, { get: (t, k) => (k === 'ellipse' || k === 'arc') ? (x, y, rx, ry) => { if (rx < 0 || (k === 'ellipse' && ry < 0)) throw new Error('IndexSizeError ' + k); } : (k === 'canvas' ? undefined : (k === 'measureText' ? () => ({ width: 10 }) : () => {})), set: () => true });
+    for (const id of ids) {
+      try {
+        spells.clearRuntime(); P.weaponBuff = null; P.equipClassWeapon(id); P.mp = P.maxMp; P.reservedMana = 0;
+        dummy.homeX = dummy.x = 360; dummy.homeZ = dummy.z = .5; dummy.hp = dummy.maxHp; P.x = 300; P.z = .5; P.facing = 1; game.battlefield.placeOnSurface(P);
+        ready(); const mp0 = P.mp; P.beginCharge('down', 'key'); P.chargeTimer = P.chargeMaxTime * .5; P.chargeDir = 'down';
+        if (!P.releaseCharge() || mp0 - P.mp !== K.WEAPON_KITS[id].down.mana) kitBroken.push(id + ': down');
+        ready(); P.beginCharge('up', 'key'); P.chargeTimer = P.chargeMaxTime * .5; P.chargeDir = 'up'; P.releaseCharge();
+        if (P.lastWeaponUp !== K.WEAPON_KITS[id].up.name) kitBroken.push(id + ': up');
+        ready(); P.grounded = false; P.elevation = 60; P.vElevation = 0; P.executeAttack(neutral, 'dive');
+        if (P.lastWeaponDive !== K.WEAPON_KITS[id].dive.name) kitBroken.push(id + ': dive');
+        for (let i = 0; i < 90; i++) { P.update(1 / 60, neutral, game.battlefield, game); spells.update(1 / 60, game); if (i % 15 === 0) for (const sp of spells.activeSpells) sp.render?.(strictKit); }
+      } catch (e) { kitBroken.push(id + ': ' + e.message); }
+    }
+    P.weaponBuff = null; P.grounded = true; P.elevation = 0;
+    assert(!kitBroken.length, 'Every weapon kit (down / up / dive) runs, costs mana and renders ' + kitBroken.slice(0, 4).join(' | '));
+    // Mechanics spot checks.
+    spells.clearRuntime(); P.equipClassWeapon('sword_shield'); ready(); P.mp = P.maxMp; K.castWeaponDown(P, game, spells);
+    const attacker = { x: P.x + 40, z: P.z, hp: 100, took: 0, takeDamage(d) { this.took += d; } };
+    const { setHitContext } = await import('./public/src/signature_runes.js');
+    setHitContext(attacker); const hp0 = P.hp; const parry = P.takeDamage(30, -200, 0, .3, false, 'melee'); setHitContext(null);
+    assert(parry?.parried && P.hp === hp0 && attacker.took > 0 && !P.weaponBuff, 'Sword & shield KONTERHALTUNG: the next melee hit is parried and riposted');
+    spells.clearRuntime(); P.equipClassWeapon('bow'); ready(); P.mp = P.maxMp; dummy.homeX = dummy.x = 420; dummy.hp = dummy.maxHp; K.castWeaponDown(P, game, spells);
+    assert(K.targetDamageMult(P, dummy) > 1.3, 'Bow JÄGERMAL: the marked prey takes more damage from you');
+    spells.clearRuntime(); P.equipClassWeapon('warlock_rod'); ready(); P.mp = P.maxMp; dummy.homeX = dummy.x = 420; dummy.hp = dummy.maxHp; K.castWeaponDown(P, game, spells);
+    for (let i = 0; i < 40; i++) spells.update(1 / 60, game);
+    assert(dummy.hp < dummy.maxHp && spells.activeSpells.some((s) => s.kind === 'circle'), 'Warlock FANGZIRKEL: a binding circle rises under the foe and traps it');
+    spells.clearRuntime(); P.equipClassWeapon('claws'); ready(); P.mp = P.maxMp; K.castWeaponDown(P, game, spells); P.hp = P.maxHp - 50; const before = P.hp; K.onWeaponMeleeHit(P, dummy, 40, spells);
+    assert(P.hp > before && P.weaponBuff?.kind === 'frenzy', 'Claws BLUTRAUSCH: melee hits heal (life steal)');
+    P.weaponBuff = null; P.equipClassWeapon(null); ready(); assert(!P.beginCharge('down', 'key'), 'Without a weapon there is no ground charge-down');
+    P.chargeTimer = 0; P.state = 'idle';
+  }
   P.equipClassWeapon(null); spells.clearRuntime(); dummy.homeX = dummy.x = 512;
 }
 

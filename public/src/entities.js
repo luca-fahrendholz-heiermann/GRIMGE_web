@@ -11,6 +11,7 @@ import { WEAPONS, ThrownWeaponSpell, drawHeldWeapon, weaponMotion, makeWeaponSho
 import { drawBeastBomb, drawSpiritBow } from './form_attacks.js';
 import { FULL_CHARGE_TIME, activeMoveset, releaseFormTechnique, FORM_PALETTES } from './form_moves.js';
 import { releaseWeaponReach, releaseFormPull, isOnCastle } from './hold_actions.js';
+import { hasWeaponDown, castWeaponDown, weaponUp, weaponDive, updateWeaponKit, weaponMoveMult, weaponAttackSpeed, meleeBuffMods, targetDamageMult, onWeaponMeleeHit, afterWeaponSwing, weaponIncoming } from './weapon_kits.js';
 import { updatePrimalBond, bondMoveMultiplier, bondGainMultiplier, bondDisplacement, bondOnBlock, primalSprintVariant, renderPrimalBond, endPrimalBond, bondMelee, primalQuake } from './primals.js';
 import { createSegments, damageSegments, updateSegments, renderSegments } from './castle_segments.js';
 import { updateBuffForm, endBuffForm, isGenericBuff, currentBuffForm, renderBuffManifestation, buffVeinPainter, buffCloakColor, renderBuffGuard, levitationOffset, renderBuffCharge } from './buff_forms.js';
@@ -378,6 +379,7 @@ export class Player extends GroundEntity {
     if (this.focusTransformTimer <= 0) this.focusTransformPower = 1;
     // Primal Bond: wind-up, merge, Focus drain (1.5/s × form), Fortified.
     updatePrimalBond(this, dt, FOCUS_TRANSFORM_DRAIN);
+    updateWeaponKit(this, dt, window.gameWorld);
     // Buff transformation (special rune): limited time, one at a time.
     updateBuffForm(this, dt);
     // Signature special stance (hover, lenses, blades, needles …).
@@ -623,7 +625,7 @@ export class Player extends GroundEntity {
     const bondMult = bondMoveMultiplier(this) * (isGenericBuff(this) ? 1.08 : 1); // Wolf bond: SpeedBoost; buff forms move a little faster
     // Signature specials: hover stances glide slower, walkways / currents speed up.
     const sigMult = signatureMoveMult(this) * (this._sigBoost?.k ?? 1);
-    const combinedMult = this.slowFactor * guardMult * beastMult * focusMult * sprintMult * clashMult * burrowMult * bondMult * sigMult;
+    const combinedMult = this.slowFactor * guardMult * beastMult * focusMult * sprintMult * clashMult * burrowMult * bondMult * sigMult * weaponMoveMult(this);
 
     const baseSpeed = this.moveSpeed;
     const baseDepth = this.depthSpeed;
@@ -758,8 +760,8 @@ export class Player extends GroundEntity {
     this.chargeSource = source;
     if (!this.isAlive || this.isGuarding || !this.grounded || this.chargeTimer > 0) return false;
     if (ACTION_STATES.has(this.state)) return false;
-    // Normal mode: no ground charge-down (reserved for the weapon-specific buff / debuff).
-    if (direction === 'down' && !activeMoveset(this)) return false;
+    // Normal mode: the ground charge-down is the weapon-specific buff / debuff (weapon_kits.js).
+    if (direction === 'down' && !activeMoveset(this) && !hasWeaponDown(this)) return false;
     // Inside a transformation / manifest the charge feeds a form technique:
     // held for FULL_CHARGE_TIME it becomes the FULL version and can be held.
     this.formCharge = activeMoveset(this) ? { elapsed: 0 } : null;
@@ -796,15 +798,16 @@ export class Player extends GroundEntity {
     const chargeRatio = 1 - (this.chargeTimer / this.chargeMaxTime);
     this.chargeTimer = 0;
     if (this.chargeDir === 'hold') { if (this.isAlive) this.state = 'idle'; return this.isAlive ? this.holdAttack(chargeRatio) : false; }
-    // Ground charge-down has no generic move in the normal mode (the low sweep is gone;
-    // the slot is reserved for the weapon-specific buff / debuff).
-    if (this.chargeDir === 'down') { this.state = 'idle'; return false; }
+    // Ground charge-down = the weapon-specific buff / debuff (no generic move without a weapon).
+    if (this.chargeDir === 'down') { this.state = 'idle'; return this.isAlive && chargeRatio >= .05 ? castWeaponDown(this, window.gameWorld, spells) : false; }
     if (!this.isAlive || chargeRatio < 0.05) return false;
     const heavy = MELEE_BASELINE.heavy;
     signatureEvent(this, 'heavy', { charge: chargeRatio });
     const dmgMult = 1 + chargeRatio * 0.8;
     const kbMult = 1 + chargeRatio * 0.6;
     const dir = this.chargeDir ?? 'forward';
+    // Charged UP: the weapon's own launcher (bow arrow, harp melody, staff pillar, rising cut …).
+    if (dir === 'up' && weaponUp(this, chargeRatio, spells, window.gameWorld)) { signatureEvent(this, 'heavy', { charge: chargeRatio }); return true; }
     // Ranged weapons: the charged UP is a lifting volley.
     const weaponHeavy = this.weaponProfile?.heavy;
     if (weaponHeavy?.shot && dir === 'up') {
@@ -1042,6 +1045,8 @@ export class Player extends GroundEntity {
       return true;
     }
     if (!this.grounded && (attackKind === 'dive' || move.z > 0.55)) {
+      // Each weapon dives its own way (plunge, meteor, spin, arrow rain, orb drop, pounce, seal, downdraft).
+      if (weaponDive(this, spells, window.gameWorld)) return true;
       this.state = 'dive'; this.stateTimer = MELEE_BASELINE.dive.time; this.vElevation = -850 * PLAYER_ARC_SCALE;
       audio.playSlash(0.9);
       combat.spawnSlashArc(this.x, this.y - 15, this.facing, { radius: 50, angleStart: 0.8, angleEnd: 2.2, color: '#ff5722', glow: '#d50000' });
@@ -1065,7 +1070,8 @@ export class Player extends GroundEntity {
     this.comboResetTimer = 0.65;
     const attack = combo[this.comboStep - 1];
     // Unity: ground attacks root the Wizard — no forward lunge on a whiff.
-    this.state = attack.state; this.stateTimer = attack.time; this._weaponSwingTime = attack.time; this.vx = 0; this.vz = 0;
+    const swingTime = attack.time * weaponAttackSpeed(this); // Klingentanz: faster swings
+    this.state = attack.state; this.stateTimer = swingTime; this._weaponSwingTime = swingTime; this.vx = 0; this.vz = 0;
     this._whiffRecovery = 0;
     signatureEvent(this, 'attack', { step: this.comboStep, damage: attack.damage });
     this.setWeaponMotion('combo', this.comboStep);
@@ -1245,6 +1251,11 @@ export class Player extends GroundEntity {
     // Ape bond: heavier fists.
     const apeBond = bondMelee(this);
     if (apeBond) { dmg *= apeBond.dmg; kx *= apeBond.kx; }
+    // Weapon kit buffs (rage, war chord, phantom reach, iai / shadow step strike).
+    const kitMods = meleeBuffMods(this);
+    dmg *= kitMods.dmg; kx *= kitMods.kx;
+    if (kitMods.reach || kitMods.guardBreak || kitMods.crit) hitMeta = { ...hitMeta, reach: kitMods.reach ? (hitMeta.reach ?? 78) + kitMods.reach : hitMeta.reach, guardBreak: (hitMeta.guardBreak ?? 0) + kitMods.guardBreak };
+    if (kitMods.crit) isFinisher = true;
     const targets = window.gameWorld?.getHostileTargets(this.team, true) ?? [];
     let hitAny = false; let hitCount = 0; const sigHits = [];
     setHitContext(this);
@@ -1260,7 +1271,9 @@ export class Player extends GroundEntity {
       const heightDifference = Math.abs((target.worldHeight ?? target.elevation ?? 0) - this.worldHeight);
       const verticalReach = target.hitHeightTolerance ?? (target.isObjective ? 120 : 70);
       if (inFront && closeDepth && heightDifference <= verticalReach) {
-        const outcome = target.takeDamage(dmg, kx, lift, stunDuration, isFinisher, 'melee');
+        const targetDmg = dmg * targetDamageMult(this, target); // hunter mark, shattered
+        const outcome = target.takeDamage(targetDmg, kx, lift, stunDuration, isFinisher, 'melee');
+        if (!outcome?.ignored) onWeaponMeleeHit(this, target, targetDmg, spells);
         sigHits.push({ target, blocked: !!outcome?.blocked || (!!target.isGuarding && Math.sign(-kx) === (target.facing || 0)) });
         hitMeta.hitSet?.add(target);
         combat.spawnHitSparks(target.x, target.y - 25, this.facing, isFinisher ? '#ffea00' : '#fff', isFinisher ? 16 : 8);
@@ -1270,6 +1283,7 @@ export class Player extends GroundEntity {
       }
     }
     setHitContext(null);
+    afterWeaponSwing(this, hitAny);
     if (sigHits.length) signatureEvent(this, 'hit', { hits: sigHits, heavy: this.state === 'heavyStrike' || isFinisher, facing: this.facing });
     if (hitAny && this.buffForm) this.buffForm.hitAt = this.buffForm.age;
     if (hitMeta.shockwave) combat.spawnShockwave(this.x + this.facing * 40, this.y - 6, 70, '#b0bec5');
@@ -1303,6 +1317,10 @@ export class Player extends GroundEntity {
     const incomingFromFront = Math.abs(kx) > 0.01 && Math.sign(-kx) === this.facing;
     // Signature stances (floe plates, forge shield, shard shield) soften hits.
     amount = signatureDamageTaken(this, amount, kx, hitKind);
+    // Weapon kits: counter stance parries a melee hit, chi ignores stagger, cursed attackers hit softer.
+    const kitIn = weaponIncoming(this, amount, kx, stun, hitKind, spells);
+    if (kitIn.parried) return { blocked: true, parried: true };
+    amount = kitIn.amount; kx = kitIn.kx; stun = kitIn.stun;
     if (this.isGuarding && incomingFromFront && hitKind === 'spell' && this.guardHoldTime <= 0.18) {
       // The first fraction of a held guard is a precise parry moment.  The
       // caller receives this result and reverses a reflectable projectile.

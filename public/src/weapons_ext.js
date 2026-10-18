@@ -220,7 +220,7 @@ export class WeaponShot {
     this.vx = f * shot.speed; this._vz = spread * shot.speed / 150 * .6 + vzExtra;
     this.damage = shot.damage * power; this.radius = 9 * (shot.size ?? 1); this.life = shot.life ?? 1; this.t = 0;
     this.pierce = !!shot.pierce; this.ricochet = shot.ricochet ?? 0; this.homing = shot.homing ?? 0;
-    this.joker = shot.joker && index === Math.floor(count / 2);
+    this.joker = shot.allJokers || (shot.joker && index === Math.floor(count / 2));
     this.hitSet = new Set(); this.isFinished = false; this.isCapturableProjectile = true; this.isWeaponShot = true; this.spin = 0;
   }
   get y() { return groundYForDepth(this.z) - this.height; }
@@ -233,6 +233,7 @@ export class WeaponShot {
       if (tgt) { const sp = Math.hypot(this.vx, this._vz * 150) || 1; const want = Math.atan2((tgt.z - this.z) * 150, tgt.x - this.x); const cur = Math.atan2(this._vz * 150, this.vx); let d = want - cur; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; const a = cur + Math.max(-this.homing * dt, Math.min(this.homing * dt, d)); this.vx = Math.cos(a) * sp; this._vz = Math.sin(a) * sp / 150; }
     }
     const px = this.x;
+    if (this.shot.drop) this.height = Math.max(4, this.height - dt * this.shot.drop); // angled down (arrow rain)
     this.x += this.vx * dt; this.z = Math.max(.02, Math.min(.98, this.z + this._vz * dt)); this.life -= dt;
     for (const t of this.targets(gw)) {
       const sx = Math.max(Math.min(px, this.x), Math.min(Math.max(px, this.x), t.x));

@@ -14,6 +14,7 @@ import { audio } from './audio.js';
 import { combat } from './combat.js';
 import { makeWeaponShots, WEAPONS } from './weapons.js';
 import { PULL_LOOKS, defaultPullLook } from './pull_looks.js';
+import { stackedShot } from './weapon_kits.js';
 
 export const HOLD_MANA = Object.freeze({ lane: 2, castle: 4, pull: 5 });
 export const HOLD_MIN_TIME = .3;          // touch: a hold shorter than this stays a tap
@@ -45,7 +46,7 @@ export function releaseWeaponReach(player, spells, charge = 0) {
   const cost = castle ? HOLD_MANA.castle : HOLD_MANA.lane;
   if (player.freeMana < cost) return noMana(player);
   player.mp -= cost;
-  const shot = weaponReachShot(player);
+  const shot = stackedShot(player, weaponReachShot(player)); // Gezinkte Karten: every card a joker
   const big = castle ? { ...shot, life: (shot.life ?? 1) * 1.6, size: (shot.size ?? 1) * 1.3, pierce: true } : shot;
   const shots = makeWeaponShots(player, big, player.weapon ?? player.classWeapon, { power: (castle ? 1.5 : 1) * (1 + Math.min(1, charge) * .3), volley: castle ? 2 : 0 });
   for (const s of shots) spells.addSpell(s, 'B');
