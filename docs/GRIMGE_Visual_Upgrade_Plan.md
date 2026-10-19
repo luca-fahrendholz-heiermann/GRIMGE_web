@@ -173,3 +173,11 @@ Figurenhöhe H ≈ 88 Welt-px. Sprites werden in Welt-Pixeln authored (1 Sprite-
 - Clips: `docs/visual_upgrade/pilot_A_eiszacken_vorher.gif`, `…_nachher.gif` (0,25× Zeitlupe).
 - Offen / bewusst nicht gemacht: keine eigene Cast-Pose (nur Hand-Effekt am vorhandenen Sprite); Spitzen nicht höher als die Kollision (Plattform-Mechanik bleibt).
 - **v2 nach LF2-Stilstudie** (`C:\Dev\LittleFighter\sprite\sys`, nur Analyse, nichts übernommen): hellere Palette (fast weißer Kern, gesättigte Cyan-Ränder, dunkle Kontur bleibt für den braunen Boden), Kristall-Cluster aus kleinen Unterfacetten statt glatter Flächen, Frame 0 als stacheliger Energie-Ausbruch vor der Kristallform. Abgeleitete Prinzipien für die nächsten Piloten: Meteor-Explosion mit langer Phasenfolge (weiß-gelber Kern → fleckiges Rot → brauner Rauch → Asche, 10+ Frames); Strahlen als weißer Kern mit 1–2 satten Farbrändern.
+
+### Pilot B — Meteor Cataclysm ✅ zur Abnahme (20.10.2026)
+- Sprites (TESTASSETS, **Finales Artwork fehlt**): `meteor_body` (klumpiger Brocken, dunkle Schale, Lava-Y-Risse, 4 Rotationsframes), `meteor_flame` (Flammenzungen entgegen der Fallrichtung), `meteor_trail` (Rauch/Glut), `meteor_telegraph` (Brandring + Rune, pulsiert stärker je näher der Einschlag), `meteor_explosion` (10 Frames LF2-Prinzip: weiß-gelber Kern → fleckiges Rot → brauner Rauch → Asche), `meteor_debris`, `meteor_crater` (kühlt in 4 Stufen ab).
+- Verdrahtung: `MeteorSpell.render` → `renderSpellVisual(ctx, this, 'meteor')`; Phasen aus `isLanded`, `heightAboveGround`, `craterLife`. Mit freigegebenem Telegraph (rein visuell) und `triggerHitstop(4)` beim Einschlag. Fallzeit und Schaden identisch (Test). Strahl-Zerstörbarkeit bleibt, jetzt mit visuellem Brocken-Burst.
+- Bei aktiven Sprites spawnt der Fall keine generischen Feuerpartikel mehr (sie haben den Körper verdeckt; Test).
+- **Nebenbefund & Fix (alle Spells):** Element-Partikel wurden mit `shadowBlur` je Partikel gezeichnet — bei großen Zaubern ≈ 2,6 s pro Frame im Software-Rendering. Ersetzt durch einen Zwei-Kreis-Glow + Partikelbudget 500 → ≈ 6 ms.
+- Performance (5 gleichzeitige Meteore): legacy ≈ 3,5 ms/Frame → neu ≈ 1,7 ms/Frame. Eiszacken nach dem Partikel-Fix: 5,3 → 1,9 ms.
+- Abnahme: `docs/visual_upgrade/pilot_B_meteor_vergleich.png`, `…_vorher.gif`, `…_nachher.gif`.

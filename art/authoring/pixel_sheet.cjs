@@ -29,8 +29,8 @@ class Sheet {
     const i = this.idx(f, x, y);
     this.png.data[i] = color[0]; this.png.data[i + 1] = color[1]; this.png.data[i + 2] = color[2]; this.png.data[i + 3] = color[3] ?? 255;
   }
-  get(f, x, y) { if (!this.inside(x, y)) return null; const i = this.idx(f, x, y); return this.png.data[i + 3] ? [this.png.data[i], this.png.data[i + 1], this.png.data[i + 2], this.png.data[i + 3]] : null; }
-  alpha(f, x, y) { return this.inside(x, y) ? this.png.data[this.idx(f, x, y) + 3] : 0; }
+  get(f, x, y) { x = Math.round(x); y = Math.round(y); if (!this.inside(x, y)) return null; const i = this.idx(f, x, y); return this.png.data[i + 3] ? [this.png.data[i], this.png.data[i + 1], this.png.data[i + 2], this.png.data[i + 3]] : null; }
+  alpha(f, x, y) { x = Math.round(x); y = Math.round(y); return this.inside(x, y) ? this.png.data[this.idx(f, x, y) + 3] : 0; }
   line(f, x0, y0, x1, y1, color) {
     x0 = Math.round(x0); y0 = Math.round(y0); x1 = Math.round(x1); y1 = Math.round(y1);
     const dx = Math.abs(x1 - x0), dy = -Math.abs(y1 - y0), sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;

@@ -204,5 +204,55 @@ export const SPELL_SPRITE_SHEETS = Object.freeze({
   "h": 10,
   "frames": 3,
   "anchor": "center"
+ },
+ "meteor_body": {
+  "name": "meteor_body",
+  "w": 36,
+  "h": 36,
+  "frames": 4,
+  "anchor": "center"
+ },
+ "meteor_flame": {
+  "name": "meteor_flame",
+  "w": 56,
+  "h": 56,
+  "frames": 4,
+  "anchor": "center"
+ },
+ "meteor_trail": {
+  "name": "meteor_trail",
+  "w": 12,
+  "h": 12,
+  "frames": 4,
+  "anchor": "center"
+ },
+ "meteor_telegraph": {
+  "name": "meteor_telegraph",
+  "w": 56,
+  "h": 18,
+  "frames": 4,
+  "anchor": "center"
+ },
+ "meteor_explosion": {
+  "name": "meteor_explosion",
+  "w": 64,
+  "h": 56,
+  "frames": 10,
+  "anchor": "base",
+  "baseOffset": 3
+ },
+ "meteor_debris": {
+  "name": "meteor_debris",
+  "w": 8,
+  "h": 8,
+  "frames": 4,
+  "anchor": "center"
+ },
+ "meteor_crater": {
+  "name": "meteor_crater",
+  "w": 64,
+  "h": 20,
+  "frames": 4,
+  "anchor": "center"
  }
 });

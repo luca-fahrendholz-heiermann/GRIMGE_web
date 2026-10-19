@@ -2,13 +2,20 @@
 // identical camera / scene for legacy (before), new (after), main-body-only and hitbox overlay,
 // 0.25x slow-motion frame sequences, both facings, two heroes, an airborne cast and a render-time
 // measurement with five simultaneous instances.
-// Usage: node tools/catalog/capture_pilot.mjs <baseUrl> <outDir> <pilot>   (pilot: S37)
+// Usage: node tools/catalog/capture_pilot.mjs <baseUrl> <outDir> <pilot>   (pilot: S37 | METEOR | S39)
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
 const [base, outDir, pilot = 'S37'] = process.argv.slice(2);
+// Per pilot: spell id, target, slow-motion shot times (real ms at 0.25x), then a fast-forward and late shots.
+const PILOTS = {
+  S37: { spell: 'sig_S37', early: [80, 200, 420, 760, 1200, 2000], skip: 2200, late: [250, 350, 350] },
+  METEOR: { spell: 'meteor_cataclysm', target: true, early: [150, 700, 1400, 2080, 2350, 2800, 3400], skip: 900, late: [500, 900] },
+  S39: { spell: 'sig_S39', early: [100, 300, 600, 1000, 1500, 2100], skip: 3800, late: [250, 400, 400] }
+};
+const P0 = PILOTS[pilot];
 fs.mkdirSync(outDir, { recursive: true });
 const chrome = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'grimge-pilot-'));
@@ -35,7 +42,7 @@ const open = async (query) => {
 const setup = (hero, weapon) => `(async () => {
   const g = window.gameWorld; g.setSelectedHero?.('${hero}'); g.setMatchMode('training'); g.startMatch();
   const cv = g.canvas; for (const el of document.querySelectorAll('body *')) if (el !== cv && !el.contains(cv)) el.style.visibility = 'hidden';
-  window.__S = (await import('./src/spells.js')).spells;
+  window.__S = (await import('./src/spells.js')).spells; window.__C = await import('./src/spell_catalog.js');
   const P = g.player; P.equipClassWeapon?.(${weapon ? `'${weapon}'` : 'null'});
   return P.heroKey; })()`;
 const cast = (facing, airborne) => `(() => { const g = window.gameWorld; const P = g.player; window.__S.clearRuntime(); g.battlefield.dynamicSurfaces = [];
@@ -43,20 +50,21 @@ const cast = (facing, airborne) => `(() => { const g = window.gameWorld; const P
   ${airborne ? 'P.grounded = false; P.elevation = 70; P.vElevation = 0;' : ''}
   const d = g.trainingDummy; d.homeX = d.x = ${facing > 0 ? 470 : 554}; d.homeZ = d.z = .55; d.hp = d.maxHp;
   g.targetTimeScale = g.timeScale = .25;
-  window.__S.cast(P, window.__S.resolveSpell([{ id: 'sig_${pilot}' }]), g); return 1; })()`;
+  const def = window.__S.resolveSpell([{ id: '${P0.spell}' }]) ?? (window.__C?.SPELL_DEFINITIONS ?? {})['${P0.spell}'];
+  window.__S.cast(P, def, g, null, ${P0.target ? '{ x: d.x, z: d.z }' : 'null'}); return 1; })()`;
 const clip = { x: 64, y: 150, width: 1152, height: 400, scale: 1 };
 const shoot = async (name) => { const r = await send('Page.captureScreenshot', { format: 'png', clip }); fs.writeFileSync(path.join(outDir, name + '.png'), Buffer.from(r.result.data, 'base64')); };
 // Frame times (real ms at 0.25x): crack → first spike → row growing → hold; then fast-forward to the break.
-const EARLY = [80, 200, 420, 760, 1200, 2000];
+const EARLY = P0.early;
 async function sequence(prefix, facing = 1, airborne = false) {
   await evaluate(cast(facing, airborne));
   let tPrev = 0; let n = 0;
   for (const t of EARLY) { await sleep(t - tPrev); tPrev = t; await shoot(`${prefix}_${n++}`); }
   // Run to just before the break (game time ≈ 2.95 s of the 3.2 s life), then slow again.
   await evaluate('(() => { const g = window.gameWorld; g.targetTimeScale = g.timeScale = 1; return 1; })()');
-  await sleep(2200);
+  await sleep(P0.skip);
   await evaluate('(() => { const g = window.gameWorld; g.targetTimeScale = g.timeScale = .25; return 1; })()');
-  for (const t of [250, 600, 1000]) { await sleep(t === 250 ? 250 : 350); await shoot(`${prefix}_${n++}`); }
+  for (const t of P0.late) { await sleep(t); await shoot(`${prefix}_${n++}`); }
   await evaluate('(() => { const g = window.gameWorld; g.targetTimeScale = g.timeScale = 1; return 1; })()');
 }
 const results = {};
@@ -67,7 +75,7 @@ for (const [mode, query] of [['legacy', '?vfx=legacy'], ['new', ''], ['main', '?
   // Render cost: five simultaneous casts, 120 full frames.
   if (mode === 'legacy' || mode === 'new') {
     results[mode] = await evaluate(`(() => { const g = window.gameWorld; const P = g.player; window.__S.clearRuntime(); g.battlefield.dynamicSurfaces = []; g.targetTimeScale = g.timeScale = 1;
-      for (let k = 0; k < 5; k++) { P.x = 240 + k * 40; P.z = .3 + k * .12; P.facing = 1; P.mp = P.maxMp; window.__S.cast(P, window.__S.resolveSpell([{ id: 'sig_${pilot}' }]), g); }
+      for (let k = 0; k < 5; k++) { P.x = 240 + k * 40; P.z = .3 + k * .12; P.facing = 1; P.mp = P.maxMp; const def = window.__S.resolveSpell([{ id: '${P0.spell}' }]) ?? window.__C.SPELL_DEFINITIONS['${P0.spell}']; if (P.signature) P.signature.timer = 0; window.__S.cast(P, def, g, null, { x: 480 + k * 60, z: .3 + k * .12 }); }
       for (let i = 0; i < 40; i++) window.__S.update(1 / 60, g);
       const t0 = performance.now(); for (let i = 0; i < 120; i++) g.render(); const ms = (performance.now() - t0) / 120;
       return { msPerFrame: +ms.toFixed(3), spells: window.__S.activeSpells.length }; })()`);

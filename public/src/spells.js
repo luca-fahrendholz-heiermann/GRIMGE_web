@@ -11,6 +11,7 @@ import { activateBuffForm } from './buff_forms.js';
 import { castSignature, signatureProjectileSpawned, updateSignatureWorld } from './signature_runes.js';
 import { castNatureSpell, isNatureOrInfusion } from './nature_spells.js';
 import { renderWallLook } from './wall_looks.js';
+import { renderSpellVisual, meteorShatterBurst, spellVisualActive } from './spell_visuals.js';
 import { BeamSpell, BeamClash, resolveBeamInteractions, MirrorWardSpell, GravityLiftSpell, TitanStompSpell, SoulSeekerBolt, SeismicSlamSpell, ConeBreathSpell, BurrowStrikeSpell, ShieldBubbleSpell, renderPixelated } from './abilities.js';
 
 export { BeamClash };
@@ -1506,12 +1507,19 @@ class MeteorSpell {
 
   get heightAboveGround() { return this.targetY - this.y; }
 
+  // Debug overlay (?hitbox=1): the real impact radius (150 × area, depth 150 px per z).
+  renderHitbox(ctx) {
+    const R = 150 * (this.quality?.area ?? 1);
+    ctx.save(); ctx.strokeStyle = '#ff2bd6'; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(this.targetX, this.targetY, R, Math.abs(groundYForDepth(this.targetZ + R / 150) - this.targetY), 0, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+  }
+
   takeBeamDamage(amount) {
     if (this.isLanded || this.isFinished) return;
     this.beamSlow = .55;
     this.structureHp -= amount;
     if (this.structureHp > 0) return;
     this.isFinished = true;
+    for (const burst of meteorShatterBurst(this)) this.system?.addSpell(burst, this.quality); // visual only
     combat.shakeCamera(8, .3);
     combat.spawnShockwave(this.x, this.y, 70, '#ffab40');
     combat.spawnHitSparks(this.x, this.y, 1, '#ffd180', 22);
@@ -1523,7 +1531,8 @@ class MeteorSpell {
       this.x += this.vx * dt * this.beamSlow;
       this.y += this.vy * dt * this.beamSlow;
       this.beamSlow = 1;
-      combat.spawnElementalParticles(this.x, this.y, 'ignis', 6);
+      // The sprite visual brings its own smoke trail; the generic fire particles would bury the body.
+      if (!spellVisualActive('meteor', 'meteor_body')) combat.spawnElementalParticles(this.x, this.y, 'ignis', 6);
 
       if (this.y >= this.targetY - 10) {
         this.isLanded = true;
@@ -1531,6 +1540,7 @@ class MeteorSpell {
         environment.add('crater', this.targetX, this.targetZ, { radius: 72 * (this.quality?.area ?? 1) });
         environment.add('lava', this.targetX, this.targetZ, { radius: 42 * (this.quality?.area ?? 1), team: this.team });
         audio.playSpell('meteor');
+        combat.triggerHitstop?.(4); // a compact impact moment (visual pilot B)
         combat.shakeCamera(14, 0.6);
         combat.spawnShockwave(this.x, this.y, 140, '#ff3d00');
         combat.spawnHitSparks(this.x, this.y, 1, '#ffeb3b', 30);
@@ -1551,7 +1561,7 @@ class MeteorSpell {
       }
 
       // Lingering magma burn
-      if (Math.random() < 0.3) {
+      if (Math.random() < (spellVisualActive('meteor', 'meteor_body') ? .08 : 0.3)) {
         combat.spawnElementalParticles(this.targetX + (Math.random() * 80 - 40), this.targetY, 'ignis', 2);
       }
 
@@ -1560,6 +1570,8 @@ class MeteorSpell {
   }
 
   render(ctx) {
+    // Visual upgrade (pilot B): sprite meteor, telegraph, explosion, crater; else the old glow.
+    if (renderSpellVisual(ctx, this, 'meteor')) return;
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     if (!this.isLanded) {

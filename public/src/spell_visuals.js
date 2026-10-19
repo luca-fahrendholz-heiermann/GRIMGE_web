@@ -57,6 +57,8 @@ export function drawSpellSprite(ctx, name, frame, x, y, { anchor = 'base', flip 
 // ── Registry ─────────────────────────────────────────────────────────────
 const VISUALS = {};
 export function registerSpellVisual(key, renderer) { VISUALS[key] = renderer; }
+// true when a sprite visual will draw this key (the old procedural particles can be skipped).
+export const spellVisualActive = (key, sheet) => !!VISUALS[key] && spellSheetReady(sheet);
 // true when the visual layer drew the spell (then the old renderer is skipped).
 export function renderSpellVisual(ctx, spell, key) {
   const visual = VISUALS[key]; if (!visual) return false;
@@ -114,4 +116,48 @@ export function drawIceCrack(ctx, x0, x1, y, k) {
     drawSpellSprite(ctx, 'ice_crack', Math.min(3, local * 4), x0 + dir * (d + seg / 2), y, { anchor: 'center', flip: dir < 0, alpha: Math.min(1, (1 - k) * 4) });
   }
   return true;
+}
+
+// ── Pilot B: METEOR CATACLYSM (meteor_cataclysm) ─────────────────────────
+// Reads MeteorSpell state only: falling (x, y, heightAboveGround), landed,
+// craterLife. Telegraph + body + trail while falling; LF2-style explosion,
+// radial debris and a cooling crater after the impact.
+const METEOR_FALL = 450; // spawn height above the target (MeteorSpell)
+registerSpellVisual('meteor', (ctx, m) => {
+  if (!spellSheetReady('meteor_body')) return false;
+  const now = (globalThis.performance?.now?.() ?? Date.now()) / 1000;
+  if (!m.isLanded) {
+    const k = Math.max(0, Math.min(1, 1 - m.heightAboveGround / METEOR_FALL));
+    // Telegraph on the ground: pulses brighter as the impact nears.
+    drawSpellSprite(ctx, 'meteor_telegraph', Math.min(3, Math.floor(k * 4)), m.targetX, m.targetY, { anchor: 'center' });
+    // Smoke / ember trail behind the body along the fall direction.
+    if (secondary()) {
+      const steps = VISUAL_FLAGS.lod === 'low' ? 2 : 5;
+      const len = Math.hypot(m.vx, m.vy) || 1;
+      for (let i = steps; i >= 1; i--) drawSpellSprite(ctx, 'meteor_trail', Math.min(3, i - 1), m.x - m.vx / len * i * 16, m.y - m.vy / len * i * 16, { anchor: 'center' });
+    }
+    if (secondary()) drawSpellSprite(ctx, 'meteor_flame', Math.floor(now * 16) % 4, m.x, m.y, { anchor: 'center' });
+    drawSpellSprite(ctx, 'meteor_body', Math.floor(now * 14) % 4, m.x, m.y, { anchor: 'center' });
+    return true;
+  }
+  // Landed: remember the crater length once (craterLife is scaled by the rune grade).
+  m._craterMax ??= m.craterLife + 1e-6;
+  const since = m._craterMax - m.craterLife;
+  const cool = Math.max(0, Math.min(.999, since / m._craterMax));
+  drawSpellSprite(ctx, 'meteor_crater', Math.floor(cool * 4), m.targetX, m.targetY, { anchor: 'center' });
+  // Debris first (behind the fireball), thrown from its rim; then the explosion: 10 frames over 0.8 s.
+  if (secondary() && since > .05 && since < .7) {
+    const n = VISUAL_FLAGS.lod === 'low' ? 4 : 8;
+    for (let i = 0; i < n; i++) {
+      const a = -Math.PI * (.1 + .8 * i / (n - 1)); const sp = 140 + (i * 37) % 90;
+      drawSpellSprite(ctx, 'meteor_debris', i % 4, m.targetX + Math.cos(a) * (40 + sp * since), m.targetY - 20 + Math.sin(a) * (24 + sp * since) + 260 * since * since, { anchor: 'center' });
+    }
+  }
+  if (since < .8) drawSpellSprite(ctx, 'meteor_explosion', since / .8 * 10, m.targetX, m.targetY + 6);
+  return true;
+});
+// Shattered in the air by a beam: debris burst instead of the impact.
+export function meteorShatterBurst(m) {
+  if (!spellSheetReady('meteor_debris')) return [];
+  return Array.from({ length: 6 }, (_, i) => new SpriteBurst({ sheet: 'meteor_debris', x: m.x, y: m.y, fps: 6, vx: Math.cos(i * 1.05) * 120, vy: Math.sin(i * 1.05) * 80 - 60, gravity: 420 }));
 }

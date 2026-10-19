@@ -1,5 +1,6 @@
 // GRIMGE Prototype — Combat Feedback, Hitstop, Camera & Particle VFX Engine
 import { audio } from './audio.js';
+const MAX_PARTICLES = 500;
 
 export class CombatEngine {
   constructor() {
@@ -241,6 +242,8 @@ export class CombatEngine {
     }
 
     // 6. Update Particles
+    // Particle budget: drop the oldest beyond the cap (heavy spells used to pile up 1000+).
+    if (this.particles.length > MAX_PARTICLES) this.particles.splice(0, this.particles.length - MAX_PARTICLES);
     for (let i = this.particles.length - 1; i >= 0; i--) {
       const p = this.particles[i];
       p.x += p.vx * dt;
@@ -305,12 +308,13 @@ export class CombatEngine {
         ctx.fillStyle = p.color;
         ctx.fillRect(p.x - p.size * 0.5, p.y - p.size * 0.5, p.size, p.size);
       } else if (p.type === 'elemental') {
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        // Cheap glow: a faint larger disc + the solid core (a per-particle shadowBlur
+        // cost ~1.5 ms each and made big spells drop frames).
         ctx.fillStyle = p.color;
-        ctx.shadowColor = p.color;
-        ctx.shadowBlur = 8;
-        ctx.fill();
+        ctx.globalAlpha = p.alpha * .35;
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.size * 2, 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = p.alpha;
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill();
       } else if (p.type === 'dust') {
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);

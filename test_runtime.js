@@ -2782,6 +2782,42 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   spells.clearRuntime();
 }
 
+// Visual upgrade pilot B: Meteor Cataclysm sprites on the read-only visual layer; gameplay unchanged.
+{
+  const V = await import('./public/src/spell_visuals.js');
+  const { SPELL_SPRITE_SHEETS } = await import('./public/src/spell_sprite_sheets.js');
+  const { SPELL_DEFINITIONS } = await import('./public/src/spell_catalog.js');
+  const { combat } = await import('./public/src/combat.js');
+  game.returnToHub(); game.setMatchMode('training'); game.startMatch();
+  const P = game.player; const dummy = game.trainingDummy;
+  const run = (sheets) => {
+    for (const name of Object.keys(SPELL_SPRITE_SHEETS)) V.__setSpellSheetImage(name, sheets ? { width: 1, height: 1 } : null);
+    spells.clearRuntime(); combat.particles.length = 0; dummy.homeX = dummy.x = 520; dummy.homeZ = dummy.z = .5; dummy.hp = dummy.maxHp;
+    spells.cast(P, SPELL_DEFINITIONS.meteor_cataclysm, game, null, { x: 520, z: .5 });
+    const m = spells.activeSpells.find((sp) => sp.isHeavyObject);
+    let particlesWhileFalling = 0; let t = 0;
+    while (!m.isLanded && t < 2) { spells.update(1 / 60, game); t += 1 / 60; if (!m.isLanded) particlesWhileFalling = combat.particles.length; }
+    for (let i = 0; i < 5; i++) spells.update(1 / 60, game);
+    return { m, t, particlesWhileFalling, damage: dummy.maxHp - dummy.hp };
+  };
+  const legacy = run(false); const sprite = run(true);
+  assert(Math.abs(legacy.t - sprite.t) < 1e-9 && legacy.damage === sprite.damage && legacy.damage > 0, 'Meteor: fall time and impact damage are identical with and without the sprite visuals');
+  assert(legacy.particlesWhileFalling > 30 && sprite.particlesWhileFalling < 10, 'Meteor: with sprites the generic fire particles no longer bury the falling body');
+  const calls = []; const rec = new Proxy({}, { get: (t, k) => k === 'drawImage' ? (...a) => calls.push(a) : () => {}, set: () => true });
+  const fresh = run(true); spells.clearRuntime(); spells.cast(P, SPELL_DEFINITIONS.meteor_cataclysm, game, null, { x: 520, z: .5 });
+  const falling = spells.activeSpells.find((sp) => sp.isHeavyObject);
+  V.renderSpellVisual(rec, falling, 'meteor');
+  assert(fresh.m.isLanded && calls.length >= 4, 'Meteor falling: telegraph, trail, flame and body are drawn as sprites');
+  calls.length = 0; V.renderSpellVisual(rec, fresh.m, 'meteor');
+  assert(calls.length >= 2, 'Meteor landed: crater and explosion are drawn as sprites');
+  // A strong beam still shatters it in the air (heavy object), now with a visual debris burst.
+  spells.clearRuntime(); spells.cast(P, SPELL_DEFINITIONS.meteor_cataclysm, game, null, { x: 520, z: .5 });
+  const target = spells.activeSpells.find((sp) => sp.isHeavyObject); target.takeBeamDamage(60);
+  assert(target.isFinished && spells.activeSpells.some((sp) => sp.isVisualOnly && sp.sheet === 'meteor_debris'), 'A beam still shatters the meteor in the air; the debris burst is purely visual');
+  for (const name of Object.keys(SPELL_SPRITE_SHEETS)) V.__setSpellSheetImage(name, null);
+  spells.clearRuntime(); combat.particles.length = 0;
+}
+
 // Movement after the Unity original: rooted attacks, full combos on a target in front, long sprint jump, auto-run.
 {
   game.returnToHub(); game.setMatchMode('training'); game.startMatch(); game.selectTrainingMap('waterfalls');
