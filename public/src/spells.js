@@ -163,6 +163,8 @@ export class SpellSystem {
 
   clearRuntime() {
     for (const clash of this.activeClashes) clash.finish({ type: 'cleared' });
+    // A cleared Burrow Strike must not leave its caster underground (invisible) forever.
+    for (const spell of this.activeSpells) if (spell.caster?.burrowed) spell.caster.burrowed = false;
     this.activeSpells = [];
     this.activeSummons = [];
     this.activeClashes = [];

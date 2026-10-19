@@ -2735,6 +2735,18 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   reset();
 }
 
+// Regression (found by the visual catalog capture): clearing the spells mid-burrow left the Wizard underground and invisible.
+{
+  const { SPELL_DEFINITIONS } = await import('./public/src/spell_catalog.js');
+  game.returnToHub(); game.setMatchMode('training'); game.startMatch();
+  const P = game.player; spells.clearRuntime(); P.state = 'idle'; P.stateTimer = 0; P.canAttack = true;
+  spells.cast(P, SPELL_DEFINITIONS.burrow_strike, game);
+  const wasBurrowed = P.burrowed; spells.clearRuntime();
+  assert(wasBurrowed && !P.burrowed, 'Clearing the spells mid-burrow brings the Wizard back above ground');
+  P.burrowed = true; P.respawn(game.battlefield);
+  assert(!P.burrowed, 'A respawn never leaves the Wizard underground');
+}
+
 // Movement after the Unity original: rooted attacks, full combos on a target in front, long sprint jump, auto-run.
 {
   game.returnToHub(); game.setMatchMode('training'); game.startMatch(); game.selectTrainingMap('waterfalls');

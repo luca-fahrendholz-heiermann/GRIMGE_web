@@ -1461,6 +1461,7 @@ export class Player extends GroundEntity {
 
   respawn(battlefield) {
     this.dismount();
+    this.burrowed = false; // never respawn underground
     const spawn = battlefield?.getSpawn(this.team) ?? ARENA_LAYOUT.spawns.player;
     this.x = spawn.x; this.z = spawn.z; this.elevation = 0;
     this.vx = 0; this.vz = 0; this.vElevation = 0; this.kbVelX = 0; this.kbVelZ = 0;
