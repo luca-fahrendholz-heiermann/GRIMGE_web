@@ -20,7 +20,9 @@ const ASEPRITE = 'C:/Program Files/Aseprite/Aseprite.exe';
 
 // ── Pilot A: EISZACKEN (sig_S37) ─────────────────────────────────────────
 // Palette (plan §2.1): outline · shadow side · body · mid tone · facet · hotspot.
-const ICE = { out: hex('#0A1A2E'), shadow: hex('#123A6B'), body: hex('#1F7FD1'), mid: hex('#35B8F0'), facet: hex('#8FE3FF'), hot: hex('#FFFFFF'), crack: hex('#0B2238'), clod: hex('#2A3B4F'), clodHi: hex('#4A6078') };
+// Brighter after the LF2 reference study (near-white core, saturated cyan rims);
+// the dark outline stays so the ice reads on the brown arena floor.
+const ICE = { out: hex('#0B2A4A'), shadow: hex('#2A7FD0'), body: hex('#4FC3F7'), mid: hex('#9BE7FF'), facet: hex('#E3FAFF'), hot: hex('#FFFFFF'), crack: hex('#1A4F8C'), clod: hex('#2A3B4F'), clodHi: hex('#4A6078') };
 const SPIKE_W = 28; const SPIKE_H = 50; const BASE = SPIKE_H - 3; // bottom anchor row (ground contact)
 // World heights of the seven spikes (IceSpike: 34 + 7·i px) → sprite px at scale 2.
 const SPIKE_HEIGHTS = Array.from({ length: 7 }, (_, i) => Math.round((34 + 7 * i) / 2));
@@ -51,6 +53,25 @@ function rib(s, f, cx, h, bw, lean, seed, { pointed = false, dark = false } = {}
   }
   // One hotspot on the ridge near the top (rare near-white highlight).
   if (!dark) s.set(f, Math.round(ridge(top + 2)), top + 2, ICE.hot);
+  // Crystal cluster: small sub-facets and short fracture lines inside the body.
+  if (h >= 8) for (let k = 0; k < Math.round(h / 5); k++) {
+    const y = top + 3 + Math.floor(r() * (h - 5)); const x = Math.round(ridge(y) + (r() - .6) * bw * 1.1);
+    if (!s.get(f, x, y) || !s.get(f, x + 2, y + 2)) continue;
+    const light = r() < .55;
+    s.poly(f, [[x, y], [x + 2 + Math.round(r() * 2), y + 1], [x + 1, y + 3]], light ? (dark ? ICE.mid : ICE.facet) : ICE.shadow);
+    if (!light) s.set(f, x + 1, y + 1, ICE.crack);
+  }
+}
+// LF2-style emergence: a spiky burst of white-cyan energy before the crystal forms.
+function burst(s, f, cx, seed, size) {
+  const r = rng(seed);
+  for (let k = 0; k < 9; k++) {
+    const a = -Math.PI / 2 + (k - 4) * .32 + (r() - .5) * .15; const L = size * (.55 + r() * .6);
+    const x1 = cx + Math.cos(a) * L; const y1 = BASE + Math.sin(a) * L;
+    s.poly(f, [[cx - 2, BASE], [x1, y1], [cx + 2, BASE]], k % 3 ? ICE.facet : ICE.mid);
+  }
+  s.poly(f, [[cx - 4, BASE], [cx, BASE - size * .45], [cx + 4, BASE]], ICE.hot);
+  s.outline(f, ICE.body);
 }
 function clods(s, f, cx, seed, spread = 1) {
   const r = rng(seed);
@@ -73,9 +94,9 @@ function spikeShape(s, f, i, h, glint) {
 }
 function iceSpike(i) {
   const H = SPIKE_HEIGHTS[i];
-  // Frames: 0 stub · 1 half · 2 full (glint) · 3 hold · 4 cracked · 5 split · 6 shards.
+  // Frames: 0 energy burst · 1 half · 2 full (glint) · 3 hold · 4 cracked · 5 split · 6 shards.
   const s = new Sheet(`ice_spike_v${i}`, SPIKE_W, SPIKE_H, 7, { anchor: 'bottom', baseOffset: SPIKE_H - 1 - BASE, plateau: H, worldHeight: 34 + 7 * i, phases: { emerge: [0, 1, 2], hold: [3], break: [4, 5, 6] } });
-  spikeShape(s, 0, i, Math.max(4, Math.round(H * .3)), false);
+  burst(s, 0, 13, 400 + i, Math.max(8, Math.round(H * .55)));
   spikeShape(s, 1, i, Math.round(H * .64), false);
   spikeShape(s, 2, i, H, true);
   spikeShape(s, 3, i, H, false);
