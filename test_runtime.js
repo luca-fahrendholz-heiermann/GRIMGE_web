@@ -2747,6 +2747,41 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   assert(!P.burrowed, 'A respawn never leaves the Wizard underground');
 }
 
+// Visual upgrade pilot A (docs/GRIMGE_Visual_Upgrade_Plan.md): sprite-based Eiszacken on a read-only visual layer.
+{
+  const V = await import('./public/src/spell_visuals.js');
+  const { SPELL_SPRITE_SHEETS } = await import('./public/src/spell_sprite_sheets.js');
+  const core = await import('./public/src/signature_core.js');
+  game.returnToHub(); game.setMatchMode('training'); game.startMatch();
+  const P = game.player; spells.clearRuntime(); if (P.signature) core.endStance(P, 'replaced');
+  P.x = 300; P.z = .5; P.facing = 1; P.state = 'idle'; P.stateTimer = 0; game.battlefield.placeOnSurface(P);
+  spells.cast(P, spells.resolveSpell([{ id: 'sig_S37' }]), game);
+  const spikes = spells.activeSpells.filter((sp) => sp.surface?.label === 'Ice spike');
+  // No sheets loaded (missing files / no Image) → the old procedural renderer draws (fallback).
+  for (const name of Object.keys(SPELL_SPRITE_SHEETS)) V.__setSpellSheetImage(name, null);
+  assert(spikes.length === 7 && !V.renderSpellVisual(new Proxy({}, { get: () => () => {} }), spikes[0], 'ice_spike'), 'Without loaded sheets the visual layer falls back to the old renderer');
+  assert(Object.keys(SPELL_SPRITE_SHEETS).filter((k) => k.startsWith('ice_spike_v')).length === 7 && ['ice_crack', 'ice_shard', 'ice_hit', 'ice_cast'].every((k) => SPELL_SPRITE_SHEETS[k]), 'Pilot A sheets: seven spike variants (one per height) plus crack, shards, hit and cast');
+  // Phases come from the spike's own timers.
+  const sp = spikes[6]; const frameAt = (t) => { sp.t = t; return V.iceSpikeFrame(sp); };
+  assert(frameAt(-.1) === -1 && frameAt(.01) === 0 && frameAt(.11) === 2 && frameAt(1.5) === 3 && frameAt(sp.life - .01) === 6, 'Spike frames follow emerge / hold / break of the gameplay object');
+  // With a sheet present: drawn as a sprite; its plateau sits on the real platform height (± 1 px); flipped when facing left.
+  const calls = []; const rec = new Proxy({}, { get: (t, k) => k === 'drawImage' ? (...a) => calls.push(a) : (k === 'save' || k === 'restore' || k === 'translate' || k === 'scale') ? (...a) => calls.push([k, ...a]) : () => {}, set: () => true });
+  for (const name of Object.keys(SPELL_SPRITE_SHEETS)) V.__setSpellSheetImage(name, { width: 1, height: 1 });
+  sp.t = 1.5; V.renderSpellVisual(rec, sp, 'ice_spike');
+  const draw = calls.find((c) => typeof c[0] === 'object' && c.length === 9);
+  const meta = SPELL_SPRITE_SHEETS.ice_spike_v6;
+  const plateauTop = draw ? draw[6] + (meta.h - 1 - meta.baseOffset - meta.plateau) * 2 : NaN;
+  assert(draw && Math.abs((sp.y - plateauTop) - sp.height) <= 1, 'The ice rib plateau matches the standable platform height (pixel-aligned)');
+  calls.length = 0; P.facing = -1; V.renderSpellVisual(rec, sp, 'ice_spike'); P.facing = 1;
+  assert(calls.some((c) => c[0] === 'scale' && c[1] === -1), 'Cast to the left: the ice ribs are mirrored');
+  // Impact / cast sprites are visual only (no hit logic).
+  const burst = new V.SpriteBurst({ sheet: 'ice_hit', x: 400, z: .5 });
+  for (let i = 0; i < 20; i++) burst.update(1 / 60);
+  assert(burst.isVisualOnly && burst.isFinished && !('damage' in burst), 'Impact sprites are purely visual and finish after their animation');
+  for (const name of Object.keys(SPELL_SPRITE_SHEETS)) V.__setSpellSheetImage(name, null);
+  spells.clearRuntime();
+}
+
 // Movement after the Unity original: rooted attacks, full combos on a target in front, long sprint jump, auto-run.
 {
   game.returnToHub(); game.setMatchMode('training'); game.startMatch(); game.selectTrainingMap('waterfalls');

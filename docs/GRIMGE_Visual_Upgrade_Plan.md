@@ -154,3 +154,21 @@ Figurenhöhe H ≈ 88 Welt-px. Sprites werden in Welt-Pixeln authored (1 Sprite-
 - Meteor: darf der rein visuelle Telegraph + Impact-Hitstop dazukommen? (ändert kein Schadensverhalten, aber das Spielgefühl)
 - Test-Assets selbst pixeln vs. zusätzlich Konzeptentwürfe per Codex ImageGen erzeugen lassen.
 - Zielauflösung der Spell-Sprites: Welt-Scale 2 (wie bestehende FX) — bestätigen.
+
+---
+
+## 5. Umsetzungsstand
+
+### Schritt 0 — Infrastruktur ✅ (19.10.2026)
+- `public/src/spell_visuals.js`: Visual-Registry (`registerSpellVisual` / `renderSpellVisual`), Sheet-Loader, `drawSpellSprite` (Integer-Scale ×2, Glättung aus), `SpriteBurst` (rein visuelle One-Shot-Animationen), Debug-Schalter `?vfx=main`, `?vfx=legacy`, `?hitbox=1`, `?lod=low`. Ohne geladenes Sheet → alter Renderer (Fallback).
+- `art/authoring/pixel_sheet.cjs` + `art/authoring/generate_spell_sprites.cjs` → `public/assets/sprites/spells/*.png`, generierte Metadaten `public/src/spell_sprite_sheets.js`, editierbare Kopien `art/authoring/spells/*.aseprite` (Aseprite-CLI).
+- `tools/catalog/capture_pilot.mjs`: Abnahme-Aufnahmen (vorher/nachher, nur Hauptkörper, Hitbox, Richtungen, Sprung, zweiter Held, Render-Zeit).
+
+### Pilot A — Eiszacken (S37) ✅ zur Abnahme
+- Sprites (TESTASSETS, **Finales Artwork fehlt**): `ice_spike_v0…v6` (je eine Variante pro Höhenstufe, 7 Frames: Stummel · halb · voll · Halt · Risse · Spaltung · Splitter), `ice_crack`, `ice_shard`, `ice_hit`, `ice_cast`.
+- Verdrahtung: `IceSpike.render` → `renderSpellVisual(ctx, this, 'ice_spike')`; Frames aus `t / emerge / life / decay` der bestehenden `GeoPlatform`; Riss beim Cast, Frosthauch an der Hand, Treffer-Sprite am Ziel. **Keine** Änderung an Schaden, Timing, Hitbox oder Plattformhöhe.
+- Plateau-Oberkante = Kollisionshöhe (± 1 px, Test + Hitbox-Overlay `docs/visual_upgrade/pilot_A_eiszacken_vergleich.png`).
+- Getestet: beide Blickrichtungen, Wirken im Sprung, Astral + Paladin mit Schwert, „nur Hauptkörper“ (Form bleibt lesbar), Hitbox-Overlay.
+- Performance (5 gleichzeitige Eiszacken, 120 volle Frames, Headless-Chrome): legacy ≈ 3,9 ms/Frame → neu ≈ 1,6 ms/Frame.
+- Clips: `docs/visual_upgrade/pilot_A_eiszacken_vorher.gif`, `…_nachher.gif` (0,25× Zeitlupe).
+- Offen / bewusst nicht gemacht: keine eigene Cast-Pose (nur Hand-Effekt am vorhandenen Sprite); Spitzen nicht höher als die Kollision (Plattform-Mechanik bleibt).

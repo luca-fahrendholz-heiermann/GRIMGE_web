@@ -15,16 +15,19 @@ import { environment } from './environment.js';
 import { groundYForDepth } from './world.js';
 import { applyStatuses } from './buff_techniques.js';
 import { GeoPlatform } from './geometry.js';
+import { renderSpellVisual, drawIceCrack, SpriteBurst } from './spell_visuals.js';
 
 const gameOf = (c) => c.gw ?? sigWorld();
 
 // ── S37 Eiszacken ────────────────────────────────────────────────────────
 class IceSpike extends GeoPlatform {
   constructor(caster, game, x, z, i) {
-    super(caster, game, { x, z, halfW: 13, halfD: .05, height: 34 + i * 7, life: 3.2, emerge: .12, decay: .3, delay: i * .07, look: 'ice', damage: 22, lift: 280, stun: .6, label: 'Ice spike', onEmerge: (t) => t.freeze?.(.5) });
+    super(caster, game, { x, z, halfW: 13, halfD: .05, height: 34 + i * 7, life: 3.2, emerge: .12, decay: .3, delay: i * .07, look: 'ice', damage: 22, lift: 280, stun: .6, label: 'Ice spike', onEmerge: (t) => { t.freeze?.(.5); emit(new SpriteBurst({ sheet: 'ice_hit', x: t.x, y: (t.y ?? groundYForDepth(t.z ?? z)) - 34, owner: caster })); } });
     this.i = i;
   }
   render(ctx) {
+    // Visual upgrade (pilot A): sprite-based ice ribs; falls back to the plates below.
+    if (renderSpellVisual(ctx, this, 'ice_spike')) return;
     const h = this.currentHeight; if (h <= .5) return;
     const y = this.y; const m = this.mat; const w = this.halfW;
     // A jagged spike, not a pillar: a main blade with two side shards.
@@ -39,7 +42,9 @@ defineSignature('S37', {
   cast(c) {
     const p = c.caster; const f = p.facing || 1; const game = gameOf(c);
     for (let i = 0; i < 7; i++) emit(new IceSpike(p, game, p.x + f * (46 + i * 32), p.z, i), c.quality);
-    emit(new SigSequence(c.sig, p, { dur: .5, draw: (ctx, s, k) => { const y = groundYForDepth(s.z); thread(ctx, [[s.x + f * 14, y], [s.x + f * (40 + 230 * Math.min(1, k * 2)), y + 1]], c.sig.mat.edge, 2, 1 - k); } }), c.quality);
+    // Anticipation: frost at the casting hand, a ground crack runs out along the spike line.
+    emit(new SpriteBurst({ sheet: 'ice_cast', x: p.x + f * 17, y: (p.y ?? groundYForDepth(p.z)) - 46, fps: 14, owner: p, flip: f < 0 }), c.quality);
+    emit(new SigSequence(c.sig, p, { dur: .5, draw: (ctx, s, k) => { const y = groundYForDepth(s.z); if (drawIceCrack(ctx, s.x + f * 14, s.x + f * 270, y + 1, k)) return; thread(ctx, [[s.x + f * 14, y], [s.x + f * (40 + 230 * Math.min(1, k * 2)), y + 1]], c.sig.mat.edge, 2, 1 - k); } }), c.quality);
   }
 });
 

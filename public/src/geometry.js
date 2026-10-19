@@ -63,6 +63,14 @@ export class GeoPlatform {
     }
     if (this.t >= this.life) { this.isFinished = true; unregisterSurface(game, this.surface); }
   }
+  // Debug overlay (?hitbox=1): the real gameplay footprint and the standable top.
+  renderHitbox(ctx) {
+    const y = this.y; const d = this.halfD * 150 * .32; const top = y - this.currentHeight;
+    ctx.save(); ctx.globalAlpha = .9; ctx.strokeStyle = '#ff2bd6'; ctx.lineWidth = 1;
+    ctx.strokeRect(Math.round(this.x - this.halfW) + .5, Math.round(y - d) + .5, Math.round(this.halfW * 2), Math.max(1, Math.round(d * 2)));
+    ctx.strokeStyle = '#39ff14'; ctx.beginPath(); ctx.moveTo(Math.round(this.x - this.halfW), Math.round(top) + .5); ctx.lineTo(Math.round(this.x + this.halfW), Math.round(top) + .5); ctx.stroke();
+    ctx.restore();
+  }
   // Destroy early (e.g. a breakable pillar was smashed).
   shatter() { if (this.t < this.life - this.decay) this.t = this.life - this.decay; }
   render(ctx) {

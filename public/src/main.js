@@ -17,6 +17,7 @@ import { GamepadController } from './gamepad.js';
 import { environment, renderProp } from './environment.js';
 import { TRAINING_MAPS, getTrainingMap, zoneToWorld } from './training_maps.js';
 import { loadFxSprites } from './fx_sprites.js';
+import { loadSpellSprites } from './spell_visuals.js';
 import { renderPixelated } from './abilities.js';
 import { sky } from './sky.js';
 import { renderGroundShadows } from './shadows.js';
@@ -330,7 +331,7 @@ export class GameWorld {
     window.visualViewport?.addEventListener?.('resize', syncViewport);
 
     // Load character sprites
-    await Promise.all([sprites.loadAll(), loadFxSprites()]);
+    await Promise.all([sprites.loadAll(), loadFxSprites(), loadSpellSprites()]);
 
     window.gameWorld = this;
     // Castle Siege runs the Unity platform ↔ lane match rules (siege_match.js).
