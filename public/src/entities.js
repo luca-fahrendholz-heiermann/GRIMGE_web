@@ -1105,6 +1105,7 @@ export class Player extends GroundEntity {
       const dmg = Math.max(14, Math.round((attack.shot.damage ?? 16) * (attack.shot.count ?? 1) * .7));
       const bash = this.triggerMeleeHitbox(dmg, this.facing * (attack.finisher ? 320 : 170) * (attack.finisher ? 1 : .3), attack.finisher ? 160 : 10, attack.finisher ? .6 : .35, !!attack.finisher, { hitstopTicks: 3, hitReaction: attack.finisher ? 'finisher' : 'light', reach: 66 });
       if (!bash && !attack.finisher) this._whiffRecovery = attack.time * .5;
+      if (!bash) { this.comboStep = 0; this.comboResetTimer = 0; }
       return true;
     }
     // Chain steps barely push (the target stays in front for the next hit); only the finisher sends it away.
@@ -1112,6 +1113,9 @@ export class Player extends GroundEntity {
     const connected = this.triggerMeleeHitbox(attack.damage, this.facing * attack.knockback * push, attack.lift * pop, attack.finisher ? 0.6 : 0.4, !!attack.finisher, { hitstopTicks: attack.hitstopTicks, hitReaction: attack.hitReaction, reach: attack.reach, behind: attack.behind, crit: attack.crit, freeze: attack.freeze, guardBreak: attack.guardBreak, shockwave: attack.shockwave });
     // Unity whiff relief: a missed chain step frees locomotion once its active window is over.
     if (!connected && !attack.finisher) this._whiffRecovery = attack.time * .5;
+    // A single swing into the air is fine, but it never advances the combo: only hits
+    // chain into the next step (and up to the finisher). A whiff starts over at step 1.
+    if (!connected) { this.comboStep = 0; this.comboResetTimer = 0; }
     return true;
   }
 
@@ -1274,7 +1278,8 @@ export class Player extends GroundEntity {
     for (const target of targets) {
       if (hitMeta.hitSet?.has(target)) continue;
       if (isUpperCastleBattlement(this) && isUpperCastleBattlement(target) && target.heroKey) continue;
-      const limit = reach ?? (target.hitRadiusX ?? 78);
+      // Default reach 78 px; larger targets (towers, castles) widen it — small ones never shrink it.
+      const limit = reach ?? Math.max(78, target.hitRadiusX ?? 0);
       const inFront = (target.x - this.x) * this.facing >= (hitMeta.behind ? -limit * .6 : -10) && Math.abs(target.x - this.x) <= limit;
       const closeDepth = Math.abs((target.z ?? this.z) - this.z) <= (target.hitRadiusZ ?? 0.22);
       const heightDifference = Math.abs((target.worldHeight ?? target.elevation ?? 0) - this.worldHeight);

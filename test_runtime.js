@@ -176,7 +176,7 @@ game.enemyChampion.elevation = 0;
 let recoveredAttacks = 0;
 for (let i = 0; i < 20; i++) { game.player.state = 'idle'; game.player.stateTimer = 0; game.player.canAttack = true; if (game.player.executeAttack(game.input)) recoveredAttacks++; game.player.update(0.5, game.input, game.battlefield); }
 assert(recoveredAttacks === 20 && game.player.canAttack, 'Repeated melee actions always recover to an attack-ready state');
-game.player.state = 'attack1'; game.player.stateTimer = .08; game.player.canAttack = false;
+game.player.state = 'attack1'; game.player.stateTimer = .08; game.player.canAttack = false; game.player.comboStep = 1; // attack1 connected
 assert(game.player.executeAttack(game.input) && game.player.queuedAttack === 'normal', 'Normal melee can be buffered near recovery without adding a weapon-specific combo system');
 game.player.finishAction(game.input);
 assert(game.player.state === 'attack2', 'Buffered normal input chains directly into the next baseline combo strike');
@@ -1619,6 +1619,7 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
   assert(dummy.hp < before, 'The spear hits at long reach (~110 px)');
   // Dual swords: a five-hit chain.
   P.equipWeapon('dual_swords'); P.comboStep = 0;
+  dummy.homeX = dummy.x = P.x + 24; dummy.hp = dummy.maxHp; // the chain only continues while it hits
   const states = [];
   for (let i = 0; i < 5; i++) { ready(); P.executeAttack(neutral, 'normal'); states.push(P.comboStep); }
   assert(states.join(',') === '1,2,3,4,5', 'Dual swords chain five strikes before the combo restarts');
@@ -2172,6 +2173,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   assert(weaponMotion('spear', 'combo', 1) === 'thrust' && weaponMotion('katana', 'combo', 1) === 'iaido' && weaponMotion('great_hammer', 'heavy') === 'slam' && weaponMotion('scythe', 'heavy') === 'whirl', 'Spear thrusts, katana draws (iaido), hammer slams, scythe whirls');
   const ready = () => { P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.grounded = true; P.sprintActive = false; };
   P.equipWeapon('dual_swords'); P.comboStep = 0;
+  if (game.trainingDummy) { game.trainingDummy.homeX = game.trainingDummy.x = P.x + P.facing * 24; game.trainingDummy.homeZ = game.trainingDummy.z = P.z; } // the chain continues on hits
   ready(); P.executeAttack(neutral, 'normal'); const lead1 = P._weaponLead;
   ready(); P.executeAttack(neutral, 'normal'); const lead2 = P._weaponLead;
   assert(P._weaponMotion === 'backhand' && lead1 === 'front' && lead2 === 'rear', 'Dual swords alternate the striking hand');
@@ -2705,7 +2707,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   assert(shafts.length === 3 && shafts[0].heightAt(0) < shafts[1].heightAt(0) && shafts[1].heightAt(0) < shafts[2].heightAt(0), 'S38 SCHACHTWUCHS: three stepped stone shafts (low, middle, high) as platforms');
   reset(); cast('S39'); const hp0 = P.hp; P.takeDamage(30, 0, 0, .1, false, 'spell'); step(60);
   assert(P.signature?.id === 'S39' && hp0 - P.hp <= 21 && dummy.hp < dummy.maxHp, 'S39 TIDENBOHRER: the water shell takes a third of a hit and its jets hammer the foe');
-  reset(); cast('S40'); dummy.homeX = dummy.x = 360; for (let i = 0; i < 3; i++) { P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.executeAttack(neutral, 'normal'); step(4); }
+  reset(); cast('S40'); dummy.homeX = dummy.x = P.x + 20; for (let i = 0; i < 3; i++) { P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.executeAttack(neutral, 'normal'); step(4); }
   step(40); assert(P.signature?.id === 'S40' && dummy.hp < dummy.maxHp, 'S40 WASSERATMUNG: water arcs on every swing, the finisher sends a wave');
   reset(); cast('S42'); P.sprintActive = true; P.vx = 300; P.startSprintAttack();
   assert(P.lastSprintAttack === 'BLITZSCHRITT' && P.sprintStrike?.variant?.pierce, 'S42 DONNERATMUNG: the sprint attack becomes a lightning dash through everyone in line');
@@ -2921,6 +2923,38 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   let ok = true; try { for (let i = 0; i < 80; i++) { spells.update(1 / 60, game); fx?.render(strict); } } catch { ok = false; }
   assert(fx && hidden === 0 && shown > .9 && ok && fx.isFinished, 'A new Arcane State plays its transition (charge, flash, pillar) and the form appears after the flash');
   buff.endBuffForm(P); spells.clearRuntime();
+}
+
+// Combo rule (user): one swing into the air is allowed, but only hits chain into the next step.
+{
+  game.returnToHub(); game.setMatchMode('training'); game.startMatch();
+  const P = game.player; const dummy = game.trainingDummy; spells.clearRuntime(); P.equipClassWeapon(null); P.weapon = null;
+  const neutral = { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false };
+  const ready = () => { P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; };
+  P.x = 300; P.z = .5; P.facing = 1; game.battlefield.placeOnSurface(P); P.comboStep = 0;
+  dummy.homeX = dummy.x = 800; ready(); P.executeAttack(neutral, 'normal'); const afterWhiff = P.comboStep; ready(); P.executeAttack(neutral, 'normal');
+  assert(afterWhiff === 0 && P.comboStep === 0 && P.state === 'attack1', 'A swing into the air is allowed but does not advance the combo');
+  dummy.homeX = dummy.x = P.x + 20; dummy.homeZ = dummy.z = P.z; dummy.hp = dummy.maxHp; const steps = [];
+  for (let i = 0; i < 3; i++) { ready(); P.executeAttack(neutral, 'normal'); steps.push(P.comboStep); }
+  assert(steps.join(',') === '1,2,3', 'Hitting the foe chains the combo step by step up to the finisher');
+}
+
+// Rune drawing: a tapped hand rune shows its template in every mode; DRAW (free drawing) earns a small grade bonus.
+{
+  const { FREE_DRAW_BONUS } = await import('./public/src/main.js');
+  game.returnToHub(); game.setMatchMode('siege'); game.startMatch();
+  const P = game.player; P.slottedSpells.length = 0; P.mp = P.maxMp; P.reservedMana = 0;
+  if (game.siegeMatch) game.siegeMatch.canPrepare = () => true;
+  const card = P.runeHand[0];
+  game.startRuneDrawing(card.cardId);
+  const guide = game.runeGuide();
+  game.drawing.active = false; P.reservedMana = 0;
+  assert(guide?.id === card.id, 'Tapping a hand rune shows its template outside Training too (Siege)');
+  // Each drawing uses a card that is currently in the hand (played cards cycle back into the deck).
+  const grade = (traced) => { P.slottedSpells.length = 0; const c = P.runeHand[0]; game.drawing.active = true; game.drawing.expectedCardId = traced ? c.cardId : null; game.drawing.strokes = []; game.drawing.currentStroke = []; game.finishRuneDrawing({ rune: c, confidence: .78 }); return P.slottedSpells.at(-1)?.runes?.[0]?.grade; };
+  const traced = grade(true); const free = grade(false);
+  assert(FREE_DRAW_BONUS > 0 && traced === 'B' && free === 'A', 'Free drawing (DRAW) earns a small grade bonus over tracing the template');
+  P.slottedSpells.length = 0; game.returnToHub();
 }
 
 // Movement after the Unity original: rooted attacks, full combos on a target in front, long sprint jump, auto-run.

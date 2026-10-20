@@ -29,6 +29,8 @@ import { segmentStatus } from './castle_segments.js';
 import { HOLD_MIN_TIME } from './hold_actions.js';
 import { takeOfferedRecast, tickRecasts, runRecast } from './recast.js';
 import { TransformationFx } from './transform_fx.js';
+// Free drawing (DRAW, no template) adds this to the recognition confidence before grading.
+export const FREE_DRAW_BONUS = .06;
 import { PrimalCompanion, normalizePrimalChoice, startPrimalBond, endPrimalBond, bondForm, PRIMAL_ARCHETYPES } from './primals.js';
 
 // LF2-style Dungeon rooms. Each room is a wide scrolling stretch: the camera
@@ -1067,7 +1069,7 @@ export class GameWorld {
       this.clearRuneCanvas();
       return;
     }
-    const result = recognizedResult ?? recognizer.recognize(this.drawing.strokes, this.affordableHandRuneIds(reservedBudget));
+    let result = recognizedResult ?? recognizer.recognize(this.drawing.strokes, this.affordableHandRuneIds(reservedBudget));
 
     if (result && result.rune && runeManaCost(result.rune) > this.player.freeMana) {
       audio.playRuneFail();
@@ -1077,7 +1079,13 @@ export class GameWorld {
       if (added) {
         // A card remains a reusable deck card.  Cast quality belongs to this
         // particular prepared instance, not to every future redraw of it.
-        const grade = result.grade ?? recognizer.gradeForConfidence(result.confidence);
+        // Free drawing (DRAW, no template) earns a small bonus on the grade.
+        const GRADES = ['C', 'B', 'A', 'S'];
+        const baseGrade = result.grade ?? recognizer.gradeForConfidence(result.confidence);
+        const freeDraw = expectedCardId == null;
+        if (freeDraw) result = { ...result, confidence: Math.min(1, result.confidence + FREE_DRAW_BONUS) };
+        const bonusGrade = recognizer.gradeForConfidence(result.confidence);
+        const grade = GRADES[Math.max(GRADES.indexOf(baseGrade), freeDraw ? GRADES.indexOf(bonusGrade) : -1)];
         const runeProgress = this.profile.awardRuneUse(added.id, grade);
         const prepared = { ...added, grade, quality: result.confidence, runeLevel: this.profile.runeLevel(added.id), manaCost: runeManaCost(added) };
         // A recognized rune only goes into a spell slot in every mode; it is
@@ -3027,10 +3035,10 @@ export class GameWorld {
     ctx.restore();
   }
 
-  // The rune to pre-draw: only in Training and only for a tapped hand card
-  // (free drawing via DRAW never shows a template).
+  // The rune to pre-draw: in every mode for a tapped hand card
+  // (free drawing via DRAW never shows a template — and earns a small grade bonus).
   runeGuide() {
-    if (this.activeMode?.id !== 'training' || !this.drawing.active || this.drawing.expectedCardId == null) return null;
+    if (!this.drawing.active || this.drawing.expectedCardId == null) return null;
     const card = this.player.getRuneCard(this.drawing.expectedCardId);
     return card ? { id: card.id, color: card.color ?? '#ffffff' } : null;
   }
