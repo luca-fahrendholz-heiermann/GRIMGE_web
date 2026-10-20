@@ -2492,7 +2492,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   const step = (n, dt = 1 / 60) => { for (let i = 0; i < n; i++) { P.update(dt, neutral, game.battlefield, game); game.updateProjectiles(dt); spells.update(dt, game); } };
   const cast = (id, target = null) => spells.cast(P, spells.resolveSpell([{ id: 'sig_' + id }]), game, null, target);
   const ids = Object.keys(core.SIGNATURES);
-  assert(ids.length === 52 && ids.every((id) => core.signatureImpl(id)?.cast) && sigMod.SIGNATURE_RUNE_IDS.every((id) => isSpecialRune(id) && runeManaCost(id) >= 28 && runeManaCost(id) <= 46), 'All 52 signature specials (atlas S01–S36 + S37–S52) are special runes with their own mechanic and bound mana');
+  assert(ids.length === 53 && ids.every((id) => core.signatureImpl(id)?.cast) && sigMod.SIGNATURE_RUNE_IDS.every((id) => isSpecialRune(id) && runeManaCost(id) >= 28 && runeManaCost(id) <= 46), 'All 53 signature specials (atlas S01–S36 + S37–S53) are special runes with their own mechanic and bound mana');
   assert(ids.every((id) => spellHowTo('sig_' + id)?.effect?.length > 40) && !spells.resolveSpell([{ id: 'sig_S03' }, { id: 'ignis' }]), 'Signature specials explain themselves in the grimoire and never fuse');
   // Every special casts, runs and renders (strict canvas) without errors.
   const strict = new Proxy({}, { get: (t, k) => (k === 'ellipse' || k === 'arc') ? (x, y, rx, ry) => { if (rx < 0 || (k === 'ellipse' && ry < 0)) throw new Error('IndexSizeError ' + k); } : (k === 'canvas' ? undefined : () => {}), set: () => true });
@@ -2981,6 +2981,50 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   assert(Math.abs((hpT - P.hp) - 14 * (P.buildModifiers?.damageTaken ?? 1)) < .6, 'S52: while challenging the Wizard takes 30 % less damage');
   frame(4.2);
   assert(!dummy.tauntedBy && !P.signature, 'S52: the taunt wears off after 4 s');
+  // S53 SPHÄRENENTFALTUNG: sure-hit dome, foes trapped, finale on the 2nd tap, domain duel.
+  {
+    const D = await import('./public/src/signature_abilities_g.js');
+    core.setSignatureSink(spells);
+    reset(); dummy.homeX = dummy.x = P.x + 110; const s53 = game.slotRuneSpell(runeById('sig_S53')); game.castSlotAt(s53.position);
+    const dom = spells.activeSpells.find((sp) => sp instanceof D.Domain);
+    frame(.2);
+    assert(dom && dummy.hp === dummy.maxHp && P.state === 'heavyStrike', 'S53: hand sign first (the caster is rooted, nothing happens yet)');
+    // Every unfold phase renders cleanly (radii grow from zero).
+    { let badU = 0; const strictU = new Proxy({}, { get: (t, k) => (k === 'arc' || k === 'ellipse') ? (x, y, r1, r2) => { if (r1 < 0 || (k === 'ellipse' && r2 < 0)) badU++; } : k === 'canvas' ? undefined : () => {}, set: () => true });
+      const t0 = dom.t; for (const tt of [.1, .36, .4, .5, .7, 1, 1.5]) { dom.t = tt; for (const sp of spells.activeSpells) sp.render?.(strictU); } dom.t = t0;
+      assert(!badU, 'S53: the dome renders cleanly in every unfold phase'); }
+    frame(1.6); const cut1 = dummy.maxHp - dummy.hp; frame(1); const cut2 = dummy.maxHp - dummy.hp;
+    assert(dom.unfoldK === 1 && cut1 > 0 && cut2 > cut1 && dom.slashes !== undefined, `S53: the dome unfolds and its sure-hit slashes keep cutting the foe inside (${cut1} → ${cut2})`);
+    let bad = 0; const strict = new Proxy({}, { get: (t, k) => (k === 'arc' || k === 'ellipse') ? (x, y, r1, r2) => { if (r1 < 0 || (k === 'ellipse' && r2 < 0)) bad++; } : k === 'canvas' ? undefined : () => {}, set: () => true });
+    for (const sp of spells.activeSpells) sp.render?.(strict);
+    assert(!bad && spells.activeSpells.some((sp) => sp.constructor.name === 'DomainShell' && spells.spellDepth(sp) === null) && dom.isGroundDecal, 'S53: inner world under the actors, shell + rim over them; renders cleanly');
+    const hpFin = dummy.hp; game.castSlotAt(s53.position); frame(.7);
+    assert(dummy.maxHp - hpFin > 0 && dom.isFinished && !P.slottedSpells.includes(s53), 'S53: the second tap closes the dome with a final slash storm and frees the slot');
+    // The Wizard inside an enemy domain: guarding does not help, the wall holds him in.
+    reset(); const E = game.enemyChampion; E.lifeState = 'Alive'; E.hp = E.maxHp; E.x = P.x + 60; E.z = P.z; E.isPlayerControlled = false;
+    const enemyDom = D.openDomain(E, null, core.SIGNATURES.S53);
+    for (let i = 0; i < 60; i++) { game.updateRecasts(1 / 60); spells.update(1 / 60, game); }
+    P.facing = 1; P.isGuarding = true; P.guardHoldTime = 1; P.invulnerableTimer = 0; const hpG = P.hp;
+    for (let i = 0; i < 60; i++) { P.invulnerableTimer = 0; spells.update(1 / 60, game); }
+    P.x = enemyDom.cx - 400; spells.update(1 / 60, game);
+    assert(P.hp < hpG && Math.abs(P.x - enemyDom.cx) < enemyDom.R, 'S53: inside an enemy domain the sure hit ignores the guard and the wall keeps you in');
+    P.isGuarding = false;
+    // Domain duel: tapping fast wins, the enemy dome collapses.
+    const duel = (taps) => {
+      reset(); spells.clearRuntime(); E.x = P.x + 120; E.z = P.z; E.lifeState = 'Alive'; E.hp = E.maxHp;
+      const rival = D.openDomain(E, null, core.SIGNATURES.S53); for (let i = 0; i < 70; i++) spells.update(1 / 60, game);
+      const sl = game.slotRuneSpell(runeById('sig_S53')); game.castSlotAt(sl.position); frame(.05);
+      const mine = spells.activeSpells.find((sp) => sp instanceof D.Domain && sp.owner === P);
+      const clashed = !!mine?.clash && mine.clash === rival.clash && sl.recast?.label === 'SPHÄREN-DUELL: TIPPEN!';
+      for (let i = 0; i < taps; i++) { game.castSlotAt(sl.position); frame(3 / Math.max(1, taps) * .9); }
+      frame(3.2 - (taps ? 2.7 : 0));
+      return { clashed, mineAlive: mine && mine.collapseT == null, rivalAlive: rival.collapseT == null };
+    };
+    const win = duel(20); const lose = duel(0);
+    assert(win.clashed && win.mineAlive && !win.rivalAlive, 'S53 domain duel: two domains meet, tapping fast wins — the enemy dome collapses');
+    assert(lose.clashed && !lose.mineAlive && lose.rivalAlive, 'S53 domain duel: without tapping your own dome collapses');
+    spells.clearRuntime(); E.x = 900;
+  }
   // S48: a hit is negated, the Wizard reappears behind the attacker and counters; three charges.
   reset(); const s48 = game.slotRuneSpell(runeById('sig_S48')); game.castSlotAt(s48.position);
   const attacker = { x: P.x + 40, z: P.z, team: 'red', hp: 100, isDead: false, took: 0, takeDamage(d) { this.took += d; this.hp -= d; } };

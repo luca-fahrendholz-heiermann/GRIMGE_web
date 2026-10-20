@@ -40,6 +40,8 @@ export const SIGNATURE_GLYPHS = Object.freeze({
   // S50 mirror prison: a crystal between two mirrors · S51 blood circle with an inverted triangle · S52 war cry: "!" between inward chevrons.
   S50: [ngon(0, 0, .55, 4), L(-.85, -.8, -.85, .8), L(.85, -.8, .85, .8)],
   S51: [ring(0, 0, .8), poly([[-.62, -.35], [.62, -.35], [0, .62]])],
+  // S53 domain: a dome over the floor line with the eclipse inside.
+  S53: [arc(0, .55, .9, Math.PI, Math.PI * 2, 20), L(-.95, .55, .95, .55), ring(0, .05, .2)],
   S52: [L(0, -.85, 0, .3), ring(0, .7, .13), poly([[-.9, -.5], [-.5, 0], [-.9, .5]], false), poly([[.9, -.5], [.5, 0], [.9, .5]], false)],
   S48: [arc(-.25, 0, .6, Math.PI * .55, Math.PI * 1.45), arc(.25, 0, .6, -Math.PI * .45, Math.PI * .45), L(-.15, 0, .15, 0)],
   S44: [L(-.5, .9, -.5, -.9), poly([[-.5, -.9], [.7, -.65], [.35, -.4], [.7, -.15], [-.5, -.15]], false)],

@@ -8,14 +8,14 @@ Plan: `docs/GRIMGE_Visual_Upgrade_Plan.md` §4 Schritt 4. Testassets → später
 2. **Basis-Spells** (je Element ein Hauptkörper-Sprite + Impact): Fireball, Gale Shockwave, Arc Lightning, Stone Spikes, Frost Nova, Void Bolt, Halo Pulse, Shadow Step, NATURA-Heilblüte.
 3. **Strahlen** (eine Klasse, 7 Looks): Inferno, Glacial, Thunder, Null, Radiant, Rift, Annihilation — mehrlagiger Kern + Austritts- und Einschlags-Sprites.
 4. **Fusionen** nach Sichtbarkeit: Firestorm, Magma Fissure, Tempest Blitz, Blizzard Surge, Dragon Breath, Seismic Slam, Titan Stomp, Soul Seekers, Weltenbaum.
-5. **Spezialrunen** S01–S52: zuerst Objekt-Runen (Banner, Sanktuarium, Kunai, Falle, Schächte), dann Haltungen.
+5. **Spezialrunen** S01–S53: zuerst Objekt-Runen (Banner, Sanktuarium, Kunai, Falle, Schächte), dann Haltungen.
 6. **Arcane States** (18): Rig-Teile als Sprites statt Plates; Lieblinge zuerst (Arkengestell, Sonnenwyrm, Vorausschnitt, Göttlicher Riese).
 7. **Waffen** (37): Waffen-Sprites + Bewegungs-Animationen, Kit-Effekte als Sprites — und **jede Waffe bekommt ihre eigene Verteidigungs-Animation** (Schild hochreißen, Klinge quer, Stab-Drehung, Fächer-Wand …; Nutzerwunsch 20.10.).
 8. Optional: Konzeptentwürfe per Codex ImageGen (über das OpenAI-Konto, nur nach Freigabe) → Cleanup in Aseprite.
 
 ## Anime-Mechaniken — Ideen für weitere Spezialrunen / Arcane States
-Umgesetzt: Spiralkugel (S46), Spiegelkerker (S50), Blutkreuz (S51), Herausforderung (S52). Jede neue Mechanik mit eigenem Stil, nicht alles gleich krachend.
-- **Sphären-Entfaltung (Domain Expansion, Jujutsu Kaisen):** eine Kuppel umschließt einen Bereich der Arena für ~6 s; darin gilt eine eigene Regel (z. B. jeder eigene Treffer trifft garantiert / Gegner verlangsamt / Boden wird zur Element-Fläche). Wenn beide eine Domäne öffnen: Kuppel-Duell (Tippen wie beim Beam-Clash).
+Umgesetzt: Spiralkugel (S46), Spiegelkerker (S50), Blutkreuz (S51), Herausforderung (S52), Sphärenentfaltung (S53, inkl. Sphären-Duell). Jede neue Mechanik mit eigenem Stil, nicht alles gleich krachend.
+- **Weitere Domänen-Regeln** (S53 hat "sicherer Treffer"): z. B. Zeitlupen-Domäne, Element-Domäne (Boden wird Lava/Eis), Heil-Domäne für Verbündete; KI-Gegner sollen S53 selbst öffnen können (Duell-Gegenzug).
 - **Schattenbindung (Shikamaru):** ein Schatten kriecht über den Boden; erreicht er den Gegner, spiegelt der Gegner 3 s lang jede Bewegung des Zauberers.
 - **Gedankenspiegelung / Illusion (Genjutsu):** der Gegner sieht für 2 s falsche Positionen (Doppelbilder); Treffer auf die Illusion zerplatzen.
 - **Chidori-/Raikiri-Ansturm:** gerade Blitzlinie durch alle in der Linie, mit Nachleuchten der Bahn (zweistufig: Rückweg-Schlag).
