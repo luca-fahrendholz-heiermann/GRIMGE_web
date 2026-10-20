@@ -10,7 +10,7 @@
 | Morphologie | Aufbau | Formen |
 |---|---|---|
 | **Astral Avatar** | riesige externe Kampfgestalt | B02 Arkengestell |
-| **Energy Extension** | bewegliche Schweife, Bänder und Peitschen aus der Körperkontur | B01 Risswild, T04 Korallenschild |
+| **Energy Extension** | bewegliche Schweife, Bänder und Peitschen aus der Körperkontur | B01 Risswild, T04 Korallenschild, A03 Tausendhand |
 | **Body Augmentation** | Strukturen direkt am Körper, zusätzliche Glieder und Leitungen | T13 Fadenschlag, T37 Säuregerüst |
 | **Orbital Construct** | freischwebende Ringe, Objekte und Fragmente | T02 Schlackenkern, T06 Ionspindel, T08 Ossuarium, T23 Nullfeldträger, T38 Asterglied |
 | **Temporal Projection** | versetzte Abbilder und Bewegungsechos | T39 Vorausschnitt |
@@ -19,7 +19,7 @@
 | **Environmental State** | der Spieler verändert einen größeren Bereich der Arena | T35 Kältestillstand |
 | **Divine Projection** | vergrößertes Lichtbild des eigenen Körpers | A01 Göttlicher Riese |
 
-## Die 17 aktiven Arcane States (kuratiert: je eigene Techniken, Lade-Ritual und Palette)
+## Die 18 aktiven Arcane States (kuratiert: je eigene Techniken, Lade-Ritual und Palette)
 
 ### B01 Risswild · *Energy Extension* · V3.2: Tiergeist (Kyubi): neun Fuchsflammen-Schweife
 
@@ -224,6 +224,18 @@
 - **Heavies (V3.2-Abbildung):** Forward — Short: Riesenfaust nach vorn; Full: violettes Gebrüll als Schallwelle. · Up — Short: Affenhaken; Full: Sprung mit krachender Landung vor dem Spieler. · Down — Short: Faustschlag auf den Boden; Full: Brusttrommeln mit Bebenwellen.
 - **Ausschlüsse:** Kein realistischer Gorilla, keine Rüstung.
 - Palette: `#1c1030` `#c9a8ff` `#ffffff` `#b06cff` · Material: silberweißes Geisterfell in violetten Kristallflammen.
+
+### A03 Tausendhand — Schrein der hundert Arme · *Energy Extension* · V3.2: Halbkreis aus Geisterarmen (Tausendhand)
+
+- **Anker:** `back`, `shoulder_left`, `shoulder_right`, `hand_right`, `root`
+- **Idle-Silhouette:** Ein Halbkreis aus sechs langen Geisterarmen in rotem Lack mit Goldreifen ragt hinter dem Wizard auf wie ein Strahlenkranz.
+- **Action-Silhouette:** Die Arme folgen den Schlägen des Wizards: bei jedem Hieb schlägt ein Geisterarm mit; im Sprint ziehen sie wie ein Fächer hinterher.
+- **Peak Manifestation:** Bei Full greifen alle Arme gemeinsam an: Trommelfeuer, Säulenhände oder die Gebetsfalle.
+- **Transform-In / Out:** Goldene Reifen erscheinen in der Aura, aus ihnen wachsen die Arme. / Die Arme lösen sich zu goldenen Funken auf.
+- **Defense · Grab · Jump:** Die Hände legen sich zu einer Wand aus Handflächen. · Mehrere Hände packen das Ziel und schleudern es im Kreis davon. · Die Arme stemmen den Wizard hoch und schlagen bei der Landung zu.
+- **Heavies (V3.2-Abbildung):** Forward — Short: drei Fäuste nacheinander; Full: Trommelfeuer aus Fäusten über die Lane. · Up — Short: Hand aus dem Boden reißt hoch; Full: vier Säulenarme jonglieren das Ziel. · Down — Short: Handflächenstoß ringsum; Full: zwei Riesenhände klatschen zusammen.
+- **Ausschlüsse:** Kein Torso, keine fremde Figur.
+- Palette: `#3a0d0d` `#c62828` `#ffd54f` `#fff3c4` · Material: roter Lack mit Goldspangen und Geisterlicht.
 
 
 ## Archiviert (aus dem Spiel genommen, im Atlas erhalten)

@@ -2192,7 +2192,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   const { MageProfile, BUFF_RUNE_IDS } = await import('./public/src/progression.js');
   const neutral = { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false };
   const ids = buff.BUFF_FORM_IDS;
-  assert(ids.length === 17 && ids[0] === 'B01' && ids[1] === 'B02' && ids.includes('T40') && ids.includes('A01') && ids.includes('A02'), 'The 17 curated Arcane States are registered (B01, B02, 13 atlas forms, A01 Göttlicher Riese, A02 Mystischer Affe)');
+  assert(ids.length === 18 && ids[0] === 'B01' && ids[1] === 'B02' && ids.includes('T40') && ['A01', 'A02', 'A03'].every((id) => ids.includes(id)), 'The 18 curated Arcane States are registered (B01, B02, 13 atlas forms, A01 Göttlicher Riese, A02 Mystischer Affe, A03 Tausendhand)');
   const tForms = ids.filter((id) => /^[TA]/.test(id));
   assert(tForms.every((id) => ['forward', 'up', 'down'].every((d) => FORM_MOVESETS[id]?.[d]?.short?.make && FORM_MOVESETS[id][d].full?.make) && FORM_SPRINT_ATTACKS[id]?.name), 'Every T / A form has six charged techniques and its own sprint attack');
   assert(FORM_MOVESETS.T13.forward.short.name === 'THREAD NEEDLE' && FORM_MOVESETS.T13.forward.full.name === 'HUNDRED FILAMENTS' && FORM_SPRINT_ATTACKS.T13.name === 'SILK STRIKE', 'Technique names come straight from the atlas (T13 Fadenschlag)');
@@ -2205,7 +2205,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   const second = profile.addRuneToDeck('buff_B01');
   assert(!second.ok && /ONE ARCANE STATE/.test(second.reason), 'A second buff rune is refused (one per deck)');
   assert(profile.sanitizeDeck(['ignis', 'buff_T13', 'buff_T08', 'aqua']).filter((id) => id.startsWith('buff_')).length === 1, 'Loading a deck keeps only one buff rune');
-  assert(BUFF_RUNE_IDS.length === 17, 'All 17 Arcane State runes are offered in the deck builder');
+  assert(BUFF_RUNE_IDS.length === 18, 'All 18 Arcane State runes are offered in the deck builder');
   // The shared hourglass sigil.
   const hand = ['ignis', 'fulgur', 'doppel', 'buff_T13'];
   const sigil = recognizer.recognize(guideStrokes('buff_T13', 400, 300, 120), hand);
@@ -2593,7 +2593,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   const strict = new Proxy({}, { get: (t, k) => (k === 'ellipse' || k === 'arc') ? (x, y, rx, ry) => { if (rx < 0 || (k === 'ellipse' && ry < 0)) throw new Error('IndexSizeError ' + k); } : (k === 'canvas' ? undefined : () => {}), set: () => true });
   const slots = [['forward', 'short'], ['forward', 'full'], ['up', 'short'], ['up', 'full'], ['down', 'short'], ['down', 'full']];
   const missed = []; const broken = [];
-  for (const id of ['A01', 'A02']) for (const [dir, variant] of slots) {
+  for (const id of ['A01', 'A02', 'A03']) for (const [dir, variant] of slots) {
     spells.clearRuntime(); buff.endBuffForm(P);
     P.x = 400; P.z = .5; P.facing = 1; P.state = 'idle'; P.stateTimer = 0; game.battlefield.placeOnSurface(P);
     dummy.homeX = dummy.x = 470; dummy.homeZ = dummy.z = .5; dummy.hp = dummy.maxHp;
@@ -2605,7 +2605,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
     } catch (e) { broken.push(id + ' ' + dir + ' ' + variant + ': ' + e.message); }
   }
   assert(ARCANE_MOVES.A01?.length === 6 && ARCANE_MOVES.A02?.length === 6 && ARCANE_MOVES.A01.every(Boolean) && ARCANE_MOVES.A02.every(Boolean), 'A01 Göttlicher Riese and A02 Mystischer Affe have six techniques of their own');
-  assert(!broken.length && !missed.length, 'All twelve A01 / A02 techniques run, render and hit a foe in front ' + [...broken, ...missed].slice(0, 3).join(' | '));
+  assert(!broken.length && !missed.length, 'All eighteen A01 / A02 / A03 techniques run, render and hit a foe in front ' + [...broken, ...missed].slice(0, 3).join(' | '));
   let charged = true;
   for (const id of ['A01', 'A02']) for (const dir of ['forward', 'up', 'down']) { try { ARCANE_CHARGE[id](strict, { x: 400, y: 300, f: 1 }, buff.BUFF_FORMS[id].mat, dir, .7, 1.2); } catch { charged = false; } }
   assert(charged && hasFormRenderer('A01') && hasFormRenderer('A02') && buff.BUFF_FORMS.A01.mat.kind === 'crystal', 'A01 / A02 have their own renderer and a charge ritual in every direction');
@@ -2623,7 +2623,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   const strict = new Proxy({}, { get: (t, k) => (k === 'ellipse' || k === 'arc') ? (x, y, rx, ry) => { if (rx < 0 || (k === 'ellipse' && ry < 0)) throw new Error('IndexSizeError ' + k); } : (k === 'canvas' ? undefined : (k === 'measureText' ? () => ({ width: 10 }) : (k === 'createLinearGradient' ? () => ({ addColorStop() {} }) : () => {}))), set: () => true });
   const ids = Object.keys(buff.BUFF_FORMS);
   const impacts = ids.filter((id) => FS.FORM_SPRINTS[id]).map((id) => FS.FORM_SPRINTS[id].impact);
-  assert(new Set(impacts).size === impacts.length && impacts.length === 15, 'Every Arcane State (besides the B01 / B02 engines) has its own sprint impact');
+  assert(new Set(impacts).size === impacts.length && impacts.length === 16, 'Every Arcane State (besides the B01 / B02 engines) has its own sprint impact');
   assert(ids.every((id) => FS.FORM_DIVES[id]) && new Set(ids.map((id) => FS.FORM_DIVES[id].style)).size === ids.length && ['ninefold', 'eidolon', 'ascendant'].every((k) => FS.FORM_DIVES[k]), 'Every Arcane State and Focus transformation has its own air dive');
   const broken = [];
   for (const id of ids) {

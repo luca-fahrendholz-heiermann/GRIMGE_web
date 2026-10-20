@@ -305,7 +305,7 @@ for (const f of forms) {
 // techniques, a charge-up ritual and its own vivid palette (arcane_moves.js). The
 // other 27 atlas forms stay parsed and are listed as ARCHIVED in the morphology
 // doc — adding an id here brings one back.
-const ACTIVE = ['B01', 'B02', 'T02', 'T04', 'T05', 'T06', 'T08', 'T13', 'T23', 'T24', 'T35', 'T37', 'T38', 'T39', 'T40', 'A01', 'A02'];
+const ACTIVE = ['B01', 'B02', 'T02', 'T04', 'T05', 'T06', 'T08', 'T13', 'T23', 'T24', 'T35', 'T37', 'T38', 'T39', 'T40', 'A01', 'A02', 'A03'];
 const PALETTES = {
   T02: ['#2a1210', '#ff5a1f', '#ffd27a', '#ff2a00'], T04: ['#1d3c48', '#ff8fa3', '#bff6ff', '#5ff0d8'], T05: ['#120c1e', '#b04dff', '#e9c8ff', '#ff4fd8'],
   T06: ['#10222a', '#d4ff3a', '#f6ffd0', '#7af7ff'], T08: ['#22302c', '#e8dcc0', '#fff8e6', '#4fe0a8'], T13: ['#1c1420', '#ff7a3d', '#ffd0a8', '#ff3d6e'],
@@ -376,6 +376,30 @@ const EXTRA_FORMS = [
     if (b01.v32) { b01.v32.silhouette = b01.silhouette; b01.v32.idle = b01.silhouette; b01.v32.category = 'Tiergeist (Kyubi): neun Fuchsflammen-Schweife'; b01.v32.exclusions = 'Keine abstrakten Bänder mehr als Hauptform.'; b01.morphCategory = b01.v32.category; b01.states = { ...(b01.states ?? {}), idle: b01.silhouette }; }
   }
 }
+// A03 Tausendhand (user, 20 Oct 2026: "Attacke, wo mehrere Hände und Arme visualisiert werden" → as an Arcane State).
+EXTRA_FORMS.push({
+  id: 'A03', name: 'Tausendhand', title: 'Schrein der hundert Arme', ref: 'Viele Geisterarme aus der Aura (Referenz: Riesenarm-Attacken aus Anime-Fightern)',
+  palette: ['#3a0d0d', '#c62828', '#ffd54f', '#fff3c4'], material: 'roter Lack mit Goldspangen und Geisterlicht.', quality: 'lackierte Unterarme, goldene Armreifen, helle offene Handflächen.', motion: 'ein Halbkreis aus sechs Geisterarmen fächert sich hinter dem Wizard auf und greift einzeln oder gemeinsam an.',
+  silhouette: 'Ein Halbkreis aus sechs langen Geisterarmen in rotem Lack mit Goldreifen ragt hinter dem Wizard auf wie ein Strahlenkranz; die Hände sind offen.',
+  avoid: 'Keine fremde Figur, kein Torso — nur Arme und Hände aus der Aura.',
+  archetype: 'thousand_hands', count: 6, item: null,
+  tech: {
+    sprint: { name: 'Handkranz-Lauf', text: 'die Arme ziehen wie ein Fächer hinterher.' },
+    sprintHeavy: { name: 'Hundertfaust-Sturm', text: 'alle Arme schlagen im Lauf nacheinander zu.' },
+    defense: { name: 'Handflächenwall', text: 'die Hände legen sich zu einer Wand aus Handflächen; Perfect Block stößt mit allen Händen zurück.', counter: 'riposte', status: [] },
+    grab: { name: 'Vielarm-Griff', text: 'mehrere Hände packen das Ziel und schleudern es weit.', throw: 'spin', status: [] },
+    jump: { name: 'Armsprung', text: 'die Arme stemmen den Wizard hoch und schlagen bei der Landung auf den Boden.', landing: 'stomp' },
+    forward: { short: { name: 'Handsalve', text: 'drei Geisterfäuste schlagen nacheinander nach vorn.', kind: 'cone', status: [] }, full: { name: 'Hundert Fäuste', text: 'ein Trommelfeuer aus Geisterfäusten über die Lane.', kind: 'sequence', status: [] } },
+    up: { short: { name: 'Himmelsgriff', text: 'eine Hand greift aus dem Boden und reißt das Ziel hoch.', kind: 'burst', status: ['launch'] }, full: { name: 'Säulenhände', text: 'vier Arme brechen aus dem Boden und jonglieren das Ziel in der Luft.', kind: 'pillar', status: [] } },
+    down: { short: { name: 'Handflächenstoß', text: 'die Hände schlagen ringsum auf den Boden.', kind: 'ring', status: [] }, full: { name: 'Gebetsfalle', text: 'zwei riesige Hände klatschen vor dem Wizard zusammen und zermalmen das Ziel.', kind: 'sequence', status: ['stun'] } }
+  },
+  statusAll: [], morphology: 'energy_extension', morphologyLabel: 'Energy Extension',
+  v32: v32('Halbkreis aus Geisterarmen (Tausendhand)', 'Ein Halbkreis aus sechs langen Geisterarmen in rotem Lack mit Goldreifen ragt hinter dem Wizard auf wie ein Strahlenkranz.', ['back', 'shoulder_left', 'shoulder_right', 'hand_right', 'root'],
+    'Die Arme folgen den Schlägen des Wizards: bei jedem Hieb schlägt ein Geisterarm mit; im Sprint ziehen sie wie ein Fächer hinterher.', 'Bei Full greifen alle Arme gemeinsam an: Trommelfeuer, Säulenhände oder die Gebetsfalle.',
+    ['Goldene Reifen erscheinen in der Aura, aus ihnen wachsen die Arme.', 'Die Hände legen sich zu einer Wand aus Handflächen.', 'Mehrere Hände packen das Ziel und schleudern es im Kreis davon.', 'Die Arme stemmen den Wizard hoch und schlagen bei der Landung zu.', 'Die Arme lösen sich zu goldenen Funken auf.'],
+    { forward: 'Short: drei Fäuste nacheinander; Full: Trommelfeuer aus Fäusten über die Lane.', up: 'Short: Hand aus dem Boden reißt hoch; Full: vier Säulenarme jonglieren das Ziel.', down: 'Short: Handflächenstoß ringsum; Full: zwei Riesenhände klatschen zusammen.' },
+    'Kein Torso, keine fremde Figur.')
+});
 for (const f of EXTRA_FORMS) { f.states = { idle: f.v32.idle, action: f.v32.action, peak: f.v32.peak }; f.morphCategory = f.v32.category; forms.push(f); }
 if (!MORPH.divine_projection) MORPH.divine_projection = { label: 'Divine Projection', what: 'vergrößertes Lichtbild des eigenen Körpers', action: '', peak: '' };
 

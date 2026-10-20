@@ -45,7 +45,7 @@
 | ★ | **ANNIHILATION BEAM** `transform_beam` | Transformation | ★ | `#ff4cff` | 0 | Any gesture while Focus Ascendant | ANNIHILATION BEAM |
 | ◉ | **VOID IMPLOSION** `transform_implode` | Transformation | ◉ | `#b668ff` | 0 | Any gesture while Eidolon Mantle | — |
 | ⚡ | **INFERNO RAMPAGE** `transform_rampage` | Transformation | ⚡ | `#ff6f3b` | 0 | Any gesture while Ninefold Beast | — |
-| <img src="runes/buff_sigil.svg" width="48" alt="buff"> | **ARCANE-STATE-SIEGEL** `buff_*` (17 Runen) | Arcane State | ⧗ | je Form | 30 | Sanduhr ⧗ in einem geschlossenen Strich — **Tag: arcane-state · max-1-per-deck** | der Arcane State der Rune (Abschnitt 3.7) |
+| <img src="runes/buff_sigil.svg" width="48" alt="buff"> | **ARCANE-STATE-SIEGEL** `buff_*` (18 Runen) | Arcane State | ⧗ | je Form | 30 | Sanduhr ⧗ in einem geschlossenen Strich — **Tag: arcane-state · max-1-per-deck** | der Arcane State der Rune (Abschnitt 3.7) |
 | <img src="runes/sig_S01.svg" width="48" alt="sig"> | **SIGNATURE-SPEZIALRUNEN** `sig_*` (48 Runen) | Signature Special | ✦ | je Rune | 28–44 | **eigenes mehrstrichiges Symbol je Rune** (Abschnitt 3.8) — Tag: signature-special · je Rune 1× pro Deck | die Signature-Mechanik der Rune (Abschnitt 3.8) |
 
 ### Glyphen als ASCII (Ziffer = Startpunkt des Strichs)
@@ -1358,6 +1358,7 @@ Quelle: `docs/GRIMGE_Transformations_Atlas_V3_1_Sonnenwyrm.md`. Jede Form ist ei
 | T40 | **Sonnenwyrm** — Eid der Drachenlanze<br><sub>verwobene, unterschiedlich breite Schuppenband-Segmente auf zwei gegenläufigen Bewegungsachsen. Jedes Segment hat dunklen Grund, matte Innenfacette, gravierte Schneidkerbe, goldene gefaste Lichtkante und einzelne orange Schmelznähte.</sub> | `wyrm` ×2 | `#f6cb6a` `#ed7b32` `#29212b` `#69d0c2` | Drachenlanzenstoß | Sonnenstich (`beam`) / Zwillingswyrm-Jagd (`wyrms`) | Himmelszahn (`burst`) / Himmelswendel (`pillar`) | Glutkreis (`ring`) / Wyrmportal-Ritual (`portals`) | Drachengrat · Wyrmfang · Himmelslauf und konturtreue Air-Aura |
 | A01 | **Göttlicher Riese** — Silberner Himmelskörper<br><sub>Eine 2,4–2,8 H große, transluzente silberblaue Lichtgestalt des eigenen Charakters steht hinter ihm und spiegelt jede Pose; Blitzadern laufen über die Kontur, silberne Lichtflammen lodern über dem Kopf.</sub> | `divine_giant` ×1 | `#14204a` `#8fc4ff` `#f2f8ff` `#6ad8ff` | Göttlicher Ansturm | Riesenhandstreich (`cone`) / Himmelsfaust (`projectile`) | Himmelsheber (`burst`) / Göttlicher Griff (`pillar`) | Riesentritt (`ring`) / Doppelfaust-Gericht (`sequence`) | Silberpanzer · Riesengriff · Sternensprung |
 | A02 | **Mystischer Affe** — Silberfell-Urgeist<br><sub>Ein riesiger silberweißer Geisteraffe (Kopf mit Reißzähnen, breite Schultern, gewaltige Arme und Fäuste seitlich) erhebt sich hinter dem Spieler, umwirbelt von violett-blauen Kristallflammen.</sub> | `mystic_ape` ×1 | `#1c1030` `#c9a8ff` `#ffffff` `#b06cff` | Affensturm | Urfaust (`cone`) / Urgebrüll (`cone`) | Affenhaken (`burst`) / Himmelssprung (`pillar`) | Bodenschlag (`ring`) / Brusttrommel-Beben (`sequence`) | Fellwall · Affengriff · Baumsprung |
+| A03 | **Tausendhand** — Schrein der hundert Arme<br><sub>Ein Halbkreis aus sechs langen Geisterarmen in rotem Lack mit Goldreifen ragt hinter dem Wizard auf wie ein Strahlenkranz; die Hände sind offen.</sub> | `thousand_hands` ×6 | `#3a0d0d` `#c62828` `#ffd54f` `#fff3c4` | Hundertfaust-Sturm | Handsalve (`cone`) / Hundert Fäuste (`sequence`) | Himmelsgriff (`burst`) / Säulenhände (`pillar`) | Handflächenstoß (`ring`) / Gebetsfalle (`sequence`) | Handflächenwall · Vielarm-Griff · Armsprung |
 
 ## 4. Kombinationsmatrix
 
@@ -1485,7 +1486,7 @@ Ehemalige Transformations-Spells: ANNIHILATION BEAM (über Focus Ascendant Forwa
 | `summon` | BEAST FAMILIAR, SHADOW DOPPELGANGER, REVENANT CALL, STORM WOLF, VOID SPIDER, RUNE GOLEM, WORLD RUNE SERPENT, SPIRIT WOLF, SIEGE GOLEM |
 | `dash` | SHADOW STEP, INFERNO RAMPAGE, TEMPEST BLITZ, KOMETENTRÄGER, EISZACKEN, BLITZMARKE, SPIRALKUGEL |
 | `heavy_object` | METEOR CATACLYSM |
-| `self` | SANDSTORM BASTION, ARCANE AEGIS, SOLAR ORB, LUNAR ORB, ECLIPSE, THUNDERHEAD, BLOOD MOON, STARFALL, AURORA VEIL, HEILBLÜTE, GROSSE BLÜTE, SEGENSKREIS, FLAMMENKLINGE, FROSTKLINGE, STURMKLINGE, GIFTKLINGE, BLUTKLINGE, REISSKLINGE, ARKENGESTELL, RISSWILD, RISSWILD, ARKENGESTELL, SCHLACKENKERN, KORALLENSCHILD, BRUCHFLUG, IONSPINDEL, OSSUARIUM, FADENSCHLAG, NULLFELDTRÄGER, FADENREGENT, KÄLTESTILLSTAND, SÄUREGERÜST, ASTERGLIED, VORAUSSCHNITT, SONNENWYRM, GÖTTLICHER RIESE, MYSTISCHER AFFE, HIMMELSREGENT, AUREOLENSCHWARM, SCHWEBENDE BASTION, NACHHALLARCHIV, RÜCKSPRUNGNADEL, PRISMENHALTER, SCHWARMPROTOKOLL, KLINGENCHOR, RUNENSCHMIEDE, ECHOFAMULUS, SCHERBENHANDEL, TIDENBOHRER, WASSERATMUNG, FLAMMENATMUNG, DONNERATMUNG, SCHATTENKONTER |
+| `self` | SANDSTORM BASTION, ARCANE AEGIS, SOLAR ORB, LUNAR ORB, ECLIPSE, THUNDERHEAD, BLOOD MOON, STARFALL, AURORA VEIL, HEILBLÜTE, GROSSE BLÜTE, SEGENSKREIS, FLAMMENKLINGE, FROSTKLINGE, STURMKLINGE, GIFTKLINGE, BLUTKLINGE, REISSKLINGE, ARKENGESTELL, RISSWILD, RISSWILD, ARKENGESTELL, SCHLACKENKERN, KORALLENSCHILD, BRUCHFLUG, IONSPINDEL, OSSUARIUM, FADENSCHLAG, NULLFELDTRÄGER, FADENREGENT, KÄLTESTILLSTAND, SÄUREGERÜST, ASTERGLIED, VORAUSSCHNITT, SONNENWYRM, GÖTTLICHER RIESE, MYSTISCHER AFFE, TAUSENDHAND, HIMMELSREGENT, AUREOLENSCHWARM, SCHWEBENDE BASTION, NACHHALLARCHIV, RÜCKSPRUNGNADEL, PRISMENHALTER, SCHWARMPROTOKOLL, KLINGENCHOR, RUNENSCHMIEDE, ECHOFAMULUS, SCHERBENHANDEL, TIDENBOHRER, WASSERATMUNG, FLAMMENATMUNG, DONNERATMUNG, SCHATTENKONTER |
 
 **Zielmodi** (gleiche Regeln für Touch, Maus/Tastatur, Gamepad):
 
@@ -1505,9 +1506,9 @@ Ehemalige Transformations-Spells: ANNIHILATION BEAM (über Focus Ascendant Forwa
 
 ## 7. Statistik
 
-- Runen: 81 (davon 10 Basis, 2 Solo-Spezial, 48 Signature-Spezial, 17 Arcane States, 3 Transformation)
-- Spells: 135 — Fundamental 11, Solo 2, Compound 39, Himmelsfelder 7, Advanced 10, Transformation 1
-- Rezepte: 134 · freie Zwei-Runen-Paare: 17 von 55
+- Runen: 82 (davon 10 Basis, 2 Solo-Spezial, 48 Signature-Spezial, 18 Arcane States, 3 Transformation)
+- Spells: 136 — Fundamental 11, Solo 2, Compound 39, Himmelsfelder 7, Advanced 10, Transformation 1
+- Rezepte: 135 · freie Zwei-Runen-Paare: 17 von 55
 
 ## 8. Hinweise für den Research-Agenten
 

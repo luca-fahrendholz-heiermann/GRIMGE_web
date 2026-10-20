@@ -10,6 +10,7 @@
 import { plate, band, fallout, shard, orbitItem, TAU, lerp, line, specks, groundRing, shape } from './buff_v32_kit.js';
 import { drawWyrmHead, stoneRing, STONE, ACID_GLASS, ghostOf } from './buff_signatures.js';
 import { giantHand } from './buff_v32_extra.js';
+import { spiritArm } from './buff_v32_hands.js';
 
 // Points along hand → tip with a sag / wave (n + 1 points).
 const path = (q, n, amp = 0, freq = 2, phase = 0) => Array.from({ length: n + 1 }, (_, i) => {
@@ -139,6 +140,8 @@ export const PULL_LOOKS = {
     for (const [a, b, w] of [[[q.hx, q.hy], el, 14], [el, [q.tx, q.ty], 16]]) { const dx = b[0] - a[0]; const dy = b[1] - a[1]; const l = Math.hypot(dx, dy) || 1; const nx = -dy / l * w / 2; const ny = dx / l * w / 2; plate(ctx, [[a[0] + nx, a[1] + ny], [b[0] + nx, b[1] + ny], [b[0] - nx, b[1] - ny], [a[0] - nx, a[1] - ny]], FUR, 7720 + w, { alpha: q.a, lit: .5, glowEdge: .4 }); }
     plate(ctx, Array.from({ length: 8 }, (_, i) => [q.tx + Math.cos(i / 8 * TAU) * 11, q.ty + Math.sin(i / 8 * TAU) * 9]), FUR, 7725, { alpha: q.a, lit: 1, glowEdge: .6 });
   },
+  // Tausendhand: three spirit arms reach out together and close on the foe.
+  A03: (ctx, q) => { for (let i = -1; i <= 1; i++) spiritArm(ctx, [q.hx - q.f * 4, q.hy - 6 + i * 8], [q.tx - q.f * (4 - i * 3), q.ty + i * 10], q.f, q.k >= 1 ? 1 : .2, q.a, 7740 + i * 10, 10); },
   // Focus transformations (no Arcane State): Kyubi tail, Eidolon arm, Ascendant light chain.
   ninefold: (ctx, q) => { band(ctx, path(q, 12, 20, 1.5, q.t * 8), (i, n) => 9 * Math.sin((i / n) * Math.PI) + 2, { kind: 'crystal', dark: '#3a1206', body: '#ff8a3d', facet: '#ffd0a0', vein: '#ff5a1f', edge: '#ffe2b8', spark: '#fff1c2', core: '#fffaf0', glow: 'rgba(255,90,31,', edgeGlow: 'rgba(255,226,184,' }, 7730, { t: q.t, alpha: q.a }); },
   eidolon: (ctx, q) => PULL_LOOKS.B02(ctx, q),
