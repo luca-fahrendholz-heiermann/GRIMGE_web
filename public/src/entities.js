@@ -1413,6 +1413,8 @@ export class Player extends GroundEntity {
     }
     setHitContext(null);
     setStatusSource(prevStatusSource);
+    // Class weapon practice for the Bankai unlock route (the player's own swings only).
+    if (hitAny && this === window.gameWorld?.player && this.classWeapon) window.gameWorld.noteWeaponHit?.(this.classWeapon);
     this.lastMeleeHits = sigHits.filter((h) => !h.blocked).map((h) => h.target);
     afterWeaponSwing(this, hitAny);
     if (sigHits.length) signatureEvent(this, 'hit', { hits: sigHits, heavy: this.state === 'heavyStrike' || isFinisher, facing: this.facing });

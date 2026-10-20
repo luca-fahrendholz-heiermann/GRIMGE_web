@@ -2428,6 +2428,14 @@ export class GameWorld {
     ui.renderProfile?.(this.profile);
   }
 
+  // Class weapon practice (Bankai route): one point per melee swing that hits.
+  noteWeaponHit(weaponId) {
+    if (this.activeMode?.progression !== 'profile' && this.activeMode?.id !== 'dungeon' && this.activeMode?.id !== 'arena') return;
+    const progress = this.profile.awardWeaponHit(weaponId);
+    if (progress?.newlyUnlockedRunes?.length) this.reportProfileProgress(progress);
+    else if (progress?.weaponLevelUp) this.showAnnouncement(`KLASSENWAFFE LEVEL ${progress.weaponLevel}`, 1.6);
+  }
+
   reportProfileProgress(progress, rune = null) {
     const unlocked = progress?.newlyUnlockedRunes ?? [];
     if (unlocked.length) {
@@ -2627,6 +2635,11 @@ export class GameWorld {
       const reward = this.winnerTeam === 'blue' ? 60 : 25;
       progression = this.profile.awardXp(reward);
       this.applyProfile();
+    }
+    // A beaten boss drops a late rune (domain / Arcane State) — in every mode.
+    if (this.winnerTeam === 'blue' && this.modeState?.bossActive && this.activeMode.id !== 'training') {
+      const drop = this.profile.rollBossDrop();
+      if (drop) progression = { ...(progression ?? {}), newlyUnlockedRunes: [...(progression?.newlyUnlockedRunes ?? []), { ...drop, title: `${drop.title} · ${recognizer.runes.find((r) => r.id === drop.runeId)?.name ?? drop.runeId}` }] };
     }
     this.reportProfileProgress(progression);
     ui.showResults(true, { winner: this.winnerTeam, elapsed: this.matchDuration - this.matchTime, stats: this.stats });

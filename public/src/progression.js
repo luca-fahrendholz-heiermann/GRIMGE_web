@@ -117,15 +117,35 @@ export const MAGE_LEVEL_RUNE_UNLOCKS = Object.freeze([
   { level: 8, runeId: 'doppel', title: 'DOPPEL SPECIAL RUNE UNLOCKED' },
   { level: 10, runeId: 'mortis', title: 'MORTIS SPECIAL RUNE UNLOCKED' }
 ]);
-// Buff transformation runes unlock with the Mage level: B01/B02 at 3, then
-// the atlas forms in groups of four (T01–T04 at 4 … T37–T40 at 13).
-export function buffUnlockLevel(runeId) {
-  const index = BUFF_RUNE_IDS.indexOf(runeId);
-  if (index < 0) return Infinity;
-  return index < 2 ? 3 : 4 + Math.floor((index - 2) / 4);
+// Late runes (user, 20 Oct 2026): at the start only base runes; domains, Arcane States
+// and the weapon Bankai are never reached by the Mage level. A boss drops one, or the
+// matching mastery earns it — far into the game:
+//   element domain    rune level 10 of its element (drawing that rune)
+//   Arcane State      rune level 8 of its element
+//   Bankai (A04)      class weapon level 8 (melee hits with a class weapon)
+//   special domain    boss drop only
+export const LATE_RUNE_LEVEL = Object.freeze({ domain: 10, arcane: 8, bankai: 8 });
+export const WEAPON_XP_PER_LEVEL = 80;
+const DOMAIN_ELEMENT = Object.freeze({ sig_S57: 'ignis', sig_S58: 'natura', sig_S61: 'fulgur', sig_S62: 'umbra', sig_S63: 'ventus', sig_S64: 'terra', sig_S65: 'aqua', sig_S66: 'bestia', sig_S67: 'construct', sig_S68: 'void', sig_S69: 'lux' });
+const ARCANE_ELEMENT = Object.freeze({
+  buff_B01: 'ignis', buff_B02: 'void', buff_T02: 'ignis', buff_T04: 'aqua', buff_T05: 'terra', buff_T06: 'fulgur', buff_T08: 'construct', buff_T13: 'construct',
+  buff_T23: 'void', buff_T24: 'umbra', buff_T35: 'aqua', buff_T37: 'natura', buff_T38: 'terra', buff_T39: 'lux', buff_T40: 'lux',
+  buff_A01: 'lux', buff_A02: 'bestia', buff_A03: 'construct', buff_A04: 'weapon'
+});
+export const isLateRuneId = (id) => isDomainRuneId(id) || isBuffRuneId(id);
+export const LATE_RUNE_IDS = Object.freeze([...DOMAIN_RUNE_IDS, ...BUFF_RUNE_IDS]);
+// How a late rune is earned besides a boss drop: { kind, element?, level? }.
+export function lateRuneRoute(id) {
+  if (isDomainRuneId(id)) return DOMAIN_ELEMENT[id] ? { kind: 'domain', element: DOMAIN_ELEMENT[id], level: LATE_RUNE_LEVEL.domain } : { kind: 'boss' };
+  if (!isBuffRuneId(id)) return null;
+  const element = ARCANE_ELEMENT[id];
+  if (element === 'weapon') return { kind: 'bankai', level: LATE_RUNE_LEVEL.bankai };
+  return element ? { kind: 'arcane', element, level: LATE_RUNE_LEVEL.arcane } : { kind: 'boss' };
 }
+const ELEMENT_LABEL = { ignis: 'IGNIS', natura: 'NATURA', fulgur: 'FULGUR', umbra: 'UMBRA', ventus: 'VENTUS', terra: 'TERRA', aqua: 'AQUA', bestia: 'BESTIA', construct: 'KONSTRUKT', void: 'VOID', lux: 'LUX' };
 export function runeUnlockLabel(runeId) {
-  if (isBuffRuneId(runeId)) return `MAGE LV.${buffUnlockLevel(runeId)}`;
+  const late = lateRuneRoute(runeId);
+  if (late) return late.kind === 'boss' ? 'BOSS-DROP' : late.kind === 'bankai' ? `BOSS-DROP / KLASSENWAFFE LV.${late.level}` : `BOSS-DROP / ${ELEMENT_LABEL[late.element]} RUNE LV.${late.level}`;
   if (isSignatureRuneId(runeId)) return `MAGE LV.${signatureUnlockLevel(runeId)}`;
   const entry = MAGE_LEVEL_RUNE_UNLOCKS.find((unlock) => unlock.runeId === runeId);
   return entry ? `MAGE LV.${entry.level}` : 'STARTER';
@@ -144,6 +164,9 @@ export class MageProfile {
     // Rune masteries (mastery_data.js): 'tree.branch.tier' ids.
     this.masteries = new Set((Array.isArray(source?.masteries) ? source.masteries : []).filter((id) => MASTERY_NODE_IDS.includes(id)));
     this.runeXp = { ...(source?.runeXp ?? {}) };
+    // Late runes earned (boss drop or mastery route) and class weapon practice.
+    this.lateUnlocks = new Set((Array.isArray(source?.lateUnlocks) ? source.lateUnlocks : []).filter((id) => LATE_RUNE_IDS.includes(id)));
+    this.weaponXp = { ...(source?.weaponXp ?? {}) };
     this.discoveredSpells = new Set(source?.discoveredSpells ?? []);
     this.unlockedRunes = new Set(source?.unlockedRunes ?? STARTER_RUNES);
     this.syncRuneUnlocks();
@@ -180,6 +203,7 @@ export class MageProfile {
     return {
       level: this.level, xp: this.xp, skillPoints: this.skillPoints,
       unlockedSkills: [...this.unlockedSkills], masteries: [...this.masteries], runeXp: clone(this.runeXp),
+      lateUnlocks: [...this.lateUnlocks], weaponXp: clone(this.weaponXp),
       discoveredSpells: [...this.discoveredSpells], unlockedRunes: [...this.unlockedRunes],
       matchDeck: [...this.matchDeck], progressionVersion: 3,
       favoriteRunes: [...this.favoriteRunes], deckPresets: this.deckPresets.map((preset) => ({ ...preset, deck: [...preset.deck] }))
@@ -189,7 +213,39 @@ export class MageProfile {
   xpToNextLevel() { return 70 + (this.level - 1) * 35; }
   runeLevel(id) { return 1 + Math.floor((this.runeXp[id] ?? 0) / 60); }
   runeXpIntoLevel(id) { return (this.runeXp[id] ?? 0) % 60; }
-  isRuneUnlocked(id) { return isBuffRuneId(id) ? this.level >= buffUnlockLevel(id) : isSignatureRuneId(id) ? this.level >= signatureUnlockLevel(id) : this.unlockedRunes.has(id); }
+  isRuneUnlocked(id) { return isLateRuneId(id) ? this.lateUnlocks.has(id) || this.lateRouteMet(id) : isSignatureRuneId(id) ? this.level >= signatureUnlockLevel(id) : this.unlockedRunes.has(id); }
+  weaponLevel(id) { return 1 + Math.floor((this.weaponXp[id] ?? 0) / WEAPON_XP_PER_LEVEL); }
+  bestWeaponLevel() { return Math.max(1, ...Object.keys(this.weaponXp).map((id) => this.weaponLevel(id))); }
+  // The mastery route of a late rune: its element rune levelled far enough (or the class weapon).
+  lateRouteMet(id) {
+    const route = lateRuneRoute(id);
+    if (!route || route.kind === 'boss') return false;
+    if (route.kind === 'bankai') return this.bestWeaponLevel() >= route.level;
+    return this.unlockedRunes.has(route.element) && this.runeLevel(route.element) >= route.level;
+  }
+  // Late runes whose mastery route was just met: kept for good and announced once.
+  claimLateRunes() {
+    const fresh = [];
+    for (const id of LATE_RUNE_IDS) if (!this.lateUnlocks.has(id) && this.lateRouteMet(id)) { this.lateUnlocks.add(id); fresh.push({ runeId: id, title: `${isDomainRuneId(id) ? 'DOMAIN' : 'ARCANE STATE'} RUNE EARNED` }); }
+    return fresh;
+  }
+  // Boss victory: one locked late rune drops (domains and Arcane States alike).
+  rollBossDrop(rng = Math.random) {
+    const pool = LATE_RUNE_IDS.filter((id) => !this.isRuneUnlocked(id));
+    if (!pool.length) return null;
+    const id = pool[Math.min(pool.length - 1, Math.floor(rng() * pool.length))];
+    this.lateUnlocks.add(id); this.save();
+    return { runeId: id, title: `BOSS-DROP: ${isDomainRuneId(id) ? 'DOMAIN' : 'ARCANE STATE'} RUNE` };
+  }
+  // Melee hits with a class weapon train it (Bankai route); saved on level-ups / match end.
+  awardWeaponHit(weaponId) {
+    if (!weaponId) return null;
+    const before = this.weaponLevel(weaponId);
+    this.weaponXp[weaponId] = (this.weaponXp[weaponId] ?? 0) + 1;
+    if (this.weaponLevel(weaponId) === before) return null;
+    const fresh = this.claimLateRunes(); this.save();
+    return { weaponLevelUp: true, weaponLevel: this.weaponLevel(weaponId), newlyUnlockedRunes: fresh };
+  }
 
   sanitizeDeck(ids = []) {
     const copies = new Map();
@@ -295,23 +351,17 @@ export class MageProfile {
         unlocked.push(entry);
       }
     }
-    // Newly reached buff transformation runes (announced once).
-    this.announcedBuffLevel ??= 0;
-    if (this.level > this.announcedBuffLevel) {
-      const fresh = BUFF_RUNE_IDS.filter((id) => buffUnlockLevel(id) > this.announcedBuffLevel && buffUnlockLevel(id) <= this.level);
-      if (fresh.length && this.announcedBuffLevel > 0) unlocked.push({ level: this.level, runeId: fresh[0], title: `${fresh.length} ARCANE STATE RUNE${fresh.length > 1 ? 'S' : ''} UNLOCKED` });
-      this.announcedBuffLevel = this.level;
-    }
     return unlocked;
   }
 
   awardRuneUse(id, grade = 'B') {
     const gained = RUNE_XP_BY_GRADE[grade] ?? RUNE_XP_BY_GRADE.B;
+    const beforeLevel = this.runeLevel(id); // measured before the gain (else a level-up never shows)
     this.runeXp[id] = (this.runeXp[id] ?? 0) + gained;
-    const beforeLevel = this.runeLevel(id);
     const result = this.awardXp(gained, { save: false });
     result.runeLevelUp = this.runeLevel(id) > beforeLevel;
     result.runeLevel = this.runeLevel(id);
+    if (result.runeLevelUp) result.newlyUnlockedRunes = [...(result.newlyUnlockedRunes ?? []), ...this.claimLateRunes()];
     this.save();
     return result;
   }

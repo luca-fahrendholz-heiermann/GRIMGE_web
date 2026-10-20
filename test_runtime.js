@@ -2264,7 +2264,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   assert(FORM_MOVESETS.ninefold.forward.short.name === 'VERDICHTETER RISSKERN' && FORM_MOVESETS.ninefold.forward.full.name === 'RISSSTRAHL' && FORM_MOVESETS.eidolon.up.full.name === 'LICHTSPALTER', 'B01 Risswild / B02 Arkengestell carry the atlas technique names');
   assert(ids.every((id) => { const r = recognizer.runes.find((x) => x.id === 'buff_' + id); const d = SPELL_DEFINITIONS['buff_' + id]; return r?.isBuffForm && r.tags.includes('max-1-per-deck') && d?.isBuffForm && d.tags.includes('arcane-state') && isSpecialRune('buff_' + id); }), 'Each form is an Arcane State special rune tagged "arcane-state · max-1-per-deck", never fusable');
   // Deck rule: at most one buff rune.
-  const profile = new MageProfile(); profile.level = 20;
+  const profile = new MageProfile(); profile.level = 20; for (const id of ids) profile.lateUnlocks.add('buff_' + id);
   profile.matchDeck = ['ignis', 'ventus', 'fulgur', 'terra', 'aqua', 'ignis', 'ventus', 'fulgur'];
   assert(profile.addRuneToDeck('buff_T13').ok, 'A buff rune can join the deck');
   const second = profile.addRuneToDeck('buff_B01');
@@ -2348,11 +2348,19 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
 
 // Buff rune unlocks and the class weapon selector in Training.
 {
-  const { MageProfile, buffUnlockLevel, runeUnlockLabel } = await import('./public/src/progression.js');
-  const fresh = new MageProfile(); fresh.level = 1;
-  assert(!fresh.isRuneUnlocked('buff_B01') && buffUnlockLevel('buff_B01') === 3 && buffUnlockLevel('buff_T02') === 4 && buffUnlockLevel('buff_T40') === 7 && runeUnlockLabel('buff_T40') === 'MAGE LV.7', 'Arcane State runes unlock with the Mage level (B01/B02 at 3, the rest in groups of four up to 7)');
-  fresh.level = 3;
-  assert(fresh.isRuneUnlocked('buff_B02') && !fresh.isRuneUnlocked('buff_T02'), 'At level 3 the first two buff runes are available');
+  const { MageProfile, runeUnlockLabel, LATE_RUNE_LEVEL } = await import('./public/src/progression.js');
+  const fresh = new MageProfile({ level: 1 });
+  // Late runes (user, 20 Oct 2026): no Arcane State / domain through the Mage level.
+  fresh.level = 30;
+  assert(!fresh.isRuneUnlocked('buff_B01') && !fresh.isRuneUnlocked('sig_S57') && fresh.isRuneUnlocked('sig_S01'), 'Arcane States and domains never unlock with the Mage level (other special runes still do)');
+  assert(runeUnlockLabel('buff_T02') === 'BOSS-DROP / IGNIS RUNE LV.8' && runeUnlockLabel('sig_S57') === 'BOSS-DROP / IGNIS RUNE LV.10' && runeUnlockLabel('sig_S53') === 'BOSS-DROP' && runeUnlockLabel('buff_A04') === 'BOSS-DROP / KLASSENWAFFE LV.8', 'Lock labels name the boss drop and the mastery route');
+  fresh.runeXp.ignis = (LATE_RUNE_LEVEL.arcane - 1) * 60 - 5; const early = fresh.awardRuneUse('ignis', 'B');
+  assert(fresh.isRuneUnlocked('buff_T02') && fresh.isRuneUnlocked('buff_B01') && !fresh.isRuneUnlocked('sig_S57') && early.newlyUnlockedRunes.some((e) => e.runeId === 'buff_T02'), 'Ignis rune level 8 earns the fire Arcane States (announced), the Ignis domain needs level 10');
+  fresh.runeXp.ignis = (LATE_RUNE_LEVEL.domain - 1) * 60; fresh.claimLateRunes();
+  assert(fresh.isRuneUnlocked('sig_S57') && !fresh.isRuneUnlocked('sig_S53'), 'Ignis rune level 10 earns the Ignis domain; special domains only drop from bosses');
+  fresh.weaponXp.sword = 7 * 80 - 1; assert(!fresh.isRuneUnlocked('buff_A04') && fresh.awardWeaponHit('sword')?.newlyUnlockedRunes?.some((e) => e.runeId === 'buff_A04'), 'Class weapon level 8 earns the Bankai Klingenblüte');
+  const drop = fresh.rollBossDrop(() => 0);
+  assert(drop && fresh.isRuneUnlocked(drop.runeId) && new MageProfile(fresh.toJSON()).isRuneUnlocked(drop.runeId), 'A boss drops a locked late rune — kept in the save');
   game.returnToHub(); game.setMatchMode('training'); game.startMatch();
   const first = game.cycleClassWeapon();
   assert(first && game.player.classWeapon === first && !game.player.weapon, 'V cycles a class weapon in Training (fixed, not a pickup)');

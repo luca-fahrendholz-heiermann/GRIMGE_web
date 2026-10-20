@@ -175,7 +175,7 @@ test('Deck builder: favourite runes toggle and persist; presets survive the deck
 test('Domains: only ONE domain per deck (like the Arcane States), all share one glyph family', () => {
   assert.ok(DOMAIN_RUNE_IDS.length >= 4 && DOMAIN_RUNE_IDS.includes('sig_S53') && DOMAIN_RUNE_IDS.includes('sig_S58'));
   assert.ok(deckAccepts(['ignis', 'sig_S53'], 'sig_S45') && !deckAccepts(['ignis', 'sig_S53'], 'sig_S56'));
-  const profile = new MageProfile({ level: 30 });
+  const profile = new MageProfile({ level: 30, lateUnlocks: ['sig_S53', 'sig_S56', 'sig_S57', 'sig_S58'] });
   profile.matchDeck = ['ignis', 'ignis', 'aqua', 'aqua', 'terra', 'terra', 'ventus', 'sig_S57'];
   assert.equal(profile.addRuneToDeck('sig_S58').reason, 'ONE DOMAIN PER DECK');
   assert.equal(profile.sanitizeDeck(['sig_S53', 'sig_S56', 'ignis']).join(), 'sig_S53,ignis');

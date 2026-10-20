@@ -19,7 +19,8 @@ Code:
 | Trigger (OnHit, OnShieldHit, OnExpire …) | Hooks: `onStatusHit` (jeder `takeDamage`), Schildabsorption, Status-Kombo, Status-Tick, Schildende, perfekter Block, aufgeladener Angriff |
 | Ressourcen | Nur HP, Mana und Fokus. Fokus wird weiter im Beam-Clash ausgegeben (bestehend). |
 | Rune Points | Skillpunkte (1 je Stufe). Stufe III braucht Runen-Level 3, Stufe IV Runen-Level 5; das Runen-Level steigt durch Benutzung. Ward braucht Mage-Level 6 bzw. 10. Im Testbuild (`DEBUG_BUILD`) sind die Stufen gratis. |
-| Klassenpassiv „Berserker Last Stand“ | Skill-Knoten **Letztes Gefecht** (DEFENSE): unter 25 % HP +50 % Nahkampf- und Charge-Schaden |
+| Klassenpassiv „Berserker Last Stand“ | **Passiver** Skill-Knoten **Letztes Gefecht** (DEFENSE, 1 Skillpunkt, kein Zauber): unter 25 % HP +50 % Nahkampf- und Charge-Schaden |
+| Spezialrunen, Arcane States, Domänen | **Bekommen keine Masteries** (Entscheidung 20.10.2026). Masteries gibt es nur für Basis-Runen und Schilde. |
 
 ## 2. Neue Schild-Rezepte
 
@@ -129,5 +130,20 @@ Im Skill-Fenster (MAGE PATHS) liegt das Panel **RUNEN-MASTERIES**:
   - Ignition und Consume (Feuer), Flow und Restore, Spread / Velocity / Displace (Wind)
   - Charge (Blitz), Tremor und Fracture, Growth und Entangle
   - Lux, Void, Konstrukt, Bestia
-- Die Masteries auch auf Spezialrunen, Arcane States und Domänen anwenden. Die Engine liest dafür nur Tags, also müssen deren Effekte vollständig getaggt sein.
 - Mastery-Wahl im Deck-Preset speichern (Build = Deck + Masteries).
+
+## 8. Freischaltung: zuerst nur Basis-Runen (Stand 20.10.2026)
+
+Zu Beginn spielt man nur Basis-Runen. Alles andere wird nach und nach freigeschaltet:
+
+| Was | Wie |
+|---|---|
+| Basis-Runen | 5 Start-Elemente. Bestia, Konstrukt, Void, Lux, Natura und Umbra kommen mit dem Mage-Level 2–6. |
+| Spezialrunen (ohne Domänen) | Mage-Level (S01 ab Level 5, dann vier pro Level) |
+| **Element-Domänen** (S57, S58, S61–S69) | **Boss-Drop** oder **Element-Meisterschaft**: Runen-Level 10 des Elements (durch Zeichnen dieser Rune) |
+| **Spezial-Domänen** (S53, S56, S59, S60) | nur **Boss-Drop** |
+| **Arcane States / Transformationen** | **Boss-Drop** oder Runen-Level 8 ihres Elements (z. B. Risswild und Schlackenkern über Ignis, Korallenschild und Kältestillstand über Aqua) |
+| **Bankai A04 Klingenblüte** | **Boss-Drop** oder **Klassenwaffe Level 8** (ein Punkt je Nahkampftreffer mit Klassenwaffe, 80 Punkte pro Level) |
+
+Boss-Drops gibt es bei besiegten Bossen (Invasion: Rift Tyrant, Dungeon: Void Warden, Arena-Champion). Es fällt jeweils eine zufällige, noch gesperrte späte Rune.
+Der Testbuild (`DEBUG_BUILD`) stellt im Training weiterhin alle Runen bereit. Die Sperren gelten in den Match-Decks und im öffentlichen Build.
