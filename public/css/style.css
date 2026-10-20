@@ -1175,6 +1175,11 @@ body.portrait-gameplay #game-container { visibility: hidden; pointer-events: non
 .skill-node { width: 100%; display: grid; gap: 3px; margin: 5px 0; padding: 8px; text-align: left; color: #e8e2ff; border: 1px solid #625078; border-radius: 6px; background: #1b142c; cursor: pointer; }
 .skill-node b { color: #e5d5ff; font-size: 11px; }.skill-node span { color: #bbb1d2; font-size: 10px; }.skill-node em { color: #82dfff; font-size: 9px; font-style: normal; }
 .skill-node.unlocked { border-color: #55d6a6; background: rgba(34, 110, 82, .33); }.skill-node.unlocked b { color: #99ffd5; }
+/* Runes bought with skill points */
+.rune-unlock-panel { grid-column: 1 / -1; }
+.rune-unlock-panel > p { margin: 0 0 6px; color: #bbb1d2; font-size: 10px; }
+.rune-unlock-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+.rune-unlock-grid .skill-node { margin: 0; }
 /* Rune masteries + build analysis */
 .mastery-panel { grid-column: 1 / -1; }
 .mastery-panel > p { margin: 0 0 6px; color: #bbb1d2; font-size: 10px; }

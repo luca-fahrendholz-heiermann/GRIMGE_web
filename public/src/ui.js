@@ -1,7 +1,7 @@
 // GRIMGE Prototype — UI & HUD Controller matching Setup Mockup Exactly
 import { MASTERY_TREES, masteryRequirement, analyzeBuild } from './mastery_data.js';
 import { spells } from './spells.js';
-import { MAGE_SKILL_TREE, ALL_RUNE_IDS, runeUnlockLabel, isBuffRuneId, isSignatureRuneId, isDomainRuneId, maxRuneCopies, MAX_DECK_PRESETS, MATCH_DECK_SIZE, DECK_PRESET_NAME_MAX } from './progression.js';
+import { MAGE_SKILL_TREE, SKILL_RUNE_UNLOCKS, ALL_RUNE_IDS, runeUnlockLabel, isBuffRuneId, isSignatureRuneId, isDomainRuneId, maxRuneCopies, MAX_DECK_PRESETS, MATCH_DECK_SIZE, DECK_PRESET_NAME_MAX } from './progression.js';
 import { recognizer } from './recognizer.js';
 import { sprites } from './sprites.js';
 import { runeManaCost, SPELL_RECIPES, lookupRecipe, SOLO_RUNES, spellHowTo } from './spell_catalog.js';
@@ -253,6 +253,8 @@ export class UIManager {
       if (id) window.gameWorld?.unlockMageSkill(id);
       const mastery = e.target?.closest?.('[data-mastery-id]')?.getAttribute?.('data-mastery-id');
       if (mastery) window.gameWorld?.unlockMastery?.(mastery);
+      const runeBuy = e.target?.closest?.('[data-rune-unlock]')?.getAttribute?.('data-rune-unlock');
+      if (runeBuy) window.gameWorld?.unlockRuneWithPoints?.(runeBuy);
       if (e.target?.closest?.('[data-mastery-reset]')) window.gameWorld?.resetMasteries?.();
     });
     // The Grimoire is the deck stack: it opens the deck / rune view. Spell
@@ -893,7 +895,7 @@ export class UIManager {
     if (!profile || !this.skillTreeContent) return;
     this.renderProfile(profile);
     const branches = [...new Set(MAGE_SKILL_TREE.map((node) => node.branch))];
-    this.skillTreeContent.innerHTML = branches.map((branch) => {
+    this.skillTreeContent.innerHTML = this.runeUnlockMarkup(profile) + branches.map((branch) => {
       const nodes = MAGE_SKILL_TREE.filter((node) => node.branch === branch).map((node) => {
         const unlocked = profile.unlockedSkills.has(node.id);
         const ready = profile.canUnlock(node.id);
@@ -902,6 +904,18 @@ export class UIManager {
       }).join('');
       return `<section class="skill-branch"><h3>${branch}</h3>${nodes}</section>`;
     }).join('') + this.masteryMarkup(profile);
+  }
+
+  // New runes cost skill points too: every point is a choice (rune, passive or mastery).
+  runeUnlockMarkup(profile) {
+    if (!profile.runeBlocker) return '';
+    const buttons = SKILL_RUNE_UNLOCKS.map((entry) => {
+      const rune = recognizer.runes.find((r) => r.id === entry.runeId);
+      const block = profile.runeBlocker(entry.runeId); const owned = block === 'owned';
+      const state = owned ? 'FREIGESCHALTET' : block === 'level' ? `MAGE LV.${entry.level}` : block === 'points' ? `${entry.cost} SP — ZU WENIG PUNKTE` : `FREISCHALTEN · ${entry.cost} SP`;
+      return `<button type="button" class="skill-node rune-unlock ${owned ? 'unlocked' : ''}" data-rune-unlock="${entry.runeId}" ${block ? 'disabled' : ''}><b style="color:${rune?.color ?? '#e5d5ff'}">${owned ? '✓ ' : ''}${rune?.glyph ?? '✦'} ${rune?.name ?? entry.runeId}</b><span>${entry.cost > 1 ? 'Spezialrune' : 'Basis-Rune'} — danach im Deck-Builder verfügbar.</span><em>${state}</em></button>`;
+    }).join('');
+    return `<section class="skill-branch rune-unlock-panel"><h3>RUNEN FREISCHALTEN · ${profile.skillPoints} SP</h3><p>Jeder Skillpunkt ist eine Entscheidung: neue Rune, Passiv oder Mastery.</p><div class="rune-unlock-grid">${buttons}</div></section>`;
   }
 
   // Rune masteries (GDD build system): per tree three branches à four tiers, plus

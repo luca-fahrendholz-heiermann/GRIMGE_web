@@ -105,18 +105,21 @@ export function signatureUnlockLevel(runeId) {
 // The first deck deliberately contains two copies of every starter rune.
 // It is a legal 10-card deck and guarantees a varied initial three-card hand.
 export const DEFAULT_MATCH_DECK = Object.freeze(['fulgur', 'terra', 'ignis', 'ventus', 'aqua', 'fulgur', 'terra', 'ignis', 'ventus', 'aqua']);
-// These are real cards, not UI flags. Once unlocked they are appended to a
-// live deck and can be drawn/recognised using the ordinary hand-card path.
-export const MAGE_LEVEL_RUNE_UNLOCKS = Object.freeze([
-  { level: 2, runeId: 'bestia', title: 'BESTIA RUNE UNLOCKED' },
-  { level: 3, runeId: 'construct', title: 'KONSTRUKT RUNE UNLOCKED' },
-  { level: 4, runeId: 'void', title: 'VOID RUNE UNLOCKED' },
-  { level: 5, runeId: 'lux', title: 'LUX RUNE UNLOCKED' },
-  { level: 5, runeId: 'natura', title: 'NATURA RUNE UNLOCKED' },
-  { level: 6, runeId: 'umbra', title: 'UMBRA RUNE UNLOCKED' },
-  { level: 8, runeId: 'doppel', title: 'DOPPEL SPECIAL RUNE UNLOCKED' },
-  { level: 10, runeId: 'mortis', title: 'MORTIS SPECIAL RUNE UNLOCKED' }
+// Runes bought with skill points (user, 20 Oct 2026): beyond the five starter
+// elements no rune comes on its own — every skill point is a choice between a new
+// rune, a passive or a mastery. Base runes: 1 point, any order; the special runes
+// Doppel / Mortis: 2 points and a minimum Mage level. Real deck cards once bought.
+export const SKILL_RUNE_UNLOCKS = Object.freeze([
+  { runeId: 'bestia', cost: 1, level: 1, title: 'BESTIA RUNE UNLOCKED' },
+  { runeId: 'construct', cost: 1, level: 1, title: 'KONSTRUKT RUNE UNLOCKED' },
+  { runeId: 'void', cost: 1, level: 1, title: 'VOID RUNE UNLOCKED' },
+  { runeId: 'lux', cost: 1, level: 1, title: 'LUX RUNE UNLOCKED' },
+  { runeId: 'natura', cost: 1, level: 1, title: 'NATURA RUNE UNLOCKED' },
+  { runeId: 'umbra', cost: 1, level: 1, title: 'UMBRA RUNE UNLOCKED' },
+  { runeId: 'doppel', cost: 2, level: 8, title: 'DOPPEL SPECIAL RUNE UNLOCKED' },
+  { runeId: 'mortis', cost: 2, level: 10, title: 'MORTIS SPECIAL RUNE UNLOCKED' }
 ]);
+export const skillRuneUnlock = (runeId) => SKILL_RUNE_UNLOCKS.find((entry) => entry.runeId === runeId) ?? null;
 // Late runes (user, 20 Oct 2026): at the start only base runes; domains, Arcane States
 // and the weapon Bankai are never reached by the Mage level. A boss drops one, or the
 // matching mastery earns it — far into the game:
@@ -147,8 +150,10 @@ export function runeUnlockLabel(runeId) {
   const late = lateRuneRoute(runeId);
   if (late) return late.kind === 'boss' ? 'BOSS-DROP' : late.kind === 'bankai' ? `BOSS-DROP / KLASSENWAFFE LV.${late.level}` : `BOSS-DROP / ${ELEMENT_LABEL[late.element]} RUNE LV.${late.level}`;
   if (isSignatureRuneId(runeId)) return `MAGE LV.${signatureUnlockLevel(runeId)}`;
-  const entry = MAGE_LEVEL_RUNE_UNLOCKS.find((unlock) => unlock.runeId === runeId);
-  return entry ? `MAGE LV.${entry.level}` : 'STARTER';
+  const entry = skillRuneUnlock(runeId);
+  if (!entry) return 'STARTER';
+  const points = `${entry.cost} SKILLPUNKT${entry.cost > 1 ? 'E' : ''} (MAGE PATHS)`;
+  return entry.level > 1 ? `MAGE LV.${entry.level} · ${points}` : points;
 }
 
 function clone(value) { return JSON.parse(JSON.stringify(value)); }
@@ -343,15 +348,26 @@ export class MageProfile {
     return this.getMatchDeck();
   }
 
-  syncRuneUnlocks() {
-    const unlocked = [];
-    for (const entry of MAGE_LEVEL_RUNE_UNLOCKS) {
-      if (this.level >= entry.level && !this.unlockedRunes.has(entry.runeId)) {
-        this.unlockedRunes.add(entry.runeId);
-        unlocked.push(entry);
-      }
-    }
-    return unlocked;
+  // Runes no longer arrive with the level (they are bought, see unlockRune); kept as the
+  // hook for level-based announcements.
+  syncRuneUnlocks() { return []; }
+
+  // Buying a rune with skill points: null = possible, else why not.
+  runeBlocker(runeId) {
+    const entry = skillRuneUnlock(runeId);
+    if (!entry) return 'unknown';
+    if (this.unlockedRunes.has(runeId)) return 'owned';
+    if (this.level < entry.level) return 'level';
+    if (this.skillPoints < entry.cost) return 'points';
+    return null;
+  }
+  unlockRune(runeId) {
+    if (this.runeBlocker(runeId) !== null) return null;
+    const entry = skillRuneUnlock(runeId);
+    this.skillPoints -= entry.cost;
+    this.unlockedRunes.add(runeId);
+    this.save();
+    return entry;
   }
 
   awardRuneUse(id, grade = 'B') {

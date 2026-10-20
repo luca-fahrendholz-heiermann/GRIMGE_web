@@ -25,18 +25,20 @@ test('Rune use can level the Mage and provides a spendable skill point', () => {
   assert.equal(profile.skillPoints, 1);
 });
 
-test('Mage levels unlock Bestia, Konstrukt and Void as real deck-eligible runes', () => {
+test('New runes cost skill points (a choice against passives), not the level alone', () => {
   const profile = new MageProfile({ level: 1, xp: 0, skillPoints: 0, unlockedRunes: ['ignis', 'ventus', 'fulgur', 'terra', 'aqua'] });
   assert.equal(profile.isRuneUnlocked('bestia'), false);
   profile.awardXp(70);
   assert.equal(profile.level, 2);
-  assert.equal(profile.isRuneUnlocked('bestia'), true);
-  profile.awardXp(105);
-  assert.equal(profile.level, 3);
-  assert.equal(profile.isRuneUnlocked('construct'), true);
-  profile.awardXp(140);
-  assert.equal(profile.level, 4);
-  assert.equal(profile.isRuneUnlocked('void'), true);
+  assert.equal(profile.isRuneUnlocked('bestia'), false, 'a level-up alone grants no rune');
+  assert.equal(profile.skillPoints, 1);
+  assert.equal(profile.runeBlocker('natura'), null, 'base runes in any order');
+  assert.ok(profile.unlockRune('natura'));
+  assert.equal(profile.isRuneUnlocked('natura'), true);
+  assert.equal(profile.skillPoints, 0);
+  assert.equal(profile.runeBlocker('bestia'), 'points');
+  assert.equal(profile.runeBlocker('doppel'), 'level');
+  assert.equal(new MageProfile(profile.toJSON()).isRuneUnlocked('natura'), true);
 });
 
 test('Deckbuilder persists a legal 10-card selected deck and enforces unlock/copy limits', () => {
@@ -111,7 +113,7 @@ test('Skill tree is a compact 24-node Mage vertical slice (incl. multi-instance 
   assert.deepEqual(new Set(MAGE_SKILL_TREE.map((node) => node.branch)), new Set(['ELEMENTAL', 'DEFENSE', 'SUMMONING', 'RUNE MASTERY', 'SHADOW']));
 });
 
-test('SHADOW passives add Shadow Stomper targets, doubles and revenants; light/shadow runes unlock by level', () => {
+test('SHADOW passives add Shadow Stomper targets, doubles and revenants; shadow / special runes are bought with points', () => {
   const profile = new MageProfile({ level: 12, skillPoints: 9, matchDeck: [...DEFAULT_MATCH_DECK] });
   const base = profile.getModifiers();
   assert.equal(base.bindTargets, 0); assert.equal(base.extraDoppels, 0); assert.equal(base.extraRevenants, 0);
@@ -123,9 +125,11 @@ test('SHADOW passives add Shadow Stomper targets, doubles and revenants; light/s
   assert.ok(Math.abs(modifiers.bindHold - 1.3) < 1e-9);
   assert.ok(Math.abs(modifiers.skyDuration - 1.35) < 1e-9);
   assert.equal(profile.getBuildIdentity().label, 'SHADOW MAGE');
-  for (const id of ['lux', 'umbra', 'doppel', 'mortis']) assert.ok(profile.isRuneUnlocked(id), id);
-  const fresh = new MageProfile({ level: 5, matchDeck: [...DEFAULT_MATCH_DECK] });
-  assert.ok(fresh.isRuneUnlocked('lux') && !fresh.isRuneUnlocked('umbra') && !fresh.isRuneUnlocked('mortis'));
+  profile.skillPoints = 5;
+  for (const id of ['umbra', 'doppel', 'mortis']) assert.ok(profile.unlockRune(id), id);
+  assert.equal(profile.skillPoints, 0, 'base rune 1 point, special runes 2 points each');
+  const fresh = new MageProfile({ level: 9, skillPoints: 5, matchDeck: [...DEFAULT_MATCH_DECK] });
+  assert.ok(!fresh.isRuneUnlocked('lux') && fresh.unlockRune('lux') && fresh.unlockRune('doppel') && fresh.runeBlocker('mortis') === 'level');
 });
 
 test('A saved deck that lost a retired rune (archived Arcane State) is topped up to 10 cards', () => {
@@ -135,7 +139,7 @@ test('A saved deck that lost a retired rune (archived Arcane State) is topped up
 });
 
 test('Deck builder: build presets save, load in one step, overwrite, delete and persist', () => {
-  const profile = new MageProfile({ level: 20, matchDeck: [...DEFAULT_MATCH_DECK] });
+  const profile = new MageProfile({ level: 20, unlockedRunes: ['ignis', 'ventus', 'fulgur', 'terra', 'aqua', 'lux'], matchDeck: [...DEFAULT_MATCH_DECK] });
   profile.removeRuneFromDeck('aqua');
   assert.equal(profile.saveDeckPreset('Half').reason, 'DECK NEEDS 10 CARDS');
   profile.addRuneToDeck('lux');

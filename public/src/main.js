@@ -2481,6 +2481,17 @@ export class GameWorld {
     return true;
   }
 
+  // Skill points → a new rune (deck-builder card from now on).
+  unlockRuneWithPoints(runeId) {
+    const entry = this.profile.unlockRune(runeId);
+    if (!entry) { this.showAnnouncement('RUNE GESPERRT — SKILLPUNKTE / LEVEL FEHLEN'); return false; }
+    this.applyProfile();
+    ui.renderSkillTree?.(this.profile);
+    ui.renderDeckBuilder?.(this.profile);
+    this.showAnnouncement(`${entry.title} — ADD IN DECK BUILDER`, 2.2);
+    return true;
+  }
+
   unlockMageSkill(id) {
     if (!this.profile.unlock(id)) {
       this.showAnnouncement('SKILL LOCKED — NEED POINTS / PREREQUISITE');
