@@ -36,7 +36,7 @@ export const ELEMENT_STATUS = Object.freeze({
 // Ice spells are aqua / ventus fusions — recognised by their id / name.
 const ICE_RE = /ice|frost|glac|freez|cryo|blizz|snow|hail|eis/i;
 // Signature specials with an elemental bite (the rest causes no status).
-const SIGNATURE_ELEMENTS = Object.freeze({ S42: ['fulgur'], S50: ['frost'] });
+const SIGNATURE_ELEMENTS = Object.freeze({ S42: ['fulgur'], S50: ['frost'], S51: ['blade'] });
 
 // Elements of a cast spell definition (recipe runes + ice detection + signatures).
 export function statusElementsOf(def) {

@@ -1216,7 +1216,8 @@ export class GameWorld {
       const label = slot.recast.label;
       runRecast(slot, this);
       this.showAnnouncement(`${resolved.name}: ${label}!`);
-      this.removeSlots([slot]);
+      // A multi-tap spell keeps its slot open for the next tap.
+      if (!slot.recast) this.removeSlots([slot]);
       return true;
     }
     if (resolved.isComponent) {

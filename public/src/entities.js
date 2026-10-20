@@ -2040,7 +2040,9 @@ export class Minion extends GroundEntity {
     this.animTime += dt; this.hitFlash = Math.max(0, this.hitFlash - dt); this.attackTimer -= dt; this.targetLockTimer = Math.max(0, this.targetLockTimer - dt);
     this.freezeTimer = Math.max(0, this.freezeTimer - dt); this.slowTimer = Math.max(0, this.slowTimer - dt); if (!this.slowTimer) this.slowFactor = 1;
     if (this.specialTimer > 0) this.specialTimer -= dt;
-    const target = gameWorld.findMinionTarget(this);
+    // Taunted (S52 Herausforderung): the challenger is the only target.
+    const taunter = this.tauntTimer > 0 && this.tauntedBy?.isAlive !== false && !this.tauntedBy?.isDead ? this.tauntedBy : null;
+    const target = taunter ?? gameWorld.findMinionTarget(this);
     const distance = target ? groundDistance(this, target) : Infinity;
     if (this.freezeTimer > 0) { this.vx = this.vz = 0; }
     else if (this.hurtTimer > 0) { this.hurtTimer -= dt; this.state = 'hurt'; }
@@ -2286,9 +2288,10 @@ export class EnemyChampion extends GroundEntity {
         this.vx = this.vz = 0;
       } else if (this.attackCooldown <= 0) this.executeAIAttack(player);
     }
-    else if (player.isAlive && distance < 430 && (gameWorld.activeMode?.enemyBehavior === 'duel' || gameWorld.modeState?.bossActive || objectiveThreat || Math.abs(player.x - home.x) < 430)) {
-      this.aiMode = objectiveThreat ? 'PROTECT_OBJECTIVE' : 'INTERCEPT';
-      const retreating = this.hp / this.maxHp < .30 && distance < 180;
+    else if (player.isAlive && (this.tauntTimer > 0 || distance < 430 && (gameWorld.activeMode?.enemyBehavior === 'duel' || gameWorld.modeState?.bossActive || objectiveThreat || Math.abs(player.x - home.x) < 430))) {
+      this.aiMode = this.tauntTimer > 0 ? 'TAUNTED' : objectiveThreat ? 'PROTECT_OBJECTIVE' : 'INTERCEPT';
+      // Taunted: no retreat, straight at the challenger.
+      const retreating = !(this.tauntTimer > 0) && this.hp / this.maxHp < .30 && distance < 180;
       const destination = retreating ? home : player;
       const move = normalizeMove({ x: destination.x - this.x, z: (destination.z - this.z) * 150 });
       this.facing = retreating ? -Math.sign(move.x || this.facing) : Math.sign(move.x) || this.facing;

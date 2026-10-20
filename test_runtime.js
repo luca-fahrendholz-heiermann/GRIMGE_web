@@ -2492,7 +2492,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   const step = (n, dt = 1 / 60) => { for (let i = 0; i < n; i++) { P.update(dt, neutral, game.battlefield, game); game.updateProjectiles(dt); spells.update(dt, game); } };
   const cast = (id, target = null) => spells.cast(P, spells.resolveSpell([{ id: 'sig_' + id }]), game, null, target);
   const ids = Object.keys(core.SIGNATURES);
-  assert(ids.length === 49 && ids.every((id) => core.signatureImpl(id)?.cast) && sigMod.SIGNATURE_RUNE_IDS.every((id) => isSpecialRune(id) && runeManaCost(id) >= 28 && runeManaCost(id) <= 46), 'All 49 signature specials (atlas S01–S36 + S37–S49) are special runes with their own mechanic and bound mana');
+  assert(ids.length === 52 && ids.every((id) => core.signatureImpl(id)?.cast) && sigMod.SIGNATURE_RUNE_IDS.every((id) => isSpecialRune(id) && runeManaCost(id) >= 28 && runeManaCost(id) <= 46), 'All 52 signature specials (atlas S01–S36 + S37–S52) are special runes with their own mechanic and bound mana');
   assert(ids.every((id) => spellHowTo('sig_' + id)?.effect?.length > 40) && !spells.resolveSpell([{ id: 'sig_S03' }, { id: 'ignis' }]), 'Signature specials explain themselves in the grimoire and never fuse');
   // Every special casts, runs and renders (strict canvas) without errors.
   const strict = new Proxy({}, { get: (t, k) => (k === 'ellipse' || k === 'arc') ? (x, y, rx, ry) => { if (rx < 0 || (k === 'ellipse' && ry < 0)) throw new Error('IndexSizeError ' + k); } : (k === 'canvas' ? undefined : () => {}), set: () => true });
@@ -2948,6 +2948,39 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   if (game.targeting.isActive) { game.targeting.setPoint?.({ x: 520, z: .5 }); game.targeting.confirm(); }
   const trap2 = spells.activeSpells.find((sp) => sp.constructor.name === 'SealTrap'); frame(.5); game.castSlotAt(s47b.position);
   assert(trap2?.fired && trap2.big, 'S47 stage 2 within the window: detonate the trap yourself (bigger blast)');
+  // S50 SPIEGELKERKER: shard → six mirrors around the foe; 4 single dashes, the 5th tap is the mirror storm.
+  reset(); dummy.homeX = dummy.x = 470; const s50 = game.slotRuneSpell(runeById('sig_S50')); game.castSlotAt(s50.position); frame(.4);
+  const prison = spells.activeSpells.find((sp) => sp.constructor.name === 'MirrorPrison');
+  assert(prison?.trapped && P.slottedSpells.includes(s50) && /SPIEGELSPRUNG 1\/4/.test(s50.recast?.label ?? ''), 'S50: the shard hits, six ice mirrors rise around the foe (prison) and the slot waits for the dashes');
+  let hpMirror = dummy.hp; let dashHits = 0;
+  for (let i = 0; i < 4; i++) { game.castSlotAt(s50.position); frame(.3); if (dummy.hp < hpMirror) dashHits++; hpMirror = dummy.hp; }
+  assert(dashHits === 4 && P.slottedSpells.includes(s50) && s50.recast?.label === 'SPIEGELSTURM', 'S50: every tap sends a mirror image through the foe (4 dashes), then the storm is offered');
+  game.castSlotAt(s50.position); frame(2);
+  assert(dummy.hp < hpMirror && !P.slottedSpells.includes(s50) && prison.isFinished, 'S50: the 5th tap is the mirror storm — all mirrors at once, then they shatter and the slot is free');
+  reset(); dummy.homeX = dummy.x = 900; const s50b = game.slotRuneSpell(runeById('sig_S50')); game.castSlotAt(s50b.position); frame(1.6);
+  assert(!P.slottedSpells.includes(s50b) && !spells.activeSpells.some((sp) => sp.constructor.name === 'MirrorPrison'), 'S50: a missed shard builds no prison and frees the slot');
+  // S51 BLUTKREUZ: a foe in the blood circle is bound to the cross; faster taps hit harder.
+  const crossRun = (gap) => {
+    reset(); dummy.homeX = dummy.x = 520; const s51 = game.slotRuneSpell(runeById('sig_S51')); game.castSlotAt(s51.position);
+    if (game.targeting.isActive) { game.targeting.setPoint?.({ x: 520, z: .5 }); game.targeting.confirm(); }
+    frame(.1);
+    const circle = spells.activeSpells.find((sp) => sp.constructor.name === 'BloodCircle');
+    const label = s51.recast?.label; const hp0 = dummy.hp;
+    for (let i = 0; i < 6; i++) { game.castSlotAt(s51.position); frame(gap); }
+    return { circle, label, perTap: (hp0 - dummy.hp) / Math.max(1, circle?.taps ?? 1), taps: circle?.taps ?? 0, slot: s51 };
+  };
+  const fast = crossRun(.1); const slow = crossRun(.45);
+  assert(fast.circle?.bindT != null && fast.label === 'SCHNELL DRÜCKEN!' && fast.taps === 6, 'S51: the foe steps into the blood circle, is bound to the cross and the slot asks for fast taps');
+  assert(fast.perTap > slow.perTap * 1.5, `S51: faster tapping hits harder (${fast.perTap.toFixed(1)} vs ${slow.perTap.toFixed(1)} per tap)`);
+  frame(4);
+  assert(!P.slottedSpells.includes(slow.slot) && slow.circle.isFinished, 'S51: after the binding a burst ends it and the slot is freed');
+  // S52 HERAUSFORDERUNG: foes in range are taunted, the challenger takes 30 % less damage.
+  reset(); dummy.homeX = dummy.x = 470; const s52 = game.slotRuneSpell(runeById('sig_S52')); game.castSlotAt(s52.position);
+  assert(dummy.tauntedBy === P && dummy.tauntTimer > 3.5 && P.signature?.id === 'S52', 'S52: nearby foes are taunted by the challenger');
+  P.invulnerableTimer = 0; const hpT = P.hp; P.takeDamage(20, 0, 0, .1, false, 'spell');
+  assert(Math.abs((hpT - P.hp) - 14 * (P.buildModifiers?.damageTaken ?? 1)) < .6, 'S52: while challenging the Wizard takes 30 % less damage');
+  frame(4.2);
+  assert(!dummy.tauntedBy && !P.signature, 'S52: the taunt wears off after 4 s');
   // S48: a hit is negated, the Wizard reappears behind the attacker and counters; three charges.
   reset(); const s48 = game.slotRuneSpell(runeById('sig_S48')); game.castSlotAt(s48.position);
   const attacker = { x: P.x + 40, z: P.z, team: 'red', hp: 100, isDead: false, took: 0, takeDamage(d) { this.took += d; this.hp -= d; } };

@@ -7,12 +7,17 @@
 // within the window runs stage 2 and frees the slot. When the window runs out
 // the slot is freed and `expire` runs (e.g. a trap stays armed but can no
 // longer be detonated by hand). Mana is paid once, at the first cast.
+//
+// Multi-tap spells (mirror dashes, mashing a bound foe): stage2 may return
+// { again: true, window, label } — the slot stays open for the next tap with
+// a fresh window. `poll()` lets the spell itself retime the open window (e.g.
+// a trap that just caught someone: { window: 3.5, label: 'MASH!' }).
 export const RECAST_WINDOW = 4; // default seconds
 
 let offered = null;
 // Called by a spell during its first cast.
-export function offerRecast(caster, { window = RECAST_WINDOW, label = 'STUFE 2', stage2, expire = null, valid = null } = {}) {
-  offered = { caster, window, label, stage2, expire, valid };
+export function offerRecast(caster, { window = RECAST_WINDOW, label = 'STUFE 2', stage2, expire = null, valid = null, poll = null } = {}) {
+  offered = { caster, window, label, stage2, expire, valid, poll };
 }
 // Taken by the slot code right after the cast (null when the spell offered nothing).
 export function takeOfferedRecast(caster) {
@@ -25,6 +30,8 @@ export function tickRecasts(player, dt) {
   for (const slot of player.slottedSpells ?? []) {
     const r = slot.recast; if (!r) continue;
     r.left -= dt;
+    const upd = r.poll?.();
+    if (upd) { if (upd.window != null) { r.left = upd.window; r.total = upd.window; } if (upd.label) r.label = upd.label; }
     // A stage-2 target that vanished (e.g. the marked foe died) ends the window early.
     if (r.left <= 0 || (r.valid && !r.valid())) expired.push(slot);
   }
@@ -35,5 +42,12 @@ export function tickRecasts(player, dt) {
 export function runRecast(slot, game) {
   const r = slot?.recast; if (!r) return false;
   slot.recast = null;
-  return r.stage2?.(game) !== false;
+  const out = r.stage2?.(game);
+  if (out && typeof out === 'object' && out.again) {
+    // Multi-tap: keep the slot open for the next tap.
+    const window = out.window ?? r.left;
+    slot.recast = { ...r, label: out.label ?? r.label, left: window, total: out.window ?? r.total };
+    return true;
+  }
+  return out !== false;
 }
