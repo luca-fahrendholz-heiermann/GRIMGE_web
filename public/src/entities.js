@@ -1764,6 +1764,9 @@ export class Player extends GroundEntity {
     if (armed) drawHeldWeapon(ctx, this, renderY, 'back');
     sprites.renderEntity(ctx, this.heroKey, this.x, renderY, renderOpts);
     if (armed) drawHeldWeapon(ctx, this, renderY, 'front');
+    // HOLD charge without a weapon: the bare hands glow (with a weapon, the weapon pulses).
+    const holdK = this.isAlive && !armed ? this.holdChargeLevel() : null;
+    if (holdK != null) this.renderHoldHands(ctx, renderY, holdK, activeMoveset(this) ? (currentBuffForm(this)?.mat?.vein ?? FORM_PALETTES[activeMoveset(this)]?.main ?? '#c9a8ff') : '#7fd8ff');
     if (formCloak) this.renderFormCloak(ctx, renderY, renderOpts, formCloak, 'front');
     // Guard poses: tail cocoon (Ninefold, drawn with the tails), ribs + palm, light shield.
     if (this.isAlive && this.isGuarding) {
@@ -1895,6 +1898,24 @@ export class Player extends GroundEntity {
 
   // HOLD charge (attack held without a direction): the weapon hand / weapon glows in its
   // colour, energy streams into it and an arrow shows that a ranged move (or the pull) follows.
+  // 0..1 while the HOLD slot charges (attack held without a direction), else null.
+  holdChargeLevel() {
+    if (this.chargeDir !== 'hold' || !(this.chargeTimer > 0)) return null;
+    if (this.formCharge) return Math.min(1, this.formCharge.elapsed / FULL_CHARGE_TIME);
+    return Math.max(0, Math.min(1, 1 - this.chargeTimer / this.chargeMaxTime));
+  }
+
+  // Weaponless HOLD charge: both hands glow and pulse in front of the body.
+  renderHoldHands(ctx, renderY, k, color) {
+    const f = this.facing || 1; const t = this.animTime ?? 0; const pulse = .55 + .45 * Math.sin(t * 16);
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    for (const [hx, hy, s] of [[this.x + f * 15, renderY - 44, 1], [this.x - f * 7, renderY - 47, .8]]) {
+      for (const [r, a] of [[(12 + 8 * k) * s, .3], [(7 + 4 * k) * s, .6], [(3 + 2 * k) * s, 1]]) { ctx.globalAlpha = a * pulse; ctx.fillStyle = r < 6 ? '#ffffff' : color; ctx.beginPath(); ctx.arc(hx, hy, r, 0, Math.PI * 2); ctx.fill(); }
+      for (let i = 0; i < 4; i++) { const a = t * 7 + i * Math.PI / 2; ctx.globalAlpha = .8 * pulse; ctx.fillStyle = color; ctx.fillRect(Math.round(hx + Math.cos(a) * (10 + 6 * k) * s), Math.round(hy + Math.sin(a) * (8 + 4 * k) * s), 2, 2); }
+    }
+    ctx.restore();
+  }
+
   renderHoldCharge(ctx, renderY, k, color, pull = false) {
     const f = this.facing || 1; const hx = this.x + f * 17; const hy = renderY - 46; const t = this.animTime ?? 0;
     const pulse = .6 + .4 * Math.sin(t * 18);

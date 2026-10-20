@@ -380,6 +380,8 @@ export function drawHeldWeapon(ctx, player, renderY, layer = 'front') {
   const { swinging, progress, pose } = weaponSwing(player, weaponId);
   const hover = swinging ? 0 : Math.sin(time * 2.4) * 2;
   const guarding = !!player.isGuarding;
+  // HOLD charge: the weapon itself pulses in its colour (null = not charging the HOLD slot).
+  const holdK = player.holdChargeLevel?.() ?? null;
   // Which hand leads this strike (pairs alternate per combo step).
   const leadFront = cfg.hands !== 'pair' || (player._weaponLead ?? 'front') === 'front';
   const items = [];
@@ -429,6 +431,14 @@ export function drawHeldWeapon(ctx, player, renderY, layer = 'front') {
     ctx.translate(item.reach ?? 0, 0);
     ctx.rotate(item.angle);
     drawAstralPiece(ctx, item.piece, hue, { intensity: item.active ? 1.1 : .7, time });
+    if (holdK != null) {
+      const pulse = .5 + .5 * Math.sin(time * 16);
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = (.18 + .32 * holdK) * (.4 + .6 * pulse);
+      ctx.shadowColor = hue; ctx.shadowBlur = 8 + 12 * holdK;
+      const s = 1 + .06 * pulse * (.5 + holdK); ctx.scale(s, s);
+      drawAstralPiece(ctx, item.piece, hue, { intensity: .9, time });
+      ctx.restore();
+    }
     ctx.restore();
   }
 }

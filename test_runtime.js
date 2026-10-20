@@ -3129,6 +3129,19 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
     let ok = true; try { P.renderChargeAura(hctx, P.y); } catch { ok = false; }
     P.chargeTimer = 0; P.formCharge = null;
     assert(ok && m.arcs === 0, 'In form mode the normal-aura path skips the HOLD look (no negative radii)');
+    // The weapon itself pulses while HOLD charges; bare hands glow instead.
+    const W = await import('./public/src/weapons.js');
+    const count = () => { const c = { lighter: 0, arcs: 0 }; return { c, ctx: new Proxy({}, { get: (tt, k) => k === 'arc' ? (x, y, r) => { if (r < 0) throw new Error('IndexSizeError'); c.arcs++; } : k === 'canvas' ? undefined : () => {}, set: (tt, k, v) => { if (k === 'globalCompositeOperation' && v === 'lighter') c.lighter++; return true; } }) }; };
+    P.equipClassWeapon('sword_shield'); P.chargeTimer = 0; P.formCharge = null;
+    const idleW = count(); W.drawHeldWeapon(idleW.ctx, P, P.y, 'front'); W.drawHeldWeapon(idleW.ctx, P, P.y, 'back');
+    ready(); P.beginCharge('hold', 'key'); P.chargeDir = 'hold'; P.chargeTimer = P.chargeMaxTime * .5;
+    const holdW = count(); W.drawHeldWeapon(holdW.ctx, P, P.y, 'front'); W.drawHeldWeapon(holdW.ctx, P, P.y, 'back');
+    assert(P.holdChargeLevel() > .4 && holdW.c.lighter > idleW.c.lighter, 'While HOLD charges the held weapon itself pulses (extra glow pass)');
+    P.equipClassWeapon(null); P.equipWeapon?.(null);
+    const hands = count(); P.renderHoldHands(hands.ctx, P.y, P.holdChargeLevel(), '#7fd8ff');
+    P.chargeTimer = 0; P.formCharge = null;
+    assert(hands.c.arcs >= 6 && P.holdChargeLevel() === null, 'Without a weapon both hands glow while charging; no charge → no glow');
+    P.equipClassWeapon('bow');
   }
   spells.clearRuntime(); ready(); P.beginCharge('up', 'key'); P.chargeTimer = P.chargeMaxTime * .2; P.chargeDir = 'up'; P.releaseCharge();
   const skyArrow = spells.activeSpells.filter((s) => s.isWeaponShot);
