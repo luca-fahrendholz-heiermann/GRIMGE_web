@@ -148,6 +148,7 @@ const firstRuneCard = elements.get('card-0');
 const runePointer = { pointerId: 77, clientX: 850, clientY: 470, preventDefault() {}, stopPropagation() {} };
 firstRuneCard.listeners.pointerdown(runePointer);
 assert(game.drawing.active && game.drawing.inputMode === null, 'Tapping a hand rune card opens persistent drawing mode without a Draw button');
+assert(game.targetTimeScale === 1, 'Drawing runes does not slow the world down (multiplayer-safe)');
 const incompleteRuneTouch = { identifier: 77, clientX: 850, clientY: 470 };
 game.canvas.listeners.touchstart({ changedTouches: [incompleteRuneTouch] });
 windowListeners.touchend({ changedTouches: [incompleteRuneTouch] });

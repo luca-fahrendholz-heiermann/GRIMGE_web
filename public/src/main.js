@@ -942,7 +942,9 @@ export class GameWorld {
     this.drawing.autoLockArmed = false;
     this.drawing.touchId = null;
     this.drawing.inputMode = null;
-    this.targetTimeScale = 0.22;
+    // No slow motion while drawing (user, 20 Oct 2026): it cannot work in multiplayer,
+    // where it would slow every other player too. The world keeps running at full speed.
+    this.targetTimeScale = 1;
 
     ui.setDrawingMode(true);
     audio.playRuneChime(392);
