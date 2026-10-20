@@ -1325,6 +1325,8 @@ export class Player extends GroundEntity {
     const incomingFromFront = Math.abs(kx) > 0.01 && Math.sign(-kx) === this.facing;
     // Signature stances (floe plates, forge shield, shard shield) soften hits.
     amount = signatureDamageTaken(this, amount, kx, hitKind);
+    // A stance that fully evaded the hit (Schattenkonter) also cancels knockback and stagger.
+    if (this._sigDodged) { this._sigDodged = false; return { dodged: true }; }
     // Weapon kits: counter stance parries a melee hit, chi ignores stagger, cursed attackers hit softer.
     const kitIn = weaponIncoming(this, amount, kx, stun, hitKind, spells);
     if (kitIn.parried) return { blocked: true, parried: true };

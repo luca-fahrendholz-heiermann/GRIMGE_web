@@ -2885,7 +2885,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   const attacker = { x: P.x + 40, z: P.z, team: 'red', hp: 100, isDead: false, took: 0, takeDamage(d) { this.took += d; this.hp -= d; } };
   const { setHitContext } = await import('./public/src/signature_runes.js');
   setHitContext(attacker); const hpBefore = P.hp; P.invulnerableTimer = 0; P.takeDamage(30, -200, 0, .3, false, 'melee'); setHitContext(null);
-  assert(P.hp === hpBefore && attacker.took > 0 && P.x > attacker.x && P.signature?.charges === 2, 'S48 SCHATTENKONTER: a hit is negated, the Wizard counters from behind the attacker (charge used)');
+  assert(P.hp === hpBefore && attacker.took > 0 && P.x > attacker.x && P.signature?.charges === 2 && P.state !== 'hurt' && !(Math.abs(P.kbVelX ?? 0) > 0), 'S48 SCHATTENKONTER: a hit is negated, the Wizard counters from behind the attacker (charge used)');
   reset();
 }
 

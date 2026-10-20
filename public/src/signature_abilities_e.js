@@ -219,7 +219,7 @@ defineSignature('S48', {
     update(p, st, dt) { st.flash = Math.max(0, st.flash - dt); if (st.charges <= 0) endStance(p, 'spent'); },
     damageTaken(p, st, amount) {
       if (st.charges <= 0 || !(amount > 0)) return amount;
-      st.charges--; st.flash = .3;
+      st.charges--; st.flash = .3; p._sigDodged = true; // no knockback / stagger either
       const a = currentAttacker(); const gw = globalThis.window?.gameWorld;
       if (a && alive(a) && a.team !== p.team) {
         const side = Math.sign(a.x - p.x) || p.facing || 1;
