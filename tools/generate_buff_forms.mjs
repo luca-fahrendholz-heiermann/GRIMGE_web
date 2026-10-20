@@ -402,7 +402,7 @@ EXTRA_FORMS.push({
 });
 // A04 Klingenblüte (user, 20 Oct 2026: "Bankai-artige Waffen-Entfesselung als Arcane State: die Klassenwaffe verwandelt sich, z. B. Schwert → Klingenblüten-Schwarm" — adapted).
 EXTRA_FORMS.push({
-  id: 'A04', name: 'Klingenblüte', title: 'Entfesselte Waffe', ref: 'Waffen-Entfesselung: die Klinge zerfällt zu einem Schwarm aus Klingenblättern (Referenz: Bankai-Szenen in Anime-Fightern, eigene Umsetzung)',
+  id: 'A04', name: 'Bankai', title: 'Entfesselte Klassenwaffe', ref: 'Waffen-Entfesselung: die Klinge zerfällt zu einem Schwarm aus Klingenblättern (Referenz: Bankai-Szenen in Anime-Fightern, eigene Umsetzung)',
   palette: ['#3a1a2a', '#ec407a', '#f8bbd0', '#ffffff'], material: 'Klingenstahl mit rosa Blütenschimmer.', quality: 'hauchdünne, spitze Klingenblätter mit hellen Kanten.', motion: 'die Klinge der Waffe zerfällt zu einem Schwarm aus Klingenblättern, der um den Wizard kreist und bei jedem Schlag nach vorn strömt.',
   silhouette: 'Nur der leuchtende Griff bleibt in der Hand; ein Ring aus rund dreißig rosa-silbernen Klingenblättern kreist um den Wizard.',
   avoid: 'Keine fremde Figur, keine Kirschblüten-Kopie — Klingenblätter aus der eigenen Waffe.',

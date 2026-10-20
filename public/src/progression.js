@@ -136,6 +136,8 @@ const ARCANE_ELEMENT = Object.freeze({
   buff_A01: 'lux', buff_A02: 'bestia', buff_A03: 'construct', buff_A04: 'weapon'
 });
 export const isLateRuneId = (id) => isDomainRuneId(id) || isBuffRuneId(id);
+// Bankai: ONE rune whose effect follows the chosen class, unlocked per class.
+export const BANKAI_RUNE_ID = 'buff_A04';
 export const LATE_RUNE_IDS = Object.freeze([...DOMAIN_RUNE_IDS, ...BUFF_RUNE_IDS]);
 // How a late rune is earned besides a boss drop: { kind, element?, level? }.
 export function lateRuneRoute(id) {
@@ -148,7 +150,7 @@ export function lateRuneRoute(id) {
 const ELEMENT_LABEL = { ignis: 'IGNIS', natura: 'NATURA', fulgur: 'FULGUR', umbra: 'UMBRA', ventus: 'VENTUS', terra: 'TERRA', aqua: 'AQUA', bestia: 'BESTIA', construct: 'KONSTRUKT', void: 'VOID', lux: 'LUX' };
 export function runeUnlockLabel(runeId) {
   const late = lateRuneRoute(runeId);
-  if (late) return late.kind === 'boss' ? 'BOSS-DROP' : late.kind === 'bankai' ? `BOSS-DROP / KLASSENWAFFE LV.${late.level}` : `BOSS-DROP / ${ELEMENT_LABEL[late.element]} RUNE LV.${late.level}`;
+  if (late) return late.kind === 'boss' ? 'BOSS-DROP' : late.kind === 'bankai' ? `BOSS-DROP / KLASSENWAFFE LV.${late.level} (JE KLASSE)` : `BOSS-DROP / ${ELEMENT_LABEL[late.element]} RUNE LV.${late.level}`;
   if (isSignatureRuneId(runeId)) return `MAGE LV.${signatureUnlockLevel(runeId)}`;
   const entry = skillRuneUnlock(runeId);
   if (!entry) return 'STARTER';
@@ -170,7 +172,10 @@ export class MageProfile {
     this.masteries = new Set((Array.isArray(source?.masteries) ? source.masteries : []).filter((id) => MASTERY_NODE_IDS.includes(id)));
     this.runeXp = { ...(source?.runeXp ?? {}) };
     // Late runes earned (boss drop or mastery route) and class weapon practice.
-    this.lateUnlocks = new Set((Array.isArray(source?.lateUnlocks) ? source.lateUnlocks : []).filter((id) => LATE_RUNE_IDS.includes(id)));
+    this.lateUnlocks = new Set((Array.isArray(source?.lateUnlocks) ? source.lateUnlocks : []).filter((id) => LATE_RUNE_IDS.includes(id) && id !== BANKAI_RUNE_ID));
+    // The chosen class (= class weapon) and the classes whose Bankai is unlocked.
+    this.classWeapon = typeof source?.classWeapon === 'string' ? source.classWeapon : null;
+    this.bankaiClasses = new Set(Array.isArray(source?.bankaiClasses) ? source.bankaiClasses : []);
     this.weaponXp = { ...(source?.weaponXp ?? {}) };
     this.discoveredSpells = new Set(source?.discoveredSpells ?? []);
     this.unlockedRunes = new Set(source?.unlockedRunes ?? STARTER_RUNES);
@@ -208,7 +213,7 @@ export class MageProfile {
     return {
       level: this.level, xp: this.xp, skillPoints: this.skillPoints,
       unlockedSkills: [...this.unlockedSkills], masteries: [...this.masteries], runeXp: clone(this.runeXp),
-      lateUnlocks: [...this.lateUnlocks], weaponXp: clone(this.weaponXp),
+      lateUnlocks: [...this.lateUnlocks], weaponXp: clone(this.weaponXp), classWeapon: this.classWeapon, bankaiClasses: [...this.bankaiClasses],
       discoveredSpells: [...this.discoveredSpells], unlockedRunes: [...this.unlockedRunes],
       matchDeck: [...this.matchDeck], progressionVersion: 3,
       favoriteRunes: [...this.favoriteRunes], deckPresets: this.deckPresets.map((preset) => ({ ...preset, deck: [...preset.deck] }))
@@ -218,28 +223,40 @@ export class MageProfile {
   xpToNextLevel() { return 70 + (this.level - 1) * 35; }
   runeLevel(id) { return 1 + Math.floor((this.runeXp[id] ?? 0) / 60); }
   runeXpIntoLevel(id) { return (this.runeXp[id] ?? 0) % 60; }
-  isRuneUnlocked(id) { return isLateRuneId(id) ? this.lateUnlocks.has(id) || this.lateRouteMet(id) : isSignatureRuneId(id) ? this.level >= signatureUnlockLevel(id) : this.unlockedRunes.has(id); }
+  isRuneUnlocked(id) { return id === BANKAI_RUNE_ID ? this.isBankaiUnlocked() : isLateRuneId(id) ? this.lateUnlocks.has(id) || this.lateRouteMet(id) : isSignatureRuneId(id) ? this.level >= signatureUnlockLevel(id) : this.unlockedRunes.has(id); }
   weaponLevel(id) { return 1 + Math.floor((this.weaponXp[id] ?? 0) / WEAPON_XP_PER_LEVEL); }
-  bestWeaponLevel() { return Math.max(1, ...Object.keys(this.weaponXp).map((id) => this.weaponLevel(id))); }
+  // Bankai is available when the chosen class has earned it (weapon level / boss drop).
+  isBankaiUnlocked(classWeapon = this.classWeapon) { return !!classWeapon && (this.bankaiClasses.has(classWeapon) || this.weaponLevel(classWeapon) >= LATE_RUNE_LEVEL.bankai); }
+  // Choosing a class: a deck Bankai that this class has not earned leaves the deck.
+  setClassWeapon(weaponId) {
+    this.classWeapon = weaponId ?? null;
+    if (this.matchDeck.includes(BANKAI_RUNE_ID) && !this.isBankaiUnlocked()) this.matchDeck = this.topUpDeck(this.matchDeck.filter((id) => id !== BANKAI_RUNE_ID));
+    this.save();
+  }
   // The mastery route of a late rune: its element rune levelled far enough (or the class weapon).
   lateRouteMet(id) {
     const route = lateRuneRoute(id);
     if (!route || route.kind === 'boss') return false;
-    if (route.kind === 'bankai') return this.bestWeaponLevel() >= route.level;
+    if (route.kind === 'bankai') return this.isBankaiUnlocked();
     return this.unlockedRunes.has(route.element) && this.runeLevel(route.element) >= route.level;
   }
   // Late runes whose mastery route was just met: kept for good and announced once.
   claimLateRunes() {
     const fresh = [];
-    for (const id of LATE_RUNE_IDS) if (!this.lateUnlocks.has(id) && this.lateRouteMet(id)) { this.lateUnlocks.add(id); fresh.push({ runeId: id, title: `${isDomainRuneId(id) ? 'DOMAIN' : 'ARCANE STATE'} RUNE EARNED` }); }
+    // Bankai: remembered for the class that earned it.
+    if (this.classWeapon && !this.bankaiClasses.has(this.classWeapon) && this.isBankaiUnlocked()) { this.bankaiClasses.add(this.classWeapon); fresh.push({ runeId: BANKAI_RUNE_ID, title: 'BANKAI EARNED FOR THIS CLASS' }); }
+    for (const id of LATE_RUNE_IDS) if (id !== BANKAI_RUNE_ID && !this.lateUnlocks.has(id) && this.lateRouteMet(id)) { this.lateUnlocks.add(id); fresh.push({ runeId: id, title: `${isDomainRuneId(id) ? 'DOMAIN' : 'ARCANE STATE'} RUNE EARNED` }); }
     return fresh;
   }
   // Boss victory: one locked late rune drops (domains and Arcane States alike).
   rollBossDrop(rng = Math.random) {
-    const pool = LATE_RUNE_IDS.filter((id) => !this.isRuneUnlocked(id));
+    // Bankai can drop for the chosen class only.
+    const pool = LATE_RUNE_IDS.filter((id) => !this.isRuneUnlocked(id) && (id !== BANKAI_RUNE_ID || this.classWeapon));
     if (!pool.length) return null;
     const id = pool[Math.min(pool.length - 1, Math.floor(rng() * pool.length))];
-    this.lateUnlocks.add(id); this.save();
+    if (id === BANKAI_RUNE_ID) this.bankaiClasses.add(this.classWeapon); else this.lateUnlocks.add(id);
+    this.save();
+    if (id === BANKAI_RUNE_ID) return { runeId: id, title: 'BOSS-DROP: BANKAI FOR THIS CLASS' };
     return { runeId: id, title: `BOSS-DROP: ${isDomainRuneId(id) ? 'DOMAIN' : 'ARCANE STATE'} RUNE` };
   }
   // Melee hits with a class weapon train it (Bankai route); saved on level-ups / match end.

@@ -2561,8 +2561,8 @@ export const BUFF_FORM_DATA = Object.freeze([
  },
  {
   "id": "A04",
-  "name": "Klingenblüte",
-  "title": "Entfesselte Waffe",
+  "name": "Bankai",
+  "title": "Entfesselte Klassenwaffe",
   "ref": "Waffen-Entfesselung: die Klinge zerfällt zu einem Schwarm aus Klingenblättern (Referenz: Bankai-Szenen in Anime-Fightern, eigene Umsetzung)",
   "palette": [
    "#3a1a2a",

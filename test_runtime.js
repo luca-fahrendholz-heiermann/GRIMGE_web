@@ -2353,12 +2353,19 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   // Late runes (user, 20 Oct 2026): no Arcane State / domain through the Mage level.
   fresh.level = 30;
   assert(!fresh.isRuneUnlocked('buff_B01') && !fresh.isRuneUnlocked('sig_S57') && fresh.isRuneUnlocked('sig_S01'), 'Arcane States and domains never unlock with the Mage level (other special runes still do)');
-  assert(runeUnlockLabel('buff_T02') === 'BOSS-DROP / IGNIS RUNE LV.8' && runeUnlockLabel('sig_S57') === 'BOSS-DROP / IGNIS RUNE LV.10' && runeUnlockLabel('sig_S53') === 'BOSS-DROP' && runeUnlockLabel('buff_A04') === 'BOSS-DROP / KLASSENWAFFE LV.8', 'Lock labels name the boss drop and the mastery route');
+  assert(runeUnlockLabel('buff_T02') === 'BOSS-DROP / IGNIS RUNE LV.8' && runeUnlockLabel('sig_S57') === 'BOSS-DROP / IGNIS RUNE LV.10' && runeUnlockLabel('sig_S53') === 'BOSS-DROP' && runeUnlockLabel('buff_A04') === 'BOSS-DROP / KLASSENWAFFE LV.8 (JE KLASSE)', 'Lock labels name the boss drop and the mastery route');
   fresh.runeXp.ignis = (LATE_RUNE_LEVEL.arcane - 1) * 60 - 5; const early = fresh.awardRuneUse('ignis', 'B');
   assert(fresh.isRuneUnlocked('buff_T02') && fresh.isRuneUnlocked('buff_B01') && !fresh.isRuneUnlocked('sig_S57') && early.newlyUnlockedRunes.some((e) => e.runeId === 'buff_T02'), 'Ignis rune level 8 earns the fire Arcane States (announced), the Ignis domain needs level 10');
   fresh.runeXp.ignis = (LATE_RUNE_LEVEL.domain - 1) * 60; fresh.claimLateRunes();
   assert(fresh.isRuneUnlocked('sig_S57') && !fresh.isRuneUnlocked('sig_S53'), 'Ignis rune level 10 earns the Ignis domain; special domains only drop from bosses');
-  fresh.weaponXp.sword = 7 * 80 - 1; assert(!fresh.isRuneUnlocked('buff_A04') && fresh.awardWeaponHit('sword')?.newlyUnlockedRunes?.some((e) => e.runeId === 'buff_A04'), 'Class weapon level 8 earns the Bankai Klingenblüte');
+  // Bankai: ONE rune, unlocked per class (class weapon level 8 or a boss drop for that class).
+  fresh.setClassWeapon('katana'); fresh.weaponXp.katana = 7 * 80 - 1;
+  assert(!fresh.isRuneUnlocked('buff_A04') && fresh.awardWeaponHit('katana')?.newlyUnlockedRunes?.some((e) => e.runeId === 'buff_A04') && fresh.isRuneUnlocked('buff_A04'), 'Class weapon level 8 earns the Bankai for that class');
+  fresh.setClassWeapon('bow'); assert(!fresh.isRuneUnlocked('buff_A04'), 'Another class has not earned its Bankai yet (selectable per class)');
+  fresh.setClassWeapon(null); assert(!fresh.isRuneUnlocked('buff_A04'), 'Without a class there is no Bankai');
+  fresh.setClassWeapon('katana'); assert(fresh.isRuneUnlocked('buff_A04') && new MageProfile(fresh.toJSON()).isRuneUnlocked('buff_A04'), 'The earned Bankai stays with its class (saved)');
+  { const BK = await import('./public/src/bankai.js'); const k = BK.bankaiStyleFor('katana'); const bw = BK.bankaiStyleFor('bow'); const hm = BK.bankaiStyleFor('great_hammer'); const harp = BK.bankaiStyleFor('harp');
+    assert(k.shape === 'petal' && bw.shape === 'arrow' && hm.shape === 'shard' && harp.shape === 'note' && bw.name !== hm.name && hm.status !== k.status, 'Bankai adapts to the class: blade petals, arrow swarm, shard storm, sound swarm — own name and wound'); }
   const drop = fresh.rollBossDrop(() => 0);
   assert(drop && fresh.isRuneUnlocked(drop.runeId) && new MageProfile(fresh.toJSON()).isRuneUnlocked(drop.runeId), 'A boss drops a locked late rune — kept in the save');
   game.returnToHub(); game.setMatchMode('training'); game.startMatch();

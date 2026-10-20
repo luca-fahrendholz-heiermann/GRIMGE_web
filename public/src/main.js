@@ -1697,6 +1697,8 @@ export class GameWorld {
     const order = [null, ...Object.keys(WEAPONS).filter((id) => id !== 'ice_sword')];
     const next = order[(order.indexOf(this.player.classWeapon ?? null) + 1) % order.length];
     this.player.equipClassWeapon(next);
+    this.profile.setClassWeapon?.(next); // the class: decides the Bankai and is worn in every match
+    ui.renderDeckBuilder?.(this.profile);
     this.showAnnouncement(next ? `CLASS WEAPON: ${WEAPONS[next].name}` : 'CLASS WEAPON: NONE (BARE HANDS)', 1.2);
     return next;
   }
@@ -2540,6 +2542,7 @@ export class GameWorld {
     const spawn = this.battlefield.getSpawn('blue');
     this.player = new Player(spawn.x, spawn.z);
     this.player.heroKey = this.selectedHeroKey ?? ui.getSelectedHero?.() ?? 'paladin';
+    if (this.profile?.classWeapon) this.player.equipClassWeapon(this.profile.classWeapon);
     this.enemyChampion = new EnemyChampion(ARENA_LAYOUT.spawns.redCastle.x, ARENA_LAYOUT.spawns.redCastle.z, 'warlord');
     this.battlefield.placeOnSurface(this.player);
     this.applyProfile();

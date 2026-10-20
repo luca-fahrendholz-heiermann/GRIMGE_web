@@ -12,6 +12,7 @@
 // the manifestation around the Wizard. B01 and B02 keep their established
 // combat engines (the former Ninefold / Eidolon manifests) and get the
 // atlas look and names; T01–T40 run on the generic engine below.
+import { bankaiStyleOf } from './bankai.js';
 import { BUFF_FORM_DATA } from './buff_forms_data.js';
 import { FORM_MOVESETS, registerFormPalette, FormStrikeSpell } from './form_moves.js';
 import { FORM_SPRINT_ATTACKS, FORM_FX_HOOKS } from './form_actions.js';
@@ -203,7 +204,8 @@ export function activateBuffForm(player, id, quality = { duration: 1, power: 1, 
   if (!active) { emit(new TransformationFx(player, transitionStyleOf(form))); buffTransformFx(player, form, 'in'); }
   combat.spawnShockwave(player.x, player.y - 40, 80 * (quality.area ?? 1), form.mat.vein);
   combat.spawnShockwave(player.x, player.y - 4, 50, form.mat.edge);
-  window.gameWorld?.showAnnouncement?.(`${form.name.toUpperCase()}${form.title ? ' — ' + form.title.toUpperCase() : ''} · ${Math.round(duration)} S`, 1.6);
+  const title = id === 'A04' ? bankaiStyleOf(player).name : form.title?.toUpperCase(); // Bankai: the class decides
+  window.gameWorld?.showAnnouncement?.(`${form.name.toUpperCase()}${title ? ' — ' + title : ''} · ${Math.round(duration)} S`, 1.6);
   return true;
 }
 

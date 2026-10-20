@@ -237,7 +237,7 @@
 - **Ausschlüsse:** Kein Torso, keine fremde Figur.
 - Palette: `#3a0d0d` `#c62828` `#ffd54f` `#fff3c4` · Material: roter Lack mit Goldspangen und Geisterlicht.
 
-### A04 Klingenblüte — Entfesselte Waffe · *Weapon Morph* · V3.2: Waffen-Entfesselung (Klingenblüte)
+### A04 Bankai — Entfesselte Klassenwaffe · *Weapon Morph* · V3.2: Waffen-Entfesselung (Klingenblüte)
 
 - **Anker:** `hand_right`, `root`, `back`
 - **Idle-Silhouette:** Nur der leuchtende Griff bleibt in der Hand; ein Ring aus rund dreißig rosa-silbernen Klingenblättern kreist um den Wizard.
