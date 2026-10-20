@@ -26,6 +26,8 @@ const FONT = 'Segoe UI';
 const ratio = 701 / 1806; // screenshot aspect (h / w)
 const W = 6.15; const H = W * ratio; const XS = [0.4, 6.75];
 const FW = 4.1; const FH = FW * ratio; const FX = [0.4, 4.6, 8.8];
+// Two-stage spells: five frames per row (stage 1 + stage 2).
+const FW5 = 2.46; const FH5 = FW5 * ratio; const FX5 = [0.4, 2.92, 5.44, 7.96, 10.48];
 
 function base(title, subtitle = '') {
   const s = pres.addSlide(); s.background = { color: BG };
@@ -45,7 +47,7 @@ const tag = (s, text, x, y) => s.addText(text, { x: x + 0.05, y: y + 0.03, w: 1.
   const s = pres.addSlide(); s.background = { color: '0E1014' };
   s.addText('GRIMGE', { x: 0.6, y: 1.6, w: 12, h: 1.2, fontSize: 60, bold: true, color: ACC, fontFace: FONT });
   s.addText('Visueller Katalog: Arcane States, Spells & Waffen', { x: 0.6, y: 2.8, w: 12, h: 0.7, fontSize: 28, color: FG, fontFace: FONT });
-  s.addText(`Im Spiel aufgenommen (Training, Held: Astral) - ${manifest.forms.length} Arcane States x 4 Bilder - ${manifest.spells.length} Spells (je 3 Momente) - ${manifest.weapons?.length ?? 0} Waffen x 5 Bilder - Stand ${new Date().toISOString().slice(0, 10)}`, { x: 0.6, y: 3.6, w: 12, h: 0.5, fontSize: 14, color: SUB, fontFace: FONT });
+  s.addText(`Im Spiel aufgenommen (Training, Held: Astral) - ${manifest.forms.length} Arcane States x 4 Bilder - ${manifest.spells.length} Spells (je 3 Momente, Zweistufer 5) - ${manifest.statuses?.length ?? 0} Statuseffekte, ${manifest.combos?.length ?? 0} Kombos - ${manifest.weapons?.length ?? 0} Waffen x 5 Bilder - Stand ${new Date().toISOString().slice(0, 10)}`, { x: 0.6, y: 3.6, w: 12, h: 0.5, fontSize: 14, color: SUB, fontFace: FONT });
   s.addText('Spells und Waffen in Zeitlupe aufgenommen, damit der Zauber selbst sichtbar ist und nicht nur sein Einschlag: 1 Wirken - 2 Flug / Aufbau - 3 Wirkung.', { x: 0.6, y: 4.4, w: 12, h: 0.8, fontSize: 12, color: SUB, fontFace: FONT });
 }
 
@@ -84,9 +86,9 @@ const groups = [
   ['NATURA & Heilung', 'Neue Elementar-Rune Natura: Heilkreise, Dornen, Gift, Weltenbaum.', (sp) => NATURE.includes(sp.id)],
   ['Waffen-Infusionen', 'Konstrukt + Element: Element-Effekte auf der Waffe (12 s).', (sp) => INFUSION.includes(sp.id)],
   ['Solo-Spezialrunen', 'Komplexe Glyphe, keine Kombination noetig.', (sp) => SOLO.includes(sp.id)],
-  ['Signatur-Spezialrunen', 'Eigene Mehrstrich-Glyphe, eigene Mechanik (S01-S44).', (sp) => sigIds.has(sp.id)]
+  ['Signatur-Spezialrunen', 'Eigene Mehrstrich-Glyphe, eigene Mechanik (S01-S54). Zweistufige Runen zeigen zusaetzlich Stufe 2 (erneut tippen).', (sp) => sigIds.has(sp.id)]
 ];
-const FRAME_LABEL = ['1 Wirken', '2 Flug / Aufbau', '3 Wirkung'];
+const FRAME_LABEL = ['1 Wirken', '2 Flug / Aufbau', '3 Wirkung', '4 Stufe 2', '5 Stufe 2: Wirkung'];
 function spellSlides(title, list) {
   const ROWS = [0.9, 4.15];
   for (let i = 0; i < list.length; i += 2) {
@@ -94,9 +96,11 @@ function spellSlides(title, list) {
     const s = base(`${title}${list.length > 2 ? ` (${Math.floor(i / 2) + 1}/${Math.ceil(list.length / 2)})` : ''}`);
     chunk.forEach((sp, k) => {
       const y = ROWS[k];
-      (sp.frames ?? ['a', 'b', 'c']).forEach((fr, j) => {
-        s.addImage({ path: img(`spell_${sp.id}_${fr}`), x: FX[j], y, w: FW, h: FH });
-        tag(s, FRAME_LABEL[j], FX[j], y);
+      const frames = sp.frames ?? ['a', 'b', 'c']; const five = frames.length > 3;
+      frames.forEach((fr, j) => {
+        const x = five ? FX5[j] : FX[j];
+        s.addImage({ path: img(`spell_${sp.id}_${fr}`), x, y, w: five ? FW5 : FW, h: five ? FH5 : FH });
+        tag(s, FRAME_LABEL[j], x, y);
       });
       const def = SPELL_DEFINITIONS[sp.id] ?? {};
       const recipe = recipeOf[sp.id]?.[0];
@@ -117,6 +121,28 @@ for (const [title, text, pick] of groups) {
 }
 const rest = manifest.spells.filter((sp) => !used.has(sp.id));
 if (rest.length) { section('Weitere Spells', `Ohne Runen-Rezept (z. B. von Transformationen gewaehrt): ${rest.length}`); spellSlides('Weitere Spells', rest); }
+
+// Status effects (6 per slide) and combos (6 per slide).
+function grid(title, cells) {
+  for (let i = 0; i < cells.length; i += 6) {
+    const s = base(`${title}${cells.length > 6 ? ` (${i / 6 + 1}/${Math.ceil(cells.length / 6)})` : ''}`);
+    cells.slice(i, i + 6).forEach(([image, label, text], k) => {
+      const x = FX[k % 3]; const y = k < 3 ? 1.0 : 1.0 + FH + 1.05;
+      s.addImage({ path: img(image), x, y, w: FW, h: FH });
+      s.addText([{ text: label, options: { bold: true, color: ACC, fontSize: 12, breakLine: true } }, { text: text ?? '', options: { color: SUB, fontSize: 10 } }], { x, y: y + FH + 0.03, w: FW, h: 0.8, fontFace: FONT, valign: 'top' });
+    });
+  }
+}
+if (manifest.statuses?.length) {
+  section('Statuseffekte & Kombos', 'Ein Treffer KANN einen Status hinterlassen (Zufall pro Treffer, wie bei Pokemon). Trifft ein passendes Element auf einen Status, loest eine Kombo garantiert aus.');
+  const STATUS_TEXT = { frozen: 'Eisblock: keine Bewegung (Eis-Spells)', burn: 'Flammen, Schaden ueber Zeit (Ignis)', paralysis: 'Blitzboegen, stockt immer wieder (Fulgur)', poison: 'Giftblasen, laengerer Schaden ueber Zeit (Natura, Mortis)', bleed: 'Blutstropfen, mehr Schaden in Bewegung (Klingen, Terra)', wet: 'Nass: kein Schaden, bereitet Kombos vor (Wasser, Pfuetzen)' };
+  grid('Statuseffekte', manifest.statuses.map((st) => [`status_${st.kind}`, st.label, STATUS_TEXT[st.kind]]));
+  grid('Status-Kombos', (manifest.combos ?? []).map((c) => [`combo_${c.id}`, c.name, c.text]));
+}
+if (manifest.duel?.length) {
+  const s = base('Sphaeren-Duell (S53)', 'Treffen zwei gegnerische Sphaerenentfaltungen aufeinander, tippen beide 3 s um die Wette - die schwaechere Kuppel bricht zusammen. Die KI antwortet auf eine Kuppel mit ihrer eigenen.');
+  manifest.duel.forEach((name, i) => s.addImage({ path: img(name), x: XS[i], y: 1.4, w: W, h: H }));
+}
 
 // Weapons: one slide each — combo, hold, charge down, charge up, air dive.
 if (manifest.weapons?.length) {

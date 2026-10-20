@@ -35,6 +35,8 @@ await sleep(2500);
 await evaluate("localStorage.setItem('grimge-selected-companion', 'none'); 1");
 await send('Page.navigate', { url });
 await sleep(3500);
+// Wait until the game has booted (slow loads otherwise abort the whole run).
+for (let i = 0; i < 60 && !(await evaluate('!!window.gameWorld?.canvas')); i++) await sleep(250);
 const outDir = out; fs.mkdirSync(outDir, { recursive: true });
 const shoot = async (name, clip) => { const r = await send('Page.captureScreenshot', { format: 'png', clip: { ...clip, scale: 1 } }); fs.writeFileSync(path.join(outDir, name + '.png'), Buffer.from(r.result.data, 'base64')); };
 // Setup: Astral, Training, UI hidden (canvas only), no sparring partner.
@@ -44,6 +46,7 @@ console.log(await evaluate(`(async () => {
   const cv = window.gameWorld.canvas;
   for (const el of document.querySelectorAll('body *')) if (el !== cv && !el.contains(cv)) el.style.visibility = 'hidden';
   window.__S = (await import('./src/spells.js')).spells; window.__C = await import('./src/spell_catalog.js'); window.__B = await import('./src/buff_forms.js'); window.__core = await import('./src/signature_core.js');
+  window.__R = await import('./src/recast.js'); window.__ST = await import('./src/status_effects.js'); window.__D = await import('./src/signature_abilities_g.js');
   window.__reset = (px = 330, dummyX = 560) => { const P = g.player; if (!P.isAlive) P.respawn(g.battlefield); P.invulnerableTimer = 0; P.equipClassWeapon?.(null); window.__S.clearRuntime(); window.__B.endBuffForm(P); if (P.signature) window.__core.endStance(P, 'replaced'); P.weaponInfusion = null; P.weaponBuff = null;
     P.x = px; P.z = .55; P.facing = 1; P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.hp = P.maxHp; P.mp = P.maxMp; P.reservedMana = 0; P.chargeTimer = 0; P.formCharge = null; g.battlefield.placeOnSurface(P);
     const d = g.trainingDummy; d.homeX = d.x = dummyX; d.homeZ = d.z = .55; d.hp = d.maxHp; g.battlefield.dynamicSurfaces = []; };
@@ -72,19 +75,70 @@ const slow = (k) => evaluate(`(() => { const g = window.gameWorld; g.targetTimeS
 const spellList = JSON.parse(await evaluate(`JSON.stringify(Object.values(window.__C.SPELL_DEFINITIONS).filter((d) => !d.isBuffForm && !String(d.id).startsWith('transform')).map((d) => [d.id, d.name, d.isSignature ? 'sig' : (d.tier ?? 1), d.desc ?? '']))`));
 const FRAMES = [['a', 230], ['b', 420], ['c', 750]]; // real-time gaps at 0.3x speed ≈ 0.07 s / 0.2 s / 0.43 s game time
 for (const [id, name, tier, desc] of spellList) {
-  const r = await evaluate(`(() => { try { window.__reset(300, 760); const g = window.gameWorld; const P = g.player; const def = window.__C.SPELL_DEFINITIONS['${id}'];
-    const target = { x: 600, z: .55, a: { x: 520, z: .45 }, b: { x: 660, z: .65 }, start: { x: 520, z: .38 }, end: { x: 520, z: .72 }, orientation: 'lateral', length: 160, entity: P };
+  // Special runes get a foe in reach (rushes, shards, the shadow, the blood circle need one).
+  const sig = id.startsWith('sig_');
+  const r = await evaluate(`(() => { try { window.__reset(300, ${sig ? 470 : 760}); const g = window.gameWorld; const P = g.player; const def = window.__C.SPELL_DEFINITIONS['${id}'];
+    const target = { x: ${sig ? 470 : 600}, z: .55, a: { x: 520, z: .45 }, b: { x: 660, z: .65 }, start: { x: 520, z: .38 }, end: { x: 520, z: .72 }, orientation: 'lateral', length: 160, entity: P };
     g.targetTimeScale = g.timeScale = .3;
-    window.__S.cast(P, def, g, null, def.targetingMode === 'ally' ? P : target); return 'ok'; } catch (e) { return 'ERR ' + e.message; } })()`);
+    window.__R.takeOfferedRecast(null);
+    window.__S.cast(P, def, g, null, def.targetingMode === 'ally' ? P : target);
+    window.__offer = window.__R.takeOfferedRecast(P);
+    return window.__offer ? 'ok+recast' : 'ok'; } catch (e) { return 'ERR ' + e.message; } })()`);
   const isStance = await evaluate(`!!window.gameWorld.player.signature`);
   if (isStance) { await sleep(300); await evaluate(`(() => { const P = window.gameWorld.player; P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.executeAttack({ keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false }, 'normal'); return 1; })()`); }
-  const slowSpell = id === 'world_tree' || id === 'meteor_cataclysm' || id.startsWith('summon') || id === 'apocalyptic_heavensurge';
+  const slowSpell = id === 'world_tree' || id === 'meteor_cataclysm' || id.startsWith('summon') || id === 'apocalyptic_heavensurge' || id === 'sig_S53';
   for (const [tag, gap] of FRAMES) { await sleep(slowSpell ? gap * 2 : gap); await shoot(`spell_${id}_${tag}`, clip); }
+  const frames = FRAMES.map(([t]) => t);
+  // Two-stage spells: fire stage 2 (several taps where the slot stays open) and add two frames.
+  if (r === 'ok+recast') {
+    await sleep(900);
+    await evaluate(`(async () => { const g = window.gameWorld; const o = window.__offer; for (let i = 0; i < 5; i++) { const out = o?.stage2?.(g); if (!(out && out.again)) break; await new Promise((res) => setTimeout(res, 170)); } return 1; })()`);
+    await sleep(250); await shoot(`spell_${id}_d`, clip);
+    await sleep(650); await shoot(`spell_${id}_e`, clip);
+    frames.push('d', 'e');
+  }
   await slow(1);
   const alive = await evaluate('window.gameWorld.player.isAlive');
   if (!alive) console.log('CASTER DIED after', id);
-  manifest.spells.push({ id, name, tier, desc, status: r, frames: FRAMES.map(([t]) => t), casterAlive: alive });
+  manifest.spells.push({ id, name, tier, desc, status: r, frames, casterAlive: alive });
 }
+
+// Status effects (on the dummy) and every status combo (a second foe stands next to it).
+const sparring = (on) => evaluate(`(() => { const g = window.gameWorld; if (!!g.modeState?.sparring !== ${on}) g.toggleSparringPartner(); const E = g.enemyChampion; if (${on}) { E.passive = true; E.lifeState = 'Alive'; E.hp = E.maxHp; E.x = 625; E.z = .55; E.elevation = 0; g.battlefield.placeOnSurface(E); } return 1; })()`);
+manifest.statuses = [];
+const kinds = JSON.parse(await evaluate(`JSON.stringify(Object.entries(window.__ST.STATUS_DEFS).map(([k, d]) => [k, d.label]))`));
+for (const [kind, label] of kinds) {
+  await evaluate(`(() => { window.__reset(330, 560); window.__ST.clearStatuses(); const d = window.gameWorld.trainingDummy; d.statusImmuneUntil = {}; window.__ST.applyStatus(d, '${kind}', { duration: 30, quiet: true }); return 1; })()`);
+  await sleep(600); await shoot(`status_${kind}`, clip);
+  manifest.statuses.push({ kind, label });
+}
+const COMBOS = [
+  ['wet', 'fulgur', 'SCHOCK!', 'Nass + Blitz: sichere Paralyse, Bonusschaden'],
+  ['wet', 'frost', 'SCHOCKFROST!', 'Nass + Eis: sicheres Einfrieren'],
+  ['burn', 'ventus', 'FEUERSTURM!', 'Brand + Wind: das Feuer springt auf Gegner in der Naehe'],
+  ['burn', 'aqua', 'GELOESCHT', 'Brand + Wasser: geloescht, Dampf, das Ziel ist nass'],
+  ['frozen', 'hard', 'ZERSPLITTERT!', 'Gefroren + harter Treffer (ab 20 Schaden): das Eis platzt, +18'],
+  ['poison', 'ignis', 'GIFTGAS-EXPLOSION!', 'Gift + Feuer: Explosion, Umstehende werden vergiftet'],
+  ['bleed', 'ventus', 'SCHNITT-WIRBEL!', 'Blutung + Wind: Schnittschaden, die Blutung springt ueber'],
+  ['paralysis', 'terra', 'ERDUNG!', 'Paralyse + Erde: Entladung als Schockring, Paralyse endet']
+];
+manifest.combos = [];
+await sparring(true);
+for (const [status, element, name, text] of COMBOS) {
+  await evaluate(`(() => { window.__reset(330, 560); const g = window.gameWorld; const E = g.enemyChampion; E.passive = true; E.x = 625; E.z = .55; window.__ST.clearStatuses(); const d = g.trainingDummy; d.statusImmuneUntil = {}; E.statusImmuneUntil = {};
+    window.__ST.applyStatus(d, '${status}', { duration: 30, quiet: true });
+    const prev = window.__ST.setStatusSource('${element}' === 'hard' ? null : { team: g.player.team, statusElements: ['${element}'] });
+    d.takeDamage('${element}' === 'hard' ? 26 : 6, 0, 0, 0, false, 'spell'); window.__ST.setStatusSource(prev); return 1; })()`);
+  await sleep(260); await shoot(`combo_${status}_${element}`, clip);
+  manifest.combos.push({ id: `${status}_${element}`, name, text });
+}
+// Domain duel: the AI opens a domain, the Wizard answers with his own.
+await evaluate(`(() => { window.__reset(380, 900); const g = window.gameWorld; const E = g.enemyChampion; E.passive = true; E.x = 650; E.z = .55; E.isPlayerControlled = false; window.__D.openDomain(E, null, window.__core.SIGNATURES.S53); g.targetTimeScale = g.timeScale = .5; return 1; })()`);
+await sleep(1600);
+await evaluate(`(() => { const g = window.gameWorld; const P = g.player; P.mp = P.maxMp; window.__S.cast(P, window.__S.resolveSpell([{ id: 'sig_S53' }]), g); return 1; })()`);
+await sleep(1900); await shoot('duel_a', clip); await sleep(1400); await shoot('duel_b', clip);
+manifest.duel = ['duel_a', 'duel_b'];
+await slow(1); await sparring(false);
 
 // Weapons: combo, HOLD (ranged reach), charge down (weapon buff / debuff), charge up (launcher), air dive.
 const weaponList = JSON.parse(await evaluate(`(async () => { const W = await import('./src/weapons.js'); const K = await import('./src/weapon_kits.js'); window.__W = W; window.__K = K; return JSON.stringify(Object.entries(W.WEAPONS).map(([id, w]) => [id, w.name, w.family ?? '', w.desc ?? '', K.WEAPON_KITS[id]?.down?.name ?? '', K.WEAPON_KITS[id]?.up?.name ?? '', K.WEAPON_KITS[id]?.dive?.name ?? ''])); })()`));
