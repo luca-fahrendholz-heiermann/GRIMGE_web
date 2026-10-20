@@ -12,6 +12,7 @@ import { drawBeastBomb, drawSpiritBow } from './form_attacks.js';
 import { FULL_CHARGE_TIME, activeMoveset, releaseFormTechnique, FORM_PALETTES } from './form_moves.js';
 import { releaseWeaponReach, releaseFormPull, isOnCastle, weaponReachShot } from './hold_actions.js';
 import { onStatusHit, setStatusSource, isBladeLook, hasStatus, drawIceBlock } from './status_effects.js';
+import { tryAICounterDomain, tryAISpecial, updateAIRecast } from './ai_specials.js';
 import { formDive, FORM_SPECIAL_MANA, tickFormSpecials } from './form_specials.js';
 import { renderInfusion } from './nature_spells.js';
 import { TransformationFx } from './transform_fx.js';
@@ -2251,6 +2252,7 @@ export class EnemyChampion extends GroundEntity {
     this.animTime += dt; this.hitFlash = Math.max(0, this.hitFlash - dt);
     if (this.lifeState === 'Dying') { this.stateTimer -= dt; if (this.stateTimer <= 0) { this.lifeState = 'Dead'; this.respawnTimer = gameWorld.canRespawn(this.team) ? this.respawnDuration : Infinity; if (!Number.isFinite(this.respawnTimer)) gameWorld.onFinalWizardDeath(this.team); } return; }
     if (this.lifeState === 'Dead') { this.respawnTimer -= dt; if (this.respawnTimer <= 0) this.respawn(battlefield, gameWorld); return; }
+    this.specialCooldown = Math.max(0, (this.specialCooldown ?? 0) - dt); updateAIRecast(this, dt, gameWorld);
     this.attackCooldown -= dt; this.spellCooldown -= dt; this.defensiveCooldown -= dt; this.beamCooldown -= dt; this.mp = Math.min(this.maxMp, this.mp + dt * 11); this.arcaneShieldTimer = Math.max(0, this.arcaneShieldTimer - dt); if (this.arcaneShieldTimer <= 0) this.arcaneShield = 0; this.freezeTimer = Math.max(0, this.freezeTimer - dt); this.slowTimer = Math.max(0, this.slowTimer - dt); if (!this.slowTimer) this.slowFactor = 1;
     if (this.stateTimer > 0) { this.stateTimer -= dt; if (this.stateTimer <= 0) this.state = this.grounded ? 'idle' : 'fall'; }
     const player = gameWorld.player; const distance = player.isAlive ? groundDistance(this, player) : Infinity;
@@ -2275,6 +2277,9 @@ export class EnemyChampion extends GroundEntity {
       if (this.stateTimer <= 0 && this.grounded) this.state = 'idle';
       this.passiveIdle = (this.passiveIdle ?? 0) + dt;
       if (this.passiveIdle > 3 && this.hp < this.maxHp) this.hp = this.maxHp;
+    }
+    else if (player.isAlive && tryAICounterDomain(this, gameWorld, spells)) {
+      this.vx = this.vz = 0;
     }
     else if (player.isAlive && this.tryAICounterBeam(gameWorld)) {
       this.vx = this.vz = 0;
@@ -2303,7 +2308,8 @@ export class EnemyChampion extends GroundEntity {
       this.vz = move.z * this.speed / 150 * this.slowFactor * (retreating ? -.82 : 1);
       this.state = 'run';
       if (!this.tryAIDefense(player, distance, objectiveThreat, gameWorld) && distance > 110 && !this.tryAIBeam(player, distance, gameWorld)) {
-        if (this.deckSpells) this.tryAIDeckSpell(player, distance, gameWorld);
+        if (tryAISpecial(this, player, distance, gameWorld, spells)) { /* special rune */ }
+        else if (this.deckSpells) this.tryAIDeckSpell(player, distance, gameWorld);
         else this.tryAICast('fireball', gameWorld, 12, objectiveThreat ? 2.1 : 3.1);
       }
     } else {
@@ -2335,7 +2341,8 @@ export class EnemyChampion extends GroundEntity {
     if (this.spellCooldown > 0 || !this.deckSpells.length) return false;
     const hurt = this.hp / this.maxHp < .6;
     const usable = this.deckSpells.filter(({ def, cost }) => {
-      if (cost > this.mp || def.deliveryType === 'beam') return false;
+      // Special runes go through ai_specials.js (situation + second stage), never the plain pick.
+      if (cost > this.mp || def.deliveryType === 'beam' || def.isSignature || def.isBuffForm) return false;
       if (def.targetingMode === 'self' || def.targetingMode === 'ally') return hurt && ['arcane_aegis', 'sandstorm_bastion', 'mirror_ward', 'eidolon_mantle'].includes(def.id);
       return true;
     });

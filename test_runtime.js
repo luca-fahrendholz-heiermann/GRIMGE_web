@@ -3078,6 +3078,36 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
     assert(!bindC?.victim && !P.slottedSpells.includes(s54c), 'S54: a foe in the air is not caught (jump to dodge); the slot frees after the miss');
     spells.clearRuntime(); E.elevation = 0; E.passive = false; E.x = 900;
   }
+  // The AI Wizard uses special runes: counter domain, shadow binding, second stages.
+  {
+    const AI = await import('./public/src/ai_specials.js'); const D = await import('./public/src/signature_abilities_g.js'); const H = await import('./public/src/signature_abilities_h.js');
+    const E = game.enemyChampion;
+    const arm = (kit, dx) => { spells.clearRuntime(); E.lifeState = 'Alive'; E.hp = E.maxHp; E.mp = E.maxMp; E.passive = false; E.aiRecast = null; E.specialCooldown = 0; E.spellCooldown = 0; E.freezeTimer = 0; E.deckIds = []; E.aiSpecialIds = kit; E.x = P.x + dx; E.z = P.z; E.elevation = 0; E.state = 'idle'; E.stateTimer = 0; game.battlefield.placeOnSurface(E); };
+    const stepAI = (sec) => { for (let i = 0; i < sec * 60; i++) { P.update(1 / 60, neutral, game.battlefield, game); game.updateRecasts(1 / 60); spells.update(1 / 60, game); E.update(1 / 60, game, game.battlefield); } };
+    // Training without a kit: no specials.
+    reset(); arm(null, 200); E.aiSpecialIds = undefined;
+    assert(!AI.tryAISpecial(E, P, 200, game, spells), 'AI: without a deck / kit the training partner casts no special runes');
+    // Counter domain → domain duel.
+    reset(); dummy.homeX = dummy.x = 900; arm(['sig_S53'], 120);
+    const sd = game.slotRuneSpell(runeById('sig_S53')); game.castSlotAt(sd.position); stepAI(.2);
+    const aiDomain = D.activeDomains().find((d) => d.owner === E); const myDomain = D.activeDomains().find((d) => d.owner === P);
+    assert(aiDomain && myDomain && aiDomain.clash && aiDomain.clash === myDomain.clash && E.lastAISpecial === 'S53', 'AI: a hostile domain around it → it opens its own (domain duel)');
+    stepAI(3.4);
+    assert(myDomain.collapseT != null && aiDomain.collapseT == null, 'AI: in the duel the AI taps on its own — without tapping your dome loses');
+    // Shadow binding: the AI binds the Wizard and strangles after a moment.
+    reset(); dummy.homeX = dummy.x = 900; arm(['sig_S54'], 200); P.invulnerableTimer = 0; const hpS = P.hp;
+    assert(AI.tryAISpecial(E, P, 200, game, spells) && E.aiRecast?.sig === 'S54', 'AI: at mid range in the same lane it casts the shadow binding');
+    stepAI(.8); const bindAI = spells.activeSpells.find((sp) => sp instanceof H.ShadowBind);
+    assert(bindAI?.victim === P && P.freezeTimer > 0, 'AI: the shadow reaches the Wizard and binds him');
+    stepAI(2.6);
+    assert(P.hp <= hpS - H.SHADOW.strangle + 1 && !E.aiRecast, 'AI: it uses the second stage (strangle) on its own');
+    // A two-stage rush: the AI fires stage 2 by itself.
+    reset(); dummy.homeX = dummy.x = 900; arm(['sig_S46'], 150); P.invulnerableTimer = 0; const hpR = P.hp;
+    assert(AI.tryAISpecial(E, P, 150, game, spells) && E.aiRecast?.sig === 'S46', 'AI: in the same lane it opens with the spiral rush');
+    stepAI(2.5);
+    assert(P.hp < hpR && !E.aiRecast && E.lastAISpecial === 'S46', 'AI: stage 2 (teleport above, slam) follows without the player');
+    E.aiSpecialIds = undefined; E.passive = false; E.x = 900; spells.clearRuntime(); P.freezeTimer = 0;
+  }
   // S48: a hit is negated, the Wizard reappears behind the attacker and counters; three charges.
   reset(); const s48 = game.slotRuneSpell(runeById('sig_S48')); game.castSlotAt(s48.position);
   const attacker = { x: P.x + 40, z: P.z, team: 'red', hp: 100, isDead: false, took: 0, takeDamage(d) { this.took += d; this.hp -= d; } };

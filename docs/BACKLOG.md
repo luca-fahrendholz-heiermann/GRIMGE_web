@@ -15,7 +15,7 @@ Plan: `docs/GRIMGE_Visual_Upgrade_Plan.md` §4 Schritt 4. Testassets → später
 
 ## Anime-Mechaniken — Ideen für weitere Spezialrunen / Arcane States
 Umgesetzt: Spiralkugel (S46), Spiegelkerker (S50), Blutkreuz (S51), Herausforderung (S52), Sphärenentfaltung (S53, inkl. Sphären-Duell), Schattenbindung (S54). Jede neue Mechanik mit eigenem Stil, nicht alles gleich krachend.
-- **Weitere Domänen-Regeln** (S53 hat "sicherer Treffer"): z. B. Zeitlupen-Domäne, Element-Domäne (Boden wird Lava/Eis), Heil-Domäne für Verbündete; KI-Gegner sollen S53 selbst öffnen können (Duell-Gegenzug).
+- **Weitere Domänen-Regeln** (S53 hat "sicherer Treffer"): z. B. Zeitlupen-Domäne, Element-Domäne (Boden wird Lava/Eis), Heil-Domäne für Verbündete. (KI-Gegenzug mit eigener Domäne ist umgesetzt, ai_specials.js.)
 - **Gedankenspiegelung / Illusion (Genjutsu):** der Gegner sieht für 2 s falsche Positionen (Doppelbilder); Treffer auf die Illusion zerplatzen.
 - **Chidori-/Raikiri-Ansturm:** gerade Blitzlinie durch alle in der Linie, mit Nachleuchten der Bahn (zweistufig: Rückweg-Schlag).
 - **Hollow-/Cero-Strahl mit Aufladung:** je länger gehalten, desto breiter; beim Loslassen Rückstoß für den Zauberer.
@@ -26,6 +26,7 @@ Umgesetzt: Spiralkugel (S46), Spiegelkerker (S50), Blutkreuz (S51), Herausforder
 - **Weitere Status-Kombos** (umgesetzt: Nass+Blitz, Nass+Eis, Brand+Wind, Brand+Wasser, Gefroren+harter Treffer): z. B. Gift+Feuer = Giftgas-Explosion, Blutung+Wind = Schnitt-Wirbel, Paralyse+Erde = Erdung.
 
 ## Weitere offene Punkte
+- **KI-Spezialrunen ausbauen:** feinere Taktik je Rune (Falle vorausplanen, Spiegelkerker-Sprünge timen), Schwierigkeitsstufen.
 - **Statuseffekte balancieren:** Chancen (aktuell 8–22 % pro Treffer, × Grade-Power), Dauer, Immunitätsfenster; weitere Quellen (Gift-Waffen, Eis-Fusionen, Blutungs-Kits).
 - **Aggro im Mehrspieler:** S52 zwingt bisher Minions und den Gegner-Zauberer; Begleiter/Summons der Gegenseite fehlen noch.
 - **Spielgefühl & Balance** im echten Spiel prüfen: Mana-Kosten, Zeitfenster der Zweistufer (Blitzmarke 5 s, Spiralkugel 2,5 s, Bannfalle 6 s, Schachtwuchs 6 s, Steinwall 5 s, Flutstrahl 5 s), Waffen-Kits, Halte-Slot (Touch-Schwelle 0,3 s).
