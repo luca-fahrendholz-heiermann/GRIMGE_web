@@ -2821,6 +2821,14 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   step(40); assert(P.signature?.id === 'S40' && dummy.hp < dummy.maxHp, 'S40 WASSERATMUNG: water arcs on every swing, the finisher sends a wave');
   reset(); cast('S42'); P.sprintActive = true; P.vx = 300; P.startSprintAttack();
   assert(P.lastSprintAttack === 'BLITZSCHRITT' && P.sprintStrike?.variant?.pierce, 'S42 DONNERATMUNG: the sprint attack becomes a lightning dash through everyone in line');
+  // Charged forward attack = the breathing's signature move.
+  const charged = () => { P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.beginCharge('forward'); P.chargeTimer = P.chargeMaxTime * .1; P.releaseCharge(); };
+  reset(); cast('S41'); dummy.homeX = dummy.x = P.x + 330; dummy.hp = dummy.maxHp; dummy.statusImmuneUntil = {}; charged(); step(50);
+  assert(dummy.hp < dummy.maxHp && STATUS.hasStatus(dummy, 'burn'), 'S41 FLAMMENATMUNG charged: a flame serpent rolls far down the lane (330 px) and burns');
+  reset(); cast('S42'); dummy.homeX = dummy.x = P.x + 150; dummy.hp = dummy.maxHp; dummy.statusImmuneUntil = {}; charged(); step(12);
+  assert(P.x > dummy.x && dummy.hp < dummy.maxHp && STATUS.hasStatus(dummy, 'paralysis'), 'S42 DONNERATMUNG charged: one flash — the Wizard strikes through the foe and stands behind it (paralysed)');
+  reset(); cast('S40'); dummy.homeX = dummy.x = P.x + 300; dummy.hp = dummy.maxHp; dummy.statusImmuneUntil = {}; charged(); step(45);
+  assert(dummy.hp < dummy.maxHp && STATUS.hasStatus(dummy, 'wet'), 'S40 WASSERATMUNG charged: a towering flood wave sweeps the lane and soaks');
   reset();
 }
 

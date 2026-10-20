@@ -894,12 +894,12 @@ export class Player extends GroundEntity {
     // Masteries: the shield / stored reaction becomes the force of this charged hit.
     if (chargeRatio > .25) masteryChargedRelease(this);
     const heavy = MELEE_BASELINE.heavy;
-    signatureEvent(this, 'heavy', { charge: chargeRatio });
+    signatureEvent(this, 'heavy', { charge: chargeRatio, dir: this.chargeDir ?? 'forward' });
     const dmgMult = 1 + chargeRatio * 0.8;
     const kbMult = 1 + chargeRatio * 0.6;
     const dir = this.chargeDir ?? 'forward';
     // Charged UP: the weapon's own launcher (bow arrow, harp melody, staff pillar, rising cut …).
-    if (dir === 'up' && weaponUp(this, chargeRatio, spells, window.gameWorld)) { signatureEvent(this, 'heavy', { charge: chargeRatio }); return true; }
+    if (dir === 'up' && weaponUp(this, chargeRatio, spells, window.gameWorld)) return true;
     // Ranged weapons: the charged UP is a lifting volley.
     const weaponHeavy = this.weaponProfile?.heavy;
     if (weaponHeavy?.shot && dir === 'up') {

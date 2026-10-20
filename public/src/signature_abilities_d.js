@@ -12,7 +12,8 @@ import {
 } from './signature_core.js';
 import { combat } from './combat.js';
 import { environment } from './environment.js';
-import { groundYForDepth } from './world.js';
+import { groundYForDepth, clampToArena } from './world.js';
+import { applyStatus } from './status_effects.js';
 import { applyStatuses } from './buff_techniques.js';
 import { GeoPlatform } from './geometry.js';
 import { offerRecast } from './recast.js';
@@ -143,6 +144,84 @@ function slashWave(p, id, quality, { len = 260, damage = 22, kx = 320, lift = 80
     else if (id === 'S41') { for (let i = 0; i < 3; i++) plate(ctx, [[x - f * 30, y - 10 - i * 12], [x + f * 10, y - 24 - i * 10], [x - f * 6, y - 2 - i * 12]], b.mat, 4020 + i, { alpha: a, glowEdge: 1.2 }); sparks(ctx, [[x, y - 20]], b.mat, s.t, 4023, 8, a); }
   } }), quality);
 }
+// ── Charged breathing moves (user, 20 Oct 2026: "aufgeladene Attacken passen sich dem
+// Stil der Atmung an — Feuer: krasse Attacke in die Ferne, Blitz: fegt wie ein Blitz
+// durch den Gegner"). A charged FORWARD attack in a breathing stance; stronger and
+// longer the fuller the charge.
+// Flame: a flame serpent rolls far down the lane, burns, leaves scorched ground.
+function flameTorrent(p, quality, charge) {
+  const f = p.facing || 1; const len = 360 + 220 * charge; const dmg = 30 + 26 * charge; const b = BREATH.S41;
+  emit(new SigSequence({ mat: b.mat, seed: 4300 }, p, { dur: .9, data: { hit: new Set(), acc: 0 }, tick: (s, dt, gw) => {
+    const head = 30 + Math.min(1, s.t / .55) * len;
+    for (const t of foesOf(gw, p.team)) {
+      if (s.hit.has(t)) continue;
+      const dx = (t.x - s.x) * f;
+      if (dx > 0 && dx < head && Math.abs(((t.z ?? s.z) - s.z) * DEPTH) < 40) { s.hit.add(t); hit(t, dmg, f * 260, 140, .45); applyStatus(t, 'burn', { force: true }); }
+    }
+    s.acc += dt; if (s.acc > .09 && s.t < .55) { s.acc = 0; environment.add('scorch', s.x + f * head, s.z, { radius: 30, team: p.team }); }
+  }, draw: (ctx, s) => {
+    const y = groundYForDepth(s.z) - 34; const head = 30 + Math.min(1, s.t / .55) * len; const a = 1 - Math.max(0, (s.t - .55) / .35);
+    // A rolling body of flame tongues (dark red at the rim, yellow-white core), widening to the head.
+    const n = 22; const roll = s.t * 16;
+    ctx.save(); ctx.globalAlpha = a;
+    for (const [col, grow, lift] of [['#b71c1c', 1.25, 0], ['#ff5a1f', 1, 2], ['#ffb300', .7, 4], ['#fff1c2', .38, 6]]) {
+      ctx.fillStyle = col;
+      for (let i = 0; i < n; i++) {
+        const u = i / (n - 1); const x = s.x + f * (20 + head * u); const yy = y + Math.sin(u * 9 - roll) * 12 * u - lift;
+        const w = (8 + 26 * u) * grow; const h = (22 + 34 * u + Math.sin(i * 1.7 + roll) * 8) * grow;
+        ctx.beginPath(); ctx.moveTo(x - f * w * .6, yy + w * .45); ctx.quadraticCurveTo(x - f * w * .2, yy - h * .4, x + f * w * .25, yy - h); ctx.quadraticCurveTo(x + f * w * .5, yy - h * .3, x + f * w * .7, yy + w * .45); ctx.closePath(); ctx.fill();
+      }
+    }
+    ctx.restore();
+    sparks(ctx, Array.from({ length: 6 }, (_, i) => [s.x + f * (20 + head * (i + 1) / 6), y - 20]), b.mat, s.t, 4303, 10, a);
+    const hx = s.x + f * (20 + head);
+    for (let i = 0; i < 4; i++) plate(ctx, [[hx, y - 6 + i * 3], [hx + f * 34, y - 28 + i * 13], [hx + f * 14, y + 6]], b.mat, 4310 + i, { alpha: a, glowEdge: 1.4 });
+  } }), quality);
+  combat.shakeCamera?.(6 + 6 * charge, .35);
+}
+// Thunder: one flash — the Wizard strikes THROUGH every foe in line and stands behind them.
+function thunderclap(p, quality, charge) {
+  const f = p.facing || 1; const dist = 220 + 200 * charge; const dmg = 32 + 24 * charge; const b = BREATH.S42;
+  const x0 = p.x; const z0 = p.z;
+  emit(new SigSequence({ mat: b.mat, seed: 4400 }, p, { dur: .6, x: x0, z: z0, data: { hit: new Set(), x1: x0, moved: false }, steps: [{ at: .07, fn: (s, gw) => {
+    p.x = x0 + f * dist; clampToArena(p, gw?.battlefield?.boundsOverride ?? null); gw?.battlefield?.placeOnSurface?.(p);
+    s.x1 = p.x; s.moved = true; p.invulnerableTimer = Math.max(p.invulnerableTimer ?? 0, .3);
+    const lo = Math.min(x0, s.x1) - 12; const hi = Math.max(x0, s.x1) + 12;
+    for (const t of foesOf(gw, p.team)) {
+      if (t.isProp || t.x < lo || t.x > hi || Math.abs(((t.z ?? z0) - z0) * DEPTH) > 36) continue;
+      s.hit.add(t); hit(t, dmg, f * 180, 160, .7); applyStatus(t, 'paralysis', { force: true });
+    }
+    combat.shakeCamera?.(10, .3); combat.triggerHitstop?.(4); combat.spawnShockwave?.(s.x1, groundYForDepth(z0) - 30, 64, '#ffe03d');
+  } }], draw: (ctx, s, k) => {
+    const y = groundYForDepth(s.z) - 40;
+    if (!s.moved) { sparks(ctx, [[x0, y]], b.mat, s.t, 4401, 14, 1); return; }
+    const a = 1 - k; const n = 11; const roll = Math.floor(s.t * 40);
+    const pts = Array.from({ length: n }, (_, i) => [x0 + (s.x1 - x0) * i / (n - 1), y + (i && i < n - 1 ? Math.sin(i * 2.7 + roll) * 13 : 0)]);
+    thread(ctx, pts, b.color, 8 * a + 1, a); thread(ctx, pts, '#ffffff', 2.5, a);
+    sparks(ctx, pts.filter((_, i) => i % 2 === 0), b.mat, s.t, 4402, 6, a);
+    for (const t of s.hit) thread(ctx, [[t.x - 10, y - 32], [t.x + 6, y - 8], [t.x - 4, y + 10], [t.x + 10, y + 32]], '#ffffff', 2, a);
+  } }), quality);
+}
+// Water: a towering flood wave sweeps the lane, pushes far and soaks.
+function floodWave(p, quality, charge) {
+  const f = p.facing || 1; const len = 380 + 200 * charge; const dmg = 26 + 20 * charge; const b = BREATH.S40;
+  emit(new SigSequence({ mat: b.mat, seed: 4500 }, p, { dur: .8, data: { hit: new Set() }, tick: (s, dt, gw) => {
+    const head = 30 + Math.min(1, s.t / .6) * len;
+    for (const t of foesOf(gw, p.team)) {
+      if (s.hit.has(t)) continue;
+      const dx = (t.x - s.x) * f;
+      if (dx > 0 && dx < head && Math.abs(((t.z ?? s.z) - s.z) * DEPTH) < 44) { s.hit.add(t); hit(t, dmg, f * 460, 90, .4); applyStatus(t, 'wet', { force: true }); }
+    }
+  }, draw: (ctx, s) => {
+    const base = groundYForDepth(s.z); const head = 30 + Math.min(1, s.t / .6) * len; const a = 1 - Math.max(0, (s.t - .6) / .2); const hx = s.x + f * head;
+    const crest = [[hx - f * 90, base], [hx - f * 50, base - 40], [hx - f * 10, base - 74 - 20 * charge], [hx + f * 14, base - 60], [hx + f * 20, base - 30]];
+    ribbon(ctx, crest, (i) => 16 - i * 2, b.mat, 4501, s.t, a);
+    ribbon(ctx, crest.map(([x, y]) => [x - f * 30, y + 12]), (i) => 12 - i * 2, b.mat, 4502, s.t, a * .7);
+    sparks(ctx, [crest[2], crest[3]], b.mat, s.t, 4503, 10, a);
+  } }), quality);
+  combat.shakeCamera?.(5 + 5 * charge, .3);
+}
+
 function breathStance(id) {
   const b = BREATH[id];
   return {
@@ -155,6 +234,15 @@ function breathStance(id) {
       if (type === 'hit' && id === 'S42') for (const h of info.hits ?? []) if (!h.target.isProp) applyStatuses(h.target, ['shock'], p, f);
       // Finisher (step 3+) / charged heavy: the breathing's big move.
       const finisher = type === 'attack' && (info.step ?? 1) >= 3;
+      // Charged FORWARD attack: the breathing's signature move (scales with the charge).
+      if (type === 'heavy' && info.dir === 'forward') { // only a released charge carries dir
+        st.arcs.push({ t: 0, step: 3, f, big: true });
+        const charge = Math.max(.3, Math.min(1, info.charge ?? .6));
+        if (id === 'S40') floodWave(p, st.quality, charge);
+        if (id === 'S41') flameTorrent(p, st.quality, charge);
+        if (id === 'S42') thunderclap(p, st.quality, charge);
+        return;
+      }
       if (finisher || type === 'heavy') {
         st.arcs.push({ t: 0, step: 3, f, big: true });
         if (id === 'S40') slashWave(p, id, st.quality, { len: type === 'heavy' ? 320 : 220, damage: type === 'heavy' ? 30 : 20 });
