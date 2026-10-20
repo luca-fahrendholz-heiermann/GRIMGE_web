@@ -3700,7 +3700,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   const reset = () => {
     spells.clearRuntime(); game.minions = []; P.x = 300; P.z = .5; P.facing = 1; P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.grounded = true; P.elevation = 0;
     P.isGuarding = false; P.invulnerableTimer = 0; P.hp = P.maxHp; P.mp = P.maxMp; P.arcaneShield = 0; P.arcaneShieldTimer = 0; P.wardCharge = 0; P.convertBonus = 0; P._retaliateAt = -9;
-    game.battlefield.placeOnSurface(P); dummy.homeX = dummy.x = 1600; E.x = 2200;
+    game.battlefield.placeOnSurface(P); dummy.homeX = dummy.x = 1600; E.x = 2200; M.resetMasteryRuntime(P);
   };
   const foe = (x, hp = 500) => { const m = new Minion(x, .5, 'red', 'melee', 0); m.maxHp = m.hp = hp; game.battlefield.placeOnSurface(m); game.minions.push(m); return m; };
   const hitFrom = (attacker, amount, kx = -120) => { const prev = STATUS.setStatusSource({ team: attacker.team, statusElements: [], castBy: attacker }); try { return P.takeDamage(amount, kx, 0, .2, false, 'melee'); } finally { STATUS.setStatusSource(prev); } };
@@ -3772,6 +3772,20 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   // Build analysis spells the chains out.
   const chains = M.analyzeBuild(new Set([...tiers('ward.retaliate', 4), ...tiers('fulgur.chain', 1), ...tiers('fulgur.discharge', 3), ...tiers('natura.leech', 4), ...tiers('ward.sustain', 2)])).join(' | ');
   assert(/Blitz-Vergeltung/.test(chains) && /Kette/.test(chains) && /Heilung/.test(chains) && /verlängert/.test(chains), 'Build analysis explains the Witcher chain: ' + chains);
+  // Every element has its own tree (Ventus, Lux, Void, Konstrukt, Bestia too).
+  const hitAs = (target, tags, amount = 20) => { const prev = STATUS.setStatusSource({ team: P.team, statusElements: tags, castBy: P, statusChance: 0 }); try { return target.takeDamage(amount, 0, 0, .1, false, 'spell'); } finally { STATUS.setStatusSource(prev); } };
+  const only = (...ids) => { P.masteries = new Set(ids.flatMap(([id, n]) => tiers(id, n))); };
+  reset(); only(['ventus.displace', 4]); { const v1 = foe(360); const v2 = foe(400); const vx0 = v1.x; hitAs(v1, ['ventus']); assert(v1.x > vx0 && v1.slowTimer > 0 && v2.hp < 500, 'Ventus Verdrängen: harder push, slow, the pushed foe hurts the one behind it'); }
+  reset(); only(['ventus.spread', 2]); { const s1 = foe(360); const s2 = foe(420); const s3 = foe(300 + 110); STATUS.applyStatus(s1, 'poison', { force: true }); hitAs(s1, ['ventus']); assert(STATUS.hasStatus(s2, 'poison') && STATUS.hasStatus(s3, 'poison'), 'Ventus Ausbreiten: the wind carries poison to two neighbours'); }
+  reset(); only(['lux.blessing', 4]); { const l1 = foe(360); P.hp = P.maxHp - 20; const h = P.hp; hitAs(l1, ['lux']); assert(P.arcaneShield === 5 && P.hp > h, 'Lux Segen: light hits build shield points and heal'); }
+  reset(); only(['lux.purify', 4]); { const l1 = foe(360); P._purifyAt = -9; STATUS.applyStatus(P, 'burn', { force: true }); P.hp = P.maxHp - 30; const h = P.hp; hitAs(l1, ['lux']); assert(!STATUS.hasStatus(P, 'burn') && P.hp > h && l1.hp < 500 - 20, 'Lux Reinigung: a light hit cleanses your burn, heals and sends a light pulse'); }
+  reset(); only(['void.collapse', 3]); { const c1 = foe(360); const c2 = foe(460); const x0 = c2.x; hitAs(c1, ['void']); assert(c2.x < x0 && c2.hp < 500, 'Void Kollaps: foes nearby are pulled to the target and hurt'); }
+  reset(); only(['void.nullify', 4]); { E.x = P.x + 80; E.z = P.z; E.lifeState = 'Alive'; E.hp = E.maxHp; E.mp = 4; E.spellCooldown = 0; P.mp = 10; hitAs(E, ['void']); assert(E.mp === 0 && P.mp === 12 && E.spellCooldown >= 1.5, 'Void Annullieren: mana drained (half to you), an empty foe is silenced'); E.x = 2200; }
+  reset(); only(['construct.durability', 4]); { spells.cast(P, spells.resolveSpell([{ id: 'aqua' }, { id: 'terra' }]), game); const cap = P.arcaneShield; const k1 = foe(340); hitFrom(k1, cap + 5); assert(P.arcaneShield === Math.round(cap * .25) && P.arcaneShieldTimer > 0, 'Konstrukt Haltbarkeit III: a broken shield rebuilds once at 25 %'); P.mp = 0; P.arcaneShieldTimer = 0; M.masteryTickShield(P); assert(P.mp === 15, 'Konstrukt Haltbarkeit IV: a shield running out returns 15 mana'); }
+  reset(); only(['construct.forge', 4]); { const f1 = foe(360); const f2 = foe(420); hitAs(f1, ['construct']); const after1 = f1.hp; hitAs(f1, ['construct']); assert(STATUS.hasStatus(f1, 'bleed') && STATUS.hasStatus(f2, 'bleed') && after1 - f1.hp > 20, 'Konstrukt Schmieden: guaranteed bleeding, it spreads, bleeding foes take more'); }
+  reset(); only(['bestia.instinct', 2]); { const b1 = foe(360, 2000); P._instinct = 0; const dmg = []; for (let i = 0; i < 3; i++) { const h = b1.hp; hitAs(b1, ['bestia']); dmg.push(h - b1.hp); } assert(dmg[2] > dmg[0] && dmg[0] === dmg[1], 'Bestia Instinkt: every third beast hit is critical'); }
+  reset(); only(['bestia.pack', 4]); { const r1 = foe(360); P.hp = P.maxHp - 20; hitAs(r1, ['bestia']); const h = r1.hp; const ph = P.hp; hitAs(r1, ['ignis']); assert(h - r1.hp > 20 && P.hp > ph && !r1.packMark, 'Bestia Rudel: the mark is cashed in by your next other hit (+bonus, heal)'); }
+  assert(Object.keys(M.MASTERY_TREES).filter((k) => k !== 'ward').length === 11, 'Every one of the 11 elements has its own mastery tree');
   P.masteries = new Set(); P.buildModifiers = { ...P.buildModifiers, lastStand: 0 }; reset(); game.minions = [];
 }
 

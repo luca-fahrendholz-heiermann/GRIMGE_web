@@ -23,6 +23,26 @@ export const MASTERY_TREES = Object.freeze({
   umbra: { name: 'Umbra · Schatten', color: '#b39ddb', branches: {
     sacrifice: { name: 'Opfer', tiers: ['Beim Schildwirken werden 15 % deiner HP geopfert und zu 150 % Schildkapazität.', '20 % HP → 175 % Kapazität.', 'Läuft der Schild ungebrochen aus, kehren 30 % der geopferten HP zurück.', 'Unter 30 % HP treffen deine Schatten-Treffer 25 % härter.'] }
   } },
+  ventus: { name: 'Ventus · Wind', color: '#b2ebf2', branches: {
+    displace: { name: 'Verdrängen', tiers: ['Wind-Treffer stoßen Gegner 30 % weiter.', 'Stoß 60 % weiter.', 'Weggestoßene Gegner sind 1 s verlangsamt.', 'Wer gegen einen anderen Gegner fliegt, verletzt beide (25 % des Treffers).'] },
+    spread: { name: 'Ausbreiten', tiers: ['Wind-Treffer verwehen Brand, Gift oder Blutung auf 1 Nachbarziel.', '2 Nachbarziele, größerer Radius.', 'Auch Nässe und Lähmung werden verweht.', 'Verwehte Status halten voll statt 60 %.'] }
+  } },
+  lux: { name: 'Lux · Licht', color: '#ffe082', branches: {
+    blessing: { name: 'Segen', tiers: ['Licht-Treffer geben dir 3 Schildpunkte (bis 30).', '5 Schildpunkte (bis 45).', 'Licht-Treffer verlängern deinen Schild leicht.', 'Licht-Treffer heilen 1,5 HP je Ziel.'] },
+    purify: { name: 'Reinigung', tiers: ['Licht-Treffer lösen einen negativen Status von dir (alle 2 s).', 'Jede Reinigung heilt 5 HP.', 'Licht trifft brennende, vergiftete oder blutende Gegner 25 % härter.', 'Jede Reinigung sendet einen Lichtstoß (10 Schaden ringsum).'] }
+  } },
+  void: { name: 'Void · Leere', color: '#ce93d8', branches: {
+    collapse: { name: 'Kollaps', tiers: ['Void-Treffer ziehen Gegner in der Nähe zum Ziel.', 'Stärkerer Sog, größerer Radius.', 'Eingesogene Gegner nehmen 4 Schaden.', 'Eingesogene Gegner sind 0,8 s verlangsamt.'] },
+    nullify: { name: 'Annullieren', tiers: ['Void-Treffer entziehen 4 Mana, du erhältst die Hälfte.', '6 Mana pro Treffer.', 'Void-Treffer zerreißen 15 Schildpunkte des Ziels.', 'Ein Ziel ohne Mana kann 1,5 s nicht zaubern.'] }
+  } },
+  construct: { name: 'Konstrukt', color: '#b0bec5', branches: {
+    durability: { name: 'Haltbarkeit', tiers: ['+10 % Schildkapazität.', '+20 % Schildkapazität.', 'Bricht dein Schild, baut er sich einmal mit 25 % neu auf.', 'Läuft dein Schild ungebrochen aus, erhältst du 15 Mana zurück.'] },
+    forge: { name: 'Schmieden', tiers: ['Konstrukt-Treffer lassen garantiert bluten.', 'Blutung hält länger.', 'Blutende Ziele nehmen 20 % mehr von Konstrukt-Treffern.', 'Blutung springt auf ein Nachbarziel über.'] }
+  } },
+  bestia: { name: 'Bestia · Tier', color: '#ffb74d', branches: {
+    instinct: { name: 'Instinkt', tiers: ['Jeder 4. Bestia-Treffer ist kritisch (+50 %).', 'Jeder 3. Bestia-Treffer.', 'Kritische Treffer lassen bluten.', 'Kritische Treffer heilen 3 HP.'] },
+    pack: { name: 'Rudel', tiers: ['Bestia-Treffer markieren das Ziel 3 s: dein nächster anderer Treffer darauf +20 %.', '+30 % beim Einlösen.', 'Markierte Ziele sind verlangsamt.', 'Das Einlösen der Markierung heilt 3 HP.'] }
+  } },
   ward: { name: 'Schutz (Ward) · alle Schilde', color: '#b388ff', branches: {
     absorb: { name: 'Absorbieren', tiers: ['+25 % Schildkapazität.', '+50 % Schildkapazität.', 'Absorbierter Schaden lädt eine Reaktion auf: perfekter Block oder nächster schwerer Angriff entlädt sie.', 'Restkapazität entlädt sich beim Schildende als Schockwelle.'] },
     retaliate: { name: 'Vergeltung', tiers: ['Schildtreffer erzeugen einen kleinen Gegenschlag.', 'Der Gegenschlag trifft auch alle Gegner in deiner Nähe.', 'Der Gegenschlag übernimmt die Element-Tags des Schildes.', 'Gegenschläge dürfen Kette und Lebensentzug nutzen.'] },
@@ -30,7 +50,7 @@ export const MASTERY_TREES = Object.freeze({
   } }
 });
 // Which rune a tree belongs to (ward: none — the shield principle is open to everyone).
-const TREE_RUNE = { fulgur: 'fulgur', natura: 'natura', aqua: 'aqua', ignis: 'ignis', terra: 'terra', umbra: 'umbra', ward: null };
+const TREE_RUNE = { fulgur: 'fulgur', natura: 'natura', aqua: 'aqua', ignis: 'ignis', terra: 'terra', umbra: 'umbra', ventus: 'ventus', lux: 'lux', void: 'void', construct: 'construct', bestia: 'bestia', ward: null };
 export const MASTERY_NODE_IDS = Object.freeze(Object.entries(MASTERY_TREES).flatMap(([tree, t]) => Object.keys(t.branches).flatMap((b) => [1, 2, 3, 4].map((n) => `${tree}.${b}.${n}`))));
 export const masteryRune = (id) => TREE_RUNE[String(id).split('.')[0]] ?? null;
 export function masteryNode(id) {
@@ -68,6 +88,10 @@ export function analyzeBuild(masteries, extra = {}) {
   else if (t('terra', 'fortify') >= 4) out.push('Schild aufbauen → aufgeladener Angriff wandelt ihn in Burst');
   if (t('ward', 'absorb') >= 3) out.push('Absorbierter Schaden → perfekter Block / schwerer Angriff entlädt ihn');
   if (t('aqua', 'soak') >= 1 && t('fulgur', 'chain') >= 3) out.push('Nässe → Kette springt bevorzugt auf nasse Gegner' + (t('aqua', 'soak') >= 3 ? ' → Schock verbraucht die Nässe nicht' : ''));
+  if (t('ventus', 'spread') && (t('ignis', 'burn') || t('construct', 'forge'))) out.push((t('ignis', 'burn') ? 'Brand' : 'Blutung') + ' setzen → Wind verweht ihn auf Nachbarn' + (t('ventus', 'spread') >= 4 ? ' (volle Dauer)' : ''));
+  if (t('lux', 'blessing')) out.push('Licht-Treffer → Schildpunkte' + (t('ward', 'retaliate') ? ' → Schildtreffer lösen Vergeltung aus' : '') + (t('lux', 'blessing') >= 4 ? ' → Heilung je Ziel' : ''));
+  if (t('void', 'collapse') && (t('fulgur', 'chain') || t('ventus', 'spread'))) out.push('Void zieht Gegner zusammen → ' + (t('fulgur', 'chain') ? 'Kette springt kürzer und sicher' : 'Status verweht auf alle'));
+  if (t('bestia', 'pack') && t('bestia', 'instinct')) out.push('Bestia markiert → anderer Treffer löst die Markierung ein' + (t('bestia', 'pack') >= 4 ? ' → Heilung' : ''));
   if (t('ignis', 'burn') >= 3) out.push('Brand springt über' + (t('ignis', 'burn') >= 4 ? ' → Folgetreffer verlängern ihn' : ''));
   return out;
 }
