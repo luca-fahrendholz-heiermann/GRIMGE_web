@@ -2818,6 +2818,32 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   spells.clearRuntime(); combat.particles.length = 0;
 }
 
+// Visual upgrade pilot C: Tidenbohrer rotor / jets as sprites; stance mechanics unchanged.
+{
+  const V = await import('./public/src/spell_visuals.js');
+  const { SPELL_SPRITE_SHEETS } = await import('./public/src/spell_sprite_sheets.js');
+  const core = await import('./public/src/signature_core.js');
+  const sig = await import('./public/src/signature_runes.js');
+  game.returnToHub(); game.setMatchMode('training'); game.startMatch();
+  const P = game.player; const dummy = game.trainingDummy;
+  const neutral = { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false };
+  const run = (sheets) => {
+    for (const name of Object.keys(SPELL_SPRITE_SHEETS)) V.__setSpellSheetImage(name, sheets ? { width: 1, height: 1 } : null);
+    spells.clearRuntime(); if (P.signature) core.endStance(P, 'replaced');
+    P.x = 300; P.z = .5; P.facing = 1; P.state = 'idle'; P.stateTimer = 0; P.hp = P.maxHp; game.battlefield.placeOnSurface(P);
+    dummy.homeX = dummy.x = 400; dummy.homeZ = dummy.z = .5; dummy.hp = dummy.maxHp;
+    spells.cast(P, spells.resolveSpell([{ id: 'sig_S39' }]), game);
+    const calls = []; const rec = new Proxy({}, { get: (t, k) => k === 'drawImage' ? (...a) => calls.push(a) : () => {}, set: () => true });
+    for (let i = 0; i < 90; i++) { P.update(1 / 60, neutral, game.battlefield, game); spells.update(1 / 60, game); if (i === 60) for (const l of ['back', 'front']) sig.renderSignatureStance(rec, P, P.y, l); }
+    return { dmg: dummy.maxHp - dummy.hp, draws: calls.length, jets: P.signature?.jets?.length ?? 0 };
+  };
+  const legacy = run(false); const sprite = run(true);
+  assert(legacy.dmg === sprite.dmg && legacy.dmg > 0, 'Tidenbohrer: jet damage is identical with and without the sprite visuals');
+  assert(legacy.draws === 0 && sprite.draws >= 4, 'Tidenbohrer: rotor halves and nozzles are drawn as sprites (fallback without sheets)');
+  for (const name of Object.keys(SPELL_SPRITE_SHEETS)) V.__setSpellSheetImage(name, null);
+  spells.clearRuntime(); if (P.signature) core.endStance(P, 'replaced');
+}
+
 // Movement after the Unity original: rooted attacks, full combos on a target in front, long sprint jump, auto-run.
 {
   game.returnToHub(); game.setMatchMode('training'); game.startMatch(); game.selectTrainingMap('waterfalls');

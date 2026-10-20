@@ -13,7 +13,7 @@ const [base, outDir, pilot = 'S37'] = process.argv.slice(2);
 const PILOTS = {
   S37: { spell: 'sig_S37', early: [80, 200, 420, 760, 1200, 2000], skip: 2200, late: [250, 350, 350] },
   METEOR: { spell: 'meteor_cataclysm', target: true, early: [150, 700, 1400, 2080, 2350, 2800, 3400], skip: 900, late: [500, 900] },
-  S39: { spell: 'sig_S39', early: [100, 300, 600, 1000, 1500, 2100], skip: 3800, late: [250, 400, 400] }
+  S39: { spell: 'sig_S39', early: [100, 300, 600, 1000, 1500, 2100], skip: 4000, late: [250, 400, 400, 320] }
 };
 const P0 = PILOTS[pilot];
 fs.mkdirSync(outDir, { recursive: true });

@@ -15,7 +15,7 @@ import { environment } from './environment.js';
 import { groundYForDepth } from './world.js';
 import { applyStatuses } from './buff_techniques.js';
 import { GeoPlatform } from './geometry.js';
-import { renderSpellVisual, drawIceCrack, SpriteBurst } from './spell_visuals.js';
+import { renderSpellVisual, drawIceCrack, SpriteBurst, tideHitBurst } from './spell_visuals.js';
 
 const gameOf = (c) => c.gw ?? sigWorld();
 
@@ -68,8 +68,16 @@ function waterJet(p, st, angle, gw, power = 1) {
     const u = rx * dx + rz * dz; if (u < 10 || u > len) continue;
     if (Math.abs(rx * dz - rz * dx) > 22) continue;
     hit(t, 9 * power, Math.sign(rx || 1) * 260, 40, .25);
+    emit(tideHitBurst(t)); // visual only
   }
   st.jets.push({ angle, t: 0 });
+}
+// Debug overlay (?hitbox=1): the real jet hit corridors (210 px long, ±22 px wide on the ground).
+function tideHitboxOverlay(ctx, p, st, ry) {
+  ctx.save(); ctx.strokeStyle = '#ff2bd6'; ctx.lineWidth = 1;
+  for (const j of st.jets) { const dx = Math.cos(j.angle); const dz = Math.sin(j.angle) * .35; const y0 = groundYForDepth(p.z); const nx = -dz; const nz = dx; const P = (u, w) => [p.x + dx * u + nx * w, y0 + (dz * u + nz * w) * (groundYForDepth(p.z + 1 / DEPTH) - y0)];
+    const pts = [P(10, -22), P(210, -22), P(210, 22), P(10, 22)]; ctx.beginPath(); pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath(); ctx.stroke(); }
+  ctx.restore();
 }
 defineSignature('S39', {
   cast(c) { startStance(c.caster, 'S39', c.quality, { spin: 0, next: 0, nozzle: 0, jets: [] }); },
@@ -84,6 +92,8 @@ defineSignature('S39', {
     },
     onEvent(p, st, type, info, gw) { if (type === 'heavy') for (let k = 0; k < 4; k++) waterJet(p, st, st.spin + k * TAU / 4, gw, 1.6); },
     render(ctx, p, st, ry, layer) {
+      // Visual upgrade (pilot C): sprite rotor, nozzles and layered pressure jets; else the plates below.
+      if (renderSpellVisual(ctx, { p, st, ry, layer, renderHitbox: (c) => tideHitboxOverlay(c, p, st, ry) }, 'tide_drill')) return;
       const cy = ry - 44; const emerge = Math.min(1, st.t / .3); const pop = st.timer < .3 ? st.timer / .3 : 1;
       // The spinning shell: plates on an ellipse, back half behind the sprite.
       for (let i = 0; i < 10; i++) {

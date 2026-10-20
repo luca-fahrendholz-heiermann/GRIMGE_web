@@ -254,5 +254,61 @@ export const SPELL_SPRITE_SHEETS = Object.freeze({
   "h": 20,
   "frames": 4,
   "anchor": "center"
+ },
+ "tide_rotor_back": {
+  "name": "tide_rotor_back",
+  "w": 72,
+  "h": 40,
+  "frames": 8,
+  "anchor": "center"
+ },
+ "tide_rotor_front": {
+  "name": "tide_rotor_front",
+  "w": 72,
+  "h": 40,
+  "frames": 8,
+  "anchor": "center"
+ },
+ "tide_nozzle": {
+  "name": "tide_nozzle",
+  "w": 8,
+  "h": 8,
+  "frames": 4,
+  "anchor": "center"
+ },
+ "tide_jet_head": {
+  "name": "tide_jet_head",
+  "w": 14,
+  "h": 14,
+  "frames": 4,
+  "anchor": "center"
+ },
+ "tide_hit": {
+  "name": "tide_hit",
+  "w": 18,
+  "h": 18,
+  "frames": 4,
+  "anchor": "center"
+ },
+ "tide_droplet": {
+  "name": "tide_droplet",
+  "w": 4,
+  "h": 5,
+  "frames": 2,
+  "anchor": "center"
+ },
+ "tide_gather": {
+  "name": "tide_gather",
+  "w": 72,
+  "h": 40,
+  "frames": 6,
+  "anchor": "center"
+ },
+ "tide_burst": {
+  "name": "tide_burst",
+  "w": 80,
+  "h": 48,
+  "frames": 6,
+  "anchor": "center"
  }
 });

@@ -161,3 +161,46 @@ export function meteorShatterBurst(m) {
   if (!spellSheetReady('meteor_debris')) return [];
   return Array.from({ length: 6 }, (_, i) => new SpriteBurst({ sheet: 'meteor_debris', x: m.x, y: m.y, fps: 6, vx: Math.cos(i * 1.05) * 120, vy: Math.sin(i * 1.05) * 80 - 60, gravity: 420 }));
 }
+
+// ── Pilot C: TIDENBOHRER (sig_S39 stance) ─────────────────────────────────
+// Reads the stance state only: st.t (since start), st.timer (left), st.spin,
+// st.jets [{ angle, t }]. Rotor back half behind the Wizard, front half and
+// nozzles / jets in front. Jets are layered opaque bands (dark mantle →
+// saturated body → white axis) with a foam crown and dissolving droplets.
+const TIDE = { mantle: '#0B3D73', body: '#1F7FD1', mid: '#2FB4EA', foam: '#D6F6FF', core: '#FFFFFF' };
+const TIDE_RING = { rx: 40, ry: 18 }; // world px (rotor sprite RX 20 / RY 9 at scale 2)
+function tideJetGeometry(p, cy, angle, t) {
+  const dx = Math.cos(angle); const dz = Math.sin(angle) * .35; const len = 210 * Math.min(1, t / .08);
+  return { x0: p.x + dx * TIDE_RING.rx, y0: cy + Math.sin(angle) * TIDE_RING.ry, x1: p.x + dx * len, y1: cy + dz * len * .32 * 150 / 100, dx, len };
+}
+registerSpellVisual('tide_drill', (ctx, v) => {
+  const { p, st, ry, layer } = v;
+  if (!spellSheetReady('tide_rotor_back')) return false;
+  const cy = ry - 44; const period = Math.PI * 2 / 3;
+  const frame = Math.floor(((((st.spin % period) + period) % period) / period) * 8);
+  const opening = st.t < .3; const closing = st.timer < .3;
+  if (layer === 'back') {
+    if (opening) drawSpellSprite(ctx, 'tide_gather', st.t / .3 * 6, p.x, cy, { anchor: 'center' });
+    else if (!closing) drawSpellSprite(ctx, 'tide_rotor_back', frame, p.x, cy, { anchor: 'center' });
+    for (let k = 0; k < 4 && !opening && !closing; k++) { const a = st.spin + k * Math.PI / 2; if (Math.sin(a) < 0) drawSpellSprite(ctx, 'tide_nozzle', k, p.x + Math.cos(a) * TIDE_RING.rx, cy + Math.sin(a) * TIDE_RING.ry, { anchor: 'center' }); }
+    return true;
+  }
+  if (closing) { drawSpellSprite(ctx, 'tide_burst', (1 - st.timer / .3) * 6, p.x, cy, { anchor: 'center' }); return true; }
+  if (opening) return true;
+  drawSpellSprite(ctx, 'tide_rotor_front', frame, p.x, cy, { anchor: 'center' });
+  for (let k = 0; k < 4; k++) { const a = st.spin + k * Math.PI / 2; if (Math.sin(a) >= 0) drawSpellSprite(ctx, 'tide_nozzle', k, p.x + Math.cos(a) * TIDE_RING.rx, cy + Math.sin(a) * TIDE_RING.ry, { anchor: 'center' }); }
+  // Pressure jets.
+  for (const j of st.jets) {
+    const g = tideJetGeometry(p, cy, j.angle, j.t); const fade = j.t > .14 ? Math.max(0, 1 - (j.t - .14) / .08) : 1;
+    ctx.save(); ctx.lineCap = 'butt'; ctx.globalAlpha = fade;
+    for (const [w, c] of [[10, TIDE.mantle], [7, TIDE.body], [4, TIDE.mid], [2, TIDE.core]]) { ctx.strokeStyle = c; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(Math.round(g.x0), Math.round(g.y0)); ctx.lineTo(Math.round(g.x1), Math.round(g.y1)); ctx.stroke(); }
+    ctx.restore();
+    drawSpellSprite(ctx, 'tide_jet_head', Math.floor(j.t * 30) % 4, g.x1, g.y1, { anchor: 'center', alpha: fade });
+    // Delayed dissolve: droplets fall off the jet.
+    if (secondary() && j.t > .1 && VISUAL_FLAGS.lod !== 'low') for (let i = 1; i <= 4; i++) { const u = i / 5; const fall = (j.t - .1) * 260; drawSpellSprite(ctx, 'tide_droplet', i % 2, g.x0 + (g.x1 - g.x0) * u, g.y0 + (g.y1 - g.y0) * u + fall * (.4 + u * .3), { anchor: 'center' }); }
+  }
+  return true;
+});
+export function tideHitBurst(target) {
+  return new SpriteBurst({ sheet: 'tide_hit', x: target.x, y: (target.y ?? groundYForDepth(target.z ?? .5)) - 30, fps: 20 });
+}

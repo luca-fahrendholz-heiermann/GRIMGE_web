@@ -181,3 +181,12 @@ Figurenhöhe H ≈ 88 Welt-px. Sprites werden in Welt-Pixeln authored (1 Sprite-
 - **Nebenbefund & Fix (alle Spells):** Element-Partikel wurden mit `shadowBlur` je Partikel gezeichnet — bei großen Zaubern ≈ 2,6 s pro Frame im Software-Rendering. Ersetzt durch einen Zwei-Kreis-Glow + Partikelbudget 500 → ≈ 6 ms.
 - Performance (5 gleichzeitige Meteore): legacy ≈ 3,5 ms/Frame → neu ≈ 1,7 ms/Frame. Eiszacken nach dem Partikel-Fix: 5,3 → 1,9 ms.
 - Abnahme: `docs/visual_upgrade/pilot_B_meteor_vergleich.png`, `…_vorher.gif`, `…_nachher.gif`.
+
+### Pilot C — Tidenbohrer (S39) ✅ zur Abnahme (20.10.2026)
+- Sprites (TESTASSETS, **Finales Artwork fehlt**): `tide_rotor_back` / `tide_rotor_front` (Ring mit drei asymmetrischen Wasser-Sicheln → Drehrichtung lesbar, 8 Frames, getrennt hinter / vor dem Wizard), `tide_nozzle`, `tide_jet_head` (Schaumkrone), `tide_hit`, `tide_droplet`, `tide_gather` (Wasser zieht sich spiralig zum Ring), `tide_burst` (Aufplatzen am Ende).
+- Druckstrahlen als opake Schichten (dunkler Mantel → sattes Blau → Cyan → weiße Achse) statt dünner Glow-Bänder; verzögertes Auflösen in Tropfen; Treffer-Sprite am Ziel.
+- Verdrahtung: Stance-`render` → `renderSpellVisual(…, 'tide_drill')`; Frames aus `st.spin`, `st.jets`, `st.t`, `st.timer`. Schaden / Rhythmus / Schadensreduktion unverändert (Test). Hitbox-Overlay zeigt die echten Strahl-Korridore.
+- Performance (1 Instanz): legacy ≈ 2,3 ms → neu ≈ 2,0 ms pro Frame.
+- Abnahme: `docs/visual_upgrade/pilot_C_tidenbohrer_vergleich.png`, `…_vorher.gif`, `…_nachher.gif`.
+
+**Alle drei Piloten fertig → nächster Schritt laut Plan: Freigabe der Referenzqualität, dann gemeinsame Komponenten ableiten und schrittweise ausrollen.**
