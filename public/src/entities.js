@@ -101,6 +101,7 @@ const BACKDASH_COOLDOWN = 0.8;
 // onto the foe for a beat (hitstop, little horizontal drift, low gravity) so the air combo can
 // continue — then both fall from the hit point. A down swipe after 1–2 air hits ends it.
 const AIR_ATTACK_MOMENTUM = .85;
+const AIR_SWING_REACH = 40;       // max height difference an air swing can still hit
 const AIR_LATCH_TIME = .34;
 const AIR_LATCH_GRAVITY = .22;
 const AIR_LATCH_MAX = 3;          // latches per jump (no infinite air)
@@ -761,7 +762,7 @@ export class Player extends GroundEntity {
       if (this.state === 'dive' && !this.grounded) {
         // Sweep: every foe on the diagonal path is struck once.
         this.vx = this.facing * SPRINT_DIVE_SPEED;
-        this.triggerMeleeHitbox(MELEE_BASELINE.dive.damage * .8, this.facing * 340, -180, .55, false, { hitstopTicks: 4, hitReaction: 'strong', hitSet: this.sprintDive.hitSet, reach: 64 });
+        this.triggerMeleeHitbox(MELEE_BASELINE.dive.damage * .8, this.facing * 340, -180, .55, false, { hitstopTicks: 4, hitReaction: 'strong', hitSet: this.sprintDive.hitSet, reach: 64, downward: true });
         if (Math.random() < .6) this.ghosts.push({ x: this.x, y: this.y, z: this.z, elevation: this.elevation, facing: this.facing, alpha: .4, state: 'dive', animTime: this.animTime });
       } else {
         // Landing: a skid and a dust burst, momentum bleeds off.
@@ -1155,7 +1156,7 @@ export class Player extends GroundEntity {
       this.state = 'dive'; this.stateTimer = MELEE_BASELINE.dive.time; this.vElevation = -850 * PLAYER_ARC_SCALE;
       audio.playSlash(0.9);
       combat.spawnSlashArc(this.x, this.y - 15, this.facing, { radius: 50, angleStart: 0.8, angleEnd: 2.2, color: '#ff5722', glow: '#d50000' });
-      this.triggerMeleeHitbox(MELEE_BASELINE.dive.damage, this.facing * MELEE_BASELINE.dive.knockback, MELEE_BASELINE.dive.lift, 0.6, false, { hitstopTicks: MELEE_BASELINE.dive.hitstopTicks, hitReaction: MELEE_BASELINE.dive.hitReaction });
+      this.triggerMeleeHitbox(MELEE_BASELINE.dive.damage, this.facing * MELEE_BASELINE.dive.knockback, MELEE_BASELINE.dive.lift, 0.6, false, { hitstopTicks: MELEE_BASELINE.dive.hitstopTicks, hitReaction: MELEE_BASELINE.dive.hitReaction, downward: true });
       return true;
     }
     if (attackKind === 'heavy') {
@@ -1387,7 +1388,10 @@ export class Player extends GroundEntity {
       const inFront = (target.x - this.x) * this.facing >= (hitMeta.behind ? -limit * .6 : -10) && Math.abs(target.x - this.x) <= limit;
       const closeDepth = Math.abs((target.z ?? this.z) - this.z) <= (target.hitRadiusZ ?? 0.22);
       const heightDifference = Math.abs((target.worldHeight ?? target.elevation ?? 0) - this.worldHeight);
-      const verticalReach = target.hitHeightTolerance ?? (target.isObjective ? 120 : 70);
+      // A swing in the air only reaches what is about as high (user, 20 Oct 2026: jumping over a foe
+      // must not hit it). Downward strikes (dives) and structures keep the old reach.
+      const airLimit = !this.grounded && !hitMeta.downward && !target.isObjective ? AIR_SWING_REACH : Infinity;
+      const verticalReach = Math.min(target.hitHeightTolerance ?? (target.isObjective ? 120 : 70), airLimit);
       if (inFront && closeDepth && heightDifference <= verticalReach) {
         const targetDmg = dmg * targetDamageMult(this, target); // hunter mark, shattered
         const outcome = target.takeDamage(targetDmg, kx, lift, stunDuration, isFinisher, 'melee');

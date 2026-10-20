@@ -404,7 +404,7 @@ export function weaponDive(player, spells, game) {
   switch (dive.style) {
     case 'plunge': {
       player.state = 'dive'; player.stateTimer = .35; player.vElevation = -900;
-      player.triggerMeleeHitbox(base.damage * (dive.dmg ?? 1), f * 120, -340, .6, false, { hitstopTicks: 5, hitReaction: 'strong', behind: dive.behind });
+      player.triggerMeleeHitbox(base.damage * (dive.dmg ?? 1), f * 120, -340, .6, false, { hitstopTicks: 5, hitReaction: 'strong', behind: dive.behind, downward: true });
       fx(spells, player, 'plunge', { dur: 2, hue, tick: (s) => land(s, () => player.triggerMeleeHitbox(18, f * 160, 120, .3, false, { reach: 60 })) });
       break;
     }
@@ -415,7 +415,7 @@ export function weaponDive(player, spells, game) {
     }
     case 'spin': {
       player.state = 'dive'; player.stateTimer = .45; player.vElevation = -520;
-      fx(spells, player, 'spin', { dur: .5, hue, next: 0, tick: (s, dt) => { s.next -= dt; if (s.next <= 0) { s.next = .12; player.triggerMeleeHitbox(14, f * 60, 30, .2, false, { reach: 64, behind: true, hitstopTicks: 2 }); } } });
+      fx(spells, player, 'spin', { dur: .5, hue, next: 0, tick: (s, dt) => { s.next -= dt; if (s.next <= 0) { s.next = .12; player.triggerMeleeHitbox(14, f * 60, 30, .2, false, { reach: 64, behind: true, hitstopTicks: 2, downward: true }); } } });
       break;
     }
     case 'rain': {
@@ -432,7 +432,7 @@ export function weaponDive(player, spells, game) {
     }
     case 'pounce': {
       player.state = 'dive'; player.stateTimer = .4; player.vElevation = -600; player.vx = f * 420;
-      player.triggerMeleeHitbox(base.damage * .8, f * 260, -120, .5, false, { reach: 70, hitstopTicks: 4, hitReaction: 'strong' });
+      player.triggerMeleeHitbox(base.damage * .8, f * 260, -120, .5, false, { reach: 70, hitstopTicks: 4, hitReaction: 'strong', downward: true });
       fx(spells, player, 'pounce', { dur: .35, hue });
       break;
     }

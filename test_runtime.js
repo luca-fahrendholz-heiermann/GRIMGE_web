@@ -3351,6 +3351,15 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   assert(P.executeAttack(neutral, 'dive') && P.sprintDive && P.vx > 500 && P.vElevation < -500, 'Sprint jump + down swipe starts a fast diagonal dive');
   const diveX = P.x; step(.6);
   assert(P.grounded && P.x - diveX > 60 && dummy.hp < dummy.maxHp && !P.sprintDive && P.state !== 'dive', 'The diagonal dive travels forward, strikes on the way and ends cleanly on landing');
+  // Height matters: an air swing high above a foe on the ground misses; low or diving it hits.
+  dummy.elevation = 0; dummy.vElevation = 0;
+  air(60); P.vx = 0; P.x = 300; dummy.x = 330; dummy.z = .5; dummy.hp = dummy.maxHp; P.executeAttack(neutral, 'normal');
+  const highMiss = dummy.hp === dummy.maxHp;
+  air(25); P.vx = 0; P.x = 300; dummy.hp = dummy.maxHp; P.executeAttack(neutral, 'normal');
+  const lowHit = dummy.hp < dummy.maxHp;
+  air(60); P.vx = 0; P.x = 300; dummy.hp = dummy.maxHp; P.executeAttack(neutral, 'dive');
+  assert(highMiss && lowHit && dummy.hp < dummy.maxHp, 'Air swings only hit foes at a similar height (jumping over a grounded foe misses); dives still strike downward');
+  step(.6); dummy.x = 900;
   // A normal jump + down swipe stays the vertical drop.
   air(90); P.vx = 0; P.x = 300; dummy.x = 900; P.executeAttack(neutral, 'dive');
   assert(!P.sprintDive && Math.abs(P.vx) < 1, 'A normal jump + down swipe stays a vertical dive');
