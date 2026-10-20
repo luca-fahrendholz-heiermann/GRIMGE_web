@@ -146,7 +146,7 @@ export class FormSprintAttackFx {
     const total = s.windup + s.active + (s.variant?.recovery ?? 0);
     const strikeT = Math.max(0, t - s.windup);
     const fade = t < s.windup + s.active ? 1 : Math.max(0, 1 - (t - s.windup - s.active) / Math.max(.01, total - s.windup - s.active));
-    const ry = p.y - (p.elevation ?? 0);
+    const ry = p.y; // y already includes the elevation
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     ctx.lineCap = 'round';

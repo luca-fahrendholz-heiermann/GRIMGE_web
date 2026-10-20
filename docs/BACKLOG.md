@@ -26,7 +26,6 @@ Umgesetzt: Spiralkugel (S46), Spiegelkerker (S50), Blutkreuz (S51), Herausforder
 - **Weitere Status-Kombos** (umgesetzt: Nass+Blitz, Nass+Eis, Brand+Wind, Brand+Wasser, Gefroren+harter Treffer, Gift+Feuer, Blutung+Wind, Paralyse+Erde): weitere nach Bedarf.
 
 ## Weitere offene Punkte
-- **Ältere Form-/Arcane-Effekte** (buff_forms.js, form_actions.js, form_specials.js, signature_abilities_a.js) ziehen die Höhe doppelt ab (`p.y - p.elevation`, obwohl y sie schon enthält) — bei Sprüngen sitzen diese Effekte zu hoch. Prüfen und angleichen.
 - **KI-Spezialrunen ausbauen:** feinere Taktik je Rune (Falle vorausplanen, Spiegelkerker-Sprünge timen), Schwierigkeitsstufen.
 - **Statuseffekte balancieren:** Chancen (aktuell 8–22 % pro Treffer, × Grade-Power), Dauer, Immunitätsfenster; weitere Quellen (Gift-Waffen, Eis-Fusionen, Blutungs-Kits).
 - **Aggro im Mehrspieler:** S52 zwingt bisher Minions und den Gegner-Zauberer; Begleiter/Summons der Gegenseite fehlen noch.

@@ -109,7 +109,7 @@ const SPRINT_LOOKS = {
   T35: (ctx, q) => { const c = crystal(q.mat); for (let i = 0; i < 5; i++) { const x = q.x - q.f * (14 + i * 16); plate(ctx, [[x - 6, q.y + 40], [x, q.y + 26 - (i % 2) * 6], [x + 6, q.y + 40]], c, 9470 + i, { alpha: q.fade * (1 - i * .15), glowEdge: .9 }); } plate(ctx, [[q.x + q.f * 14, q.y - 16], [q.x + q.f * 30, q.y], [q.x + q.f * 14, q.y + 16]], c, 9476, { alpha: q.fade, glowEdge: 1.2 }); },
   T37: (ctx, q) => { band(ctx, [[q.x, q.y], [q.x + q.f * 20, q.y - 6], [q.x + q.f * 40, q.y + 4 * q.k]], () => 5, ACID_GLASS, 9480, { t: q.t, alpha: q.fade }); if (q.k > .5) fallout(ctx, [[q.x + q.f * 40, q.y]], ACID_GLASS, q.t, 9481, { count: 8, alpha: q.fade }); },
   T38: (ctx, q) => stoneRing(ctx, q.x + q.f * 30, q.y + 12, 18, .1, 0, q.t * 14 * q.f, 6, 9490, q.fade, null, 2),
-  T39: (ctx, q) => { const p = q.p; for (let i = 1; i <= 3; i++) ghostOf(ctx, p, q.x - q.f * i * 22, p.y - (p.elevation ?? 0), p.state, p.animTime, q.f, .35 / i, q.mat.edge); },
+  T39: (ctx, q) => { const p = q.p; for (let i = 1; i <= 3; i++) ghostOf(ctx, p, q.x - q.f * i * 22, p.y, p.state, p.animTime, q.f, .35 / i, q.mat.edge); },
   T40: (ctx, q) => { for (const oy of [-14, 14]) { const pts = [[q.x - q.f * 20, q.y + oy], [q.x + q.f * 6, q.y + oy * .6 - 6], [q.x + q.f * (26 + 14 * q.k), q.y + oy * .4]]; band(ctx, pts, (i, n) => 5 - i, { ...q.mat, kind: 'crust' }, 9500 + oy, { t: q.t, alpha: q.fade }); drawWyrmHead(ctx, pts[2][0], pts[2][1], q.f, 0, 10, q.mat, .5, q.fade, 9502 + oy); } },
   A01: (ctx, q) => giantHand(ctx, [q.x + q.f * (26 + 16 * q.k), q.y - 6], 0, q.f, 30, 1, crystal(q.mat), 9510, q.fade),
   A03: (ctx, q) => { for (let i = 0; i < 3; i++) spiritArm(ctx, [q.x - q.f * 6, q.y - 10 + i * 8], [q.x + q.f * (30 + 18 * q.k + i * 8), q.y - 8 + i * 9], q.f, 1, q.fade, 9510 + i * 10, 10); },
@@ -123,7 +123,7 @@ FORM_FX_HOOKS.sprint = (ctx, fx) => {
   const total = s.windup + s.active + (s.variant?.recovery ?? 0);
   const fade = s.elapsed < s.windup + s.active ? 1 : Math.max(0, 1 - (s.elapsed - s.windup - s.active) / Math.max(.01, total - s.windup - s.active));
   const k = s.elapsed < s.windup ? 0 : Math.min(1, strikeT / Math.max(.01, s.active));
-  ctx.save(); look(ctx, { p, f: fx.facing, x: p.x, y: p.y - (p.elevation ?? 0) - 44, k, fade, t: p.animTime ?? 0, mat: formMat(id) }); ctx.restore();
+  ctx.save(); look(ctx, { p, f: fx.facing, x: p.x, y: p.y - 44, k, fade, t: p.animTime ?? 0, mat: formMat(id) }); ctx.restore();
   return true;
 };
 
@@ -190,7 +190,7 @@ export class FormDiveFx {
     ctx.save();
     if (!this.landed) {
       // The descent: the form's shape drives down under the Wizard.
-      const ry = p.y - (p.elevation ?? 0);
+      const ry = p.y; // y already includes the elevation
       (DIVE_FALL[this.def.style] ?? DIVE_FALL.default)(ctx, { x: p.x, y: ry, f, t: this.t, m, p });
     } else {
       const k = Math.min(1, this.landT / .5); const a = 1 - k;

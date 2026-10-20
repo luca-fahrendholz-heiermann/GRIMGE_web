@@ -313,7 +313,7 @@ FORM_FX_HOOKS.sprint = (ctx, fx) => {
   const form = BUFF_FORMS[fx.form];
   if (!form || !fx.strike) return false;
   const p = fx.player; const m = form.mat; const f = fx.facing; const s = fx.strike;
-  const ry = p.y - (p.elevation ?? 0) - 44;
+  const ry = p.y - 44; // y already includes the elevation
   const strikeT = Math.max(0, s.elapsed - s.windup);
   const k = s.elapsed < s.windup ? s.elapsed / Math.max(.01, s.windup) * .3 : Math.min(1, .3 + strikeT / Math.max(.01, s.active));
   const len = 30 + 60 * k;

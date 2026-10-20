@@ -273,7 +273,7 @@ class CometFlight {
     if (this.t < .18) { for (const sg of [-1, 1]) ribbon(ctx, [[c.x + sg * 6, c.y], [c.x + sg * 10, c.y - 6], [c.x + sg * 5, c.y - 12]], 2, mat, 450, this.t, 1); }
     else if (!this.landed) {
       // Ellipsoid sky fragment as comet mantle around the Wizard, core behind the back.
-      const cy = c.y - (c.elevation ?? 0) - 40;
+      const cy = c.y - 40; // y already includes the elevation
       for (let i = 0; i < 7; i++) { const a = i / 7 * TAU + this.t * 4; plate(ctx, [[c.x + Math.cos(a) * 26, cy + Math.sin(a) * 34], [c.x + Math.cos(a + .5) * 22, cy + Math.sin(a + .5) * 30], [c.x + Math.cos(a + .25) * 30, cy + Math.sin(a + .25) * 40]], mat, 460 + i, { alpha: .6, glowEdge: .8 }); }
       plate(ctx, [[c.x - this.f * 12, cy - 6], [c.x - this.f * 30, cy], [c.x - this.f * 12, cy + 6]], mat, 470, { alpha: 1, core: 1, glowEdge: 1.2 });
       sparks(ctx, [[c.x - this.f * 24, cy]], mat, this.t, 471, 8, 1);
