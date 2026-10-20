@@ -3299,7 +3299,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
     const before = { x: P.x, z: P.z }; game.castSlotAt(s74.position);
     assert(Math.hypot(P.x - before.x, (P.z - before.z) * 150) > 30 && !P.slottedSpells.includes(s74), 'S74: tap again — swap places with a double (slot freed)');
     let bad = 0; const strict = new Proxy({}, { get: (t, k) => (k === 'arc' || k === 'ellipse') ? (x, y, r1, r2) => { if (r1 < 0 || (k === 'ellipse' && r2 < 0)) bad++; } : k === 'canvas' ? undefined : () => {}, set: () => true });
-    mirage.render(strict); assert(!bad, 'S74 renders cleanly');
+    mirage.render(strict); for (const e of mirage.actorEntries()) e.render(strict); assert(!bad && mirage.actorEntries().length === mirage.living().length, 'S74 renders cleanly — the doubles are sharp actors in the painter order, not pixelated VFX');
     spells.clearRuntime(); E.passive = false; E.x = 900; E.deceivedBy = null; E.deceiveTimer = 0; E.tauntedBy = null; E.tauntTimer = 0; E.spellCooldown = 0; E.beamCooldown = 0; P.invulnerableTimer = 0;
   }
   // S48: a hit is negated, the Wizard reappears behind the attacker and counters; three charges.

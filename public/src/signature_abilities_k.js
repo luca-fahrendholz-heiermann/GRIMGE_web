@@ -33,6 +33,15 @@ export class IllusionDouble {
   }
 }
 
+// Render the caster at the double's spot (position, facing) and restore everything afterwards.
+function drawAs(ctx, p, d, alpha) {
+  const keep = { x: p.x, z: p.z, elevation: p.elevation, surfaceHeight: p.surfaceHeight, facing: p.facing };
+  p.x = d.x; p.z = d.z; p.elevation = 0; p.surfaceHeight = 0; p.facing = d.facing;
+  ctx.save(); ctx.globalAlpha *= alpha;
+  try { if (typeof p.render === 'function') p.render(ctx); else sprites.renderEntity(ctx, p.heroKey, d.x, d.y, { facing: d.facing, state: 'idle', animTime: p.animTime ?? 0, alpha }); }
+  finally { ctx.restore(); Object.assign(p, keep); }
+}
+
 export class Mirage {
   constructor(sig, owner, quality, gw) {
     this.sig = sig; this.owner = owner; this.team = owner.team; this.quality = quality; this.t = 0; this.life = TRUG.life * (quality?.duration ?? 1); this.isFinished = false;
@@ -87,20 +96,33 @@ export class Mirage {
     for (const f of this.deceived) if (f.deceivedBy?.isIllusion || f.tauntedBy?.isIllusion) { f.deceivedBy = null; f.tauntedBy = null; f.tauntTimer = 0; f.deceiveTimer = 0; }
     for (const d of this.doubles) if (d.isAlive) { d.isAlive = false; d.isDead = true; d.lifeState = 'Dead'; }
   }
-  render(ctx) {
-    const p = this.owner; if (!p?.heroKey) return;
-    for (const d of this.doubles) {
-      if (d.burstT != null) {
-        // Mist puffs where a double burst.
-        const k = Math.min(1, d.burstT / .5); if (k >= 1) continue;
-        ctx.save(); for (let i = 0; i < 7; i++) { const a = i / 7 * TAU; ctx.globalAlpha = .55 * (1 - k); ctx.fillStyle = '#e1bee7'; ctx.beginPath(); ctx.arc(d.x + Math.cos(a) * 26 * k, d.y - 40 + Math.sin(a) * 20 * k, 12, 0, TAU); ctx.fill(); } ctx.restore();
-        continue;
-      }
-      // The double: the caster's sprite, a faint shimmer every now and then.
+  // The doubles are actors in the painter's order (sharp, like the real Wizard —
+  // the spell layer is pixelated VFX).
+  actorEntries() {
+    if (this.isFinished || !this.owner?.heroKey) return [];
+    return this.living().map((d) => ({ y: d.y, render: (ctx) => this.renderDouble(ctx, d) }));
+  }
+  // A double is drawn through the caster's OWN render path (same sprite scale, weapon,
+  // aura, health bar, slot orbs): for the foes it is indistinguishable.
+  renderDouble(ctx, d) {
+    const p = this.owner; if (this._drawing) return;
+    this._drawing = true; // the owner's render must never re-enter this one
+    try {
       const fadeIn = Math.min(1, this.t / .25) * Math.min(1, (this.life - this.t) / .3);
-      const shimmer = Math.sin(this.t * 9 + d.seed * 3) > .93 ? 3 : 0;
-      sprites.renderEntity(ctx, p.heroKey, d.x + shimmer, d.y, { facing: d.facing, state: p.state === 'run' ? 'run' : 'idle', animTime: (p.animTime ?? 0) + d.seed * .3, alpha: .92 * fadeIn });
-      if (shimmer) { ctx.save(); ctx.globalAlpha = .4; ctx.strokeStyle = '#e1bee7'; ctx.lineWidth = 1; for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.moveTo(d.x - 16, d.y - 20 - i * 22); ctx.lineTo(d.x + 16, d.y - 20 - i * 22); ctx.stroke(); } ctx.restore(); }
+      drawAs(ctx, p, d, fadeIn);
+      // Only the caster knows: a faint violet glint at the double's feet.
+      if (p === globalThis.window?.gameWorld?.player) {
+        ctx.save(); ctx.globalAlpha = .35 + .2 * Math.sin(this.t * 4 + d.seed); ctx.strokeStyle = '#e1bee7'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.ellipse(d.x, d.y + 1, 12, 3.5, 0, 0, TAU); ctx.stroke(); ctx.restore();
+      }
+    } finally { this._drawing = false; }
+  }
+  // The spell layer only draws the mist where doubles burst.
+  render(ctx) {
+    for (const d of this.doubles) {
+      if (d.burstT == null) continue;
+      const k = Math.min(1, d.burstT / .5); if (k >= 1) continue;
+      ctx.save(); for (let i = 0; i < 7; i++) { const a = i / 7 * TAU; ctx.globalAlpha = .55 * (1 - k); ctx.fillStyle = '#e1bee7'; ctx.beginPath(); ctx.arc(d.x + Math.cos(a) * 26 * k, d.y - 40 + Math.sin(a) * 20 * k, 12, 0, TAU); ctx.fill(); } ctx.restore();
     }
   }
 }

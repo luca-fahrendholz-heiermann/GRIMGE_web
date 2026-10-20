@@ -844,6 +844,9 @@ export class SpellSystem {
       if (spell.isGroundDecal) continue;
       const y = this.spellDepth(spell);
       if (y !== null) entries.push({ y, spell });
+      // Spells that show real figures (illusion doubles) add them as actors: sharp,
+      // not through the pixelated VFX layer.
+      if (typeof spell.actorEntries === 'function') entries.push(...spell.actorEntries());
     }
     for (const summon of this.activeSummons) entries.push({ y: summon.y, render: (c) => summon.render(c) });
     entries.push(...statusDepthEntries());
