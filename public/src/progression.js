@@ -17,6 +17,7 @@ export const MAGE_SKILL_TREE = Object.freeze([
   { id: 'quick_draw', branch: 'RUNE MASTERY', title: 'Quick Draw', desc: 'C-grade runes become B-grade for spell scaling.', cost: 1, modifiers: { qualityFloor: 'B' } },
   { id: 'focused_casting', branch: 'RUNE MASTERY', title: 'Focused Casting', desc: '+12% duration and +15% Focus gain.', cost: 1, prerequisites: ['quick_draw'], modifiers: { spellDuration: 1.12, focusGain: 1.15 } },
   { id: 'telekinetic_grip', branch: 'RUNE MASTERY', title: 'Telekinetic Grip', desc: 'Gravity Lift grabs 3 more targets and holds them 60% longer.', cost: 1, prerequisites: ['focused_casting'], modifiers: { liftTargets: 3, liftHold: 1.6 } },
+  { id: 'far_grasp', branch: 'RUNE MASTERY', title: 'Far Grasp', desc: 'The Arcane State pull hook flies 30% farther.', cost: 1, prerequisites: ['focused_casting'], modifiers: { pullRange: 1.3 } },
   { id: 'combination_scholar', branch: 'RUNE MASTERY', title: 'Combination Scholar', desc: '+12% combined-spell power.', cost: 1, prerequisites: ['focused_casting'], modifiers: { comboPower: 1.12 } },
   { id: 'shadow_weaver', branch: 'SHADOW', title: 'Shadow Weaver', desc: 'Shadow Stomper holds one more target at once.', cost: 1, modifiers: { bindTargets: 1 } },
   { id: 'umbral_grip', branch: 'SHADOW', title: 'Umbral Grip', desc: 'Shadow Stomper holds one more target and 30% longer.', cost: 1, prerequisites: ['shadow_weaver'], modifiers: { bindTargets: 1, bindHold: 1.3 } },
@@ -56,7 +57,8 @@ const BASE_MODIFIERS = Object.freeze({
   doppelHp: 1,
   extraRevenants: 0,
   revenantBurst: 1,
-  skyDuration: 1
+  skyDuration: 1,
+  pullRange: 1
 });
 const ADDITIVE_MODIFIERS = new Set(['maxWalls', 'extraSummons', 'liftTargets', 'bindTargets', 'extraDoppels', 'extraRevenants']);
 

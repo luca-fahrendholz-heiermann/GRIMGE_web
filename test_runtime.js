@@ -2595,7 +2595,28 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
     dummy.homeX = dummy.x = 520; dummy.homeZ = dummy.z = .5; dummy.hp = dummy.maxHp; spells.clearRuntime();
     const before = P.mp; P.beginCharge('hold', 'key'); P.formCharge.elapsed = .3; P.releaseCharge();
     for (let i = 0; i < 40; i++) spells.update(1 / 60, game);
-    assert(P.lastHoldAction === 'PULL' && before - P.mp === HOLD_MANA.pull && Math.abs(dummy.x - (P.x + 46)) < 12, 'Arcane State HOLD: the pull drags the foe in front of the Wizard (5 mana)');
+    assert(P.lastHoldAction === 'PULL' && before - P.mp === HOLD_MANA.pull && Math.abs(dummy.x - (P.x + 46)) < 12, 'Arcane State HOLD: the fired pull hook hits and drags the foe in front of the Wizard (5 mana)');
+    {
+      const { PULL_RANGE, PULL_COOLDOWN } = await import('./public/src/hold_actions.js');
+      const pull = () => { P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.mp = P.maxMp; spells.clearRuntime(); P.beginCharge('hold', 'key'); P.formCharge.elapsed = .3; return P.releaseCharge(); };
+      const run = (sec, each) => { for (let i = 0; i < sec * 60; i++) { each?.(); spells.update(1 / 60, game); } };
+      // A second throw right away is on cooldown (no spam, no mana spent).
+      const mpBefore = P.mp; assert(!pull() && P.mp === P.maxMp && P.pullCooldown > 0, 'The pull has a cooldown — it cannot be spammed');
+      // Out of range: the hook flies to its limit and reels back empty.
+      P.pullCooldown = 0; P.x = 300; P.facing = 1; dummy.x = 300 + PULL_RANGE + 80; dummy.elevation = 0; const far = dummy.x;
+      pull(); run(.8);
+      assert(dummy.x === far && P.pullCooldown > 0 && PULL_COOLDOWN >= 1, 'Out of range the hook misses and reels back empty (still on cooldown)');
+      // No homing: the foe steps aside after the throw → miss.
+      P.pullCooldown = 0; dummy.x = 480; dummy.z = .5; pull(); run(.6, () => { dummy.z = .85; });
+      assert(Math.abs(dummy.x - 480) < 1, 'The hook does not home in: a foe that steps out of its line is not grabbed');
+      // Airborne foe within range: aimed upward and grabbed.
+      P.pullCooldown = 0; dummy.x = 470; dummy.z = .5; dummy.elevation = 110; pull(); run(.8, () => { if (!dummy._held) dummy.vElevation = 0; });
+      assert(Math.abs(dummy.x - (P.x + 46)) < 14 && (dummy.elevation ?? 0) < 40, 'The hook also aims at foes in the air and pulls them down in front of the Wizard');
+      // Behind the caster: aims backward and turns around.
+      P.pullCooldown = 0; dummy.elevation = 0; dummy.x = 160; dummy.z = .5; P.x = 300; P.facing = 1; pull(); run(.8);
+      assert(P.facing === -1 && Math.abs(dummy.x - (P.x - 46)) < 14, 'The hook fires at the nearest foe in range even behind the caster (turns around)');
+      P.pullCooldown = 0; dummy.homeX = dummy.x = 520; dummy.z = .5; dummy.elevation = 0; void mpBefore;
+    }
     // Every Arcane State (and each Focus transformation) pulls with its own look.
     const { PULL_LOOKS } = await import('./public/src/pull_looks.js');
     const strictPull = new Proxy({}, { get: (t, k) => (k === 'ellipse' || k === 'arc') ? (x, y, rx, ry) => { if (rx < 0 || (k === 'ellipse' && ry < 0)) throw new Error('IndexSizeError ' + k); } : (k === 'canvas' ? undefined : () => {}), set: () => true });

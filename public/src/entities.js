@@ -398,6 +398,7 @@ export class Player extends GroundEntity {
     this.rootTimer = Math.max(0, (this.rootTimer ?? 0) - dt);
     this.landingRecoveryTimer = Math.max(0, this.landingRecoveryTimer - dt);
     this.grabCooldown = Math.max(0, this.grabCooldown - dt);
+    this.pullCooldown = Math.max(0, (this.pullCooldown ?? 0) - dt);
     if (this.slowTimer <= 0) this.slowFactor = 1;
     this.comboResetTimer = Math.max(0, this.comboResetTimer - dt);
     if (this.comboResetTimer <= 0) this.comboStep = 0;
