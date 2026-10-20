@@ -18,6 +18,7 @@ import './signature_abilities_e.js'; // S45–S48 (two-stage spells, counter cha
 import './signature_abilities_f.js'; // S50–S52 (mirror prison, blood cross, challenge)
 import './signature_abilities_g.js'; // S53 (domain expansion)
 import './signature_abilities_h.js'; // S54 (shadow bind)
+import './signature_abilities_i.js'; // S55 (thousand birds lightning dash)
 
 export { SIGNATURES, isSignatureRuneId, SIGNATURE_RUNE_IDS, SIG_PREFIX, setHitContext, startStance, endStance };
 

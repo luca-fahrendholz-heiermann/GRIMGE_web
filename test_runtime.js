@@ -2518,7 +2518,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   const step = (n, dt = 1 / 60) => { for (let i = 0; i < n; i++) { P.update(dt, neutral, game.battlefield, game); game.updateProjectiles(dt); spells.update(dt, game); } };
   const cast = (id, target = null) => spells.cast(P, spells.resolveSpell([{ id: 'sig_' + id }]), game, null, target);
   const ids = Object.keys(core.SIGNATURES);
-  assert(ids.length === 54 && ids.every((id) => core.signatureImpl(id)?.cast) && sigMod.SIGNATURE_RUNE_IDS.every((id) => isSpecialRune(id) && runeManaCost(id) >= 28 && runeManaCost(id) <= 46), 'All 54 signature specials (atlas S01–S36 + S37–S54) are special runes with their own mechanic and bound mana');
+  assert(ids.length === 55 && ids.every((id) => core.signatureImpl(id)?.cast) && sigMod.SIGNATURE_RUNE_IDS.every((id) => isSpecialRune(id) && runeManaCost(id) >= 28 && runeManaCost(id) <= 46), 'All 55 signature specials (atlas S01–S36 + S37–S55) are special runes with their own mechanic and bound mana');
   assert(ids.every((id) => spellHowTo('sig_' + id)?.effect?.length > 40) && !spells.resolveSpell([{ id: 'sig_S03' }, { id: 'ignis' }]), 'Signature specials explain themselves in the grimoire and never fuse');
   // Every special casts, runs and renders (strict canvas) without errors.
   const strict = new Proxy({}, { get: (t, k) => (k === 'ellipse' || k === 'arc') ? (x, y, rx, ry) => { if (rx < 0 || (k === 'ellipse' && ry < 0)) throw new Error('IndexSizeError ' + k); } : (k === 'canvas' ? undefined : () => {}), set: () => true });
@@ -3107,6 +3107,30 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
     stepAI(2.5);
     assert(P.hp < hpR && !E.aiRecast && E.lastAISpecial === 'S46', 'AI: stage 2 (teleport above, slam) follows without the player');
     E.aiSpecialIds = undefined; E.passive = false; E.x = 900; spells.clearRuntime(); P.freezeTimer = 0;
+  }
+  // S55 TAUSENDVOGEL: lightning dash through everyone in the lane; 2nd tap runs back.
+  {
+    const I = await import('./public/src/signature_abilities_i.js');
+    const E = game.enemyChampion;
+    const stepB = (sec) => { for (let i = 0; i < sec * 60; i++) { P.update(1 / 60, neutral, game.battlefield, game); game.updateRecasts(1 / 60); spells.update(1 / 60, game); } };
+    reset(); dummy.homeX = dummy.x = P.x + 110; E.lifeState = 'Alive'; E.hp = E.maxHp; E.passive = true; E.x = P.x + 210; E.z = P.z; E.elevation = 0; E.statusImmuneUntil = {}; dummy.statusImmuneUntil = {};
+    const x0 = P.x; const s55 = game.slotRuneSpell(runeById('sig_S55')); game.castSlotAt(s55.position);
+    const birds = spells.activeSpells.find((sp) => sp instanceof I.ThousandBirds); birds.forceParalysis = true;
+    stepB(.15);
+    assert(birds.phase === 'charge' && Math.abs(P.x - x0) < 1, 'S55: a short charge first (lightning in the hand, the Wizard stands)');
+    let inv = true; for (let i = 0; i < 18; i++) { stepB(1 / 60); if (birds.phase === 'dash' && !(P.invulnerableTimer > 0)) inv = false; }
+    stepB(.3);
+    assert(P.x - x0 > 250 && dummy.hp < dummy.maxHp && E.hp < E.maxHp && inv, 'S55: the lightning dash runs THROUGH every foe in the lane (both hit), invulnerable meanwhile');
+    assert(STATUS.hasStatus(E, 'paralysis') && s55.recast?.label === 'RÜCKWEG-SCHLAG', 'S55: lightning paralyses; the slot offers the return strike');
+    const hpBack = E.hp; game.castSlotAt(s55.position); stepB(.4);
+    assert(Math.abs(P.x - x0) < 40 && hpBack - E.hp >= I.BIRD.returnDamage + I.BIRD.returnBonus - .5 && !P.slottedSpells.includes(s55), 'S55: the return strike runs back along the path, extra damage on a paralysed foe');
+    // Out of the lane: no hit.
+    reset(); dummy.homeX = dummy.x = 900; E.x = P.x + 150; E.z = P.z + .3; E.hp = E.maxHp;
+    const s55b = game.slotRuneSpell(runeById('sig_S55')); game.castSlotAt(s55b.position); stepB(.8);
+    let bad = 0; const strict = new Proxy({}, { get: (t, k) => (k === 'arc' || k === 'ellipse') ? (x, y, r1, r2) => { if (r1 < 0 || (k === 'ellipse' && r2 < 0)) bad++; } : k === 'canvas' ? undefined : () => {}, set: () => true });
+    for (const sp of spells.activeSpells) sp.render?.(strict);
+    assert(E.hp === E.maxHp && !bad, 'S55: foes outside the lane are not hit; renders cleanly');
+    spells.clearRuntime(); STATUS.clearStatuses(); E.passive = false; E.x = 900; E.z = .5;
   }
   // S48: a hit is negated, the Wizard reappears behind the attacker and counters; three charges.
   reset(); const s48 = game.slotRuneSpell(runeById('sig_S48')); game.castSlotAt(s48.position);
