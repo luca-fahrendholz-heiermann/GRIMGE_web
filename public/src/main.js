@@ -11,6 +11,7 @@ import { VIEWPORT, ARENA_LAYOUT, ENTITY_VISUALS, groundDistance, groundYForDepth
 import { ART_ASSETS } from './art_assets.js';
 import { MageProfile, MAGE_SKILL_TREE, applyMageProfile, DEFAULT_MATCH_DECK, MATCH_DECK_SIZE, MAX_RUNE_COPIES, ALL_RUNE_IDS, deckAccepts, isDomainRuneId } from './progression.js';
 import { getGameMode, DEBUG_BUILD } from './game_modes.js';
+import { masteryNode } from './mastery_data.js';
 import { runeManaCost, isSpecialRune, TARGETING } from './spell_catalog.js';
 import { SpellTargeting, SlotChord, needsTarget } from './targeting.js';
 import { GamepadController } from './gamepad.js';
@@ -32,6 +33,8 @@ import { TransformationFx } from './transform_fx.js';
 // Free drawing (DRAW, no template) adds this to the recognition confidence before grading.
 export const FREE_DRAW_BONUS = .06;
 import { PrimalCompanion, normalizePrimalChoice, startPrimalBond, endPrimalBond, bondForm, PRIMAL_ARCHETYPES } from './primals.js';
+// Every own shield recipe (Ward principle) shares one cooldown.
+const WARD_SPELL_IDS = new Set(['arcane_aegis', 'storm_ward', 'sacrifice_bulwark']);
 
 // LF2-style Dungeon rooms. Each room is a wide scrolling stretch: the camera
 // follows the player, enemy groups enter from the right screen edge once the
@@ -1156,8 +1159,8 @@ export class GameWorld {
         audio.playRuneFail();
         return false;
       }
-      if (resolved.id === 'arcane_aegis' && this.player.arcaneShieldCooldown > 0) {
-        this.showAnnouncement('ARCANE AEGIS IS RECHARGING');
+      if (WARD_SPELL_IDS.has(resolved.id) && this.player.arcaneShieldCooldown > 0) {
+        this.showAnnouncement('SHIELD IS RECHARGING');
         audio.playRuneFail();
         return false;
       }
@@ -1178,7 +1181,7 @@ export class GameWorld {
       }
       this.player.mp -= resolved.manaCost ?? 0;
       if (resolved.id === 'aura_shock') this.player.auraShockCooldown = resolved.cooldown;
-      if (resolved.id === 'arcane_aegis') this.player.arcaneShieldCooldown = resolved.cooldown;
+      if (WARD_SPELL_IDS.has(resolved.id)) this.player.arcaneShieldCooldown = resolved.cooldown;
       if (resolved.id === 'eidolon_mantle') this.player.eidolonCooldown = resolved.cooldown;
       if (resolved.id === 'ninefold_beast_form') this.player.ninefoldCooldown = resolved.cooldown;
     spells.cast(this.player, resolved, this, spells.qualityForRunes(selectedRunes));
@@ -1254,8 +1257,8 @@ export class GameWorld {
     if (resolved.id === 'aura_shock' && this.player.auraShockCooldown > 0) {
       this.showAnnouncement('AURA SHOCK IS RECHARGING'); audio.playRuneFail(); return false;
     }
-    if (resolved.id === 'arcane_aegis' && this.player.arcaneShieldCooldown > 0) {
-      this.showAnnouncement('ARCANE AEGIS IS RECHARGING'); audio.playRuneFail(); return false;
+    if (WARD_SPELL_IDS.has(resolved.id) && this.player.arcaneShieldCooldown > 0) {
+      this.showAnnouncement('SHIELD IS RECHARGING'); audio.playRuneFail(); return false;
     }
     if (resolved.id === 'eidolon_mantle' && this.player.eidolonCooldown > 0) {
       this.showAnnouncement('EIDOLON MANTLE IS RECHARGING'); audio.playRuneFail(); return false;
@@ -1267,7 +1270,7 @@ export class GameWorld {
     // spent mana (it regenerates later) — there is no second payment gate.
     this.player.mp = Math.max(0, this.player.mp - (slot.manaCost ?? 0));
     if (resolved.id === 'aura_shock') this.player.auraShockCooldown = resolved.cooldown;
-    if (resolved.id === 'arcane_aegis') this.player.arcaneShieldCooldown = resolved.cooldown;
+    if (WARD_SPELL_IDS.has(resolved.id)) this.player.arcaneShieldCooldown = resolved.cooldown;
     if (resolved.id === 'eidolon_mantle') this.player.eidolonCooldown = resolved.cooldown;
     if (resolved.id === 'ninefold_beast_form') this.player.ninefoldCooldown = resolved.cooldown;
     takeOfferedRecast(null); // no stale offer from an earlier cast
@@ -2480,6 +2483,26 @@ export class GameWorld {
     ui.renderSkillTree?.(this.profile);
     this.showAnnouncement(`UNLOCKED: ${node?.title ?? id}`, 1.8);
     return true;
+  }
+
+  // Rune masteries. The test build unlocks them for free (only the tier order counts).
+  get freeMasteries() { return DEBUG_BUILD; }
+  unlockMastery(id) {
+    if (!this.profile.unlockMastery(id, { free: this.freeMasteries })) {
+      this.showAnnouncement('MASTERY GESPERRT');
+      return false;
+    }
+    this.applyProfile();
+    ui.renderSkillTree?.(this.profile);
+    const node = masteryNode(id);
+    this.showAnnouncement(`MASTERY: ${node?.branchName ?? id} ${['I', 'II', 'III', 'IV'][(node?.tier ?? 1) - 1]}`, 1.8);
+    return true;
+  }
+  resetMasteries() {
+    this.profile.resetMasteries({ refund: !this.freeMasteries });
+    this.applyProfile();
+    ui.renderSkillTree?.(this.profile);
+    this.showAnnouncement('MASTERIES ZURÜCKGESETZT', 1.4);
   }
 
   noteSpellDiscovery(spell) {

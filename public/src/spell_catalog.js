@@ -33,6 +33,8 @@ const TARGETING_BY_SPELL = Object.freeze({
   void_implosion: TARGETING.GROUND, firestorm: TARGETING.GROUND,
   stone_wall: TARGETING.PLACEMENT, construct_bulwark: TARGETING.PLACEMENT,
   arcane_aegis: TARGETING.ALLY,
+  storm_ward: TARGETING.SELF,
+  sacrifice_bulwark: TARGETING.SELF,
   frost_nova: TARGETING.SELF, aura_shock: TARGETING.SELF, eidolon_mantle: TARGETING.SELF, ninefold_beast_form: TARGETING.SELF,
   sandstorm_bastion: TARGETING.SELF, mirror_ward: TARGETING.SELF, burrow_strike: TARGETING.SELF,
   shadow_stomper: TARGETING.AIM, mirror_gate: TARGETING.DUAL, halo_pulse: TARGETING.SELF, shadow_doppelganger: TARGETING.SELF, revenant_call: TARGETING.SELF,
@@ -102,6 +104,8 @@ const SPELL_DEFINITIONS_EXT = {
   blizzard_surge: def('blizzard_surge', { name: 'BLIZZARD SURGE', tier: 2, color: '#80d8ff', deliveryType: DELIVERY.ZONE, desc: 'Freezing gale freezing minions and drastically slowing enemy lane push.' }),
   aura_shock: def('aura_shock', { name: 'AURA SHOCK', tier: 2, manaCost: 20, cooldown: 3.5, color: '#b388ff', deliveryType: DELIVERY.AREA, desc: 'Frost-lightning pulse blasting surrounding enemies away.' }),
   arcane_aegis: def('arcane_aegis', { name: 'ARCANE AEGIS', tier: 2, manaCost: 30, cooldown: 8, color: '#b388ff', deliveryType: DELIVERY.SELF, desc: 'A temporary protective aura that absorbs incoming damage.' }),
+  storm_ward: def('storm_ward', { name: 'LEBENSSTURM-SCHILD', tier: 3, manaCost: 34, cooldown: 8, color: '#c5e1a5', deliveryType: DELIVERY.SELF, desc: 'A storm-and-root shield (lightning, nature, earth): it absorbs damage, and with Ward masteries it strikes back with lightning, chains and heals.' }),
+  sacrifice_bulwark: def('sacrifice_bulwark', { name: 'OPFERBOLLWERK', tier: 3, manaCost: 30, cooldown: 8, color: '#9575cd', deliveryType: DELIVERY.SELF, desc: 'A dark earth bulwark: 10% of your HP are sacrificed and become 150% shield capacity. Fits Umbra Opfer and Terra Befestigen.' }),
   stone_wall: def('stone_wall', { name: 'STONE WALL', tier: 2, manaCost: 25, color: '#8d6e63', deliveryType: DELIVERY.WALL, desc: 'Raises a temporary earth wall that stops hostile movement and projectiles.' }),
   // New beams: one mechanical class, four looks (concept doc §5).
   inferno_beam: def('inferno_beam', { name: 'INFERNO BEAM', tier: 2, color: '#ff6d00', deliveryType: DELIVERY.BEAM, interactionTags: ['clashable', 'blockable'], beamProfile: 'inferno', desc: 'A sustained straight fire beam. Meets an enemy beam tip-to-tip for a Beam Clash.' }),
@@ -186,7 +190,8 @@ const SPELL_RECIPES_EXT = {
   'bestia+ignis+ventus': 'dragon_invocation', 'bestia+terra+ventus': 'summon_rune_snake',
   'aqua+terra+ventus': 'summon_spirit_wolf', 'fulgur+terra+terra': 'summon_siege_golem',
   'fulgur+ignis+terra': 'dragon_invocation', 'fulgur+ignis+ventus': 'apocalyptic_heavensurge',
-  'aqua+natura+terra': 'world_tree'
+  'aqua+natura+terra': 'world_tree',
+  'fulgur+natura+terra': 'storm_ward', 'terra+terra+umbra': 'sacrifice_bulwark'
 };
 
 // Arcane States (atlas buff transformations B01, B02, T01–T40): one special rune each.

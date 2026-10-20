@@ -20,6 +20,7 @@ import { hasWeaponDown, castWeaponDown, weaponUp, weaponDive, updateWeaponKit, w
 import { updatePrimalBond, bondMoveMultiplier, bondGainMultiplier, bondDisplacement, bondOnBlock, primalSprintVariant, renderPrimalBond, endPrimalBond, bondMelee, primalQuake } from './primals.js';
 import { createSegments, damageSegments, updateSegments, renderSegments } from './castle_segments.js';
 import { updateBuffForm, endBuffForm, isGenericBuff, currentBuffForm, renderBuffManifestation, buffVeinPainter, buffCloakColor, renderBuffGuard, levitationOffset, renderBuffCharge } from './buff_forms.js';
+import { masteryOnShieldHit, masteryTickShield, masteryChargedRelease, masteryPerfectBlock, masteryTier, currentAttacker } from './mastery.js';
 import { updateSignatureStance, renderSignatureStance, signatureHover, signatureMoveMult, signatureEvent, signatureDamageTaken, setHitContext, signatureSprintVariant } from './signature_runes.js';
 
 // Every spell a rune deck can produce: single runes plus every valid two-
@@ -411,6 +412,7 @@ export class Player extends GroundEntity {
     this.attackBufferTimer = Math.max(0, this.attackBufferTimer - dt);
     if (this.attackBufferTimer <= 0) this.queuedAttack = null;
     this.guardBreakTimer = Math.max(0, this.guardBreakTimer - dt);
+    masteryTickShield(this); // shield end masteries (residual shockwave, sacrifice refund)
     if (this.arcaneShieldTimer <= 0) this.arcaneShield = 0;
     this.freezeTimer = Math.max(0, this.freezeTimer - dt);
     this.slowTimer = Math.max(0, this.slowTimer - dt);
@@ -873,6 +875,8 @@ export class Player extends GroundEntity {
     // Ground charge-down = the weapon-specific buff / debuff (no generic move without a weapon).
     if (this.chargeDir === 'down') { this.state = 'idle'; return this.isAlive && chargeRatio >= .05 ? castWeaponDown(this, window.gameWorld, spells) : false; }
     if (!this.isAlive || chargeRatio < 0.05) return false;
+    // Masteries: the shield / stored reaction becomes the force of this charged hit.
+    if (chargeRatio > .25) masteryChargedRelease(this);
     const heavy = MELEE_BASELINE.heavy;
     signatureEvent(this, 'heavy', { charge: chargeRatio });
     const dmgMult = 1 + chargeRatio * 0.8;
@@ -1376,7 +1380,10 @@ export class Player extends GroundEntity {
     let hitAny = false; let hitCount = 0; const sigHits = [];
     setHitContext(this);
     const bladeLook = WEAPONS[this.weapon ?? this.classWeapon]?.look;
-    const prevStatusSource = setStatusSource(isBladeLook(bladeLook) ? { team: this.team, statusElements: ['blade'], statusChance: isFinisher ? 2 : 1 } : null);
+    // Every swing is a status source (blades bleed); castBy lets masteries react to it.
+    const prevStatusSource = setStatusSource({ team: this.team, statusElements: isBladeLook(bladeLook) ? ['blade'] : [], statusChance: isFinisher ? 2 : 1, castBy: this });
+    // Letztes Gefecht (skill): melee and charged hits below 25 % HP hit harder.
+    if (this.buildModifiers?.lastStand && this.hp < this.maxHp * .25) dmg *= 1 + this.buildModifiers.lastStand;
     // Weapon reach / sweeps behind (scythe); the default reach stays 78 px.
     const reach = hitMeta.reach ?? null;
     if (hitMeta.crit && Math.random() < hitMeta.crit) { dmg *= 1.5; isFinisher = true; }
@@ -1456,9 +1463,11 @@ export class Player extends GroundEntity {
       this.perfectBlockFlash = 0.3;
       audio.playImpact(true);
       formGuardCounter(this, window.gameWorld);
+      masteryPerfectBlock(this, currentAttacker()); // Ward · Absorbieren III releases its stored reaction
       return { blocked: true, perfect: true, attackerRecoilDistance: PERFECT_BLOCK_ATTACKER_RECOIL, attackerRecoilTicks: PERFECT_BLOCK_ATTACKER_RECOIL_TICKS };
     }
     if (this.isGuarding && incomingFromFront) {
+      if (hitKind === 'melee' && this.guardHoldTime <= .18) masteryPerfectBlock(this, currentAttacker());
       // In a form, a well-timed block of a melee hit counters as well.
       if (hitKind === 'melee' && this.guardHoldTime <= .18 && activeMoveset(this) && !this._formCounterLock) {
         this._formCounterLock = true;
@@ -1498,7 +1507,11 @@ export class Player extends GroundEntity {
       amount -= absorbed;
       combat.spawnElementalParticles(this.x, this.y - 35, 'fulgur', 6);
       if (this.arcaneShield <= 0) { this.arcaneShield = 0; this.arcaneShieldTimer = 0; combat.spawnShockwave(this.x, this.y - 30, 44, '#b388ff'); }
+      // Ward masteries: retaliation, stored reaction, stability pulse.
+      masteryOnShieldHit(this, absorbed, currentAttacker(), hitKind);
       if (amount <= 0) return { blocked: true };
+      // Terra · Befestigen II: what pierces the shield barely interrupts.
+      if (masteryTier(this, 'terra', 'fortify') >= 2) { stun *= .3; kx *= .5; lift *= .5; }
     }
     if (this.eidolonTimer > 0) {
       amount *= 1 - this.eidolonArmor;

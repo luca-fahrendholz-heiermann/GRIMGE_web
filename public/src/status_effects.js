@@ -69,6 +69,10 @@ export const isBladeLook = (look) => BLADE_LOOKS.has(look);
 // ── hit context ──
 let source = null;
 export function setStatusSource(src) { const prev = source; source = src; return prev; }
+export const getStatusSource = () => source;
+// Mastery hooks (mastery.js registers them): onHit, onCombo, onDot.
+let hooks = {};
+export function setStatusHooks(h) { hooks = h ?? {}; }
 let rng = Math.random;
 export function setStatusRandom(fn) { rng = fn ?? Math.random; }
 
@@ -81,6 +85,12 @@ export function hasStatus(target, kind) { return !!target?.statuses?.[kind] && !
 export function onStatusHit(target, amount, hitKind = 'melee') {
   if (hitKind === 'status' || !(amount > 0) || !target) return null;
   if (target.isObjective || target.isStoneWall || target.isProp || target.isCastle) return null;
+  const result = rollStatusHit(target, amount);
+  // Masteries react to the hit (chain, leech, burn …) — after the status roll.
+  if (source && !(source.team && target.team === source.team)) hooks.onHit?.(target, amount, hitKind, source);
+  return result;
+}
+function rollStatusHit(target, amount) {
   // Frozen + a hard hit: the ice shatters (any source, also bare fists and summons).
   if (hasStatus(target, 'frozen') && amount >= COMBO.shatterThreshold) return comboShatter(target);
   if (!source) return null;
@@ -99,7 +109,9 @@ export function onStatusHit(target, amount, hitKind = 'melee') {
 }
 
 // ── combos ──
-function comboText(t, text, color) { combat.spawnDamageText?.(t.x, (t.y ?? 0) - 104, text, { color, isCrit: true }); }
+function comboText(t, text, color) { combat.spawnDamageText?.(t.x, (t.y ?? 0) - 104, text, { color, isCrit: true }); hooks.onCombo?.(t, source?.castBy ?? null, source); }
+// Aqua · Durchnässen III: shock / flash-freeze keep the target wet.
+const keepsWet = () => !!source?.castBy?.masteries?.has?.('aqua.soak.3');
 // Foes around a target (for spreading combos).
 function foesAround(t, radius) {
   const gw = globalThis.window?.gameWorld;
@@ -131,14 +143,14 @@ function tryCombo(t, elements) {
     return null;
   }
   if (has('fulgur') && hasStatus(t, 'wet')) {
-    t.statuses.wet.end();
+    if (!keepsWet()) t.statuses.wet.end();
     const fx = applyStatus(t, 'paralysis', { force: true, quiet: true });
     statusDamage(t, COMBO.shockBonus); comboText(t, 'SCHOCK!', '#fff176');
     combat.spawnHitSparks?.(t.x, (t.y ?? 0) - 40, 1, '#fff59d', 16);
     return fx;
   }
   if (has('frost') && hasStatus(t, 'wet')) {
-    t.statuses.wet.end();
+    if (!keepsWet()) t.statuses.wet.end();
     const fx = applyStatus(t, 'frozen', { force: true, quiet: true });
     comboText(t, 'SCHOCKFROST!', '#80deea');
     return fx;
@@ -183,6 +195,7 @@ export function applyStatus(target, kind, { duration = null, force = false, quie
   // Water puts out the fire: steam instead of flames.
   if (kind === 'wet' && hasStatus(target, 'burn')) { target.statuses.burn.end(); combat.spawnShockwave?.(target.x, (target.y ?? 0) - 40, 26, '#eceff1'); }
   const fx = new StatusEffectFx(target, kind, duration ?? def.duration);
+  fx.owner = source?.castBy ?? null; // who applied it (Leech III heals from its ticks)
   target.statuses[kind] = fx; active.add(fx);
   if (kind === 'frozen') target.freeze?.(fx.dur);
   if (!quiet) combat.spawnDamageText?.(target.x, (target.y ?? 0) - 92, def.label, { color: def.color });
@@ -239,7 +252,9 @@ export class StatusEffectFx {
       if (this.tick >= .5) {
         this.tick -= .5;
         const moved = Math.hypot(t.x - this.lastX, ((t.z ?? 0) - (this.lastZ ?? 0)) * 150) > 6;
-        statusDamage(t, (moved && def.movingDps ? def.movingDps : def.dps) * .5);
+        const tickDmg = (moved && def.movingDps ? def.movingDps : def.dps) * .5;
+        statusDamage(t, tickDmg);
+        if (this.owner) hooks.onDot?.(t, tickDmg, this.owner);
         this.lastX = t.x; this.lastZ = t.z;
       }
     }

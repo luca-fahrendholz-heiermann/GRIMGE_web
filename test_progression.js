@@ -82,8 +82,25 @@ test('Rune Mastery produces a distinct live Focus-oriented Mage identity', () =>
   assert.equal(profile.getBuildIdentity().label, 'RUNE MASTER');
 });
 
-test('Skill tree is a compact 23-node Mage vertical slice (incl. multi-instance passives)', () => {
-  assert.equal(MAGE_SKILL_TREE.length, 23);
+test('Rune masteries: tier order, rune level through use, skill points, persistence', () => {
+  const profile = new MageProfile({ level: 3, skillPoints: 3, unlockedRunes: ['fulgur', 'natura', 'terra'] });
+  assert.equal(profile.masteryBlocker('fulgur.chain.2'), 'prev');
+  assert.ok(profile.unlockMastery('fulgur.chain.1'));
+  assert.equal(profile.skillPoints, 2);
+  assert.ok(profile.unlockMastery('fulgur.chain.2'));
+  assert.equal(profile.masteryBlocker('fulgur.chain.3'), 'runeLevel');
+  assert.equal(profile.masteryBlocker('ignis.burn.1'), 'rune');
+  assert.equal(profile.masteryBlocker('ward.absorb.3', { free: false }), 'prev');
+  assert.ok(profile.unlockMastery('fulgur.chain.3', { free: true }));
+  const copy = new MageProfile(profile.toJSON());
+  assert.deepEqual([...copy.masteries].sort(), ['fulgur.chain.1', 'fulgur.chain.2', 'fulgur.chain.3']);
+  copy.resetMasteries({ refund: true });
+  assert.equal(copy.masteries.size, 0);
+  assert.equal(copy.skillPoints, profile.skillPoints + 3);
+});
+
+test('Skill tree is a compact 24-node Mage vertical slice (incl. multi-instance passives)', () => {
+  assert.equal(MAGE_SKILL_TREE.length, 24);
   const profile = new MageProfile({ level: 9, skillPoints: 9, matchDeck: [...DEFAULT_MATCH_DECK] });
   assert.equal(profile.getModifiers().maxWalls, 1);
   for (const id of ['arcane_skin', 'barrier_mastery', 'rampart_mason', 'spirit_bond', 'empowered_summons', 'pack_leader', 'quick_draw', 'focused_casting', 'telekinetic_grip']) assert.ok(profile.unlock(id), id);

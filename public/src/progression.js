@@ -1,6 +1,7 @@
 // GRIMGE Prototype — lightweight local Mage progression.
 // This deliberately stays data-driven: UI, casting and future save/profile
 // work consume the same skill definitions and aggregate modifiers.
+import { MASTERY_NODE_IDS, masteryRequirement } from './mastery_data.js';
 
 export const MAGE_SKILL_TREE = Object.freeze([
   { id: 'elemental_power', branch: 'ELEMENTAL', title: 'Elemental Power', desc: '+12% spell damage.', cost: 1, modifiers: { spellPower: 1.12 } },
@@ -9,6 +10,7 @@ export const MAGE_SKILL_TREE = Object.freeze([
   { id: 'arcane_skin', branch: 'DEFENSE', title: 'Arcane Skin', desc: 'Take 10% less damage.', cost: 1, modifiers: { damageTaken: .90 } },
   { id: 'barrier_mastery', branch: 'DEFENSE', title: 'Barrier Mastery', desc: 'Walls last 30% longer and cover more ground.', cost: 1, prerequisites: ['arcane_skin'], modifiers: { wallDuration: 1.30, wallHp: 1.25 } },
   { id: 'rampart_mason', branch: 'DEFENSE', title: 'Rampart Mason', desc: 'Keep up to 3 walls on the field at once; older walls only fall when destroyed or expired.', cost: 1, prerequisites: ['barrier_mastery'], modifiers: { maxWalls: 2 } },
+  { id: 'last_stand', branch: 'DEFENSE', title: 'Letztes Gefecht', desc: 'Below 25% HP your melee and charged hits deal +50% damage.', cost: 1, prerequisites: ['arcane_skin'], modifiers: { lastStand: .5 } },
   { id: 'aura_shock_mastery', branch: 'DEFENSE', title: 'Aura Shock Mastery', desc: '+18% Aura Shock radius and knockback.', cost: 1, prerequisites: ['barrier_mastery'], modifiers: { auraArea: 1.18, auraPush: 1.18 } },
   { id: 'spirit_bond', branch: 'SUMMONING', title: 'Spirit Bond', desc: '+25% summon health and +10% mount speed.', cost: 1, modifiers: { summonHp: 1.25, mountSpeed: 1.10 } },
   { id: 'empowered_summons', branch: 'SUMMONING', title: 'Empowered Summons', desc: '+18% summon damage.', cost: 1, prerequisites: ['spirit_bond'], modifiers: { summonDamage: 1.18 } },
@@ -58,9 +60,10 @@ const BASE_MODIFIERS = Object.freeze({
   extraRevenants: 0,
   revenantBurst: 1,
   skyDuration: 1,
-  pullRange: 1
+  pullRange: 1,
+  lastStand: 0
 });
-const ADDITIVE_MODIFIERS = new Set(['maxWalls', 'extraSummons', 'liftTargets', 'bindTargets', 'extraDoppels', 'extraRevenants']);
+const ADDITIVE_MODIFIERS = new Set(['lastStand', 'maxWalls', 'extraSummons', 'liftTargets', 'bindTargets', 'extraDoppels', 'extraRevenants']);
 
 export const RUNE_XP_BY_GRADE = Object.freeze({ C: 6, B: 10, A: 14, S: 18 });
 export const STARTER_RUNES = Object.freeze(['ignis', 'ventus', 'fulgur', 'terra', 'aqua']);
@@ -138,6 +141,8 @@ export class MageProfile {
     this.xp = Math.max(0, source?.xp ?? 0);
     this.skillPoints = Math.max(0, source?.skillPoints ?? 0);
     this.unlockedSkills = new Set(source?.unlockedSkills ?? []);
+    // Rune masteries (mastery_data.js): 'tree.branch.tier' ids.
+    this.masteries = new Set((Array.isArray(source?.masteries) ? source.masteries : []).filter((id) => MASTERY_NODE_IDS.includes(id)));
     this.runeXp = { ...(source?.runeXp ?? {}) };
     this.discoveredSpells = new Set(source?.discoveredSpells ?? []);
     this.unlockedRunes = new Set(source?.unlockedRunes ?? STARTER_RUNES);
@@ -174,7 +179,7 @@ export class MageProfile {
   toJSON() {
     return {
       level: this.level, xp: this.xp, skillPoints: this.skillPoints,
-      unlockedSkills: [...this.unlockedSkills], runeXp: clone(this.runeXp),
+      unlockedSkills: [...this.unlockedSkills], masteries: [...this.masteries], runeXp: clone(this.runeXp),
       discoveredSpells: [...this.discoveredSpells], unlockedRunes: [...this.unlockedRunes],
       matchDeck: [...this.matchDeck], progressionVersion: 3,
       favoriteRunes: [...this.favoriteRunes], deckPresets: this.deckPresets.map((preset) => ({ ...preset, deck: [...preset.deck] }))
@@ -361,6 +366,35 @@ export class MageProfile {
     return (node.prerequisites ?? []).every((prerequisite) => this.unlockedSkills.has(prerequisite));
   }
 
+  // Masteries: previous tier owned, the rune unlocked and levelled through use (III: rune
+  // level 3, IV: 5; Ward = every shield: Mage level 6 / 10), one skill point each.
+  masteryBlocker(id, { free = false } = {}) {
+    const req = masteryRequirement(id);
+    if (!req) return 'unknown';
+    if (this.masteries.has(id)) return 'owned';
+    if (req.prev && !this.masteries.has(req.prev)) return 'prev';
+    if (free) return null; // test build: only the tier order counts
+    if (req.rune && !this.unlockedRunes.has(req.rune)) return 'rune';
+    if (req.rune && this.runeLevel(req.rune) < req.runeLevel) return 'runeLevel';
+    if (this.level < req.mageLevel) return 'level';
+    if (this.skillPoints < req.cost) return 'points';
+    return null;
+  }
+  canUnlockMastery(id, opts) { return this.masteryBlocker(id, opts) === null; }
+  unlockMastery(id, { free = false } = {}) {
+    if (!this.canUnlockMastery(id, { free })) return false;
+    if (!free) this.skillPoints -= masteryRequirement(id).cost;
+    this.masteries.add(id);
+    this.save();
+    return true;
+  }
+  // Respec: drops every mastery (refunds the points unless they were free test unlocks).
+  resetMasteries({ refund = true } = {}) {
+    if (refund) this.skillPoints += this.masteries.size;
+    this.masteries.clear();
+    this.save();
+  }
+
   unlock(id) {
     if (!this.canUnlock(id)) return false;
     const node = MAGE_SKILL_TREE.find((entry) => entry.id === id);
@@ -373,6 +407,7 @@ export class MageProfile {
 
 export function applyMageProfile(player, profile) {
   player.buildModifiers = profile.getModifiers();
+  player.masteries = new Set(profile.masteries ?? []);
   player.profileLevel = profile.level;
   return player.buildModifiers;
 }

@@ -3681,6 +3681,92 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   P.equipClassWeapon(null); spells.clearRuntime(); dummy.homeX = dummy.x = 512;
 }
 
+// Mastery system (GDD build system adapted to GRIMGE): the two reference builds come out
+// of general rules — shields are the Ward principle, masteries change concrete parameters.
+{
+  const M = await import('./public/src/mastery.js');
+  const { Minion } = await import('./public/src/entities.js');
+  game.returnToHub(); game.setMatchMode('training'); game.startMatch(); game.selectTrainingMap('waterfalls');
+  const P = game.player; const E = game.enemyChampion; const dummy = game.trainingDummy;
+  const tiers = (id, upTo) => [1, 2, 3, 4].slice(0, upTo).map((n) => id + '.' + n);
+  const reset = () => {
+    spells.clearRuntime(); game.minions = []; P.x = 300; P.z = .5; P.facing = 1; P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.grounded = true; P.elevation = 0;
+    P.isGuarding = false; P.invulnerableTimer = 0; P.hp = P.maxHp; P.mp = P.maxMp; P.arcaneShield = 0; P.arcaneShieldTimer = 0; P.wardCharge = 0; P.convertBonus = 0; P._retaliateAt = -9;
+    game.battlefield.placeOnSurface(P); dummy.homeX = dummy.x = 1600; E.x = 2200;
+  };
+  const foe = (x, hp = 500) => { const m = new Minion(x, .5, 'red', 'melee', 0); m.maxHp = m.hp = hp; game.battlefield.placeOnSurface(m); game.minions.push(m); return m; };
+  const hitFrom = (attacker, amount, kx = -120) => { const prev = STATUS.setStatusSource({ team: attacker.team, statusElements: [], castBy: attacker }); try { return P.takeDamage(amount, kx, 0, .2, false, 'melee'); } finally { STATUS.setStatusSource(prev); } };
+
+  // Build 1 — Lebenssturm-Wächter (Witcher Quen): Fulgur + Natura + Terra shield.
+  reset();
+  P.masteries = new Set([...tiers('ward.retaliate', 4), ...tiers('ward.sustain', 3), ...tiers('fulgur.chain', 2), ...tiers('fulgur.discharge', 3), ...tiers('natura.leech', 4)]);
+  const ward = spells.resolveSpell([{ id: 'fulgur' }, { id: 'natura' }, { id: 'terra' }]);
+  assert(ward?.id === 'storm_ward' && spells.resolveSpell([{ id: 'terra' }, { id: 'terra' }, { id: 'umbra' }])?.id === 'sacrifice_bulwark', 'Shield recipes: Fulgur+Natura+Terra = LEBENSSTURM-SCHILD, Terra+Terra+Umbra = OPFERBOLLWERK');
+  spells.cast(P, ward, game);
+  assert(P.arcaneShield > 0 && ['fulgur', 'natura', 'terra'].every((el) => P.shieldTags.includes(el)), 'The shield carries the element tags of its recipe (Ward principle)');
+  const a = foe(340); const b = foe(430); const c = foe(540);
+  P.hp = P.maxHp - 60; const hp0 = P.hp; const timer0 = P.arcaneShieldTimer; const cap0 = P.arcaneShield;
+  hitFrom(a, 20);
+  assert(P.arcaneShield === cap0 - 20 && a.hp < 500, 'Witcher build: a shield hit triggers an electric retaliation on the attacker');
+  assert(b.hp < 500 && c.hp < 500, 'Witcher build: the retaliation chains on to the next foes (Fulgur Kette, allowed by Vergeltung IV)');
+  assert(P.hp > hp0 && P.hp - hp0 < 8, 'Witcher build: every target hit heals a little, diminishing (Natura Lebensentzug IV)');
+  assert(P.arcaneShieldTimer > timer0 && P.arcaneShieldTimer - timer0 <= .2501, 'Witcher build: the hits extend the shield — capped per event (Aufrechterhalten III)');
+  const chainA = 500 - a.hp; const chainB = 500 - b.hp;
+  assert(chainB < chainA, 'Chain jumps lose damage (50 % per jump before tier IV)');
+  // Without masteries the same shield only absorbs.
+  reset(); P.masteries = new Set(); spells.cast(P, ward, game); const plain = foe(340); hitFrom(plain, 20);
+  assert(plain.hp === 500 && P.hp === P.maxHp, 'Without masteries a shield just absorbs (no build-specific code)');
+  // Proc control: 100 shield hits in a row — budget, depth, heal cap, max shield duration hold.
+  reset();
+  P.masteries = new Set([...tiers('ward.retaliate', 4), ...tiers('ward.sustain', 4), ...tiers('fulgur.chain', 4), ...tiers('fulgur.discharge', 4), ...tiers('natura.leech', 4), ...tiers('aqua.soak', 4)]);
+  spells.cast(P, ward, game); const pack = [340, 380, 420, 460, 500, 540].map((x) => foe(x, 1e6));
+  let hitsThisEvent = 0; let worst = 0; for (const f of pack) { const orig = f.takeDamage.bind(f); f.takeDamage = (...args) => { hitsThisEvent++; return orig(...args); }; }
+  P.hp = P.maxHp - 100; const hpStress = P.hp; let crashed = null;
+  try {
+    for (let i = 0; i < 100; i++) { P.arcaneShield = 1e5; P._retaliateAt = -9; P.invulnerableTimer = 0; hitsThisEvent = 0; hitFrom(pack[i % 6], 5); worst = Math.max(worst, hitsThisEvent); }
+  } catch (err) { crashed = err; }
+  assert(!crashed, 'Proc stress: 100 shield hits with every reactive mastery run without an endless loop ' + (crashed?.message ?? ''));
+  assert(worst > 1 && worst <= M.PROC.budget, 'Proc stress: one hit causes at most PROC.budget follow-up hits (' + worst + ')');
+  assert(P.hp - hpStress <= M.PROC.healPerSecond + 1e-6, 'Proc stress: healing stays under the heal cap per second');
+  assert(P.arcaneShieldTimer <= M.PROC.shieldMaxLife + 1e-6, 'Proc stress: the shield never lasts longer than the max duration');
+
+  // Build 2 — Gefallener Koloss (Exiled Heavy Knight).
+  reset(); P.buildModifiers = { ...P.buildModifiers, lastStand: .5 };
+  P.masteries = new Set([...tiers('terra.fortify', 4), ...tiers('ward.absorb', 3), ...tiers('umbra.sacrifice', 4), ...tiers('ignis.burn', 3)]);
+  const bulwark = spells.resolveSpell([{ id: 'terra' }, { id: 'terra' }, { id: 'umbra' }]);
+  spells.cast(P, bulwark, game);
+  const paid = P.maxHp - P.hp;
+  assert(paid === Math.floor(P.maxHp * .2) && P.sacrificedHp === paid && P.arcaneShield > 110 * 1.7 + paid, 'Knight build: Opfer sacrifices 20 % HP into shield capacity (an HP sacrifice is no enemy hit)');
+  const brute = foe(340, 3000); const bx = brute.x;
+  hitFrom(brute, 30);
+  assert(P.wardCharge > 0, 'Knight build: absorbed damage charges a reaction (Absorbieren III)');
+  assert((brute.kbVelX ?? 0) > 0 || brute.x > bx, 'Knight build: a melee attacker bounces off the shield (Befestigen III)');
+  // Difference counter: a perfect block releases the stored reaction at the attacker.
+  P.isGuarding = true; P.guardHoldTime = .05; P.facing = 1; const charge = P.wardCharge; const bhp = brute.hp;
+  hitFrom(brute, 10, -120);
+  assert(P.wardCharge < charge && bhp - brute.hp >= charge, 'Knight build: a perfect block fires the stored reaction back (difference counter)');
+  P.isGuarding = false; P.guardHoldTime = 0;
+  // Glass cannon + DEF→ATK: low HP, then a charged hit converts the shield into a one-shot.
+  P.wardCharge = 12; P.hp = Math.floor(P.maxHp * .2); P.invulnerableTimer = 0; P.state = 'idle'; P.stateTimer = 0; P.canAttack = true;
+  const shieldLeft = P.arcaneShield; brute.hp = brute.maxHp = 3000; brute.x = P.x + 40; brute.kbVelX = 0; game.battlefield.placeOnSurface(brute);
+  P.beginCharge('forward'); P.chargeTimer = P.chargeMaxTime * .05; P.releaseCharge();
+  const burst = 3000 - brute.hp;
+  assert(P.arcaneShield === 0 && burst >= shieldLeft * .8 + 12, 'Knight build: a charged hit consumes the shield — 80 % of it + the stored charge land as burst (Befestigen IV)');
+  assert(STATUS.hasStatus(brute, 'burn'), 'Knight build: Ignis Brand gives the converted blow fire');
+  // Letztes Gefecht: below 25 % HP the same swing hits 50 % harder.
+  const swing = (hp) => { P.hp = hp; P.state = 'idle'; P.canAttack = true; brute.hp = 3000; brute.x = P.x + 40; P.convertBonus = 0; P.triggerMeleeHitbox(20, 0, 0, 0, false, {}); return 3000 - brute.hp; };
+  const full = swing(P.maxHp); const low = swing(Math.floor(P.maxHp * .2));
+  assert(Math.abs(low - full * 1.5) < 1.01, 'Letztes Gefecht: melee hits deal +50 % below 25 % HP');
+  // Opfer III: a shield that expires unbroken returns part of the sacrifice.
+  reset(); P.masteries = new Set(tiers('umbra.sacrifice', 3)); spells.cast(P, bulwark, game); const after = P.hp; const sac = P.sacrificedHp;
+  P.arcaneShieldTimer = 0; M.masteryTickShield(P);
+  assert(P.hp === after + Math.round(sac * .3), 'Opfer III: an unbroken shield gives 30 % of the sacrificed HP back');
+  // Build analysis spells the chains out.
+  const chains = M.analyzeBuild(new Set([...tiers('ward.retaliate', 4), ...tiers('fulgur.chain', 1), ...tiers('fulgur.discharge', 3), ...tiers('natura.leech', 4), ...tiers('ward.sustain', 2)])).join(' | ');
+  assert(/Blitz-Vergeltung/.test(chains) && /Kette/.test(chains) && /Heilung/.test(chains) && /verlängert/.test(chains), 'Build analysis explains the Witcher chain: ' + chains);
+  P.masteries = new Set(); P.buildModifiers = { ...P.buildModifiers, lastStand: 0 }; reset(); game.minions = [];
+}
+
 const frameCallback = nextFrame;
 frameCallback(game.lastFrameTime + 16);
 game.debugVisible = true;

@@ -14,6 +14,7 @@ import { renderWallLook } from './wall_looks.js';
 import { renderSpellVisual, meteorShatterBurst, spellVisualActive } from './spell_visuals.js';
 import { offerRecast } from './recast.js';
 import { statusElementsOf, setStatusSource, updateStatuses, statusDepthEntries, clearStatuses } from './status_effects.js';
+import { applyWard, setMasterySink } from './mastery.js';
 import { BeamSpell, BeamClash, resolveBeamInteractions, MirrorWardSpell, GravityLiftSpell, TitanStompSpell, SoulSeekerBolt, SeismicSlamSpell, ConeBreathSpell, BurrowStrikeSpell, ShieldBubbleSpell, renderPixelated } from './abilities.js';
 
 export { BeamClash };
@@ -156,6 +157,7 @@ export class SpellSystem {
     if (typeof spell.craterLife === 'number') spell.craterLife *= spell.quality.duration;
     spell.system = this;
     if (this.castElements && !spell.statusElements) spell.statusElements = this.castElements;
+    if (this.castCaster && !spell.castBy) spell.castBy = this.castCaster; // masteries know whose hit it is
     this.activeSpells.push(spell);
     if (spell.isCapturableProjectile) signatureProjectileSpawned(spell);
     return spell;
@@ -240,9 +242,10 @@ export class SpellSystem {
   cast(caster, spellDef, gameWorld, quality = null, target = null) {
     if (!spellDef) return;
     const prev = this.castElements; this.castElements = statusElementsOf(spellDef);
+    const prevCaster = this.castCaster; this.castCaster = caster;
     // Damage dealt right during the cast (chain lightning, strikes) rolls statuses / combos too.
-    const prevSource = setStatusSource(this.castElements ? { team: caster.team, statusElements: this.castElements, quality: this.normalizeQuality(quality) } : null);
-    try { return this.castSpellDef(caster, spellDef, gameWorld, quality, target); } finally { this.castElements = prev; setStatusSource(prevSource); }
+    const prevSource = setStatusSource(this.castElements ? { team: caster.team, statusElements: this.castElements, quality: this.normalizeQuality(quality), castBy: caster } : null);
+    try { return this.castSpellDef(caster, spellDef, gameWorld, quality, target); } finally { this.castElements = prev; this.castCaster = prevCaster; setStatusSource(prevSource); }
   }
 
   castSpellDef(caster, spellDef, gameWorld, quality = null, target = null) {
@@ -344,6 +347,16 @@ export class SpellSystem {
           audio.playSpell('arcane_shield');
           combat.spawnShockwave(ally.x, (ally.y ?? groundYForDepth(ally.z)) - 30, 46, '#b388ff');
         } else this.castArcaneShield(caster, castQuality);
+        break;
+      }
+
+      // Shield recipes (Mastery doc): same Ward principle, own element tags.
+      case 'storm_ward': {
+        this.castArcaneShield(caster, castQuality, ['fulgur', 'natura', 'terra'], { capacity: 80, duration: 6, color: '#c5e1a5', particles: 'fulgur' });
+        break;
+      }
+      case 'sacrifice_bulwark': {
+        this.castArcaneShield(caster, castQuality, ['terra', 'umbra'], { capacity: 110, duration: 5, color: '#9575cd', particles: 'void', sacrifice: .1 });
         break;
       }
 
@@ -604,12 +617,13 @@ export class SpellSystem {
     return hitAny;
   }
 
-  castArcaneShield(caster, quality = RUNE_GRADE_PROFILES.B) {
-    caster.arcaneShield = Math.round(90 * quality.power);
-    caster.arcaneShieldTimer = 5 * quality.duration;
+  // Every own shield goes through the Ward rules (mastery.js): capacity / duration
+  // masteries, HP sacrifice, element tags for retaliation.
+  castArcaneShield(caster, quality = RUNE_GRADE_PROFILES.B, tags = ['aqua', 'terra'], { capacity = 90, duration = 5, color = '#b388ff', particles = 'fulgur', sacrifice = 0 } = {}) {
+    applyWard(caster, capacity * quality.power, duration * quality.duration, tags, { sacrifice });
     audio.playSpell('arcane_shield');
-    combat.spawnShockwave(caster.x, caster.y - 32, 52, '#b388ff');
-    combat.spawnElementalParticles(caster.x, caster.y - 30, 'fulgur', Math.round(18 * quality.particles));
+    combat.spawnShockwave(caster.x, caster.y - 32, 52, color);
+    combat.spawnElementalParticles(caster.x, caster.y - 30, particles, Math.round(18 * quality.particles));
   }
 
   castEidolonMantle(caster, quality = RUNE_GRADE_PROFILES.B) {
@@ -762,6 +776,7 @@ export class SpellSystem {
 
   update(dt, gameWorld) {
     updateSignatureWorld(dt, gameWorld);
+    setMasterySink(this);
     for (let i = this.activeSpells.length - 1; i >= 0; i--) {
       const spell = this.activeSpells[i];
       // Time stop (S73): a frozen projectile hangs in mid-air until the field ends.

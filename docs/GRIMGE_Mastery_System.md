@@ -1,0 +1,133 @@
+# GRIMGE – Mastery-System (umgesetzt, Stand 20.10.2026)
+
+Grundlage: *GRIMGE_Mastery_Runensystem_Game_Design_Document.pdf* (modulares Runen-, Mastery- und Build-System) und die zwei Referenz-Builds (Witcher-Quen-Schild, Exiled Heavy Knight).
+Die Dokumente kannten den Prototyp nicht. Sie wurden deshalb auf das bestehende System übertragen, ohne Build-spezifischen Sondercode.
+
+Code:
+- `public/src/mastery_data.js`: Bäume, Voraussetzungen, Build-Analyse (rein, ohne Kampf-Imports)
+- `public/src/mastery.js`: Ereignis-Engine und Wirkungen
+
+## 1. Übertragung GDD → GRIMGE
+
+| GDD-Begriff | In GRIMGE |
+|---|---|
+| Basisrunen (Feuer, Wasser, Blitz …) | Element-Runen: ignis, aqua, ventus, fulgur, terra, natura, lux, umbra, void, construct, bestia |
+| Ice | Keine eigene Rune. Frost entsteht aus Wasser- und Wind-Fusionen (Status-Tag `frost`). |
+| **Ward** | Keine Rune, sondern das **Schild-Prinzip**: Arcane Aegis und jedes Schild-Rezept. Der Ward-Baum gilt für alle Schilde und steht jedem offen (Freischaltung über das Mage-Level). |
+| Invocation / Control | Bestia-Beschwörungen bzw. Umbra- und Void-Bindungen (noch ohne eigene Masteries) |
+| Tags eines Effekts | `statusElements` jedes Zaubers (Rezept-Elemente). Schilde tragen `shieldTags`. |
+| Trigger (OnHit, OnShieldHit, OnExpire …) | Hooks: `onStatusHit` (jeder `takeDamage`), Schildabsorption, Status-Kombo, Status-Tick, Schildende, perfekter Block, aufgeladener Angriff |
+| Ressourcen | Nur HP, Mana und Fokus. Fokus wird weiter im Beam-Clash ausgegeben (bestehend). |
+| Rune Points | Skillpunkte (1 je Stufe). Stufe III braucht Runen-Level 3, Stufe IV Runen-Level 5; das Runen-Level steigt durch Benutzung. Ward braucht Mage-Level 6 bzw. 10. Im Testbuild (`DEBUG_BUILD`) sind die Stufen gratis. |
+| Klassenpassiv „Berserker Last Stand“ | Skill-Knoten **Letztes Gefecht** (DEFENSE): unter 25 % HP +50 % Nahkampf- und Charge-Schaden |
+
+## 2. Neue Schild-Rezepte
+
+| Rezept | Zauber | Wirkung |
+|---|---|---|
+| Aqua + Terra | ARCANE AEGIS | 90 Kapazität, 5 s, Tags aqua und terra (bestehend, läuft jetzt über die Ward-Regeln) |
+| Fulgur + Natura + Terra | **LEBENSSTURM-SCHILD** | 80 Kapazität, 6 s, Tags fulgur, natura und terra |
+| Terra + Terra + Umbra | **OPFERBOLLWERK** | 110 Kapazität, 5 s. Opfert 10 % HP als 150 % Kapazität (mit Umbra · Opfer mehr). |
+
+Alle Schild-Rezepte teilen sich eine Abklingzeit.
+
+## 3. Umgesetzte Äste (40 Stufen)
+
+- **Fulgur**
+  - **Kette:**
+    - I: 1 Sprung mit 50 % Schaden
+    - II: 2 Sprünge, mehr Reichweite
+    - III: Sprünge bevorzugen nasse Ziele
+    - IV: 3 Sprünge mit 70 % Schaden
+  - **Entladung:**
+    - I: Eine Status-Kombo schickt einen kleinen Blitz auf ein Nachbarziel
+    - II: kürzere interne Abklingzeit
+    - III: Schildtreffer lösen eine elektrische Vergeltung aus
+    - IV: Entladungen dürfen die Kette nutzen, lösen aber nie eine neue Entladung aus
+- **Natura · Lebensentzug:**
+  - I: 2 HP pro Treffer
+  - II: 3 HP pro Ziel
+  - III: Status-Ticks heilen halb so viel
+  - IV: Folgetreffer heilen, mit abnehmendem Ertrag (×0,6 je Generation)
+- **Aqua · Durchnässen:**
+  - I: macht garantiert nass
+  - II: Nässe hält länger
+  - III: Schock und Schockfrost verbrauchen die Nässe nicht
+  - IV: Nässe verbreitet sich auf Nachbarziele
+- **Ignis · Brand:**
+  - I: garantierter Brand
+  - II: Brand hält länger
+  - III: springt auf ein Nachbarziel über
+  - IV: erneute Treffer verlängern den Brand, maximal auf 8 s
+- **Terra · Befestigen:**
+  - I: +20 % Schildkapazität
+  - II: kaum Unterbrechung durch Treffer, die den Schild durchschlagen
+  - III: Nahkämpfer prallen vom Schild ab
+  - IV: Ein aufgeladener Angriff verbraucht den Schild, 80 % der Restkapazität werden zu Schaden
+- **Umbra · Opfer:**
+  - I: 15 % HP → 150 % Kapazität
+  - II: 20 % HP → 175 % Kapazität
+  - III: Läuft der Schild ungebrochen aus, kommen 30 % der geopferten HP zurück
+  - IV: Unter 30 % HP machen Schatten-Treffer +25 %
+- **Ward (alle Schilde)**
+  - **Absorbieren:**
+    - I: +25 % Kapazität
+    - II: +50 % Kapazität
+    - III: Absorbierter Schaden lädt eine Reaktion auf; ein perfekter Block oder der nächste aufgeladene Angriff entlädt sie
+    - IV: Restkapazität entlädt sich beim Ablaufen als Schockwelle
+  - **Vergeltung:**
+    - I: kleiner Gegenschlag (6 + 25 % des absorbierten Schadens, interne Abklingzeit 0,3 s)
+    - II: trifft zusätzlich Gegner in der Nähe
+    - III: übernimmt die Element-Tags des Schildes
+    - IV: Gegenschläge dürfen Kette und Lebensentzug nutzen
+  - **Aufrechterhalten:**
+    - I: +30 % Dauer
+    - II: eigene Treffer verlängern den Schild um 0,15 s
+    - III: höchstens 0,25 s pro Ereignis, egal wie viele Ziele
+    - IV: ein neuer Schild übernimmt die halbe Restdauer
+
+## 4. Laufzeitregeln (gegen Endlosschleifen)
+
+- **Ereignis-Kontext:** Jedes Ereignis bekommt eine Root-ID. Folgetreffer (Ketten-Sprung, Vergeltung, Entladung, Bonus) laufen eine Generation tiefer.
+- **Tiefe:** höchstens `PROC.maxDepth = 3`.
+- **Proc-Budget:** höchstens `PROC.budget = 14` Folgetreffer pro Wurzel-Ereignis.
+- **Folgetreffer erzeugen keine eigenen Ketten:** Ein Ketten-Sprung kettet nie weiter. Vergeltung und Entladung brauchen ihre Stufe IV, um die Kette zu nutzen.
+- **Heil-Obergrenze:** höchstens 14 HP pro Sekunde aus Masteries.
+- **Schild:** Gesamtdauer höchstens 12 s.
+- **Saubere Trennung:**
+  - Ein Treffer ist nicht dasselbe wie Schaden. Ein Status-Tick zählt nicht als Treffer.
+  - Schildabsorption ist kein HP-Verlust.
+  - Ein HP-Opfer ist kein Gegnertreffer.
+
+## 5. Die Referenz-Builds mit diesen Regeln
+
+**Lebenssturm-Wächter (Witcher Quen):** Lebenssturm-Schild mit Ward Vergeltung IV, Fulgur Entladung III, Fulgur Kette II, Natura Lebensentzug IV und Ward Aufrechterhalten III.
+1. Ein Schildtreffer löst eine Blitz-Vergeltung aus.
+2. Die Vergeltung springt als Kette auf weitere Gegner.
+3. Jedes getroffene Ziel heilt mit abnehmendem Ertrag.
+4. Der Schild verlängert sich, höchstens um 0,25 s pro Ereignis.
+
+**Gefallener Koloss (Exiled Heavy Knight):** Opferbollwerk mit Umbra Opfer IV, Terra Befestigen IV, Ward Absorbieren III, Ignis Brand III und dem Skill Letztes Gefecht.
+1. **Glaskanone:** 20 % HP werden zu Schild. Du stehst danach nahe am Letzten Gefecht.
+2. **Differenz-Konter:**
+   - Absorbierter Schaden lädt eine Reaktion auf.
+   - Ein perfekter Block schickt sie auf den Angreifer zurück.
+3. **DEF→ATK:** Ein aufgeladener Angriff verbraucht den Schild. 80 % der Restkapazität und die gespeicherte Reaktion landen als Wucht und setzen in Brand.
+
+Beide Builds sind als Tests in `test_runtime.js` nachgestellt („Witcher build …“, „Knight build …“). Dazu kommt ein Proc-Stresstest mit 100 Schildtreffern.
+
+## 6. UI
+
+Im Skill-Fenster (MAGE PATHS) liegt das Panel **RUNEN-MASTERIES**:
+- Je Ast vier Stufen-Knöpfe, die nächste Stufe mit Text und Voraussetzung.
+- Ein Knopf zum Zurücksetzen.
+- Die **BUILD-ANALYSE** beschreibt die entstehenden Reaktionsketten in Klartext.
+
+## 7. Offen / nächste Ausbaustufe
+
+- Weitere Äste nach dem GDD:
+  - Ignition und Consume (Feuer), Flow und Restore, Spread / Velocity / Displace (Wind)
+  - Charge (Blitz), Tremor und Fracture, Growth und Entangle
+  - Lux, Void, Konstrukt, Bestia
+- Die Masteries auch auf Spezialrunen, Arcane States und Domänen anwenden. Die Engine liest dafür nur Tags, also müssen deren Effekte vollständig getaggt sein.
+- Mastery-Wahl im Deck-Preset speichern (Build = Deck + Masteries).

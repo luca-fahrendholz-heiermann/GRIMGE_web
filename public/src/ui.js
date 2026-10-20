@@ -1,4 +1,5 @@
 // GRIMGE Prototype — UI & HUD Controller matching Setup Mockup Exactly
+import { MASTERY_TREES, masteryRequirement, analyzeBuild } from './mastery_data.js';
 import { spells } from './spells.js';
 import { MAGE_SKILL_TREE, ALL_RUNE_IDS, runeUnlockLabel, isBuffRuneId, isSignatureRuneId, isDomainRuneId, maxRuneCopies, MAX_DECK_PRESETS, MATCH_DECK_SIZE, DECK_PRESET_NAME_MAX } from './progression.js';
 import { recognizer } from './recognizer.js';
@@ -250,6 +251,9 @@ export class UIManager {
       const button = e.target?.closest?.('[data-skill-id]');
       const id = button?.getAttribute?.('data-skill-id');
       if (id) window.gameWorld?.unlockMageSkill(id);
+      const mastery = e.target?.closest?.('[data-mastery-id]')?.getAttribute?.('data-mastery-id');
+      if (mastery) window.gameWorld?.unlockMastery?.(mastery);
+      if (e.target?.closest?.('[data-mastery-reset]')) window.gameWorld?.resetMasteries?.();
     });
     // The Grimoire is the deck stack: it opens the deck / rune view. Spell
     // fusion is done on the right-hand triangle, never here.
@@ -897,7 +901,37 @@ export class UIManager {
         return `<button class="skill-node ${unlocked ? 'unlocked' : ''}" data-skill-id="${node.id}" ${ready ? '' : 'disabled'}><b>${unlocked ? '✓ ' : ''}${node.title}</b><span>${node.desc}</span><em>${unlocked ? 'UNLOCKED' : ready ? `UNLOCK · ${node.cost} SP` : `LOCKED${prerequisite}`}</em></button>`;
       }).join('');
       return `<section class="skill-branch"><h3>${branch}</h3>${nodes}</section>`;
+    }).join('') + this.masteryMarkup(profile);
+  }
+
+  // Rune masteries (GDD build system): per tree three branches à four tiers, plus
+  // the build analysis that spells out which reaction chains the choice creates.
+  masteryMarkup(profile) {
+    if (!profile.masteries) return '';
+    const free = !!window.gameWorld?.freeMasteries;
+    const roman = ['I', 'II', 'III', 'IV'];
+    const why = { prev: 'VORSTUFE FEHLT', rune: 'RUNE GESPERRT', points: 'KEIN SKILLPUNKT' };
+    const chains = analyzeBuild(profile.masteries, { lastStand: profile.unlockedSkills.has('last_stand') });
+    const trees = Object.entries(MASTERY_TREES).map(([treeId, tree]) => {
+      const branches = Object.entries(tree.branches).map(([branchId, branch]) => {
+        const ids = [1, 2, 3, 4].map((n) => `${treeId}.${branchId}.${n}`);
+        const next = ids.findIndex((id) => !profile.masteries.has(id));
+        const buttons = ids.map((id, i) => {
+          const owned = profile.masteries.has(id); const block = profile.masteryBlocker(id, { free });
+          const req = masteryRequirement(id);
+          const label = block === 'runeLevel' ? `RUNE LV.${req.runeLevel}` : block === 'level' ? `MAGE LV.${req.mageLevel}` : why[block] ?? '';
+          return `<button type="button" class="mastery-tier ${owned ? 'owned' : block ? 'locked' : 'ready'}" data-mastery-id="${id}" title="${branch.tiers[i]}${label ? ' — ' + label : ''}" ${owned || block ? 'disabled' : ''}>${roman[i]}</button>`;
+        }).join('');
+        const shown = next < 0 ? 3 : next;
+        const block = next < 0 ? null : profile.masteryBlocker(ids[next], { free });
+        const req = masteryRequirement(ids[shown]);
+        const hint = next < 0 ? 'MEISTERT' : block === 'runeLevel' ? `braucht RUNE LV.${req.runeLevel}` : block === 'level' ? `braucht MAGE LV.${req.mageLevel}` : block ? why[block] ?? '' : free ? 'TIPPEN · TESTBUILD GRATIS' : 'TIPPEN · 1 SP';
+        return `<div class="mastery-branch"><div class="mastery-tiers"><b>${branch.name}</b>${buttons}</div><span>${roman[shown]}: ${branch.tiers[shown]}</span><em>${hint}</em></div>`;
+      }).join('');
+      return `<div class="mastery-tree"><h4 style="color:${tree.color}">${tree.name}</h4>${branches}</div>`;
     }).join('');
+    const analysis = chains.length ? chains.map((c) => `<li>${c}</li>`).join('') : '<li>Noch keine Reaktionskette — schalte z. B. Schutz · Vergeltung frei.</li>';
+    return `<section class="skill-branch mastery-panel"><h3>RUNEN-MASTERIES · ${profile.masteries.size} aktiv</h3><p>Masteries ändern, wie deine Runen und Schilde reagieren. III und IV brauchen Runen-Level durch Benutzung.</p><div class="mastery-analysis"><b>BUILD-ANALYSE</b><ul>${analysis}</ul></div>${trees}<button type="button" class="mastery-reset" data-mastery-reset>MASTERIES ZURÜCKSETZEN</button></section>`;
   }
 
   updateActiveHeroBtn(heroKey) {
