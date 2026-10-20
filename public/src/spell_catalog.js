@@ -236,7 +236,9 @@ export function lookupRecipe(runes) {
   const spellId = SPELL_RECIPES[key];
   if (!spellId) return null;
   const definition = SPELL_DEFINITIONS[spellId];
-  return RECIPE_NAMES[key] ? { ...definition, name: RECIPE_NAMES[key] } : { ...definition };
+  // The rune elements travel with the definition (status effects roll on them).
+  const elements = key.split('+');
+  return RECIPE_NAMES[key] ? { ...definition, name: RECIPE_NAMES[key], elements } : { ...definition, elements };
 }
 
 // How to cast a spell (shown when a recipe is tapped in the grimoire): the

@@ -11,6 +11,7 @@ import { WEAPONS, ThrownWeaponSpell, drawHeldWeapon, weaponMotion, makeWeaponSho
 import { drawBeastBomb, drawSpiritBow } from './form_attacks.js';
 import { FULL_CHARGE_TIME, activeMoveset, releaseFormTechnique, FORM_PALETTES } from './form_moves.js';
 import { releaseWeaponReach, releaseFormPull, isOnCastle, weaponReachShot } from './hold_actions.js';
+import { onStatusHit, setStatusSource, isBladeLook, hasStatus, drawIceBlock } from './status_effects.js';
 import { formDive, FORM_SPECIAL_MANA, tickFormSpecials } from './form_specials.js';
 import { renderInfusion } from './nature_spells.js';
 import { TransformationFx } from './transform_fx.js';
@@ -1370,6 +1371,8 @@ export class Player extends GroundEntity {
     const targets = window.gameWorld?.getHostileTargets(this.team, true) ?? [];
     let hitAny = false; let hitCount = 0; const sigHits = [];
     setHitContext(this);
+    const bladeLook = WEAPONS[this.weapon ?? this.classWeapon]?.look;
+    const prevStatusSource = setStatusSource(isBladeLook(bladeLook) ? { team: this.team, statusElements: ['blade'], statusChance: isFinisher ? 2 : 1 } : null);
     // Weapon reach / sweeps behind (scythe); the default reach stays 78 px.
     const reach = hitMeta.reach ?? null;
     if (hitMeta.crit && Math.random() < hitMeta.crit) { dmg *= 1.5; isFinisher = true; }
@@ -1395,6 +1398,7 @@ export class Player extends GroundEntity {
       }
     }
     setHitContext(null);
+    setStatusSource(prevStatusSource);
     this.lastMeleeHits = sigHits.filter((h) => !h.blocked).map((h) => h.target);
     afterWeaponSwing(this, hitAny);
     if (sigHits.length) signatureEvent(this, 'hit', { hits: sigHits, heavy: this.state === 'heavyStrike' || isFinisher, facing: this.facing });
@@ -1513,6 +1517,7 @@ export class Player extends GroundEntity {
     amount *= this.buildModifiers?.damageTaken ?? 1;
     const receivedWhileGuarding = this.isGuarding && incomingFromFront;
     this.hp = Math.max(0, this.hp - amount);
+    if (!receivedWhileGuarding) onStatusHit(this, amount, hitKind);
     this.hitFlash = 0.15;
     this.kbVelX = kx;
     this.vx = 0;
@@ -1814,10 +1819,8 @@ export class Player extends GroundEntity {
       ctx.save(); ctx.strokeStyle = 'rgba(194, 164, 255, .9)'; ctx.fillStyle = 'rgba(137, 98, 255, .12)'; ctx.lineWidth = 2;
       ctx.shadowColor = '#b388ff'; ctx.shadowBlur = 14; ctx.beginPath(); ctx.ellipse(this.x, renderY - 37, 32, 45, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.restore();
     }
-    if (this.freezeTimer > 0 && this.isAlive) {
-      ctx.save(); ctx.fillStyle = 'rgba(0,229,255,.45)'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
-      ctx.fillRect(this.x - 24, this.y - 75, 48, 75); ctx.strokeRect(this.x - 24, this.y - 75, 48, 75); ctx.restore();
-    }
+    // Frozen: the Little-Fighter ice block (a FROZEN status draws its own block).
+    if (this.freezeTimer > 0 && this.isAlive && !hasStatus(this, 'frozen') && !hasStatus(this, 'paralysis')) drawIceBlock(ctx, this.x, renderY, 50, 90, this.animTime ?? 0);
   }
 
   // Transformed: the full blazing aura streams upward.
@@ -2171,7 +2174,7 @@ export class Minion extends GroundEntity {
       }
     }
   }
-  takeDamage(amount, kx = 0, lift = 0, stun = .25) { if (this.arcaneShield > 0) { const absorbed = Math.min(amount, this.arcaneShield); this.arcaneShield -= absorbed; amount -= absorbed; if (amount <= 0) return; } this.hp = Math.max(0, this.hp - amount); this.hitFlash = .15; this.kbVelX = kx; this.vx = 0; this.vElevation = lift; this.hurtTimer = Math.max(this.hurtTimer, stun); combat.spawnDamageText(this.x, this.y - 25, amount, { color: this.team === 'blue' ? '#90caf9' : '#ffab91' }); if (!this.hp) { this.isDead = true; combat.spawnHitSparks(this.x, this.y - 16, this.facing, '#fff', 8); } }
+  takeDamage(amount, kx = 0, lift = 0, stun = .25, isCrit = false, hitKind = 'melee') { if (this.arcaneShield > 0) { const absorbed = Math.min(amount, this.arcaneShield); this.arcaneShield -= absorbed; amount -= absorbed; if (amount <= 0) return; } this.hp = Math.max(0, this.hp - amount); if (this.hp > 0) onStatusHit(this, amount, hitKind); this.hitFlash = .15; this.kbVelX = kx; this.vx = 0; this.vElevation = lift; this.hurtTimer = Math.max(this.hurtTimer, stun); combat.spawnDamageText(this.x, this.y - 25, amount, { color: this.team === 'blue' ? '#90caf9' : '#ffab91' }); if (!this.hp) { this.isDead = true; combat.spawnHitSparks(this.x, this.y - 16, this.facing, '#fff', 8); } }
   freeze(duration) { this.freezeTimer = duration; } slow(duration, factor) { this.slowTimer = duration; this.slowFactor = factor; }
   render(ctx) { const vh = this.renderHeight ?? ENTITY_VISUALS.minionHeight; sprites.renderEntity(ctx, this.spriteKey, this.x, this.y, { facing: this.facing, state: this.state, animTime: this.animTime, hitFlash: this.hitFlash > 0, visualHeight: vh }); if (this.hp < this.maxHp) { const barY = this.y - vh - 4; ctx.fillStyle = 'rgba(0,0,0,.7)'; ctx.fillRect(this.x - 11, barY, 22, 3); ctx.fillStyle = this.team === 'blue' ? '#42a5f5' : '#e53935'; ctx.fillRect(this.x - 11, barY, 22 * this.hp / this.maxHp, 3); } }
 }
@@ -2374,7 +2377,7 @@ export class EnemyChampion extends GroundEntity {
     return false;
   }
   executeAIAttack(target) { this.attackCooldown = 1.1; this.state = 'attack1'; this.stateTimer = .28; audio.playSlash(1.1); combat.spawnSlashArc(this.x + this.facing * 20, this.y - 28, this.facing, { radius: 42, color: '#f44336', glow: '#b71c1c' }); if (!(isUpperCastleBattlement(this) && isUpperCastleBattlement(target)) && Math.abs(target.z - this.z) <= .22 && Math.abs((target.worldHeight ?? 0) - this.worldHeight) <= 70) target.takeDamage(24, this.facing * 240, 100, .3); }
-  takeDamage(amount, kx = 0, lift = 0, stun = .35, isCrit = false) { if (!this.isAlive) return; if (this.arcaneShield > 0) { const absorbed = Math.min(amount, this.arcaneShield); this.arcaneShield -= absorbed; amount -= absorbed; if (amount <= 0) { combat.spawnElementalParticles(this.x, this.y - 35, 'fulgur', 5); return; } } this.passiveIdle = 0; this.hp = Math.max(this.passive ? 1 : 0, this.hp - amount); this.hitFlash = .15; this.kbVelX = kx; this.vx = 0; this.vElevation = lift; this.state = 'hurt'; this.stateTimer = stun; combat.spawnDamageText(this.x, this.y - 45, amount, { isCrit, color: '#ff7043' }); if (!this.hp) { window.gameWorld?.recordWizardDeath?.(this.team); this.lifeState = 'Dying'; this.state = 'dead'; this.stateTimer = .45; combat.spawnShockwave(this.x, this.y - 30, 80, '#ff5252'); } }
+  takeDamage(amount, kx = 0, lift = 0, stun = .35, isCrit = false, hitKind = 'melee') { if (!this.isAlive) return; if (this.arcaneShield > 0) { const absorbed = Math.min(amount, this.arcaneShield); this.arcaneShield -= absorbed; amount -= absorbed; if (amount <= 0) { combat.spawnElementalParticles(this.x, this.y - 35, 'fulgur', 5); return; } } this.passiveIdle = 0; this.hp = Math.max(this.passive ? 1 : 0, this.hp - amount); if (this.hp > 0) onStatusHit(this, amount, hitKind); this.hitFlash = .15; this.kbVelX = kx; this.vx = 0; this.vElevation = lift; this.state = 'hurt'; this.stateTimer = stun; combat.spawnDamageText(this.x, this.y - 45, amount, { isCrit, color: '#ff7043' }); if (!this.hp) { window.gameWorld?.recordWizardDeath?.(this.team); this.lifeState = 'Dying'; this.state = 'dead'; this.stateTimer = .45; combat.spawnShockwave(this.x, this.y - 30, 80, '#ff5252'); } }
   takeHazardDamage(amount) {
     if (!this.isAlive || !(amount > 0)) return;
     if (this.arcaneShield > 0) { const absorbed = Math.min(amount, this.arcaneShield); this.arcaneShield -= absorbed; amount -= absorbed; if (amount <= 0) return; }
@@ -2419,9 +2422,10 @@ export class TrainingDummy extends GroundEntity {
     this.vx = this.vz = 0; this.kbVelX = 0; this.vElevation = 0; this.elevation = 0; this.grounded = true;
   }
 
-  takeDamage(amount, kx = 0) {
+  takeDamage(amount, kx = 0, lift = 0, stun = 0, isCrit = false, hitKind = 'melee') {
     if (!(amount > 0)) return;
     this.hp -= amount;
+    onStatusHit(this, amount, hitKind);
     if (this.hp <= 0) this.hp = this.maxHp;
     this.hitFlash = .12; this.idleTimer = 0;
     this.wobble = Math.max(-1, Math.min(1, this.wobble + (Math.sign(kx) || 1) * .6));

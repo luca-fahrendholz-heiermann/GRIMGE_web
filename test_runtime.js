@@ -19,6 +19,9 @@ globalThis.requestAnimationFrame = (callback) => { nextFrame = callback; return 
 const [{ GameWorld }, { audio }, { spells }, { recognizer }, { groundYForDepth }, { ui }] = await Promise.all([import('./public/src/main.js'), import('./public/src/audio.js'), import('./public/src/spells.js'), import('./public/src/recognizer.js'), import('./public/src/world.js'), import('./public/src/ui.js')]);
 for (const method of ['playSlash', 'playImpact', 'playJump', 'playDash', 'playRuneChime', 'playRuneSuccess', 'playRuneFail', 'playSpell', 'playTowerShot']) audio[method] = () => {};
 audio.ensureContext = () => {};
+// Status effects are chance-based; tests force the roll explicitly (default: never).
+const STATUS = await import('./public/src/status_effects.js');
+STATUS.setStatusRandom(() => 1);
 let passed = 0; let failed = 0;
 function assert(condition, name) { if (condition) { console.log(`  ✅ PASS: ${name}`); passed++; } else { console.error(`  ❌ FAIL: ${name}`); failed++; } }
 
@@ -3018,6 +3021,59 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   const traced = grade(true); const free = grade(false);
   assert(FREE_DRAW_BONUS > 0 && traced === 'B' && free === 'A', 'Free drawing (DRAW) earns a small grade bonus over tracing the template');
   P.slottedSpells.length = 0; game.returnToHub();
+}
+
+// Element status effects (20 Oct 2026): chance-based burn / frozen / paralysis / poison / bleed.
+{
+  game.returnToHub(); game.setMatchMode('training'); game.startMatch(); game.selectTrainingMap('waterfalls');
+  const rune = (id) => recognizer.runes.find((entry) => entry.id === id);
+  const P = game.player; const dummy = game.trainingDummy; spells.clearRuntime();
+  const neutral = { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false };
+  const stepSpells = (sec) => { for (let i = 0; i < sec * 60; i++) { spells.update(1 / 60, game); dummy.update(1 / 60); } };
+  P.x = 300; P.z = .5; P.facing = 1; game.battlefield.placeOnSurface(P); P.mp = P.maxMp; P.state = 'idle'; P.canAttack = true;
+  dummy.homeX = dummy.x = 420; dummy.homeZ = dummy.z = .5; dummy.hp = dummy.maxHp; dummy.statusImmuneUntil = {};
+  assert(STATUS.statusElementsOf(spells.resolveSpell([rune('ignis')])).includes('ignis') && STATUS.statusElementsOf({ id: 'frost_nova', name: 'FROST NOVA' }).includes('frost'), 'Spells carry their rune elements (ice spells count as frost)');
+  // Not guaranteed: with a failed roll the fireball hits without a status.
+  STATUS.setStatusRandom(() => 1);
+  spells.cast(P, spells.resolveSpell([rune('ignis')]), game); stepSpells(.6);
+  assert(dummy.hp < dummy.maxHp && !STATUS.hasStatus(dummy, 'burn'), 'A failed roll: the hit lands but leaves no status (chance, not guaranteed)');
+  // A successful roll burns: flames on the body and fire damage over time.
+  spells.clearRuntime(); dummy.hp = dummy.maxHp; STATUS.setStatusRandom(() => 0);
+  spells.cast(P, spells.resolveSpell([rune('ignis')]), game); stepSpells(.5);
+  STATUS.setStatusRandom(() => 1);
+  assert(STATUS.hasStatus(dummy, 'burn'), 'A successful roll sets the target on fire (BURN)');
+  const hpBurn = dummy.hp; stepSpells(1.2);
+  assert(dummy.hp < hpBurn, 'Burning deals damage over time');
+  // Every look renders safely (ice block, flames, arcs, bubbles, blood) incl. the icon row.
+  let bad = 0; const strict = new Proxy({}, { get: (t, k) => (k === 'arc' || k === 'ellipse') ? (x, y, r1, r2) => { if (r1 < 0 || (k === 'ellipse' && r2 < 0)) bad++; } : k === 'canvas' ? undefined : () => {}, set: () => true });
+  for (const kind of Object.keys(STATUS.STATUS_DEFS)) { dummy.statusImmuneUntil = {}; STATUS.applyStatus(dummy, kind); }
+  for (const e of STATUS.statusDepthEntries()) e.render(strict);
+  assert(!bad && Object.keys(dummy.statuses).length === 5 && STATUS.statusDepthEntries().every((e) => e.y > dummy.y), 'All five statuses render on the target (in front of it) without errors');
+  spells.clearRuntime();
+  assert(!Object.keys(dummy.statuses ?? {}).length, 'Clearing the runtime clears the statuses');
+  // Frozen: the player is stuck in an ice block; afterwards a short immunity.
+  P.statusImmuneUntil = {}; STATUS.applyStatus(P, 'frozen');
+  const fx0 = P.x; P.update(.3, { ...neutral, keys: { KeyD: true }, move: { x: 1, z: 0 } }, game.battlefield, game);
+  assert(P.freezeTimer > 0 && Math.abs(P.x - fx0) < 1, 'FROZEN: trapped in an ice block — no movement');
+  for (let i = 0; i < 100; i++) spells.update(1 / 60, game);
+  assert(!STATUS.hasStatus(P, 'frozen') && !STATUS.applyStatus(P, 'frozen'), 'After the ice breaks a short immunity prevents an instant re-freeze');
+  // Paralysis stutters (short freezes every ~0.8 s).
+  P.statusImmuneUntil = {}; P.freezeTimer = 0; STATUS.applyStatus(P, 'paralysis'); let stutters = 0;
+  for (let i = 0; i < 120; i++) { spells.update(1 / 60, game); if (P.freezeTimer > .15) stutters++; P.freezeTimer = Math.max(0, P.freezeTimer - 1 / 60); }
+  assert(stutters >= 2, 'PARALYSIS: the target keeps stuttering (short freezes)');
+  spells.clearRuntime(); P.freezeTimer = 0;
+  // Bleeding hurts more while moving.
+  const E = dummy; const bleedRun = (moving) => { E.statusImmuneUntil = {}; E.hp = E.maxHp; E.x = 500; E.z = .5; STATUS.applyStatus(E, 'bleed'); for (let i = 0; i < 120; i++) { if (moving) E.x += 2; spells.update(1 / 60, game); } spells.clearRuntime(); return E.maxHp - E.hp; };
+  const still = bleedRun(false); const moving = bleedRun(true);
+  assert(moving > still && still > 0, `BLEED: damage over time, more while moving (${still} still vs ${moving} moving)`);
+  // Blade weapons can cause bleeding; blunt ones never do.
+  P.state = 'idle'; P.canAttack = true; P.comboStep = 0; dummy.homeX = dummy.x = P.x + 30; dummy.statusImmuneUntil = {};
+  P.equipClassWeapon('sword_shield'); STATUS.setStatusRandom(() => 0); P.executeAttack(neutral, 'normal');
+  const swordBleeds = STATUS.hasStatus(dummy, 'bleed'); spells.clearRuntime(); dummy.statusImmuneUntil = {};
+  P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.comboStep = 0; P.equipClassWeapon('hammer'); P.executeAttack(neutral, 'normal');
+  STATUS.setStatusRandom(() => 1);
+  assert(swordBleeds && !STATUS.hasStatus(dummy, 'bleed'), 'Blade weapons can make the target bleed, blunt weapons cannot');
+  spells.clearRuntime(); P.equipClassWeapon(null); dummy.homeX = dummy.x = 900;
 }
 
 // Air combat (20 Oct 2026): air attacks keep momentum, a hit latches onto the foe, then both fall;

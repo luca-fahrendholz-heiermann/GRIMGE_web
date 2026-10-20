@@ -13,6 +13,7 @@ import { castNatureSpell, isNatureOrInfusion } from './nature_spells.js';
 import { renderWallLook } from './wall_looks.js';
 import { renderSpellVisual, meteorShatterBurst, spellVisualActive } from './spell_visuals.js';
 import { offerRecast } from './recast.js';
+import { statusElementsOf, setStatusSource, updateStatuses, statusDepthEntries, clearStatuses } from './status_effects.js';
 import { BeamSpell, BeamClash, resolveBeamInteractions, MirrorWardSpell, GravityLiftSpell, TitanStompSpell, SoulSeekerBolt, SeismicSlamSpell, ConeBreathSpell, BurrowStrikeSpell, ShieldBubbleSpell, renderPixelated } from './abilities.js';
 
 export { BeamClash };
@@ -154,6 +155,7 @@ export class SpellSystem {
     if (typeof spell.life === 'number') spell.life *= spell.quality.duration;
     if (typeof spell.craterLife === 'number') spell.craterLife *= spell.quality.duration;
     spell.system = this;
+    if (this.castElements && !spell.statusElements) spell.statusElements = this.castElements;
     this.activeSpells.push(spell);
     if (spell.isCapturableProjectile) signatureProjectileSpawned(spell);
     return spell;
@@ -167,6 +169,7 @@ export class SpellSystem {
     for (const clash of this.activeClashes) clash.finish({ type: 'cleared' });
     // A cleared Burrow Strike must not leave its caster underground (invisible) forever.
     for (const spell of this.activeSpells) if (spell.caster?.burrowed) spell.caster.burrowed = false;
+    clearStatuses();
     this.activeSpells = [];
     this.activeSummons = [];
     this.activeClashes = [];
@@ -232,8 +235,15 @@ export class SpellSystem {
   // targeting step: { x, z } for ground spells, { x, z, orientation, length }
   // for placed walls and { entity } for ally spells. Without a target every
   // spell falls back to its classic in-front-of-the-caster behaviour.
+  // Every spell object created during a cast is tagged with the cast's elements
+  // (status effects: burn, frozen, paralysis, poison, bleed — rolled per hit).
   cast(caster, spellDef, gameWorld, quality = null, target = null) {
     if (!spellDef) return;
+    const prev = this.castElements; this.castElements = statusElementsOf(spellDef);
+    try { return this.castSpellDef(caster, spellDef, gameWorld, quality, target); } finally { this.castElements = prev; }
+  }
+
+  castSpellDef(caster, spellDef, gameWorld, quality = null, target = null) {
     const castQuality = this.applyCasterModifiers(caster, spellDef, quality);
 
     audio.playSpell(spellDef.id);
@@ -752,7 +762,9 @@ export class SpellSystem {
     updateSignatureWorld(dt, gameWorld);
     for (let i = this.activeSpells.length - 1; i >= 0; i--) {
       const spell = this.activeSpells[i];
-      spell.update(dt, gameWorld);
+      // Hits during this update roll the spell's status effects.
+      const prevSource = setStatusSource(spell.statusElements ? spell : null);
+      try { spell.update(dt, gameWorld); } finally { setStatusSource(prevSource); }
       this.updateTrail(spell, dt);
       if (spell.isFinished) {
         this.activeSpells.splice(i, 1);
@@ -767,6 +779,7 @@ export class SpellSystem {
         this.activeSummons.splice(i, 1);
       }
     }
+    updateStatuses(dt);
     for (const grave of this.graves) grave.age += dt;
     this.graves = this.graves.filter((grave) => grave.age < 45);
     sky.update(dt, gameWorld);
@@ -814,6 +827,7 @@ export class SpellSystem {
       if (y !== null) entries.push({ y, spell });
     }
     for (const summon of this.activeSummons) entries.push({ y: summon.y, render: (c) => summon.render(c) });
+    entries.push(...statusDepthEntries());
     return entries;
   }
 
