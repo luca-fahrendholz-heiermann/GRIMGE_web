@@ -920,10 +920,17 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
   resetDuel(); P.backdashCooldown = 0;
   fakeNow += 1000; touch.beginJoystick(ev(300, 400));
   fakeNow += 70; touch.update(ev(190, 398));
-  assert(P.state === 'dash' && P.backdashTimer > 0 && P.facing === 1, 'A fast flick against the facing direction triggers one backdash and keeps facing stable');
+  assert(P.state !== 'dash' && touch.leftGesture.state === 'joystick' && !P.touchFacingLock, 'Left half: a fast move against the facing is plain stick input (no backdash, facing free to turn)');
   touch.clear(ev(190, 398));
+  // Right half: a back swipe is the backdash; attack during it fires one counter shot.
+  resetDuel(); P.backdashCooldown = 0; P.mp = P.maxMp; spells.clearRuntime();
+  assert(game.performTouchAttackGesture(-90, 6) && P.state === 'dash' && P.backdashTimer > 0 && P.facing === 1, 'Right half: a swipe away from the facing triggers the backdash and keeps facing');
+  const mpDash = P.mp;
+  assert(P.executeAttack(neutralInput, 'normal') && spells.activeSpells.some((s) => s.isWeaponShot) && mpDash - P.mp === 1 && P.lastBackdashCounter, 'Attack during the backdash fires one counter shot (1 mana)');
+  const shotsAfter = spells.activeSpells.length;
+  assert(!P.executeAttack(neutralInput, 'normal') && spells.activeSpells.length === shotsAfter, 'Only one counter shot per backdash (no free automatic counter)');
   P.backdashTimer = 0; P.state = 'idle';
-  assert(!P.triggerBackdash({ source: 'touch' }), 'Touch backdash has a short cooldown');
+  assert(!P.triggerBackdash({ source: 'touch' }), 'Touch backdash has a cooldown');
   resetDuel(); P.backdashCooldown = 0;
   fakeNow += 1000; touch.beginJoystick(ev(200, 400));
   fakeNow += 320; touch.update(ev(310, 400));
@@ -1207,7 +1214,7 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
   for (let t = 0; t < .3; t += 1 / 60) P.update(1 / 60, neutral, game.battlefield, game);
   P.activateSprint(1);
   assert(!P.sprintActive && !P.triggerBackdash(), 'Right after a dash there is no sprint and the dash is on cooldown');
-  for (let t = 0; t < .7; t += 1 / 60) P.update(1 / 60, neutral, game.battlefield, game);
+  for (let t = 0; t < .9; t += 1 / 60) P.update(1 / 60, neutral, game.battlefield, game);
   P.activateSprint(1);
   assert(P.sprintActive && (P.cancelSprint(), P.triggerBackdash()), 'After the cooldown sprint and dash are available again');
 
@@ -1576,8 +1583,8 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
   resetForm(); P.backdashCooldown = 0; P.backdashSuppressTimer = 0;
   const dashFrom = P.x;
   P.triggerBackdash();
-  for (let i = 0; i < 20; i++) P.update(1 / 60, neutralInput, game.battlefield, game);
-  assert(Math.abs(Math.abs(P.x - dashFrom) - 36) < 4, `The backdash covers 1.5 u (${Math.abs(P.x - dashFrom).toFixed(1)} px) over 15 ticks`);
+  for (let i = 0; i < 24; i++) P.update(1 / 60, neutralInput, game.battlefield, game);
+  assert(Math.abs(Math.abs(P.x - dashFrom) - 81.6) < 5, `The backdash covers 3.4 u (${Math.abs(P.x - dashFrom).toFixed(1)} px) over 18 ticks — farther than the original 1.5 u`);
   resetForm();
   // The body forms move with the Wizard: running makes them lean / stream.
   resetForm();

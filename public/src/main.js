@@ -633,8 +633,8 @@ export class GameWorld {
     let attackStartTime = 0;
     let chargeArmed = false;
     // One record per left finger (concept doc §4.5.4): every touch starts as
-    // PendingLeftGesture and is classified exactly once as JOYSTICK, BACKDASH
-    // or SPRINT. A finger already classified as joystick is never
+    // PendingLeftGesture and is classified exactly once as JOYSTICK or SPRINT
+    // (the backdash is a back swipe on the right half). A finger already classified as joystick is never
     // re-interpreted as a flick until it is released.
     let leftGesture = null;
     const JOYSTICK_RADIUS = 66;
@@ -677,7 +677,10 @@ export class GameWorld {
         && Math.abs(dx) >= FLICK_MIN_DISTANCE
         && Math.abs(dx) / elapsed * 1000 >= FLICK_MIN_SPEED
         && Math.atan2(Math.abs(dy), Math.abs(dx)) <= FLICK_MAX_ANGLE;
-      if (isFlick) return Math.sign(dx) * g.facing > 0 ? 'sprint' : 'backdash';
+      // The backdash moved to the right half (back swipe): a move against the facing is plain
+      // stick input right away, so turning around is never held up by the flick check.
+      if (dx * g.facing < -14) return 'joystick';
+      if (isFlick) return 'sprint';
       // Too slow, too long or not horizontal enough: this finger is a stick.
       if (elapsed > FLICK_WINDOW_MS || distance > FLICK_MIN_DISTANCE * 1.6) return 'joystick';
       return 'pending';
@@ -694,11 +697,6 @@ export class GameWorld {
           // flick reads as a moderate forward steer, not a pinned stick.
           placeStick({ x: pt.x - dir * JOYSTICK_RADIUS * .6, y: pt.y });
         } else g.state = 'joystick';
-      } else if (kind === 'backdash') {
-        this.player.triggerBackdash({ source: 'touch' });
-        // After the short dodge the same finger steers normally again.
-        placeStick(pt);
-        g.state = 'joystick';
       }
     };
     const update = (event) => {
@@ -727,7 +725,7 @@ export class GameWorld {
       // A very fast flick can be released before a move event classified it.
       if (leftGesture?.state === 'pending') {
         const kind = classifyFlick(released, performance.now());
-        if (kind === 'sprint' || kind === 'backdash') settleLeftGesture(kind, released);
+        if (kind === 'sprint') settleLeftGesture(kind, released);
       }
       if (leftGesture?.state === 'sprint') this.player?.releaseTouchSprint?.();
       if (this.player) this.player.touchFacingLock = false;
@@ -809,6 +807,12 @@ export class GameWorld {
         const elapsed = performance.now() - attackStartTime;
         const dy = pt.y - attackStart.y;
         const facingDx = dx * this.player.facing;
+        // Right half: a quick swipe away from the facing is the backdash (fires on the move, not on release).
+        if (facingDx < -40 && Math.abs(dx) > Math.abs(dy) * 1.2 && elapsed < 320 && !this.player.activeTelekinesis) {
+          this.player.triggerBackdash({ source: 'touch' });
+          attackPointerId = null; attackStart = null;
+          return;
+        }
         // Hold, then drag (by angle): toward the facing = forward, up = up, down = down.
         if (elapsed > 180 && Math.hypot(dx, dy) > 34 && facingDx > -12) {
           const ahead = Math.max(facingDx, 0) * .8;
@@ -881,6 +885,8 @@ export class GameWorld {
     // Right-half up-swipe is an uppercut; a right-swipe is the compact heavy
     // lunge. In the air a down-swipe becomes the existing dive strike.
     const facingDx = dx * (this.player.facing || 1);
+    // A swipe away from the facing is the backdash (a very fast swipe can end before a move event).
+    if (facingDx < -threshold && Math.abs(dx) >= Math.abs(dy)) return this.player.triggerBackdash({ source: 'touch' });
     if (!this.player.grounded && dy > threshold && Math.abs(dy) > Math.abs(dx)) attackKind = 'dive';
     else if (dy < -threshold && Math.abs(dy) > Math.abs(dx)) attackKind = 'uppercut';
     else if (facingDx > threshold && Math.abs(dx) >= Math.abs(dy)) attackKind = 'heavy';

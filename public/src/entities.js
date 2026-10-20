@@ -10,7 +10,7 @@ import { formGuardCounter, updateFormSprint, FormGrabFx, formJumpFx, FORM_SPRINT
 import { WEAPONS, ThrownWeaponSpell, drawHeldWeapon, weaponMotion, makeWeaponShots, astralHue } from './weapons.js';
 import { drawBeastBomb, drawSpiritBow } from './form_attacks.js';
 import { FULL_CHARGE_TIME, activeMoveset, releaseFormTechnique, FORM_PALETTES } from './form_moves.js';
-import { releaseWeaponReach, releaseFormPull, isOnCastle } from './hold_actions.js';
+import { releaseWeaponReach, releaseFormPull, isOnCastle, weaponReachShot } from './hold_actions.js';
 import { formDive, FORM_SPECIAL_MANA, tickFormSpecials } from './form_specials.js';
 import { renderInfusion } from './nature_spells.js';
 import { TransformationFx } from './transform_fx.js';
@@ -83,14 +83,18 @@ const SPRINT_ACCEL_TIME = 0.06;           // walk → sprint speed
 
 const JUMP_BUFFER_TIME = 6 / 60;          // 6 ticks
 
-const BACKDASH_DISTANCE = 1.5 * UNITY_PX; // 1.5 u → 36 px
-const BACKDASH_DURATION = 15 / 60;        // 15 ticks
-const BACKDASH_INVULN_TIME = 3 / 60;      // first 3 ticks
+// Backdash (user, 20 Oct 2026): farther than the Unity original, triggered by a back swipe on
+// the right touch area (or the keyboard reversal flick); one counter shot can be fired during it.
+const BACKDASH_DISTANCE = 3.4 * UNITY_PX; // 3.4 u → ~82 px
+const BACKDASH_DURATION = 18 / 60;        // 18 ticks
+const BACKDASH_INVULN_TIME = 4 / 60;      // first 4 ticks
+const BACKDASH_COUNTER_GRACE = .1;        // counter shot still allowed shortly after the dash
+const BACKDASH_COUNTER_MANA = 1;
 const BACKDASH_REVERSAL_WINDOW = 9 / 60;  // flick toward facing, then back within 9 ticks
 // After a backdash no sprint can start right away (stale direction is
 // suppressed for 8 ticks in Unity). The prototype keeps its dodge cooldown.
 const BACKDASH_SUPPRESS_TIME = 8 / 60;
-const BACKDASH_COOLDOWN = 0.5;
+const BACKDASH_COOLDOWN = 0.8;
 // Sprint Attack (sprint punisher) — Unity CharacterDefinition "Sprint Attack":
 // the Forward Heavy at normal Heavy strength, started at once from a sprint.
 // It keeps advancing until it connects; a clean hit carries the attacker a
@@ -358,6 +362,7 @@ export class Player extends GroundEntity {
       if (this.focusDecayDelay <= 0) this.focus = Math.max(0, this.focus - FOCUS_DECAY_RATE * dt);
     }
     this.backdashCooldown = Math.max(0, this.backdashCooldown - dt);
+    this.backdashCounterTimer = Math.max(0, (this.backdashCounterTimer ?? 0) - dt);
     this.sp = Math.min(this.maxSp, this.sp + dt * 25);
     this.auraShockCooldown = Math.max(0, this.auraShockCooldown - dt);
     this.arcaneShieldTimer = Math.max(0, this.arcaneShieldTimer - dt);
@@ -921,11 +926,27 @@ export class Player extends GroundEntity {
     this.backdashTotalTicks = Math.round(BACKDASH_DURATION * 60);
     this.backdashTicksLeft = this.backdashTotalTicks;
     this.invulnerableTimer = BACKDASH_INVULN_TIME;
+    this.backdashCounterTimer = BACKDASH_DURATION + BACKDASH_COUNTER_GRACE;
     this.state = 'dash';
     this.stateTimer = BACKDASH_DURATION;
     this.vx = 0; this.vz = 0;
     audio.playDash();
     combat.spawnShockwave(this.x, this.y - 25, 24, '#80d8ff');
+    return true;
+  }
+
+  // Attack during the backdash: fire back once — the weapon's ranged move, a little weaker,
+  // for 1 mana. Never automatic (that would undo the distance the dash just made).
+  backdashCounterShot() {
+    this.backdashCounterTimer = 0;
+    if (this.freeMana < BACKDASH_COUNTER_MANA) { combat.spawnDamageText(this.x, this.y - 70, 'NO MANA', { color: '#64b5f6' }); return false; }
+    this.mp -= BACKDASH_COUNTER_MANA;
+    const weaponId = this.weapon ?? this.classWeapon;
+    for (const s of makeWeaponShots(this, weaponReachShot(this), weaponId, { power: .8 })) spells.addSpell(s, 'B');
+    combat.spawnShockwave(this.x + this.facing * 22, this.y - (this.elevation ?? 0) - 44, 22, astralHue(weaponId));
+    this.setWeaponMotion?.('heavy'); this._weaponSwingTime = .2;
+    this.lastBackdashCounter = true;
+    audio.playSlash(.9);
     return true;
   }
 
@@ -1011,6 +1032,9 @@ export class Player extends GroundEntity {
 
   executeAttack(input, attackKind = 'normal') {
     if (!this.isAlive || this.isGuarding || this.burrowed || !window.gameWorld?.isMatchRunning?.()) return false;
+    // Attack while backdashing: the counter shot (once per dash).
+    // Only while the dash runs or right after it ended (an interrupted dash closes the window).
+    if (this.backdashCounterTimer > 0 && (this.backdashTimer > 0 || this.backdashSuppressTimer > 0)) return this.backdashCounterShot();
     // Holding targets with Gravity Lift: the attack releases them instead.
     if (this.activeTelekinesis && !this.activeTelekinesis.isFinished) {
       const back = attackKind === 'normal' && normalizeMove(moveVector(input)).x * (this.facing || 1) < -.5;
