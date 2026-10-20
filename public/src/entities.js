@@ -7,7 +7,7 @@ import { ARENA_LAYOUT, ENTITY_VISUALS, GroundEntity, groundDistance } from './wo
 import { lookupRecipe, runeManaCost } from './spell_catalog.js';
 import { drawFocusAura, drawEidolonGuardian, drawNinefoldSpirit, drawFormGuard } from './forms_fx.js';
 import { formGuardCounter, updateFormSprint, FormGrabFx, formJumpFx, FORM_SPRINT_ATTACKS, FormSprintAttackFx, formSprintImpact } from './form_actions.js';
-import { WEAPONS, ThrownWeaponSpell, drawHeldWeapon, weaponMotion, makeWeaponShots } from './weapons.js';
+import { WEAPONS, ThrownWeaponSpell, drawHeldWeapon, weaponMotion, makeWeaponShots, astralHue } from './weapons.js';
 import { drawBeastBomb, drawSpiritBow } from './form_attacks.js';
 import { FULL_CHARGE_TIME, activeMoveset, releaseFormTechnique, FORM_PALETTES } from './form_moves.js';
 import { releaseWeaponReach, releaseFormPull, isOnCastle } from './hold_actions.js';
@@ -1741,6 +1741,8 @@ export class Player extends GroundEntity {
     const charge = Math.min(1, this.formCharge.elapsed / FULL_CHARGE_TIME);
     const full = this.formCharge.elapsed >= FULL_CHARGE_TIME;
     const dir = this.chargeDir ?? 'forward';
+    // HOLD (no direction) = the pull: a distinct charge look, never a normal attack.
+    if (dir === 'hold') { this.renderHoldCharge(ctx, renderY, charge, currentBuffForm(this)?.mat?.vein ?? FORM_PALETTES[form]?.main ?? '#c9a8ff', true); return; }
     // Arcane States: each charges with its own ritual.
     if (renderBuffCharge(ctx, this, renderY, dir, charge, full)) return;
     const pal = FORM_PALETTES[form];
@@ -1792,7 +1794,27 @@ export class Player extends GroundEntity {
     ctx.restore();
   }
 
+  // HOLD charge (attack held without a direction): the weapon hand / weapon glows in its
+  // colour, energy streams into it and an arrow shows that a ranged move (or the pull) follows.
+  renderHoldCharge(ctx, renderY, k, color, pull = false) {
+    const f = this.facing || 1; const hx = this.x + f * 17; const hy = renderY - 46; const t = this.animTime ?? 0;
+    const pulse = .6 + .4 * Math.sin(t * 18);
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    // Glow around the weapon hand (grows with the charge).
+    for (const [r, a] of [[16 + 10 * k, .25], [9 + 5 * k, .55], [4 + 2 * k, .95]]) { ctx.globalAlpha = a * pulse; ctx.fillStyle = r < 8 ? '#ffffff' : color; ctx.beginPath(); ctx.arc(hx, hy, r, 0, Math.PI * 2); ctx.fill(); }
+    // A glowing outline along the held weapon direction.
+    ctx.globalAlpha = .8; ctx.strokeStyle = color; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(hx - f * 6, hy + 8); ctx.lineTo(hx + f * (18 + 10 * k), hy - 10); ctx.stroke();
+    // Energy streaming into the hand.
+    for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2 + t * 3; const r = 34 * (1 - ((t * 2 + i / 8) % 1)) + 6; ctx.globalAlpha = .9; ctx.fillStyle = i % 2 ? '#ffffff' : color; ctx.fillRect(Math.round(hx + Math.cos(a) * r), Math.round(hy + Math.sin(a) * r * .7), 2, 2); }
+    // Arrow ahead: a ranged move (or a pull hook) is coming, not a melee swing.
+    const ax = this.x + f * (40 + 6 * k); ctx.globalAlpha = .55 + .4 * k; ctx.fillStyle = color;
+    ctx.beginPath(); ctx.moveTo(ax, hy - 6); ctx.lineTo(ax + f * 12, hy); ctx.lineTo(ax, hy + 6); ctx.closePath(); ctx.fill();
+    if (pull) { ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(ax + f * 16, hy, 5, f > 0 ? -1.6 : 1.6, f > 0 ? 1.6 : 4.7); ctx.stroke(); }
+    ctx.restore();
+  }
+
   renderChargeAura(ctx, renderY) {
+    if (this.chargeDir === 'hold') { if (!this.formCharge) this.renderHoldCharge(ctx, renderY, Math.max(0, Math.min(1, 1 - this.chargeTimer / this.chargeMaxTime)), astralHue(this.weapon ?? this.classWeapon)); return; }
     const t = this.chargeTimer;
     const intensity = Math.min(1, t / 0.5);
     const pulse = 1 + Math.sin(this.animTime * 10) * 0.12 * intensity;

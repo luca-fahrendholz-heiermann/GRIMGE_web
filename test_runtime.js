@@ -3017,6 +3017,18 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   P.chargeTimer = 1; P.chargeSource = 'key'; P.update(1 / 60, neutral, game.battlefield, game); const holdDir = P.chargeDir;
   P.update(1 / 60, { ...neutral, keys: { KeyD: true } }, game.battlefield, game); const fwdDir = P.chargeDir; P.chargeTimer = 0; P.formCharge = null;
   assert(holdDir === 'hold' && fwdDir === 'forward', 'K alone charges the HOLD slot, K + toward the facing the forward charge');
+  {
+    // The HOLD charge has its own look (glowing weapon hand + arrow) — never the normal melee aura.
+    const m = { arcs: 0, glow: 0 };
+    const hctx = new Proxy({}, { get: (t, k) => k === 'arc' ? (x, y, r) => { if (r < 0) throw new Error('IndexSizeError'); m.arcs++; } : k === 'canvas' ? undefined : () => {}, set: (t, k, v) => { if (k === 'globalCompositeOperation' && v === 'lighter') m.glow++; return true; } });
+    ready(); P.beginCharge('hold', 'key'); P.chargeDir = 'hold'; P.chargeTimer = P.chargeMaxTime * .4; P.renderChargeAura(hctx, P.y);
+    const normalArcs = m.arcs; P.chargeTimer = 0; P.formCharge = null;
+    assert(normalArcs >= 3 && m.glow >= 1, 'HOLD charge shows a glowing weapon hand instead of the melee aura');
+    P.chargeTimer = 99; P.formCharge = { elapsed: .5 }; m.arcs = 0;
+    let ok = true; try { P.renderChargeAura(hctx, P.y); } catch { ok = false; }
+    P.chargeTimer = 0; P.formCharge = null;
+    assert(ok && m.arcs === 0, 'In form mode the normal-aura path skips the HOLD look (no negative radii)');
+  }
   spells.clearRuntime(); ready(); P.beginCharge('up', 'key'); P.chargeTimer = P.chargeMaxTime * .2; P.chargeDir = 'up'; P.releaseCharge();
   const skyArrow = spells.activeSpells.filter((s) => s.isWeaponShot);
   assert(skyArrow.length === 1 && skyArrow[0].kind === 'arrow' && skyArrow[0].shot.lift > 400 && P.lastWeaponUp === 'HIMMELSPFEIL', 'Charged UP with the bow: the sky arrow that lifts the target');
