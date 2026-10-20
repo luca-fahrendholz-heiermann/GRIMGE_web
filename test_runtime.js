@@ -227,9 +227,10 @@ game.player.mp = game.player.maxMp;
 game.slotRuneSpell(slotIgnis); game.slotRuneSpell(slotAqua);
 assert(game.slotAt(0)?.runes[0].id === 'ignis' && game.slotAt(1)?.runes[0].id === 'aqua' && !game.slotAt(2), 'Drawn runes fill the triangle slots in order: top, bottom-left, bottom-right');
 assert(game.player.boundMana === 20 && game.player.freeMana === game.player.mp - 20, 'Prepared slots bind their rune mana; only the remainder is free for new drawings');
-const selectedSpellCount = spells.activeSpells.length;
+const realSpells = () => spells.activeSpells.filter((sp) => sp.constructor.name !== 'CastCircleFx').length; // the cast circle is decoration
+const selectedSpellCount = realSpells();
 const manaBeforeSlotCast = game.player.mp;
-assert(game.castSlotAt(0) && game.player.slottedSpells.length === 1 && game.slotAt(1)?.runes[0].id === 'aqua' && spells.activeSpells.length === selectedSpellCount + 1, 'Tapping a slot fires exactly that spell and leaves the other slots in place');
+assert(game.castSlotAt(0) && game.player.slottedSpells.length === 1 && game.slotAt(1)?.runes[0].id === 'aqua' && realSpells() === selectedSpellCount + 1 && spells.activeSpells.some((sp) => sp.constructor.name === 'CastCircleFx'), 'Tapping a slot fires exactly that spell (with a casting circle at the feet) and leaves the other slots in place');
 assert(game.player.mp === manaBeforeSlotCast - 10 && game.player.boundMana === 10, 'Casting turns the slot\'s bound mana into spent mana without a second payment');
 game.slotRuneSpell(runeById('ventus'));
 assert(game.slotAt(0)?.runes[0].id === 'ventus', 'A freed slot is refilled by the next drawn rune');
@@ -1257,7 +1258,7 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
   reset();
   P.z = .4; game.battlefield.placeOnSurface(P);
   spells.cast(P, spells.resolveSpell([rune('terra')]), game);
-  const spikes = spells.activeSpells.find((s) => Number.isFinite(spells.spellDepth(s)));
+  const spikes = spells.activeSpells.find((s) => !s.isGroundDecal && Number.isFinite(spells.spellDepth(s)));
   const dummyY = groundYForDepth(.5);
   assert(spikes && spells.spellDepth(spikes) < dummyY && spells.depthEntries().some((entry) => entry.spell === spikes), 'Spikes behind the dummy sort behind it (painter order)');
 

@@ -15,6 +15,7 @@ import { renderSpellVisual, meteorShatterBurst, spellVisualActive } from './spel
 import { offerRecast } from './recast.js';
 import { statusElementsOf, setStatusSource, updateStatuses, statusDepthEntries, clearStatuses } from './status_effects.js';
 import { applyWard, setMasterySink } from './mastery.js';
+import { CastCircleFx } from './cast_circle.js';
 import { BeamSpell, BeamClash, resolveBeamInteractions, MirrorWardSpell, GravityLiftSpell, TitanStompSpell, SoulSeekerBolt, SeismicSlamSpell, ConeBreathSpell, BurrowStrikeSpell, ShieldBubbleSpell, renderPixelated } from './abilities.js';
 
 export { BeamClash };
@@ -252,7 +253,10 @@ export class SpellSystem {
     const castQuality = this.applyCasterModifiers(caster, spellDef, quality);
 
     audio.playSpell(spellDef.id);
-    combat.shakeCamera(spellDef.tier * 4 + 3, 0.3);
+    // Casting draws a magic circle at the feet (pixel-art look); the screen only kicks for the
+    // big special runes — impacts bring their own shake (no blanket shake on every cast).
+    if (caster && Number.isFinite(caster.x)) this.addSpell(new CastCircleFx(caster, spellDef.color ?? '#b388ff', { big: (spellDef.tier ?? 1) >= 3 }), 'B');
+    if ((spellDef.tier ?? 1) >= 3) combat.shakeCamera(4, 0.2);
 
     const facing = caster.facing;
     const startX = caster.x + facing * 35;

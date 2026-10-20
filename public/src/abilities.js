@@ -1109,6 +1109,31 @@ export class ShieldBubbleSpell {
 // ─────────────────────────────────────────────────────────────────────────
 
 let pixelLayer = null;
+// Sprite-style outline for the VFX layer (user, 21 Oct 2026: spells must fit the pixel-art
+// character designs — dark, hue-tinted contours, hard pixel edges). Every effect drawn into
+// the low-res layer gets a 1-art-pixel contour in a darkened version of its own colour.
+export const PIXEL_OUTLINE = { enabled: true, color: 'rgba(14, 7, 24, 0.84)' };
+let outlineLayers = null;
+function lowResCanvas(doc, w, h) { const canvas = doc.createElement('canvas'); canvas.width = w; canvas.height = h; const c = canvas.getContext?.('2d'); return c ? { canvas, ctx: c } : null; }
+function outlined(doc, layer, w, h) {
+  if (!outlineLayers || outlineLayers.sil.canvas.width !== w || outlineLayers.sil.canvas.height !== h) {
+    const sil = lowResCanvas(doc, w, h); const comp = lowResCanvas(doc, w, h);
+    if (!sil || !comp) return layer;
+    outlineLayers = { sil, comp };
+  }
+  const { sil, comp } = outlineLayers; const sc = sil.ctx; const cc = comp.ctx;
+  // Silhouette: the layer darkened toward near-black (a trace of its hue stays).
+  sc.setTransform(1, 0, 0, 1, 0, 0); sc.globalAlpha = 1;
+  sc.globalCompositeOperation = 'copy'; sc.drawImage(layer, 0, 0);
+  sc.globalCompositeOperation = 'source-atop'; sc.fillStyle = PIXEL_OUTLINE.color; sc.fillRect(0, 0, w, h);
+  sc.globalCompositeOperation = 'source-over';
+  // Contour = the silhouette shifted one pixel in the four directions, the effect on top.
+  cc.setTransform(1, 0, 0, 1, 0, 0); cc.globalAlpha = 1; cc.globalCompositeOperation = 'source-over'; cc.clearRect(0, 0, w, h);
+  cc.drawImage(sil.canvas, 1, 0); cc.drawImage(sil.canvas, -1, 0); cc.drawImage(sil.canvas, 0, 1); cc.drawImage(sil.canvas, 0, -1);
+  cc.drawImage(layer, 0, 0);
+  return comp.canvas;
+}
+
 export function renderPixelated(ctx, pixelSize, draw) {
   const target = ctx.canvas;
   const transform = typeof ctx.getTransform === 'function' ? ctx.getTransform() : null;
@@ -1127,10 +1152,11 @@ export function renderPixelated(ctx, pixelSize, draw) {
   lctx.clearRect(0, 0, w, h);
   lctx.setTransform(transform.a / pixelSize, transform.b / pixelSize, transform.c / pixelSize, transform.d / pixelSize, transform.e / pixelSize, transform.f / pixelSize);
   draw(lctx);
+  const shown = PIXEL_OUTLINE.enabled ? outlined(doc, pixelLayer.canvas, w, h) : pixelLayer.canvas;
   ctx.save();
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.imageSmoothingEnabled = false;
-  ctx.drawImage(pixelLayer.canvas, 0, 0, w * pixelSize, h * pixelSize);
+  ctx.drawImage(shown, 0, 0, w * pixelSize, h * pixelSize);
   ctx.restore();
   return true;
 }
