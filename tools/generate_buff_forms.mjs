@@ -305,7 +305,7 @@ for (const f of forms) {
 // techniques, a charge-up ritual and its own vivid palette (arcane_moves.js). The
 // other 27 atlas forms stay parsed and are listed as ARCHIVED in the morphology
 // doc — adding an id here brings one back.
-const ACTIVE = ['B01', 'B02', 'T02', 'T04', 'T05', 'T06', 'T08', 'T13', 'T23', 'T24', 'T35', 'T37', 'T38', 'T39', 'T40', 'A01', 'A02', 'A03'];
+const ACTIVE = ['B01', 'B02', 'T02', 'T04', 'T05', 'T06', 'T08', 'T13', 'T23', 'T24', 'T35', 'T37', 'T38', 'T39', 'T40', 'A01', 'A02', 'A03', 'A04'];
 const PALETTES = {
   T02: ['#2a1210', '#ff5a1f', '#ffd27a', '#ff2a00'], T04: ['#1d3c48', '#ff8fa3', '#bff6ff', '#5ff0d8'], T05: ['#120c1e', '#b04dff', '#e9c8ff', '#ff4fd8'],
   T06: ['#10222a', '#d4ff3a', '#f6ffd0', '#7af7ff'], T08: ['#22302c', '#e8dcc0', '#fff8e6', '#4fe0a8'], T13: ['#1c1420', '#ff7a3d', '#ffd0a8', '#ff3d6e'],
@@ -399,6 +399,30 @@ EXTRA_FORMS.push({
     ['Goldene Reifen erscheinen in der Aura, aus ihnen wachsen die Arme.', 'Die Hände legen sich zu einer Wand aus Handflächen.', 'Mehrere Hände packen das Ziel und schleudern es im Kreis davon.', 'Die Arme stemmen den Wizard hoch und schlagen bei der Landung zu.', 'Die Arme lösen sich zu goldenen Funken auf.'],
     { forward: 'Short: drei Fäuste nacheinander; Full: Trommelfeuer aus Fäusten über die Lane.', up: 'Short: Hand aus dem Boden reißt hoch; Full: vier Säulenarme jonglieren das Ziel.', down: 'Short: Handflächenstoß ringsum; Full: zwei Riesenhände klatschen zusammen.' },
     'Kein Torso, keine fremde Figur.')
+});
+// A04 Klingenblüte (user, 20 Oct 2026: "Bankai-artige Waffen-Entfesselung als Arcane State: die Klassenwaffe verwandelt sich, z. B. Schwert → Klingenblüten-Schwarm" — adapted).
+EXTRA_FORMS.push({
+  id: 'A04', name: 'Klingenblüte', title: 'Entfesselte Waffe', ref: 'Waffen-Entfesselung: die Klinge zerfällt zu einem Schwarm aus Klingenblättern (Referenz: Bankai-Szenen in Anime-Fightern, eigene Umsetzung)',
+  palette: ['#3a1a2a', '#ec407a', '#f8bbd0', '#ffffff'], material: 'Klingenstahl mit rosa Blütenschimmer.', quality: 'hauchdünne, spitze Klingenblätter mit hellen Kanten.', motion: 'die Klinge der Waffe zerfällt zu einem Schwarm aus Klingenblättern, der um den Wizard kreist und bei jedem Schlag nach vorn strömt.',
+  silhouette: 'Nur der leuchtende Griff bleibt in der Hand; ein Ring aus rund dreißig rosa-silbernen Klingenblättern kreist um den Wizard.',
+  avoid: 'Keine fremde Figur, keine Kirschblüten-Kopie — Klingenblätter aus der eigenen Waffe.',
+  archetype: 'blade_bloom', count: 28, item: 'weapon',
+  tech: {
+    sprint: { name: 'Blütenschweif', text: 'der Schwarm zieht wie ein Schweif hinterher.' },
+    sprintHeavy: { name: 'Blütensturm-Lauf', text: 'der Schwarm schneidet im Lauf durch alles in der Bahn.' },
+    defense: { name: 'Blätterwand', text: 'die Klingenblätter legen sich zu einer Wand vor den Wizard.', counter: 'riposte', status: [] },
+    grab: { name: 'Blütengriff', text: 'der Schwarm umhüllt das Ziel und schleudert es fort.', throw: 'spin', status: [] },
+    jump: { name: 'Blütensprung', text: 'die Blätter tragen den Wizard hoch und regnen bei der Landung herab.', landing: 'stomp' },
+    forward: { short: { name: 'Blütenstrom', text: 'ein Strom aus Klingenblättern schneidet nach vorn.', kind: 'cone', status: [] }, full: { name: 'Tausend Klingen', text: 'eine Sturzflut aus Klingenblättern fegt über die ganze Lane.', kind: 'sequence', status: [] } },
+    up: { short: { name: 'Blütenwirbel', text: 'ein Wirbel aus Blättern reißt das Ziel hoch.', kind: 'burst', status: ['launch'] }, full: { name: 'Klingensäule', text: 'eine Säule aus Klingenblättern jongliert das Ziel in der Luft.', kind: 'pillar', status: [] } },
+    down: { short: { name: 'Klingenteppich', text: 'die Blätter fegen ringsum über den Boden.', kind: 'ring', status: [] }, full: { name: 'Blütengrab', text: 'eine Kuppel aus Klingenblättern schließt sich um das Ziel und schnappt zusammen.', kind: 'sequence', status: [] } }
+  },
+  statusAll: [], morphology: 'weapon_morph', morphologyLabel: 'Weapon Morph',
+  v32: v32('Waffen-Entfesselung (Klingenblüte)', 'Nur der leuchtende Griff bleibt in der Hand; ein Ring aus rund dreißig rosa-silbernen Klingenblättern kreist um den Wizard.', ['hand_right', 'root', 'back'],
+    'Bei jedem Hieb strömt der Schwarm nach vorn und schneidet; im Sprint zieht er wie ein Schweif hinterher.', 'Bei Full fegt der ganze Schwarm: Sturzflut, Säule oder Blütengrab.',
+    ['Die Klinge zerspringt in hunderte Blätter, die sich zu einem Ring ordnen.', 'Die Blätter legen sich zu einer Wand.', 'Der Schwarm umhüllt das Ziel und schleudert es fort.', 'Die Blätter tragen den Wizard hoch und regnen herab.', 'Die Blätter fügen sich wieder zur Klinge.'],
+    { forward: 'Short: ein Blätterstrom nach vorn; Full: Sturzflut über die Lane.', up: 'Short: Blütenwirbel reißt hoch; Full: Klingensäule jongliert.', down: 'Short: Klingenteppich ringsum; Full: Blütengrab schnappt zu.' },
+    'Keine Kirschblüten-Kopie, keine fremde Figur.')
 });
 for (const f of EXTRA_FORMS) { f.states = { idle: f.v32.idle, action: f.v32.action, peak: f.v32.peak }; f.morphCategory = f.v32.category; forms.push(f); }
 if (!MORPH.divine_projection) MORPH.divine_projection = { label: 'Divine Projection', what: 'vergrößertes Lichtbild des eigenen Körpers', action: '', peak: '' };

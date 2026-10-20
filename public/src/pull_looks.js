@@ -11,6 +11,7 @@ import { plate, band, fallout, shard, orbitItem, TAU, lerp, line, specks, ground
 import { drawWyrmHead, stoneRing, STONE, ACID_GLASS, ghostOf } from './buff_signatures.js';
 import { giantHand } from './buff_v32_extra.js';
 import { spiritArm } from './buff_v32_hands.js';
+import { petal } from './buff_v32_bloom.js';
 
 // Points along hand → tip with a sag / wave (n + 1 points).
 const path = (q, n, amp = 0, freq = 2, phase = 0) => Array.from({ length: n + 1 }, (_, i) => {
@@ -142,6 +143,8 @@ export const PULL_LOOKS = {
   },
   // Tausendhand: three spirit arms reach out together and close on the foe.
   A03: (ctx, q) => { for (let i = -1; i <= 1; i++) spiritArm(ctx, [q.hx - q.f * 4, q.hy - 6 + i * 8], [q.tx - q.f * (4 - i * 3), q.ty + i * 10], q.f, q.k >= 1 ? 1 : .2, q.a, 7740 + i * 10, 10); },
+  // Klingenblüte: a ribbon of blade petals reaches out and wraps the foe.
+  A04: (ctx, q) => { for (let i = 0; i < 12; i++) { const u = i / 11; const x = q.hx + (q.tx - q.hx) * u * q.k; const y = q.hy + (q.ty - q.hy) * u * q.k + Math.sin(u * 8 + q.t * 10) * 6; petal(ctx, x, y, Math.atan2(q.ty - q.hy, q.tx - q.hx), 5, q.a, 7760 + i); } },
   // Focus transformations (no Arcane State): Kyubi tail, Eidolon arm, Ascendant light chain.
   ninefold: (ctx, q) => { band(ctx, path(q, 12, 20, 1.5, q.t * 8), (i, n) => 9 * Math.sin((i / n) * Math.PI) + 2, { kind: 'crystal', dark: '#3a1206', body: '#ff8a3d', facet: '#ffd0a0', vein: '#ff5a1f', edge: '#ffe2b8', spark: '#fff1c2', core: '#fffaf0', glow: 'rgba(255,90,31,', edgeGlow: 'rgba(255,226,184,' }, 7730, { t: q.t, alpha: q.a }); },
   eidolon: (ctx, q) => PULL_LOOKS.B02(ctx, q),

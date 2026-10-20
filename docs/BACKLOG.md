@@ -9,15 +9,14 @@ Plan: `docs/GRIMGE_Visual_Upgrade_Plan.md` §4 Schritt 4. Testassets → später
 3. **Strahlen** (eine Klasse, 7 Looks): Inferno, Glacial, Thunder, Null, Radiant, Rift, Annihilation — mehrlagiger Kern + Austritts- und Einschlags-Sprites.
 4. **Fusionen** nach Sichtbarkeit: Firestorm, Magma Fissure, Tempest Blitz, Blizzard Surge, Dragon Breath, Seismic Slam, Titan Stomp, Soul Seekers, Weltenbaum.
 5. **Spezialrunen** S01–S73: zuerst Objekt-Runen (Banner, Sanktuarium, Kunai, Falle, Schächte), dann Haltungen.
-6. **Arcane States** (18): Rig-Teile als Sprites statt Plates; Lieblinge zuerst (Arkengestell, Sonnenwyrm, Vorausschnitt, Göttlicher Riese).
+6. **Arcane States** (19): Rig-Teile als Sprites statt Plates; Lieblinge zuerst (Arkengestell, Sonnenwyrm, Vorausschnitt, Göttlicher Riese).
 7. **Waffen** (37): Waffen-Sprites + Bewegungs-Animationen, Kit-Effekte als Sprites — und **jede Waffe bekommt ihre eigene Verteidigungs-Animation** (Schild hochreißen, Klinge quer, Stab-Drehung, Fächer-Wand …; Nutzerwunsch 20.10.).
 8. Optional: Konzeptentwürfe per Codex ImageGen (über das OpenAI-Konto, nur nach Freigabe) → Cleanup in Aseprite.
 
 ## Anime-Mechaniken — Ideen für weitere Spezialrunen / Arcane States
-Umgesetzt: Spiralkugel (S46), Spiegelkerker (S50), Blutkreuz (S51), Herausforderung (S52), Sphären als eigene Familie (S53 Abgrundschrein, S56 Stillstand, S57 Glutkessel, S58 Lebenshain, S59 Spiegelwelt, S60 Schwerkraft, S61 Sturm, S62 Schattenmeer, dazu je Element eine Sphäre: S63 Ventus, S64 Terra, S65 Aqua, S66 Bestia, S67 Konstrukt, S68 Void, S69 Lux (Ignis/Natura/Fulgur/Umbra = S57/S58/S61/S62); Name nur für den Besitzer sichtbar; gleiche Glyphe, eigene Fähigkeit, max. 1 pro Deck, Sphären-Duell), Schattenbindung (S54), Azurflamme (S55, Chidori-artig adaptiert: blaues Feuer), Bannwürfel (S70), Zornstrahl (S71, Slot halten zum Aufladen), Blutvertrag (S72), Zeitstopp (S73). Jede neue Mechanik mit eigenem Stil, nicht alles gleich krachend.
+Umgesetzt: Spiralkugel (S46), Spiegelkerker (S50), Blutkreuz (S51), Herausforderung (S52), Sphären als eigene Familie (S53 Abgrundschrein, S56 Stillstand, S57 Glutkessel, S58 Lebenshain, S59 Spiegelwelt, S60 Schwerkraft, S61 Sturm, S62 Schattenmeer, dazu je Element eine Sphäre: S63 Ventus, S64 Terra, S65 Aqua, S66 Bestia, S67 Konstrukt, S68 Void, S69 Lux (Ignis/Natura/Fulgur/Umbra = S57/S58/S61/S62); Name nur für den Besitzer sichtbar; gleiche Glyphe, eigene Fähigkeit, max. 1 pro Deck, Sphären-Duell), Schattenbindung (S54), Azurflamme (S55, Chidori-artig adaptiert: blaues Feuer), Bannwürfel (S70), Zornstrahl (S71, Slot halten zum Aufladen), Blutvertrag (S72), Zeitstopp (S73), Arcane State A04 Klingenblüte (Waffen-Entfesselung). Jede neue Mechanik mit eigenem Stil, nicht alles gleich krachend.
 - **Weitere Sphären** nach Bedarf (gleiche Glyphe, eigene Regel).
 - **Gedankenspiegelung / Illusion (Genjutsu):** der Gegner sieht für 2 s falsche Positionen (Doppelbilder); Treffer auf die Illusion zerplatzen.
-- **Bankai-artige Waffen-Entfesselung** als Arcane State: die Klassenwaffe verwandelt sich (z. B. Schwert → Klingenblüten-Schwarm).
 - **Weitere Status-Kombos** (umgesetzt: Nass+Blitz, Nass+Eis, Brand+Wind, Brand+Wasser, Gefroren+harter Treffer, Gift+Feuer, Blutung+Wind, Paralyse+Erde): weitere nach Bedarf.
 
 ## Weitere offene Punkte

@@ -24,6 +24,7 @@ import './buff_v32_b.js'; // T13–T24
 import './buff_v32_c.js'; // T25–T36
 import './buff_v32_extra.js'; // A01 / A02 from user reference art
 import './buff_v32_hands.js'; // A03 Tausendhand
+import './buff_v32_bloom.js'; // A04 Klingenblüte
 import { combat } from './combat.js';
 import { TransformationFx, transitionStyleOf, TRANSFORM_TIMING } from './transform_fx.js';
 import { groundYForDepth } from './world.js';

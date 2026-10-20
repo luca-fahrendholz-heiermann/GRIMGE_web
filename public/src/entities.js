@@ -1774,7 +1774,8 @@ export class Player extends GroundEntity {
     if (veins) renderOpts.maskPaint = veins;
     if (formCloak) this.renderFormCloak(ctx, renderY, renderOpts, formCloak, 'back');
     // Astral weapon: the rear-hand piece behind the body, the front one in front.
-    const armed = this.isAlive && (this.weapon || this.classWeapon);
+    // Klingenblüte (A04): the weapon has become the petal swarm — only the swarm renderer draws it.
+    const armed = this.isAlive && (this.weapon || this.classWeapon) && currentBuffForm(this)?.id !== 'A04';
     if (armed) drawHeldWeapon(ctx, this, renderY, 'back');
     sprites.renderEntity(ctx, this.heroKey, this.x, renderY, renderOpts);
     if (armed) drawHeldWeapon(ctx, this, renderY, 'front');

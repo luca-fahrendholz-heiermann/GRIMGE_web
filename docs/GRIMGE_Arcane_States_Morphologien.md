@@ -19,7 +19,7 @@
 | **Environmental State** | der Spieler verändert einen größeren Bereich der Arena | T35 Kältestillstand |
 | **Divine Projection** | vergrößertes Lichtbild des eigenen Körpers | A01 Göttlicher Riese |
 
-## Die 18 aktiven Arcane States (kuratiert: je eigene Techniken, Lade-Ritual und Palette)
+## Die 19 aktiven Arcane States (kuratiert: je eigene Techniken, Lade-Ritual und Palette)
 
 ### B01 Risswild · *Energy Extension* · V3.2: Tiergeist (Kyubi): neun Fuchsflammen-Schweife
 
@@ -236,6 +236,18 @@
 - **Heavies (V3.2-Abbildung):** Forward — Short: drei Fäuste nacheinander; Full: Trommelfeuer aus Fäusten über die Lane. · Up — Short: Hand aus dem Boden reißt hoch; Full: vier Säulenarme jonglieren das Ziel. · Down — Short: Handflächenstoß ringsum; Full: zwei Riesenhände klatschen zusammen.
 - **Ausschlüsse:** Kein Torso, keine fremde Figur.
 - Palette: `#3a0d0d` `#c62828` `#ffd54f` `#fff3c4` · Material: roter Lack mit Goldspangen und Geisterlicht.
+
+### A04 Klingenblüte — Entfesselte Waffe · *Weapon Morph* · V3.2: Waffen-Entfesselung (Klingenblüte)
+
+- **Anker:** `hand_right`, `root`, `back`
+- **Idle-Silhouette:** Nur der leuchtende Griff bleibt in der Hand; ein Ring aus rund dreißig rosa-silbernen Klingenblättern kreist um den Wizard.
+- **Action-Silhouette:** Bei jedem Hieb strömt der Schwarm nach vorn und schneidet; im Sprint zieht er wie ein Schweif hinterher.
+- **Peak Manifestation:** Bei Full fegt der ganze Schwarm: Sturzflut, Säule oder Blütengrab.
+- **Transform-In / Out:** Die Klinge zerspringt in hunderte Blätter, die sich zu einem Ring ordnen. / Die Blätter fügen sich wieder zur Klinge.
+- **Defense · Grab · Jump:** Die Blätter legen sich zu einer Wand. · Der Schwarm umhüllt das Ziel und schleudert es fort. · Die Blätter tragen den Wizard hoch und regnen herab.
+- **Heavies (V3.2-Abbildung):** Forward — Short: ein Blätterstrom nach vorn; Full: Sturzflut über die Lane. · Up — Short: Blütenwirbel reißt hoch; Full: Klingensäule jongliert. · Down — Short: Klingenteppich ringsum; Full: Blütengrab schnappt zu.
+- **Ausschlüsse:** Keine Kirschblüten-Kopie, keine fremde Figur.
+- Palette: `#3a1a2a` `#ec407a` `#f8bbd0` `#ffffff` · Material: Klingenstahl mit rosa Blütenschimmer.
 
 
 ## Archiviert (aus dem Spiel genommen, im Atlas erhalten)

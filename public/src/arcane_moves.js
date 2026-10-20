@@ -15,6 +15,7 @@ import { stoneRing, STONE, ACID_GLASS, drawWyrmHead, ghostOf } from './buff_sign
 import { applyStatuses } from './buff_techniques.js';
 import { giantHand } from './buff_v32_extra.js';
 import { spiritArm } from './buff_v32_hands.js';
+import { petal } from './buff_v32_bloom.js';
 import { environment } from './environment.js';
 import { combat } from './combat.js';
 import { groundYForDepth } from './world.js';
@@ -240,6 +241,21 @@ export const ARCANE_MOVES = {
       giantHand(ctx, [s.x - gap - 18, y], -1.57, 1, 40, .05, PALMS, 9890, fade(k, .1, .2)); giantHand(ctx, [s.x + gap + 18, y], -1.57, -1, 40, .05, PALMS, 9891, fade(k, .1, .2));
       if (s.t > .55) { const q = (s.t - .55) / .55; ctx.save(); ctx.globalAlpha = 1 - q; ctx.strokeStyle = '#ffd54f'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(s.x, y, 20 + q * 70, 0, TAU); ctx.stroke(); ctx.restore(); } } })
   ],
+  // ── A04 Klingenblüte: the weapon unleashed as a swarm of blade petals (cuts → bleed) ──
+  A04: [
+    // Blütenstrom: a stream of petals cuts ahead.
+    (f, p) => ticking(f, p, { dur: .5, n: 3, area: ahead(150, 30), damage: 11, kx: 120, lift: 20, st: ['bleed'], paint: (ctx, s, k) => { const y = gy(s) - 46; for (let i = 0; i < 14; i++) { const u = (k * 2 + i / 14) % 1; petal(ctx, s.x + s.facing * (20 + 140 * u), y + Math.sin(u * 12 + i) * 10, s.facing > 0 ? 0 : Math.PI, 6, fade(k), 9960 + i); } } }),
+    // Tausend Klingen: a torrent of petals over the whole lane.
+    (f, p) => ticking(f, p, { dur: 1.1, n: 10, area: ahead(280, 36), damage: 7, kx: 40, lift: 10, st: ['bleed'], final: { area: ahead(280, 40), damage: 26, kx: 380, lift: 140 }, paint: (ctx, s, k) => { const y = gy(s) - 46; for (let i = 0; i < 40; i++) { const u = (k * 3 + i / 40) % 1; petal(ctx, s.x + s.facing * (20 + 270 * u), y + Math.sin(u * 9 + i * 1.7) * 26, (s.facing > 0 ? 0 : Math.PI) + Math.sin(i) * .4, 6, fade(k) * (1 - u * .3), 10000 + i); } } }),
+    // Blütenwirbel: a petal whirl tears the foe upward.
+    (f, p) => strike(f, p, { dur: .5, at: .12, x: p.x + p.facing * 56, area: around(44), damage: 28, kx: 20, lift: 560, stun: .5, st: ['bleed'], paint: (ctx, s, k) => { const y = gy(s); for (let i = 0; i < 16; i++) { const a = i / 16 * TAU + k * 14; const h = (i / 16) * 110 * Math.min(1, k * 2); petal(ctx, s.x + Math.cos(a) * 22, y - h, a, 6, fade(k), 10050 + i); } } }),
+    // Klingensäule: a column of blade petals juggles the foe.
+    (f, p) => ticking(f, p, { dur: 1, n: 5, x: p.x + p.facing * 70, area: around(60), damage: 10, kx: 0, lift: 300, st: ['bleed'], final: { area: around(60), damage: 26, lift: 520 }, paint: (ctx, s, k) => { const y = gy(s); for (let i = 0; i < 30; i++) { const a = i * 2.39 + s.t * 10; const h = (i / 30) * 150; petal(ctx, s.x + Math.cos(a) * 26, y - h, a + Math.PI / 2, 6, fade(k, .1, .2), 10080 + i); } } }),
+    // Klingenteppich: the petals sweep the ground all around.
+    (f, p) => strike(f, p, { dur: .45, at: .12, area: around(96), damage: 24, kx: 260, lift: 80, stun: .4, st: ['bleed'], paint: (ctx, s, k) => { const y = gy(s); const r = 30 + 70 * Math.min(1, k * 2.5); for (let i = 0; i < 24; i++) { const a = i / 24 * TAU + k * 6; petal(ctx, s.x + Math.cos(a) * r, y + Math.sin(a) * r * .3, a + Math.PI / 2, 6, fade(k), 10120 + i); } } }),
+    // Blütengrab: a dome of blade petals closes around the foe and snaps shut.
+    (f, p) => new SigSequence(sigOf(f), p, { dur: 1.1, x: p.x + p.facing * 100, steps: [{ at: .6, fn: (s, gw) => { s.strike(gw, around(64)(s), 66, () => 0, 80, 1, { onHit: status(s, ['bleed', 'stun']) }); combat.shakeCamera(11, .3); combat.triggerHitstop?.(6); } }], draw: (ctx, s, k) => { const y = gy(s); const close = Math.min(1, (s.t / .6) ** 2); const r = 90 - 64 * close; for (let i = 0; i < 36; i++) { const a = i / 36 * TAU; const lat = (i % 3) / 3; petal(ctx, s.x + Math.cos(a) * r * (1 - lat * .4), y - 20 - lat * 50 * (1 - close * .5) + Math.sin(a) * r * .25, a + Math.PI / 2, 6, fade(k, .1, .2), 10150 + i); } if (s.t > .6) { const q = (s.t - .6) / .5; ctx.save(); ctx.globalAlpha = 1 - q; ctx.strokeStyle = '#ec407a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(s.x, y - 30, 20 + q * 60, 0, TAU); ctx.stroke(); ctx.restore(); } } })
+  ],
   // ── A02 Mystischer Affe: spirit-ape fists, roar and drumming quakes ──
   A02: [
     // Urfaust: one huge fur fist punches forward.
@@ -284,6 +300,8 @@ export const ARCANE_CHARGE = {
   // A02: violet flames spiral into a spirit fist that pulses like a drum beat.
   A02: (ctx, s, mat, dir, k, t) => { const [x, y] = chargeAt(s, dir); const fl = { ...mat, kind: 'crystal', body: '#7f66ff', facet: '#c3b4ff', vein: '#5f86ff', edge: '#efe6ff' }; for (let i = 0; i < 2; i++) { const pts = Array.from({ length: 7 }, (_, q) => { const a = t * 5 + i * Math.PI + q * .6; const r = (36 - q * 5) * (1 - k * .4); return [x + Math.cos(a) * r, y + Math.sin(a) * r * .6]; }); band(ctx, pts, (q, n) => 2 + 4 * k * (1 - q / n), fl, 9211 + i, { t, alpha: .85 }); } const beat = Math.pow(Math.max(0, Math.sin(t * (6 + 10 * k))), 6); const r = 8 + 8 * k + 3 * beat; plate(ctx, Array.from({ length: 8 }, (_, i) => [x + Math.cos(i / 8 * TAU) * r, y + Math.sin(i / 8 * TAU) * r * .85]), APE_FUR, 9213, { alpha: .5 + .5 * k, lit: 1 }); if (beat > .5) groundRing(ctx, s.x, s.y, 24 + 10 * k, fl, 0, beat * .6, 10, 9214, 2); },
   // A03: gold rings open around the charge point, each grows a spirit arm (more arms the longer you charge).
-  A03: (ctx, s, mat, dir, k, t) => { const [x, y] = chargeAt(s, dir); const n = 1 + Math.floor(k * 5); for (let i = 0; i < n; i++) { const a = i / 6 * TAU + t; const rx = x + Math.cos(a) * 26; const ry = y + Math.sin(a) * 16; ctx.save(); ctx.strokeStyle = '#ffd54f'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(rx, ry, 5, 7, 0, 0, TAU); ctx.stroke(); ctx.restore(); spiritArm(ctx, [rx, ry], [rx + Math.cos(a) * 12, ry + Math.sin(a) * 9], s.f, k > .8 ? 1 : .2, .9, 9600 + i * 10, 6); } }
+  A03: (ctx, s, mat, dir, k, t) => { const [x, y] = chargeAt(s, dir); const n = 1 + Math.floor(k * 5); for (let i = 0; i < n; i++) { const a = i / 6 * TAU + t; const rx = x + Math.cos(a) * 26; const ry = y + Math.sin(a) * 16; ctx.save(); ctx.strokeStyle = '#ffd54f'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(rx, ry, 5, 7, 0, 0, TAU); ctx.stroke(); ctx.restore(); spiritArm(ctx, [rx, ry], [rx + Math.cos(a) * 12, ry + Math.sin(a) * 9], s.f, k > .8 ? 1 : .2, .9, 9600 + i * 10, 6); } },
+  // A04: blade petals spiral into the charge point — the swarm thickens the longer you charge.
+  A04: (ctx, s, mat, dir, k, t) => { const [x, y] = chargeAt(s, dir); const n = 4 + Math.floor(k * 14); for (let i = 0; i < n; i++) { const a = i / n * TAU + t * 5; const r = 34 * (1 - k * .5) + Math.sin(t * 6 + i) * 4; petal(ctx, x + Math.cos(a) * r, y + Math.sin(a) * r * .6, a + Math.PI / 2, 5, .9, 10200 + i); } }
 };
-export const CURATED_ARCANE_STATES = Object.freeze(['B01', 'B02', 'T02', 'T04', 'T05', 'T06', 'T08', 'T13', 'T23', 'T24', 'T35', 'T37', 'T38', 'T39', 'T40', 'A01', 'A02', 'A03']);
+export const CURATED_ARCANE_STATES = Object.freeze(['B01', 'B02', 'T02', 'T04', 'T05', 'T06', 'T08', 'T13', 'T23', 'T24', 'T35', 'T37', 'T38', 'T39', 'T40', 'A01', 'A02', 'A03', 'A04']);

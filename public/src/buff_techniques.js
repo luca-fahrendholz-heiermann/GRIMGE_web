@@ -8,6 +8,7 @@
 // that implodes ('projectile'), a lane beam ('beam'), T40's twin hunting
 // wyrms ('wyrms') and its portal ritual ('portals'). Statuses named by the
 // atlas gameplay text are applied on hit.
+import { applyStatus } from './status_effects.js';
 import { combat } from './combat.js';
 import { groundYForDepth } from './world.js';
 import { FormStrikeSpell } from './form_moves.js';
@@ -30,6 +31,7 @@ export function applyStatuses(target, statuses, caster, facing) {
       case 'shock': target.slow?.(.4, .3); combat.spawnElementalParticles(target.x, (target.y ?? 0) - 30, 'fulgur', 5); break;
       case 'pull': if ('kbVelX' in target) target.kbVelX = -Math.sign(target.x - caster.x || facing) * 280; break;
       case 'heal': if (caster.hp > 0) caster.hp = Math.min(caster.maxHp, caster.hp + 6); break;
+      case 'bleed': applyStatus(target, 'bleed'); break; // blade petals (A04) cut
       default: break;
     }
   }

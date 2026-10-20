@@ -21,6 +21,7 @@ import { plate, band, fallout, shard, orbitItem, TAU, lerp, line, specks, ground
 import { drawWyrmHead, stoneRing, ACID_GLASS, ghostOf } from './buff_signatures.js';
 import { giantHand } from './buff_v32_extra.js';
 import { spiritArm } from './buff_v32_hands.js';
+import { petal } from './buff_v32_bloom.js';
 
 export const FORM_SPECIAL_MANA = Object.freeze({ sprint: 4, dive: 4 });
 // Delayed follow-up hits in game time (puppets, echoes); ticked from Player.update.
@@ -63,7 +64,8 @@ export const FORM_SPRINTS = {
   T40: { ...LEAP, leap: 200, impact: 'wyrm' },      // Sonnenwyrm: wyrm heads lunge, burn
   A01: { ...RAM, recoilMult: 1.9, damageMult: 1.4, impact: 'giant' }, // Göttlicher Riese: giant shoulder
   A02: { ...RAM, lift: 120, impact: 'ape' },        // Mystischer Affe: two-fist charge, quake
-  A03: { ...LUNGE, impact: 'hands' }                // Tausendhand: fists strike along the dash
+  A03: { ...LUNGE, impact: 'hands' },               // Tausendhand: fists strike along the dash
+  A04: { ...LUNGE, impact: 'petals' }               // Klingenblüte: the swarm cuts through the lane
 };
 for (const [id, mech] of Object.entries(FORM_SPRINTS)) {
   const form = BUFF_FORMS[id]; if (!form) continue;
@@ -86,6 +88,7 @@ const IMPACTS = {
   echo: (p, struck) => later(.3, () => { if (!struck.isDead) struck.takeDamage?.(18, (p.facing || 1) * 200, 60, .3, false, 'melee'); }),
   wyrm: (p, struck) => applyStatuses(struck, ['burn'], p, p.facing),
   giant: () => combat.shakeCamera(10, .3),
+  petals: (p, struck) => { for (const delay of [.06, .12, .18, .24]) later(delay, () => { if (!struck.isDead) struck.takeDamage?.(5, (p.facing || 1) * 60, 10, .1, false, 'melee'); }); },
   hands: (p, struck) => { for (const delay of [.08, .16, .24]) later(delay, () => { if (!struck.isDead) struck.takeDamage?.(7, (p.facing || 1) * 90, 20, .15, false, 'melee'); }); },
   ape: (p, struck, game) => { for (const t of foes(p, game)) if (Math.hypot(t.x - struck.x, ((t.z ?? p.z) - (struck.z ?? p.z)) * DEPTH) < 90) t.takeDamage?.(10, Math.sign(t.x - struck.x || 1) * 220, 120, .3, false, 'spell'); combat.shakeCamera(7, .2); }
 };
@@ -112,6 +115,7 @@ const SPRINT_LOOKS = {
   T39: (ctx, q) => { const p = q.p; for (let i = 1; i <= 3; i++) ghostOf(ctx, p, q.x - q.f * i * 22, p.y, p.state, p.animTime, q.f, .35 / i, q.mat.edge); },
   T40: (ctx, q) => { for (const oy of [-14, 14]) { const pts = [[q.x - q.f * 20, q.y + oy], [q.x + q.f * 6, q.y + oy * .6 - 6], [q.x + q.f * (26 + 14 * q.k), q.y + oy * .4]]; band(ctx, pts, (i, n) => 5 - i, { ...q.mat, kind: 'crust' }, 9500 + oy, { t: q.t, alpha: q.fade }); drawWyrmHead(ctx, pts[2][0], pts[2][1], q.f, 0, 10, q.mat, .5, q.fade, 9502 + oy); } },
   A01: (ctx, q) => giantHand(ctx, [q.x + q.f * (26 + 16 * q.k), q.y - 6], 0, q.f, 30, 1, crystal(q.mat), 9510, q.fade),
+  A04: (ctx, q) => { for (let i = 0; i < 12; i++) { const u = (q.k * 2 + i / 12) % 1; petal(ctx, q.x + q.f * (10 + 60 * u), q.y - 6 + Math.sin(u * 10 + i) * 10, q.f > 0 ? 0 : Math.PI, 6, q.fade, 10220 + i); } },
   A03: (ctx, q) => { for (let i = 0; i < 3; i++) spiritArm(ctx, [q.x - q.f * 6, q.y - 10 + i * 8], [q.x + q.f * (30 + 18 * q.k + i * 8), q.y - 8 + i * 9], q.f, 1, q.fade, 9510 + i * 10, 10); },
   A02: (ctx, q) => { const FUR = { kind: 'crust', dark: '#3d2f5c', body: '#dcd6ec', facet: '#f4f1fb', vein: '#9c7ae0', edge: '#efeaff', spark: '#c9a8ff', core: '#ffffff', glow: 'rgba(176,108,255,', edgeGlow: 'rgba(239,234,255,' }; for (const oy of [-12, 14]) { const x = q.x + q.f * (28 + 14 * q.k); const y = q.y + oy; plate(ctx, Array.from({ length: 8 }, (_, i) => [x + Math.cos(i / 8 * TAU) * 12, y + Math.sin(i / 8 * TAU) * 10]), FUR, 9520 + oy, { alpha: q.fade, lit: 1, glowEdge: .5 }); } }
 };
@@ -149,7 +153,8 @@ export const FORM_DIVES = {
   T40: DIVE('wyrm', 100, 48, { st: ['burn'] }),
   A01: DIVE('giantPalm', 120, 56),
   A02: DIVE('apeSlam', 115, 50, { lift: 260 }),
-  A03: DIVE('palms', 105, 46, { st: ['stun'] })
+  A03: DIVE('palms', 105, 46, { st: ['stun'] }),
+  A04: DIVE('petalStorm', 108, 46, { st: ['bleed'] })
 };
 
 export class FormDiveFx {
@@ -206,6 +211,7 @@ const DIVE_FALL = {
   giantPalm: (ctx, q) => giantHand(ctx, [q.x, q.y - 70], 1.57, q.f, 34, 0, crystal(q.m), 9630, .85),
   apeSlam: (ctx, q) => { const FUR = { kind: 'crust', dark: '#3d2f5c', body: '#dcd6ec', facet: '#f4f1fb', vein: '#9c7ae0', edge: '#efeaff', spark: '#c9a8ff', core: '#ffffff', glow: 'rgba(176,108,255,', edgeGlow: 'rgba(239,234,255,' }; for (const ox of [-18, 18]) plate(ctx, Array.from({ length: 8 }, (_, i) => [q.x + ox + Math.cos(i / 8 * TAU) * 12, q.y - 60 + Math.sin(i / 8 * TAU) * 10]), FUR, 9640 + ox, { alpha: 1, lit: 1 }); },
   wyrm: (ctx, q) => drawWyrmHead(ctx, q.x, q.y + 6, 0, 1, 12, q.m, .5, 1, 9650),
+  petalStorm: (ctx, q) => { for (let i = 0; i < 10; i++) { const a = i / 10 * TAU + q.t * 10; petal(ctx, q.x + Math.cos(a) * 16, q.y - 20 + Math.sin(a) * 8, a, 6, 1, 10240 + i); } },
   palms: (ctx, q) => { for (const sg of [-1, 1]) spiritArm(ctx, [q.x + sg * 10, q.y - 40], [q.x + sg * 16, q.y + 10], q.f, 0, 1, 9655 + sg, 11); },
   ring: (ctx, q) => stoneRing(ctx, q.x, q.y - 10, 22, .9, 0, q.t * 8, 6, 9660, 1, null, 2),
   bell: (ctx, q) => orbitItem(ctx, 'bell', q.x, q.y - 4, 14, 0, q.m, 9670, 1, q.t),
@@ -230,6 +236,7 @@ const DIVE_LAND = {
   echo: (ctx, q) => { for (let r = 0; r < 3; r++) groundRing(ctx, q.x + (r - 1) * 14, q.y, q.R * q.k * (1 - r * .2), q.m, 0, q.a * (1 - r * .25), 12, 9850 + r * 12, 2); },
   wyrm: (ctx, q) => { for (let i = 0; i < 2; i++) { const s = i ? 1 : -1; drawWyrmHead(ctx, q.x + s * q.R * .5 * q.k, q.y - 10, s, -.3, 12, q.m, .6, q.a + .2, 9860 + i); } fallout(ctx, [[q.x, q.y - 6]], q.m, q.t, 9862, { count: 10, alpha: q.a }); },
   giantPalm: (ctx, q) => { giantHand(ctx, [q.x, q.y - 20], 1.57, q.f, 38, 0, crystal(q.m), 9870, q.a + .3); groundRing(ctx, q.x, q.y, q.R * q.k, crystal(q.m), 0, q.a, 14, 9871, 4); },
+  petalStorm: (ctx, q) => { for (let i = 0; i < 24; i++) { const a = i / 24 * TAU + q.k * 5; const r = q.R * q.k; petal(ctx, q.x + Math.cos(a) * r, q.y + Math.sin(a) * r * .3, a + Math.PI / 2, 6, q.a + .2, 10260 + i); } groundRing(ctx, q.x, q.y, q.R * q.k, q.m, 0, q.a, 12, 10290, 3); },
   palms: (ctx, q) => { for (let i = 0; i < 6; i++) { const a = i / 6 * TAU; giantHand(ctx, [q.x + Math.cos(a) * q.R * .6 * q.k, q.y + Math.sin(a) * q.R * .2 * q.k - 6], 1.57, q.f, 11, 0, { kind: 'crust', dark: '#5d2e0a', body: '#ffcc80', facet: '#ffe0b2', vein: '#ffd54f', edge: '#fff8e1', spark: '#fff3c4', core: '#ffffff', glow: 'rgba(255,213,79,', edgeGlow: 'rgba(255,248,225,' }, 9660 + i, q.a + .2); } groundRing(ctx, q.x, q.y, q.R * q.k, q.m, 0, q.a, 12, 9668, 3); },
   apeSlam: (ctx, q) => { for (let r = 0; r < 2; r++) groundRing(ctx, q.x, q.y, q.R * q.k * (1 - r * .3), { kind: 'crystal', dark: '#1c1030', body: '#7f66ff', facet: '#c3b4ff', vein: '#5f86ff', edge: '#efe6ff', spark: '#b06cff', core: '#ffffff', glow: 'rgba(127,102,255,', edgeGlow: 'rgba(239,230,255,' }, 0, q.a, 14, 9880 + r * 14, 4); }
 };
