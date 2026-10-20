@@ -3020,6 +3020,44 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   P.slottedSpells.length = 0; game.returnToHub();
 }
 
+// Air combat (20 Oct 2026): air attacks keep momentum, a hit latches onto the foe, then both fall;
+// sprint jump + down swipe is a diagonal dive.
+{
+  game.returnToHub(); game.setMatchMode('training'); game.startMatch(); game.selectTrainingMap('waterfalls');
+  const P = game.player; const dummy = game.trainingDummy; spells.clearRuntime();
+  const neutral = { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false };
+  const air = (h = 70) => { P.state = 'jump'; P.stateTimer = 0; P.canAttack = true; P.grounded = false; P.elevation = h; P.vElevation = 120; P.comboStep = 0; P.airLatch = null; P.airLatchCount = 0; P.sprintDive = null; P.isSprintJump = false; P.kbVelX = 0; };
+  const step = (sec) => { for (let i = 0; i < sec * 60; i++) P.update(1 / 60, neutral, game.battlefield, game); };
+  P.equipWeapon(null); P.equipClassWeapon(null);
+  P.x = 300; P.z = .5; P.facing = 1; game.battlefield.placeOnSurface(P); dummy.homeX = dummy.x = 900; dummy.homeZ = dummy.z = .5;
+  // Whiff in the air: the jump momentum continues.
+  air(); P.vx = 200; P.executeAttack(neutral, 'normal');
+  assert(Math.abs(P.vx - 170) < 1 && !P.airLatch, 'An air attack keeps the jump momentum (no abrupt stop)');
+  const xBefore = P.x; step(.1);
+  assert(P.x - xBefore > 12, 'The Wizard keeps travelling in the jump direction while swinging');
+  // Air hit: latch onto the foe, little drift, low gravity — then both fall.
+  air(80); P.x = 300; P.vx = 220; dummy.x = 340; dummy.z = .5; dummy.elevation = 80; dummy.vElevation = 0; dummy.hp = dummy.maxHp;
+  P.executeAttack(neutral, 'normal');
+  assert(dummy.hp < dummy.maxHp && P.airLatch?.target === dummy, 'An air hit latches the Wizard onto the foe');
+  const hLatch = P.elevation; step(.2);
+  assert(P.airLatch && Math.abs(P.x - (dummy.x - 40)) < 12 && hLatch - P.elevation < 25 && Math.abs(P.vx) < 60, 'While latched the Wizard hangs in front of the foe: damped drift, low gravity');
+  step(.25);
+  assert(!P.airLatch && P.vElevation < 0, 'After the exchange both fall from the hit point');
+  // Latches per jump are capped.
+  air(80); P.airLatchCount = 3; P.x = 300; dummy.x = 340; dummy.elevation = 80; P.executeAttack(neutral, 'normal');
+  assert(!P.airLatch, 'At most three latches per jump (no infinite air combo)');
+  dummy.elevation = 0; dummy.vElevation = 0;
+  // Sprint jump + down swipe: diagonal dive that sweeps through a foe on the path.
+  air(90); P.isSprintJump = true; P.x = 300; P.vx = 300; dummy.x = 360; dummy.z = .5; dummy.hp = dummy.maxHp;
+  assert(P.executeAttack(neutral, 'dive') && P.sprintDive && P.vx > 500 && P.vElevation < -500, 'Sprint jump + down swipe starts a fast diagonal dive');
+  const diveX = P.x; step(.6);
+  assert(P.grounded && P.x - diveX > 60 && dummy.hp < dummy.maxHp && !P.sprintDive && P.state !== 'dive', 'The diagonal dive travels forward, strikes on the way and ends cleanly on landing');
+  // A normal jump + down swipe stays the vertical drop.
+  air(90); P.vx = 0; P.x = 300; dummy.x = 900; P.executeAttack(neutral, 'dive');
+  assert(!P.sprintDive && Math.abs(P.vx) < 1, 'A normal jump + down swipe stays a vertical dive');
+  step(.6); spells.clearRuntime();
+}
+
 // Movement after the Unity original: rooted attacks, full combos on a target in front, long sprint jump, auto-run.
 {
   game.returnToHub(); game.setMatchMode('training'); game.startMatch(); game.selectTrainingMap('waterfalls');

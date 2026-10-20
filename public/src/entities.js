@@ -95,6 +95,16 @@ const BACKDASH_REVERSAL_WINDOW = 9 / 60;  // flick toward facing, then back with
 // suppressed for 8 ticks in Unity). The prototype keeps its dodge cooldown.
 const BACKDASH_SUPPRESS_TIME = 8 / 60;
 const BACKDASH_COOLDOWN = 0.8;
+// Air combat (user, 20 Oct 2026): air attacks keep the jump momentum; a hit latches the Wizard
+// onto the foe for a beat (hitstop, little horizontal drift, low gravity) so the air combo can
+// continue — then both fall from the hit point. A down swipe after 1–2 air hits ends it.
+const AIR_ATTACK_MOMENTUM = .85;
+const AIR_LATCH_TIME = .34;
+const AIR_LATCH_GRAVITY = .22;
+const AIR_LATCH_MAX = 3;          // latches per jump (no infinite air)
+const AIR_LATCH_GAP = 40;         // the Wizard hangs this far in front of the foe
+// Sprint jump + down swipe: a fast diagonal (~45°) dive with a sweeping strike.
+const SPRINT_DIVE_SPEED = 640;
 // Sprint Attack (sprint punisher) — Unity CharacterDefinition "Sprint Attack":
 // the Forward Heavy at normal Heavy strength, started at once from a sprint.
 // It keeps advancing until it connects; a clean hit carries the attacker a
@@ -363,6 +373,7 @@ export class Player extends GroundEntity {
     }
     this.backdashCooldown = Math.max(0, this.backdashCooldown - dt);
     this.backdashCounterTimer = Math.max(0, (this.backdashCounterTimer ?? 0) - dt);
+    this.updateAirCombat(dt);
     this.sp = Math.min(this.maxSp, this.sp + dt * 25);
     this.auraShockCooldown = Math.max(0, this.auraShockCooldown - dt);
     this.arcaneShieldTimer = Math.max(0, this.arcaneShieldTimer - dt);
@@ -722,6 +733,52 @@ export class Player extends GroundEntity {
     this._lastFlickTime = now;
   }
 
+  // Air latch + sprint dive bookkeeping (see AIR_LATCH_* / SPRINT_DIVE_SPEED).
+  updateAirCombat(dt) {
+    const latch = this.airLatch;
+    if (latch) {
+      const t = latch.target;
+      latch.timer -= dt;
+      if (this.grounded || !t || t.isDead || latch.timer <= 0) {
+        // The exchange is over: both drop from the hit point.
+        this.airLatch = null;
+        if (!this.grounded) this.vElevation = Math.min(this.vElevation, -140);
+        if (t && !t.isDead && (t.elevation ?? 0) > 0) t.vElevation = Math.min(t.vElevation ?? 0, -140);
+      } else {
+        // Hang in front of the foe; horizontal drift is damped for both.
+        const goal = t.x - this.facing * AIR_LATCH_GAP;
+        this.x += (goal - this.x) * Math.min(1, dt * 14);
+        this.vx *= Math.max(0, 1 - dt * 10); this.kbVelX *= Math.max(0, 1 - dt * 10);
+        if ((t.elevation ?? 0) > 0) { t.vElevation = Math.max(Math.min(t.vElevation ?? 0, 60), -40); t.kbVelX = (t.kbVelX ?? 0) * Math.max(0, 1 - dt * 10); }
+        if (Number.isFinite(t.z)) this.z += (t.z - this.z) * Math.min(1, dt * 8);
+      }
+    }
+    if (this.sprintDive) {
+      if (this.state === 'dive' && !this.grounded) {
+        // Sweep: every foe on the diagonal path is struck once.
+        this.vx = this.facing * SPRINT_DIVE_SPEED;
+        this.triggerMeleeHitbox(MELEE_BASELINE.dive.damage * .8, this.facing * 340, -180, .55, false, { hitstopTicks: 4, hitReaction: 'strong', hitSet: this.sprintDive.hitSet, reach: 64 });
+        if (Math.random() < .6) this.ghosts.push({ x: this.x, y: this.y, z: this.z, elevation: this.elevation, facing: this.facing, alpha: .4, state: 'dive', animTime: this.animTime });
+      } else {
+        // Landing: a skid and a dust burst, momentum bleeds off.
+        if (this.grounded) { combat.spawnShockwave(this.x, this.y - 2, 46, '#ffccbc'); combat.spawnDust(this.x, this.y, 8); this.vx *= .25; if (this.state === 'dive') this.stateTimer = Math.min(this.stateTimer, .12); }
+        this.sprintDive = null;
+      }
+    }
+    if (this.grounded) this.airLatchCount = 0;
+  }
+
+  // A connected air hit latches onto the first foe hit (max AIR_LATCH_MAX per jump).
+  startAirLatch(targets) {
+    const t = (targets ?? []).find((tg) => tg && !tg.isDead && !tg.isObjective && !tg.isProp);
+    if (!t || this.grounded || (this.airLatchCount ?? 0) >= AIR_LATCH_MAX) return false;
+    this.airLatchCount = (this.airLatchCount ?? 0) + 1;
+    this.airLatch = { target: t, timer: AIR_LATCH_TIME };
+    this.vElevation = Math.max(this.vElevation, 40);
+    if ((t.elevation ?? 0) > 0) t.vElevation = Math.max(t.vElevation ?? 0, 40);
+    return true;
+  }
+
   performJump() {
     if (this.jumpsLeft <= 0 || this.rootTimer > 0) return;
     const wasSprinting = this.sprintActive;
@@ -996,6 +1053,7 @@ export class Player extends GroundEntity {
 
   getEffectiveGravity() {
     const g = UNITY_MOVEMENT.gravity;
+    if (this.airLatch && !this.grounded) return g * AIR_LATCH_GRAVITY;
     if (!this.launcherMode) return g;
     if (Math.abs(this.vElevation) <= LAUNCHER_APEX_VEL_THRESH) return g * LAUNCHER_APEX_GRAV_SCALE;
     return g * LAUNCHER_GRAV_SCALE;
@@ -1073,7 +1131,18 @@ export class Player extends GroundEntity {
       this.triggerMeleeHitbox(up.damage, this.facing * up.knockback, up.lift, 0.5, false, { hitstopTicks: up.hitstopTicks, hitReaction: up.hitReaction });
       return true;
     }
+    if (!this.grounded && (attackKind === 'dive' || move.z > 0.55) && this.isSprintJump && !this.sprintDive) {
+      // Sprint jump + down: a fast diagonal dive with a sweeping strike (instead of the vertical drop).
+      this.airLatch = null;
+      this.state = 'dive'; this.stateTimer = 1.2; this.vElevation = -SPRINT_DIVE_SPEED; this.vx = this.facing * SPRINT_DIVE_SPEED;
+      this.sprintDive = { hitSet: new Set() };
+      this.setWeaponMotion?.('heavy'); this._weaponSwingTime = .35;
+      audio.playSlash(.8);
+      combat.spawnSlashArc(this.x + this.facing * 10, this.y - (this.elevation ?? 0) - 20, this.facing, { radius: 56, angleStart: -.4, angleEnd: 1.9, color: '#ffab91', glow: '#ff3d00', width: 6 });
+      return true;
+    }
     if (!this.grounded && (attackKind === 'dive' || move.z > 0.55)) {
+      this.airLatch = null;
       // In a form / Arcane State the form dives its own way (mana in an Arcane State).
       const diveForm = activeMoveset(this);
       if (diveForm && formDive(this, diveForm, spells, { mana: this.buffForm?.timer > 0 })) return true;
@@ -1103,7 +1172,10 @@ export class Player extends GroundEntity {
     const attack = combo[this.comboStep - 1];
     // Unity: ground attacks root the Wizard — no forward lunge on a whiff.
     const swingTime = attack.time * weaponAttackSpeed(this); // Klingentanz: faster swings
-    this.state = attack.state; this.stateTimer = swingTime; this._weaponSwingTime = swingTime; this.vx = 0; this.vz = 0;
+    this.state = attack.state; this.stateTimer = swingTime; this._weaponSwingTime = swingTime;
+    // On the ground the swing roots the Wizard; in the air it keeps the jump momentum.
+    const airborne = !this.grounded;
+    if (airborne) { this.vx *= AIR_ATTACK_MOMENTUM; this.vz *= AIR_ATTACK_MOMENTUM; } else { this.vx = 0; this.vz = 0; }
     this._whiffRecovery = 0;
     signatureEvent(this, 'attack', { step: this.comboStep, damage: attack.damage });
     this.setWeaponMotion('combo', this.comboStep);
@@ -1141,6 +1213,7 @@ export class Player extends GroundEntity {
     // A single swing into the air is fine, but it never advances the combo: only hits
     // chain into the next step (and up to the finisher). A whiff starts over at step 1.
     if (!connected) { this.comboStep = 0; this.comboResetTimer = 0; }
+    else if (airborne) this.startAirLatch(this.lastMeleeHits);
     return true;
   }
 
@@ -1322,6 +1395,7 @@ export class Player extends GroundEntity {
       }
     }
     setHitContext(null);
+    this.lastMeleeHits = sigHits.filter((h) => !h.blocked).map((h) => h.target);
     afterWeaponSwing(this, hitAny);
     if (sigHits.length) signatureEvent(this, 'hit', { hits: sigHits, heavy: this.state === 'heavyStrike' || isFinisher, facing: this.facing });
     if (hitAny && this.buffForm) this.buffForm.hitAt = this.buffForm.age;
@@ -1504,7 +1578,7 @@ export class Player extends GroundEntity {
     this.invulnerableTimer = 1.25; this.auraShockCooldown = 0; this.arcaneShield = 0; this.arcaneShieldTimer = 0; this.arcaneShieldCooldown = 0; this.eidolonTimer = 0; this.eidolonCooldown = 0; this.eidolonPower = 1; this.eidolonArmor = 0; this.ninefoldTimer = 0; this.ninefoldCooldown = 0; this.ninefoldPower = 1; this.focus = 0; this.focusTransformTimer = 0; this.focusTransformPower = 1; this.isGuarding = false; this.guardStability = 100; this.guardHoldTime = 0; this.guardBreakTimer = 0; this.jumpsLeft = 1; this.ghosts = [];
     this.sprintActive = false; this.sprintDir = 0; this.sprintLean = 0; this.sprintBobPhase = 0;
     this.backdashTimer = 0; this.backdashSuppressTimer = 0; this.jumpBufferTimer = 0;
-    this.isSprintJump = false; this.launcherMode = false; this.chargeTimer = 0;
+    this.isSprintJump = false; this.launcherMode = false; this.chargeTimer = 0; this.airLatch = null; this.sprintDive = null;
     this._prevInputDir = 0; this._lastFlickDir = 0; this._lastFlickTime = 0;
     this.entityHitstop = 0; this.hitRecoilTimer = 0; this.hitRecoilDistance = 0;
     this.forcedRecoilTimer = 0; this.landingRecoveryTimer = 0; this.grabCooldown = 0;
