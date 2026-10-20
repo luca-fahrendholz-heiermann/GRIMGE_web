@@ -764,6 +764,8 @@ export class SpellSystem {
     updateSignatureWorld(dt, gameWorld);
     for (let i = this.activeSpells.length - 1; i >= 0; i--) {
       const spell = this.activeSpells[i];
+      // Time stop (S73): a frozen projectile hangs in mid-air until the field ends.
+      if (spell.timeFrozen) continue;
       // Hits during this update roll the spell's status effects.
       const prevSource = setStatusSource(spell.statusElements ? spell : null);
       try { spell.update(dt, gameWorld); } finally { setStatusSource(prevSource); }

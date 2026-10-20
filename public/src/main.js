@@ -1199,6 +1199,12 @@ export class GameWorld {
     if (expired.length) this.removeSlots(expired);
   }
 
+  // Slots whose spell charges while the slot is held (touch: press starts, release fires).
+  isChargeSlot(position) {
+    const slot = this.slotAt(position);
+    return !!slot && !slot.recast && ['S71'].includes(slot.definition?.signatureId);
+  }
+
   slotAt(position) {
     return this.player.slottedSpells.find((slot) => slot.position === position) ?? null;
   }
@@ -2837,6 +2843,7 @@ export class GameWorld {
   updateProjectiles(dt) {
     for (let i = this.projectiles.length - 1; i >= 0; i--) {
       const p = this.projectiles[i];
+      if (p.timeFrozen) continue; // time stop (S73)
       p.life -= dt;
 
       if (p.type === 'bolt') {

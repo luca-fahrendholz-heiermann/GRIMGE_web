@@ -992,6 +992,8 @@ export class UIManager {
         button.setPointerCapture?.(e.pointerId);
         const filled = !!window.gameWorld?.slotAt?.(position);
         this.fusionDrag = { pointerId: e.pointerId, visited: [position], startX: e.clientX, startY: e.clientY, moved: false, filled };
+        // A charge spell (S71) starts charging the moment the slot is pressed.
+        if (filled && window.gameWorld?.isChargeSlot?.(position)) { this.fusionDrag.charging = true; window.gameWorld.castSlotAt(position); return; }
         if (filled) this.updateFusionPreview(e.clientX, e.clientY);
       });
       button.addEventListener('pointermove', (e) => this.moveFusionDrag(e));
@@ -1054,6 +1056,8 @@ export class UIManager {
     this.cancelFusionDrag();
     const game = window.gameWorld;
     if (!game) return;
+    // Released after charging: fire (the open re-cast of the charge spell).
+    if (drag.charging) { const pos = drag.visited[0]; if (game.slotAt(pos)?.recast?.releaseOnUp) game.castSlotAt(pos); return; }
     if (drag.aiming) {
       // Released on the battlefield: cast there. Back over the triangle: cancel.
       if (this.insideTriangle(e.clientX, e.clientY)) game.targeting.cancel();

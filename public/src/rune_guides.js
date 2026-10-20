@@ -51,6 +51,11 @@ export const SIGNATURE_GLYPHS = Object.freeze({
   S54: [ring(.5, -.62, .18), L(.5, -.42, .5, .4), wave(-.9, .6, .62, .12, 3)],
   // S55 azure flame: two flame flickers over a crackling line.
   S55: [poly([[-.9, -.65], [-.55, -.3], [-.2, -.65]], false), poly([[.2, -.65], [.55, -.3], [.9, -.65]], false), zig(-.85, .55, .85, .2, 5, .2)],
+  // S70 cube: two overlapping squares · S71 wrath beam: a core and a long double line · S72 blood pact: a drop over a seal circle · S73 time stop: a clock with two hands.
+  S70: [poly([[-.75, -.25], [.25, -.25], [.25, .75], [-.75, .75]]), poly([[-.25, -.75], [.75, -.75], [.75, .25], [-.25, .25]])],
+  S71: [ring(-.6, 0, .3), L(-.25, -.15, .95, -.15), L(-.25, .15, .95, .15)],
+  S72: [poly([[0, -.95], [.3, -.4], [0, -.2], [-.3, -.4]]), ring(0, .4, .5, .25)],
+  S73: [ring(0, 0, .8), L(0, 0, 0, -.55), L(0, 0, .45, .25)],
   S52: [L(0, -.85, 0, .3), ring(0, .7, .13), poly([[-.9, -.5], [-.5, 0], [-.9, .5]], false), poly([[.9, -.5], [.5, 0], [.9, .5]], false)],
   S48: [arc(-.25, 0, .6, Math.PI * .55, Math.PI * 1.45), arc(.25, 0, .6, -Math.PI * .45, Math.PI * .45), L(-.15, 0, .15, 0)],
   S44: [L(-.5, .9, -.5, -.9), poly([[-.5, -.9], [.7, -.65], [.35, -.4], [.7, -.15], [-.5, -.15]], false)],

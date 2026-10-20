@@ -16,8 +16,9 @@ export const RECAST_WINDOW = 4; // default seconds
 
 let offered = null;
 // Called by a spell during its first cast.
-export function offerRecast(caster, { window = RECAST_WINDOW, label = 'STUFE 2', stage2, expire = null, valid = null, poll = null } = {}) {
-  offered = { caster, window, label, stage2, expire, valid, poll };
+// releaseOnUp: a charge spell — releasing the held slot (touch) runs stage 2.
+export function offerRecast(caster, { window = RECAST_WINDOW, label = 'STUFE 2', stage2, expire = null, valid = null, poll = null, releaseOnUp = false } = {}) {
+  offered = { caster, window, label, stage2, expire, valid, poll, releaseOnUp };
 }
 // Taken by the slot code right after the cast (null when the spell offered nothing).
 export function takeOfferedRecast(caster) {

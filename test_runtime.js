@@ -2518,7 +2518,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   const step = (n, dt = 1 / 60) => { for (let i = 0; i < n; i++) { P.update(dt, neutral, game.battlefield, game); game.updateProjectiles(dt); spells.update(dt, game); } };
   const cast = (id, target = null) => spells.cast(P, spells.resolveSpell([{ id: 'sig_' + id }]), game, null, target);
   const ids = Object.keys(core.SIGNATURES);
-  assert(ids.length === 69 && ids.every((id) => core.signatureImpl(id)?.cast) && sigMod.SIGNATURE_RUNE_IDS.every((id) => isSpecialRune(id) && runeManaCost(id) >= 28 && runeManaCost(id) <= 46), 'All 69 signature specials (atlas S01–S36 + S37–S69) are special runes with their own mechanic and bound mana');
+  assert(ids.length === 73 && ids.every((id) => core.signatureImpl(id)?.cast) && sigMod.SIGNATURE_RUNE_IDS.every((id) => isSpecialRune(id) && runeManaCost(id) >= 28 && runeManaCost(id) <= 46), 'All 73 signature specials (atlas S01–S36 + S37–S73) are special runes with their own mechanic and bound mana');
   assert(ids.every((id) => spellHowTo('sig_' + id)?.effect?.length > 40) && !spells.resolveSpell([{ id: 'sig_S03' }, { id: 'ignis' }]), 'Signature specials explain themselves in the grimoire and never fuse');
   // Every special casts, runs and renders (strict canvas) without errors.
   const strict = new Proxy({}, { get: (t, k) => (k === 'ellipse' || k === 'arc') ? (x, y, rx, ry) => { if (rx < 0 || (k === 'ellipse' && ry < 0)) throw new Error('IndexSizeError ' + k); } : (k === 'canvas' ? undefined : () => {}), set: () => true });
@@ -3213,6 +3213,51 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
     for (const sp of spells.activeSpells) sp.render?.(strict);
     assert(E.hp === E.maxHp && !bad, 'S55: foes outside the lane are not hit; renders cleanly');
     spells.clearRuntime(); STATUS.clearStatuses(); E.passive = false; E.x = 900; E.z = .5;
+  }
+  // S70–S73: seal cube, wrath beam (hold to charge), blood pact, time stop.
+  {
+    const J = await import('./public/src/signature_abilities_j.js');
+    const E = game.enemyChampion;
+    const foeAt = (dx) => { E.lifeState = 'Alive'; E.hp = E.maxHp; E.passive = true; E.x = P.x + dx; E.z = P.z; E.elevation = 0; E.freezeTimer = 0; game.battlefield.placeOnSurface(E); };
+    const runJ = (sec) => { for (let i = 0; i < sec * 60; i++) { P.update(1 / 60, neutral, game.battlefield, game); game.updateRecasts(1 / 60); spells.update(1 / 60, game); E.update(1 / 60, game, game.battlefield); } };
+    // Seal cube: the foe cannot get out; tap again: crushed.
+    reset(); dummy.homeX = dummy.x = 900; foeAt(150);
+    const s70 = game.slotRuneSpell(runeById('sig_S70')); game.castSlotAt(s70.position);
+    if (game.targeting.isActive) { game.targeting.setPoint?.({ x: E.x, z: E.z }); game.targeting.confirm(); }
+    const cube = spells.activeSpells.find((sp) => sp instanceof J.SealCube); runJ(.2); E.x += 80; runJ(1 / 60);
+    assert(cube?.victim === E && Math.abs(E.x - cube.x) <= J.CUBE.half && s70.recast?.label === 'ZERFALL', 'S70 BANNWÜRFEL: the cube seals the foe in — it cannot get out');
+    const hpCube = E.hp; game.castSlotAt(s70.position); runJ(.5);
+    assert(hpCube - E.hp >= J.CUBE.crush - .5 && !P.slottedSpells.includes(s70), 'S70: tap again — the cube collapses and crushes the foe (slot freed)');
+    // Wrath beam via the real slot button: press = charge, release = fire.
+    reset(); dummy.homeX = dummy.x = P.x + 300; dummy.hp = dummy.maxHp;
+    const s71 = game.slotRuneSpell(runeById('sig_S71')); const btn = elements.get('action-slot-' + s71.position);
+    assert(game.isChargeSlot(s71.position), 'S71 ZORNSTRAHL is a charge slot');
+    const pe = { pointerId: 91, clientX: 10, clientY: 10, preventDefault() {}, stopPropagation() {} };
+    btn.listeners.pointerdown(pe); const beam = spells.activeSpells.find((sp) => sp instanceof J.WrathBeam); const xBeam = P.x;
+    runJ(1.2);
+    assert(beam?.phase === 'charge' && beam.k > .5 && Math.abs(P.x - xBeam) < 1, 'S71: pressing the slot charges the beam (the Wizard stands, the core grows)');
+    btn.listeners.pointerup(pe); runJ(.4);
+    assert(dummy.hp < dummy.maxHp - J.WRATH.base && !P.slottedSpells.includes(s71) && P.x < xBeam - 5, 'S71: releasing fires through the lane (more damage when charged) and the recoil shoves the Wizard back');
+    reset(); dummy.homeX = dummy.x = P.x + 300; dummy.hp = dummy.maxHp; const s71b = game.slotRuneSpell(runeById('sig_S71')); game.castSlotAt(s71b.position); runJ(3.2);
+    assert(dummy.hp < dummy.maxHp && !P.slottedSpells.includes(s71b), 'S71: held too long it fires on its own (keys: tap to charge, tap to fire)');
+    // Blood pact: one huge blow across the front.
+    reset(); dummy.homeX = dummy.x = 900; foeAt(180); const hpPact = E.hp;
+    const s72 = game.slotRuneSpell(runeById('sig_S72')); game.castSlotAt(s72.position); runJ(1.6);
+    const pact = spells.activeSpells.find((sp) => sp instanceof J.BloodPact);
+    assert(hpPact - E.hp >= J.PACT.damage - .5, 'S72 BLUTVERTRAG: the summoned beast strikes ONE huge blow across the front');
+    // Time stop: a projectile entering the field hangs in the air, then flies on.
+    reset(); dummy.homeX = dummy.x = 900; E.x = 900;
+    spells.cast(P, { ...spells.resolveSpell([runeById('sig_S73')]) }, game, null, { x: P.x + 140, z: P.z });
+    spells.cast(P, spells.resolveSpell([runeById('ignis')]), game);
+    const ball = spells.activeSpells.find((sp) => Number.isFinite(sp.vx) && Math.abs(sp.vx) > 40 && !sp.isTimeField);
+    runJ(.5); const xFrozen = ball?.x; runJ(1);
+    assert(ball?.timeFrozen && Math.abs(ball.x - xFrozen) < .01, 'S73 ZEITSTOPP: a projectile in the field freezes in mid-air');
+    runJ(4); const xAfter = ball.x; runJ(.1);
+    assert(!ball.timeFrozen && Math.abs(ball.x - xAfter) > 1, 'S73: when the field ends the projectile flies on');
+    let bad = 0; const strict = new Proxy({}, { get: (t, k) => (k === 'arc' || k === 'ellipse') ? (x, y, r1, r2) => { if (r1 < 0 || (k === 'ellipse' && r2 < 0)) bad++; } : k === 'canvas' ? undefined : () => {}, set: () => true });
+    for (const sp of [cube, beam, pact]) { if (!sp) continue; const t0 = sp.t; for (const tt of [.05, .3, .6, 1, 1.5]) { sp.t = tt; sp.render(strict); } sp.t = t0; }
+    assert(!bad, 'S70–S73 render cleanly in every phase');
+    spells.clearRuntime(); E.passive = false; E.x = 900;
   }
   // S48: a hit is negated, the Wizard reappears behind the attacker and counters; three charges.
   reset(); const s48 = game.slotRuneSpell(runeById('sig_S48')); game.castSlotAt(s48.position);
