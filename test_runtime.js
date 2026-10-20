@@ -2868,8 +2868,16 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   // S46: rush launches, stage 2 slams it down with an explosion.
   reset(); const s46 = game.slotRuneSpell(runeById('sig_S46')); dummy.homeX = dummy.x = 360; game.castSlotAt(s46.position); frame(.3);
   const launched = (dummy.vElevation ?? 0) > 0 || (dummy.elevation ?? 0) > 0 || dummy.hp < dummy.maxHp;
-  const hp1 = dummy.hp; game.castSlotAt(s46.position); frame(1);
-  assert(launched && dummy.hp < hp1 && !P.slottedSpells.includes(s46), 'S46 SPIRALKUGEL: the rush launches the foe, stage 2 teleports above it and slams it down');
+  const hp1 = dummy.hp; game.castSlotAt(s46.position); frame(.1);
+  const hoverH = P.elevation; const hoverX = P.x; frame(.1); const stillUp = P.elevation;
+  assert(hoverH >= 150 && stillUp >= 150 && Math.abs(hoverX - dummy.x) < 30, 'S46 stage 2: the Wizard appears high above the foe and hangs there for a beat');
+  frame(.9);
+  const crater = spells.activeSpells.find((sp) => sp.isSpiralCrater);
+  assert(launched && dummy.hp < hp1 && !P.slottedSpells.includes(s46) && P.grounded, 'S46 SPIRALKUGEL: the rush launches the foe, stage 2 slams it down from above');
+  assert(crater && crater.isGroundDecal, 'S46 impact leaves a (purely visual) crater on the ground');
+  { let bad = false; const cctx = new Proxy({}, { get: (t, k) => (k === 'ellipse' || k === 'arc') ? (...v) => { if (v[2] < 0 || (k === 'ellipse' && v[3] < 0)) bad = true; } : k === 'canvas' ? undefined : () => {}, set: () => true });
+    for (const sp of spells.activeSpells) sp.render?.(cctx); crater.t = crater.life - .01; crater.render(cctx);
+    assert(!bad, 'S46 slam and crater render without negative radii'); }
   // S47: the trap stays armed after the window — no manual detonation, but contact still sets it off.
   reset(); dummy.homeX = dummy.x = 900; const s47 = game.slotRuneSpell(runeById('sig_S47')); game.castSlotAt(s47.position);
   if (game.targeting.isActive) { game.targeting.setPoint?.({ x: 520, z: .5 }); game.targeting.confirm(); }

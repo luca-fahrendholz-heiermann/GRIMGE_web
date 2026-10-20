@@ -122,30 +122,119 @@ class SpiralRush {
     if (!this.hitAt) thread(ctx, [[p.x - this.f * 40, y], [x - this.f * 10, y]], ORB.mid, 3, .7);
   }
 }
+// Stage 2: the Wizard appears high above the foe, hangs there for a beat while the orb
+// swells over the raised hand (the foe is held in the air below), then smashes straight
+// down — flash, shock rings, flying rubble, screen shake and a lingering crater.
+const SLAM_HOVER = .26; const SLAM_DIVE_SPEED = 1700;
 class SpiralSlam {
-  constructor(sig, owner, victim, quality) { this.sig = sig; this.owner = owner; this.team = owner.team; this.victim = victim; this.quality = quality; this.t = 0; this.landed = false; this.isFinished = false; this.x = owner.x; this.z = owner.z; }
+  constructor(sig, owner, victim, quality, hoverH) {
+    this.sig = sig; this.owner = owner; this.team = owner.team; this.victim = victim; this.quality = quality;
+    this.t = 0; this.hoverH = hoverH; this.diving = false; this.landed = false; this.isFinished = false; this.x = owner.x; this.z = owner.z;
+    this.victimH = Math.max(0, victim?.elevation ?? 0);
+  }
   get y() { return groundYForDepth(this.z); }
   update(dt, gw) {
     this.t += dt; const p = this.owner;
-    if (!this.landed) {
-      if (p.grounded || this.t > 1.2) {
+    if (!this.landed) this.z = p.z;
+    if (!this.diving && !this.landed) {
+      // Hang in the air above the foe; the foe is held below.
+      p.grounded = false; p.elevation = this.hoverH; p.vElevation = 0; p.vx = 0; p.state = 'dive'; p.stateTimer = .5;
+      if (this.victim && alive(this.victim) && this.victimH > 0) { this.victim.elevation = this.victimH; this.victim.vElevation = 0; this.victim.x += (p.x - this.victim.x) * Math.min(1, dt * 10); }
+      if (this.t >= SLAM_HOVER) { this.diving = true; p.vElevation = -SLAM_DIVE_SPEED; audio.playSlash?.(.7); }
+    } else if (!this.landed) {
+      p.vElevation = Math.min(p.vElevation ?? 0, -SLAM_DIVE_SPEED); p.state = 'dive'; p.stateTimer = .5;
+      if (p.grounded || (p.elevation ?? 0) <= 0 || this.t > SLAM_HOVER + 1) {
         this.landed = true; this.landT = this.t; this.x = p.x; this.z = p.z;
         for (const t of foesOf(gw, this.team)) if (!t.isProp && groundDist(t, p) < 110) hit(t, (t === this.victim ? 60 : 30) * (this.quality?.power ?? 1), Math.sign(t.x - p.x || 1) * 300, -200, .7, t === this.victim);
-        combat.shakeCamera(14, .4); combat.triggerHitstop?.(6); audio.playImpact?.(true);
-      } else if (this.victim && alive(this.victim)) { this.victim.x += (p.x - this.victim.x) * Math.min(1, dt * 12); this.victim.vElevation = Math.min(this.victim.vElevation ?? 0, -900); }
+        if (this.victim && alive(this.victim) && (this.victim.elevation ?? 0) > 0) { this.victim.elevation = 0; this.victim.vElevation = 0; }
+        const gy = groundYForDepth(p.z);
+        combat.shakeCamera(12, .45); combat.triggerHitstop?.(8); audio.playImpact?.(true);
+        combat.spawnShockwave(p.x, gy, 130, ORB.mid); combat.spawnShockwave(p.x, gy, 80, ORB.core); combat.spawnDust(p.x, gy, 10);
+        emit(new SpiralCrater(p.x, p.z), this.quality);
+      } else if (this.victim && alive(this.victim)) {
+        // Dragged down in front of the orb.
+        this.victim.x += (p.x - this.victim.x) * Math.min(1, dt * 12);
+        if ((this.victim.elevation ?? 0) > 0) this.victim.elevation = Math.max(0, Math.min(this.victim.elevation, (p.elevation ?? 0) - 10));
+        this.victim.vElevation = Math.min(this.victim.vElevation ?? 0, -900);
+      }
     }
-    if (this.landed && this.t - this.landT > .6) this.isFinished = true;
+    if (this.landed && this.t - this.landT > .7) this.isFinished = true;
   }
   render(ctx) {
-    const p = this.owner;
-    if (!this.landed) { drawSpiralOrb(ctx, p.x + (p.facing || 1) * 8, (p.y ?? this.y) - (p.elevation ?? 0) + 6, 13, this.t); return; }
-    const k = (this.t - this.landT) / .6; const y = this.y;
+    const p = this.owner; const f = p.facing || 1; const gy = groundYForDepth(p.z); const py = gy - (p.elevation ?? 0);
+    if (!this.landed) {
+      ctx.save();
+      // Target mark on the ground under the Wizard: shows where it will hit.
+      const mk = this.diving ? 1 : this.t / SLAM_HOVER; const mr = 70 - 30 * mk;
+      ctx.globalAlpha = .45 + .4 * mk; ctx.strokeStyle = ORB.rim; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.ellipse(p.x, gy, mr, mr * .32, 0, 0, TAU); ctx.stroke();
+      ctx.globalAlpha = .25 + .3 * mk; ctx.fillStyle = ORB.dark; ctx.beginPath(); ctx.ellipse(p.x, gy, mr * .7, mr * .22, 0, 0, TAU); ctx.fill();
+      if (!this.diving) {
+        // Hover: the orb swells over the raised hand, energy rushes into it.
+        const k = Math.min(1, this.t / SLAM_HOVER); const ox = p.x + f * 4; const oy = py - 82 - 6 * k;
+        ctx.globalCompositeOperation = 'lighter';
+        for (let n = 0; n < 10; n++) { const a = n / 10 * TAU + this.t * 6; const r = 60 * (1 - ((this.t * 3 + n / 10) % 1)) + 14; ctx.globalAlpha = .8; ctx.fillStyle = n % 2 ? ORB.core : ORB.mid; ctx.fillRect(Math.round(ox + Math.cos(a) * r), Math.round(oy + Math.sin(a) * r * .8), 3, 3); }
+        ctx.globalAlpha = .35; ctx.fillStyle = ORB.mid; ctx.beginPath(); ctx.arc(ox, oy, 26 + 14 * k, 0, TAU); ctx.fill();
+        ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+        drawSpiralOrb(ctx, ox, oy, 12 + 14 * k, this.t);
+        // Light line from the raised hand up to the orb.
+        thread(ctx, [[p.x + f * 6, py - 52], [ox, oy + 12]], ORB.mid, 3, .8);
+      } else {
+        // Dive: speed lines above, the orb leads underneath.
+        ctx.globalAlpha = .75; ctx.strokeStyle = ORB.core; ctx.lineWidth = 2;
+        for (let n = 0; n < 7; n++) { const lx = p.x - 24 + n * 8; const ly = py - 70 - ((n * 37) % 30); ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(lx, ly - 70 - (n % 3) * 20); ctx.stroke(); }
+        ctx.globalAlpha = 1; drawSpiralOrb(ctx, p.x + f * 6, py + 4, 26, this.t);
+      }
+      ctx.restore(); return;
+    }
+    const k = (this.t - this.landT) / .7; const y = this.y;
     ctx.save();
-    ctx.globalAlpha = 1 - k; ctx.fillStyle = ORB.mid; ctx.beginPath(); ctx.ellipse(this.x, y, 30 + 90 * k, (30 + 90 * k) * .32, 0, 0, TAU); ctx.fill();
-    ctx.strokeStyle = ORB.core; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(this.x, y, 20 + 110 * k, (20 + 110 * k) * .32, 0, 0, TAU); ctx.stroke();
-    if (k < .4) drawSpiralOrb(ctx, this.x, y - 14, 22 * (1 - k * 2), this.t);
+    // White impact flash + an energy dome that bursts outward.
+    if (k < .18) { ctx.globalAlpha = .9 * (1 - k / .18); ctx.fillStyle = ORB.core; ctx.beginPath(); ctx.ellipse(this.x, y - 30, 110, 80, 0, 0, TAU); ctx.fill(); }
+    const dr = 40 + 110 * Math.min(1, k * 1.6);
+    ctx.globalAlpha = .7 * (1 - k); ctx.fillStyle = ORB.rim; ctx.beginPath(); ctx.ellipse(this.x, y, dr, dr * .75, 0, Math.PI, TAU); ctx.fill();
+    ctx.globalAlpha = .8 * (1 - k); ctx.fillStyle = ORB.mid; ctx.beginPath(); ctx.ellipse(this.x, y, dr * .7, dr * .5, 0, Math.PI, TAU); ctx.fill();
+    ctx.globalAlpha = 1 - k; ctx.strokeStyle = ORB.core; ctx.lineWidth = 4; ctx.beginPath(); ctx.ellipse(this.x, y, 20 + 150 * k, (20 + 150 * k) * .32, 0, 0, TAU); ctx.stroke();
+    ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(this.x, y, 10 + 90 * k, (10 + 90 * k) * .32, 0, 0, TAU); ctx.stroke();
+    // Rubble flying out in arcs.
+    for (let n = 0; n < 14; n++) {
+      const a = (n / 14) * Math.PI + .1; const sp = 90 + (n * 53) % 80; const tt = k * .7;
+      const rx = this.x + Math.cos(a) * sp * tt * 2.2 * (n % 2 ? 1 : -1); const ry = y - Math.sin(a) * sp * tt * 3 + 420 * tt * tt;
+      if (ry > y + 4) continue;
+      ctx.globalAlpha = 1 - k * .6; ctx.fillStyle = n % 3 ? '#6d6253' : '#3e3730'; const sz = 3 + (n % 3) * 2;
+      ctx.fillRect(Math.round(rx - sz / 2), Math.round(ry - sz / 2), sz, sz);
+    }
+    if (k < .4) drawSpiralOrb(ctx, this.x, y - 16, 26 * (1 - k * 2.5), this.t);
     ctx.restore();
-    sparks(ctx, [[this.x, y - 10]], this.sig.mat, this.t, 4601, 10, 1 - k);
+    sparks(ctx, [[this.x, y - 10]], this.sig.mat, this.t, 4601, 14, 1 - k);
+  }
+}
+// Purely visual crater (no slow zone): a dark bowl with a raised rim, radial cracks with
+// a fading blue glow and rocks on the rim. Lies under every actor, fades after a few seconds.
+class SpiralCrater {
+  constructor(x, z) { this.x = x; this.z = z; this.t = 0; this.life = 4.5; this.isGroundDecal = true; this.isSpiralCrater = true; this.isFinished = false; }
+  get y() { return groundYForDepth(this.z); }
+  update(dt) { this.t += dt; if (this.t >= this.life) this.isFinished = true; }
+  render(ctx) {
+    const a = Math.min(1, this.t / .05) * Math.min(1, (this.life - this.t) / 1.2); if (a <= 0) return;
+    const x = this.x; const y = this.y; const R = 62;
+    ctx.save(); ctx.globalAlpha = a;
+    ctx.fillStyle = '#8a7a66'; ctx.beginPath(); ctx.ellipse(x, y, R + 8, (R + 8) * .34, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#2b241e'; ctx.beginPath(); ctx.ellipse(x, y + 1, R, R * .3, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#16120f'; ctx.beginPath(); ctx.ellipse(x, y + 3, R * .55, R * .16, 0, 0, TAU); ctx.fill();
+    // Radial cracks out of the bowl.
+    const glow = Math.max(0, 1 - this.t / 2.5);
+    for (let n = 0; n < 9; n++) {
+      const ang = n / 9 * TAU + .3; const L = R + 22 + (n * 29) % 34;
+      const pts = [[x + Math.cos(ang) * R * .9, y + Math.sin(ang) * R * .28], [x + Math.cos(ang + .12) * (R + L) * .5 + Math.cos(ang) * R * .3, y + Math.sin(ang + .12) * (R + L) * .16], [x + Math.cos(ang - .05) * L * 1.15, y + Math.sin(ang - .05) * L * .36]];
+      ctx.strokeStyle = '#1f1a15'; ctx.lineWidth = 3; ctx.beginPath(); pts.forEach(([px, py], i) => (i ? ctx.lineTo(px, py) : ctx.moveTo(px, py))); ctx.stroke();
+      if (glow > 0) { ctx.globalAlpha = a * glow; ctx.strokeStyle = ORB.mid; ctx.lineWidth = 1.5; ctx.stroke(); ctx.globalAlpha = a; }
+    }
+    // Rocks on the rim.
+    ctx.fillStyle = '#5d5246';
+    for (let n = 0; n < 8; n++) { const ang = n / 8 * TAU + .7; const rx = x + Math.cos(ang) * (R + 4); const ry = y + Math.sin(ang) * (R + 4) * .32; const sz = 4 + (n % 3) * 2; ctx.fillRect(Math.round(rx - sz / 2), Math.round(ry - sz), sz, sz); }
+    if (glow > 0) { ctx.globalAlpha = a * glow * .6; ctx.fillStyle = ORB.rim; ctx.beginPath(); ctx.ellipse(x, y + 3, R * .4, R * .1, 0, 0, TAU); ctx.fill(); }
+    ctx.restore();
   }
 }
 defineSignature('S46', {
@@ -154,10 +243,12 @@ defineSignature('S46', {
     offerRecast(p, { window: 2.5, label: 'SPRUNG & EINSCHLAG', valid: () => !rush.victim || alive(rush.victim), stage2: (gw) => {
       const v = rush.victim && alive(rush.victim) ? rush.victim : nearestAhead(gw, p, 260);
       if (!v) return false;
-      // Above the foe, then a fast dive that drags it down into the ground.
+      // Appear high above the foe (clearly visible), hang for a beat, then smash down.
       teleport(p, v.x - (p.facing || 1) * 6, v.z ?? p.z, gw, ORB.mid);
-      p.grounded = false; p.elevation = Math.max(90, (v.elevation ?? 0) + 70); p.vElevation = -1100; p.state = 'dive'; p.stateTimer = .5;
-      emit(new SpiralSlam(c.sig, p, v, c.quality), c.quality);
+      const hoverH = Math.max(170, (v.elevation ?? 0) + 120);
+      p.grounded = false; p.elevation = hoverH; p.vElevation = 0; p.state = 'dive'; p.stateTimer = .5;
+      combat.spawnShockwave(p.x, groundYForDepth(p.z) - hoverH - 40, 46, ORB.core);
+      emit(new SpiralSlam(c.sig, p, v, c.quality, hoverH), c.quality);
     } });
   }
 });
