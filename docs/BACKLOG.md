@@ -8,14 +8,14 @@ Plan: `docs/GRIMGE_Visual_Upgrade_Plan.md` §4 Schritt 4. Testassets → später
 2. **Basis-Spells** (je Element ein Hauptkörper-Sprite + Impact): Fireball, Gale Shockwave, Arc Lightning, Stone Spikes, Frost Nova, Void Bolt, Halo Pulse, Shadow Step, NATURA-Heilblüte.
 3. **Strahlen** (eine Klasse, 7 Looks): Inferno, Glacial, Thunder, Null, Radiant, Rift, Annihilation — mehrlagiger Kern + Austritts- und Einschlags-Sprites.
 4. **Fusionen** nach Sichtbarkeit: Firestorm, Magma Fissure, Tempest Blitz, Blizzard Surge, Dragon Breath, Seismic Slam, Titan Stomp, Soul Seekers, Weltenbaum.
-5. **Spezialrunen** S01–S58: zuerst Objekt-Runen (Banner, Sanktuarium, Kunai, Falle, Schächte), dann Haltungen.
+5. **Spezialrunen** S01–S62: zuerst Objekt-Runen (Banner, Sanktuarium, Kunai, Falle, Schächte), dann Haltungen.
 6. **Arcane States** (18): Rig-Teile als Sprites statt Plates; Lieblinge zuerst (Arkengestell, Sonnenwyrm, Vorausschnitt, Göttlicher Riese).
 7. **Waffen** (37): Waffen-Sprites + Bewegungs-Animationen, Kit-Effekte als Sprites — und **jede Waffe bekommt ihre eigene Verteidigungs-Animation** (Schild hochreißen, Klinge quer, Stab-Drehung, Fächer-Wand …; Nutzerwunsch 20.10.).
 8. Optional: Konzeptentwürfe per Codex ImageGen (über das OpenAI-Konto, nur nach Freigabe) → Cleanup in Aseprite.
 
 ## Anime-Mechaniken — Ideen für weitere Spezialrunen / Arcane States
-Umgesetzt: Spiralkugel (S46), Spiegelkerker (S50), Blutkreuz (S51), Herausforderung (S52), Sphären als eigene Familie (S53 Abgrundschrein, S56 Stillstand, S57 Glutkessel, S58 Lebenshain; gleiche Glyphe, eigene Fähigkeit, max. 1 pro Deck, Sphären-Duell), Schattenbindung (S54), Tausendvogel (S55, Chidori-artig). Jede neue Mechanik mit eigenem Stil, nicht alles gleich krachend.
-- **Weitere Sphären** (gleiche Glyphe, eigene Regel): z. B. Spiegelwelt (Gegner sehen Doppelbilder), Schwerkraft-Sphäre (alles wird zu Boden gedrückt, keine Sprünge), Sturm-Sphäre (Blitze in Nässe), Schatten-Sphäre (Fallen unsichtbar).
+Umgesetzt: Spiralkugel (S46), Spiegelkerker (S50), Blutkreuz (S51), Herausforderung (S52), Sphären als eigene Familie (S53 Abgrundschrein, S56 Stillstand, S57 Glutkessel, S58 Lebenshain, S59 Spiegelwelt, S60 Schwerkraft, S61 Sturm, S62 Schattenmeer; Name nur für den Besitzer sichtbar; gleiche Glyphe, eigene Fähigkeit, max. 1 pro Deck, Sphären-Duell), Schattenbindung (S54), Azurflamme (S55, Chidori-artig adaptiert: blaues Feuer). Jede neue Mechanik mit eigenem Stil, nicht alles gleich krachend.
+- **Weitere Sphären** nach Bedarf (gleiche Glyphe, eigene Regel).
 - **Gedankenspiegelung / Illusion (Genjutsu):** der Gegner sieht für 2 s falsche Positionen (Doppelbilder); Treffer auf die Illusion zerplatzen.
 - **Hollow-/Cero-Strahl mit Aufladung:** je länger gehalten, desto breiter; beim Loslassen Rückstoß für den Zauberer.
 - **Kekkai/Bannwürfel (Kekkaishi):** ein Würfel um den Gegner, zweiter Tipp „Metsu“: Würfel zieht sich zusammen.

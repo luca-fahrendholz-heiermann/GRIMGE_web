@@ -241,7 +241,7 @@ assert(sQuality.power > 1 && sQuality.area > 1 && sQuality.duration > 1, 'S-grad
   let seed = 11; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
   const rough = (id, size = 120) => guideStrokes(id, 400, 300, size).map((st, i) => (i % 2 ? st.slice().reverse() : st).map((pt) => ({ x: pt.x + (rnd() - .5) * 10, y: pt.y + (rnd() - .5) * 10 }))).reverse();
   const misses = SIG.filter((id) => recognizer.recognize(rough(id), ['ignis', 'aqua', 'terra', id])?.rune.id !== id);
-  assert(SIG.length === 58 && !misses.length, 'Every signature glyph, drawn roughly in any stroke order, is recognised from the hand' + (misses.length ? ' (' + misses.join(',') + ')' : ''));
+  assert(SIG.length === 62 && !misses.length, 'Every signature glyph, drawn roughly in any stroke order, is recognised from the hand' + (misses.length ? ' (' + misses.join(',') + ')' : ''));
   seed = 11; // the pair check uses its own fixed noise (independent of how many glyphs ran before)
   const pairs = [['sig_S01', 'sig_S02'], ['sig_S18', 'sig_S35'], ['sig_S23', 'sig_S27'], ['sig_S09', 'sig_S31']];
   assert(pairs.every(([a, b]) => recognizer.recognize(rough(a), [a, b, 'fulgur'])?.rune.id === a && recognizer.recognize(rough(b), [a, b, 'fulgur'])?.rune.id === b), 'Two signature specials in one hand are told apart by their glyphs');

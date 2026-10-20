@@ -45,10 +45,10 @@ export const SIGNATURE_GLYPHS = Object.freeze({
   // S53 domain: a dome over the floor line with the eclipse inside.
   S53: DOMAIN_GLYPH,
   // Every domain shares the domain glyph (like the Arcane States share the hourglass sigil).
-  S56: DOMAIN_GLYPH, S57: DOMAIN_GLYPH, S58: DOMAIN_GLYPH,
+  S56: DOMAIN_GLYPH, S57: DOMAIN_GLYPH, S58: DOMAIN_GLYPH, S59: DOMAIN_GLYPH, S60: DOMAIN_GLYPH, S61: DOMAIN_GLYPH, S62: DOMAIN_GLYPH,
   // S54 shadow bind: a figure standing on a wavy shadow.
   S54: [ring(.5, -.62, .18), L(.5, -.42, .5, .4), wave(-.9, .6, .62, .12, 3)],
-  // S55 thousand birds: two birds over a lightning zig-zag.
+  // S55 azure flame: two flame flickers over a crackling line.
   S55: [poly([[-.9, -.65], [-.55, -.3], [-.2, -.65]], false), poly([[.2, -.65], [.55, -.3], [.9, -.65]], false), zig(-.85, .55, .85, .2, 5, .2)],
   S52: [L(0, -.85, 0, .3), ring(0, .7, .13), poly([[-.9, -.5], [-.5, 0], [-.9, .5]], false), poly([[.9, -.5], [.5, 0], [.9, .5]], false)],
   S48: [arc(-.25, 0, .6, Math.PI * .55, Math.PI * 1.45), arc(.25, 0, .6, -Math.PI * .45, Math.PI * .45), L(-.15, 0, .15, 0)],

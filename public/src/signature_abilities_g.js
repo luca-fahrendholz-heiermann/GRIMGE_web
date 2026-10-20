@@ -13,12 +13,18 @@
 //   S56 STILLSTAND      time stands still: foes in slow motion, clock-hand strikes
 //   S57 GLUTKESSEL      a magma floor: foes burn, fire geysers erupt under them
 //   S58 LEBENSHAIN      allies heal and shake off statuses; foes are poisoned
+//   S59 SPIEGELWELT     mirror images strike from every side, foes lose their bearings
+//   S60 SCHWERKRAFT     no jumping, flyers torn down, pulls to the centre
+//   S61 STURM           rain soaks, lightning strikes (wet + lightning = shock)
+//   S62 SCHATTENMEER    foes sink, shadow hands grab and hold
+// Only the caster sees the domain's name — the opponent has to find out by playing.
 import { defineSignature, emit, foesOf, hit, plate, sparks, sigSink, TAU, DEPTH } from './signature_core.js';
 import { offerRecast } from './recast.js';
 import { combat } from './combat.js';
 import { audio } from './audio.js';
 import { groundYForDepth } from './world.js';
 import { applyStatus, hasStatus } from './status_effects.js';
+import { ghostOf } from './buff_signatures.js';
 
 export const DOMAIN = Object.freeze({ radius: 190, height: 175, duration: 6, sign: .35, unfold: .6, slashEvery: .45, slashDamage: 7, duelTime: 3, aiTapRate: 4.5 });
 const alive = (t) => t && !t.isDead && t.lifeState !== 'Dead' && t.lifeState !== 'Dying' && (t.hp ?? 1) > 0;
@@ -122,6 +128,100 @@ export const DOMAIN_RULES = Object.freeze({
       for (let i = 0; i < 22; i++) { const ph = (d.t * .35 + i / 22) % 1; const px = x - rx * .8 + ((i * 113 + d.seed) % 1000) / 1000 * rx * 1.6 + Math.sin(d.t * 2 + i) * 6; const py = y - h * .9 + ph * h * .85; ctx.globalAlpha = fade * (1 - ph * .5); ctx.fillStyle = i % 2 ? '#f8bbd0' : '#fff9c4'; ctx.fillRect(Math.round(px), Math.round(py), 3, 2); }
       ctx.globalAlpha = fade; for (let i = 0; i < 12; i++) { const a = i / 12 * TAU + .3; const fx = x + Math.cos(a) * rx * .7; const fy = y + Math.sin(a) * ry * .7; ctx.fillStyle = i % 3 ? '#ffeb3b' : '#f48fb1'; ctx.fillRect(Math.round(fx) - 2, Math.round(fy) - 2, 4, 4); }
     }
+  },
+  // S59 — mirror world: images of the caster strike from every side, foes lose their bearings.
+  S59: {
+    name: 'SPIEGELWELT', finaleLabel: 'SCHLIESSEN: SPLITTER', slow: .7,
+    pal: { bands: ['#0e1116', '#161b24', '#1f2733', '#2a3444'], floor: '#11161e', crack: '#e0f7fa', wall: '#90a4ae', rim: '#e0f7fa', rimLight: '#ffffff', shell: '#b0bec5', mat: mat('#0e1116', '#2a3444', '#90a4ae', '#e0f7fa', '#ffffff', '#b2ebf2') },
+    caster() {},
+    foe(d, dt, t) {
+      if (!d.every(t, 1.3)) return;
+      const side = (d.fx.length % 2 ? 1 : -1);
+      hit(t, Math.round(11 * d.power), -side * 120, 40, .35);
+      if (Math.random() < .5) t.facing = -(t.facing || 1); // confused: which one is real?
+      d.fx.push({ type: 'mirror', t: 0, x: t.x, z: t.z ?? d.cz, side });
+    },
+    finale(d, gw, left) { for (const t of d.foesInside(gw)) { hit(t, Math.round((10 + left * 5) * d.power), 0, 160, .5, true); d.fx.push({ type: 'mirror', t: 0, x: t.x, z: t.z ?? d.cz, side: 1, big: true }, { type: 'mirror', t: 0, x: t.x, z: t.z ?? d.cz, side: -1, big: true }); } },
+    interior(ctx, d, x, y, rx, ry, h, k, fade) {
+      // Tall mirror shards all around, each holding a reflection of the caster.
+      for (let i = 0; i < 7; i++) {
+        const sx = x - rx * .8 + i * rx * .27; const sh = h * (.55 + (i % 3) * .12); const sy = y - ry * .2;
+        ctx.globalAlpha = fade * .5; ctx.fillStyle = '#b0bec5'; ctx.beginPath(); ctx.moveTo(sx - 10, sy); ctx.lineTo(sx - 7, sy - sh); ctx.lineTo(sx + 9, sy - sh + 8); ctx.lineTo(sx + 10, sy); ctx.closePath(); ctx.fill();
+        ctx.globalAlpha = fade * .9; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1; ctx.stroke();
+        if (d.owner?.heroKey && i % 2) ghostOf(ctx, d.owner, sx, sy - 4, 'idle', d.owner.animTime ?? 0, i % 4 ? 1 : -1, .25 * fade, '#e0f7fa', .6);
+      }
+    }
+  },
+  // S60 — gravity: nobody leaves the ground, flyers are torn down, a pull to the centre.
+  S60: {
+    name: 'SCHWERKRAFT', finaleLabel: 'SCHLIESSEN: KOLLAPS', slow: .5,
+    pal: { bands: ['#08060f', '#120d22', '#1c1433', '#271c45'], floor: '#0f0b1c', crack: '#b388ff', wall: '#5e35b1', rim: '#b388ff', rimLight: '#ede7f6', shell: '#9575cd', mat: mat('#08060f', '#271c45', '#5e35b1', '#b388ff', '#ede7f6', '#d1c4e9') },
+    caster() {},
+    foe(d, dt, t) {
+      // Pressed down: no jumping; whoever is in the air is slammed to the ground.
+      if ((t.elevation ?? 0) > 2) { t.vElevation = Math.min(t.vElevation ?? 0, -900); if (d.every(t, 1, 'slam')) hit(t, Math.round(14 * d.power), 0, -300, .4); }
+      else if ((t.vElevation ?? 0) > 0) t.vElevation = 0;
+      if (!d.every(t, 2)) return;
+      // Gravity pulse: a pull toward the centre.
+      t.x += (d.cx - t.x) * .3; if (Number.isFinite(t.z)) t.z += (d.cz - t.z) * .3;
+      hit(t, Math.round(8 * d.power), 0, 0, .25);
+      d.fx.push({ type: 'pulse', t: 0, x: d.cx, z: d.cz });
+    },
+    finale(d, gw, left) { for (const t of d.foesInside(gw)) { t.x += (d.cx - t.x) * .8; if (Number.isFinite(t.z)) t.z += (d.cz - t.z) * .8; hit(t, Math.round((14 + left * 6) * d.power), 0, -400, .7, true); } d.fx.push({ type: 'pulse', t: 0, x: d.cx, z: d.cz, big: true }); },
+    interior(ctx, d, x, y, rx, ry, h, k, fade) {
+      // A black hole above the centre with an accretion disc; rings sink toward the floor.
+      const cy = y - h * .62;
+      ctx.globalAlpha = fade * .8; ctx.strokeStyle = '#b388ff'; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(x, cy, 44 * k, 12 * k, Math.sin(d.t) * .1, 0, TAU); ctx.stroke();
+      ctx.globalAlpha = fade; ctx.fillStyle = '#000000'; ctx.beginPath(); ctx.arc(x, cy, 18 * k, 0, TAU); ctx.fill();
+      ctx.strokeStyle = '#ede7f6'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x, cy, 20 * k, 0, TAU); ctx.stroke();
+      for (let i = 0; i < 4; i++) { const ph = (d.t * .5 + i / 4) % 1; ctx.globalAlpha = fade * (1 - ph) * .6; ctx.strokeStyle = '#7e57c2'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(x, y, rx * (1 - ph * .85), ry * (1 - ph * .85), 0, 0, TAU); ctx.stroke(); }
+      ctx.fillStyle = '#d1c4e9'; for (let i = 0; i < 18; i++) { const ph = (d.t * .8 + i / 18) % 1; const sx = x - rx * .8 + ((i * 97 + d.seed) % 1000) / 1000 * rx * 1.6; ctx.globalAlpha = fade * .7; ctx.fillRect(Math.round(sx), Math.round(y - h * .9 + ph * h * .85), 2, 3); }
+    }
+  },
+  // S61 — storm: rain soaks everyone, lightning strikes (wet + lightning = shock).
+  S61: {
+    name: 'STURM', finaleLabel: 'SCHLIESSEN: DONNERKEIL', slow: .75,
+    pal: { bands: ['#0b1118', '#121c27', '#1a2836', '#233446'], floor: '#0f1922', crack: '#81d4fa', wall: '#546e7a', rim: '#4fc3f7', rimLight: '#e1f5fe', shell: '#90caf9', mat: mat('#0b1118', '#233446', '#546e7a', '#4fc3f7', '#e1f5fe', '#b3e5fc') },
+    caster() {},
+    foe(d, dt, t) {
+      applyStatus(t, 'wet', { quiet: true, duration: 1.5 });
+      if (!d.every(t, 1.1)) return;
+      hit(t, Math.round(12 * d.power), 0, 60, .3); // the domain carries 'fulgur': wet + lightning → SCHOCK
+      d.fx.push({ type: 'bolt', t: 0, x: t.x, z: t.z ?? d.cz });
+    },
+    finale(d, gw, left) { for (const t of d.foesInside(gw)) { hit(t, Math.round((16 + left * 5) * d.power), 0, 200, .6, true); d.fx.push({ type: 'bolt', t: 0, x: t.x, z: t.z ?? d.cz, big: true }); } },
+    interior(ctx, d, x, y, rx, ry, h, k, fade) {
+      // Heavy clouds, slanted rain, lightning flickering in the sky.
+      ctx.globalAlpha = fade * .9; ctx.fillStyle = '#2b3a4d';
+      for (let i = 0; i < 6; i++) { const cx = x - rx * .75 + i * rx * .3; ctx.beginPath(); ctx.ellipse(cx, y - h * .82 + (i % 2) * 8, 34 * k, 14 * k, 0, 0, TAU); ctx.fill(); }
+      ctx.strokeStyle = '#90caf9'; ctx.lineWidth = 1;
+      for (let i = 0; i < 40; i++) { const ph = (d.t * 2.2 + i / 40) % 1; const sx = x - rx + ((i * 61 + d.seed) % 1000) / 1000 * rx * 2; const sy = y - h * .75 + ph * h * .8; ctx.globalAlpha = fade * .6; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx - 3, sy + 8); ctx.stroke(); }
+      if (Math.sin(d.t * 5.3) > .92) { ctx.globalAlpha = fade * .25; ctx.fillStyle = '#e1f5fe'; ctx.fillRect(x - rx, y - h, rx * 2, h); }
+    }
+  },
+  // S62 — shadow sea: foes sink, shadow hands grab and hold them.
+  S62: {
+    name: 'SCHATTENMEER', finaleLabel: 'SCHLIESSEN: SCHATTENFLUT', slow: .5,
+    pal: { bands: ['#030305', '#07070c', '#0c0b14', '#12101e'], floor: '#050409', crack: '#7e57c2', wall: '#311b92', rim: '#7e57c2', rimLight: '#d1c4e9', shell: '#5e35b1', mat: mat('#030305', '#12101e', '#311b92', '#7e57c2', '#d1c4e9', '#b39ddb') },
+    caster() {},
+    foe(d, dt, t) {
+      if (!d.every(t, 1.4)) return;
+      hit(t, Math.round(12 * d.power), 0, 0, .3); t.freeze?.(.5);
+      d.fx.push({ type: 'hands', t: 0, x: t.x, z: t.z ?? d.cz });
+    },
+    finale(d, gw, left) { for (const t of d.foesInside(gw)) { hit(t, Math.round((12 + left * 5) * d.power), 0, 0, .6, true); t.freeze?.(1); d.fx.push({ type: 'hands', t: 0, x: t.x, z: t.z ?? d.cz, big: true }); } },
+    interior(ctx, d, x, y, rx, ry, h, k, fade) {
+      // A black sea; silhouettes of shadow beasts peek out, pale eyes blink.
+      for (let i = 0; i < 4; i++) {
+        const bx = x - rx * .6 + i * rx * .4; const by = y - ry * .1; const bob = Math.sin(d.t * 1.5 + i) * 4;
+        ctx.globalAlpha = fade * .9; ctx.fillStyle = '#000000'; ctx.beginPath(); ctx.ellipse(bx, by - 18 + bob, 16 * k, 20 * k, 0, Math.PI, TAU); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(bx - 12 * k, by - 30 + bob); ctx.lineTo(bx - 8 * k, by - 44 * k + bob); ctx.lineTo(bx - 4 * k, by - 32 + bob); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(bx + 12 * k, by - 30 + bob); ctx.lineTo(bx + 8 * k, by - 44 * k + bob); ctx.lineTo(bx + 4 * k, by - 32 + bob); ctx.fill();
+        if (Math.sin(d.t * 2 + i * 1.7) > -.6) { ctx.fillStyle = '#d1c4e9'; ctx.fillRect(Math.round(bx - 6), Math.round(by - 26 + bob), 3, 2); ctx.fillRect(Math.round(bx + 3), Math.round(by - 26 + bob), 3, 2); }
+      }
+      ctx.strokeStyle = '#311b92'; ctx.lineWidth = 2;
+      for (let i = 0; i < 8; i++) { const a = i / 8 * TAU + d.t * .3; ctx.globalAlpha = fade * .7; ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * rx * .3, y + Math.sin(a) * ry * .3); ctx.quadraticCurveTo(x + Math.cos(a + .4) * rx * .6, y + Math.sin(a + .4) * ry * .6 - 10, x + Math.cos(a) * rx * .9, y + Math.sin(a) * ry * .9); ctx.stroke(); }
+    }
   }
 });
 export const DOMAIN_IDS = Object.freeze(Object.keys(DOMAIN_RULES));
@@ -135,7 +235,7 @@ export class Domain {
   constructor(sig, owner, quality, ruleId = 'S53') {
     this.sig = sig; this.owner = owner; this.team = owner.team; this.quality = quality; this.ruleId = DOMAIN_RULES[ruleId] ? ruleId : 'S53'; this.rule = DOMAIN_RULES[this.ruleId];
     this.cx = owner.x; this.cz = owner.z; this.R = DOMAIN.radius; this.t = 0; this.life = DOMAIN.duration * (quality?.duration ?? 1);
-    this.tickT = new Map(); this.trapped = new Set(); this.slashes = []; this.geysers = []; this.collapseT = null; this.finale = 0; this.clash = null; this.isFinished = false;
+    this.tickT = new Map(); this.trapped = new Set(); this.slashes = []; this.geysers = []; this.fx = []; this.collapseT = null; this.finale = 0; this.clash = null; this.isFinished = false;
     this.isGroundDecal = true; // the inner world lies under every actor
     this.seed = Math.floor(Math.random() * 1000);
     active.add(this);
@@ -154,12 +254,13 @@ export class Domain {
     for (const s of sigSink()?.getSummons?.(this.team) ?? []) if (alive(s) && this.inside(s)) out.push(s);
     return out.filter((a) => alive(a) && this.inside(a));
   }
-  // Per-target interval timer (true once every `sec` seconds).
-  every(t, sec) { const last = this.tickT.get(t); if (last != null && this.t - last < sec) return false; this.tickT.set(t, this.t); return true; }
+  // Per-target interval timer (true once every `sec` seconds); a tag keeps separate timers per target.
+  every(t, sec, tag = 'main') { let m = this.tickT.get(t); if (!m) this.tickT.set(t, (m = new Map())); const last = m.get(tag); if (last != null && this.t - last < sec) return false; m.set(tag, this.t); return true; }
   update(dt, gw) {
     this.t += dt;
     const p = this.owner;
     for (const g of this.geysers) g.t += dt; this.geysers = this.geysers.filter((g) => g.t < .6);
+    for (const f of this.fx) f.t += dt; this.fx = this.fx.filter((f) => f.t < .7);
     for (const s of this.slashes) s.t += dt; this.slashes = this.slashes.filter((s) => s.t < .22);
     if (this.collapseT != null) { if (this.t - this.collapseT > .6) { this.isFinished = true; active.delete(this); } return; }
     if (this.t < DOMAIN.sign) { p.state = 'heavyStrike'; p.stateTimer = .1; p.vx = 0; p.vz = 0; return; }
@@ -244,6 +345,24 @@ class DomainShell {
       ctx.fillStyle = '#ffd180'; ctx.fillRect(Math.round(g.x - 4), Math.round(gy - gh), 8, Math.round(gh));
       ctx.fillStyle = '#fff3e0'; ctx.beginPath(); ctx.arc(g.x, gy - gh, 10 * gk, 0, TAU); ctx.fill();
     }
+    for (const f of d.fx) {
+      const fk = Math.min(1, f.t / .12); const fa = Math.max(0, 1 - Math.max(0, f.t - .25) / .45); const fy = groundYForDepth(f.z);
+      ctx.globalAlpha = fa;
+      if (f.type === 'mirror' && d.owner?.heroKey) {
+        // A mirror image of the caster dashes in from the side and strikes.
+        const sx = f.x + f.side * (60 - 50 * fk); ghostOf(ctx, d.owner, sx, fy, 'attack1', d.owner.animTime ?? 0, -f.side, .7 * fa, '#e0f7fa', f.big ? 1.1 : 1);
+        if (fk >= 1) { ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(f.x - 18, fy - 56); ctx.lineTo(f.x + 18, fy - 30); ctx.stroke(); }
+      } else if (f.type === 'pulse') {
+        ctx.strokeStyle = pal.rim; ctx.lineWidth = f.big ? 5 : 3; const pr = (f.big ? 1 : .8) * d.R * (1 - fk * .8);
+        ctx.beginPath(); ctx.ellipse(f.x, fy, pr, pr * .32, 0, 0, TAU); ctx.stroke();
+      } else if (f.type === 'bolt') {
+        ctx.strokeStyle = '#e1f5fe'; ctx.lineWidth = f.big ? 5 : 3; ctx.beginPath(); let bx = f.x; ctx.moveTo(bx, fy - DOMAIN.height);
+        for (let i = 1; i <= 7; i++) { bx = f.x + (i % 2 ? 8 : -8) * (1 - i / 8); ctx.lineTo(bx, fy - DOMAIN.height + i * DOMAIN.height / 7); } ctx.stroke();
+        ctx.fillStyle = '#4fc3f7'; ctx.beginPath(); ctx.ellipse(f.x, fy, 20 * fk, 6 * fk, 0, 0, TAU); ctx.fill();
+      } else if (f.type === 'hands') {
+        for (const side of [-1, 1]) { const hh = (f.big ? 70 : 50) * fk; plate(ctx, [[f.x + side * 6 - 4, fy], [f.x + side * 10, fy - hh], [f.x + side * 16, fy - hh - 6], [f.x + side * 6 + 4, fy]], pal.mat, 5450 + (side > 0 ? 1 : 0), { alpha: fa, glowEdge: 1.1 }); }
+      }
+    }
     for (const s of d.slashes) {
       const kk = Math.min(1, s.t / .06); const a = 1 - Math.max(0, s.t - .08) / .14; const L = 34 * kk;
       ctx.globalAlpha = Math.max(0, a); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2;
@@ -260,7 +379,7 @@ class DomainShell {
     ctx.lineWidth = 2; ctx.strokeStyle = pal.rim; ctx.beginPath(); ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI); ctx.stroke();
     for (let i = 0; i < 6; i++) { const a = Math.PI + ((d.t * .35 + i / 6) % 1) * Math.PI; ctx.fillStyle = pal.rimLight; ctx.fillRect(Math.round(x + Math.cos(a) * rx) - 1, Math.round(y + Math.sin(a) * h) - 1, 3, 3); }
     // Domain name over the dome while it is fresh.
-    if (ft < 1.6) { ctx.globalAlpha = Math.min(1, (1.6 - ft) / .4); ctx.font = '900 15px Cinzel, serif'; ctx.textAlign = 'center'; ctx.fillStyle = pal.rimLight; ctx.strokeStyle = pal.bands[0]; ctx.lineWidth = 3; ctx.strokeText(d.rule.name, x, y - h - 8); ctx.fillText(d.rule.name, x, y - h - 8); }
+    if (ft < 1.6 && d.owner?.isPlayerControlled) { ctx.globalAlpha = Math.min(1, (1.6 - ft) / .4); ctx.font = '900 15px Cinzel, serif'; ctx.textAlign = 'center'; ctx.fillStyle = pal.rimLight; ctx.strokeStyle = pal.bands[0]; ctx.lineWidth = 3; ctx.strokeText(d.rule.name, x, y - h - 8); ctx.fillText(d.rule.name, x, y - h - 8); }
     if (d.clash && d.clash.a === d) {
       const c = d.clash; const sx = c.seamX(); const top = y - DOMAIN.height;
       ctx.globalAlpha = .95; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3; ctx.beginPath();
@@ -298,6 +417,8 @@ export class DomainClash {
 
 // Opens a domain (of a rule) for any owner (player or AI). Returns the domain.
 export function openDomain(owner, quality = null, sig = null, ruleId = 'S53') {
+  // One domain per caster: a new one replaces the caster's previous dome.
+  for (const old of activeDomains()) if (old.owner === owner && old.collapseT == null) old.collapse();
   const domain = emit(new Domain(sig, owner, quality, ruleId), quality);
   const rival = activeDomains().find((d) => d !== domain && d.team !== domain.team && d.collapseT == null && !d.clash && Math.hypot(d.cx - domain.cx, (d.cz - domain.cz) * DEPTH) < d.R + domain.R);
   if (rival) domain.duel = emit(new DomainClash(domain, rival), quality);

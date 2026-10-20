@@ -2518,7 +2518,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   const step = (n, dt = 1 / 60) => { for (let i = 0; i < n; i++) { P.update(dt, neutral, game.battlefield, game); game.updateProjectiles(dt); spells.update(dt, game); } };
   const cast = (id, target = null) => spells.cast(P, spells.resolveSpell([{ id: 'sig_' + id }]), game, null, target);
   const ids = Object.keys(core.SIGNATURES);
-  assert(ids.length === 58 && ids.every((id) => core.signatureImpl(id)?.cast) && sigMod.SIGNATURE_RUNE_IDS.every((id) => isSpecialRune(id) && runeManaCost(id) >= 28 && runeManaCost(id) <= 46), 'All 58 signature specials (atlas S01–S36 + S37–S58) are special runes with their own mechanic and bound mana');
+  assert(ids.length === 62 && ids.every((id) => core.signatureImpl(id)?.cast) && sigMod.SIGNATURE_RUNE_IDS.every((id) => isSpecialRune(id) && runeManaCost(id) >= 28 && runeManaCost(id) <= 46), 'All 62 signature specials (atlas S01–S36 + S37–S62) are special runes with their own mechanic and bound mana');
   assert(ids.every((id) => spellHowTo('sig_' + id)?.effect?.length > 40) && !spells.resolveSpell([{ id: 'sig_S03' }, { id: 'ignis' }]), 'Signature specials explain themselves in the grimoire and never fuse');
   // Every special casts, runs and renders (strict canvas) without errors.
   const strict = new Proxy({}, { get: (t, k) => (k === 'ellipse' || k === 'arc') ? (x, y, rx, ry) => { if (rx < 0 || (k === 'ellipse' && ry < 0)) throw new Error('IndexSizeError ' + k); } : (k === 'canvas' ? undefined : () => {}), set: () => true });
@@ -3077,6 +3077,32 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
     assert(sFire.recast?.label === 'SCHLIESSEN: ERUPTION', 'A domain slot offers its own finale (Glutkessel: ERUPTION)');
     game.castSlotAt(sFire.position); run(.2);
     assert(E.hp < hpFin && !P.slottedSpells.includes(sFire), 'The finale fires and frees the slot');
+    // Spiegelwelt: mirror images strike from the sides.
+    reset(); foeIn(); const dMirror = D.openDomain(P, null, core.SIGNATURES.S59, 'S59'); run(1.6);
+    assert(dMirror.rule.name === 'SPIEGELWELT' && E.hp <= E.maxHp - 11, 'S59 SPIEGELWELT: mirror images of the caster strike the trapped foe');
+    // Schwerkraft: no flying inside — a foe in the air is slammed down; a pulse pulls to the centre.
+    reset(); foeIn(); E.x = P.x + 150; const dGrav = D.openDomain(P, null, core.SIGNATURES.S60, 'S60'); run(1);
+    E.elevation = 70; E.vElevation = 0; const hpGrav = E.hp; run(.5);
+    assert((E.elevation ?? 0) < 10 && E.hp < hpGrav, 'S60 SCHWERKRAFT: a foe in the air is torn down and hurt');
+    const distGrav = Math.abs(E.x - dGrav.cx); run(2.1);
+    assert(Math.abs(E.x - dGrav.cx) < distGrav, 'S60 SCHWERKRAFT: the gravity pulse drags foes toward the centre');
+    // Sturm (cast through a slot so the domain carries lightning): rain soaks, the bolt turns it into a shock.
+    reset(); foeIn(); const sStorm = game.slotRuneSpell(runeById('sig_S61')); game.castSlotAt(sStorm.position); run(2.4);
+    assert(STATUS.hasStatus(E, 'paralysis') && E.hp < E.maxHp, 'S61 STURM: rain soaks the foe, the lightning strike turns it into SCHOCK (paralysis)');
+    // Schattenmeer: shadow hands hold.
+    reset(); foeIn(); const dShadow = D.openDomain(P, null, core.SIGNATURES.S62, 'S62'); let held = false;
+    for (let i = 0; i < 100; i++) { run(1 / 60); if (E.freezeTimer > .3) held = true; }
+    assert(held && E.hp < E.maxHp && dShadow.rule.name === 'SCHATTENMEER', 'S62 SCHATTENMEER: shadow hands grab and hold the foe');
+    for (const d of [dMirror, dGrav, dShadow]) { const t0 = d.t; for (const tt of [.1, .5, 1.2, 2]) { d.t = tt; d.render(strict); for (const sp of spells.activeSpells) sp.render?.(strict); } d.t = t0; }
+    assert(!bad, 'The new domains render cleanly in every phase');
+    reset(); const firstD = D.openDomain(P, null, core.SIGNATURES.S59, 'S59'); const secondD = D.openDomain(P, null, core.SIGNATURES.S61, 'S61');
+    assert(firstD.collapseT != null && secondD.collapseT == null, 'A new own domain replaces the previous dome of the same caster (never two own domes)');
+    // Only the caster sees the domain name; the opponent has to find out by playing.
+    const names = (dom) => { const texts = []; const rec = new Proxy({}, { get: (t, k) => k === 'fillText' ? (txt) => texts.push(String(txt)) : k === 'canvas' ? undefined : () => {}, set: () => true }); const shell = spells.activeSpells.find((sp) => sp.domain === dom); dom.t = DOMAIN_T; shell?.render(rec); return texts; };
+    const DOMAIN_T = 1.2;
+    reset(); E.x = P.x + 400; E.isPlayerControlled = false; E.lifeState = 'Alive'; P.isPlayerControlled = true;
+    const ownD = D.openDomain(P, null, core.SIGNATURES.S57, 'S57'); const foeD = D.openDomain(E, null, core.SIGNATURES.S60, 'S60');
+    assert(names(ownD).includes('GLUTKESSEL') && !names(foeD).some((txt) => txt === 'SCHWERKRAFT'), 'Domain names are shown only to the caster — the opponent sees no name');
     // A duel works between different domains.
     reset(); E.x = P.x + 120; E.isPlayerControlled = false; E.lifeState = 'Alive';
     const rivalD = D.openDomain(E, null, core.SIGNATURES.S58, 'S58'); run(.3); const mineD = D.openDomain(P, null, core.SIGNATURES.S56, 'S56');
@@ -3147,15 +3173,15 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
     const stepB = (sec) => { for (let i = 0; i < sec * 60; i++) { P.update(1 / 60, neutral, game.battlefield, game); game.updateRecasts(1 / 60); spells.update(1 / 60, game); } };
     reset(); dummy.homeX = dummy.x = P.x + 110; E.lifeState = 'Alive'; E.hp = E.maxHp; E.passive = true; E.x = P.x + 210; E.z = P.z; E.elevation = 0; E.statusImmuneUntil = {}; dummy.statusImmuneUntil = {};
     const x0 = P.x; const s55 = game.slotRuneSpell(runeById('sig_S55')); game.castSlotAt(s55.position);
-    const birds = spells.activeSpells.find((sp) => sp instanceof I.ThousandBirds); birds.forceParalysis = true;
+    const birds = spells.activeSpells.find((sp) => sp instanceof I.ThousandBirds); birds.forceBurn = true;
     stepB(.15);
-    assert(birds.phase === 'charge' && Math.abs(P.x - x0) < 1, 'S55: a short charge first (lightning in the hand, the Wizard stands)');
+    assert(birds.phase === 'charge' && Math.abs(P.x - x0) < 1, 'S55: a short charge first (blue flame in the hand, the Wizard stands)');
     let inv = true; for (let i = 0; i < 18; i++) { stepB(1 / 60); if (birds.phase === 'dash' && !(P.invulnerableTimer > 0)) inv = false; }
     stepB(.3);
-    assert(P.x - x0 > 250 && dummy.hp < dummy.maxHp && E.hp < E.maxHp && inv, 'S55: the lightning dash runs THROUGH every foe in the lane (both hit), invulnerable meanwhile');
-    assert(STATUS.hasStatus(E, 'paralysis') && s55.recast?.label === 'RÜCKWEG-SCHLAG', 'S55: lightning paralyses; the slot offers the return strike');
+    assert(P.x - x0 > 250 && dummy.hp < dummy.maxHp && E.hp < E.maxHp && inv, 'S55: the azure dash runs THROUGH every foe in the lane (both hit), invulnerable meanwhile');
+    assert(STATUS.hasStatus(E, 'burn') && s55.recast?.label === 'RÜCKWEG-SCHLAG', 'S55: the blue fire sets foes burning; the slot offers the return strike');
     const hpBack = E.hp; game.castSlotAt(s55.position); stepB(.4);
-    assert(Math.abs(P.x - x0) < 40 && hpBack - E.hp >= I.BIRD.returnDamage + I.BIRD.returnBonus - .5 && !P.slottedSpells.includes(s55), 'S55: the return strike runs back along the path, extra damage on a paralysed foe');
+    assert(Math.abs(P.x - x0) < 40 && hpBack - E.hp >= I.BIRD.returnDamage + I.BIRD.returnBonus - .5 && !P.slottedSpells.includes(s55), 'S55: the return strike runs back through the flames, extra damage on a burning foe');
     // Out of the lane: no hit.
     reset(); dummy.homeX = dummy.x = 900; E.x = P.x + 150; E.z = P.z + .3; E.hp = E.maxHp;
     const s55b = game.slotRuneSpell(runeById('sig_S55')); game.castSlotAt(s55b.position); stepB(.8);

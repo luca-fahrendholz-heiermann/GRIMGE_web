@@ -189,10 +189,10 @@ runes.push(
     'Ein tintenschwarzer, welliger Schattenstreifen mit leckenden Ausläufern; unter dem Gebundenen ein Schattenteich, beim Würgen klettern Schattenhände empor.',
     ['Der Schatten löst sich von den Füßen und kriecht los.', 'Er erreicht den Gegner und verschmilzt mit dessen Schatten.', 'Der Gegner macht jede Bewegung des Zauberers nach.', 'Zweiter Tipp: Schattenhände würgen ihn.'],
     'Kontrolle statt Schaden: Positionen erzwingen, Kombos mit Fallen und Domänen.'),
-  X('S55', 'Tausendvogel', 'Zweistufig · Blitz-Ansturm', 'direction', 34, ['#0d47a1', '#4fc3f7', '#b3e5fc', '#ffffff'], 3,
-    'A short charge with crackling lightning in the hand — then a straight lightning dash THROUGH every foe in your lane (invulnerable while dashing, paralysis very likely). The path keeps glowing. Tap again within ~2 s: the return strike runs back along the same path, with extra damage on paralysed foes.',
-    'Knisternde Blitzkugel in der Hand, umschwirrt von zirpenden Funkenvögeln; der Ansturm hinterlässt eine gezackte, nachglühende Blitznaht.',
-    ['Blitze sammeln sich zwitschernd in der Hand.', 'Ein gerader Blitz-Ansturm durch alle Gegner in der Bahn.', 'Die Bahn glüht nach.', 'Zweiter Tipp: Rückweg-Schlag auf derselben Bahn.'],
+  X('S55', 'Azurflamme', 'Zweistufig · Blaufeuer-Ansturm', 'direction', 34, ['#0a2a5c', '#1565c0', '#40c4ff', '#ffffff'], 3,
+    'A short charge while your hand bursts into blue flame — then a straight dash THROUGH every foe in your lane (invulnerable while dashing, burning very likely). A trail of blue fire stays on the path. Tap again within ~2 s: the return strike runs back through the flames, with extra damage on burning foes.',
+    'Die Hand lodert in blauem Feuer, Glut wirbelt hinein; der Ansturm hinterlässt eine Spur aus blauen Flammen.',
+    ['Blaues Feuer schlägt aus der Hand.', 'Ein gerader Ansturm als blauer Flammenkomet durch alle Gegner in der Bahn.', 'Die Bahn brennt blau nach.', 'Zweiter Tipp: Rückweg-Schlag durch die Flammen.'],
     'Durchschlagender Linien-Angriff mit Timing-Rückweg.'),
   // More domains (user, 20 Oct 2026): the same glyph as every domain, an own ability inside — ONE domain per deck.
   X('S56', 'Sphäre: Stillstand', 'Domäne · Zeitlupe', 'self', 46, ['#03141a', '#0c4858', '#ffd54f', '#fff8e1'], 6,
@@ -209,7 +209,27 @@ runes.push(
     'Domain (same glyph as every domain, only one per deck). For 6 s a grove of life: you and your summons inside heal and shake off burn / poison / bleed / paralysis / freeze; foes inside are trapped, poisoned and slowed. Tap again: BLÜTENSEGEN — a burst of healing and a poison blast on the foes.',
     'Eine Baumkrone hinter dem Zauberer, Sonnenstrahlen, treibende Blüten und Blumen auf moosigem Boden.',
     ['Fingerzeichen, Blätter wirbeln auf.', 'Die Kuppel entfaltet sich in Grün und Gold.', 'Verbündete heilen, Gegner werden vergiftet.', 'Blütensegen: Heilung und Giftstoß.'],
-    'Unterstützungs-Domäne: heilen, reinigen, Gegner zermürben.')
+    'Unterstützungs-Domäne: heilen, reinigen, Gegner zermürben.'),
+  X('S59', 'Sphäre: Spiegelwelt', 'Domäne · Spiegelbilder', 'self', 46, ['#0e1116', '#2a3444', '#e0f7fa', '#ffffff'], 6,
+    'Domain (same glyph as every domain, only one per deck). For 6 s a world of mirrors: foes are trapped, mirror images of you strike them from changing sides every 1.3 s and they lose their bearings (facing flips). Tap again: SPLITTER — every image strikes at once.',
+    'Hohe Spiegelscherben ringsum, in denen sich der Zauberer spiegelt; Spiegelbilder preschen von der Seite heran.',
+    ['Fingerzeichen, die Luft wird glasig.', 'Die Kuppel entfaltet sich, Spiegelscherben wachsen.', 'Spiegelbilder schlagen aus wechselnden Richtungen zu.', 'Splitter: alle Bilder zugleich.'],
+    'Verwirrungs-Domäne: Gegner wissen nicht, woher der nächste Schlag kommt.'),
+  X('S60', 'Sphäre: Schwerkraft', 'Domäne · Gravitation', 'self', 46, ['#08060f', '#271c45', '#b388ff', '#ede7f6'], 6,
+    'Domain (same glyph as every domain, only one per deck). For 6 s gravity crushes: foes are trapped and pressed to the ground (no jumping, flyers are slammed down), a gravity pulse drags them toward the centre every 2 s. Tap again: KOLLAPS — everything is pulled in and crushed.',
+    'Ein schwarzes Loch mit Akkretionsscheibe über der Mitte, Ringe sinken zum Boden, Trümmer fallen.',
+    ['Fingerzeichen, der Boden knackt.', 'Die Kuppel entfaltet sich, alles wird schwer.', 'Gegner werden zu Boden gedrückt und zur Mitte gezogen.', 'Kollaps: alles stürzt zur Mitte.'],
+    'Anti-Luft-Domäne: keine Sprünge, alles in der Mitte bündeln.'),
+  X('S61', 'Sphäre: Sturm', 'Domäne · Unwetter', 'self', 46, ['#0b1118', '#233446', '#4fc3f7', '#e1f5fe'], 6,
+    'Domain (same glyph as every domain, only one per deck). For 6 s a storm: foes are trapped and soaked by the rain (WET), lightning strikes each of them every 1.1 s — wet + lightning becomes a SHOCK. Tap again: DONNERKEIL — a huge bolt on everyone inside.',
+    'Schwere Wolken, schräger Regen, Blitze flackern am Himmel und schlagen in die Gegner ein.',
+    ['Fingerzeichen, Wind kommt auf.', 'Die Kuppel entfaltet sich, Regen setzt ein.', 'Nasse Gegner werden vom Blitz getroffen und geschockt.', 'Donnerkeil: ein gewaltiger Blitz.'],
+    'Kombo-Domäne: Nässe und Blitz arbeiten zusammen.'),
+  X('S62', 'Sphäre: Schattenmeer', 'Domäne · Schatten', 'self', 46, ['#030305', '#12101e', '#7e57c2', '#d1c4e9'], 6,
+    'Domain (same glyph as every domain, only one per deck). For 6 s a sea of shadow: foes are trapped and sink in (slowed), shadow hands grab each of them every 1.4 s and hold them. Tap again: SCHATTENFLUT — the shadows drag everyone down and hold them.',
+    'Ein schwarzes Meer, aus dem Schattenbestien mit blassen Augen lugen; Schattenhände greifen aus dem Boden.',
+    ['Fingerzeichen, die Schatten werden länger.', 'Die Kuppel entfaltet sich, der Boden wird schwarz.', 'Schattenhände packen und halten die Gegner.', 'Schattenflut: alle werden hinabgezogen.'],
+    'Halte-Domäne: Gegner festsetzen für eigene Angriffe.')
 );
 
 const out = `// GENERATED by tools/generate_signature_runes.mjs from
