@@ -3827,6 +3827,24 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   P.elevation = 0; P.grounded = true; P.state = 'idle'; P.sprintDive = null; P.isSprintJump = false; dummy.homeX = dummy.x = 512;
 }
 
+// Domains really bite (user, 20 Oct 2026): sure-hit potency, the trapped cannot cast, a trapped Wizard loses mana.
+{
+  const D = await import('./public/src/signature_abilities_g.js'); const core = await import('./public/src/signature_core.js'); const { Minion } = await import('./public/src/entities.js');
+  game.returnToHub(); game.setMatchMode('training'); game.startMatch(); game.selectTrainingMap('waterfalls');
+  const P = game.player; const E = game.enemyChampion; spells.clearRuntime(); game.minions = [];
+  P.x = 400; P.z = .5; game.battlefield.placeOnSurface(P); E.lifeState = 'Alive'; E.hp = E.maxHp; E.passive = true; E.x = 470; E.z = .5; E.spellCooldown = 0; E.beamCooldown = 0;
+  const m = new Minion(360, .5, 'red', 'melee', 0); game.battlefield.placeOnSurface(m); game.minions.push(m); const interval = m.attackCooldown;
+  const dom = D.openDomain(P, null, core.SIGNATURES.S53, 'S53');
+  for (let i = 0; i < 90; i++) spells.update(1 / 60, game);
+  assert(dom.power >= D.DOMAIN.potency - 1e-9 && dom.trapped.has(E) && E.spellCooldown >= .5 && E.beamCooldown >= .5, 'Domain: sure-hit potency, a trapped foe Wizard cannot cast spells or beams');
+  assert(m.attackCooldown === interval, 'Domain: minions are slowed in attacking without breaking their attack interval');
+  spells.clearRuntime(); game.minions = [];
+  P.mp = 80; const foeDom = D.openDomain(E, null, core.SIGNATURES.S53, 'S53');
+  for (let i = 0; i < 90; i++) spells.update(1 / 60, game);
+  assert(foeDom.trapped.has(P) && P.mp < 80 - 2, 'Domain: a Wizard trapped in a hostile domain loses mana (only an own domain breaks free)');
+  spells.clearRuntime(); E.passive = false; E.x = 900;
+}
+
 const frameCallback = nextFrame;
 frameCallback(game.lastFrameTime + 16);
 game.debugVisible = true;

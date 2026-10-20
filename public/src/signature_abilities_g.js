@@ -35,7 +35,10 @@ import { groundYForDepth } from './world.js';
 import { applyStatus, hasStatus } from './status_effects.js';
 import { ghostOf } from './buff_signatures.js';
 
-export const DOMAIN = Object.freeze({ radius: 190, height: 175, duration: 6, sign: .35, unfold: .6, slashEvery: .45, slashDamage: 7, duelTime: 3, aiTapRate: 4.5 });
+// potency: every domain rule hits this much harder (user, 20 Oct 2026: foes inside barely
+// suffered); suppress: the trapped cannot cast, attack slower; drain: mana lost by a
+// trapped Wizard per second.
+export const DOMAIN = Object.freeze({ radius: 190, height: 175, duration: 6, sign: .35, unfold: .6, slashEvery: .45, slashDamage: 7, duelTime: 3, aiTapRate: 4.5, potency: 1.8, attackSlow: .5, drain: 4 });
 const alive = (t) => t && !t.isDead && t.lifeState !== 'Dead' && t.lifeState !== 'Dying' && (t.hp ?? 1) > 0;
 const mat = (dark, body, facet, vein, edge, spark) => ({ kind: 'crystal', dark, body, facet, vein, edge, spark, core: '#ffffff', glow: 'rgba(255,255,255,', edgeGlow: 'rgba(255,255,255,' });
 
@@ -389,7 +392,7 @@ export class Domain {
     emit(new DomainShell(this), quality);
   }
   get x() { return this.cx; } get z() { return this.cz; } get y() { return groundYForDepth(this.cz); }
-  get power() { return this.quality?.power ?? 1; }
+  get power() { return (this.quality?.power ?? 1) * DOMAIN.potency; }
   // Screen half-height of the floor ellipse (depth → screen).
   get ry() { return Math.max(18, Math.abs(groundYForDepth(Math.min(.98, this.cz + this.R / DEPTH)) - groundYForDepth(this.cz)) * .9); }
   get unfoldK() { const k = Math.max(0, Math.min(1, (this.t - DOMAIN.sign) / DOMAIN.unfold)); return 1 - (1 - k) * (1 - k); }
@@ -420,13 +423,24 @@ export class Domain {
     for (const t of foesOf(gw, this.team)) {
       if (t.isProp) continue;
       // Trapped: whoever was inside once is held in by the dome wall (also against knockback).
-      if (this.inside(t)) this.trapped.add(t);
+      if (this.inside(t) && !this.trapped.has(t)) { this.trapped.add(t); combat.spawnDamageText?.(t.x, (t.y ?? 0) - 100, 'GEFANGEN', { color: this.rule.pal.rim, isCrit: true }); }
       if (!this.trapped.has(t)) continue;
+      this.suppress(t, dt, gw);
       const dx = t.x - this.cx; const dz = ((t.z ?? this.cz) - this.cz) * DEPTH; const dd = Math.hypot(dx, dz); const lim = this.R - 16;
       if (dd > lim) { t.x = this.cx + dx / dd * lim; if (Number.isFinite(t.z)) t.z = this.cz + dz / dd * lim / DEPTH; t.kbVelX = 0; }
       t.slow?.(.3, this.rule.slow);
       this.rule.foe(this, dt, t, gw);
     }
+  }
+  // Sure-hit pressure on a trapped foe: no spells or beams, slower attacks; a trapped Wizard
+  // loses mana (only an own domain — the clash — breaks free).
+  suppress(t, dt, gw) {
+    if (t === gw?.player || t.isPlayerControlled) { if (Number.isFinite(t.mp)) t.mp = Math.max(0, t.mp - DOMAIN.drain * dt); return; }
+    if ('spellCooldown' in t) t.spellCooldown = Math.max(t.spellCooldown, .5);
+    if ('beamCooldown' in t) t.beamCooldown = Math.max(t.beamCooldown, .5);
+    // Minions count attackTimer down (attackCooldown is their fixed interval); the Wizard counts attackCooldown down.
+    if (t.isMinion) { if (Number.isFinite(t.attackTimer)) t.attackTimer += dt * DOMAIN.attackSlow; }
+    else if (Number.isFinite(t.attackCooldown)) t.attackCooldown += dt * DOMAIN.attackSlow;
   }
   // Stage 2: close early with the domain's finale (more time left → stronger).
   closeWithFinale(gw) {
@@ -461,6 +475,9 @@ export class Domain {
     ctx.strokeStyle = pal.crack; ctx.lineWidth = 1.5; ctx.globalAlpha = fade * (.45 + .25 * Math.sin(this.t * 4));
     for (let i = 0; i < 10; i++) { const a = i / 10 * TAU + .2; ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * rx * .12, y + Math.sin(a) * ry * .12); ctx.lineTo(x + Math.cos(a + .1) * rx * .55, y + Math.sin(a + .1) * ry * .55); ctx.lineTo(x + Math.cos(a - .05) * rx * .92, y + Math.sin(a - .05) * ry * .92); ctx.stroke(); }
     ctx.restore();
+    // The trapped are marked: a pulsing ring of the domain's colour at their feet.
+    ctx.strokeStyle = pal.rim; ctx.lineWidth = 2;
+    for (const t of this.trapped) { if (!alive(t)) continue; const ty = t.y ?? groundYForDepth(t.z ?? this.cz); ctx.globalAlpha = fade * (.55 + .35 * Math.sin(this.t * 8)); ctx.beginPath(); ctx.ellipse(t.x, ty, 18, 5, 0, 0, TAU); ctx.stroke(); }
     ctx.strokeStyle = pal.wall; ctx.lineWidth = 2; ctx.globalAlpha = fade * .9;
     ctx.beginPath(); ctx.ellipse(x, y, rx, h, 0, Math.PI, TAU); ctx.stroke();
     ctx.restore();
