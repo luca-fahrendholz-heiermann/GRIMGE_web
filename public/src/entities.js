@@ -436,6 +436,8 @@ export class Player extends GroundEntity {
       if (this.chargeTimer <= 0) this.releaseCharge();
     }
 
+    // Safety net: outside an action the Wizard can always attack again (no stuck lock).
+    if (!ACTION_STATES.has(this.state) && !this.canAttack && this.chargeTimer <= 0) { this._attackLockT = (this._attackLockT ?? 0) + dt; if (this._attackLockT > .25) { this.canAttack = true; this._attackLockT = 0; } } else this._attackLockT = 0;
     if (ACTION_STATES.has(this.state)) {
       if (this.sprintStrike) this.updateSprintAttack(dt);
       this.stateTimer -= dt;
@@ -1527,6 +1529,8 @@ export class Player extends GroundEntity {
     this.vElevation = lift * PLAYER_ARC_SCALE;
     this.cancelSprint();
     this.backdashTimer = 0;
+    // A real hit interrupts a charge (no delayed release after the stagger, no rooted Wizard).
+    if (!receivedWhileGuarding && this.chargeTimer > 0) { this.chargeTimer = 0; this.formCharge = null; }
     this.state = 'hurt'; this.stateTimer = stun; this.canAttack = false;
     this.entityHitstop = isCrit ? HITSTOP_CHARGED_MAX : HITSTOP_NORMAL;
     // A tiny post-hit grace window prevents an overlapping minion pack from

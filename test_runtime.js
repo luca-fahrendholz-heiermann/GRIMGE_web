@@ -3230,6 +3230,14 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   windowListeners.keydown({ code: 'Space', repeat: false, target: null, preventDefault() {} });
   assert(!game.drawing.active && P.slottedSpells.some((sl) => sl.runes?.[0]?.id === card2.id) && !game.input.keys.Space, 'While drawing, Space locks the rune in too');
   game.input.keys = {}; game.input.justPressedKeys = {};
+  // A hit interrupts a charge; outside an action the Wizard can always attack again.
+  const neutralC = { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false };
+  P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.grounded = true; P.chargeTimer = 0; P.formCharge = null;
+  P.beginCharge('forward', 'key'); P.invulnerableTimer = 0; P.takeDamage(10, -100, 0, .3, false, 'melee');
+  assert(P.chargeTimer === 0 && !P.formCharge, 'A hit interrupts the charge (no delayed release, not rooted afterwards)');
+  for (let i = 0; i < 40; i++) P.update(1 / 60, neutralC, game.battlefield, game);
+  P.state = 'idle'; P.canAttack = false; for (let i = 0; i < 20; i++) P.update(1 / 60, neutralC, game.battlefield, game);
+  assert(P.canAttack, 'Safety net: a stuck attack lock outside an action clears itself');
 }
 
 // Air combat (20 Oct 2026): air attacks keep momentum, a hit latches onto the foe, then both fall;
