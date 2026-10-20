@@ -32,7 +32,9 @@ Code:
 
 Alle Schild-Rezepte teilen sich eine Abklingzeit.
 
-## 3. Umgesetzte Äste (40 Stufen)
+## 3. Umgesetzte Äste (80 Stufen, jedes der 11 Elemente hat einen Baum)
+
+Nachgezogen sind Ventus (Verdrängen, Ausbreiten), Lux (Segen, Reinigung), Void (Kollaps, Annullieren), Konstrukt (Haltbarkeit, Schmieden) und Bestia (Instinkt, Rudel), jeweils mit 4 Stufen.
 
 - **Fulgur**
   - **Kette:**
@@ -138,12 +140,12 @@ Zu Beginn spielt man nur Basis-Runen. Alles andere wird nach und nach freigescha
 
 | Was | Wie |
 |---|---|
-| Basis-Runen | 5 Start-Elemente. Bestia, Konstrukt, Void, Lux, Natura und Umbra kommen mit dem Mage-Level 2–6. |
+| Basis-Runen | 5 Start-Elemente. Bestia, Konstrukt, Void, Lux, Natura und Umbra kosten je **1 Skillpunkt** (beliebige Reihenfolge, Panel RUNEN FREISCHALTEN). Doppel und Mortis kosten 2 Skillpunkte und brauchen Mage-Level 8 bzw. 10. Jeder Punkt ist eine Wahl: Rune, Passiv oder Mastery. |
 | Spezialrunen (ohne Domänen) | Mage-Level (S01 ab Level 5, dann vier pro Level) |
 | **Element-Domänen** (S57, S58, S61–S69) | **Boss-Drop** oder **Element-Meisterschaft**: Runen-Level 10 des Elements (durch Zeichnen dieser Rune) |
 | **Spezial-Domänen** (S53, S56, S59, S60) | nur **Boss-Drop** |
 | **Arcane States / Transformationen** | **Boss-Drop** oder Runen-Level 8 ihres Elements (z. B. Risswild und Schlackenkern über Ignis, Korallenschild und Kältestillstand über Aqua) |
-| **Bankai A04 Klingenblüte** | **Boss-Drop** oder **Klassenwaffe Level 8** (ein Punkt je Nahkampftreffer mit Klassenwaffe, 80 Punkte pro Level) |
+| **Bankai** (eine Rune, A04) | Passt sich der gewählten Klasse an (Schwarm aus Klingenblättern, Pfeilen, Splittern, Runen, Noten, Karten …, eigene Wunde). Freischaltung **pro Klasse**: Boss-Drop mit dieser Klasse oder **Klassenwaffe Level 8** (ein Punkt je Nahkampftreffer, 80 Punkte pro Level). |
 
 Boss-Drops gibt es bei besiegten Bossen (Invasion: Rift Tyrant, Dungeon: Void Warden, Arena-Champion). Es fällt jeweils eine zufällige, noch gesperrte späte Rune.
 Der Testbuild (`DEBUG_BUILD`) stellt im Training weiterhin alle Runen bereit. Die Sperren gelten in den Match-Decks und im öffentlichen Build.
