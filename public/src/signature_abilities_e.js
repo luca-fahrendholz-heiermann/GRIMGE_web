@@ -334,6 +334,7 @@ defineSignature('S48', {
 // Stage 1: a pressure jet of water pushes foes back, soaks them and leaves
 // puddles. Stage 2 (within 5 s): everything soaked freezes, the puddles turn to ice.
 import { environment } from './environment.js';
+import { applyStatus } from './status_effects.js';
 const WATER = { dark: '#0b3d73', body: '#1f7fd1', mid: '#2fb4ea', foam: '#d6f6ff', ice: '#e3faff' };
 class FloodJet {
   constructor(sig, owner) { this.sig = sig; this.owner = owner; this.team = owner.team; this.f = owner.facing || 1; this.x = owner.x; this.z = owner.z; this.t = 0; this.dur = .6; this.soaked = new Set(); this.puddles = []; this.isFinished = false; this.frozenAt = null; }
@@ -342,7 +343,7 @@ class FloodJet {
     this.t += dt;
     if (this.t < this.dur) {
       const reach = 30 + 250 * Math.min(1, this.t / .3);
-      for (const t of foesOf(gw, this.team)) { if (t.isProp) continue; const dx = (t.x - this.x) * this.f; if (dx > 10 && dx < reach && Math.abs(((t.z ?? this.z) - this.z) * DEPTH) < 22) { if (!this.soaked.has(t)) { this.soaked.add(t); hit(t, 10, this.f * 260, 30, .3); } t.slow?.(.3, .7); } }
+      for (const t of foesOf(gw, this.team)) { if (t.isProp) continue; const dx = (t.x - this.x) * this.f; if (dx > 10 && dx < reach && Math.abs(((t.z ?? this.z) - this.z) * DEPTH) < 22) { if (!this.soaked.has(t)) { this.soaked.add(t); hit(t, 10, this.f * 260, 30, .3); applyStatus(t, 'wet'); } t.slow?.(.3, .7); } }
       if (this.puddles.length < 4 && this.t > this.puddles.length * .12) { const px = this.x + this.f * (60 + this.puddles.length * 60); this.puddles.push(px); environment.add('water', px, this.z, { radius: 30 }); }
     }
     if (this.frozenAt != null && this.t - this.frozenAt > .6) this.isFinished = true;

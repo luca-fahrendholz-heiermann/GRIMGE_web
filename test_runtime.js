@@ -3123,9 +3123,11 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   assert(dummy.hp < hpBurn, 'Burning deals damage over time');
   // Every look renders safely (ice block, flames, arcs, bubbles, blood) incl. the icon row.
   let bad = 0; const strict = new Proxy({}, { get: (t, k) => (k === 'arc' || k === 'ellipse') ? (x, y, r1, r2) => { if (r1 < 0 || (k === 'ellipse' && r2 < 0)) bad++; } : k === 'canvas' ? undefined : () => {}, set: () => true });
-  for (const kind of Object.keys(STATUS.STATUS_DEFS)) { dummy.statusImmuneUntil = {}; STATUS.applyStatus(dummy, kind); }
+  // WET puts a burn out, so it goes onto the Wizard; the other five onto the dummy.
+  for (const kind of Object.keys(STATUS.STATUS_DEFS).filter((k) => k !== 'wet')) { dummy.statusImmuneUntil = {}; STATUS.applyStatus(dummy, kind); }
+  P.statusImmuneUntil = {}; STATUS.applyStatus(P, 'wet');
   for (const e of STATUS.statusDepthEntries()) e.render(strict);
-  assert(!bad && Object.keys(dummy.statuses).length === 5 && STATUS.statusDepthEntries().every((e) => e.y > dummy.y), 'All five statuses render on the target (in front of it) without errors');
+  assert(!bad && Object.keys(dummy.statuses).length === 5 && STATUS.hasStatus(P, 'wet') && STATUS.statusDepthEntries().filter((e) => e.y > dummy.y).length >= 5, 'All six statuses render on their targets (in front of them) without errors');
   spells.clearRuntime();
   assert(!Object.keys(dummy.statuses ?? {}).length, 'Clearing the runtime clears the statuses');
   // Frozen: the player is stuck in an ice block; afterwards a short immunity.
@@ -3151,6 +3153,40 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   STATUS.setStatusRandom(() => 1);
   assert(swordBleeds && !STATUS.hasStatus(dummy, 'bleed'), 'Blade weapons can make the target bleed, blunt weapons cannot');
   spells.clearRuntime(); P.equipClassWeapon(null); dummy.homeX = dummy.x = 900;
+
+  // ── Status combos ──
+  dummy.homeX = dummy.x = 420; dummy.homeZ = dummy.z = .5;
+  const fresh = (t) => { t.statusImmuneUntil = {}; STATUS.clearStatuses(t); t.statusImmuneUntil = {}; };
+  const castAt = (ids) => { P.mp = P.maxMp; P.state = 'idle'; P.canAttack = true; spells.cast(P, spells.resolveSpell(ids.map(rune)), game, null, { x: dummy.x, z: dummy.z }); stepSpells(.7); };
+  // Water soaks (WET) — a failed roll still leaves the combo setup to chance.
+  fresh(dummy); STATUS.setStatusRandom(() => 0); castAt(['aqua']); STATUS.setStatusRandom(() => 1);
+  assert(STATUS.hasStatus(dummy, 'wet'), 'A water spell can soak the target (WET)');
+  // WET + lightning → guaranteed paralysis, even with a failed roll.
+  const hpShock = dummy.hp; castAt(['fulgur']);
+  assert(STATUS.hasStatus(dummy, 'paralysis') && !STATUS.hasStatus(dummy, 'wet') && dummy.hp < hpShock, 'Combo WET + lightning: SCHOCK — guaranteed paralysis (the water is used up)');
+  // WET + ice → guaranteed freeze.
+  fresh(dummy); STATUS.applyStatus(dummy, 'wet');
+  const prevSrc = STATUS.setStatusSource({ team: P.team, statusElements: ['frost'] }); dummy.takeDamage(5, 0, 0, 0, false, 'spell'); STATUS.setStatusSource(prevSrc);
+  assert(STATUS.hasStatus(dummy, 'frozen') && !STATUS.hasStatus(dummy, 'wet'), 'Combo WET + ice: SCHOCKFROST — guaranteed freeze');
+  // FROZEN + a hard hit → the ice shatters for bonus damage (any source).
+  const hpIce = dummy.hp; dummy.takeDamage(STATUS.COMBO.shatterThreshold + 2, 0, 0, 0, false, 'melee');
+  assert(!STATUS.hasStatus(dummy, 'frozen') && hpIce - dummy.hp >= STATUS.COMBO.shatterThreshold + 2 + STATUS.COMBO.shatterBonus - .01, 'Combo FROZEN + hard hit: ZERSPLITTERT — the ice bursts for bonus damage');
+  fresh(dummy); STATUS.applyStatus(dummy, 'frozen'); dummy.takeDamage(5, 0, 0, 0, false, 'melee');
+  assert(STATUS.hasStatus(dummy, 'frozen'), 'A light hit does not shatter the ice');
+  // BURN + wind → the fire jumps to foes nearby.
+  const EC = game.enemyChampion; EC.lifeState = 'Alive'; EC.hp = EC.maxHp; EC.x = dummy.x + 60; EC.z = dummy.z; EC.passive = true; fresh(EC);
+  fresh(dummy); STATUS.applyStatus(dummy, 'burn');
+  const prevWind = STATUS.setStatusSource({ team: P.team, statusElements: ['ventus'] }); dummy.takeDamage(5, 0, 0, 0, false, 'spell'); STATUS.setStatusSource(prevWind);
+  assert(STATUS.hasStatus(EC, 'burn') && STATUS.hasStatus(dummy, 'burn'), 'Combo BURN + wind: FEUERSTURM — the fire jumps to a foe nearby');
+  // BURN + water → put out, steam, the target is WET; a wet target does not catch fire.
+  const prevWater = STATUS.setStatusSource({ team: P.team, statusElements: ['aqua'] }); dummy.takeDamage(5, 0, 0, 0, false, 'spell'); STATUS.setStatusSource(prevWater);
+  assert(!STATUS.hasStatus(dummy, 'burn') && STATUS.hasStatus(dummy, 'wet') && !STATUS.applyStatus(dummy, 'burn'), 'Combo BURN + water: GELÖSCHT — the burn ends, the target is wet and cannot catch fire');
+  // Standing in a puddle soaks.
+  const { environment } = await import('./public/src/environment.js');
+  fresh(P); P.x = 300; P.z = .5; game.battlefield.placeOnSurface(P); environment.add('water', P.x, P.z, { radius: 40 });
+  for (let i = 0; i < 5; i++) environment.update(1 / 60, game, []);
+  assert(STATUS.hasStatus(P, 'wet'), 'Standing in a puddle makes the Wizard WET');
+  spells.clearRuntime(); environment.clear(); EC.x = 900; EC.passive = false; dummy.homeX = dummy.x = 900;
 }
 
 // Air combat (20 Oct 2026): air attacks keep momentum, a hit latches onto the foe, then both fall;

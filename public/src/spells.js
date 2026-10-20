@@ -240,7 +240,9 @@ export class SpellSystem {
   cast(caster, spellDef, gameWorld, quality = null, target = null) {
     if (!spellDef) return;
     const prev = this.castElements; this.castElements = statusElementsOf(spellDef);
-    try { return this.castSpellDef(caster, spellDef, gameWorld, quality, target); } finally { this.castElements = prev; }
+    // Damage dealt right during the cast (chain lightning, strikes) rolls statuses / combos too.
+    const prevSource = setStatusSource(this.castElements ? { team: caster.team, statusElements: this.castElements, quality: this.normalizeQuality(quality) } : null);
+    try { return this.castSpellDef(caster, spellDef, gameWorld, quality, target); } finally { this.castElements = prev; setStatusSource(prevSource); }
   }
 
   castSpellDef(caster, spellDef, gameWorld, quality = null, target = null) {

@@ -7,6 +7,14 @@
 //   paralysis  electric arcs, the target stutters (short freezes)
 //   poison     green bubbles, longer damage over time
 //   bleed      dripping blood, damage over time — more while moving
+//   wet        soaked (water spells, puddles): no damage, but it sets up combos
+//
+// Combos (user, 20 Oct 2026) — a matching hit on an existing status:
+//   wet + lightning  → SCHOCK!       guaranteed paralysis (+ bonus damage)
+//   wet + ice        → SCHOCKFROST!  guaranteed freeze
+//   burn + wind      → FEUERSTURM!   the fire jumps to foes nearby
+//   burn + water     → GELÖSCHT      steam, the burn ends, the target is wet
+//   frozen + a hard hit → ZERSPLITTERT! the ice bursts for bonus damage
 // The hit source (a spell, a melee swing) is set as a context around its
 // update, so every takeDamage in the game can roll without extra wiring.
 import { combat } from './combat.js';
@@ -19,12 +27,16 @@ export const STATUS_DEFS = Object.freeze({
   burn: Object.freeze({ label: 'BURN', color: '#ff7043', duration: 3, dps: 5, immune: 1 }),
   paralysis: Object.freeze({ label: 'PARALYSIS', color: '#fff176', duration: 3.2, immune: 2, stutterEvery: .8, stutter: .22 }),
   poison: Object.freeze({ label: 'POISON', color: '#9ccc65', duration: 6, dps: 3, immune: 1 }),
-  bleed: Object.freeze({ label: 'BLEED', color: '#e53935', duration: 4, dps: 2, movingDps: 5, immune: 1 })
+  bleed: Object.freeze({ label: 'BLEED', color: '#e53935', duration: 4, dps: 2, movingDps: 5, immune: 1 }),
+  wet: Object.freeze({ label: 'WET', color: '#4fc3f7', duration: 5, immune: 0 })
 });
+
+export const COMBO = Object.freeze({ shockBonus: 8, stormRadius: 110, stormBonus: 10, shatterThreshold: 20, shatterBonus: 18 });
 
 // Which element can cause which status, and how likely per damaging hit.
 export const ELEMENT_STATUS = Object.freeze({
   ignis: ['burn', .22],
+  aqua: ['wet', .55],
   frost: ['frozen', .18],
   fulgur: ['paralysis', .22],
   natura: ['poison', .18],
@@ -64,11 +76,16 @@ export function hasStatus(target, kind) { return !!target?.statuses?.[kind] && !
 
 // Called from every takeDamage after real damage: rolls the source's statuses.
 export function onStatusHit(target, amount, hitKind = 'melee') {
-  if (hitKind === 'status' || !(amount > 0) || !source || !target) return null;
+  if (hitKind === 'status' || !(amount > 0) || !target) return null;
   if (target.isObjective || target.isStoneWall || target.isProp || target.isCastle) return null;
+  // Frozen + a hard hit: the ice shatters (any source, also bare fists and summons).
+  if (hasStatus(target, 'frozen') && amount >= COMBO.shatterThreshold) return comboShatter(target);
+  if (!source) return null;
   if (source.team && target.team === source.team) return null;
   const elements = source.statusElements;
   if (!elements?.length) return null;
+  const combo = tryCombo(target, elements);
+  if (combo) return combo;
   const mult = (source.statusChance ?? 1) * (source.quality?.power ?? 1);
   for (const el of elements) {
     const entry = ELEMENT_STATUS[el];
@@ -78,18 +95,66 @@ export function onStatusHit(target, amount, hitKind = 'melee') {
   return null;
 }
 
-// Apply (or refresh) a status. Respects a short immunity after it ended.
-export function applyStatus(target, kind, { duration = null } = {}) {
+// ── combos ──
+function comboText(t, text, color) { combat.spawnDamageText?.(t.x, (t.y ?? 0) - (t.elevation ?? 0) - 104, text, { color, isCrit: true }); }
+function tryCombo(t, elements) {
+  const has = (el) => elements.includes(el);
+  if (has('fulgur') && hasStatus(t, 'wet')) {
+    t.statuses.wet.end();
+    const fx = applyStatus(t, 'paralysis', { force: true, quiet: true });
+    statusDamage(t, COMBO.shockBonus); comboText(t, 'SCHOCK!', '#fff176');
+    combat.spawnHitSparks?.(t.x, (t.y ?? 0) - 40, 1, '#fff59d', 16);
+    return fx;
+  }
+  if (has('frost') && hasStatus(t, 'wet')) {
+    t.statuses.wet.end();
+    const fx = applyStatus(t, 'frozen', { force: true, quiet: true });
+    comboText(t, 'SCHOCKFROST!', '#80deea');
+    return fx;
+  }
+  if (has('ventus') && hasStatus(t, 'burn')) {
+    // The wind fans the fire onto every foe nearby.
+    const burn = t.statuses.burn; burn.dur = Math.max(burn.dur, burn.t + STATUS_DEFS.burn.duration);
+    statusDamage(t, COMBO.stormBonus);
+    const gw = globalThis.window?.gameWorld;
+    for (const o of gw?.getHostileTargets?.(source.team) ?? []) {
+      if (o === t || o.isObjective || o.isProp || o.isStoneWall || o.isCastle) continue;
+      if (Math.hypot(o.x - t.x, ((o.z ?? 0) - (t.z ?? 0)) * 150) < COMBO.stormRadius) applyStatus(o, 'burn', { force: true });
+    }
+    comboText(t, 'FEUERSTURM!', '#ff7043');
+    return burn;
+  }
+  if (has('aqua') && hasStatus(t, 'burn')) {
+    const fx = applyStatus(t, 'wet', { quiet: true }); // wet puts the fire out (see applyStatus)
+    comboText(t, 'GELÖSCHT', '#b3e5fc');
+    return fx;
+  }
+  return null;
+}
+function comboShatter(t) {
+  t.statuses.frozen.end();
+  statusDamage(t, COMBO.shatterBonus);
+  comboText(t, 'ZERSPLITTERT!', '#e0f7fa');
+  combat.spawnHitSparks?.(t.x, (t.y ?? 0) - (t.elevation ?? 0) - 40, 1, '#e0f7fa', 22);
+  combat.shakeCamera?.(6, .2);
+  return null;
+}
+
+// Apply (or refresh) a status. Respects a short immunity after it ended (force = combos ignore it).
+export function applyStatus(target, kind, { duration = null, force = false, quiet = false } = {}) {
   const def = STATUS_DEFS[kind];
   if (!def || !target || target.isDead || (target.hp ?? 1) <= 0) return null;
   target.statuses ??= {};
+  if (kind === 'burn' && hasStatus(target, 'wet') && !force) return null;
   const current = target.statuses[kind];
   if (current && !current.isFinished) { current.dur = Math.max(current.dur, current.t + (duration ?? def.duration)); return current; }
-  if ((target.statusImmuneUntil?.[kind] ?? 0) > nowS()) return null;
+  if (!force && (target.statusImmuneUntil?.[kind] ?? 0) > nowS()) return null;
+  // Water puts out the fire: steam instead of flames.
+  if (kind === 'wet' && hasStatus(target, 'burn')) { target.statuses.burn.end(); combat.spawnShockwave?.(target.x, (target.y ?? 0) - 40, 26, '#eceff1'); }
   const fx = new StatusEffectFx(target, kind, duration ?? def.duration);
   target.statuses[kind] = fx; active.add(fx);
   if (kind === 'frozen') target.freeze?.(fx.dur);
-  combat.spawnDamageText?.(target.x, (target.y ?? 0) - (target.elevation ?? 0) - 92, def.label, { color: def.color });
+  if (!quiet) combat.spawnDamageText?.(target.x, (target.y ?? 0) - (target.elevation ?? 0) - 92, def.label, { color: def.color });
   return fx;
 }
 
@@ -165,6 +230,7 @@ export class StatusEffectFx {
     else if (this.kind === 'paralysis') drawParalysis(ctx, x, base, h, time, this.seed, this.flash ?? 0);
     else if (this.kind === 'poison') drawPoison(ctx, x, base, h, time, this.seed);
     else if (this.kind === 'bleed') drawBleed(ctx, x, base, h, time, this.seed);
+    else if (this.kind === 'wet') drawWet(ctx, x, base, h, time, this.seed);
     ctx.restore();
     // One icon row per target: drawn by its first active status only.
     if (Object.values(t.statuses ?? {}).find((fx) => fx && !fx.isFinished) === this) drawStatusIcons(ctx, t, x, base - h - 30);
@@ -247,6 +313,18 @@ function drawBleed(ctx, x, base, h, time, seed) {
   ctx.restore();
 }
 
+function drawWet(ctx, x, base, h, time, seed) {
+  ctx.save();
+  // A cool sheen over the body and drops running down.
+  ctx.globalAlpha *= .18; ctx.fillStyle = '#4fc3f7'; ctx.beginPath(); ctx.ellipse(x, base - h * .5, 17, h * .5, 0, 0, TAU); ctx.fill(); ctx.globalAlpha /= .18;
+  for (let i = 0; i < 6; i++) {
+    const ph = (time * 1.6 + i / 6) % 1; const dx = x + ((i * 23 + seed) % 26) - 13; const dy = base - h * .85 + ph * h * .85;
+    ctx.globalAlpha = .9 * (1 - ph * .5); ctx.fillStyle = i % 2 ? '#81d4fa' : '#e1f5fe'; ctx.fillRect(Math.round(dx), Math.round(dy), 2, 3);
+  }
+  ctx.globalAlpha = .45; ctx.strokeStyle = '#4fc3f7'; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(x, base - 1, 16, 4, 0, 0, TAU); ctx.stroke();
+  ctx.restore();
+}
+
 // Small status icons above the head.
 function drawStatusIcons(ctx, t, x, y) {
   const kinds = Object.keys(t.statuses ?? {}).filter((k) => t.statuses[k] && !t.statuses[k].isFinished);
@@ -260,6 +338,7 @@ function drawStatusIcons(ctx, t, x, y) {
     else if (k === 'burn') { ctx.beginPath(); ctx.moveTo(cx, y - 4); ctx.lineTo(cx + 3, y + 3); ctx.lineTo(cx - 3, y + 3); ctx.closePath(); ctx.fill(); }
     else if (k === 'paralysis') { ctx.beginPath(); ctx.moveTo(cx + 1, y - 4); ctx.lineTo(cx - 2, y); ctx.lineTo(cx + 2, y); ctx.lineTo(cx - 1, y + 4); ctx.stroke(); }
     else if (k === 'poison') { ctx.beginPath(); ctx.arc(cx, y + 1, 3, 0, TAU); ctx.fill(); }
+    else if (k === 'wet') { ctx.beginPath(); ctx.moveTo(cx, y - 4); ctx.quadraticCurveTo(cx + 4, y + 2, cx, y + 4); ctx.quadraticCurveTo(cx - 4, y + 2, cx, y - 4); ctx.fill(); ctx.fillStyle = '#e1f5fe'; ctx.fillRect(cx - 1, y, 1, 2); }
     else if (k === 'bleed') { ctx.beginPath(); ctx.moveTo(cx, y - 4); ctx.quadraticCurveTo(cx + 4, y + 2, cx, y + 4); ctx.quadraticCurveTo(cx - 4, y + 2, cx, y - 4); ctx.fill(); }
   });
   ctx.restore();

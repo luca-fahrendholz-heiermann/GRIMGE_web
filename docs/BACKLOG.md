@@ -24,7 +24,7 @@ Umgesetzt: Spiralkugel (S46), Spiegelkerker (S50), Blutkreuz (S51), Herausforder
 - **Zeitstopp-Feld:** Projektile im Feld frieren in der Luft ein; beim Ende fliegen sie weiter (auch die eigenen).
 - **Beschwörungs-Kette (Summoning Contract):** Blut auf eine Schriftrolle — eine riesige Kreatur erscheint kurz und führt EINEN Angriff aus.
 - **Bankai-artige Waffen-Entfesselung** als Arcane State: die Klassenwaffe verwandelt sich (z. B. Schwert → Klingenblüten-Schwarm).
-- **Statuseffekt-Kombos:** nass + Blitz = Paralyse garantiert, brennend + Wind = Feuer springt über, gefroren + schwerer Treffer = Eis zersplittert mit Bonusschaden.
+- **Weitere Status-Kombos** (umgesetzt: Nass+Blitz, Nass+Eis, Brand+Wind, Brand+Wasser, Gefroren+harter Treffer): z. B. Gift+Feuer = Giftgas-Explosion, Blutung+Wind = Schnitt-Wirbel, Paralyse+Erde = Erdung.
 
 ## Weitere offene Punkte
 - **Statuseffekte balancieren:** Chancen (aktuell 8–22 % pro Treffer, × Grade-Power), Dauer, Immunitätsfenster; weitere Quellen (Gift-Waffen, Eis-Fusionen, Blutungs-Kits).

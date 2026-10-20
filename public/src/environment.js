@@ -25,6 +25,7 @@ import { audio } from './audio.js';
 import { combat } from './combat.js';
 import { getGroundProjection, groundYForDepth } from './world.js';
 import { drawFx, fxReady } from './fx_sprites.js';
+import { applyStatus } from './status_effects.js';
 
 export const GROUND_EFFECTS = Object.freeze({
   ice: Object.freeze({ life: 7, slow: null, slippery: true }),
@@ -384,6 +385,8 @@ export class EnvironmentSystem {
         actor._wadeTimer = .38;
       }
       actor._inWater = wet;
+      // Standing in water soaks (status WET → lightning / ice combos; puts out a burn).
+      if (wet) applyStatus(actor, 'wet', { duration: 2, quiet: true });
     }
 
     // Props: burning barrels burst, burning ground sets crates alight.
