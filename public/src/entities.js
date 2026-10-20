@@ -16,6 +16,8 @@ import { tryAICounterDomain, tryAISpecial, updateAIRecast } from './ai_specials.
 import { formDive, FORM_SPECIAL_MANA, tickFormSpecials } from './form_specials.js';
 import { renderInfusion } from './nature_spells.js';
 import { TransformationFx } from './transform_fx.js';
+import { weaponSprintVariant, weaponSprintStart, weaponSprintTick, weaponSprintHit } from './weapon_sprint.js';
+import { kitOf } from './weapon_kits.js';
 import { hasWeaponDown, castWeaponDown, weaponUp, weaponDive, updateWeaponKit, weaponMoveMult, weaponAttackSpeed, meleeBuffMods, targetDamageMult, onWeaponMeleeHit, afterWeaponSwing, weaponIncoming } from './weapon_kits.js';
 import { updatePrimalBond, bondMoveMultiplier, bondGainMultiplier, bondDisplacement, bondOnBlock, primalSprintVariant, renderPrimalBond, endPrimalBond, bondMelee, primalQuake } from './primals.js';
 import { createSegments, damageSegments, updateSegments, renderSegments } from './castle_segments.js';
@@ -1156,6 +1158,16 @@ export class Player extends GroundEntity {
       this.triggerMeleeHitbox(up.damage, this.facing * up.knockback, up.lift, 0.5, false, { hitstopTicks: up.hitstopTicks, hitReaction: up.hitReaction });
       return true;
     }
+    if (!this.grounded && (attackKind === 'dive' || move.z > 0.55) && this.isSprintJump && !this.sprintDive && !activeMoveset(this) && kitOf(this)?.dive) {
+      // Sprint jump + down with a class weapon: the weapon's own dive, slanted at the foe below.
+      const style = kitOf(this).dive.style;
+      if (weaponDive(this, spells, window.gameWorld)) {
+        this.airLatch = null;
+        if (['plunge', 'meteor', 'spin', 'pounce', 'orbDrop', 'seal'].includes(style)) { this.vx = this.diveAimAt(SPRINT_DIVE_SPEED)?.vx ?? this.facing * SPRINT_DIVE_SPEED * .8; this.vElevation = Math.min(this.vElevation, -SPRINT_DIVE_SPEED * .8); }
+        this.diveAim = false;
+        return true;
+      }
+    }
     if (!this.grounded && (attackKind === 'dive' || move.z > 0.55) && this.isSprintJump && !this.sprintDive) {
       // Sprint jump + down: a fast diagonal dive with a sweeping strike (instead of the vertical drop).
       this.airLatch = null;
@@ -1281,8 +1293,10 @@ export class Player extends GroundEntity {
     if (form && this.buffForm?.timer > 0) { if (this.freeMana >= FORM_SPECIAL_MANA.sprint) this.mp -= FORM_SPECIAL_MANA.sprint; else form = null; }
     // Primal Bond: the Unity sprint attack with the bond's carry / push.
     const primal = form ? null : (signatureSprintVariant(this) ?? primalSprintVariant(this));
+    // A class weapon has its own sprint attack (weapon_sprint.js).
     const variant = form ? FORM_SPRINT_ATTACKS[form]
-      : primal ? { ...primal, windup: 0, active: SPRINT_ATTACK_ACTIVE_TIME, recovery: Math.max(.05, heavy.time - SPRINT_ATTACK_ACTIVE_TIME) } : null;
+      : primal ? { ...primal, windup: 0, active: SPRINT_ATTACK_ACTIVE_TIME, recovery: Math.max(.05, heavy.time - SPRINT_ATTACK_ACTIVE_TIME) }
+      : weaponSprintVariant(this);
     const speed = Math.max(Math.abs(this.vx), this.moveSpeed * SPRINT_MULT);
     this.cancelSprint();
     this.canAttack = false;
@@ -1298,7 +1312,8 @@ export class Player extends GroundEntity {
     this.lastSprintAttack = variant?.name ?? 'SPRINT ATTACK';
     audio.playSlash(variant?.pitch ?? 0.82);
     combat.spawnDust(this.x, this.y, 6);
-    if (variant && !variant.primal) spells.addSpell(new FormSprintAttackFx(this, form), 'B');
+    if (variant?.weapon) weaponSprintStart(this, this.sprintStrike, spells);
+    else if (variant && !variant.primal) spells.addSpell(new FormSprintAttackFx(this, form), 'B');
     else if (!weapon) combat.spawnSlashArc(this.x + this.facing * 28, this.y - 25, this.facing, { radius: 58, angleStart: -0.9, angleEnd: 0.9, color: '#ffd54f', glow: '#ff6d00', width: 7 });
     this.updateSprintAttack(0);
     return true;
@@ -1317,6 +1332,8 @@ export class Player extends GroundEntity {
       this.vx = this.facing * strike.speed * (variant?.lungeSpeed ?? 1);
       if (variant?.leap && this.grounded) { this.grounded = false; this.vElevation = variant.leap * PLAYER_ARC_SCALE; }
     }
+    // The class weapon's own move (vortex, carry-and-impulse punch, delayed iai cut, waves …).
+    if (variant?.weapon && weaponSprintTick(this, strike, dt, spells, window.gameWorld)) return;
     if (strike.connected) {
       strike.carry -= dt;
       if (strike.carry <= 0) this.vx = 0;
@@ -1329,11 +1346,12 @@ export class Player extends GroundEntity {
     const momentum = Math.max(.8, Math.min(1.35, strike.speed / (this.moveSpeed * SPRINT_MULT)));
     const recoil = Math.sqrt(2 * KB_DECAY_RATE * SPRINT_ATTACK_RECOIL_DISTANCE * (variant?.recoilMult ?? 1) * momentum);
     const hit = this.triggerMeleeHitbox(heavy.damage * (variant?.damageMult ?? 1) * (1 + .25 * momentum), this.facing * recoil, variant?.lift ?? 0, variant?.stun ?? .55, true, {
-      hitstopTicks: (variant?.hitstopTicks ?? heavy.hitstopTicks) + 2, hitReaction: variant && !variant.primal ? 'finisher' : heavy.hitReaction,
+      hitstopTicks: (variant?.hitstopTicks ?? heavy.hitstopTicks) + 2, hitReaction: variant && !variant.primal && !variant.weapon ? 'finisher' : heavy.hitReaction,
       reach: variant?.reach ?? heavy.reach, freeze: heavy.freeze, sprintAttack: true, hitSet: strike.hits
     });
     if (!hit) return;
-    if (variant && !variant.primal) formSprintImpact(this, strike.form, strike.hits, window.gameWorld);
+    if (variant?.weapon) weaponSprintHit(this, strike);
+    else if (variant && !variant.primal) formSprintImpact(this, strike.form, strike.hits, window.gameWorld);
     else if (variant?.primal) combat.spawnShockwave(this.x + this.facing * 30, this.y - 26, 50, variant.color);
     if (variant?.quake) primalQuake(this, variant.quake);
     // A piercing lunge keeps going and hits every enemy on its path once.

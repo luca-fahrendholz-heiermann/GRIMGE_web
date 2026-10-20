@@ -52,7 +52,8 @@ export class CombatEngine {
       text = null
     } = opt;
 
-    const displayText = text || `${prefix}${amount}`;
+    const shown = typeof amount === 'number' && Number.isFinite(amount) ? (amount > 0 ? Math.max(1, Math.round(amount)) : Math.round(amount)) : amount;
+    const displayText = text || `${prefix}${shown}`;
     this.damageNumbers.push({
       x: x + (Math.random() * 20 - 10),
       y: y - 10 + (Math.random() * 10 - 5),

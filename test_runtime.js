@@ -1743,7 +1743,7 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
   // A class weapon is part of the Wizard: never thrown, its heavy powers the sprint attack.
   P.equipClassWeapon('katana'); placePartner(400); sprintReady();
   const before = thrownCount();
-  assert(P.executeAttack(neutral, 'normal') && P.lastSprintAttack === 'SPRINT ATTACK' && P.classWeapon === 'katana' && thrownCount() === before, 'The class weapon is never thrown: sprint + attack stays the Sprint Attack');
+  assert(P.executeAttack(neutral, 'normal') && P.lastSprintAttack === 'IAI-DURCHZUG' && P.classWeapon === 'katana' && thrownCount() === before, 'The class weapon is never thrown: sprint + attack is the weapon own sprint attack (katana: IAI-DURCHZUG)');
   // A picked-up field weapon overrides the class moveset and can be thrown.
   P.equipWeapon('great_axe');
   assert(P.weaponProfile?.name === 'GREAT AXE', 'A picked-up field weapon takes over the moveset');
@@ -3843,6 +3843,37 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   for (let i = 0; i < 90; i++) spells.update(1 / 60, game);
   assert(foeDom.trapped.has(P) && P.mp < 80 - 2, 'Domain: a Wizard trapped in a hostile domain loses mana (only an own domain breaks free)');
   spells.clearRuntime(); E.passive = false; E.x = 900;
+}
+
+// Weapon sprint attacks (user, 20 Oct 2026): every class weapon has its own sprint move.
+{
+  const WS = await import('./public/src/weapon_sprint.js'); const { Minion } = await import('./public/src/entities.js');
+  game.returnToHub(); game.setMatchMode('training'); game.startMatch(); game.selectTrainingMap('waterfalls');
+  const P = game.player; const dummy = game.trainingDummy; dummy.homeX = dummy.x = 1600;
+  const neutral = { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false };
+  const step = (n) => { for (let i = 0; i < n; i++) { P.update(1 / 60, neutral, game.battlefield, game); for (const m of game.minions) m.update?.(1 / 60, game, game.battlefield); spells.update(1 / 60, game); } };
+  const sprintAt = (weapon, foeX) => {
+    spells.clearRuntime(); game.minions = []; P.equipClassWeapon(weapon); P.x = 300; P.z = .5; P.facing = 1; P.grounded = true; P.elevation = 0; P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.sprintStrike = null; game.battlefield.placeOnSurface(P);
+    const m = new Minion(foeX, .5, 'red', 'melee', 0); m.maxHp = m.hp = 3000; m.passive = true; game.battlefield.placeOnSurface(m); game.minions.push(m);
+    P.sprintActive = true; P.vx = 320; P.startSprintAttack(); return m;
+  };
+  assert(Object.keys(WS.WEAPON_SPRINTS).length >= 36, 'Every class weapon has its own sprint attack');
+  let m = sprintAt('daggers', 340); let hits = 0; const orig = m.takeDamage.bind(m); m.takeDamage = (...args) => { hits++; return orig(...args); }; step(40);
+  assert(P.lastSprintAttack === 'DOLCHWIRBEL' && hits >= 3, 'Daggers DOLCHWIRBEL: the Wizard spins like a vortex — several hits (' + hits + ')');
+  m = sprintAt('gauntlets', 345); step(6); const dragX = m.x; step(4);
+  const carried = m.x > 345 + 5; step(14);
+  assert(P.lastSprintAttack === 'DURCHSCHLAG' && carried && m.hp < 3000 && Math.abs(P.vx) < 1 && (m.kbVelX > 300 || m.x > dragX + 60), 'Gauntlets DURCHSCHLAG: the punch carries the foe along, then the impulse launches it while the Wizard stops dead');
+  m = sprintAt('katana', 360); step(14); const passHp = m.hp; step(20);
+  assert(P.x > m.x && m.hp < passHp, 'Katana IAI-DURCHZUG: a draw-cut dash THROUGH the foe, the cut lands a moment later');
+  m = sprintAt('rune_greatsword', 620); step(45);
+  assert(P.lastSprintAttack === 'RUNENSICHEL' && m.hp < 3000, 'Greatsword RUNENSICHEL: a giant crescent wave carries the impulse far down the lane (320 px)');
+  m = sprintAt('scythe', 420); step(30);
+  assert(m.hp < 3000, 'Scythe ERNTEKREIS: the wide sweep drags the foe in and reaps it');
+  // Sprint jump + down: the weapon's own dive.
+  spells.clearRuntime(); game.minions = []; P.equipClassWeapon('great_hammer'); P.x = 300; P.facing = 1; P.elevation = 100; P.grounded = false; P.isSprintJump = true; P.sprintDive = null; P.state = 'idle'; P.canAttack = true; P.lastWeaponDive = null;
+  P.executeAttack(neutral, 'dive');
+  assert(P.lastWeaponDive === 'HAMMERFALL' && P.vx > 0, 'Sprint jump + down with a class weapon: the weapon dive (HAMMERFALL), slanted forward');
+  P.equipClassWeapon(null); P.elevation = 0; P.grounded = true; P.isSprintJump = false; P.state = 'idle'; spells.clearRuntime(); game.minions = []; dummy.homeX = dummy.x = 512;
 }
 
 const frameCallback = nextFrame;

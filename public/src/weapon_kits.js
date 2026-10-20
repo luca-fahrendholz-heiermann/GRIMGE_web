@@ -400,7 +400,9 @@ export function weaponDive(player, spells, game) {
   const f = player.facing || 1; const hue = hueOf(player);
   player.lastWeaponDive = dive.name;
   const base = { damage: 55, knockback: 200, lift: -300 };
-  const land = (s, cb) => { if (!s.landed && player.grounded) { s.landed = true; s.t = 0; s.dur = .4; cb?.(); } };
+  // The landing is the impact: the heavier the dive, the harder the screen shakes.
+  const LANDING = { meteor: [8 + (dive.radius ?? 80) / 20, 5], plunge: [4, 2], orbDrop: [5, 3], seal: [3, 1] };
+  const land = (s, cb) => { if (!s.landed && player.grounded) { s.landed = true; s.t = 0; s.dur = .4; cb?.(); const [amp, stop] = LANDING[dive.style] ?? [3, 1]; combat.shakeCamera?.(amp, .22); combat.triggerHitstop?.(stop); } };
   switch (dive.style) {
     case 'plunge': {
       player.state = 'dive'; player.stateTimer = .35; player.vElevation = -900;
