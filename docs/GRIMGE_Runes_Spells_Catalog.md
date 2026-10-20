@@ -46,7 +46,7 @@
 | ◉ | **VOID IMPLOSION** `transform_implode` | Transformation | ◉ | `#b668ff` | 0 | Any gesture while Eidolon Mantle | — |
 | ⚡ | **INFERNO RAMPAGE** `transform_rampage` | Transformation | ⚡ | `#ff6f3b` | 0 | Any gesture while Ninefold Beast | — |
 | <img src="runes/buff_sigil.svg" width="48" alt="buff"> | **ARCANE-STATE-SIEGEL** `buff_*` (17 Runen) | Arcane State | ⧗ | je Form | 30 | Sanduhr ⧗ in einem geschlossenen Strich — **Tag: arcane-state · max-1-per-deck** | der Arcane State der Rune (Abschnitt 3.7) |
-| <img src="runes/sig_S01.svg" width="48" alt="sig"> | **SIGNATURE-SPEZIALRUNEN** `sig_*` (44 Runen) | Signature Special | ✦ | je Rune | 28–44 | **eigenes mehrstrichiges Symbol je Rune** (Abschnitt 3.8) — Tag: signature-special · je Rune 1× pro Deck | die Signature-Mechanik der Rune (Abschnitt 3.8) |
+| <img src="runes/sig_S01.svg" width="48" alt="sig"> | **SIGNATURE-SPEZIALRUNEN** `sig_*` (48 Runen) | Signature Special | ✦ | je Rune | 28–44 | **eigenes mehrstrichiges Symbol je Rune** (Abschnitt 3.8) — Tag: signature-special · je Rune 1× pro Deck | die Signature-Mechanik der Rune (Abschnitt 3.8) |
 
 ### Glyphen als ASCII (Ziffer = Startpunkt des Strichs)
 
@@ -1341,7 +1341,7 @@ Quelle: `docs/GRIMGE_Transformations_Atlas_V3_1_Sonnenwyrm.md`. Jede Form ist ei
 
 | ID | Form | Archetyp der Manifestation | Palette | Sprint + Heavy | Forward kurz / voll | Up kurz / voll | Down kurz / voll | Defense · Grab · Jump |
 |---|---|---|---|---|---|---|---|---|
-| B01 | **Risswild**<br><sub>Drei ungleich breite, kantige Energiebänder entstehen versetzt an Hüfte und Schulter; keine Fuchsohren und keine neun Schweife. Die Bänder fließen wie zähe, in Platten brechende Flüssigkeit.</sub> | `risswild` ×3 | `#241623` `#f29b35` `#ffd774` `#ff5b25` | Beast Pounce | Verdichteter Risskern (`bomb`) / Rissstrahl (`beam`) | Bruchheber (`burst`) / Doppelter Rissaufstieg (`pillar`) | Scherfeger (`ring`) / Rissfeld-Einschlag (`sequence`) | Scherhaut · Plattenzunge · Risssprung |
+| B01 | **Risswild**<br><sub>Kyubi-Geist: neun Fuchsflammen-Schweife fächern sich hinter dem Wizard auf, darüber ein Flammenmantel und ein Fuchskopf; beim Angriff peitschen drei Riss-Schweife nach vorn.</sub> | `risswild` ×3 | `#241623` `#f29b35` `#ffd774` `#ff5b25` | Beast Pounce | Verdichteter Risskern (`bomb`) / Rissstrahl (`beam`) | Bruchheber (`burst`) / Doppelter Rissaufstieg (`pillar`) | Scherfeger (`ring`) / Rissfeld-Einschlag (`sequence`) | Scherhaut · Plattenzunge · Risssprung |
 | B02 | **Arkengestell**<br><sub>Vier große modulare Träger und sechs isolierte Panzerplatten formen ein offenes, asymmetrisches Kraftgestell um den Avatar. Kein riesiger Geister-Samurai, kein Schädel und keine Rippen.</sub> | `arkengestell` ×4 | `#30205d` `#8e67f0` `#d6a7ff` `#e994f2` | Kolossstoß | Glyphenbolzen (`arrow`) / Belagerungspfeil (`arrow`) | Trägerheber (`burst`) / Lichtspalter (`wall`) | Ankerstampfer (`ring`) / Gericht des Gestells (`ring`) | Schildtrichter · Greifzange · Trägersprung |
 | T02 | **Schlackenkern**<br><sub>Schwebender Keramikofen als asymmetrisches Rippenband um Taille und Schulter; glühende Öffnung an der linken Hüfte.</sub> | `girdle/rib` ×4 | `#2a1210` `#ff5a1f` `#ffd27a` `#ff2a00` | Melt Ram | Cinder Spit (`projectile`) / Volcano Lance (`beam`) | Ash Vent (`burst`) / Eruption Crown (`pillar`) | Soot Stomp (`ring`) / Crater Heart (`sequence`) | Basalt Shell · Furnace Grip · Magma Bound |
 | T04 | **Korallenschild**<br><sub>Zwei fächerförmige Schutzsegel aus Korallenlamellen stehen seitlich statt klassischer Drachenflügel.</sub> | `fins/sail` ×2 | `#1d3c48` `#ff8fa3` `#bff6ff` `#5ff0d8` | Wing Embrace | Life Spark (`projectile`) / Queenfire Stream (`beam`) | Winglift (`burst`) / Crown Ascent (`pillar`) | Bloom Step (`ring`) / Sanctuary Bloom (`sequence`) | Queen Mantle · Mercy Lift · Bloom Flight |
@@ -1442,6 +1442,10 @@ Quelle: `docs/GRIMGE_Spezialrunen_Research_Designatlas_V1.md` (S01–S36). Spezi
 | S42 | <img src="runes/sig_S42.svg" width="48" alt="sig_S42"> | **Donneratmung** `sig_S42` | G · Atemtechnik · Kampfstil · 15 s | `self` | 34 | Thunder breathing for 15 s: swings flash as lightning lines, the sprint attack becomes a lightning dash through everyone in line, and charged attacks drop a thunderbolt on the nearest foe. | Gelbe Zickzack-Blitze und Funken folgen jeder Bewegung. |  |
 | S43 | <img src="runes/sig_S43.svg" width="48" alt="sig_S43"> | **Sanktuarium** `sig_S43` | G · Objekt · Heilzone · 10 s | `ground` | 36 | A sanctuary obelisk rises at the target point inside a magic circle: allies standing in the circle heal and shake off slows for 10 s. Foes can smash the obelisk. | Ein heller Obelisk mit grünem Kristall über einem rotierenden Runenkreis. |  |
 | S44 | <img src="runes/sig_S44.svg" width="48" alt="sig_S44"> | **Kriegsbanner** `sig_S44` | G · Objekt · Buffzone · 10 s | `ground` | 32 | A war banner is planted at the target point: allies near it strike harder (+20 % melee damage) and move faster for 10 s. Foes can tear the banner down. | Ein rotes Banner mit goldenem Saum an einem Speerschaft, das im Wind flattert. |  |
+| S45 | <img src="runes/sig_S45.svg" width="48" alt="sig_S45"> | **Blitzmarke** `sig_S45` | G · Zweistufig · Teleport · 5 s | `direction` | 30 | Stage 1: throw a marked kunai — it sticks in the first foe it hits, otherwise in the ground. Stage 2 (tap the slot again within 5 s): teleport to the mark; in a foe you appear behind it and strike. | Dunkler Kunai mit Ring und flatterndem gelbem Siegel-Zettel; Teleport mit Nachbild und Lichtblitz. |  |
+| S46 | <img src="runes/sig_S46.svg" width="48" alt="sig_S46"> | **Spiralkugel** `sig_S46` | G · Zweistufig · Launcher · 3 s | `direction` | 38 | Stage 1: rush forward with a spinning energy ball — the impact launches the foe high. Stage 2 (tap again within 2.5 s): teleport above it and slam it into the ground with an explosion. | Eine wirbelnde blaue Energiekugel mit weißen Spiralbahnen in der Hand. |  |
+| S47 | <img src="runes/sig_S47.svg" width="48" alt="sig_S47"> | **Bannfalle** `sig_S47` | G · Zweistufig · Falle · 20 s | `ground` | 28 | Stage 1: lay a seal trap at the target point — it is always armed and goes off when a foe steps on it. Stage 2 (tap again within 6 s): detonate it yourself with a bigger blast. After the window it stays armed but can only be set off by contact. | Ein Papiersiegel mit rotem Zeichen in einem doppelten Bannkreis. |  |
+| S48 | <img src="runes/sig_S48.svg" width="48" alt="sig_S48"> | **Schattenkonter** `sig_S48` | G · Haltung · Konter-Ladungen · 12 s | `self` | 34 | Three counter charges for 12 s: each hit you take is negated — you vanish and reappear behind the attacker with a counter strike (without a known attacker: a sidestep). | Drei dunkle Schattenkugeln kreisen um den Körper; beim Konter bleibt ein Schattenschleier zurück. |  |
 
 Hinweis: `DRAGON INVOCATION` hat zwei Rezepte (Bestia+Ignis+Ventus und Fulgur+Ignis+Terra). Von den 220 möglichen Drei-Runen-Kombinationen der Basisrunen (mit Wiederholung) sind nur wenige belegt.
 
@@ -1472,16 +1476,16 @@ Ehemalige Transformations-Spells: ANNIHILATION BEAM (über Focus Ascendant Forwa
 | `cone` | DRAGON BREATH, POLLENSTURM |
 | `burrow` | BURROW STRIKE |
 | `area` | GALE SHOCKWAVE, ARC LIGHTNING, STONE SPIKES, FROST NOVA, HALO PULSE, AURA SHOCK, DORNENWUCHS, FLAMMENSAMEN, DRAGON INVOCATION, APOCALYPTIC HEAVENSURGE |
-| `zone` | VOID IMPLOSION, FIRESTORM VORTEX, MAGMA FISSURE, BLIZZARD SURGE, FROST MIRROR GATE, HEILQUELLE, GIFTSUMPF, WELTENBAUM, STERNENANKER, LUFTNÄHTE, SEKUNDENPFAND, STILLFUGE, SPLITTERGARTEN, SEISMISCHER STEG, FLUTSCHIENE, GLUTPUMPE, RAUMFALTER, GLASFELD, STRAHLENWEBER, RISSWEICHE, POLARISATIONSWERK, SCHWERELOSBAND, BRUCHKOLOSS, JÄGERGLOCKE, RUNENGERICHT, EXILKORRIDOR, ERNTEZIRKEL, RESONANZKORRIDOR, WELTNAHT, SCHACHTWUCHS, SANKTUARIUM, KRIEGSBANNER |
+| `zone` | VOID IMPLOSION, FIRESTORM VORTEX, MAGMA FISSURE, BLIZZARD SURGE, FROST MIRROR GATE, HEILQUELLE, GIFTSUMPF, WELTENBAUM, STERNENANKER, LUFTNÄHTE, SEKUNDENPFAND, STILLFUGE, SPLITTERGARTEN, SEISMISCHER STEG, FLUTSCHIENE, GLUTPUMPE, RAUMFALTER, GLASFELD, STRAHLENWEBER, RISSWEICHE, POLARISATIONSWERK, SCHWERELOSBAND, BRUCHKOLOSS, JÄGERGLOCKE, RUNENGERICHT, EXILKORRIDOR, ERNTEZIRKEL, RESONANZKORRIDOR, WELTNAHT, SCHACHTWUCHS, SANKTUARIUM, KRIEGSBANNER, BANNFALLE |
 | `wall` | CONSTRUCT BULWARK, STONE WALL |
 | `telekinesis` | GRAVITY LIFT |
 | `capture` | MIRROR WARD, SPIEGELVERSATZ, SCHICKSALSNADEL, MARIONETTENFADEN |
 | `slam` | SEISMIC SLAM |
 | `stomp` | TITAN STOMP, SHADOW STOMPER |
 | `summon` | BEAST FAMILIAR, SHADOW DOPPELGANGER, REVENANT CALL, STORM WOLF, VOID SPIDER, RUNE GOLEM, WORLD RUNE SERPENT, SPIRIT WOLF, SIEGE GOLEM |
-| `dash` | SHADOW STEP, INFERNO RAMPAGE, TEMPEST BLITZ, KOMETENTRÄGER, EISZACKEN |
+| `dash` | SHADOW STEP, INFERNO RAMPAGE, TEMPEST BLITZ, KOMETENTRÄGER, EISZACKEN, BLITZMARKE, SPIRALKUGEL |
 | `heavy_object` | METEOR CATACLYSM |
-| `self` | SANDSTORM BASTION, ARCANE AEGIS, SOLAR ORB, LUNAR ORB, ECLIPSE, THUNDERHEAD, BLOOD MOON, STARFALL, AURORA VEIL, HEILBLÜTE, GROSSE BLÜTE, SEGENSKREIS, FLAMMENKLINGE, FROSTKLINGE, STURMKLINGE, GIFTKLINGE, BLUTKLINGE, REISSKLINGE, ARKENGESTELL, RISSWILD, RISSWILD, ARKENGESTELL, SCHLACKENKERN, KORALLENSCHILD, BRUCHFLUG, IONSPINDEL, OSSUARIUM, FADENSCHLAG, NULLFELDTRÄGER, FADENREGENT, KÄLTESTILLSTAND, SÄUREGERÜST, ASTERGLIED, VORAUSSCHNITT, SONNENWYRM, GÖTTLICHER RIESE, MYSTISCHER AFFE, HIMMELSREGENT, AUREOLENSCHWARM, SCHWEBENDE BASTION, NACHHALLARCHIV, RÜCKSPRUNGNADEL, PRISMENHALTER, SCHWARMPROTOKOLL, KLINGENCHOR, RUNENSCHMIEDE, ECHOFAMULUS, SCHERBENHANDEL, TIDENBOHRER, WASSERATMUNG, FLAMMENATMUNG, DONNERATMUNG |
+| `self` | SANDSTORM BASTION, ARCANE AEGIS, SOLAR ORB, LUNAR ORB, ECLIPSE, THUNDERHEAD, BLOOD MOON, STARFALL, AURORA VEIL, HEILBLÜTE, GROSSE BLÜTE, SEGENSKREIS, FLAMMENKLINGE, FROSTKLINGE, STURMKLINGE, GIFTKLINGE, BLUTKLINGE, REISSKLINGE, ARKENGESTELL, RISSWILD, RISSWILD, ARKENGESTELL, SCHLACKENKERN, KORALLENSCHILD, BRUCHFLUG, IONSPINDEL, OSSUARIUM, FADENSCHLAG, NULLFELDTRÄGER, FADENREGENT, KÄLTESTILLSTAND, SÄUREGERÜST, ASTERGLIED, VORAUSSCHNITT, SONNENWYRM, GÖTTLICHER RIESE, MYSTISCHER AFFE, HIMMELSREGENT, AUREOLENSCHWARM, SCHWEBENDE BASTION, NACHHALLARCHIV, RÜCKSPRUNGNADEL, PRISMENHALTER, SCHWARMPROTOKOLL, KLINGENCHOR, RUNENSCHMIEDE, ECHOFAMULUS, SCHERBENHANDEL, TIDENBOHRER, WASSERATMUNG, FLAMMENATMUNG, DONNERATMUNG, SCHATTENKONTER |
 
 **Zielmodi** (gleiche Regeln für Touch, Maus/Tastatur, Gamepad):
 
@@ -1501,9 +1505,9 @@ Ehemalige Transformations-Spells: ANNIHILATION BEAM (über Focus Ascendant Forwa
 
 ## 7. Statistik
 
-- Runen: 77 (davon 10 Basis, 2 Solo-Spezial, 44 Signature-Spezial, 17 Arcane States, 3 Transformation)
-- Spells: 131 — Fundamental 11, Solo 2, Compound 39, Himmelsfelder 7, Advanced 10, Transformation 1
-- Rezepte: 130 · freie Zwei-Runen-Paare: 17 von 55
+- Runen: 81 (davon 10 Basis, 2 Solo-Spezial, 48 Signature-Spezial, 17 Arcane States, 3 Transformation)
+- Spells: 135 — Fundamental 11, Solo 2, Compound 39, Himmelsfelder 7, Advanced 10, Transformation 1
+- Rezepte: 134 · freie Zwei-Runen-Paare: 17 von 55
 
 ## 8. Hinweise für den Research-Agenten
 

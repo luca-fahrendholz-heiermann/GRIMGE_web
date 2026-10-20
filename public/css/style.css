@@ -1463,3 +1463,8 @@ code {
 .deck-section-title { grid-column: 1 / -1; margin: 10px 0 2px; color: #ffd27a; font: 800 11px/1.2 'Rajdhani', sans-serif; letter-spacing: 1px; }
 .deck-rune.is-buff { border-style: dashed; }
 .buff-tag { font-style: normal; font-size: 8px; padding: 1px 4px; border-radius: 3px; background: rgba(255, 210, 122, .18); color: #ffd27a; letter-spacing: .5px; }
+
+/* Two-stage spells: the slot glows and a ring drains with the re-cast window. */
+.spell-slot.is-recast { animation: recast-pulse .5s ease-in-out infinite alternate; background: conic-gradient(var(--slot-color) calc(var(--recast, 0) * 360deg), rgba(0,0,0,.35) 0); }
+.spell-slot.is-recast .slot-glyph { color: #fff; text-shadow: 0 0 10px var(--slot-color), 0 0 4px #fff; }
+@keyframes recast-pulse { from { box-shadow: 0 0 6px var(--slot-color); } to { box-shadow: 0 0 18px var(--slot-color), 0 0 4px #fff inset; } }

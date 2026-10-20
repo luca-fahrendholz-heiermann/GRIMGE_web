@@ -1021,9 +1021,12 @@ export class UIManager {
       const slot = player.slottedSpells.find((entry) => entry.position === position);
       button.classList.toggle('is-empty', !slot);
       button.classList.toggle('is-combo', !!slot?.isCombo);
+      // Two-stage spell: glowing ring that drains with the re-cast window.
+      button.classList.toggle('is-recast', !!slot?.recast);
+      button.style.setProperty?.('--recast', slot?.recast ? String(Math.max(0, slot.recast.left / slot.recast.total)) : '0');
       button.style.setProperty?.('--slot-color', slot ? slot.definition.color : '#4d4260');
       if (this.slotGlyphs[position]) this.slotGlyphs[position].textContent = slot ? (slot.isCombo ? '✦' : slot.runes[0].glyph) : '';
-      button.title = slot ? `${slot.definition.name} — tap to cast, swipe to another slot to fuse` : `Spell slot ${position + 1} (empty)`;
+      button.title = slot ? (slot.recast ? `${slot.definition.name} — tap again: ${slot.recast.label}` : `${slot.definition.name} — tap to cast, swipe to another slot to fuse`) : `Spell slot ${position + 1} (empty)`;
     }
     if (this.castBtn) {
       const clash = !!player.activeClash;
@@ -1205,6 +1208,7 @@ export class UIManager {
     if (selectedSlot) {
       this.activeSpellPreview.textContent = selectedSlot.definition.isComponent
         ? `COMPONENT: ${selectedSlot.definition.name} — DRAW A MATCHING RUNE`
+        : selectedSlot.recast ? `${selectedSlot.definition.name}: ${selectedSlot.recast.label} — TAP SLOT ${(selectedSlot.position ?? 0) + 1} AGAIN (${Math.ceil(selectedSlot.recast.left)} s)`
         : `READY: ${selectedSlot.definition.name} — TAP SLOT ${(selectedSlot.position ?? 0) + 1}`;
       this.activeSpellPreview.style.color = selectedSlot.definition.color;
     } else {

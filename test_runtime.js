@@ -2453,7 +2453,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   const step = (n, dt = 1 / 60) => { for (let i = 0; i < n; i++) { P.update(dt, neutral, game.battlefield, game); game.updateProjectiles(dt); spells.update(dt, game); } };
   const cast = (id, target = null) => spells.cast(P, spells.resolveSpell([{ id: 'sig_' + id }]), game, null, target);
   const ids = Object.keys(core.SIGNATURES);
-  assert(ids.length === 44 && ids.every((id) => core.signatureImpl(id)?.cast) && sigMod.SIGNATURE_RUNE_IDS.every((id) => isSpecialRune(id) && runeManaCost(id) >= 28 && runeManaCost(id) <= 46), 'All 44 signature specials (atlas S01–S36 + S37–S44) are special runes with their own mechanic and bound mana');
+  assert(ids.length === 48 && ids.every((id) => core.signatureImpl(id)?.cast) && sigMod.SIGNATURE_RUNE_IDS.every((id) => isSpecialRune(id) && runeManaCost(id) >= 28 && runeManaCost(id) <= 46), 'All 48 signature specials (atlas S01–S36 + S37–S48) are special runes with their own mechanic and bound mana');
   assert(ids.every((id) => spellHowTo('sig_' + id)?.effect?.length > 40) && !spells.resolveSpell([{ id: 'sig_S03' }, { id: 'ignis' }]), 'Signature specials explain themselves in the grimoire and never fuse');
   // Every special casts, runs and renders (strict canvas) without errors.
   const strict = new Proxy({}, { get: (t, k) => (k === 'ellipse' || k === 'arc') ? (x, y, rx, ry) => { if (rx < 0 || (k === 'ellipse' && ry < 0)) throw new Error('IndexSizeError ' + k); } : (k === 'canvas' ? undefined : () => {}), set: () => true });
@@ -2842,6 +2842,51 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   assert(legacy.draws === 0 && sprite.draws >= 4, 'Tidenbohrer: rotor halves and nozzles are drawn as sprites (fallback without sheets)');
   for (const name of Object.keys(SPELL_SPRITE_SHEETS)) V.__setSpellSheetImage(name, null);
   spells.clearRuntime(); if (P.signature) core.endStance(P, 'replaced');
+}
+
+// Block B: two-stage spells (slot stays after stage 1, tap again for stage 2) and counter charges.
+{
+  const core = await import('./public/src/signature_core.js');
+  game.returnToHub(); game.setMatchMode('training'); game.startMatch();
+  const P = game.player; const dummy = game.trainingDummy;
+  const neutral = { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false };
+  const frame = (sec) => { for (let t = 0; t < sec; t += 1 / 60) { P.update(1 / 60, neutral, game.battlefield, game); game.updateRecasts(1 / 60); spells.update(1 / 60, game); dummy.update?.(1 / 60, game, game.battlefield); } };
+  const reset = () => { spells.clearRuntime(); if (P.signature) core.endStance(P, 'replaced'); P.slottedSpells.length = 0; P.preparedRunes = []; P.x = 300; P.z = .5; P.facing = 1; P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.hp = P.maxHp; P.mp = P.maxMp; game.battlefield.placeOnSurface(P); dummy.homeX = dummy.x = 470; dummy.homeZ = dummy.z = .5; dummy.hp = dummy.maxHp; };
+  // S45: kunai sticks in the foe, the slot stays (paid, counting down), second tap teleports behind the foe.
+  reset(); const s45 = game.slotRuneSpell(runeById('sig_S45')); const mp0 = P.mp;
+  game.castSlotAt(s45.position);
+  assert(P.slottedSpells.includes(s45) && s45.recast && s45.manaCost === 0 && mp0 - P.mp > 0, 'Two-stage spell: after stage 1 the slot stays with an open re-cast (mana paid once)');
+  frame(.4);
+  const hpAfterKunai = dummy.hp;
+  game.castSlotAt(s45.position);
+  assert(!P.slottedSpells.includes(s45) && Math.abs(P.x - dummy.x) < 40 && dummy.hp < hpAfterKunai, 'S45 BLITZMARKE stage 2: teleport to the kunai in the foe, strike from behind, slot freed');
+  // Window runs out → the slot is freed without stage 2.
+  reset(); const s45b = game.slotRuneSpell(runeById('sig_S45')); dummy.homeX = dummy.x = 900; game.castSlotAt(s45b.position); frame(5.3);
+  assert(!P.slottedSpells.includes(s45b), 'When the re-cast window runs out the slot is freed');
+  // S46: rush launches, stage 2 slams it down with an explosion.
+  reset(); const s46 = game.slotRuneSpell(runeById('sig_S46')); dummy.homeX = dummy.x = 360; game.castSlotAt(s46.position); frame(.3);
+  const launched = (dummy.vElevation ?? 0) > 0 || (dummy.elevation ?? 0) > 0 || dummy.hp < dummy.maxHp;
+  const hp1 = dummy.hp; game.castSlotAt(s46.position); frame(1);
+  assert(launched && dummy.hp < hp1 && !P.slottedSpells.includes(s46), 'S46 SPIRALKUGEL: the rush launches the foe, stage 2 teleports above it and slams it down');
+  // S47: the trap stays armed after the window — no manual detonation, but contact still sets it off.
+  reset(); dummy.homeX = dummy.x = 900; const s47 = game.slotRuneSpell(runeById('sig_S47')); game.castSlotAt(s47.position);
+  if (game.targeting.isActive) { game.targeting.setPoint?.({ x: 520, z: .5 }); game.targeting.confirm(); }
+  const trap = spells.activeSpells.find((sp) => sp.constructor.name === 'SealTrap');
+  frame(6.3);
+  assert(trap && !trap.fired && !trap.isFinished && !trap.manual && !P.slottedSpells.includes(s47), 'S47 BANNFALLE: after the window the trap stays armed (manual detonation gone)');
+  dummy.homeX = dummy.x = trap.x; dummy.homeZ = dummy.z = trap.z; frame(.2);
+  assert(trap.fired && dummy.hp < dummy.maxHp, 'S47: a foe stepping on the armed trap sets it off');
+  reset(); dummy.homeX = dummy.x = 900; const s47b = game.slotRuneSpell(runeById('sig_S47')); game.castSlotAt(s47b.position);
+  if (game.targeting.isActive) { game.targeting.setPoint?.({ x: 520, z: .5 }); game.targeting.confirm(); }
+  const trap2 = spells.activeSpells.find((sp) => sp.constructor.name === 'SealTrap'); frame(.5); game.castSlotAt(s47b.position);
+  assert(trap2?.fired && trap2.big, 'S47 stage 2 within the window: detonate the trap yourself (bigger blast)');
+  // S48: a hit is negated, the Wizard reappears behind the attacker and counters; three charges.
+  reset(); const s48 = game.slotRuneSpell(runeById('sig_S48')); game.castSlotAt(s48.position);
+  const attacker = { x: P.x + 40, z: P.z, team: 'red', hp: 100, isDead: false, took: 0, takeDamage(d) { this.took += d; this.hp -= d; } };
+  const { setHitContext } = await import('./public/src/signature_runes.js');
+  setHitContext(attacker); const hpBefore = P.hp; P.invulnerableTimer = 0; P.takeDamage(30, -200, 0, .3, false, 'melee'); setHitContext(null);
+  assert(P.hp === hpBefore && attacker.took > 0 && P.x > attacker.x && P.signature?.charges === 2, 'S48 SCHATTENKONTER: a hit is negated, the Wizard counters from behind the attacker (charge used)');
+  reset();
 }
 
 // Movement after the Unity original: rooted attacks, full combos on a target in front, long sprint jump, auto-run.

@@ -27,6 +27,7 @@ import { WeaponArmory, WEAPONS } from './weapons.js';
 import { SiegeMatch } from './siege_match.js';
 import { segmentStatus } from './castle_segments.js';
 import { HOLD_MIN_TIME } from './hold_actions.js';
+import { takeOfferedRecast, tickRecasts, runRecast } from './recast.js';
 import { PrimalCompanion, normalizePrimalChoice, startPrimalBond, endPrimalBond, bondForm, PRIMAL_ARCHETYPES } from './primals.js';
 
 // LF2-style Dungeon rooms. Each room is a wide scrolling stretch: the camera
@@ -1163,6 +1164,12 @@ export class GameWorld {
     return false;
   }
 
+  // Two-stage spells: open re-cast windows count down; expired slots are freed.
+  updateRecasts(dt) {
+    const expired = tickRecasts(this.player, dt);
+    if (expired.length) this.removeSlots(expired);
+  }
+
   slotAt(position) {
     return this.player.slottedSpells.find((slot) => slot.position === position) ?? null;
   }
@@ -1195,6 +1202,14 @@ export class GameWorld {
   castSpellSlot(slot, consumeSelected = false, target = null) {
     const resolved = slot?.definition;
     if (!resolved) return false;
+    // Second press of a two-stage spell: stage 2, then the slot is freed (mana was paid at stage 1).
+    if (slot.recast) {
+      const label = slot.recast.label;
+      runRecast(slot, this);
+      this.showAnnouncement(`${resolved.name}: ${label}!`);
+      this.removeSlots([slot]);
+      return true;
+    }
     if (resolved.isComponent) {
       this.showAnnouncement(`${slot.runes[0].name} NEEDS A RUNE COMBINATION`);
       audio.playRuneFail();
@@ -1219,10 +1234,18 @@ export class GameWorld {
     if (resolved.id === 'arcane_aegis') this.player.arcaneShieldCooldown = resolved.cooldown;
     if (resolved.id === 'eidolon_mantle') this.player.eidolonCooldown = resolved.cooldown;
     if (resolved.id === 'ninefold_beast_form') this.player.ninefoldCooldown = resolved.cooldown;
+    takeOfferedRecast(null); // no stale offer from an earlier cast
     spells.cast(this.player, resolved, this, slot.quality, target);
     this.player.gainFocus(resolved.tier > 1 ? 8 : 4, 'SPELL CAST');
     this.showAnnouncement(`CAST: ${resolved.name}!`);
     this.noteSpellDiscovery(resolved);
+    // The spell offered a second stage: the slot stays (paid, glowing, counting down).
+    const offer = takeOfferedRecast(this.player);
+    if (offer && consumeSelected) {
+      slot.recast = { ...offer, left: offer.window, total: offer.window };
+      slot.manaCost = 0;
+      return true;
+    }
     if (consumeSelected) {
       if (this.activeMode?.id === 'arena') {
         for (const rune of slot.runes) {
@@ -1252,6 +1275,8 @@ export class GameWorld {
     const slot = this.slotAt(position);
     if (!slot) return false;
     this.player.selectedSpellIndex = this.player.slottedSpells.indexOf(slot);
+    // Two-stage spell waiting for its second press: stage 2 fires at once (no aiming).
+    if (slot.recast) return this.castSpellSlot(slot, true);
     // Ground / placement / ally spells first ask for their target.
     if (needsTarget(slot.definition)) {
       this.targeting.begin(slot, 'tap');
@@ -2625,6 +2650,7 @@ export class GameWorld {
       this.updateMountCandidate();
 
       this.player.update(scaledDt, this.input, this.battlefield, this);
+      this.updateRecasts(scaledDt);
       this.enemyChampion.update(scaledDt, this, this.battlefield);
       this.siegeMatch?.tick(scaledDt);
       this.primal?.update(scaledDt, this);

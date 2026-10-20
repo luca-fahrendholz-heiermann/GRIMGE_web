@@ -13,7 +13,8 @@ import {
 import './signature_abilities_a.js';
 import './signature_abilities_b.js';
 import './signature_abilities_c.js';
-import './signature_abilities_d.js'; // S37–S42 (design rules: ice spikes, shafts, water drill, breathings)
+import './signature_abilities_d.js'; // S37–S44 (design rules: ice spikes, shafts, water drill, breathings, objects)
+import './signature_abilities_e.js'; // S45–S48 (two-stage spells, counter charges)
 
 export { SIGNATURES, isSignatureRuneId, SIGNATURE_RUNE_IDS, SIG_PREFIX, setHitContext, startStance, endStance };
 
