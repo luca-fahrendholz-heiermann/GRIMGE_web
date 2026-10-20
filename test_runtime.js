@@ -2518,7 +2518,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   const step = (n, dt = 1 / 60) => { for (let i = 0; i < n; i++) { P.update(dt, neutral, game.battlefield, game); game.updateProjectiles(dt); spells.update(dt, game); } };
   const cast = (id, target = null) => spells.cast(P, spells.resolveSpell([{ id: 'sig_' + id }]), game, null, target);
   const ids = Object.keys(core.SIGNATURES);
-  assert(ids.length === 62 && ids.every((id) => core.signatureImpl(id)?.cast) && sigMod.SIGNATURE_RUNE_IDS.every((id) => isSpecialRune(id) && runeManaCost(id) >= 28 && runeManaCost(id) <= 46), 'All 62 signature specials (atlas S01–S36 + S37–S62) are special runes with their own mechanic and bound mana');
+  assert(ids.length === 69 && ids.every((id) => core.signatureImpl(id)?.cast) && sigMod.SIGNATURE_RUNE_IDS.every((id) => isSpecialRune(id) && runeManaCost(id) >= 28 && runeManaCost(id) <= 46), 'All 69 signature specials (atlas S01–S36 + S37–S69) are special runes with their own mechanic and bound mana');
   assert(ids.every((id) => spellHowTo('sig_' + id)?.effect?.length > 40) && !spells.resolveSpell([{ id: 'sig_S03' }, { id: 'ignis' }]), 'Signature specials explain themselves in the grimoire and never fuse');
   // Every special casts, runs and renders (strict canvas) without errors.
   const strict = new Proxy({}, { get: (t, k) => (k === 'ellipse' || k === 'arc') ? (x, y, rx, ry) => { if (rx < 0 || (k === 'ellipse' && ry < 0)) throw new Error('IndexSizeError ' + k); } : (k === 'canvas' ? undefined : () => {}), set: () => true });
@@ -3097,6 +3097,30 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
     assert(!bad, 'The new domains render cleanly in every phase');
     reset(); const firstD = D.openDomain(P, null, core.SIGNATURES.S59, 'S59'); const secondD = D.openDomain(P, null, core.SIGNATURES.S61, 'S61');
     assert(firstD.collapseT != null && secondD.collapseT == null, 'A new own domain replaces the previous dome of the same caster (never two own domes)');
+    // Element domains: one per rune element, each with its own effect.
+    const elementCheck = {
+      S63: (d, st) => st.moved || st.lifted,
+      S64: (d, st) => st.fx.has('spike'),
+      S65: () => STATUS.hasStatus(E, 'wet'),
+      S66: (d, st) => st.fx.has('wolf'),
+      S67: (d, st) => st.fx.has('blade'),
+      S68: (d, st) => st.foeMp < 100 && P.mp > st.mpStart,
+      S69: (d, st) => P.hp > st.hpStart
+    };
+    const elementNames = { S63: 'AUGE DES ORKANS', S64: 'STEINGRAB', S65: 'TIEFSEE', S66: 'JAGDGRUND', S67: 'KLINGENSCHMIEDE', S68: 'LEERE', S69: 'SONNENHEILIGTUM' };
+    const failedEl = [];
+    for (const [id, check] of Object.entries(elementCheck)) {
+      reset(); foeIn(); E.mp = 100; P.mp = 20; P.hp = P.maxHp - 50;
+      const st = { mpStart: P.mp, hpStart: P.hp, fx: new Set(), moved: false, lifted: false, foeMp: 100 }; const x0 = E.x;
+      const dom = D.openDomain(P, null, core.SIGNATURES[id], id);
+      for (let i = 0; i < 150; i++) { run(1 / 60); for (const f of dom.fx) st.fx.add(f.type); if (Math.abs(E.x - x0) > 6) st.moved = true; if ((E.elevation ?? 0) > 5) st.lifted = true; }
+      st.foeMp = E.mp;
+      if (dom.rule.name !== elementNames[id] || !(E.hp < E.maxHp) || !check(dom, st)) failedEl.push(id);
+      for (const tt of [.1, .5, 1.2, 2]) { const t0 = dom.t; dom.t = tt; dom.render(strict); for (const sp of spells.activeSpells) sp.render?.(strict); dom.t = t0; }
+    }
+    assert(!failedEl.length && !bad, 'Element domains (Ventus, Terra, Aqua, Bestia, Konstrukt, Void, Lux) each work with their own effect and render cleanly' + (failedEl.length ? ' (' + failedEl.join(',') + ')' : ''));
+    const { DOMAIN_RUNE_IDS } = await import('./public/src/progression.js');
+    assert(DOMAIN_RUNE_IDS.length === 15, 'Every rune element has its own domain, plus the special domains (15 in total)');
     // Only the caster sees the domain name; the opponent has to find out by playing.
     const names = (dom) => { const texts = []; const rec = new Proxy({}, { get: (t, k) => k === 'fillText' ? (txt) => texts.push(String(txt)) : k === 'canvas' ? undefined : () => {}, set: () => true }); const shell = spells.activeSpells.find((sp) => sp.domain === dom); dom.t = DOMAIN_T; shell?.render(rec); return texts; };
     const DOMAIN_T = 1.2;

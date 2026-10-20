@@ -46,6 +46,7 @@ export const SIGNATURE_GLYPHS = Object.freeze({
   S53: DOMAIN_GLYPH,
   // Every domain shares the domain glyph (like the Arcane States share the hourglass sigil).
   S56: DOMAIN_GLYPH, S57: DOMAIN_GLYPH, S58: DOMAIN_GLYPH, S59: DOMAIN_GLYPH, S60: DOMAIN_GLYPH, S61: DOMAIN_GLYPH, S62: DOMAIN_GLYPH,
+  S63: DOMAIN_GLYPH, S64: DOMAIN_GLYPH, S65: DOMAIN_GLYPH, S66: DOMAIN_GLYPH, S67: DOMAIN_GLYPH, S68: DOMAIN_GLYPH, S69: DOMAIN_GLYPH,
   // S54 shadow bind: a figure standing on a wavy shadow.
   S54: [ring(.5, -.62, .18), L(.5, -.42, .5, .4), wave(-.9, .6, .62, .12, 3)],
   // S55 azure flame: two flame flickers over a crackling line.

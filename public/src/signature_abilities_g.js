@@ -17,6 +17,15 @@
 //   S60 SCHWERKRAFT     no jumping, flyers torn down, pulls to the centre
 //   S61 STURM           rain soaks, lightning strikes (wet + lightning = shock)
 //   S62 SCHATTENMEER    foes sink, shadow hands grab and hold
+// Element domains (one per rune element): Ignis = S57 Glutkessel, Natura = S58 Lebenshain,
+// Fulgur = S61 Sturm, Umbra = S62 Schattenmeer, and
+//   S63 VENTUS · AUGE DES ORKANS   circling current, foes tossed up
+//   S64 TERRA  · STEINGRAB         stone spikes burst up under the foes
+//   S65 AQUA   · TIEFSEE           underwater: slow, soaked, slowly drowning
+//   S66 BESTIA · JAGDGRUND         spirit wolves leap at the foes
+//   S67 KONSTRUKT · KLINGENSCHMIEDE floating blades dive at the foes
+//   S68 VOID   · LEERE             drains the foes' mana into the caster, rifts
+//   S69 LUX    · SONNENHEILIGTUM   pillars of light punish, the caster heals
 // Only the caster sees the domain's name — the opponent has to find out by playing.
 import { defineSignature, emit, foesOf, hit, plate, sparks, sigSink, TAU, DEPTH } from './signature_core.js';
 import { offerRecast } from './recast.js';
@@ -222,6 +231,144 @@ export const DOMAIN_RULES = Object.freeze({
       ctx.strokeStyle = '#311b92'; ctx.lineWidth = 2;
       for (let i = 0; i < 8; i++) { const a = i / 8 * TAU + d.t * .3; ctx.globalAlpha = fade * .7; ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * rx * .3, y + Math.sin(a) * ry * .3); ctx.quadraticCurveTo(x + Math.cos(a + .4) * rx * .6, y + Math.sin(a + .4) * ry * .6 - 10, x + Math.cos(a) * rx * .9, y + Math.sin(a) * ry * .9); ctx.stroke(); }
     }
+  },
+  // ── element domains (one per rune element) ──
+  // S63 — Ventus: the eye of the hurricane — foes are swept around in circles and tossed up.
+  S63: {
+    name: 'AUGE DES ORKANS', finaleLabel: 'SCHLIESSEN: ORKAN', slow: .8,
+    pal: { bands: ['#0d1a1a', '#14302e', '#1c4642', '#255c56'], floor: '#12302c', crack: '#a7ffeb', wall: '#4db6ac', rim: '#a7ffeb', rimLight: '#e0f2f1', shell: '#b2dfdb', mat: mat('#0d1a1a', '#255c56', '#4db6ac', '#a7ffeb', '#e0f2f1', '#b2dfdb') },
+    caster() {},
+    foe(d, dt, t) {
+      // A circular current: pushed sideways around the eye.
+      const dx = t.x - d.cx; const dz = ((t.z ?? d.cz) - d.cz) * DEPTH; const r = Math.hypot(dx, dz) || 1;
+      t.x += (-dz / r) * 70 * dt; if (Number.isFinite(t.z)) t.z += (dx / r) * 70 * dt / DEPTH;
+      if (!d.every(t, 1.5)) return;
+      hit(t, Math.round(9 * d.power), 0, 300, .35);
+      d.fx.push({ type: 'wind', t: 0, x: t.x, z: t.z ?? d.cz });
+    },
+    finale(d, gw, left) { for (const t of d.foesInside(gw)) { hit(t, Math.round((12 + left * 5) * d.power), Math.sign(t.x - d.cx || 1) * 260, 560, .7, true); d.fx.push({ type: 'wind', t: 0, x: t.x, z: t.z ?? d.cz, big: true }); } },
+    interior(ctx, d, x, y, rx, ry, h, k, fade) {
+      // Wind bands circling the eye, leaves whirling.
+      for (let i = 0; i < 5; i++) { const rr = .25 + i * .16; ctx.globalAlpha = fade * .55; ctx.strokeStyle = i % 2 ? '#a7ffeb' : '#4db6ac'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(x, y - h * .35, rx * rr, h * .45 * rr, 0, d.t * (1.2 + i * .3), d.t * (1.2 + i * .3) + Math.PI * 1.3); ctx.stroke(); }
+      for (let i = 0; i < 14; i++) { const a = d.t * 2 + i * .45; const rr = rx * (.3 + (i % 5) * .12); ctx.globalAlpha = fade * .8; ctx.fillStyle = i % 2 ? '#c5e1a5' : '#e0f2f1'; ctx.fillRect(Math.round(x + Math.cos(a) * rr), Math.round(y - h * .35 + Math.sin(a) * rr * .4), 3, 2); }
+    }
+  },
+  // S64 — Terra: the stone grave — spikes burst up under the foes.
+  S64: {
+    name: 'STEINGRAB', finaleLabel: 'SCHLIESSEN: ERDGRAB', slow: .6,
+    pal: { bands: ['#1a1410', '#2a2018', '#3a2d22', '#4a3a2c'], floor: '#2e241b', crack: '#ffcc80', wall: '#8d6e63', rim: '#ffcc80', rimLight: '#fff3e0', shell: '#bcaaa4', mat: mat('#1a1410', '#4a3a2c', '#8d6e63', '#ffcc80', '#fff3e0', '#d7ccc8') },
+    caster() {},
+    foe(d, dt, t) {
+      if (!d.every(t, 1.3)) return;
+      hit(t, Math.round(14 * d.power), 0, 220, .4);
+      d.fx.push({ type: 'spike', t: 0, x: t.x, z: t.z ?? d.cz });
+    },
+    finale(d, gw, left) { for (const t of d.foesInside(gw)) { hit(t, Math.round((12 + left * 5) * d.power), 0, 0, .6, true); t.freeze?.(1); d.fx.push({ type: 'spike', t: 0, x: t.x, z: t.z ?? d.cz, big: true }); } },
+    interior(ctx, d, x, y, rx, ry, h, k, fade) {
+      // A cave: stalactites from the dome, boulders on the floor.
+      ctx.fillStyle = '#5d4037';
+      for (let i = 0; i < 9; i++) { const sx = x - rx * .8 + i * rx * .2; const sh = 20 + (i * 37 % 30); ctx.globalAlpha = fade * .9; ctx.beginPath(); ctx.moveTo(sx - 7, y - h * .78); ctx.lineTo(sx + 7, y - h * .78); ctx.lineTo(sx, y - h * .78 + sh * k); ctx.closePath(); ctx.fill(); }
+      ctx.fillStyle = '#6d4c41'; for (let i = 0; i < 6; i++) { const a = i / 6 * TAU + .5; ctx.beginPath(); ctx.ellipse(x + Math.cos(a) * rx * .75, y + Math.sin(a) * ry * .7, 12 * k, 7 * k, 0, 0, TAU); ctx.fill(); }
+    }
+  },
+  // S65 — Aqua: the deep sea — everyone underwater is slow; foes are soaked and slowly drown.
+  S65: {
+    name: 'TIEFSEE', finaleLabel: 'SCHLIESSEN: MAHLSTROM', slow: .55,
+    pal: { bands: ['#020c1a', '#04172e', '#062344', '#09305a'], floor: '#051a33', crack: '#40c4ff', wall: '#1565c0', rim: '#40c4ff', rimLight: '#e1f5fe', shell: '#81d4fa', mat: mat('#020c1a', '#09305a', '#1565c0', '#40c4ff', '#e1f5fe', '#b3e5fc') },
+    caster() {},
+    foe(d, dt, t) {
+      applyStatus(t, 'wet', { quiet: true, duration: 1.5 });
+      if (d.every(t, .5)) hit(t, Math.round(2 * d.power), 0, 0, 0); // drowning
+    },
+    finale(d, gw, left) { for (const t of d.foesInside(gw)) { t.x += (d.cx - t.x) * .7; if (Number.isFinite(t.z)) t.z += (d.cz - t.z) * .7; hit(t, Math.round((12 + left * 5) * d.power), 0, 120, .6, true); } d.fx.push({ type: 'pulse', t: 0, x: d.cx, z: d.cz, big: true }); },
+    interior(ctx, d, x, y, rx, ry, h, k, fade) {
+      // Light shafts from above, rising bubbles, swaying kelp.
+      ctx.globalAlpha = fade * .18; ctx.fillStyle = '#81d4fa';
+      for (let i = 0; i < 4; i++) { const bx = x - rx * .55 + i * rx * .35 + Math.sin(d.t + i) * 6; ctx.beginPath(); ctx.moveTo(bx, y - h); ctx.lineTo(bx + 14, y - h); ctx.lineTo(bx + 30, y); ctx.lineTo(bx + 4, y); ctx.closePath(); ctx.fill(); }
+      ctx.strokeStyle = '#2e7d32'; ctx.lineWidth = 3;
+      for (let i = 0; i < 5; i++) { const kx = x - rx * .7 + i * rx * .35; ctx.globalAlpha = fade * .8; ctx.beginPath(); ctx.moveTo(kx, y); for (let j = 1; j <= 5; j++) ctx.lineTo(kx + Math.sin(d.t * 2 + j + i) * 5, y - j * 14 * k); ctx.stroke(); }
+      for (let i = 0; i < 20; i++) { const ph = (d.t * .6 + i / 20) % 1; const bx = x - rx + ((i * 79 + d.seed) % 1000) / 1000 * rx * 2; ctx.globalAlpha = fade * (1 - ph) * .8; ctx.strokeStyle = '#e1f5fe'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(bx + Math.sin(d.t * 3 + i) * 3, y - ph * h * .9, 2 + (i % 3), 0, TAU); ctx.stroke(); }
+    }
+  },
+  // S66 — Bestia: the hunting ground — spirit wolves leap at the foes.
+  S66: {
+    name: 'JAGDGRUND', finaleLabel: 'SCHLIESSEN: RUDEL', slow: .75,
+    pal: { bands: ['#0f0c08', '#1e180f', '#2d2416', '#3c301e'], floor: '#231b10', crack: '#ffd180', wall: '#795548', rim: '#ffab40', rimLight: '#fff3e0', shell: '#ffcc80', mat: mat('#0f0c08', '#3c301e', '#795548', '#ffab40', '#fff3e0', '#ffe0b2') },
+    caster() {},
+    foe(d, dt, t) {
+      if (!d.every(t, 1.2)) return;
+      hit(t, Math.round(12 * d.power), 0, 60, .35); // bestia hits can bleed (status element 'blade')
+      d.fx.push({ type: 'wolf', t: 0, x: t.x, z: t.z ?? d.cz, side: d.fx.length % 2 ? 1 : -1 });
+    },
+    finale(d, gw, left) { for (const t of d.foesInside(gw)) { hit(t, Math.round((12 + left * 5) * d.power), 0, 140, .6, true); for (const side of [-1, 1]) d.fx.push({ type: 'wolf', t: 0, x: t.x, z: t.z ?? d.cz, side, big: true }); } },
+    interior(ctx, d, x, y, rx, ry, h, k, fade) {
+      // A moonlit forest: tree trunks, a full moon, glowing eyes in the dark.
+      ctx.globalAlpha = fade; ctx.fillStyle = '#fff8e1'; ctx.beginPath(); ctx.arc(x + rx * .35, y - h * .75, 18 * k, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#1b130a'; for (let i = 0; i < 7; i++) { const tx = x - rx * .85 + i * rx * .28; ctx.fillRect(Math.round(tx - 5), Math.round(y - h * .85), 10, Math.round(h * .85 - ry * .3)); }
+      for (let i = 0; i < 5; i++) { if (Math.sin(d.t * 1.7 + i * 2.1) < -.3) continue; const ex = x - rx * .7 + i * rx * .35; const ey = y - h * .3 + (i % 2) * 10; ctx.fillStyle = '#ffab40'; ctx.fillRect(Math.round(ex - 4), Math.round(ey), 2, 2); ctx.fillRect(Math.round(ex + 2), Math.round(ey), 2, 2); }
+    }
+  },
+  // S67 — Konstrukt: the blade forge — floating blades dive at the foes.
+  S67: {
+    name: 'KLINGENSCHMIEDE', finaleLabel: 'SCHLIESSEN: KLINGENREGEN', slow: .75,
+    pal: { bands: ['#111214', '#1c1e22', '#272a30', '#33373f'], floor: '#1e2024', crack: '#ffca28', wall: '#78909c', rim: '#ffca28', rimLight: '#fffde7', shell: '#cfd8dc', mat: mat('#111214', '#33373f', '#78909c', '#ffca28', '#fffde7', '#eceff1') },
+    caster() {},
+    foe(d, dt, t) {
+      if (!d.every(t, 1)) return;
+      hit(t, Math.round(10 * d.power), 0, 0, .3);
+      d.fx.push({ type: 'blade', t: 0, x: t.x, z: t.z ?? d.cz });
+    },
+    finale(d, gw, left) { for (const t of d.foesInside(gw)) { hit(t, Math.round((14 + left * 5) * d.power), 0, 0, .6, true); for (let i = -1; i <= 1; i++) d.fx.push({ type: 'blade', t: -i * .05 - .05, x: t.x + i * 14, z: t.z ?? d.cz, big: true }); } },
+    interior(ctx, d, x, y, rx, ry, h, k, fade) {
+      // A forge: hanging blades turning slowly, sparks from an anvil glow.
+      for (let i = 0; i < 9; i++) {
+        const bx = x - rx * .8 + i * rx * .2; const by = y - h * (.55 + (i % 3) * .1) + Math.sin(d.t * 2 + i) * 4; const a = Math.sin(d.t + i) * .3;
+        ctx.save(); ctx.translate(bx, by); ctx.rotate(Math.PI + a); ctx.globalAlpha = fade * .9;
+        ctx.fillStyle = '#cfd8dc'; ctx.beginPath(); ctx.moveTo(-3, 0); ctx.lineTo(3, 0); ctx.lineTo(0, -26 * k); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = '#ffca28'; ctx.fillRect(-6, 0, 12, 3); ctx.fillStyle = '#5d4037'; ctx.fillRect(-1, 3, 3, 8); ctx.restore();
+      }
+      ctx.fillStyle = '#ffab00'; for (let i = 0; i < 10; i++) { const ph = (d.t * 1.5 + i / 10) % 1; ctx.globalAlpha = fade * (1 - ph); ctx.fillRect(Math.round(x + Math.cos(i * 2.4) * 30 * ph), Math.round(y - 10 - ph * 40), 2, 2); }
+    }
+  },
+  // S68 — Void: the void — drains the foes' mana into the caster, rifts tear open.
+  S68: {
+    name: 'LEERE', finaleLabel: 'SCHLIESSEN: AUSLÖSCHUNG', slow: .7,
+    pal: { bands: ['#000000', '#05010a', '#0a0314', '#10051e'], floor: '#030006', crack: '#e040fb', wall: '#4a148c', rim: '#e040fb', rimLight: '#f3e5f5', shell: '#ce93d8', mat: mat('#000000', '#10051e', '#4a148c', '#e040fb', '#f3e5f5', '#ea80fc') },
+    caster() {},
+    foe(d, dt, t) {
+      // Mana flows out of the foes into the caster.
+      if (Number.isFinite(t.mp) && t.mp > 0) { const take = Math.min(t.mp, 12 * dt); t.mp -= take; d.drained = (d.drained ?? 0) + take; const p = d.owner; if (Number.isFinite(p.mp)) p.mp = Math.min(p.maxMp ?? 100, p.mp + take); }
+      if (!d.every(t, 1.5)) return;
+      hit(t, Math.round(10 * d.power), 0, 0, .3);
+      d.fx.push({ type: 'rift', t: 0, x: t.x, z: t.z ?? d.cz });
+    },
+    finale(d, gw, left) { const bonus = Math.min(30, (d.drained ?? 0) * .4); for (const t of d.foesInside(gw)) { hit(t, Math.round((12 + left * 4 + bonus) * d.power), 0, 100, .6, true); d.fx.push({ type: 'rift', t: 0, x: t.x, z: t.z ?? d.cz, big: true }); } },
+    interior(ctx, d, x, y, rx, ry, h, k, fade) {
+      // Nothing — but cracks of violet light and motes being sucked into the centre.
+      ctx.strokeStyle = '#e040fb'; ctx.lineWidth = 2;
+      for (let i = 0; i < 5; i++) { const sx = x - rx * .6 + i * rx * .3; const sy = y - h * (.4 + (i % 2) * .2); ctx.globalAlpha = fade * (.5 + .4 * Math.sin(d.t * 3 + i)); ctx.beginPath(); ctx.moveTo(sx, sy - 18 * k); ctx.lineTo(sx + 4, sy - 4); ctx.lineTo(sx - 3, sy + 4); ctx.lineTo(sx + 2, sy + 18 * k); ctx.stroke(); }
+      ctx.fillStyle = '#ea80fc'; for (let i = 0; i < 24; i++) { const ph = (d.t * .7 + i / 24) % 1; const a = i * 2.39; const rr = rx * .9 * (1 - ph); ctx.globalAlpha = fade * ph; ctx.fillRect(Math.round(x + Math.cos(a) * rr), Math.round(y - h * .4 + Math.sin(a) * rr * .45), 2, 2); }
+    }
+  },
+  // S69 — Lux: the sun sanctum — pillars of light punish the foes, the caster heals.
+  S69: {
+    name: 'SONNENHEILIGTUM', finaleLabel: 'SCHLIESSEN: ZENIT', slow: .8,
+    pal: { bands: ['#2a2208', '#3d3210', '#504218', '#655422'], floor: '#3a300f', crack: '#fff59d', wall: '#fbc02d', rim: '#fff176', rimLight: '#ffffff', shell: '#fff9c4', mat: mat('#2a2208', '#655422', '#fbc02d', '#fff176', '#ffffff', '#fffde7') },
+    caster(d, dt, p) { if (d.inside(p) && Number.isFinite(p.hp)) p.hp = Math.min(p.maxHp ?? p.hp, p.hp + 4 * dt); },
+    foe(d, dt, t) {
+      if (!d.every(t, 1.2)) return;
+      hit(t, Math.round(12 * d.power), 0, 40, .35);
+      d.fx.push({ type: 'beam', t: 0, x: t.x, z: t.z ?? d.cz });
+    },
+    finale(d, gw, left) { for (const t of d.foesInside(gw)) { hit(t, Math.round((12 + left * 5) * d.power), 0, 0, .6, true); t.freeze?.(.6); d.fx.push({ type: 'beam', t: 0, x: t.x, z: t.z ?? d.cz, big: true }); } },
+    interior(ctx, d, x, y, rx, ry, h, k, fade) {
+      // A radiant sun with rays, golden pillars of a temple.
+      const sy = y - h * .72;
+      ctx.globalAlpha = fade * .5; ctx.strokeStyle = '#fff59d'; ctx.lineWidth = 2;
+      for (let i = 0; i < 16; i++) { const a = i / 16 * TAU + d.t * .2; ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * 26 * k, sy + Math.sin(a) * 26 * k); ctx.lineTo(x + Math.cos(a) * (40 + (i % 2) * 14) * k, sy + Math.sin(a) * (40 + (i % 2) * 14) * k); ctx.stroke(); }
+      ctx.globalAlpha = fade; ctx.fillStyle = '#fff176'; ctx.beginPath(); ctx.arc(x, sy, 22 * k, 0, TAU); ctx.fill(); ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(x, sy, 12 * k, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#c9a227'; for (const side of [-1, 1]) for (const o of [.55, .8]) { ctx.globalAlpha = fade * .8; ctx.fillRect(Math.round(x + side * rx * o - 6), Math.round(y - h * .6), 12, Math.round(h * .6 - ry * .2)); ctx.fillStyle = '#fff59d'; ctx.fillRect(Math.round(x + side * rx * o - 8), Math.round(y - h * .62), 16, 4); ctx.fillStyle = '#c9a227'; }
+    }
   }
 });
 export const DOMAIN_IDS = Object.freeze(Object.keys(DOMAIN_RULES));
@@ -359,6 +506,30 @@ class DomainShell {
         ctx.strokeStyle = '#e1f5fe'; ctx.lineWidth = f.big ? 5 : 3; ctx.beginPath(); let bx = f.x; ctx.moveTo(bx, fy - DOMAIN.height);
         for (let i = 1; i <= 7; i++) { bx = f.x + (i % 2 ? 8 : -8) * (1 - i / 8); ctx.lineTo(bx, fy - DOMAIN.height + i * DOMAIN.height / 7); } ctx.stroke();
         ctx.fillStyle = '#4fc3f7'; ctx.beginPath(); ctx.ellipse(f.x, fy, 20 * fk, 6 * fk, 0, 0, TAU); ctx.fill();
+      } else if (f.type === 'wind') {
+        ctx.strokeStyle = '#a7ffeb'; ctx.lineWidth = 2;
+        for (let i = 0; i < 3; i++) { const r = (14 + i * 8) * (f.big ? 1.5 : 1); ctx.beginPath(); ctx.ellipse(f.x, fy - 20 - i * 14 - fk * 30, r, r * .35, 0, f.t * 12 + i, f.t * 12 + i + Math.PI * 1.4); ctx.stroke(); }
+      } else if (f.type === 'spike') {
+        const sh = (f.big ? 90 : 60) * fk; plate(ctx, [[f.x - 12, fy], [f.x - 2, fy - sh], [f.x + 3, fy - sh * .9], [f.x + 12, fy]], pal.mat, 5460, { alpha: fa, glowEdge: .8 });
+        plate(ctx, [[f.x + 6, fy], [f.x + 14, fy - sh * .6], [f.x + 20, fy]], pal.mat, 5461, { alpha: fa, glowEdge: .8 });
+      } else if (f.type === 'wolf') {
+        // A spirit wolf leaping in from the side.
+        const wx = f.x + f.side * (70 - 60 * fk); const wy = fy - 20 - Math.sin(fk * Math.PI) * 26; const dir = -f.side; const sc = f.big ? 1.3 : 1;
+        ctx.fillStyle = '#ffcc80'; ctx.beginPath(); ctx.ellipse(wx, wy, 16 * sc, 7 * sc, 0, 0, TAU); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(wx + dir * 12 * sc, wy - 4); ctx.lineTo(wx + dir * 24 * sc, wy - 2); ctx.lineTo(wx + dir * 14 * sc, wy + 4); ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(wx + dir * 12 * sc, wy - 5); ctx.lineTo(wx + dir * 15 * sc, wy - 13 * sc); ctx.lineTo(wx + dir * 17 * sc, wy - 5); ctx.fill();
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(Math.round(wx + dir * 17 * sc), Math.round(wy - 4), 2, 2);
+      } else if (f.type === 'blade') {
+        const k2 = Math.max(0, Math.min(1, f.t / .14)); const by = fy - 120 + 110 * k2;
+        ctx.save(); ctx.translate(f.x, by); ctx.fillStyle = '#eceff1'; ctx.beginPath(); ctx.moveTo(-4, -30); ctx.lineTo(4, -30); ctx.lineTo(0, 6); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = '#ffca28'; ctx.fillRect(-8, -32, 16, 4); ctx.restore();
+        if (k2 >= 1) { ctx.fillStyle = '#ffe082'; ctx.beginPath(); ctx.ellipse(f.x, fy, 14, 4, 0, 0, TAU); ctx.fill(); }
+      } else if (f.type === 'rift') {
+        ctx.strokeStyle = '#e040fb'; ctx.lineWidth = f.big ? 4 : 3; ctx.beginPath(); ctx.moveTo(f.x - 2, fy - 70 * fk); ctx.lineTo(f.x + 6, fy - 46 * fk); ctx.lineTo(f.x - 5, fy - 26 * fk); ctx.lineTo(f.x + 3, fy); ctx.stroke();
+        ctx.fillStyle = '#000000'; ctx.beginPath(); ctx.ellipse(f.x, fy - 36 * fk, 5 * fk, 24 * fk, 0, 0, TAU); ctx.fill();
+      } else if (f.type === 'beam') {
+        const bw = (f.big ? 22 : 14) * (1 - Math.max(0, f.t - .2) * 1.5);
+        if (bw > 0) { ctx.fillStyle = '#fff59d'; ctx.fillRect(Math.round(f.x - bw), Math.round(fy - DOMAIN.height), Math.round(bw * 2), Math.round(DOMAIN.height)); ctx.fillStyle = '#ffffff'; ctx.fillRect(Math.round(f.x - bw * .4), Math.round(fy - DOMAIN.height), Math.round(bw * .8), Math.round(DOMAIN.height)); }
       } else if (f.type === 'hands') {
         for (const side of [-1, 1]) { const hh = (f.big ? 70 : 50) * fk; plate(ctx, [[f.x + side * 6 - 4, fy], [f.x + side * 10, fy - hh], [f.x + side * 16, fy - hh - 6], [f.x + side * 6 + 4, fy]], pal.mat, 5450 + (side > 0 ? 1 : 0), { alpha: fa, glowEdge: 1.1 }); }
       }
