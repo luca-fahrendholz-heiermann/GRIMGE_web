@@ -1004,7 +1004,7 @@ export class Player extends GroundEntity {
     this.mp -= BACKDASH_COUNTER_MANA;
     const weaponId = this.weapon ?? this.classWeapon;
     for (const s of makeWeaponShots(this, weaponReachShot(this), weaponId, { power: .8 })) spells.addSpell(s, 'B');
-    combat.spawnShockwave(this.x + this.facing * 22, this.y - (this.elevation ?? 0) - 44, 22, astralHue(weaponId));
+    combat.spawnShockwave(this.x + this.facing * 22, this.y - 44, 22, astralHue(weaponId));
     this.setWeaponMotion?.('heavy'); this._weaponSwingTime = .2;
     this.lastBackdashCounter = true;
     audio.playSlash(.9);
@@ -1142,7 +1142,7 @@ export class Player extends GroundEntity {
       this.sprintDive = { hitSet: new Set() };
       this.setWeaponMotion?.('heavy'); this._weaponSwingTime = .35;
       audio.playSlash(.8);
-      combat.spawnSlashArc(this.x + this.facing * 10, this.y - (this.elevation ?? 0) - 20, this.facing, { radius: 56, angleStart: -.4, angleEnd: 1.9, color: '#ffab91', glow: '#ff3d00', width: 6 });
+      combat.spawnSlashArc(this.x + this.facing * 10, this.y - 20, this.facing, { radius: 56, angleStart: -.4, angleEnd: 1.9, color: '#ffab91', glow: '#ff3d00', width: 6 });
       return true;
     }
     if (!this.grounded && (attackKind === 'dive' || move.z > 0.55)) {
@@ -2183,6 +2183,8 @@ export class Minion extends GroundEntity {
   }
   takeDamage(amount, kx = 0, lift = 0, stun = .25, isCrit = false, hitKind = 'melee') { if (this.arcaneShield > 0) { const absorbed = Math.min(amount, this.arcaneShield); this.arcaneShield -= absorbed; amount -= absorbed; if (amount <= 0) return; } this.hp = Math.max(0, this.hp - amount); if (this.hp > 0) onStatusHit(this, amount, hitKind); this.hitFlash = .15; this.kbVelX = kx; this.vx = 0; this.vElevation = lift; this.hurtTimer = Math.max(this.hurtTimer, stun); combat.spawnDamageText(this.x, this.y - 25, amount, { color: this.team === 'blue' ? '#90caf9' : '#ffab91' }); if (!this.hp) { this.isDead = true; combat.spawnHitSparks(this.x, this.y - 16, this.facing, '#fff', 8); } }
   freeze(duration) { this.freezeTimer = duration; } slow(duration, factor) { this.slowTimer = duration; this.slowFactor = factor; }
+  // Damage over time (burn, poison, bleed, hazards): no stagger, no knockback — the march goes on.
+  takeHazardDamage(amount) { if (this.isDead || !(amount > 0)) return; if (this.hp - amount <= 0) { this.takeDamage(amount, 0, 0, 0, false, 'status'); return; } this.hp -= amount; this.hitFlash = Math.max(this.hitFlash, .06); combat.spawnDamageText(this.x, this.y - 25, Math.round(amount), { color: '#ff8a65' }); }
   render(ctx) { const vh = this.renderHeight ?? ENTITY_VISUALS.minionHeight; sprites.renderEntity(ctx, this.spriteKey, this.x, this.y, { facing: this.facing, state: this.state, animTime: this.animTime, hitFlash: this.hitFlash > 0, visualHeight: vh }); if (this.hp < this.maxHp) { const barY = this.y - vh - 4; ctx.fillStyle = 'rgba(0,0,0,.7)'; ctx.fillRect(this.x - 11, barY, 22, 3); ctx.fillStyle = this.team === 'blue' ? '#42a5f5' : '#e53935'; ctx.fillRect(this.x - 11, barY, 22 * this.hp / this.maxHp, 3); } }
 }
 
@@ -2401,6 +2403,8 @@ export class EnemyChampion extends GroundEntity {
   }
   respawn(battlefield, gameWorld = null) { const spawn = gameWorld?.getEnemyHome?.(this.team, battlefield) ?? battlefield.getSpawn(this.team); this.x = spawn.x; this.z = spawn.z; this.elevation = 0; this.vx = this.vz = this.vElevation = 0; this.hp = this.maxHp; this.mp = this.maxMp; this.arcaneShield = 0; this.arcaneShieldTimer = 0; this.state = 'idle'; this.lifeState = 'Alive'; this.respawnTimer = 0; this.attackCooldown = 0; this.spellCooldown = 1; this.defensiveCooldown = 0; battlefield.resolveEntityCollision(this); combat.spawnShockwave(this.x, this.y - 28, 50, '#ff5252'); }
   freeze(duration) { this.freezeTimer = duration; } slow(duration, factor) { this.slowTimer = duration; this.slowFactor = factor; }
+  // Damage over time (burn, poison, bleed, hazards): HP only — the AI keeps acting (no 'hurt' state every tick).
+  takeHazardDamage(amount) { if (!this.isAlive || !(amount > 0)) return; if (this.arcaneShield > 0) { const absorbed = Math.min(amount, this.arcaneShield); this.arcaneShield -= absorbed; amount -= absorbed; if (amount <= 0) return; } if (this.hp - amount <= 0 && !this.passive) { this.takeDamage(amount, 0, 0, 0, false, 'status'); return; } this.hp = Math.max(this.passive ? 1 : 0, this.hp - amount); this.passiveIdle = 0; this.hitFlash = Math.max(this.hitFlash, .06); combat.spawnDamageText(this.x, this.y - 45, Math.round(amount), { color: '#ff8a65' }); }
   render(ctx) { sprites.renderEntity(ctx, this.heroKey, this.x, this.y, { facing: this.facing, state: this.state, animTime: this.animTime, hitFlash: this.hitFlash > 0, alpha: this.lifeState === 'Dead' ? 0 : 1 }); if (this.lifeState !== 'Dead') { const healthBarY = this.y - ENTITY_VISUALS.heroHeight - 8; ctx.fillStyle = 'rgba(0,0,0,.8)'; ctx.fillRect(this.x - 27, healthBarY, 54, 6); ctx.fillStyle = '#f44336'; ctx.fillRect(this.x - 27, healthBarY, 54 * this.hp / this.maxHp, 6); } }
 }
 

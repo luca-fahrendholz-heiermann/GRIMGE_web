@@ -23,9 +23,10 @@ Umgesetzt: Spiralkugel (S46), Spiegelkerker (S50), Blutkreuz (S51), Herausforder
 - **Zeitstopp-Feld:** Projektile im Feld frieren in der Luft ein; beim Ende fliegen sie weiter (auch die eigenen).
 - **Beschwörungs-Kette (Summoning Contract):** Blut auf eine Schriftrolle — eine riesige Kreatur erscheint kurz und führt EINEN Angriff aus.
 - **Bankai-artige Waffen-Entfesselung** als Arcane State: die Klassenwaffe verwandelt sich (z. B. Schwert → Klingenblüten-Schwarm).
-- **Weitere Status-Kombos** (umgesetzt: Nass+Blitz, Nass+Eis, Brand+Wind, Brand+Wasser, Gefroren+harter Treffer): z. B. Gift+Feuer = Giftgas-Explosion, Blutung+Wind = Schnitt-Wirbel, Paralyse+Erde = Erdung.
+- **Weitere Status-Kombos** (umgesetzt: Nass+Blitz, Nass+Eis, Brand+Wind, Brand+Wasser, Gefroren+harter Treffer, Gift+Feuer, Blutung+Wind, Paralyse+Erde): weitere nach Bedarf.
 
 ## Weitere offene Punkte
+- **Ältere Form-/Arcane-Effekte** (buff_forms.js, form_actions.js, form_specials.js, signature_abilities_a.js) ziehen die Höhe doppelt ab (`p.y - p.elevation`, obwohl y sie schon enthält) — bei Sprüngen sitzen diese Effekte zu hoch. Prüfen und angleichen.
 - **KI-Spezialrunen ausbauen:** feinere Taktik je Rune (Falle vorausplanen, Spiegelkerker-Sprünge timen), Schwierigkeitsstufen.
 - **Statuseffekte balancieren:** Chancen (aktuell 8–22 % pro Treffer, × Grade-Power), Dauer, Immunitätsfenster; weitere Quellen (Gift-Waffen, Eis-Fusionen, Blutungs-Kits).
 - **Aggro im Mehrspieler:** S52 zwingt bisher Minions und den Gegner-Zauberer; Begleiter/Summons der Gegenseite fehlen noch.

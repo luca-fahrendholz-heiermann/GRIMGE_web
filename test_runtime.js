@@ -3269,6 +3269,28 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   fresh(P); P.x = 300; P.z = .5; game.battlefield.placeOnSurface(P); environment.add('water', P.x, P.z, { radius: 40 });
   for (let i = 0; i < 5; i++) environment.update(1 / 60, game, []);
   assert(STATUS.hasStatus(P, 'wet'), 'Standing in a puddle makes the Wizard WET');
+  // More combos: poison + fire, bleed + wind, paralysis + earth.
+  const withSource = (els, fn) => { const prev = STATUS.setStatusSource({ team: P.team, statusElements: els }); try { fn(); } finally { STATUS.setStatusSource(prev); } };
+  EC.lifeState = 'Alive'; EC.hp = EC.maxHp; EC.passive = true; EC.x = dummy.x + 60; EC.z = dummy.z; EC.elevation = 0;
+  fresh(dummy); fresh(EC); STATUS.applyStatus(dummy, 'poison'); const hpGasE = EC.hp; const hpGasD = dummy.hp;
+  withSource(['ignis'], () => dummy.takeDamage(5, 0, 0, 0, false, 'spell'));
+  assert(!STATUS.hasStatus(dummy, 'poison') && STATUS.hasStatus(EC, 'poison') && EC.hp < hpGasE && hpGasD - dummy.hp > 5, 'Combo POISON + fire: GIFTGAS-EXPLOSION — the cloud blows up and poisons foes nearby');
+  fresh(dummy); fresh(EC); STATUS.applyStatus(dummy, 'bleed'); const hpWhirl = dummy.hp;
+  withSource(['ventus'], () => dummy.takeDamage(5, 0, 0, 0, false, 'spell'));
+  assert(STATUS.hasStatus(EC, 'bleed') && hpWhirl - dummy.hp > 5, 'Combo BLEED + wind: SCHNITT-WIRBEL — cutting gust, the bleeding spreads');
+  fresh(dummy); fresh(EC); STATUS.applyStatus(dummy, 'paralysis'); const hpGround = dummy.hp; const hpGroundE = EC.hp;
+  withSource(['terra'], () => dummy.takeDamage(5, 0, 0, 0, false, 'spell'));
+  assert(!STATUS.hasStatus(dummy, 'paralysis') && hpGround - dummy.hp > 5 && EC.hp < hpGroundE, 'Combo PARALYSIS + earth: ERDUNG — the charge discharges into a shock ring');
+  // Damage over time does not stagger the AI Wizard every tick.
+  fresh(EC); EC.passive = false; EC.state = 'idle'; EC.stateTimer = 0; STATUS.applyStatus(EC, 'burn'); const hpBurnE = EC.hp; let hurtFrames = 0;
+  for (let i = 0; i < 90; i++) { spells.update(1 / 60, game); if (EC.state === 'hurt') hurtFrames++; }
+  assert(EC.hp < hpBurnE && hurtFrames === 0, 'Burn / poison / bleed chip the AI Wizard without putting it into the hurt state');
+  // Overlays sit on a floating foe (y already includes the lift — no double offset).
+  fresh(EC); EC.elevation = 60; STATUS.applyStatus(EC, 'burn'); let iconY = null;
+  const rec = new Proxy({}, { get: (t, k) => k === 'fillRect' ? (x, y, w, h) => { if (w === 10 && h === 10) iconY = y; } : k === 'canvas' ? undefined : () => {}, set: () => true });
+  for (const e of STATUS.statusDepthEntries()) e.render(rec);
+  assert(iconY != null && Math.abs(iconY - (EC.y - 78 - 30 - 5)) < 2, 'Status icons sit above a floating foe at the right height');
+  STATUS.clearStatuses(EC); EC.elevation = 0; EC.passive = false; EC.x = 900;
   spells.clearRuntime(); environment.clear(); EC.x = 900; EC.passive = false; dummy.homeX = dummy.x = 900;
 }
 

@@ -127,10 +127,10 @@ export class PullTetherFx {
     }
   }
   render(ctx) {
-    const p = this.player; const f = p.facing || 1; const hx = p.x + f * 16; const hy = p.y - (p.elevation ?? 0) - 48;
+    const p = this.player; const f = p.facing || 1; const hx = p.x + f * 16; const hy = p.y - 48; // y already includes the elevation
     let tx; let ty; let k; let d = 0; let a = 1;
     if (this.phase === 'drag' && this.target) {
-      const t = this.target; tx = t.x; ty = (t.y ?? p.y) - (t.elevation ?? 0) - 40; k = 1;
+      const t = this.target; tx = t.x; ty = (t.y ?? p.y) - 40; k = 1;
       d = Math.min(1, this.dragT / this.drag); a = this.dragT > this.drag ? Math.max(0, 1 - (this.dragT - this.drag) / .12) : 1;
     } else {
       const tip = this.tip; tx = tip.x; ty = groundYForDepth(tip.z) - tip.h; k = Math.min(.99, this.dist / this.range);

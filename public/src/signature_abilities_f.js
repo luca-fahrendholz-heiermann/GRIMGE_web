@@ -94,7 +94,7 @@ class MirrorPrison {
     }
     for (const d of this.dashes) {
       d.t += dt;
-      if (!d.hit && d.t >= d.dur * .5) { d.hit = true; if (alive(v)) { hit(v, d.dmg, d.dir * 30, 0, .45); combat.spawnHitSparks?.(v.x, (v.y ?? this.y) - (v.elevation ?? 0) - 40, d.dir, ICE.edge, 10); combat.triggerHitstop?.(2); } }
+      if (!d.hit && d.t >= d.dur * .5) { d.hit = true; if (alive(v)) { hit(v, d.dmg, d.dir * 30, 0, .45); combat.spawnHitSparks?.(v.x, (v.y ?? this.y) - 40, d.dir, ICE.edge, 10); combat.triggerHitstop?.(2); } }
     }
     this.dashes = this.dashes.filter((d) => d.t < d.dur + .15);
     if (this.storm) {
@@ -158,7 +158,7 @@ class MirrorPrison {
         const kk = Math.max(0, k - tr * .08); const x = a.x + (b.x - a.x) * kk; const y = y0 + (y1 - y0) * kk - lift * Math.sin(kk * Math.PI);
         if (p?.heroKey) ghostOf(ctx, p, x, y, 'attack1', p.animTime ?? 0, d.dir, (tr ? .14 : .6) * (1 - Math.max(0, d.t - d.dur) / .15), tr ? '#4fc3f7' : '#b3e5fc');
       }
-      if (d.hit && d.t < d.dur + .1 && alive(v)) { const vy = (v.y ?? this.y) - (v.elevation ?? 0) - 40; thread(ctx, [[v.x - 26 * d.dir, vy + 10], [v.x + 26 * d.dir, vy - 10]], ICE.edge, 3, .9); }
+      if (d.hit && d.t < d.dur + .1 && alive(v)) { const vy = (v.y ?? this.y) - 40; thread(ctx, [[v.x - 26 * d.dir, vy + 10], [v.x + 26 * d.dir, vy - 10]], ICE.edge, 3, .9); }
     }
     // The held foe: frost ring under it.
     if (this.trapped && alive(v)) { ctx.save(); ctx.globalAlpha = .45; ctx.strokeStyle = ICE.vein; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(this.cx, groundYForDepth(this.cz), 30, 9, 0, 0, TAU); ctx.stroke(); ctx.restore(); }
@@ -339,7 +339,7 @@ defineSignature('S52', {
       // A red line from every taunted foe to the challenger, "!" above them.
       for (const t of st.taunted) {
         if (t.tauntedBy !== p || !alive(t)) continue;
-        const ty = (t.y ?? ry) - (t.elevation ?? 0);
+        const ty = (t.y ?? ry);
         thread(ctx, [[t.x, ty - 60], [p.x, ry - 60]], '#ff5252', 1.5, .35);
         ctx.save(); ctx.font = '900 16px Rajdhani, sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#ff5252'; ctx.strokeStyle = '#2a0d05'; ctx.lineWidth = 3; ctx.strokeText('!', t.x, ty - 92); ctx.fillText('!', t.x, ty - 92); ctx.restore();
       }

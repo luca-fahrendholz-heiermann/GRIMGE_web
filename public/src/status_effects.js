@@ -15,6 +15,9 @@
 //   burn + wind      → FEUERSTURM!   the fire jumps to foes nearby
 //   burn + water     → GELÖSCHT      steam, the burn ends, the target is wet
 //   frozen + a hard hit → ZERSPLITTERT! the ice bursts for bonus damage
+//   poison + fire    → GIFTGAS-EXPLOSION the poison blows up, poisons foes nearby
+//   bleed + wind     → SCHNITT-WIRBEL  cutting gust, the bleeding spreads
+//   paralysis + earth → ERDUNG        the charge discharges: shock ring, paralysis ends
 // The hit source (a spell, a melee swing) is set as a context around its
 // update, so every takeDamage in the game can roll without extra wiring.
 import { combat } from './combat.js';
@@ -31,7 +34,7 @@ export const STATUS_DEFS = Object.freeze({
   wet: Object.freeze({ label: 'WET', color: '#4fc3f7', duration: 5, immune: 0 })
 });
 
-export const COMBO = Object.freeze({ shockBonus: 8, stormRadius: 110, stormBonus: 10, shatterThreshold: 20, shatterBonus: 18 });
+export const COMBO = Object.freeze({ shockBonus: 8, stormRadius: 110, stormBonus: 10, shatterThreshold: 20, shatterBonus: 18, gasBonus: 14, gasSplash: 10, whirlBonus: 12, groundBonus: 16, groundSplash: 10, splashRadius: 95 });
 
 // Which element can cause which status, and how likely per damaging hit.
 export const ELEMENT_STATUS = Object.freeze({
@@ -96,9 +99,37 @@ export function onStatusHit(target, amount, hitKind = 'melee') {
 }
 
 // ── combos ──
-function comboText(t, text, color) { combat.spawnDamageText?.(t.x, (t.y ?? 0) - (t.elevation ?? 0) - 104, text, { color, isCrit: true }); }
+function comboText(t, text, color) { combat.spawnDamageText?.(t.x, (t.y ?? 0) - 104, text, { color, isCrit: true }); }
+// Foes around a target (for spreading combos).
+function foesAround(t, radius) {
+  const gw = globalThis.window?.gameWorld;
+  return (gw?.getHostileTargets?.(source?.team) ?? []).filter((o) => o !== t && !o.isObjective && !o.isProp && !o.isStoneWall && !o.isCastle && Math.hypot(o.x - t.x, ((o.z ?? 0) - (t.z ?? 0)) * 150) < radius);
+}
 function tryCombo(t, elements) {
   const has = (el) => elements.includes(el);
+  if (has('ignis') && hasStatus(t, 'poison')) {
+    // The poison cloud ignites.
+    t.statuses.poison.end(); statusDamage(t, COMBO.gasBonus);
+    for (const o of foesAround(t, COMBO.splashRadius)) { statusDamage(o, COMBO.gasSplash); applyStatus(o, 'poison', { force: true, quiet: true }); }
+    combat.spawnShockwave?.(t.x, (t.y ?? 0) - 30, COMBO.splashRadius, '#9ccc65'); combat.spawnShockwave?.(t.x, (t.y ?? 0) - 30, 50, '#ff7043');
+    comboText(t, 'GIFTGAS-EXPLOSION!', '#c6ff00');
+    return null;
+  }
+  if (has('ventus') && hasStatus(t, 'bleed')) {
+    const bleed = t.statuses.bleed; bleed.dur = Math.max(bleed.dur, bleed.t + STATUS_DEFS.bleed.duration);
+    statusDamage(t, COMBO.whirlBonus);
+    for (const o of foesAround(t, COMBO.splashRadius)) applyStatus(o, 'bleed', { force: true, quiet: true });
+    comboText(t, 'SCHNITT-WIRBEL!', '#ef5350');
+    return bleed;
+  }
+  if (has('terra') && hasStatus(t, 'paralysis')) {
+    // Earth grounds the charge: it discharges into a shock ring.
+    t.statuses.paralysis.end(); statusDamage(t, COMBO.groundBonus);
+    for (const o of foesAround(t, COMBO.splashRadius)) statusDamage(o, COMBO.groundSplash);
+    combat.spawnShockwave?.(t.x, (t.y ?? 0) + 2, COMBO.splashRadius, '#fff176');
+    comboText(t, 'ERDUNG!', '#fff176');
+    return null;
+  }
   if (has('fulgur') && hasStatus(t, 'wet')) {
     t.statuses.wet.end();
     const fx = applyStatus(t, 'paralysis', { force: true, quiet: true });
@@ -135,7 +166,7 @@ function comboShatter(t) {
   t.statuses.frozen.end();
   statusDamage(t, COMBO.shatterBonus);
   comboText(t, 'ZERSPLITTERT!', '#e0f7fa');
-  combat.spawnHitSparks?.(t.x, (t.y ?? 0) - (t.elevation ?? 0) - 40, 1, '#e0f7fa', 22);
+  combat.spawnHitSparks?.(t.x, (t.y ?? 0) - 40, 1, '#e0f7fa', 22);
   combat.shakeCamera?.(6, .2);
   return null;
 }
@@ -154,7 +185,7 @@ export function applyStatus(target, kind, { duration = null, force = false, quie
   const fx = new StatusEffectFx(target, kind, duration ?? def.duration);
   target.statuses[kind] = fx; active.add(fx);
   if (kind === 'frozen') target.freeze?.(fx.dur);
-  if (!quiet) combat.spawnDamageText?.(target.x, (target.y ?? 0) - (target.elevation ?? 0) - 92, def.label, { color: def.color });
+  if (!quiet) combat.spawnDamageText?.(target.x, (target.y ?? 0) - 92, def.label, { color: def.color });
   return fx;
 }
 
@@ -194,7 +225,7 @@ export class StatusEffectFx {
     if (t) { t.statusImmuneUntil ??= {}; t.statusImmuneUntil[this.kind] = nowS() + this.def.immune; }
     if (this.kind === 'frozen' && t) {
       // The ice bursts into shards.
-      combat.spawnHitSparks?.(t.x, (t.y ?? 0) - (t.elevation ?? 0) - 40, 1, '#e0f7fa', 14);
+      combat.spawnHitSparks?.(t.x, (t.y ?? 0) - 40, 1, '#e0f7fa', 14);
       if ((t.freezeTimer ?? 0) > 0) t.freezeTimer = 0;
     }
   }
@@ -222,7 +253,7 @@ export class StatusEffectFx {
   }
   render(ctx) {
     const t = this.target; if (!t || this.isFinished) return;
-    const x = t.x; const base = (t.y ?? 0) - (t.elevation ?? 0); const h = heightOf(t); const time = this.t;
+    const x = t.x; const base = (t.y ?? 0); const h = heightOf(t); const time = this.t;
     const fadeIn = Math.min(1, this.t / .12); const fadeOut = Math.min(1, (this.dur - this.t) / .25);
     ctx.save(); ctx.globalAlpha = fadeIn * fadeOut;
     if (this.kind === 'frozen') drawIceBlock(ctx, x, base, 50, h + 12, time);

@@ -64,7 +64,7 @@ export class Domain {
       if (since == null || this.t - since >= DOMAIN.slashEvery) {
         this.slashT.set(t, this.t);
         hit(t, Math.round(DOMAIN.slashDamage * (this.quality?.power ?? 1)), 0, 0, .12);
-        this.slashes.push({ t: 0, x: t.x, y: (t.y ?? this.y) - (t.elevation ?? 0) - 40, a: ((this.t * 7.3 + this.seed) % 3.14) - 1.57 });
+        this.slashes.push({ t: 0, x: t.x, y: (t.y ?? this.y) - 40, a: ((this.t * 7.3 + this.seed) % 3.14) - 1.57 });
       }
     }
     for (const s of this.slashes) s.t += dt;
@@ -137,7 +137,7 @@ class DomainShell {
   render(ctx) {
     const d = this.domain; const k = d.unfoldK; const x = d.cx; const y = d.y;
     // Hand sign glow at the caster's hands.
-    if (d.t < DOMAIN.sign) { const p = d.owner; const hy = (p.y ?? y) - (p.elevation ?? 0) - 50; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = .9; ctx.fillStyle = '#ff3d6e'; ctx.beginPath(); ctx.arc(p.x + (p.facing || 1) * 6, hy, 4 + 8 * (d.t / DOMAIN.sign), 0, TAU); ctx.fill(); ctx.restore(); return; }
+    if (d.t < DOMAIN.sign) { const p = d.owner; const hy = (p.y ?? y) - 50; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = .9; ctx.fillStyle = '#ff3d6e'; ctx.beginPath(); ctx.arc(p.x + (p.facing || 1) * 6, hy, 4 + 8 * (d.t / DOMAIN.sign), 0, TAU); ctx.fill(); ctx.restore(); return; }
     // Blackout flash right as it unfolds.
     const ft = d.t - DOMAIN.sign;
     if (ft < .18) { ctx.save(); ctx.globalAlpha = .85 * (1 - ft / .18); ctx.fillStyle = '#000000'; ctx.fillRect(x - 3000, y - 3000, 6000, 6000); ctx.restore(); }
