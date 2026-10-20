@@ -335,7 +335,10 @@ export class UIManager {
     this.jumpBtn.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      if (window.gameWorld?.player?.isAlive) window.gameWorld.input.justPressedKeys.Space = true;
+      const gw = window.gameWorld;
+      // While drawing, JUMP locks the rune in (like LOCK) — the thumb is already there.
+      if (gw?.drawing?.active) { gw.lockOrExitRuneDrawing(); return; }
+      if (gw?.player?.isAlive) gw.input.justPressedKeys.Space = true;
     });
     this.dashBtn?.addEventListener('pointerdown', (e) => {
       e.preventDefault();
@@ -1298,6 +1301,8 @@ export class UIManager {
   }
 
   setDrawingMode(active) {
+    // While drawing, the training buttons step aside (they overlap the drawing prompt).
+    document.getElementById('ui-layer')?.classList?.toggle?.('is-drawing', !!active);
     if (active) {
       this.drawingHud.classList.remove('hidden');
       this.drawingHud.style.display = 'flex';

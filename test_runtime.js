@@ -152,6 +152,7 @@ const runePointer = { pointerId: 77, clientX: 850, clientY: 470, preventDefault(
 firstRuneCard.listeners.pointerdown(runePointer);
 assert(game.drawing.active && game.drawing.inputMode === null, 'Tapping a hand rune card opens persistent drawing mode without a Draw button');
 assert(game.targetTimeScale === 1, 'Drawing runes does not slow the world down (multiplayer-safe)');
+assert(game.runeGuide()?.name && game.runeGuide().name === game.player.getRuneCard(game.drawing.expectedCardId)?.name, 'The tapped rune card shows its name above the drawing template');
 const incompleteRuneTouch = { identifier: 77, clientX: 850, clientY: 470 };
 game.canvas.listeners.touchstart({ changedTouches: [incompleteRuneTouch] });
 windowListeners.touchend({ changedTouches: [incompleteRuneTouch] });
@@ -945,6 +946,31 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
   fakeNow += 60; touch.update(ev(230, 520));
   assert(touch.leftGesture.state === 'joystick' && !P.sprintActive && P.state !== 'dash', 'A fast vertical swipe is joystick input, not a flick');
   touch.clear(ev(230, 520));
+  // Right half: holding attack still starts the HOLD charge (glow) after HOLD_MIN_TIME; it stays HOLD.
+  {
+    const { HOLD_MANA } = await import('./public/src/hold_actions.js');
+    resetDuel(); P.equipClassWeapon('bow'); P.mp = P.maxMp; P.surfaceId = null; spells.clearRuntime();
+    const rx = game.renderWidth * .8;
+    const rev = (x, y) => ({ pointerId: 77, pointerType: 'touch', clientX: x, clientY: y, preventDefault() {} });
+    // getCanvasCoords maps client → canvas; feed coordinates that land on the right half.
+    const right = (dx = 0, dy = 0) => { const c = game.getCanvasCoords(0, 0); const k = game.getCanvasCoords(100, 100); const sx = (k.x - c.x) / 100 || 1; const sy = (k.y - c.y) / 100 || 1; return rev((rx - c.x) / sx + dx, (300 - c.y) / sy + dy); };
+    fakeNow += 1000; touch.beginAttackGesture(right());
+    fakeNow += 150; game.tickTouchHold();
+    assert(!(P.chargeTimer > 0), 'Touch hold: a short press is not a charge yet (still a tap)');
+    fakeNow += 200; game.tickTouchHold();
+    assert(P.chargeTimer > 0 && P.chargeDir === 'hold' && touch.holdArmed && P.holdChargeLevel() !== null, 'Touch hold: holding attack still starts the HOLD charge (glow at weapon / hands)');
+    windowListeners.pointermove?.(right(0, -120)); P.update(1 / 60, neutralInput, game.battlefield, game);
+    assert(P.chargeDir === 'hold', 'Touch hold: once HOLD charges, a drag no longer turns it into a directional charge');
+    const mp0 = P.mp; touch.finishAttackGesture(right(0, -120));
+    assert(P.lastHoldAction === 'REACH' && mp0 - P.mp === HOLD_MANA.lane && !(P.chargeTimer > 0), 'Touch hold: releasing fires the HOLD move');
+    // Held to full charge: it fires by itself, and lifting the finger does not fire again.
+    resetDuel(); P.mp = P.maxMp; P.lastHoldAction = null; spells.clearRuntime();
+    fakeNow += 1000; touch.beginAttackGesture(right()); fakeNow += 350; game.tickTouchHold();
+    const mp1 = P.mp; for (let i = 0; i < 70; i++) { P.update(1 / 60, neutralInput, game.battlefield, game); game.tickTouchHold(); }
+    const fired = P.lastHoldAction === 'REACH'; const shotsAuto = spells.activeSpells.filter((sp) => sp.isWeaponShot).length; touch.finishAttackGesture(right());
+    assert(fired && shotsAuto > 0 && spells.activeSpells.filter((sp) => sp.isWeaponShot).length === shotsAuto && mp1 - P.mp > HOLD_MANA.lane - 2, 'Touch hold: at full charge it releases on its own — exactly once');
+    resetDuel();
+  }
   useRealClock();
   resetDuel();
 }
@@ -3187,6 +3213,23 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   for (let i = 0; i < 5; i++) environment.update(1 / 60, game, []);
   assert(STATUS.hasStatus(P, 'wet'), 'Standing in a puddle makes the Wizard WET');
   spells.clearRuntime(); environment.clear(); EC.x = 900; EC.passive = false; dummy.homeX = dummy.x = 900;
+}
+
+// While drawing, JUMP (button or Space) locks the rune in like LOCK — no jump.
+{
+  const { guideStrokes } = await import('./public/src/rune_guides.js');
+  game.returnToHub(); game.setMatchMode('training'); game.startMatch();
+  const P = game.player; P.mp = P.maxMp; P.slottedSpells.length = 0;
+  const card = P.runeHand[0]; game.startRuneDrawing(card.cardId);
+  game.drawing.strokes = guideStrokes(card.id, 400, 300, 120); game.input.justPressedKeys = {};
+  const btn = { preventDefault() {}, stopPropagation() {} };
+  elements.get('action-jump-btn').listeners.pointerdown(btn);
+  assert(!game.drawing.active && P.slottedSpells.some((sl) => sl.runes?.[0]?.id === card.id) && !game.input.justPressedKeys.Space, 'While drawing, the JUMP button locks the rune in (slotted) instead of jumping');
+  const card2 = P.runeHand[0]; game.startRuneDrawing(card2.cardId);
+  game.drawing.strokes = guideStrokes(card2.id, 400, 300, 120);
+  windowListeners.keydown({ code: 'Space', repeat: false, target: null, preventDefault() {} });
+  assert(!game.drawing.active && P.slottedSpells.some((sl) => sl.runes?.[0]?.id === card2.id) && !game.input.keys.Space, 'While drawing, Space locks the rune in too');
+  game.input.keys = {}; game.input.justPressedKeys = {};
 }
 
 // Air combat (20 Oct 2026): air attacks keep momentum, a hit latches onto the foe, then both fall;

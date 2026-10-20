@@ -402,6 +402,8 @@ export class GameWorld {
         if (e.code === 'Enter' || e.code === 'Space') this.startMatch();
         return;
       }
+      // While drawing, Space locks the rune in (like LOCK / the JUMP button).
+      if (e.code === 'Space' && this.drawing.active && !e.repeat) { this.lockOrExitRuneDrawing(); e.preventDefault(); return; }
       // Esc closes the training map picker first (and resumes the training).
       if (e.code === 'Escape' && ui.trainingMapsOpen) {
         ui.toggleTrainingMaps?.(false);
@@ -622,6 +624,11 @@ export class GameWorld {
     let attackStart = null;
     let attackStartTime = 0;
     let chargeArmed = false;
+    // Touch HOLD (attack held without a drag): after HOLD_MIN_TIME the HOLD charge starts
+    // right away (glow at the weapon / hands, auto-release at full charge) and stays
+    // HOLD — a later drag no longer turns it into a directional charge.
+    let holdArmed = false;
+    let attackLast = null;
     // One record per left finger (concept doc §4.5.4): every touch starts as
     // PendingLeftGesture and is classified exactly once as JOYSTICK or SPRINT
     // (the backdash is a back swipe on the right half). A finger already classified as joystick is never
@@ -736,8 +743,9 @@ export class GameWorld {
       if (pt.x < this.renderWidth * 0.48) return;
       attackPointerId = event.pointerId;
       attackStart = pt;
+      attackLast = pt;
       attackStartTime = performance.now();
-      chargeArmed = false;
+      chargeArmed = false; holdArmed = false;
       this.canvas.setPointerCapture?.(attackPointerId);
     };
     const finishAttackGesture = (event) => {
@@ -747,9 +755,10 @@ export class GameWorld {
       const dy = end.y - attackStart.y;
       attackPointerId = null;
       attackStart = null;
-      if (chargeArmed && this.player?.chargeTimer > 0) {
-        chargeArmed = false;
-        this.player.releaseCharge();
+      if (chargeArmed) {
+        // Released by the finger — or already auto-released at full charge (never twice).
+        chargeArmed = false; holdArmed = false;
+        if (this.player?.chargeTimer > 0) this.player.releaseCharge();
         return;
       }
       chargeArmed = false;
@@ -791,6 +800,7 @@ export class GameWorld {
         return;
       }
       update(event);
+      if (attackPointerId === event.pointerId && attackStart) attackLast = this.getCanvasCoords(event.clientX, event.clientY);
       if (attackPointerId === event.pointerId && attackStart && !chargeArmed && this.player?.isAlive && !this.player.activeClash) {
         const pt = this.getCanvasCoords(event.clientX, event.clientY);
         const dx = pt.x - attackStart.x;
@@ -809,7 +819,7 @@ export class GameWorld {
           const dir = -dy > ahead ? 'up' : dy > ahead ? 'down' : 'forward';
           if (this.player.beginCharge(dir, 'touch')) chargeArmed = true;
         }
-      } else if (attackPointerId === event.pointerId && attackStart && chargeArmed && this.player?.chargeTimer > 0) {
+      } else if (attackPointerId === event.pointerId && attackStart && chargeArmed && !holdArmed && this.player?.chargeTimer > 0) {
         // While charging, the drag direction can still be changed until release.
         const pt = this.getCanvasCoords(event.clientX, event.clientY);
         const dx = pt.x - attackStart.x; const dy = pt.y - attackStart.y; const ahead = Math.max(dx * this.player.facing, 0) * .8;
@@ -824,8 +834,18 @@ export class GameWorld {
       clear(event); finishAttackGesture(event);
     }, { passive: false });
     window.addEventListener('pointercancel', (event) => { clear(event); attackPointerId = null; attackStart = null; chargeArmed = false; }, { passive: false });
-    // Exposed for headless tests of the left-half classifier.
-    this.touchGestureDebug = { beginJoystick, update, clear, get leftGesture() { return leftGesture; } };
+    // Per frame: a right-half finger held still for HOLD_MIN_TIME starts the HOLD charge.
+    this.tickTouchHold = () => {
+      if (attackPointerId === null || !attackStart || chargeArmed || !this.player?.isAlive || this.player.activeClash) return false;
+      if (performance.now() - attackStartTime < HOLD_MIN_TIME * 1000) return false;
+      const last = attackLast ?? attackStart;
+      if (Math.hypot(last.x - attackStart.x, last.y - attackStart.y) >= 34) return false;
+      if (!this.player.beginCharge('hold', 'touch')) return false;
+      chargeArmed = true; holdArmed = true;
+      return true;
+    };
+    // Exposed for headless tests of the left-half classifier and the touch HOLD.
+    this.touchGestureDebug = { beginJoystick, update, clear, beginAttackGesture, finishAttackGesture, get leftGesture() { return leftGesture; }, get holdArmed() { return holdArmed; } };
   }
 
   setSelectedHero(heroKey) {
@@ -2707,6 +2727,7 @@ export class GameWorld {
 
       this.player.update(scaledDt, this.input, this.battlefield, this);
       this.updateRecasts(scaledDt);
+      this.tickTouchHold?.();
       this.enemyChampion.update(scaledDt, this, this.battlefield);
       this.siegeMatch?.tick(scaledDt);
       this.primal?.update(scaledDt, this);
@@ -3084,7 +3105,7 @@ export class GameWorld {
   runeGuide() {
     if (!this.drawing.active || this.drawing.expectedCardId == null) return null;
     const card = this.player.getRuneCard(this.drawing.expectedCardId);
-    return card ? { id: card.id, color: card.color ?? '#ffffff' } : null;
+    return card ? { id: card.id, color: card.color ?? '#ffffff', name: card.name ?? card.id } : null;
   }
 
   renderRuneStrokes() {
@@ -3102,7 +3123,17 @@ export class GameWorld {
 
     // Training: a tapped hand rune is pre-drawn as a template to trace.
     const guide = this.runeGuide();
-    if (guide) renderRuneGuide(rctx, guide.id, this.renderWidth / 2, this.renderHeight * .56, Math.min(this.renderWidth, this.renderHeight) * .24, guide.color);
+    if (guide) {
+      const size = Math.min(this.renderWidth, this.renderHeight) * .24; const cx = this.renderWidth / 2; const cy = this.renderHeight * .56;
+      renderRuneGuide(rctx, guide.id, cx, cy, size, guide.color);
+      // The rune's name above the template, so it is clear what is being drawn.
+      rctx.save();
+      rctx.font = `700 ${Math.round(Math.max(18, size * .16))}px Cinzel, serif`; rctx.textAlign = 'center'; rctx.textBaseline = 'bottom';
+      rctx.lineWidth = 5; rctx.strokeStyle = 'rgba(8, 6, 18, .9)'; rctx.shadowColor = guide.color; rctx.shadowBlur = 12;
+      const label = String(guide.name).toUpperCase(); const ty = cy - size * .82 - 10; // just above the template
+      rctx.strokeText(label, cx, ty); rctx.fillStyle = guide.color; rctx.fillText(label, cx, ty);
+      rctx.restore();
+    }
 
     rctx.lineCap = 'round';
     rctx.lineJoin = 'round';

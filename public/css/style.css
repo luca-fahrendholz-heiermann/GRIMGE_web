@@ -1420,6 +1420,7 @@ code {
   pointer-events: auto;
 }
 #ui-layer.mode-training .training-controls { display: flex; }
+#ui-layer.mode-training.is-drawing .training-controls { display: none; }
 .deck-target-tabs { display: flex; gap: 6px; margin: 4px 0 6px; }
 .deck-target-tabs.hidden { display: none; }
 .deck-target-tabs button { flex: 1; padding: 5px 8px; border: 1px solid #6d5b83; border-radius: 6px; background: #1a1228; color: #d8c9ee; font: 800 10px 'Rajdhani', sans-serif; letter-spacing: 1px; cursor: pointer; }
