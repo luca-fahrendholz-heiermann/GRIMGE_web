@@ -63,6 +63,9 @@ const ADDITIVE_MODIFIERS = new Set(['maxWalls', 'extraSummons', 'liftTargets', '
 export const RUNE_XP_BY_GRADE = Object.freeze({ C: 6, B: 10, A: 14, S: 18 });
 export const STARTER_RUNES = Object.freeze(['ignis', 'ventus', 'fulgur', 'terra', 'aqua']);
 export const MATCH_DECK_SIZE = 10;
+// Deck builder (user, 20 Oct 2026): saved builds that load in one tap, favourite runes.
+export const MAX_DECK_PRESETS = 8;
+export const DECK_PRESET_NAME_MAX = 20;
 export const MAX_RUNE_COPIES = 2;
 import { BUFF_FORM_DATA } from './buff_forms_data.js';
 import { SIGNATURE_RUNE_DATA } from './signature_runes_data.js';
@@ -132,6 +135,12 @@ export class MageProfile {
     this.discoveredSpells = new Set(source?.discoveredSpells ?? []);
     this.unlockedRunes = new Set(source?.unlockedRunes ?? STARTER_RUNES);
     this.syncRuneUnlocks();
+    // Favourites and build presets first: the deck repair below already saves the profile.
+    this.favoriteRunes = new Set((Array.isArray(source?.favoriteRunes) ? source.favoriteRunes : []).filter((id) => ALL_RUNE_IDS.includes(id)));
+    this.deckPresets = (Array.isArray(source?.deckPresets) ? source.deckPresets : [])
+      .filter((preset) => preset && Array.isArray(preset.deck))
+      .slice(0, MAX_DECK_PRESETS)
+      .map((preset, i) => ({ id: String(preset.id ?? `preset_${i + 1}`), name: this.cleanPresetName(preset.name, i), deck: preset.deck.filter((id) => ALL_RUNE_IDS.includes(id)).slice(0, MATCH_DECK_SIZE) }));
     const savedDeck = Array.isArray(source?.matchDeck) ? source.matchDeck : DEFAULT_MATCH_DECK;
     this.matchDeck = this.sanitizeDeck(savedDeck);
     // A saved deck can lose cards when runes are retired (e.g. the archived
@@ -160,7 +169,8 @@ export class MageProfile {
       level: this.level, xp: this.xp, skillPoints: this.skillPoints,
       unlockedSkills: [...this.unlockedSkills], runeXp: clone(this.runeXp),
       discoveredSpells: [...this.discoveredSpells], unlockedRunes: [...this.unlockedRunes],
-      matchDeck: [...this.matchDeck], progressionVersion: 3
+      matchDeck: [...this.matchDeck], progressionVersion: 3,
+      favoriteRunes: [...this.favoriteRunes], deckPresets: this.deckPresets.map((preset) => ({ ...preset, deck: [...preset.deck] }))
     };
   }
 
@@ -209,6 +219,53 @@ export class MageProfile {
     if (index < 0) return { ok: false, reason: 'NOT IN DECK' };
     this.matchDeck.splice(index, 1); this.save();
     return { ok: true };
+  }
+
+  // ── Build presets ──
+  cleanPresetName(name, index = this.deckPresets?.length ?? 0) {
+    const clean = String(name ?? '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, DECK_PRESET_NAME_MAX);
+    return clean || `BUILD ${index + 1}`;
+  }
+  getDeckPreset(id) { return this.deckPresets.find((preset) => preset.id === id) ?? null; }
+  // Save a deck as a build. Same name (or the given id) overwrites that build.
+  saveDeckPreset(name, deck = this.matchDeck, id = null) {
+    const cards = [...deck];
+    if (cards.length !== MATCH_DECK_SIZE) return { ok: false, reason: 'DECK NEEDS 10 CARDS' };
+    const existing = id ? this.getDeckPreset(id) : this.deckPresets.find((preset) => preset.name.toLowerCase() === this.cleanPresetName(name).toLowerCase());
+    if (existing) {
+      if (name != null && String(name).trim()) existing.name = this.cleanPresetName(name);
+      existing.deck = cards; this.save();
+      return { ok: true, preset: existing, overwritten: true };
+    }
+    if (this.deckPresets.length >= MAX_DECK_PRESETS) return { ok: false, reason: `MAX ${MAX_DECK_PRESETS} BUILDS` };
+    let n = this.deckPresets.length + 1; while (this.getDeckPreset(`preset_${n}`)) n++;
+    const preset = { id: `preset_${n}`, name: this.cleanPresetName(name), deck: cards };
+    this.deckPresets.push(preset); this.save();
+    return { ok: true, preset };
+  }
+  // Load a build as the match deck (rules re-checked; runes that are not legal are skipped and the deck is topped up).
+  loadDeckPreset(id) {
+    const preset = this.getDeckPreset(id);
+    if (!preset) return { ok: false, reason: 'BUILD NOT FOUND' };
+    const deck = this.sanitizeDeck(preset.deck);
+    this.matchDeck = deck.length < MATCH_DECK_SIZE ? this.topUpDeck(deck) : deck;
+    this.save();
+    return { ok: true, preset, repaired: deck.length < preset.deck.length };
+  }
+  deleteDeckPreset(id) {
+    const index = this.deckPresets.findIndex((preset) => preset.id === id);
+    if (index < 0) return { ok: false, reason: 'BUILD NOT FOUND' };
+    const [preset] = this.deckPresets.splice(index, 1); this.save();
+    return { ok: true, preset };
+  }
+  // ── Favourite runes (filter in the deck builder) ──
+  isFavoriteRune(id) { return this.favoriteRunes.has(id); }
+  toggleFavoriteRune(id) {
+    if (!ALL_RUNE_IDS.includes(id)) return { ok: false, reason: 'UNKNOWN RUNE' };
+    const on = !this.favoriteRunes.has(id);
+    if (on) this.favoriteRunes.add(id); else this.favoriteRunes.delete(id);
+    this.save();
+    return { ok: true, favorite: on };
   }
 
   resetMatchDeck() {

@@ -1242,6 +1242,32 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
   assert([...P.runeDeck, ...P.runeHand].some((card) => card.id === 'void') && E.deckSpells.some((option) => option.def.id === 'summon_lesser_beast'), 'Both edited decks are applied (partner AI casts from its deck)');
   game.toggleSparringPartner();
   game.profile.unlockedRunes.add('void');
+  {
+    // Deck builder: saved builds load in one tap (match deck and training deck), favourites filter the list.
+    const prof = game.profile; const savedDeck = prof.getMatchDeck(); const savedPresets = prof.deckPresets.splice(0); const savedFavs = new Set(prof.favoriteRunes);
+    prof.favoriteRunes.clear();
+    assert(game.updateMatchDeck('preset-save', 'Main <b>') && prof.deckPresets.length === 1 && prof.deckPresets[0].name === 'Main b', 'SAVE CURRENT DECK stores the match deck as a named build');
+    const mainId = prof.deckPresets[0].id;
+    game.updateMatchDeck('remove', 'ignis'); game.updateMatchDeck('remove', 'ignis');
+    assert(prof.matchDeck.length === 8 && game.updateMatchDeck('preset-load', mainId) && prof.getRuneCopies('ignis') === 2 && prof.matchDeck.length === 10, 'LOAD restores the saved build as the match deck in one step');
+    ui.toggleDeckBuilder(true); game.refreshDeckBuilder();
+    const presetHtml = document.getElementById('deck-presets').innerHTML;
+    assert(presetHtml.includes('Main b') && presetHtml.includes('is-active') && !presetHtml.includes('<b>Main'), 'The build list shows the saved build (name escaped), the loaded one marked active');
+    assert(game.updateMatchDeck('favorite', 'sig_S46') && prof.isFavoriteRune('sig_S46'), 'The star marks a rune as favourite');
+    ui.deckFilter = 'favorites'; game.refreshDeckBuilder();
+    const favHtml = document.getElementById('deck-builder-content').innerHTML;
+    assert(favHtml.includes('data-rune-id="sig_S46"') && !favHtml.includes('data-rune-id="ignis"') && (favHtml.match(/<article/g) ?? []).length === 1, 'The FAVORITES filter lists only favourite runes');
+    ui.deckFilter = 'deck'; game.refreshDeckBuilder();
+    assert(document.getElementById('deck-builder-content').innerHTML.includes('data-rune-id="ignis"') && !document.getElementById('deck-builder-content').innerHTML.includes('data-rune-id="sig_S46"'), 'The IN DECK filter lists only the runes in the deck');
+    ui.deckFilter = 'all'; ui.toggleDeckBuilder(false);
+    // Training: a build loads straight into the open training deck.
+    game.openTrainingDeck('player');
+    game.trainingDecks.player.splice(0, game.trainingDecks.player.length, 'void');
+    assert(game.updateMatchDeck('preset-load', mainId) && game.trainingDecks.player.length === 10 && !game.trainingDecks.player.includes('void'), 'In training a saved build loads into the edited training deck');
+    assert(game.updateMatchDeck('preset-delete', mainId) && !prof.deckPresets.length, 'A build can be deleted');
+    ui.toggleDeckBuilder(false);
+    prof.matchDeck = savedDeck; prof.deckPresets.push(...savedPresets); prof.favoriteRunes = savedFavs;
+  }
 
   // 5. Walls: base limit 1, Rampart Mason keeps several; walls stand until broken.
   reset();

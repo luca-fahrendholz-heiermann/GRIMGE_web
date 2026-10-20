@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { MageProfile, MAGE_SKILL_TREE, applyMageProfile, DEFAULT_MATCH_DECK } from './public/src/progression.js';
+import { MageProfile, MAGE_SKILL_TREE, applyMageProfile, DEFAULT_MATCH_DECK, MAX_DECK_PRESETS } from './public/src/progression.js';
 
 let passed = 0;
 function test(name, fn) {
@@ -115,6 +115,44 @@ test('A saved deck that lost a retired rune (archived Arcane State) is topped up
   const profile = new MageProfile({ level: 20, matchDeck: ['ignis', 'ignis', 'aqua', 'aqua', 'terra', 'terra', 'ventus', 'ventus', 'fulgur', 'buff_T26'] });
   assert.equal(profile.matchDeck.length, 10);
   assert.ok(profile.isDeckReady() && profile.deckRepaired && !profile.matchDeck.includes('buff_T26'));
+});
+
+test('Deck builder: build presets save, load in one step, overwrite, delete and persist', () => {
+  const profile = new MageProfile({ level: 20, matchDeck: [...DEFAULT_MATCH_DECK] });
+  profile.removeRuneFromDeck('aqua');
+  assert.equal(profile.saveDeckPreset('Half').reason, 'DECK NEEDS 10 CARDS');
+  profile.addRuneToDeck('lux');
+  const fire = profile.saveDeckPreset('  Feuer <Rush>  ');
+  assert.ok(fire.ok && fire.preset.name === 'Feuer Rush' && fire.preset.deck.includes('lux'));
+  const firstDeck = profile.getMatchDeck();
+  profile.resetMatchDeck();
+  assert.ok(!profile.matchDeck.includes('lux'));
+  assert.ok(profile.loadDeckPreset(fire.preset.id).ok);
+  assert.deepEqual(profile.getMatchDeck(), firstDeck);
+  // Same name overwrites, an empty name gets a default.
+  profile.removeRuneFromDeck('lux'); profile.addRuneToDeck('aqua');
+  assert.ok(profile.saveDeckPreset('feuer rush').overwritten && profile.deckPresets.length === 1 && !profile.deckPresets[0].deck.includes('lux'));
+  assert.equal(profile.saveDeckPreset('').preset.name, 'BUILD 2');
+  // Persisted with the profile.
+  const restored = new MageProfile(profile.toJSON());
+  assert.deepEqual(restored.deckPresets.map((p) => p.name), ['feuer rush', 'BUILD 2']); // overwrite takes the newly typed name
+  assert.ok(restored.deleteDeckPreset(restored.deckPresets[1].id).ok && restored.deckPresets.length === 1);
+  // Limit.
+  for (let i = 0; i < MAX_DECK_PRESETS + 2; i++) restored.saveDeckPreset(`B${i}`);
+  assert.equal(restored.deckPresets.length, MAX_DECK_PRESETS);
+  assert.ok(restored.saveDeckPreset('one more').reason.startsWith('MAX'));
+});
+
+test('Deck builder: favourite runes toggle and persist; presets survive the deck repair on load', () => {
+  const profile = new MageProfile({ level: 20 });
+  assert.ok(profile.toggleFavoriteRune('ignis').favorite && profile.isFavoriteRune('ignis'));
+  profile.toggleFavoriteRune('sig_S46'); profile.toggleFavoriteRune('ignis');
+  assert.ok(!profile.isFavoriteRune('ignis') && profile.isFavoriteRune('sig_S46') && !profile.toggleFavoriteRune('nope').ok);
+  assert.deepEqual([...new MageProfile(profile.toJSON()).favoriteRunes], ['sig_S46']);
+  const preset = { id: 'preset_1', name: 'Old', deck: [...DEFAULT_MATCH_DECK] };
+  const repaired = new MageProfile({ level: 20, favoriteRunes: ['lux'], deckPresets: [preset], matchDeck: ['ignis', 'ignis', 'aqua', 'aqua', 'terra', 'terra', 'ventus', 'ventus', 'fulgur', 'buff_T26'] });
+  assert.ok(repaired.deckRepaired && repaired.deckPresets.length === 1 && repaired.isFavoriteRune('lux'));
+  assert.ok(repaired.toJSON().deckPresets[0].name === 'Old');
 });
 
 console.log(`\nProgression results: ${passed} passed, ${process.exitCode ? 1 : 0} failed.`);

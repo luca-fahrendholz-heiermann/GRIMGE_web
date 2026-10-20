@@ -240,7 +240,14 @@
             <button type="button" data-deck-target="player">YOUR DECK</button>
             <button type="button" data-deck-target="opponent">SPARRING PARTNER</button>
           </div>
+          <!-- Saved builds (load in one tap) and the rune filter (favourites). -->
+          <div id="deck-presets" class="deck-presets"></div>
           <div id="deck-builder-summary" class="deck-builder-summary"></div>
+          <div id="deck-filter" class="deck-filter">
+            <button type="button" data-deck-filter="all" class="active">ALL RUNES</button>
+            <button type="button" data-deck-filter="favorites">★ FAVORITES</button>
+            <button type="button" data-deck-filter="deck">IN DECK</button>
+          </div>
           <div id="deck-builder-content" class="deck-builder-content"></div>
           <div class="deck-builder-actions"><button id="reset-deck-btn" class="match-button" type="button">RESTORE STARTER DECK</button></div>
         </div>

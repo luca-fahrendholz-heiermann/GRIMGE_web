@@ -1183,6 +1183,28 @@ body.portrait-gameplay #game-container { visibility: hidden; pointer-events: non
 .deck-rune button { width: 25px; height: 25px; border: 1px solid var(--rune-color); border-radius: 5px; background: #171125; color: #fff; font-weight: 900; cursor: pointer; }.deck-rune button:disabled { opacity: .32; cursor: not-allowed; }
 .deck-rune.locked { filter: grayscale(.8); opacity: .55; }.deck-builder-actions { display: flex; justify-content: center; padding: 0 16px 16px; }
 @media (max-width: 720px) { .deck-builder-content { grid-template-columns: 1fr; } }
+/* Deck builder: saved builds + favourites filter. */
+.deck-presets { margin: 8px 16px 0; padding: 8px; border: 1px solid #4b3d63; border-radius: 8px; background: rgba(14, 10, 28, .85); display: grid; gap: 5px; }
+.deck-preset-new { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.deck-preset-new span { color: #ffd54f; font: 800 10px 'Rajdhani', sans-serif; letter-spacing: 1px; margin-right: auto; }
+.deck-preset-new input { flex: 1 1 140px; min-width: 0; padding: 5px 8px; border: 1px solid #6d5b83; border-radius: 6px; background: #120c1f; color: #fff; font: 700 11px 'Rajdhani', sans-serif; letter-spacing: 1px; }
+.deck-presets button { padding: 5px 9px; border: 1px solid #6d5b83; border-radius: 6px; background: #1a1228; color: #e8dcff; font: 800 10px 'Rajdhani', sans-serif; letter-spacing: 1px; cursor: pointer; }
+.deck-presets button:disabled { opacity: .35; cursor: not-allowed; }
+.deck-presets button.confirm { border-color: #ff7043; color: #ffccbc; box-shadow: 0 0 8px rgba(255, 112, 67, .5); }
+.deck-preset { display: grid; grid-template-columns: minmax(70px, auto) 1fr auto auto auto; gap: 6px; align-items: center; padding: 4px 6px; border: 1px solid #3a2f50; border-radius: 6px; }
+.deck-preset b { color: #e5d5ff; font: 800 11px 'Rajdhani', sans-serif; letter-spacing: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.deck-preset.is-active { border-color: #ffd54f; box-shadow: inset 0 0 8px rgba(255, 213, 79, .25); }
+.deck-preset.is-active b::after { content: ' · ACTIVE'; color: #ffd54f; font-size: 9px; }
+.deck-preset-runes { display: flex; gap: 2px; flex-wrap: wrap; font-size: 11px; }
+.deck-preset-runes i { color: var(--rune-color); font-style: normal; }
+.deck-preset-empty { margin: 0; color: #8f86a6; font-size: 10px; }
+.deck-filter { display: flex; gap: 6px; margin: 8px 16px 0; }
+.deck-filter button { padding: 4px 10px; border: 1px solid #6d5b83; border-radius: 12px; background: #1a1228; color: #d8c9ee; font: 800 10px 'Rajdhani', sans-serif; letter-spacing: 1px; cursor: pointer; }
+.deck-filter button.active { border-color: #ffd54f; color: #fff3c4; box-shadow: 0 0 8px rgba(255, 213, 79, .4); }
+.deck-rune button.fav-btn { border-color: #6d5b83; color: #8f86a6; }
+.deck-rune button.fav-btn.on { border-color: #ffd54f; color: #ffd54f; text-shadow: 0 0 6px rgba(255, 213, 79, .8); }
+.deck-empty { grid-column: 1 / -1; margin: 6px 0; color: #8f86a6; font-size: 11px; text-align: center; }
+@media (max-width: 720px) { .deck-preset { grid-template-columns: 1fr auto auto auto; } .deck-preset-runes { grid-column: 1 / -1; grid-row: 2; } }
 @media (max-width: 720px) { .skill-tree-content { grid-template-columns: 1fr; } }
 
 .modal-header {

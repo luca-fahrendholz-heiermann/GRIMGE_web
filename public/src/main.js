@@ -390,6 +390,8 @@ export class GameWorld {
       else if (e.pointerType === 'mouse') this.setInputMode('desktop');
     }, { capture: true, passive: true });
     window.addEventListener('keydown', (e) => {
+      // Typing in a text field (e.g. a build name) never triggers game keys — only Esc still closes menus.
+      if (e.target?.closest?.('input, textarea, [contenteditable="true"]') && e.code !== 'Escape') return;
       if (!e.repeat) this.setInputMode('desktop');
       if (this.matchState === 'Results') {
         if (e.code === 'Enter') this.startMatch();
@@ -1741,8 +1743,44 @@ export class GameWorld {
       target, matchDeck: deck, trainingSparring: !!this.modeState?.sparring,
       isRuneUnlocked: (id) => DEBUG_BUILD || this.profile.isRuneUnlocked(id),
       getRuneCopies: (id) => deck.filter((entry) => entry === id).length,
-      runeLevel: (id) => this.profile.runeLevel(id)
+      runeLevel: (id) => this.profile.runeLevel(id),
+      deckPresets: this.profile.deckPresets,
+      isFavoriteRune: (id) => this.profile.isFavoriteRune(id)
     };
+  }
+
+  refreshDeckBuilder() {
+    ui.renderDeckBuilder?.(this.deckEditTarget ? this.trainingDeckSource() : this.profile);
+  }
+
+  // Saved builds: save / overwrite / delete in the profile; load into the match deck or the open training deck.
+  updateDeckPreset(action, arg) {
+    const target = this.deckEditTarget;
+    const deck = target ? this.trainingDecks?.[target] : this.profile.matchDeck;
+    let result;
+    if (action === 'preset-save') result = this.profile.saveDeckPreset(arg, deck ?? []);
+    else if (action === 'preset-overwrite') result = this.profile.saveDeckPreset(null, deck ?? [], arg);
+    else if (action === 'preset-delete') result = this.profile.deleteDeckPreset(arg);
+    else if (action === 'preset-load') {
+      if (target) {
+        const preset = this.profile.getDeckPreset(arg);
+        if (!preset || !deck) result = { ok: false, reason: 'BUILD NOT FOUND' };
+        else {
+          const source = this.trainingDeckSource(); const next = [];
+          for (const id of preset.deck) if (next.length < MATCH_DECK_SIZE && ALL_RUNE_IDS.includes(id) && source.isRuneUnlocked(id) && deckAccepts(next, id)) next.push(id);
+          deck.splice(0, deck.length, ...next);
+          result = { ok: true, preset };
+        }
+      } else {
+        result = this.profile.loadDeckPreset(arg);
+        if (result.ok) this.applyProfile();
+      }
+    } else return false;
+    if (!result.ok) { this.showAnnouncement(`BUILD: ${result.reason}`, 1.2); return false; }
+    const label = { 'preset-save': result.overwritten ? 'BUILD UPDATED' : 'BUILD SAVED', 'preset-overwrite': 'BUILD UPDATED', 'preset-delete': 'BUILD DELETED', 'preset-load': 'BUILD LOADED' }[action];
+    this.showAnnouncement(`${label}: ${result.preset?.name ?? ''}`, 1.3);
+    this.refreshDeckBuilder();
+    return true;
   }
 
   openTrainingDeck(target = 'player') {
@@ -2382,6 +2420,13 @@ export class GameWorld {
   }
 
   updateMatchDeck(action, runeId = null) {
+    // Favourites and saved builds work for the match deck and the training decks alike.
+    if (action === 'favorite') {
+      if (!this.profile.toggleFavoriteRune(runeId).ok) return false;
+      this.refreshDeckBuilder();
+      return true;
+    }
+    if (typeof action === 'string' && action.startsWith('preset-')) return this.updateDeckPreset(action, runeId);
     if (this.deckEditTarget) return this.editTrainingDeck(action, runeId);
     let result;
     if (action === 'reset') {

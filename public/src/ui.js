@@ -1,10 +1,12 @@
 // GRIMGE Prototype — UI & HUD Controller matching Setup Mockup Exactly
 import { spells } from './spells.js';
-import { MAGE_SKILL_TREE, ALL_RUNE_IDS, runeUnlockLabel, isBuffRuneId, isSignatureRuneId, maxRuneCopies } from './progression.js';
+import { MAGE_SKILL_TREE, ALL_RUNE_IDS, runeUnlockLabel, isBuffRuneId, isSignatureRuneId, maxRuneCopies, MAX_DECK_PRESETS, MATCH_DECK_SIZE, DECK_PRESET_NAME_MAX } from './progression.js';
 import { recognizer } from './recognizer.js';
 import { sprites } from './sprites.js';
 import { runeManaCost, SPELL_RECIPES, lookupRecipe, SOLO_RUNES, spellHowTo } from './spell_catalog.js';
 import { TRAINING_MAPS, trainingMapThumb } from './training_maps.js';
+
+const escapeHtml = (text) => String(text ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 
 export class UIManager {
   constructor() {
@@ -103,6 +105,9 @@ export class UIManager {
     this.deckBuilderSummary = document.getElementById('deck-builder-summary');
     this.closeDeckBuilderBtn = document.getElementById('close-deck-builder-btn');
     this.resetDeckBtn = document.getElementById('reset-deck-btn');
+    this.deckPresetsEl = document.getElementById('deck-presets');
+    this.deckFilterEl = document.getElementById('deck-filter');
+    this.deckFilter = 'all'; this.pendingPresetAction = null; this.lastDeckSource = null;
 
     this.cards = [
       document.getElementById('card-0'),
@@ -215,6 +220,28 @@ export class UIManager {
       const action = button?.getAttribute?.('data-deck-action');
       const runeId = button?.getAttribute?.('data-rune-id');
       if (action) window.gameWorld?.updateMatchDeck(action, runeId);
+    });
+    // Saved builds: SAVE CURRENT DECK (name field), LOAD, overwrite and delete (both confirm with a second tap).
+    this.deckPresetsEl?.addEventListener('pointerdown', (e) => {
+      const button = e.target?.closest?.('[data-deck-action]');
+      if (!button || button.disabled) return;
+      e.preventDefault(); e.stopPropagation();
+      const action = button.getAttribute('data-deck-action'); const id = button.getAttribute('data-preset-id');
+      if (action === 'preset-save') { this.savePresetFromInput(); return; }
+      if ((action === 'preset-delete' || action === 'preset-overwrite') && this.pendingPresetAction !== `${action}:${id}`) {
+        this.pendingPresetAction = `${action}:${id}`; this.renderDeckBuilder(this.lastDeckSource); return;
+      }
+      this.pendingPresetAction = null;
+      window.gameWorld?.updateMatchDeck(action, id);
+    });
+    this.deckPresetsEl?.addEventListener('keydown', (e) => {
+      if (e.code === 'Enter' && e.target?.id === 'deck-preset-name') { e.preventDefault(); this.savePresetFromInput(); }
+    });
+    this.deckFilterEl?.addEventListener('pointerdown', (e) => {
+      const filter = e.target?.closest?.('[data-deck-filter]')?.getAttribute?.('data-deck-filter');
+      if (!filter) return;
+      e.preventDefault(); e.stopPropagation();
+      this.deckFilter = filter; this.renderDeckBuilder(this.lastDeckSource);
     });
     this.resetDeckBtn?.addEventListener('pointerdown', (e) => {
       e.preventDefault(); e.stopPropagation(); window.gameWorld?.updateMatchDeck('reset');
@@ -705,8 +732,37 @@ export class UIManager {
     this.renderHub(profile);
   }
 
+  savePresetFromInput() {
+    const input = this.deckPresetsEl?.querySelector?.('#deck-preset-name');
+    if (window.gameWorld?.updateMatchDeck('preset-save', input?.value ?? '') && input) input.value = '';
+  }
+
+  // Saved builds of the profile (shared by the match deck and the training decks).
+  renderDeckPresets(profile) {
+    if (!this.deckPresetsEl) return;
+    const presets = profile.deckPresets ?? [];
+    const byId = new Map(recognizer.runes.map((rune) => [rune.id, rune]));
+    const sameDeck = (a, b) => a.length === b.length && [...a].sort().join() === [...b].sort().join();
+    const pending = this.pendingPresetAction;
+    const row = (preset) => {
+      const id = escapeHtml(preset.id);
+      const runes = preset.deck.map((rid) => { const rune = byId.get(rid); return rune ? `<i style="--rune-color:${rune.color}" title="${escapeHtml(rune.name)}">${rune.glyph}</i>` : ''; }).join('');
+      const over = pending === `preset-overwrite:${preset.id}`; const del = pending === `preset-delete:${preset.id}`;
+      return `<div class="deck-preset ${sameDeck(preset.deck, profile.matchDeck) ? 'is-active' : ''}"><b title="${escapeHtml(preset.name)}">${escapeHtml(preset.name)}</b><span class="deck-preset-runes">${runes}</span>`
+        + `<button type="button" data-deck-action="preset-load" data-preset-id="${id}">LOAD</button>`
+        + `<button type="button" class="${over ? 'confirm' : ''}" data-deck-action="preset-overwrite" data-preset-id="${id}" title="Overwrite with the current deck" ${profile.matchDeck.length === MATCH_DECK_SIZE ? '' : 'disabled'}>${over ? 'SURE?' : 'SAVE'}</button>`
+        + `<button type="button" class="${del ? 'confirm' : ''}" data-deck-action="preset-delete" data-preset-id="${id}" title="Delete build">${del ? 'SURE?' : '✕'}</button></div>`;
+    };
+    const canSave = profile.matchDeck.length === MATCH_DECK_SIZE && presets.length < MAX_DECK_PRESETS;
+    this.deckPresetsEl.innerHTML = `<div class="deck-preset-new"><span>SAVED BUILDS ${presets.length}/${MAX_DECK_PRESETS}</span><input id="deck-preset-name" type="text" maxlength="${DECK_PRESET_NAME_MAX}" placeholder="BUILD NAME" autocomplete="off" spellcheck="false"><button type="button" data-deck-action="preset-save" ${canSave ? '' : 'disabled'}>SAVE CURRENT DECK</button></div>`
+      + (presets.map(row).join('') || '<p class="deck-preset-empty">No builds yet — put together a 10-card deck and save it here to load it later in one tap.</p>');
+  }
+
   renderDeckBuilder(profile) {
     if (!profile || !this.deckBuilderContent || !this.deckBuilderSummary) return;
+    this.lastDeckSource = profile;
+    this.renderDeckPresets(profile);
+    for (const chip of this.deckFilterEl?.querySelectorAll?.('[data-deck-filter]') ?? []) chip.classList.toggle('active', chip.getAttribute('data-deck-filter') === this.deckFilter);
     // Training passes a deck source with a target (player / opponent).
     const training = !!profile.target;
     this.deckTargetTabs?.classList.toggle('hidden', !training);
@@ -734,14 +790,17 @@ export class UIManager {
         : sig ? (copies ? 'IN DECK · SIGNATURE SPECIAL' : `SIGNATURE SPECIAL · ONCE PER DECK · ${rune.desc.split(' — ')[1] ?? ''}`)
         : `${copies}/${max} IN DECK · RUNE LV.${profile.runeLevel(rune.id)}`;
       const blocked = !unlocked || copies >= max || profile.matchDeck.length >= 10 || buffTaken;
-      return `<article class="deck-rune ${unlocked ? '' : 'locked'} ${buff ? 'is-buff' : ''} ${sig ? 'is-signature' : ''}" style="--rune-color:${rune.color}"><b>${rune.glyph} ${rune.name}${buff ? ' <i class="buff-tag">ARCANE</i>' : sig ? ' <i class="buff-tag sig-tag">SIGNATURE</i>' : ''}</b><span>${status}</span><div><button data-deck-action="remove" data-rune-id="${rune.id}" ${copies ? '' : 'disabled'}>−</button><button data-deck-action="add" data-rune-id="${rune.id}" ${blocked ? 'disabled' : ''}>+</button></div></article>`;
+      const fav = !!profile.isFavoriteRune?.(rune.id);
+      return `<article class="deck-rune ${unlocked ? '' : 'locked'} ${buff ? 'is-buff' : ''} ${sig ? 'is-signature' : ''} ${fav ? 'is-favorite' : ''}" style="--rune-color:${rune.color}"><b>${rune.glyph} ${rune.name}${buff ? ' <i class="buff-tag">ARCANE</i>' : sig ? ' <i class="buff-tag sig-tag">SIGNATURE</i>' : ''}</b><span>${status}</span><div><button class="fav-btn ${fav ? 'on' : ''}" data-deck-action="favorite" data-rune-id="${rune.id}" title="${fav ? 'Remove from favorites' : 'Mark as favorite'}">${fav ? '★' : '☆'}</button><button data-deck-action="remove" data-rune-id="${rune.id}" ${copies ? '' : 'disabled'}>−</button><button data-deck-action="add" data-rune-id="${rune.id}" ${blocked ? 'disabled' : ''}>+</button></div></article>`;
     };
-    const deckRunes = recognizer.runes.filter((rune) => ALL_RUNE_IDS.includes(rune.id));
-    this.deckBuilderContent.innerHTML = deckRunes.filter((rune) => !isBuffRuneId(rune.id) && !isSignatureRuneId(rune.id)).map(card).join('')
-      + '<h4 class="deck-section-title">✦ SIGNATURE SPECIALS — SPECIAL RUNES · EACH ONCE PER DECK · OWN MULTI-STROKE GLYPH · NO COMBINATION</h4>'
-      + deckRunes.filter((rune) => isSignatureRuneId(rune.id)).map(card).join('')
-      + '<h4 class="deck-section-title">⧗ ARCANE STATES — SPECIAL RUNES · ONLY ONE OF ALL PER DECK · ONE HOURGLASS SIGIL</h4>'
-      + deckRunes.filter((rune) => isBuffRuneId(rune.id)).map(card).join('');
+    // Filter: all runes, only favourites, or only the runes in the deck.
+    const shown = (rune) => this.deckFilter === 'favorites' ? !!profile.isFavoriteRune?.(rune.id) : this.deckFilter === 'deck' ? profile.getRuneCopies(rune.id) > 0 : true;
+    const deckRunes = recognizer.runes.filter((rune) => ALL_RUNE_IDS.includes(rune.id) && shown(rune));
+    const section = (title, list) => (list.length ? (title ? `<h4 class="deck-section-title">${title}</h4>` : '') + list.map(card).join('') : '');
+    const html = section('', deckRunes.filter((rune) => !isBuffRuneId(rune.id) && !isSignatureRuneId(rune.id)))
+      + section('✦ SIGNATURE SPECIALS — SPECIAL RUNES · EACH ONCE PER DECK · OWN MULTI-STROKE GLYPH · NO COMBINATION', deckRunes.filter((rune) => isSignatureRuneId(rune.id)))
+      + section('⧗ ARCANE STATES — SPECIAL RUNES · ONLY ONE OF ALL PER DECK · ONE HOURGLASS SIGIL', deckRunes.filter((rune) => isBuffRuneId(rune.id)));
+    this.deckBuilderContent.innerHTML = html || `<p class="deck-empty">${this.deckFilter === 'favorites' ? 'No favorites yet — tap ☆ on a rune to mark it.' : 'The deck is empty.'}</p>`;
   }
 
   // The grimoire lists every rune gesture and every recipe straight from the
