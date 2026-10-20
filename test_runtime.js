@@ -2518,7 +2518,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   const step = (n, dt = 1 / 60) => { for (let i = 0; i < n; i++) { P.update(dt, neutral, game.battlefield, game); game.updateProjectiles(dt); spells.update(dt, game); } };
   const cast = (id, target = null) => spells.cast(P, spells.resolveSpell([{ id: 'sig_' + id }]), game, null, target);
   const ids = Object.keys(core.SIGNATURES);
-  assert(ids.length === 53 && ids.every((id) => core.signatureImpl(id)?.cast) && sigMod.SIGNATURE_RUNE_IDS.every((id) => isSpecialRune(id) && runeManaCost(id) >= 28 && runeManaCost(id) <= 46), 'All 53 signature specials (atlas S01–S36 + S37–S53) are special runes with their own mechanic and bound mana');
+  assert(ids.length === 54 && ids.every((id) => core.signatureImpl(id)?.cast) && sigMod.SIGNATURE_RUNE_IDS.every((id) => isSpecialRune(id) && runeManaCost(id) >= 28 && runeManaCost(id) <= 46), 'All 54 signature specials (atlas S01–S36 + S37–S54) are special runes with their own mechanic and bound mana');
   assert(ids.every((id) => spellHowTo('sig_' + id)?.effect?.length > 40) && !spells.resolveSpell([{ id: 'sig_S03' }, { id: 'ignis' }]), 'Signature specials explain themselves in the grimoire and never fuse');
   // Every special casts, runs and renders (strict canvas) without errors.
   const strict = new Proxy({}, { get: (t, k) => (k === 'ellipse' || k === 'arc') ? (x, y, rx, ry) => { if (rx < 0 || (k === 'ellipse' && ry < 0)) throw new Error('IndexSizeError ' + k); } : (k === 'canvas' ? undefined : () => {}), set: () => true });
@@ -3050,6 +3050,33 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
     assert(win.clashed && win.mineAlive && !win.rivalAlive, 'S53 domain duel: two domains meet, tapping fast wins — the enemy dome collapses');
     assert(lose.clashed && !lose.mineAlive && lose.rivalAlive, 'S53 domain duel: without tapping your own dome collapses');
     spells.clearRuntime(); E.x = 900;
+  }
+  // S54 SCHATTENBINDUNG: the shadow crawls, a caught foe copies the caster's moves; 2nd tap strangles.
+  {
+    const H = await import('./public/src/signature_abilities_h.js');
+    const E = game.enemyChampion;
+    const setupFoe = (dx) => { E.lifeState = 'Alive'; E.hp = E.maxHp; E.passive = true; E.x = P.x + dx; E.z = P.z; E.elevation = 0; E.vElevation = 0; E.freezeTimer = 0; game.battlefield.placeOnSurface(E); };
+    const step = (sec, each) => { for (let i = 0; i < sec * 60; i++) { each?.(); P.update(1 / 60, neutral, game.battlefield, game); game.updateRecasts(1 / 60); spells.update(1 / 60, game); E.update?.(1 / 60, game, game.battlefield); } };
+    reset(); dummy.homeX = dummy.x = 900; setupFoe(160);
+    const s54 = game.slotRuneSpell(runeById('sig_S54')); game.castSlotAt(s54.position); step(.6);
+    const bind = spells.activeSpells.find((sp) => sp instanceof H.ShadowBind);
+    assert(bind?.bound && bind.victim === E && s54.recast?.label === 'SCHATTENWÜRGEN', 'S54: the shadow crawls to the foe and binds it; the slot offers the strangle');
+    const ex = E.x; const ez = E.z; P.x += 60; P.z = Math.min(.9, P.z + .1); P.facing = -1; step(2 / 60);
+    assert(Math.abs(E.x - (ex + 60)) < 2 && Math.abs(E.z - (ez + .1)) < .02 && E.facing === -1, 'S54: the bound foe copies every move of the caster (x, depth, facing)');
+    let bad = 0; const strict = new Proxy({}, { get: (t, k) => (k === 'arc' || k === 'ellipse') ? (x, y, r1, r2) => { if (r1 < 0 || (k === 'ellipse' && r2 < 0)) bad++; } : k === 'canvas' ? undefined : () => {}, set: () => true });
+    for (const sp of spells.activeSpells) sp.render?.(strict);
+    const hp0 = E.hp; game.castSlotAt(s54.position); step(.2); for (const sp of spells.activeSpells) sp.render?.(strict); step(.7);
+    assert(!bad && hp0 - E.hp >= H.SHADOW.strangle - .5 && !bind.bound && !P.slottedSpells.includes(s54), 'S54: the second tap strangles (shadow hands, damage), ends the binding and frees the slot');
+    // Bound without a strangle: it lets go after 3 s.
+    reset(); dummy.homeX = dummy.x = 900; setupFoe(160); const s54b = game.slotRuneSpell(runeById('sig_S54')); game.castSlotAt(s54b.position); step(.6);
+    const bindB = spells.activeSpells.find((sp) => sp instanceof H.ShadowBind); step(3.2);
+    assert(bindB?.bindT != null && !bindB.bound && !P.slottedSpells.includes(s54b), 'S54: the binding ends on its own after 3 s');
+    // Jumping dodges the shadow; out of reach it fades.
+    reset(); dummy.homeX = dummy.x = 900; setupFoe(160); const s54c = game.slotRuneSpell(runeById('sig_S54')); game.castSlotAt(s54c.position);
+    step(1.2, () => { E.elevation = 60; E.vElevation = 0; });
+    const bindC = spells.activeSpells.find((sp) => sp instanceof H.ShadowBind);
+    assert(!bindC?.victim && !P.slottedSpells.includes(s54c), 'S54: a foe in the air is not caught (jump to dodge); the slot frees after the miss');
+    spells.clearRuntime(); E.elevation = 0; E.passive = false; E.x = 900;
   }
   // S48: a hit is negated, the Wizard reappears behind the attacker and counters; three charges.
   reset(); const s48 = game.slotRuneSpell(runeById('sig_S48')); game.castSlotAt(s48.position);
