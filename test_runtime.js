@@ -2889,6 +2889,21 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   reset();
 }
 
+// Transformation transitions: charge → flash → pillar; the form appears after the flash.
+{
+  const buff = await import('./public/src/buff_forms.js');
+  const { TRANSFORM_TIMING } = await import('./public/src/transform_fx.js');
+  game.returnToHub(); game.setMatchMode('training'); game.startMatch();
+  const P = game.player; spells.clearRuntime(); buff.endBuffForm(P);
+  spells.cast(P, spells.resolveSpell([{ id: 'buff_T40' }]), game);
+  const fx = spells.activeSpells.find((sp) => sp.isTransformationFx);
+  const strict = new Proxy({}, { get: (t, k) => (k === 'ellipse' || k === 'arc') ? (x, y, rx, ry) => { if (rx < 0 || (k === 'ellipse' && ry < 0)) throw new Error('IndexSizeError'); } : (k === 'canvas' ? undefined : () => {}), set: () => true });
+  P.buffForm.age = .2; const hidden = buff.buffFade(P); P.buffForm.age = TRANSFORM_TIMING.reveal + .4; const shown = buff.buffFade(P);
+  let ok = true; try { for (let i = 0; i < 80; i++) { spells.update(1 / 60, game); fx?.render(strict); } } catch { ok = false; }
+  assert(fx && hidden === 0 && shown > .9 && ok && fx.isFinished, 'A new Arcane State plays its transition (charge, flash, pillar) and the form appears after the flash');
+  buff.endBuffForm(P); spells.clearRuntime();
+}
+
 // Movement after the Unity original: rooted attacks, full combos on a target in front, long sprint jump, auto-run.
 {
   game.returnToHub(); game.setMatchMode('training'); game.startMatch(); game.selectTrainingMap('waterfalls');

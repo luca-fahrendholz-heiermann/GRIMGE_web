@@ -25,6 +25,7 @@ import './buff_v32_c.js'; // T25–T36
 import './buff_v32_extra.js'; // A01 / A02 from user reference art
 import './buff_v32_hands.js'; // A03 Tausendhand
 import { combat } from './combat.js';
+import { TransformationFx, transitionStyleOf, TRANSFORM_TIMING } from './transform_fx.js';
 import { groundYForDepth } from './world.js';
 
 export const BUFF_RUNE_PREFIX = 'buff_';
@@ -175,7 +176,10 @@ export function buffFade(player) {
   if (!form) return 0;
   const timer = form.id === 'B01' ? player.ninefoldTimer : form.id === 'B02' ? player.eidolonTimer : player.buffForm.timer;
   const age = player.buffForm?.age ?? 1;
-  return Math.max(0, Math.min(1, age * 2.2, timer * 2));
+  // A fresh transformation first plays its transition (charge → flash → pillar);
+  // the form steps out of the pillar after the flash.
+  const reveal = player.buffForm?.intro ? Math.max(0, (age - TRANSFORM_TIMING.reveal) * 3) : age * 2.2;
+  return Math.max(0, Math.min(1, reveal, timer * 2));
 }
 
 // Cast the buff rune. Returns false when another buff is still active.
@@ -194,8 +198,8 @@ export function activateBuffForm(player, id, quality = { duration: 1, power: 1, 
   else {
     player.ninefoldTimer = 0; player.eidolonTimer = 0;
   }
-  player.buffForm = { id, timer: duration, total: duration, age: active ? (player.buffForm?.age ?? 1) : 0, power: quality.power ?? 1 };
-  if (!active) buffTransformFx(player, form, 'in');
+  player.buffForm = { id, timer: duration, total: duration, age: active ? (player.buffForm?.age ?? 1) : 0, power: quality.power ?? 1, intro: !active };
+  if (!active) { emit(new TransformationFx(player, transitionStyleOf(form))); buffTransformFx(player, form, 'in'); }
   combat.spawnShockwave(player.x, player.y - 40, 80 * (quality.area ?? 1), form.mat.vein);
   combat.spawnShockwave(player.x, player.y - 4, 50, form.mat.edge);
   window.gameWorld?.showAnnouncement?.(`${form.name.toUpperCase()}${form.title ? ' — ' + form.title.toUpperCase() : ''} · ${Math.round(duration)} S`, 1.6);

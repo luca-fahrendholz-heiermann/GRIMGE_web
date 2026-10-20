@@ -13,6 +13,7 @@ import { FULL_CHARGE_TIME, activeMoveset, releaseFormTechnique, FORM_PALETTES } 
 import { releaseWeaponReach, releaseFormPull, isOnCastle } from './hold_actions.js';
 import { formDive, FORM_SPECIAL_MANA, tickFormSpecials } from './form_specials.js';
 import { renderInfusion } from './nature_spells.js';
+import { TransformationFx } from './transform_fx.js';
 import { hasWeaponDown, castWeaponDown, weaponUp, weaponDive, updateWeaponKit, weaponMoveMult, weaponAttackSpeed, meleeBuffMods, targetDamageMult, onWeaponMeleeHit, afterWeaponSwing, weaponIncoming } from './weapon_kits.js';
 import { updatePrimalBond, bondMoveMultiplier, bondGainMultiplier, bondDisplacement, bondOnBlock, primalSprintVariant, renderPrimalBond, endPrimalBond, bondMelee, primalQuake } from './primals.js';
 import { createSegments, damageSegments, updateSegments, renderSegments } from './castle_segments.js';
@@ -1834,7 +1835,8 @@ export class Player extends GroundEntity {
     this.focusTransformTimer = this.focus / FOCUS_TRANSFORM_DRAIN;
     this.focusTransformPower = 1;
     combat.spawnShockwave(this.x, this.y - 38, 92, '#f0a6ff');
-    combat.spawnElementalParticles(this.x, this.y - 38, 'void', 34);
+    // Transition (charge → flash → pillar) in the Ascendant colours.
+    spells.addSpell(new TransformationFx(this, { core: '#ffffff', main: '#f0a6ff', rim: '#b388ff', dark: '#3a1060', particle: 'shard', label: 'ASCENDANT' }), 'B');
     audio.playSpell('focus_ascendant');
     return true;
   }

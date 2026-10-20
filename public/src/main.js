@@ -28,6 +28,7 @@ import { SiegeMatch } from './siege_match.js';
 import { segmentStatus } from './castle_segments.js';
 import { HOLD_MIN_TIME } from './hold_actions.js';
 import { takeOfferedRecast, tickRecasts, runRecast } from './recast.js';
+import { TransformationFx } from './transform_fx.js';
 import { PrimalCompanion, normalizePrimalChoice, startPrimalBond, endPrimalBond, bondForm, PRIMAL_ARCHETYPES } from './primals.js';
 
 // LF2-style Dungeon rooms. Each room is a wide scrolling stretch: the camera
@@ -1609,6 +1610,9 @@ export class GameWorld {
     if (!p.grounded || p.freezeTimer > 0) { this.showAnnouncement('PRIMAL BOND NEEDS SOLID GROUND', 1); return false; }
     if (!primal.canBond(p)) { this.showAnnouncement(primal.isAlive ? `${primal.info.name} MUST BE CLOSE` : `${primal.info.name} IS DOWN`, 1.1); return false; }
     const bond = startPrimalBond(p, primal);
+    // Transition in the Primal's colours (wolf green, turtle cyan, ape violet).
+    const PRIMAL_TRANSITION = { wolf: ['#c6ff7a', '#73eb47', '#16341a'], turtle: ['#bff6ff', '#57e0f0', '#0e2a33'], ape: ['#efe6ff', '#b06cff', '#1c1030'] }[bond.archetype] ?? ['#ffffff', '#ffd54f', '#3a1d00'];
+    spells.addSpell(new TransformationFx(p, { core: '#ffffff', main: PRIMAL_TRANSITION[0], rim: PRIMAL_TRANSITION[1], dark: PRIMAL_TRANSITION[2], particle: bond.archetype === 'turtle' ? 'shard' : 'wisp', label: bond.form.name }), 'B');
     this.showAnnouncement(`PRIMAL BOND — ${bond.form.name.toUpperCase()}`, 1.4);
     return true;
   }
