@@ -2529,7 +2529,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   const step = (n, dt = 1 / 60) => { for (let i = 0; i < n; i++) { P.update(dt, neutral, game.battlefield, game); game.updateProjectiles(dt); spells.update(dt, game); } };
   const cast = (id, target = null) => spells.cast(P, spells.resolveSpell([{ id: 'sig_' + id }]), game, null, target);
   const ids = Object.keys(core.SIGNATURES);
-  assert(ids.length === 73 && ids.every((id) => core.signatureImpl(id)?.cast) && sigMod.SIGNATURE_RUNE_IDS.every((id) => isSpecialRune(id) && runeManaCost(id) >= 28 && runeManaCost(id) <= 46), 'All 73 signature specials (atlas S01–S36 + S37–S73) are special runes with their own mechanic and bound mana');
+  assert(ids.length === 74 && ids.every((id) => core.signatureImpl(id)?.cast) && sigMod.SIGNATURE_RUNE_IDS.every((id) => isSpecialRune(id) && runeManaCost(id) >= 28 && runeManaCost(id) <= 46), 'All 74 signature specials (atlas S01–S36 + S37–S74) are special runes with their own mechanic and bound mana');
   assert(ids.every((id) => spellHowTo('sig_' + id)?.effect?.length > 40) && !spells.resolveSpell([{ id: 'sig_S03' }, { id: 'ignis' }]), 'Signature specials explain themselves in the grimoire and never fuse');
   // Every special casts, runs and renders (strict canvas) without errors.
   const strict = new Proxy({}, { get: (t, k) => (k === 'ellipse' || k === 'arc') ? (x, y, rx, ry) => { if (rx < 0 || (k === 'ellipse' && ry < 0)) throw new Error('IndexSizeError ' + k); } : (k === 'canvas' ? undefined : () => {}), set: () => true });
@@ -3269,6 +3269,23 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
     for (const sp of [cube, beam, pact]) { if (!sp) continue; const t0 = sp.t; for (const tt of [.05, .3, .6, 1, 1.5]) { sp.t = tt; sp.render(strict); } sp.t = t0; }
     assert(!bad, 'S70–S73 render cleanly in every phase');
     spells.clearRuntime(); E.passive = false; E.x = 900;
+  }
+  // S74 TRUGBILD: doubles deceive the foes; a hit double bursts; 2nd tap swaps places.
+  {
+    const K = await import('./public/src/signature_abilities_k.js');
+    const E = game.enemyChampion;
+    reset(); dummy.homeX = dummy.x = 900; E.lifeState = 'Alive'; E.hp = E.maxHp; E.passive = false; E.x = P.x + 150; E.z = P.z; E.elevation = 0; E.attackCooldown = 0; E.aiSpecialIds = []; E.deckIds = []; E.spellCooldown = 99; E.beamCooldown = 99; // melee only: the hit must land on a double
+    const s74 = game.slotRuneSpell(runeById('sig_S74')); game.castSlotAt(s74.position);
+    const mirage = spells.activeSpells.find((sp) => sp instanceof K.Mirage);
+    assert(mirage?.doubles.length === 3 && E.deceivedBy?.isIllusion, 'S74: three doubles appear and the AI Wizard is deceived (targets a double)');
+    const hpReal = P.hp; let burst = false;
+    for (let i = 0; i < 240 && !burst; i++) { E.update(1 / 60, game, game.battlefield); spells.update(1 / 60, game); game.updateRecasts(1 / 60); if (mirage.doubles.some((d) => d.burstT != null)) burst = true; }
+    assert(burst && P.hp === hpReal, 'S74: the deceived AI attacks a double — it bursts into mist, the real Wizard stays untouched');
+    const before = { x: P.x, z: P.z }; game.castSlotAt(s74.position);
+    assert(Math.hypot(P.x - before.x, (P.z - before.z) * 150) > 30 && !P.slottedSpells.includes(s74), 'S74: tap again — swap places with a double (slot freed)');
+    let bad = 0; const strict = new Proxy({}, { get: (t, k) => (k === 'arc' || k === 'ellipse') ? (x, y, r1, r2) => { if (r1 < 0 || (k === 'ellipse' && r2 < 0)) bad++; } : k === 'canvas' ? undefined : () => {}, set: () => true });
+    mirage.render(strict); assert(!bad, 'S74 renders cleanly');
+    spells.clearRuntime(); E.passive = false; E.x = 900; E.deceivedBy = null; E.deceiveTimer = 0; E.tauntedBy = null; E.tauntTimer = 0; E.spellCooldown = 0; E.beamCooldown = 0; P.invulnerableTimer = 0;
   }
   // S48: a hit is negated, the Wizard reappears behind the attacker and counters; three charges.
   reset(); const s48 = game.slotRuneSpell(runeById('sig_S48')); game.castSlotAt(s48.position);

@@ -2262,7 +2262,10 @@ export class EnemyChampion extends GroundEntity {
     this.specialCooldown = Math.max(0, (this.specialCooldown ?? 0) - dt); updateAIRecast(this, dt, gameWorld);
     this.attackCooldown -= dt; this.spellCooldown -= dt; this.defensiveCooldown -= dt; this.beamCooldown -= dt; this.mp = Math.min(this.maxMp, this.mp + dt * 11); this.arcaneShieldTimer = Math.max(0, this.arcaneShieldTimer - dt); if (this.arcaneShieldTimer <= 0) this.arcaneShield = 0; this.freezeTimer = Math.max(0, this.freezeTimer - dt); this.slowTimer = Math.max(0, this.slowTimer - dt); if (!this.slowTimer) this.slowFactor = 1;
     if (this.stateTimer > 0) { this.stateTimer -= dt; if (this.stateTimer <= 0) this.state = this.grounded ? 'idle' : 'fall'; }
-    const player = gameWorld.player; const distance = player.isAlive ? groundDistance(this, player) : Infinity;
+    // Deceived (S74 Trugbild): the AI Wizard goes for an illusion double instead of the real one.
+    this.deceiveTimer = Math.max(0, (this.deceiveTimer ?? 0) - dt);
+    const decoy = this.deceiveTimer > 0 && this.deceivedBy?.isAlive ? this.deceivedBy : null;
+    const player = decoy ?? gameWorld.player; const distance = player.isAlive ? groundDistance(this, player) : Infinity;
     const home = gameWorld.getEnemyHome?.(this.team, battlefield) ?? battlefield.getSpawn(this.team);
     const ownTower = battlefield.getTower(this.team);
     const ownCastle = battlefield.getCastle(this.team);

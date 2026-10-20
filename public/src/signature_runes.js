@@ -20,6 +20,7 @@ import './signature_abilities_g.js'; // S53 (domain expansion)
 import './signature_abilities_h.js'; // S54 (shadow bind)
 import './signature_abilities_i.js'; // S55 (azure flame lane dash)
 import './signature_abilities_j.js'; // S70–S73 (seal cube, wrath beam, blood pact, time stop)
+import './signature_abilities_k.js'; // S74 (illusion doubles)
 
 export { SIGNATURES, isSignatureRuneId, SIGNATURE_RUNE_IDS, SIG_PREFIX, setHitContext, startStance, endStance };
 
