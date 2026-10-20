@@ -46,7 +46,7 @@
 | ◉ | **VOID IMPLOSION** `transform_implode` | Transformation | ◉ | `#b668ff` | 0 | Any gesture while Eidolon Mantle | — |
 | ⚡ | **INFERNO RAMPAGE** `transform_rampage` | Transformation | ⚡ | `#ff6f3b` | 0 | Any gesture while Ninefold Beast | — |
 | <img src="runes/buff_sigil.svg" width="48" alt="buff"> | **ARCANE-STATE-SIEGEL** `buff_*` (18 Runen) | Arcane State | ⧗ | je Form | 30 | Sanduhr ⧗ in einem geschlossenen Strich — **Tag: arcane-state · max-1-per-deck** | der Arcane State der Rune (Abschnitt 3.7) |
-| <img src="runes/sig_S01.svg" width="48" alt="sig"> | **SIGNATURE-SPEZIALRUNEN** `sig_*` (48 Runen) | Signature Special | ✦ | je Rune | 28–44 | **eigenes mehrstrichiges Symbol je Rune** (Abschnitt 3.8) — Tag: signature-special · je Rune 1× pro Deck | die Signature-Mechanik der Rune (Abschnitt 3.8) |
+| <img src="runes/sig_S01.svg" width="48" alt="sig"> | **SIGNATURE-SPEZIALRUNEN** `sig_*` (49 Runen) | Signature Special | ✦ | je Rune | 28–44 | **eigenes mehrstrichiges Symbol je Rune** (Abschnitt 3.8) — Tag: signature-special · je Rune 1× pro Deck | die Signature-Mechanik der Rune (Abschnitt 3.8) |
 
 ### Glyphen als ASCII (Ziffer = Startpunkt des Strichs)
 
@@ -1447,6 +1447,7 @@ Quelle: `docs/GRIMGE_Spezialrunen_Research_Designatlas_V1.md` (S01–S36). Spezi
 | S46 | <img src="runes/sig_S46.svg" width="48" alt="sig_S46"> | **Spiralkugel** `sig_S46` | G · Zweistufig · Launcher · 3 s | `direction` | 38 | Stage 1: rush forward with a spinning energy ball — the impact launches the foe high. Stage 2 (tap again within 2.5 s): teleport above it and slam it into the ground with an explosion. | Eine wirbelnde blaue Energiekugel mit weißen Spiralbahnen in der Hand. |  |
 | S47 | <img src="runes/sig_S47.svg" width="48" alt="sig_S47"> | **Bannfalle** `sig_S47` | G · Zweistufig · Falle · 20 s | `ground` | 28 | Stage 1: lay a seal trap at the target point — it is always armed and goes off when a foe steps on it. Stage 2 (tap again within 6 s): detonate it yourself with a bigger blast. After the window it stays armed but can only be set off by contact. | Ein Papiersiegel mit rotem Zeichen in einem doppelten Bannkreis. |  |
 | S48 | <img src="runes/sig_S48.svg" width="48" alt="sig_S48"> | **Schattenkonter** `sig_S48` | G · Haltung · Konter-Ladungen · 12 s | `self` | 34 | Three counter charges for 12 s: each hit you take is negated — you vanish and reappear behind the attacker with a counter strike (without a known attacker: a sidestep). | Drei dunkle Schattenkugeln kreisen um den Körper; beim Konter bleibt ein Schattenschleier zurück. |  |
+| S49 | <img src="runes/sig_S49.svg" width="48" alt="sig_S49"> | **Flutstrahl** `sig_S49` | G · Zweistufig · Wasser → Eis · 5 s | `direction` | 30 | Stage 1: a pressure jet of water pushes foes back, soaks them and leaves puddles. Stage 2 (tap again within 5 s): everything soaked freezes solid and the puddles turn to ice. | Ein satter, mehrlagiger Wasserstrahl mit Schaumspitze; durchnässte Gegner tropfen, beim Einfrieren umschließt sie ein Eisblock. |  |
 
 Hinweis: `DRAGON INVOCATION` hat zwei Rezepte (Bestia+Ignis+Ventus und Fulgur+Ignis+Terra). Von den 220 möglichen Drei-Runen-Kombinationen der Basisrunen (mit Wiederholung) sind nur wenige belegt.
 
@@ -1484,7 +1485,7 @@ Ehemalige Transformations-Spells: ANNIHILATION BEAM (über Focus Ascendant Forwa
 | `slam` | SEISMIC SLAM |
 | `stomp` | TITAN STOMP, SHADOW STOMPER |
 | `summon` | BEAST FAMILIAR, SHADOW DOPPELGANGER, REVENANT CALL, STORM WOLF, VOID SPIDER, RUNE GOLEM, WORLD RUNE SERPENT, SPIRIT WOLF, SIEGE GOLEM |
-| `dash` | SHADOW STEP, INFERNO RAMPAGE, TEMPEST BLITZ, KOMETENTRÄGER, EISZACKEN, BLITZMARKE, SPIRALKUGEL |
+| `dash` | SHADOW STEP, INFERNO RAMPAGE, TEMPEST BLITZ, KOMETENTRÄGER, EISZACKEN, BLITZMARKE, SPIRALKUGEL, FLUTSTRAHL |
 | `heavy_object` | METEOR CATACLYSM |
 | `self` | SANDSTORM BASTION, ARCANE AEGIS, SOLAR ORB, LUNAR ORB, ECLIPSE, THUNDERHEAD, BLOOD MOON, STARFALL, AURORA VEIL, HEILBLÜTE, GROSSE BLÜTE, SEGENSKREIS, FLAMMENKLINGE, FROSTKLINGE, STURMKLINGE, GIFTKLINGE, BLUTKLINGE, REISSKLINGE, ARKENGESTELL, RISSWILD, RISSWILD, ARKENGESTELL, SCHLACKENKERN, KORALLENSCHILD, BRUCHFLUG, IONSPINDEL, OSSUARIUM, FADENSCHLAG, NULLFELDTRÄGER, FADENREGENT, KÄLTESTILLSTAND, SÄUREGERÜST, ASTERGLIED, VORAUSSCHNITT, SONNENWYRM, GÖTTLICHER RIESE, MYSTISCHER AFFE, TAUSENDHAND, HIMMELSREGENT, AUREOLENSCHWARM, SCHWEBENDE BASTION, NACHHALLARCHIV, RÜCKSPRUNGNADEL, PRISMENHALTER, SCHWARMPROTOKOLL, KLINGENCHOR, RUNENSCHMIEDE, ECHOFAMULUS, SCHERBENHANDEL, TIDENBOHRER, WASSERATMUNG, FLAMMENATMUNG, DONNERATMUNG, SCHATTENKONTER |
 
@@ -1506,9 +1507,9 @@ Ehemalige Transformations-Spells: ANNIHILATION BEAM (über Focus Ascendant Forwa
 
 ## 7. Statistik
 
-- Runen: 82 (davon 10 Basis, 2 Solo-Spezial, 48 Signature-Spezial, 18 Arcane States, 3 Transformation)
-- Spells: 136 — Fundamental 11, Solo 2, Compound 39, Himmelsfelder 7, Advanced 10, Transformation 1
-- Rezepte: 135 · freie Zwei-Runen-Paare: 17 von 55
+- Runen: 83 (davon 10 Basis, 2 Solo-Spezial, 49 Signature-Spezial, 18 Arcane States, 3 Transformation)
+- Spells: 137 — Fundamental 11, Solo 2, Compound 39, Himmelsfelder 7, Advanced 10, Transformation 1
+- Rezepte: 136 · freie Zwei-Runen-Paare: 17 von 55
 
 ## 8. Hinweise für den Research-Agenten
 

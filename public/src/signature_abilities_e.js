@@ -238,3 +238,52 @@ defineSignature('S48', {
     }
   }
 });
+
+// ── S49 Flutstrahl ───────────────────────────────────────────────────────
+// Stage 1: a pressure jet of water pushes foes back, soaks them and leaves
+// puddles. Stage 2 (within 5 s): everything soaked freezes, the puddles turn to ice.
+import { environment } from './environment.js';
+const WATER = { dark: '#0b3d73', body: '#1f7fd1', mid: '#2fb4ea', foam: '#d6f6ff', ice: '#e3faff' };
+class FloodJet {
+  constructor(sig, owner) { this.sig = sig; this.owner = owner; this.team = owner.team; this.f = owner.facing || 1; this.x = owner.x; this.z = owner.z; this.t = 0; this.dur = .6; this.soaked = new Set(); this.puddles = []; this.isFinished = false; this.frozenAt = null; }
+  get y() { return groundYForDepth(this.z); }
+  update(dt, gw) {
+    this.t += dt;
+    if (this.t < this.dur) {
+      const reach = 30 + 250 * Math.min(1, this.t / .3);
+      for (const t of foesOf(gw, this.team)) { if (t.isProp) continue; const dx = (t.x - this.x) * this.f; if (dx > 10 && dx < reach && Math.abs(((t.z ?? this.z) - this.z) * DEPTH) < 22) { if (!this.soaked.has(t)) { this.soaked.add(t); hit(t, 10, this.f * 260, 30, .3); } t.slow?.(.3, .7); } }
+      if (this.puddles.length < 4 && this.t > this.puddles.length * .12) { const px = this.x + this.f * (60 + this.puddles.length * 60); this.puddles.push(px); environment.add('water', px, this.z, { radius: 30 }); }
+    }
+    if (this.frozenAt != null && this.t - this.frozenAt > .6) this.isFinished = true;
+    if (this.t > 5.5) this.isFinished = true;
+  }
+  freeze(gw) {
+    this.frozenAt = this.t;
+    for (const t of this.soaked) if (alive(t)) { t.freeze?.(1.4); t.slow?.(2, .5); hit(t, 18, 0, 0, 1.4); }
+    for (const px of this.puddles) environment.add('ice', px, this.z, { radius: 34 });
+    combat.shakeCamera(6, .2); audio.playImpact?.(true);
+  }
+  render(ctx) {
+    const y = this.y - 40; const f = this.f;
+    if (this.t < this.dur) {
+      const reach = 30 + 250 * Math.min(1, this.t / .3); const fade = this.t > this.dur - .15 ? (this.dur - this.t) / .15 : 1;
+      const x0 = this.owner.x + f * 16; const x1 = this.x + f * reach;
+      ctx.save(); ctx.globalAlpha = fade; ctx.lineCap = 'round';
+      for (const [w, c] of [[14, WATER.dark], [10, WATER.body], [6, WATER.mid], [2, WATER.foam]]) { ctx.strokeStyle = c; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(x0, y); for (let i = 1; i <= 10; i++) { const u = i / 10; ctx.lineTo(x0 + (x1 - x0) * u, y + Math.sin(this.t * 30 + i) * 2 * u + u * 6); } ctx.stroke(); }
+      ctx.fillStyle = WATER.foam; for (let i = 0; i < 5; i++) ctx.fillRect(Math.round(x1 + f * (i * 3 - 6)), Math.round(y + 4 + Math.sin(this.t * 40 + i) * 6), 3, 3);
+      ctx.restore();
+    }
+    // Soaked foes drip; after the freeze an ice block encloses them.
+    for (const t of this.soaked) {
+      if (!alive(t)) continue; const ty = (t.y ?? this.y) - 30;
+      if (this.frozenAt == null) { ctx.save(); ctx.fillStyle = WATER.mid; for (let i = 0; i < 3; i++) ctx.fillRect(Math.round(t.x - 8 + i * 8), Math.round(ty + ((this.t * 60 + i * 9) % 26)), 2, 3); ctx.restore(); }
+      else { const k = Math.min(1, (this.t - this.frozenAt) / .15); plate(ctx, [[t.x - 16, ty + 30], [t.x - 18, ty - 30 * k], [t.x + 18, ty - 34 * k], [t.x + 16, ty + 30]], { kind: 'crystal', dark: '#1c3c52', body: '#8fd8ff', facet: WATER.ice, vein: '#bff0ff', edge: '#ffffff', spark: '#ffffff', core: '#ffffff', glow: 'rgba(143,216,255,', edgeGlow: 'rgba(255,255,255,' }, 4901, { alpha: .75, glowEdge: 1 }); }
+    }
+  }
+}
+defineSignature('S49', {
+  cast(c) {
+    const p = c.caster; const jet = emit(new FloodJet(c.sig, p), c.quality);
+    offerRecast(p, { window: 5, label: 'EINFRIEREN', valid: () => !jet.isFinished && jet.frozenAt == null, stage2: (gw) => jet.freeze(gw) });
+  }
+});

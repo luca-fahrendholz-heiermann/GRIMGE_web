@@ -12,6 +12,7 @@ import { castSignature, signatureProjectileSpawned, updateSignatureWorld } from 
 import { castNatureSpell, isNatureOrInfusion } from './nature_spells.js';
 import { renderWallLook } from './wall_looks.js';
 import { renderSpellVisual, meteorShatterBurst, spellVisualActive } from './spell_visuals.js';
+import { offerRecast } from './recast.js';
 import { BeamSpell, BeamClash, resolveBeamInteractions, MirrorWardSpell, GravityLiftSpell, TitanStompSpell, SoulSeekerBolt, SeismicSlamSpell, ConeBreathSpell, BurrowStrikeSpell, ShieldBubbleSpell, renderPixelated } from './abilities.js';
 
 export { BeamClash };
@@ -708,6 +709,18 @@ export class SpellSystem {
       combat.spawnDust(wall.x, wall.y, 3);
       combat.spawnElementalParticles(wall.x, wall.y, 'terra', Math.round(5 * quality.particles));
     }
+    // Stage 2 (within 5 s): the wall bursts toward the enemy — every segment throws stone shrapnel ahead.
+    offerRecast(caster, { window: 5, label: 'MAUER SPRENGEN', valid: () => blocks.some((w) => !w.isDead), stage2: (gw) => {
+      const f = caster.facing || 1;
+      for (const wall of blocks) {
+        if (wall.isDead) continue;
+        for (const t of gw.getHostileTargets(caster.team)) { if (t.isStoneWall || t.isDead) continue; const dx = (t.x - wall.x) * f; if (dx > -10 && dx < 130 && Math.abs(((t.z ?? wall.z) - wall.z) * 150) < 26) t.takeDamage?.(24 * (quality.power ?? 1), f * 340, 120, .5, false, 'spell'); }
+        combat.spawnHitSparks(wall.x, wall.y - wall.wallHeight * .5, f, '#c7b299', 10);
+        combat.spawnShockwave(wall.x + f * 30, wall.y - 30, 40, '#a1887f');
+        wall.life = 0;
+      }
+      combat.shakeCamera(8, .25);
+    } });
     return blocks[0];
   }
 

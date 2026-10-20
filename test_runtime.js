@@ -2453,7 +2453,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   const step = (n, dt = 1 / 60) => { for (let i = 0; i < n; i++) { P.update(dt, neutral, game.battlefield, game); game.updateProjectiles(dt); spells.update(dt, game); } };
   const cast = (id, target = null) => spells.cast(P, spells.resolveSpell([{ id: 'sig_' + id }]), game, null, target);
   const ids = Object.keys(core.SIGNATURES);
-  assert(ids.length === 48 && ids.every((id) => core.signatureImpl(id)?.cast) && sigMod.SIGNATURE_RUNE_IDS.every((id) => isSpecialRune(id) && runeManaCost(id) >= 28 && runeManaCost(id) <= 46), 'All 48 signature specials (atlas S01–S36 + S37–S48) are special runes with their own mechanic and bound mana');
+  assert(ids.length === 49 && ids.every((id) => core.signatureImpl(id)?.cast) && sigMod.SIGNATURE_RUNE_IDS.every((id) => isSpecialRune(id) && runeManaCost(id) >= 28 && runeManaCost(id) <= 46), 'All 49 signature specials (atlas S01–S36 + S37–S49) are special runes with their own mechanic and bound mana');
   assert(ids.every((id) => spellHowTo('sig_' + id)?.effect?.length > 40) && !spells.resolveSpell([{ id: 'sig_S03' }, { id: 'ignis' }]), 'Signature specials explain themselves in the grimoire and never fuse');
   // Every special casts, runs and renders (strict canvas) without errors.
   const strict = new Proxy({}, { get: (t, k) => (k === 'ellipse' || k === 'arc') ? (x, y, rx, ry) => { if (rx < 0 || (k === 'ellipse' && ry < 0)) throw new Error('IndexSizeError ' + k); } : (k === 'canvas' ? undefined : () => {}), set: () => true });
@@ -2886,6 +2886,25 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   const { setHitContext } = await import('./public/src/signature_runes.js');
   setHitContext(attacker); const hpBefore = P.hp; P.invulnerableTimer = 0; P.takeDamage(30, -200, 0, .3, false, 'melee'); setHitContext(null);
   assert(P.hp === hpBefore && attacker.took > 0 && P.x > attacker.x && P.signature?.charges === 2 && P.state !== 'hurt' && !(Math.abs(P.kbVelX ?? 0) > 0), 'S48 SCHATTENKONTER: a hit is negated, the Wizard counters from behind the attacker (charge used)');
+  // More two-stage spells: S38 shafts burst, Stone Wall bursts forward, S49 water jet → freeze.
+  const { SPELL_DEFINITIONS } = await import('./public/src/spell_catalog.js');
+  reset(); dummy.homeX = dummy.x = 420; const s38 = game.slotRuneSpell(runeById('sig_S38')); game.castSlotAt(s38.position);
+  if (game.targeting.isActive) { game.targeting.setPoint?.({ x: 360, z: .5 }); game.targeting.confirm(); }
+  frame(1.2); const hp38 = dummy.hp;
+  assert(s38.recast && P.slottedSpells.includes(s38), 'S38 SCHACHTWUCHS offers a second stage');
+  game.castSlotAt(s38.position); frame(.3);
+  assert(dummy.hp < hp38 && !P.slottedSpells.includes(s38), 'S38 stage 2: the shafts burst and hit foes around them');
+  reset(); dummy.homeX = dummy.x = 900; P.facing = 1;
+  const wallSlot = { runes: [runeById('terra'), runeById('terra')], definition: SPELL_DEFINITIONS.stone_wall, isCombo: true, quality: spells.qualityForRunes([{ id: 'terra' }]), position: 0, manaCost: 25 };
+  P.slottedSpells.push(wallSlot); game.castSpellSlot(wallSlot, true, { start: { x: 360, z: .4 }, end: { x: 360, z: .6 }, x: 360, z: .5, orientation: 'lateral', length: 80 });
+  const walls = spells.activeSpells.filter((w) => w.isStoneWall); dummy.homeX = dummy.x = 420; dummy.homeZ = dummy.z = .5; frame(.2); const hpW = dummy.hp;
+  assert(walls.length > 0 && wallSlot.recast, 'STONE WALL offers a second stage (burst)');
+  game.castSpellSlot(wallSlot, true); frame(.2);
+  assert(dummy.hp < hpW && walls.every((w) => w.isFinished || w.life <= 0), 'Stone Wall stage 2: the wall bursts forward and hits the foe behind it');
+  reset(); dummy.homeX = dummy.x = 420; const s49 = game.slotRuneSpell(runeById('sig_S49')); game.castSlotAt(s49.position); frame(.7);
+  const jet = spells.activeSpells.find((sp) => sp.constructor.name === 'FloodJet'); const hp49 = dummy.hp;
+  game.castSlotAt(s49.position); frame(.1);
+  assert(jet?.soaked.has(dummy) && jet.frozenAt != null && dummy.hp < hp49 && !P.slottedSpells.includes(s49), 'S49 FLUTSTRAHL: the jet soaks the foe, stage 2 freezes everything soaked');
   reset();
 }
 

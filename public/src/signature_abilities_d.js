@@ -15,6 +15,7 @@ import { environment } from './environment.js';
 import { groundYForDepth } from './world.js';
 import { applyStatuses } from './buff_techniques.js';
 import { GeoPlatform } from './geometry.js';
+import { offerRecast } from './recast.js';
 import { renderSpellVisual, drawIceCrack, SpriteBurst, tideHitBurst } from './spell_visuals.js';
 
 const gameOf = (c) => c.gw ?? sigWorld();
@@ -53,8 +54,18 @@ defineSignature('S38', {
   cast(c) {
     const p = c.caster; const f = p.facing || 1; const game = gameOf(c);
     const x0 = c.target?.x ?? p.x + f * 90; const z = c.target?.z ?? p.z;
-    [50, 92, 134].forEach((h, i) => emit(new GeoPlatform(p, game, { x: x0 + f * i * 54, z, halfW: 24, halfD: .06, height: h, life: 8, emerge: .3, decay: .5, delay: i * .14, look: 'stone', damage: 26, lift: 420, stun: .6, label: 'Stone shaft' }), c.quality));
+    const shafts = [50, 92, 134].map((h, i) => emit(new GeoPlatform(p, game, { x: x0 + f * i * 54, z, halfW: 24, halfD: .06, height: h, life: 8, emerge: .3, decay: .5, delay: i * .14, look: 'stone', damage: 26, lift: 420, stun: .6, label: 'Stone shaft' }), c.quality));
     combat.shakeCamera(6, .3);
+    // Stage 2 (within 6 s): the shafts burst — stone shrapnel hits everyone around and on top of them.
+    offerRecast(p, { window: 6, label: 'SCHÄCHTE SPRENGEN', valid: () => shafts.some((sh) => !sh.isFinished), stage2: (gw) => {
+      for (const sh of shafts) {
+        if (sh.isFinished) continue;
+        for (const t of foesOf(gw, p.team)) if (Math.hypot(t.x - sh.x, ((t.z ?? sh.z) - sh.z) * DEPTH) < 70) hit(t, 32, Math.sign(t.x - sh.x || f) * 320, 260, .6);
+        emit(new SigSequence(c.sig, p, { dur: .5, x: sh.x, z: sh.z, draw: (ctx, s, k) => { const y = groundYForDepth(s.z) - 30; for (let i = 0; i < 9; i++) { const a = -Math.PI * (.05 + .9 * i / 8); const r = 10 + k * 70; plate(ctx, [[s.x + Math.cos(a) * r - 4, y + Math.sin(a) * r * .8 + 60 * k * k], [s.x + Math.cos(a) * r + 3, y + Math.sin(a) * r * .8 - 4 + 60 * k * k], [s.x + Math.cos(a) * r + 4, y + Math.sin(a) * r * .8 + 4 + 60 * k * k]], { kind: 'crust', dark: '#2f2a24', body: '#6d6253', facet: '#8f8371', vein: '#d9b77a', edge: '#efe0bd', spark: '#f6d58a', core: '#fff6d8', glow: 'rgba(217,183,122,', edgeGlow: 'rgba(239,224,189,' }, 3800 + i, { alpha: 1 - k }); } } }), c.quality);
+        sh.shatter();
+      }
+      combat.shakeCamera(10, .3);
+    } });
   }
 });
 
