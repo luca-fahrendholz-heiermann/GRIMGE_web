@@ -10,6 +10,7 @@
 //                    caster, strikes ONE huge claw blow across the front, vanishes
 //   S73 ZEITSTOPP    a field where every projectile freezes in mid-air (yours
 //                    too); when the field ends they fly on
+import { applyStatus } from './status_effects.js';
 import { defineSignature, emit, foesOf, hit, plate, TAU, DEPTH } from './signature_core.js';
 import { offerRecast } from './recast.js';
 import { combat } from './combat.js';
@@ -151,7 +152,9 @@ defineSignature('S71', {
 });
 
 // ── S72 Blutvertrag ──────────────────────────────────────────────────────
-export const PACT = Object.freeze({ seal: .45, rise: .4, strike: .3, sink: .6, reach: 280, damage: 58 });
+// The pact costs blood (a share of the caster's HP); the beast's blow crushes everything in
+// front (wide), throws it down, makes it bleed and leaves it frozen in terror for a moment.
+export const PACT = Object.freeze({ seal: .45, rise: .4, strike: .3, sink: .6, reach: 320, depth: 72, damage: 86, bloodCost: .08, terror: .9, launch: 420 });
 const BEAST = mat('#1a0c08', '#5d2e1f', '#8d4b32', '#ff7043', '#ffccbc', '#ffab91');
 export class BloodPact {
   constructor(sig, owner, quality) { this.sig = sig; this.owner = owner; this.team = owner.team; this.quality = quality; this.f = owner.facing || 1; this.x = owner.x - this.f * 30; this.z = Math.max(.04, owner.z - .06); this.t = 0; this.struck = false; this.isFinished = false; }
@@ -159,11 +162,20 @@ export class BloodPact {
   update(dt, gw) {
     this.t += dt; const p = this.owner;
     if (this.t < PACT.seal) { p.state = 'heavyStrike'; p.stateTimer = .1; p.vx = 0; p.vz = 0; }
+    // The price: the caster's own blood seals the pact (never lethal).
+    if (!this.paid) { this.paid = true; const cost = Math.floor((p.maxHp ?? 0) * PACT.bloodCost); if (cost > 0 && p.hp > cost + 1) { p.hp -= cost; combat.spawnDamageText?.(p.x, (p.y ?? 0) - 70, `−${cost} BLUT`, { color: '#d50000' }); } }
     const strikeAt = PACT.seal + PACT.rise + PACT.strike * .6;
     if (!this.struck && this.t >= strikeAt) {
       this.struck = true;
       // ONE huge claw blow across the front.
-      for (const t of foesOf(gw, this.team)) { if (t.isProp) continue; const along = (t.x - p.x) * this.f; if (along > -20 && along < PACT.reach && Math.abs(((t.z ?? p.z) - p.z) * DEPTH) < 46) hit(t, Math.round(PACT.damage * (this.quality?.power ?? 1)), this.f * 420, 260, .8, true); }
+      for (const t of foesOf(gw, this.team)) {
+        if (t.isProp) continue;
+        const along = (t.x - p.x) * this.f;
+        if (along < -30 || along > PACT.reach || Math.abs(((t.z ?? p.z) - p.z) * DEPTH) > PACT.depth) continue;
+        hit(t, Math.round(PACT.damage * (this.quality?.power ?? 1)), this.f * 520, PACT.launch, .9, true);
+        applyStatus(t, 'bleed', { force: true }); t.freeze?.(PACT.terror);
+        combat.spawnHitSparks?.(t.x, (t.y ?? 0) - 40, this.f, '#ff1744', 22);
+      }
       combat.shakeCamera(16, .5); combat.triggerHitstop?.(7); audio.playImpact?.(true);
       combat.spawnShockwave(p.x + this.f * 140, groundYForDepth(p.z), 150, '#ff7043');
     }

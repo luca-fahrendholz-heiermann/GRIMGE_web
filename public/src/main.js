@@ -1212,7 +1212,7 @@ export class GameWorld {
   // Slots whose spell charges while the slot is held (touch: press starts, release fires).
   isChargeSlot(position) {
     const slot = this.slotAt(position);
-    return !!slot && !slot.recast && ['S71'].includes(slot.definition?.signatureId);
+    return !!slot && !slot.recast && ['S71', 'S55'].includes(slot.definition?.signatureId);
   }
 
   slotAt(position) {

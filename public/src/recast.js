@@ -47,7 +47,7 @@ export function runRecast(slot, game) {
   if (out && typeof out === 'object' && out.again) {
     // Multi-tap: keep the slot open for the next tap.
     const window = out.window ?? r.left;
-    slot.recast = { ...r, label: out.label ?? r.label, left: window, total: out.window ?? r.total };
+    slot.recast = { ...r, label: out.label ?? r.label, left: window, total: out.window ?? r.total, releaseOnUp: out.releaseOnUp ?? r.releaseOnUp };
     return true;
   }
   return out !== false;

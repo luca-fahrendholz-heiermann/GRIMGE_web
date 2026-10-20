@@ -3233,7 +3233,10 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
     const x0 = P.x; const s55 = game.slotRuneSpell(runeById('sig_S55')); game.castSlotAt(s55.position);
     const birds = spells.activeSpells.find((sp) => sp instanceof I.ThousandBirds); birds.forceBurn = true;
     stepB(.15);
-    assert(birds.phase === 'charge' && Math.abs(P.x - x0) < 1, 'S55: a short charge first (blue flame in the hand, the Wizard stands)');
+    assert(birds.phase === 'charge' && Math.abs(P.x - x0) < 1, 'S55: holding the slot charges (blue fire in the hand, sparks spraying, the Wizard stands)');
+    stepB(.6); assert(birds.phase === 'charge' && birds.chargeK > .4, 'S55: the charge keeps building while held — it only fires on release');
+    game.castSlotAt(s55.position); // release (keys: tap again; touch: let go of the slot)
+    assert(birds.phase === 'dash' && birds.x1 - birds.x0 > I.BIRD.length + 100 && birds.dashDamage > I.BIRD.damage, 'S55: the release dashes — farther and harder the longer the charge');
     let inv = true; for (let i = 0; i < 18; i++) { stepB(1 / 60); if (birds.phase === 'dash' && !(P.invulnerableTimer > 0)) inv = false; }
     stepB(.3);
     assert(P.x - x0 > 250 && dummy.hp < dummy.maxHp && E.hp < E.maxHp && inv, 'S55: the azure dash runs THROUGH every foe in the lane (both hit), invulnerable meanwhile');
@@ -3278,7 +3281,8 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
     reset(); dummy.homeX = dummy.x = 900; foeAt(180); const hpPact = E.hp;
     const s72 = game.slotRuneSpell(runeById('sig_S72')); game.castSlotAt(s72.position); runJ(1.6);
     const pact = spells.activeSpells.find((sp) => sp instanceof J.BloodPact);
-    assert(hpPact - E.hp >= J.PACT.damage - .5, 'S72 BLUTVERTRAG: the summoned beast strikes ONE huge blow across the front');
+    assert(hpPact - E.hp >= J.PACT.damage - .5 && STATUS.hasStatus(E, 'bleed'), 'S72 BLUTVERTRAG: the summoned beast crushes the front with ONE huge blow — the foe bleeds');
+    assert(P.hp <= P.maxHp - Math.floor(P.maxHp * J.PACT.bloodCost), 'S72: the pact costs the caster blood (a share of HP)');
     // Time stop: a projectile entering the field hangs in the air, then flies on.
     reset(); dummy.homeX = dummy.x = 900; E.x = 900;
     spells.cast(P, { ...spells.resolveSpell([runeById('sig_S73')]) }, game, null, { x: P.x + 140, z: P.z });
