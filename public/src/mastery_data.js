@@ -43,14 +43,14 @@ export const MASTERY_TREES = Object.freeze({
     instinct: { name: 'Instinkt', tiers: ['Jeder 4. Bestia-Treffer ist kritisch (+50 %).', 'Jeder 3. Bestia-Treffer.', 'Kritische Treffer lassen bluten.', 'Kritische Treffer heilen 3 HP.'] },
     pack: { name: 'Rudel', tiers: ['Bestia-Treffer markieren das Ziel 3 s: dein nächster anderer Treffer darauf +20 %.', '+30 % beim Einlösen.', 'Markierte Ziele sind verlangsamt.', 'Das Einlösen der Markierung heilt 3 HP.'] }
   } },
-  ward: { name: 'Schutz (Ward) · alle Schilde', color: '#b388ff', branches: {
+  ward: { name: 'Schutz · wirkt auf alle Schilde', color: '#b388ff', branches: {
     absorb: { name: 'Absorbieren', tiers: ['+25 % Schildkapazität.', '+50 % Schildkapazität.', 'Absorbierter Schaden lädt eine Reaktion auf: perfekter Block oder nächster schwerer Angriff entlädt sie.', 'Restkapazität entlädt sich beim Schildende als Schockwelle.'] },
     retaliate: { name: 'Vergeltung', tiers: ['Schildtreffer erzeugen einen kleinen Gegenschlag.', 'Der Gegenschlag trifft auch alle Gegner in deiner Nähe.', 'Der Gegenschlag übernimmt die Element-Tags des Schildes.', 'Gegenschläge dürfen Kette und Lebensentzug nutzen.'] },
     sustain: { name: 'Aufrechterhalten', tiers: ['Schilddauer +30 %.', 'Eigene Treffer verlängern den Schild leicht.', 'Verlängerung durch mehrere Ziele wird abgeschwächt (fair).', 'Ein neuer Schild übernimmt die Hälfte der Restdauer.'] }
   } }
 });
 // Which rune a tree belongs to (ward: none — the shield principle is open to everyone).
-const TREE_RUNE = { fulgur: 'fulgur', natura: 'natura', aqua: 'aqua', ignis: 'ignis', terra: 'terra', umbra: 'umbra', ventus: 'ventus', lux: 'lux', void: 'void', construct: 'construct', bestia: 'bestia', ward: null };
+const TREE_RUNE = { fulgur: 'fulgur', natura: 'natura', aqua: 'aqua', ignis: 'ignis', terra: 'terra', umbra: 'umbra', ventus: 'ventus', lux: 'lux', void: 'void', construct: 'construct', bestia: 'bestia', ward: 'ward' };
 export const MASTERY_NODE_IDS = Object.freeze(Object.entries(MASTERY_TREES).flatMap(([tree, t]) => Object.keys(t.branches).flatMap((b) => [1, 2, 3, 4].map((n) => `${tree}.${b}.${n}`))));
 export const masteryRune = (id) => TREE_RUNE[String(id).split('.')[0]] ?? null;
 export function masteryNode(id) {

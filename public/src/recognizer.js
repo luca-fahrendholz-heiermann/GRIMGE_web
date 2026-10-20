@@ -7,7 +7,7 @@ const guideIdOf = (id) => (String(id).startsWith('buff_') ? 'buff_sigil' : Strin
 const TEMPLATE_CACHE = new Map();
 const templateOf = (id) => { const key = guideIdOf(id); if (!RUNE_GUIDES[key]) return null; if (!TEMPLATE_CACHE.has(key)) TEMPLATE_CACHE.set(key, cloudOf(RUNE_GUIDES[key])); return TEMPLATE_CACHE.get(key); };
 // Runes recognised by point-cloud template (complex glyphs): signature specials and NATURA's leaf.
-const isTemplateRune = (id) => String(id).startsWith('sig_') || id === 'natura';
+const isTemplateRune = (id) => String(id).startsWith('sig_') || id === 'natura' || id === 'ward';
 export class RuneRecognizer {
   constructor() {
     this.runes = [
@@ -110,6 +110,18 @@ export class RuneRecognizer {
         glowColor: '#d8f5b0',
         icon: '🌿',
         desc: 'Leaf: a closed leaf outline, then its midrib'
+      },
+      {
+        // SCHUTZ (user, 20 Oct 2026): the shield principle as its own special element,
+        // like KONSTRUKT and BESTIA — with its own mastery tree.
+        id: 'ward',
+        name: 'SCHUTZ',
+        element: 'Ward',
+        glyph: '⛉',
+        color: '#90caf9',
+        glowColor: '#e3f2fd',
+        icon: '🛡',
+        desc: 'Shield: a shield outline (flat top, pointed bottom), then a bar across'
       },
       {
         id: 'umbra',

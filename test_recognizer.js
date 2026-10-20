@@ -211,11 +211,17 @@ const BASE_HAND = ['ignis', 'ventus', 'fulgur', 'terra', 'aqua', 'bestia', 'cons
   assert(recognizer.recognize(guideStrokes('natura', 400, 300, 130), hand)?.rune.id === 'natura', 'Recognize: the leaf glyph is NATURA');
   assert(recognizer.recognize(guideStrokes('aqua', 400, 300, 130), hand)?.rune.id === 'aqua' && recognizer.recognize(guideStrokes('construct', 400, 300, 130), hand)?.rune.id === 'construct', 'Recognize: a circle stays AQUA and a line stays KONSTRUKT next to NATURA');
 }
+// SCHUTZ's shield glyph (template rune): found with its hand, never steals the square or the leaf.
+{
+  const hand = ['terra', 'natura', 'ward', 'aqua', 'construct'];
+  assert(recognizer.recognize(guideStrokes('ward', 400, 300, 130), hand)?.rune.id === 'ward', 'Recognize: the shield glyph is SCHUTZ');
+  assert(recognizer.recognize(guideStrokes('terra', 400, 300, 130), hand)?.rune.id === 'terra' && recognizer.recognize(guideStrokes('natura', 400, 300, 130), hand)?.rune.id === 'natura', 'Recognize: the square stays TERRA and the leaf stays NATURA with SCHUTZ in the hand');
+}
 const guideMisses = Object.keys(RUNE_GUIDES).filter((key) => {
   // The buff sigil resolves to whichever buff rune is in the hand.
   const id = key === 'buff_sigil' ? 'buff_T13' : key;
   // Special glyphs (buff sigil, signature specials) are matched when that rune is in the hand.
-  const free = recognizer.recognize(guideStrokes(id, 400, 300, 150), key === 'buff_sigil' || key.startsWith('sig_') || key === 'natura' ? [...BASE_HAND, id] : null);
+  const free = recognizer.recognize(guideStrokes(id, 400, 300, 150), key === 'buff_sigil' || key.startsWith('sig_') || key === 'natura' || key === 'ward' ? [...BASE_HAND, id] : null);
   const own = recognizer.recognize(guideStrokes(id, 400, 300, 110), [id]);
   return free?.rune.id !== id || own?.grade !== 'S';
 });

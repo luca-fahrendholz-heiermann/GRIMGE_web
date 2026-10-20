@@ -352,11 +352,18 @@ export class SpellSystem {
 
       // Shield recipes (Mastery doc): same Ward principle, own element tags.
       case 'storm_ward': {
-        this.castArcaneShield(caster, castQuality, ['fulgur', 'natura', 'terra'], { capacity: 80, duration: 6, color: '#c5e1a5', particles: 'fulgur' });
+        this.castArcaneShield(caster, castQuality, ['fulgur', 'natura', 'ward'], { capacity: 80, duration: 6, color: '#c5e1a5', particles: 'fulgur' });
+        break;
+      }
+      case 'great_aegis': {
+        this.castArcaneShield(caster, castQuality, ['ward'], { capacity: 70, duration: 6, color: '#90caf9' });
+        const allies = [...(gameWorld?.minions ?? []), ...this.activeSummons].filter((a) => a && a.team === caster.team && !a.isDead && (a.hp ?? 0) > 0 && Math.hypot(a.x - caster.x, ((a.z ?? caster.z) - caster.z) * 150) < 160);
+        for (const ally of allies) this.addSpell(new ShieldBubbleSpell(ally, Math.round(50 * castQuality.power), 5 * castQuality.duration), castQuality);
+        combat.spawnShockwave(caster.x, caster.y - 30, 160, '#90caf9');
         break;
       }
       case 'sacrifice_bulwark': {
-        this.castArcaneShield(caster, castQuality, ['terra', 'umbra'], { capacity: 110, duration: 5, color: '#9575cd', particles: 'void', sacrifice: .1 });
+        this.castArcaneShield(caster, castQuality, ['terra', 'umbra', 'ward'], { capacity: 110, duration: 5, color: '#9575cd', particles: 'void', sacrifice: .1 });
         break;
       }
 
@@ -619,7 +626,7 @@ export class SpellSystem {
 
   // Every own shield goes through the Ward rules (mastery.js): capacity / duration
   // masteries, HP sacrifice, element tags for retaliation.
-  castArcaneShield(caster, quality = RUNE_GRADE_PROFILES.B, tags = ['aqua', 'terra'], { capacity = 90, duration = 5, color = '#b388ff', particles = 'fulgur', sacrifice = 0 } = {}) {
+  castArcaneShield(caster, quality = RUNE_GRADE_PROFILES.B, tags = this.castElements ?? ['aqua', 'terra'], { capacity = 90, duration = 5, color = '#b388ff', particles = 'fulgur', sacrifice = 0 } = {}) {
     applyWard(caster, capacity * quality.power, duration * quality.duration, tags, { sacrifice });
     audio.playSpell('arcane_shield');
     combat.spawnShockwave(caster.x, caster.y - 32, 52, color);

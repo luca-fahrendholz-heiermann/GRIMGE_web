@@ -13,7 +13,7 @@ Code:
 |---|---|
 | Basisrunen (Feuer, Wasser, Blitz …) | Element-Runen: ignis, aqua, ventus, fulgur, terra, natura, lux, umbra, void, construct, bestia |
 | Ice | Keine eigene Rune. Frost entsteht aus Wasser- und Wind-Fusionen (Status-Tag `frost`). |
-| **Ward** | Keine Rune, sondern das **Schild-Prinzip**: Arcane Aegis und jedes Schild-Rezept. Der Ward-Baum gilt für alle Schilde und steht jedem offen (Freischaltung über das Mage-Level). |
+| **Ward** | Eigene Rune **SCHUTZ** (Sonder-Element wie Konstrukt und Bestia, Schild-Glyphe, 1 Skillpunkt). Der Schutz-Baum gehört zur Rune (III/IV brauchen Schutz-Runen-Level) und wirkt auf jeden Schild. Lux hat seinen eigenen Baum (Segen, Reinigung). |
 | Invocation / Control | Bestia-Beschwörungen bzw. Umbra- und Void-Bindungen (noch ohne eigene Masteries) |
 | Tags eines Effekts | `statusElements` jedes Zaubers (Rezept-Elemente). Schilde tragen `shieldTags`. |
 | Trigger (OnHit, OnShieldHit, OnExpire …) | Hooks: `onStatusHit` (jeder `takeDamage`), Schildabsorption, Status-Kombo, Status-Tick, Schildende, perfekter Block, aufgeladener Angriff |
@@ -27,8 +27,10 @@ Code:
 | Rezept | Zauber | Wirkung |
 |---|---|---|
 | Aqua + Terra | ARCANE AEGIS | 90 Kapazität, 5 s, Tags aqua und terra (bestehend, läuft jetzt über die Ward-Regeln) |
-| Fulgur + Natura + Terra | **LEBENSSTURM-SCHILD** | 80 Kapazität, 6 s, Tags fulgur, natura und terra |
-| Terra + Terra + Umbra | **OPFERBOLLWERK** | 110 Kapazität, 5 s. Opfert 10 % HP als 150 % Kapazität (mit Umbra · Opfer mehr). |
+| Schutz | ARCANE AEGIS (auch Aqua + Terra) |
+| Schutz + Schutz | **GROSSE AEGIS** | Schild für dich und eine Schildblase für jeden Verbündeten in der Nähe |
+| Fulgur + Natura + Schutz | **LEBENSSTURM-SCHILD** | 80 Kapazität, 6 s, Tags fulgur, natura und terra |
+| Terra + Umbra + Schutz | **OPFERBOLLWERK** | 110 Kapazität, 5 s. Opfert 10 % HP als 150 % Kapazität (mit Umbra · Opfer mehr). |
 
 Alle Schild-Rezepte teilen sich eine Abklingzeit.
 

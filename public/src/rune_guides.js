@@ -107,6 +107,8 @@ export const RUNE_GUIDES = Object.freeze({
   aqua: [circle(1.02)],
   bestia: [[[-.9, .7], [-.6, -.6], [-.3, .45], [0, -.75], [.3, .45], [.6, -.6], [.9, .7]]],
   construct: [[[0, -1], [0, 1]]],
+  // SCHUTZ: a heater-shield outline (flat top, curved sides to a point), then a bar across.
+  ward: [[[-.62, -.74], [-.2, -.74], [.2, -.74], [.62, -.74], [.62, -.38], [.62, -.02], ...Array.from({ length: 6 }, (_, i) => { const u = (i + 1) / 6; return [.62 * Math.cos(u * Math.PI / 2), -.02 + .9 * Math.sin(u * Math.PI / 2)]; }), ...Array.from({ length: 6 }, (_, i) => { const u = (i + 1) / 6; return [-.62 * Math.sin(u * Math.PI / 2), .88 - .9 * Math.sin(u * Math.PI / 2) ]; }), [-.62, -.38], [-.62, -.74]], [[-.62, -.3], [-.2, -.3], [.2, -.3], [.62, -.3]]],
   void: [Array.from({ length: 41 }, (_, i) => { const a = i / 40 * Math.PI * 3; const r = .1 + i / 40 * .8; return [Math.cos(a) * r, Math.sin(a) * r]; })],
   lux: [[[-.9, 0], [.9, 0]], [[0, -.9], [0, .9]], [[-.65, -.65], [.65, .65]], [[.65, -.65], [-.65, .65]]],
   // NATURA: a leaf — closed pointed outline (bottom → right → top → left), then the midrib with its stem.

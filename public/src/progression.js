@@ -86,7 +86,7 @@ export const isSignatureRuneId = (id) => String(id).startsWith('sig_');
 export const DOMAIN_RUNE_IDS = Object.freeze(SIGNATURE_RUNE_DATA.filter((d) => String(d.systemType).startsWith('Domäne')).map((d) => 'sig_' + d.id));
 export const MAX_DOMAIN_RUNES = 1;
 export const isDomainRuneId = (id) => DOMAIN_RUNE_IDS.includes(id);
-export const ALL_RUNE_IDS = Object.freeze(['ignis', 'ventus', 'fulgur', 'terra', 'aqua', 'bestia', 'construct', 'void', 'lux', 'umbra', 'natura', 'doppel', 'mortis', ...BUFF_RUNE_IDS, ...SIGNATURE_RUNE_IDS]);
+export const ALL_RUNE_IDS = Object.freeze(['ignis', 'ventus', 'fulgur', 'terra', 'aqua', 'bestia', 'construct', 'void', 'lux', 'umbra', 'natura', 'ward', 'doppel', 'mortis', ...BUFF_RUNE_IDS, ...SIGNATURE_RUNE_IDS]);
 // Elemental runes combine and may be in a deck twice. Special runes (DOPPEL,
 // MORTIS, signature specials, Arcane States) need no combination but have a
 // harder glyph: each only once — and of all Arcane States only one at all.
@@ -116,6 +116,7 @@ export const SKILL_RUNE_UNLOCKS = Object.freeze([
   { runeId: 'lux', cost: 1, level: 1, title: 'LUX RUNE UNLOCKED' },
   { runeId: 'natura', cost: 1, level: 1, title: 'NATURA RUNE UNLOCKED' },
   { runeId: 'umbra', cost: 1, level: 1, title: 'UMBRA RUNE UNLOCKED' },
+  { runeId: 'ward', cost: 1, level: 1, title: 'SCHUTZ RUNE UNLOCKED' },
   { runeId: 'doppel', cost: 2, level: 8, title: 'DOPPEL SPECIAL RUNE UNLOCKED' },
   { runeId: 'mortis', cost: 2, level: 10, title: 'MORTIS SPECIAL RUNE UNLOCKED' }
 ]);

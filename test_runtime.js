@@ -3727,10 +3727,10 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   // Build 1 — Lebenssturm-Wächter (Witcher Quen): Fulgur + Natura + Terra shield.
   reset();
   P.masteries = new Set([...tiers('ward.retaliate', 4), ...tiers('ward.sustain', 3), ...tiers('fulgur.chain', 2), ...tiers('fulgur.discharge', 3), ...tiers('natura.leech', 4)]);
-  const ward = spells.resolveSpell([{ id: 'fulgur' }, { id: 'natura' }, { id: 'terra' }]);
-  assert(ward?.id === 'storm_ward' && spells.resolveSpell([{ id: 'terra' }, { id: 'terra' }, { id: 'umbra' }])?.id === 'sacrifice_bulwark', 'Shield recipes: Fulgur+Natura+Terra = LEBENSSTURM-SCHILD, Terra+Terra+Umbra = OPFERBOLLWERK');
+  const ward = spells.resolveSpell([{ id: 'fulgur' }, { id: 'natura' }, { id: 'ward' }]);
+  assert(ward?.id === 'storm_ward' && spells.resolveSpell([{ id: 'terra' }, { id: 'umbra' }, { id: 'ward' }])?.id === 'sacrifice_bulwark', 'Shield recipes with the SCHUTZ rune: Fulgur+Natura+Schutz = LEBENSSTURM-SCHILD, Terra+Umbra+Schutz = OPFERBOLLWERK');
   spells.cast(P, ward, game);
-  assert(P.arcaneShield > 0 && ['fulgur', 'natura', 'terra'].every((el) => P.shieldTags.includes(el)), 'The shield carries the element tags of its recipe (Ward principle)');
+  assert(P.arcaneShield > 0 && ['fulgur', 'natura', 'ward'].every((el) => P.shieldTags.includes(el)), 'The shield carries the element tags of its recipe (Ward principle)');
   const a = foe(340); const b = foe(430); const c = foe(540);
   P.hp = P.maxHp - 60; const hp0 = P.hp; const timer0 = P.arcaneShieldTimer; const cap0 = P.arcaneShield;
   hitFrom(a, 20);
@@ -3760,7 +3760,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   // Build 2 — Gefallener Koloss (Exiled Heavy Knight).
   reset(); P.buildModifiers = { ...P.buildModifiers, lastStand: .5 };
   P.masteries = new Set([...tiers('terra.fortify', 4), ...tiers('ward.absorb', 3), ...tiers('umbra.sacrifice', 4), ...tiers('ignis.burn', 3)]);
-  const bulwark = spells.resolveSpell([{ id: 'terra' }, { id: 'terra' }, { id: 'umbra' }]);
+  const bulwark = spells.resolveSpell([{ id: 'terra' }, { id: 'umbra' }, { id: 'ward' }]);
   spells.cast(P, bulwark, game);
   const paid = P.maxHp - P.hp;
   assert(paid === Math.floor(P.maxHp * .2) && P.sacrificedHp === paid && P.arcaneShield > 110 * 1.7 + paid, 'Knight build: Opfer sacrifices 20 % HP into shield capacity (an HP sacrifice is no enemy hit)');
@@ -3804,7 +3804,9 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   reset(); only(['construct.forge', 4]); { const f1 = foe(360); const f2 = foe(420); hitAs(f1, ['construct']); const after1 = f1.hp; hitAs(f1, ['construct']); assert(STATUS.hasStatus(f1, 'bleed') && STATUS.hasStatus(f2, 'bleed') && after1 - f1.hp > 20, 'Konstrukt Schmieden: guaranteed bleeding, it spreads, bleeding foes take more'); }
   reset(); only(['bestia.instinct', 2]); { const b1 = foe(360, 2000); P._instinct = 0; const dmg = []; for (let i = 0; i < 3; i++) { const h = b1.hp; hitAs(b1, ['bestia']); dmg.push(h - b1.hp); } assert(dmg[2] > dmg[0] && dmg[0] === dmg[1], 'Bestia Instinkt: every third beast hit is critical'); }
   reset(); only(['bestia.pack', 4]); { const r1 = foe(360); P.hp = P.maxHp - 20; hitAs(r1, ['bestia']); const h = r1.hp; const ph = P.hp; hitAs(r1, ['ignis']); assert(h - r1.hp > 20 && P.hp > ph && !r1.packMark, 'Bestia Rudel: the mark is cashed in by your next other hit (+bonus, heal)'); }
-  assert(Object.keys(M.MASTERY_TREES).filter((k) => k !== 'ward').length === 11, 'Every one of the 11 elements has its own mastery tree');
+  assert(Object.keys(M.MASTERY_TREES).filter((k) => k !== 'ward').length === 11 && M.masteryRequirement('ward.absorb.1').rune === 'ward', 'Every one of the 11 elements has its own mastery tree; the Schutz tree belongs to the SCHUTZ rune');
+  { reset(); const ally = foe(330); ally.team = 'blue'; const ga = spells.resolveSpell([{ id: 'ward' }, { id: 'ward' }]); spells.cast(P, ga, game);
+    assert(ga?.id === 'great_aegis' && spells.resolveSpell([{ id: 'ward' }])?.id === 'arcane_aegis' && P.arcaneShield > 0 && spells.activeSpells.some((s) => s.constructor.name === 'ShieldBubbleSpell' && s.target === ally), 'SCHUTZ rune: alone the Aegis; Schutz + Schutz = GROSSE AEGIS shields you and every ally nearby'); }
   P.masteries = new Set(); P.buildModifiers = { ...P.buildModifiers, lastStand: 0 }; reset(); game.minions = [];
 }
 
