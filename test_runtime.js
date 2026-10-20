@@ -3542,7 +3542,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   dummy.elevation = 0; dummy.vElevation = 0;
   // Sprint jump + down swipe: diagonal dive that sweeps through a foe on the path.
   air(90); P.isSprintJump = true; P.x = 300; P.vx = 300; dummy.x = 360; dummy.z = .5; dummy.hp = dummy.maxHp;
-  assert(P.executeAttack(neutral, 'dive') && P.sprintDive && P.vx > 500 && P.vElevation < -500, 'Sprint jump + down swipe starts a fast diagonal dive');
+  assert(P.executeAttack(neutral, 'dive') && P.sprintDive && P.vx > 300 && P.vElevation < -500, 'Sprint jump + down swipe starts a fast diagonal dive (aimed at the foe on the ground)');
   const diveX = P.x; step(.6);
   assert(P.grounded && P.x - diveX > 60 && dummy.hp < dummy.maxHp && !P.sprintDive && P.state !== 'dive', 'The diagonal dive travels forward, strikes on the way and ends cleanly on landing');
   // Height matters: an air swing high above a foe on the ground misses; low or diving it hits.
@@ -3794,6 +3794,25 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   reset(); only(['bestia.pack', 4]); { const r1 = foe(360); P.hp = P.maxHp - 20; hitAs(r1, ['bestia']); const h = r1.hp; const ph = P.hp; hitAs(r1, ['ignis']); assert(h - r1.hp > 20 && P.hp > ph && !r1.packMark, 'Bestia Rudel: the mark is cashed in by your next other hit (+bonus, heal)'); }
   assert(Object.keys(M.MASTERY_TREES).filter((k) => k !== 'ward').length === 11, 'Every one of the 11 elements has its own mastery tree');
   P.masteries = new Set(); P.buildModifiers = { ...P.buildModifiers, lastStand: 0 }; reset(); game.minions = [];
+}
+
+// Air dive by swipe (user, 20 Oct 2026): diagonal swipes dive too and aim at the foe below.
+{
+  game.returnToHub(); game.setMatchMode('training'); game.startMatch(); game.selectTrainingMap('waterfalls');
+  const P = game.player; const dummy = game.trainingDummy; spells.clearRuntime();
+  const air = () => { P.x = 300; P.z = .5; P.facing = 1; game.battlefield.placeOnSurface(P); P.elevation = 120; P.grounded = false; P.vElevation = 0; P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.attackCooldown = 0; P.sprintDive = null; P.isSprintJump = false; };
+  dummy.homeX = dummy.x = 420; dummy.homeZ = dummy.z = .5;
+  air(); game.performTouchAttackGesture(60, 60);
+  assert(P.state === 'dive' && P.vx > 0, 'Air: a diagonal down-forward swipe dives (no longer a heavy) and slants toward the foe below');
+  air(); P.isSprintJump = true; game.performTouchAttackGesture(50, 70);
+  const vAim = P.vx; assert(P.sprintDive && vAim > 0, 'Sprint jump + diagonal swipe: the sprint dive starts');
+  air(); P.isSprintJump = true; dummy.homeX = dummy.x = 340; game.performTouchAttackGesture(50, 70);
+  assert(P.sprintDive && P.vx > 0 && P.vx < vAim, 'The sprint dive is aimed: a closer foe gets a steeper dive');
+  air(); P.facing = 1; game.performTouchAttackGesture(-60, 60);
+  assert(P.state === 'dive' && P.facing === -1, 'A diagonal down-back swipe turns around and dives that way');
+  air(); game.performTouchAttackGesture(0, 70);
+  assert(P.state === 'dive', 'A straight down swipe still dives');
+  P.elevation = 0; P.grounded = true; P.state = 'idle'; P.sprintDive = null; P.isSprintJump = false; dummy.homeX = dummy.x = 512;
 }
 
 const frameCallback = nextFrame;

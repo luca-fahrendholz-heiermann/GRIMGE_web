@@ -898,6 +898,13 @@ export class GameWorld {
     // Right-half up-swipe is an uppercut; a right-swipe is the compact heavy
     // lunge. In the air a down-swipe becomes the existing dive strike.
     const facingDx = dx * (this.player.facing || 1);
+    // In the air a swipe downward dives — straight OR diagonal (user, 20 Oct 2026): a
+    // diagonal swipe turns toward its side and the dive is aimed at the foe below.
+    if (!this.player.grounded && dy > threshold * .7 && dy > Math.abs(dx) * .45) {
+      if (Math.abs(dx) > threshold * .5) this.player.facing = Math.sign(dx);
+      this.player.diveAim = Math.abs(dx) > dy * .35;
+      return this.player.executeAttack(this.input, 'dive');
+    }
     // A swipe away from the facing is the backdash (a very fast swipe can end before a move event).
     if (facingDx < -threshold && Math.abs(dx) >= Math.abs(dy)) return this.player.triggerBackdash({ source: 'touch' });
     if (!this.player.grounded && dy > threshold && Math.abs(dy) > Math.abs(dx)) attackKind = 'dive';

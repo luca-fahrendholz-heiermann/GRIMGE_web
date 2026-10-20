@@ -861,6 +861,22 @@ export class Player extends GroundEntity {
     return releaseWeaponReach(this, spells, charge);
   }
 
+  // Dive aim assist: horizontal speed so the dive lands on the nearest foe ahead
+  // (same lane depth, up to 320 px), or null when nobody is there.
+  diveAimAt(speed, side = this.facing || 1) {
+    const foes = window.gameWorld?.getHostileTargets?.(this.team) ?? [];
+    const t = Math.max(.12, (this.elevation ?? 0) / Math.max(1, speed));
+    let best = null;
+    for (const f of foes) {
+      if (f.isObjective || f.isProp || f.isStoneWall || f.isCastle || f.isDead || f.lifeState === 'Dead' || (f.hp ?? 1) <= 0) continue;
+      const ahead = (f.x - this.x) * side;
+      if (ahead < -10 || ahead > 320 || Math.abs((f.z ?? this.z) - this.z) > .25) continue;
+      if (!best || ahead < best) best = ahead;
+    }
+    if (best === null) return null;
+    return { vx: side * Math.max(speed * .35, Math.min(speed * 1.4, best / t)) };
+  }
+
   releaseCharge() {
     // Transformations / manifests: one of six form techniques (or the HOLD pull).
     if (this.formCharge) {
@@ -1143,7 +1159,8 @@ export class Player extends GroundEntity {
     if (!this.grounded && (attackKind === 'dive' || move.z > 0.55) && this.isSprintJump && !this.sprintDive) {
       // Sprint jump + down: a fast diagonal dive with a sweeping strike (instead of the vertical drop).
       this.airLatch = null;
-      this.state = 'dive'; this.stateTimer = 1.2; this.vElevation = -SPRINT_DIVE_SPEED; this.vx = this.facing * SPRINT_DIVE_SPEED;
+      this.state = 'dive'; this.stateTimer = 1.2; this.vElevation = -SPRINT_DIVE_SPEED; this.vx = this.diveAimAt(SPRINT_DIVE_SPEED)?.vx ?? this.facing * SPRINT_DIVE_SPEED;
+      this.diveAim = false;
       this.sprintDive = { hitSet: new Set() };
       this.setWeaponMotion?.('heavy'); this._weaponSwingTime = .35;
       audio.playSlash(.8);
@@ -1158,6 +1175,9 @@ export class Player extends GroundEntity {
       // Each weapon dives its own way (plunge, meteor, spin, arrow rain, orb drop, pounce, seal, downdraft).
       if (weaponDive(this, spells, window.gameWorld)) return true;
       this.state = 'dive'; this.stateTimer = MELEE_BASELINE.dive.time; this.vElevation = -850 * PLAYER_ARC_SCALE;
+      // A diagonal swipe: the drop slants toward the foe below.
+      if (this.diveAim) this.vx = this.diveAimAt(850 * PLAYER_ARC_SCALE)?.vx ?? this.facing * 380;
+      this.diveAim = false;
       audio.playSlash(0.9);
       combat.spawnSlashArc(this.x, this.y - 15, this.facing, { radius: 50, angleStart: 0.8, angleEnd: 2.2, color: '#ff5722', glow: '#d50000' });
       this.triggerMeleeHitbox(MELEE_BASELINE.dive.damage, this.facing * MELEE_BASELINE.dive.knockback, MELEE_BASELINE.dive.lift, 0.6, false, { hitstopTicks: MELEE_BASELINE.dive.hitstopTicks, hitReaction: MELEE_BASELINE.dive.hitReaction, downward: true });
