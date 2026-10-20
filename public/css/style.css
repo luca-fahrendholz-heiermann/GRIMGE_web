@@ -687,7 +687,7 @@ body.portrait-gameplay #game-container { visibility: hidden; pointer-events: non
 
 #objective-hud {
   position: absolute;
-  top: 19%;
+  top: 11.5%; /* moved up: no hero swapper row any more */
   left: 50%;
   transform: translateX(-50%);
   min-width: 230px;
@@ -990,8 +990,9 @@ body.portrait-gameplay #game-container { visibility: hidden; pointer-events: non
 
 /* Spell triangle (320 x 200 box). The three spell slots are the corners:
    slot 1 top (160, 34), slot 2 bottom-left (88, 160), slot 3 bottom-right
-   (232, 160). DRAW sits in the geometric centre (160, 118) with clear gaps
-   to all three corners. BLOCK and JUMP flank the triangle outside. */
+   (232, 160). JUMP (round) sits in the geometric centre (160, 118) with clear
+   gaps to all three corners; DRAW flanks the triangle on the left, BLOCK on
+   the right (user, 20 Oct 2026). */
 .spell-slot { position: absolute; width: 62px; height: 62px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; border-width: 2px; --slot-color: #6d5b83; border-color: var(--slot-color); box-shadow: 0 0 12px var(--slot-color), 0 3px 9px rgba(0, 0, 0, .65); }
 .spell-slot .slot-glyph { font-size: 22px; line-height: 1; color: var(--slot-color); text-shadow: 0 0 8px var(--slot-color); }
 .spell-slot small { font-size: 7px; letter-spacing: .6px; color: #f8e8bb; }
@@ -1002,10 +1003,10 @@ body.portrait-gameplay #game-container { visibility: hidden; pointer-events: non
 .slot-top { left: 129px; top: 3px; }
 .slot-left { left: 57px; top: 129px; }
 .slot-right { left: 201px; top: 129px; }
-.triangle-cast { position: absolute; left: 125px; top: 83px; width: 70px; height: 70px; font-size: 13px; }
-.triangle-shield { position: absolute; left: 2px; top: 72px; width: 56px; height: 56px; }
-/* Tall pill: easier to hit with the right thumb. */
-.triangle-jump { position: absolute; left: 262px; top: 58px; width: 56px; height: 98px; border-radius: 30px; border-color: #c5a6ff; color: #f0e8ff; font: 900 22px/1 'Rajdhani', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.triangle-cast { position: absolute; left: 2px; top: 72px; width: 56px; height: 56px; font-size: 12px; }
+.triangle-shield { position: absolute; left: 262px; top: 72px; width: 56px; height: 56px; }
+/* Round, in the centre of the triangle: the most used button under the right thumb. */
+.triangle-jump { position: absolute; left: 125px; top: 83px; width: 70px; height: 70px; border-radius: 50%; border-color: #c5a6ff; color: #f0e8ff; font: 900 22px/1 'Rajdhani', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; }
 .triangle-jump small { font: 700 7px 'Rajdhani', sans-serif; letter-spacing: .6px; }
 .mount-action { position: absolute; left: 266px; top: 8px; width: 48px; height: 48px; font-size: 8px; border-color: #75e5c0; color: #d8fff1; opacity: 0; pointer-events: none; transform: scale(.85); transition: opacity .14s ease, transform .14s ease; }
 .mount-action.is-available { opacity: 1; pointer-events: auto; transform: scale(1); }
@@ -1412,7 +1413,7 @@ code {
 .training-controls {
   display: none;
   position: absolute;
-  top: 25%;
+  top: 17.5%;
   left: 50%;
   transform: translateX(-50%);
   gap: 6px;

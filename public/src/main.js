@@ -434,17 +434,7 @@ export class GameWorld {
       this.input.keys[e.code] = true;
       audio.ensureContext();
 
-      // Hero Swapping (Keys 1-0)
-      if (e.code === 'Digit1') { this.player.setHero('paladin'); ui.updateActiveHeroBtn('paladin'); }
-      if (e.code === 'Digit2') { this.player.setHero('berserker'); ui.updateActiveHeroBtn('berserker'); }
-      if (e.code === 'Digit3') { this.player.setHero('mage'); ui.updateActiveHeroBtn('mage'); }
-      if (e.code === 'Digit4') { this.player.setHero('warlord'); ui.updateActiveHeroBtn('warlord'); }
-      if (e.code === 'Digit5') { this.player.setHero('fighter'); ui.updateActiveHeroBtn('fighter'); }
-      if (e.code === 'Digit6') { this.player.setHero('darklord'); ui.updateActiveHeroBtn('darklord'); }
-      if (e.code === 'Digit7') { this.player.setHero('nyx'); ui.updateActiveHeroBtn('nyx'); }
-      if (e.code === 'Digit8') { this.player.setHero('deep'); ui.updateActiveHeroBtn('deep'); }
-      if (e.code === 'Digit9') { this.player.setHero('firen'); ui.updateActiveHeroBtn('firen'); }
-      if (e.code === 'Digit0') { this.player.setHero('freeze'); ui.updateActiveHeroBtn('freeze'); }
+      // No hero hotkeys in a match: the hero is chosen in the hub.
 
       // Cast Spell (E) — confirms an open targeting at the cursor.
       if (e.code === 'KeyE') this.castPreparedSpell();
