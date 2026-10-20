@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { MageProfile, MAGE_SKILL_TREE, applyMageProfile, DEFAULT_MATCH_DECK, MAX_DECK_PRESETS } from './public/src/progression.js';
+import { MageProfile, MAGE_SKILL_TREE, applyMageProfile, DEFAULT_MATCH_DECK, MAX_DECK_PRESETS, DOMAIN_RUNE_IDS, deckAccepts } from './public/src/progression.js';
 
 let passed = 0;
 function test(name, fn) {
@@ -153,6 +153,15 @@ test('Deck builder: favourite runes toggle and persist; presets survive the deck
   const repaired = new MageProfile({ level: 20, favoriteRunes: ['lux'], deckPresets: [preset], matchDeck: ['ignis', 'ignis', 'aqua', 'aqua', 'terra', 'terra', 'ventus', 'ventus', 'fulgur', 'buff_T26'] });
   assert.ok(repaired.deckRepaired && repaired.deckPresets.length === 1 && repaired.isFavoriteRune('lux'));
   assert.ok(repaired.toJSON().deckPresets[0].name === 'Old');
+});
+
+test('Domains: only ONE domain per deck (like the Arcane States), all share one glyph family', () => {
+  assert.ok(DOMAIN_RUNE_IDS.length >= 4 && DOMAIN_RUNE_IDS.includes('sig_S53') && DOMAIN_RUNE_IDS.includes('sig_S58'));
+  assert.ok(deckAccepts(['ignis', 'sig_S53'], 'sig_S45') && !deckAccepts(['ignis', 'sig_S53'], 'sig_S56'));
+  const profile = new MageProfile({ level: 30 });
+  profile.matchDeck = ['ignis', 'ignis', 'aqua', 'aqua', 'terra', 'terra', 'ventus', 'sig_S57'];
+  assert.equal(profile.addRuneToDeck('sig_S58').reason, 'ONE DOMAIN PER DECK');
+  assert.equal(profile.sanitizeDeck(['sig_S53', 'sig_S56', 'ignis']).join(), 'sig_S53,ignis');
 });
 
 console.log(`\nProgression results: ${passed} passed, ${process.exitCode ? 1 : 0} failed.`);

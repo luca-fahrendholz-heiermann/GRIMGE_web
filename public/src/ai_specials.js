@@ -10,7 +10,7 @@
 //     timing (mash fast where the slot asks for it, close a domain late).
 import { lookupRecipe, runeManaCost } from './spell_catalog.js';
 import { takeOfferedRecast } from './recast.js';
-import { activeDomains, DOMAIN } from './signature_abilities_g.js';
+import { activeDomains, DOMAIN, isDomainSigId } from './signature_abilities_g.js';
 
 export const AI_SPECIAL_COOLDOWN = 7;
 // Arena duels and boss fights without a configured deck still get a small special kit.
@@ -43,18 +43,18 @@ function cast(ai, id, gw, spells, target = null) {
   return true;
 }
 function firstDelay(offer, sig) {
-  if (sig === 'S53') return Math.max(.5, offer.window - 1.2); // close the domain with the finale near its end
+  if (isDomainSigId(sig)) return Math.max(.5, offer.window - 1.2); // close the domain with the finale near its end
   if (sig === 'S54') return 1.6;                               // lead the bound player a bit, then strangle
   return .7;
 }
 
 // A hostile domain around the AI → open its own (domain duel).
 export function tryAICounterDomain(ai, gw, spells) {
-  const ids = aiSpecialIds(ai, gw); if (!ids.includes('sig_S53')) return false;
+  const ids = aiSpecialIds(ai, gw); const domainId = ids.find(isDomainSigId); if (!domainId) return false;
   const threat = activeDomains().find((d) => d.team !== ai.team && d.collapseT == null && !d.clash && Math.hypot(d.cx - ai.x, ((d.cz - (ai.z ?? d.cz)) * 150)) < d.R + DOMAIN.radius);
-  if (!threat || (ai.mp ?? 0) < cost('sig_S53')) return false;
+  if (!threat || (ai.mp ?? 0) < cost(domainId)) return false;
   ai.facing = Math.sign(threat.cx - ai.x) || ai.facing;
-  return cast(ai, 'sig_S53', gw, spells);
+  return cast(ai, domainId, gw, spells);
 }
 
 // Pick a special that fits the moment.
@@ -67,7 +67,7 @@ export function tryAISpecial(ai, player, distance, gw, spells) {
   for (const id of ids) {
     const def = defOf(id); if (!def || (ai.mp ?? 0) < cost(id)) continue;
     const s = sigId(id); const mode = def.targetingMode;
-    if (s === 'S53') { if (distance < 170 && !activeDomains().some((d) => d.team === ai.team)) options.push([id, null, 3]); continue; }
+    if (isDomainSigId(s)) { if (distance < 170 && !activeDomains().some((d) => d.team === ai.team)) options.push([id, null, 3]); continue; }
     if (s === 'S54') { if (distance > 110 && distance < 320 && sameLane && (player.elevation ?? 0) < 10) options.push([id, null, 4]); continue; }
     if (mode === 'ground' || mode === 'placement') { if (distance < 360) options.push([id, { x: player.x, z: player.z }, 2]); continue; }
     if (mode === 'direction') { if (sameLane && distance < 300) options.push([id, null, 2]); continue; }

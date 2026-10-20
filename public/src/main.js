@@ -9,7 +9,7 @@ import { Battlefield } from './battlefield.js';
 import { ui } from './ui.js';
 import { VIEWPORT, ARENA_LAYOUT, ENTITY_VISUALS, groundDistance, groundYForDepth } from './world.js';
 import { ART_ASSETS } from './art_assets.js';
-import { MageProfile, MAGE_SKILL_TREE, applyMageProfile, DEFAULT_MATCH_DECK, MATCH_DECK_SIZE, MAX_RUNE_COPIES, ALL_RUNE_IDS, deckAccepts } from './progression.js';
+import { MageProfile, MAGE_SKILL_TREE, applyMageProfile, DEFAULT_MATCH_DECK, MATCH_DECK_SIZE, MAX_RUNE_COPIES, ALL_RUNE_IDS, deckAccepts, isDomainRuneId } from './progression.js';
 import { getGameMode, DEBUG_BUILD } from './game_modes.js';
 import { runeManaCost, isSpecialRune, TARGETING } from './spell_catalog.js';
 import { SpellTargeting, SlotChord, needsTarget } from './targeting.js';
@@ -1831,7 +1831,7 @@ export class GameWorld {
       if (!ALL_RUNE_IDS.includes(runeId) || !this.trainingDeckSource().isRuneUnlocked(runeId)) return false;
       if (deck.length >= MATCH_DECK_SIZE) return false;
       // Elemental runes twice, special runes once each; of all Arcane States only one.
-      if (!deckAccepts(deck, runeId)) { this.showAnnouncement(deck.includes(runeId) ? (deck.filter((id) => id === runeId).length >= 2 ? 'MAX 2 COPIES' : 'SPECIAL RUNES: ONCE PER DECK') : 'ONE ARCANE STATE PER DECK', 1.2); return false; }
+      if (!deckAccepts(deck, runeId)) { this.showAnnouncement(deck.includes(runeId) ? (deck.filter((id) => id === runeId).length >= 2 ? 'MAX 2 COPIES' : 'SPECIAL RUNES: ONCE PER DECK') : isDomainRuneId(runeId) ? 'ONE DOMAIN PER DECK' : 'ONE ARCANE STATE PER DECK', 1.2); return false; }
       deck.push(runeId);
     } else if (action === 'remove') {
       const index = deck.lastIndexOf(runeId);

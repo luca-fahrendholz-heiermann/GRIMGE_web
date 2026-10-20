@@ -79,6 +79,10 @@ export const isBuffRuneId = (id) => String(id).startsWith('buff_');
 // glyph — NOT Arcane States. Each may be in a deck once; several different ones are fine.
 export const SIGNATURE_RUNE_IDS = Object.freeze(SIGNATURE_RUNE_DATA.map((d) => 'sig_' + d.id));
 export const isSignatureRuneId = (id) => String(id).startsWith('sig_');
+// Domains (Sphären): a signature family with one glyph — like the Arcane States only ONE per deck.
+export const DOMAIN_RUNE_IDS = Object.freeze(SIGNATURE_RUNE_DATA.filter((d) => String(d.systemType).startsWith('Domäne')).map((d) => 'sig_' + d.id));
+export const MAX_DOMAIN_RUNES = 1;
+export const isDomainRuneId = (id) => DOMAIN_RUNE_IDS.includes(id);
 export const ALL_RUNE_IDS = Object.freeze(['ignis', 'ventus', 'fulgur', 'terra', 'aqua', 'bestia', 'construct', 'void', 'lux', 'umbra', 'natura', 'doppel', 'mortis', ...BUFF_RUNE_IDS, ...SIGNATURE_RUNE_IDS]);
 // Elemental runes combine and may be in a deck twice. Special runes (DOPPEL,
 // MORTIS, signature specials, Arcane States) need no combination but have a
@@ -87,6 +91,7 @@ export const isSpecialDeckRune = (id) => id === 'doppel' || id === 'mortis' || i
 export const maxRuneCopies = (id) => (isSpecialDeckRune(id) ? 1 : MAX_RUNE_COPIES);
 export function deckAccepts(deck, id) {
   if (isBuffRuneId(id) && deck.filter(isBuffRuneId).length >= MAX_BUFF_RUNES) return false;
+  if (isDomainRuneId(id) && deck.filter(isDomainRuneId).length >= MAX_DOMAIN_RUNES) return false;
   return deck.filter((entry) => entry === id).length < maxRuneCopies(id);
 }
 // Signature specials unlock with the Mage level: S01–S04 at 5, then four more per level (S33–S36 at 13).
@@ -188,6 +193,7 @@ export class MageProfile {
       const count = copies.get(id) ?? 0;
       if (count >= maxRuneCopies(id) || copies.size > ALL_RUNE_IDS.length) return false;
       if (isBuffRuneId(id) && [...copies.keys()].some(isBuffRuneId)) return false;
+      if (isDomainRuneId(id) && [...copies.keys()].some(isDomainRuneId)) return false;
       copies.set(id, count + 1);
       return true;
     }).slice(0, MATCH_DECK_SIZE);
@@ -211,7 +217,7 @@ export class MageProfile {
     if (!this.isRuneUnlocked(id)) return { ok: false, reason: 'LOCKED' };
     if (this.matchDeck.length >= MATCH_DECK_SIZE) return { ok: false, reason: 'DECK FULL' };
     if (this.getRuneCopies(id) >= maxRuneCopies(id)) return { ok: false, reason: 'COPY LIMIT' };
-    if (!deckAccepts(this.matchDeck, id)) return { ok: false, reason: 'ONE ARCANE STATE PER DECK' };
+    if (!deckAccepts(this.matchDeck, id)) return { ok: false, reason: isDomainRuneId(id) ? 'ONE DOMAIN PER DECK' : 'ONE ARCANE STATE PER DECK' };
     this.matchDeck.push(id); this.save();
     return { ok: true };
   }

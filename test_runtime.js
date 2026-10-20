@@ -2518,7 +2518,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   const step = (n, dt = 1 / 60) => { for (let i = 0; i < n; i++) { P.update(dt, neutral, game.battlefield, game); game.updateProjectiles(dt); spells.update(dt, game); } };
   const cast = (id, target = null) => spells.cast(P, spells.resolveSpell([{ id: 'sig_' + id }]), game, null, target);
   const ids = Object.keys(core.SIGNATURES);
-  assert(ids.length === 55 && ids.every((id) => core.signatureImpl(id)?.cast) && sigMod.SIGNATURE_RUNE_IDS.every((id) => isSpecialRune(id) && runeManaCost(id) >= 28 && runeManaCost(id) <= 46), 'All 55 signature specials (atlas S01–S36 + S37–S55) are special runes with their own mechanic and bound mana');
+  assert(ids.length === 58 && ids.every((id) => core.signatureImpl(id)?.cast) && sigMod.SIGNATURE_RUNE_IDS.every((id) => isSpecialRune(id) && runeManaCost(id) >= 28 && runeManaCost(id) <= 46), 'All 58 signature specials (atlas S01–S36 + S37–S58) are special runes with their own mechanic and bound mana');
   assert(ids.every((id) => spellHowTo('sig_' + id)?.effect?.length > 40) && !spells.resolveSpell([{ id: 'sig_S03' }, { id: 'ignis' }]), 'Signature specials explain themselves in the grimoire and never fuse');
   // Every special casts, runs and renders (strict canvas) without errors.
   const strict = new Proxy({}, { get: (t, k) => (k === 'ellipse' || k === 'arc') ? (x, y, rx, ry) => { if (rx < 0 || (k === 'ellipse' && ry < 0)) throw new Error('IndexSizeError ' + k); } : (k === 'canvas' ? undefined : () => {}), set: () => true });
@@ -3050,6 +3050,38 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
     assert(win.clashed && win.mineAlive && !win.rivalAlive, 'S53 domain duel: two domains meet, tapping fast wins — the enemy dome collapses');
     assert(lose.clashed && !lose.mineAlive && lose.rivalAlive, 'S53 domain duel: without tapping your own dome collapses');
     spells.clearRuntime(); E.x = 900;
+  }
+  // More domains: same flow, own ability inside.
+  {
+    const D = await import('./public/src/signature_abilities_g.js');
+    const E = game.enemyChampion;
+    const foeIn = () => { E.lifeState = 'Alive'; E.hp = E.maxHp; E.passive = true; E.x = P.x + 80; E.z = P.z; E.elevation = 0; E.slowFactor = 1; E.statusImmuneUntil = {}; STATUS.clearStatuses(E); };
+    const run = (sec) => { for (let i = 0; i < sec * 60; i++) { P.update(1 / 60, neutral, game.battlefield, game); spells.update(1 / 60, game); E.update(1 / 60, game, game.battlefield); } };
+    // Zeit: slow motion + clock-hand strikes.
+    reset(); dummy.homeX = dummy.x = 900; foeIn(); const dTime = D.openDomain(P, null, core.SIGNATURES.S56, 'S56'); run(2.6);
+    assert(dTime.rule.name === 'STILLSTAND' && E.slowFactor <= .25 + 1e-9 && E.hp < E.maxHp, 'S56 STILLSTAND: foes inside move in slow motion (25 %) and the clock hand strikes');
+    // Glut: burning + geysers.
+    reset(); foeIn(); const dFire = D.openDomain(P, null, core.SIGNATURES.S57, 'S57'); run(1.4);
+    assert(STATUS.hasStatus(E, 'burn') && dFire.geysers.length + (E.maxHp - E.hp > 18 ? 1 : 0) > 0 && E.hp < E.maxHp - 15, 'S57 GLUTKESSEL: foes inside burn and fire geysers erupt under them');
+    // Hain: the caster heals and is cleansed, foes are poisoned.
+    reset(); foeIn(); P.hp = P.maxHp - 60; P.statusImmuneUntil = {}; STATUS.applyStatus(P, 'poison'); const hpHeal = P.hp;
+    const dLife = D.openDomain(P, null, core.SIGNATURES.S58, 'S58'); run(1.6);
+    assert(P.hp > hpHeal + 4 && !STATUS.hasStatus(P, 'poison') && STATUS.hasStatus(E, 'poison'), 'S58 LEBENSHAIN: allies heal and shake off ailments, foes inside are poisoned');
+    // Every domain renders cleanly in every phase.
+    let bad = 0; const strict = new Proxy({}, { get: (t, k) => (k === 'arc' || k === 'ellipse') ? (x, y, r1, r2) => { if (r1 < 0 || (k === 'ellipse' && r2 < 0)) bad++; } : k === 'canvas' ? undefined : () => {}, set: () => true });
+    for (const d of [dTime, dFire, dLife]) { const t0 = d.t; for (const tt of [.1, .4, .6, 1, 2]) { d.t = tt; d.render(strict); for (const sp of spells.activeSpells) sp.render?.(strict); } d.t = t0; }
+    assert(!bad, 'All domains render cleanly in every unfold phase');
+    // Cast through a slot: the finale label is the domain's own; tapping fires its finale.
+    reset(); foeIn(); const sFire = game.slotRuneSpell(runeById('sig_S57')); game.castSlotAt(sFire.position); frame(1.2);
+    const hpFin = E.hp;
+    assert(sFire.recast?.label === 'SCHLIESSEN: ERUPTION', 'A domain slot offers its own finale (Glutkessel: ERUPTION)');
+    game.castSlotAt(sFire.position); run(.2);
+    assert(E.hp < hpFin && !P.slottedSpells.includes(sFire), 'The finale fires and frees the slot');
+    // A duel works between different domains.
+    reset(); E.x = P.x + 120; E.isPlayerControlled = false; E.lifeState = 'Alive';
+    const rivalD = D.openDomain(E, null, core.SIGNATURES.S58, 'S58'); run(.3); const mineD = D.openDomain(P, null, core.SIGNATURES.S56, 'S56');
+    assert(mineD.clash && mineD.clash === rivalD.clash, 'A domain duel also starts between two different domains');
+    spells.clearRuntime(); STATUS.clearStatuses(); E.passive = false; E.x = 900;
   }
   // S54 SCHATTENBINDUNG: the shadow crawls, a caught foe copies the caster's moves; 2nd tap strangles.
   {

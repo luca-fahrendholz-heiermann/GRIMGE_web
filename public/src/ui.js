@@ -1,6 +1,6 @@
 // GRIMGE Prototype — UI & HUD Controller matching Setup Mockup Exactly
 import { spells } from './spells.js';
-import { MAGE_SKILL_TREE, ALL_RUNE_IDS, runeUnlockLabel, isBuffRuneId, isSignatureRuneId, maxRuneCopies, MAX_DECK_PRESETS, MATCH_DECK_SIZE, DECK_PRESET_NAME_MAX } from './progression.js';
+import { MAGE_SKILL_TREE, ALL_RUNE_IDS, runeUnlockLabel, isBuffRuneId, isSignatureRuneId, isDomainRuneId, maxRuneCopies, MAX_DECK_PRESETS, MATCH_DECK_SIZE, DECK_PRESET_NAME_MAX } from './progression.js';
 import { recognizer } from './recognizer.js';
 import { sprites } from './sprites.js';
 import { runeManaCost, SPELL_RECIPES, lookupRecipe, SOLO_RUNES, spellHowTo } from './spell_catalog.js';
@@ -787,12 +787,15 @@ export class UIManager {
       // Arcane State runes: max. one of all of them in the deck.
       const buff = isBuffRuneId(rune.id);
       const buffTaken = buff && !copies && profile.matchDeck.some(isBuffRuneId);
+      const domain = isDomainRuneId(rune.id);
+      const domainTaken = domain && !copies && profile.matchDeck.some(isDomainRuneId);
       const sig = isSignatureRuneId(rune.id); const max = maxRuneCopies(rune.id);
       const status = !unlocked ? `LOCKED · ${lockedText}`
         : buff ? (copies ? 'IN DECK · ARCANE STATE' : buffTaken ? 'ANOTHER ARCANE STATE IS IN THE DECK' : 'ARCANE STATE · MAX 1 PER DECK')
+        : domain ? (copies ? 'IN DECK · DOMAIN' : domainTaken ? 'ANOTHER DOMAIN IS IN THE DECK' : `DOMAIN · MAX 1 PER DECK · ${rune.desc.split(' — ')[1] ?? ''}`)
         : sig ? (copies ? 'IN DECK · SIGNATURE SPECIAL' : `SIGNATURE SPECIAL · ONCE PER DECK · ${rune.desc.split(' — ')[1] ?? ''}`)
         : `${copies}/${max} IN DECK · RUNE LV.${profile.runeLevel(rune.id)}`;
-      const blocked = !unlocked || copies >= max || profile.matchDeck.length >= 10 || buffTaken;
+      const blocked = !unlocked || copies >= max || profile.matchDeck.length >= 10 || buffTaken || domainTaken;
       const fav = !!profile.isFavoriteRune?.(rune.id);
       return `<article class="deck-rune ${unlocked ? '' : 'locked'} ${buff ? 'is-buff' : ''} ${sig ? 'is-signature' : ''} ${fav ? 'is-favorite' : ''}" style="--rune-color:${rune.color}"><b>${rune.glyph} ${rune.name}${buff ? ' <i class="buff-tag">ARCANE</i>' : sig ? ' <i class="buff-tag sig-tag">SIGNATURE</i>' : ''}</b><span>${status}</span><div><button class="fav-btn ${fav ? 'on' : ''}" data-deck-action="favorite" data-rune-id="${rune.id}" title="${fav ? 'Remove from favorites' : 'Mark as favorite'}">${fav ? '★' : '☆'}</button><button data-deck-action="remove" data-rune-id="${rune.id}" ${copies ? '' : 'disabled'}>−</button><button data-deck-action="add" data-rune-id="${rune.id}" ${blocked ? 'disabled' : ''}>+</button></div></article>`;
     };
@@ -801,7 +804,8 @@ export class UIManager {
     const deckRunes = recognizer.runes.filter((rune) => ALL_RUNE_IDS.includes(rune.id) && shown(rune));
     const section = (title, list) => (list.length ? (title ? `<h4 class="deck-section-title">${title}</h4>` : '') + list.map(card).join('') : '');
     const html = section('', deckRunes.filter((rune) => !isBuffRuneId(rune.id) && !isSignatureRuneId(rune.id)))
-      + section('✦ SIGNATURE SPECIALS — SPECIAL RUNES · EACH ONCE PER DECK · OWN MULTI-STROKE GLYPH · NO COMBINATION', deckRunes.filter((rune) => isSignatureRuneId(rune.id)))
+      + section('✦ SIGNATURE SPECIALS — SPECIAL RUNES · EACH ONCE PER DECK · OWN MULTI-STROKE GLYPH · NO COMBINATION', deckRunes.filter((rune) => isSignatureRuneId(rune.id) && !isDomainRuneId(rune.id)))
+      + section('◓ DOMAINS — SPECIAL RUNES · ONLY ONE OF ALL PER DECK · ONE DOME GLYPH · OWN ABILITY INSIDE', deckRunes.filter((rune) => isDomainRuneId(rune.id)))
       + section('⧗ ARCANE STATES — SPECIAL RUNES · ONLY ONE OF ALL PER DECK · ONE HOURGLASS SIGIL', deckRunes.filter((rune) => isBuffRuneId(rune.id)));
     this.deckBuilderContent.innerHTML = html || `<p class="deck-empty">${this.deckFilter === 'favorites' ? 'No favorites yet — tap ☆ on a rune to mark it.' : 'The deck is empty.'}</p>`;
   }

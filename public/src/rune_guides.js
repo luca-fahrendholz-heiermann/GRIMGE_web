@@ -24,6 +24,8 @@ const ngon = (cx, cy, r, n, rot = -Math.PI / 2) => poly(Array.from({ length: n }
 const zig = (x0, y0, x1, y1, n, amp) => Array.from({ length: n + 1 }, (_, i) => { const u = i / n; const dx = x1 - x0; const dy = y1 - y0; const l = Math.hypot(dx, dy) || 1; const o = (i % 2 ? 1 : -1) * amp * (i && i < n ? 1 : 0); return [x0 + dx * u - dy / l * o, y0 + dy * u + dx / l * o]; });
 const wave = (x0, x1, y, amp, waves = 2, steps = 24) => Array.from({ length: steps + 1 }, (_, i) => { const u = i / steps; return [x0 + (x1 - x0) * u, y + Math.sin(u * Math.PI * 2 * waves) * amp]; });
 const spiralIn = (cx, cy, r, turns = 2, steps = 36) => Array.from({ length: steps + 1 }, (_, i) => { const u = i / steps; const a = -Math.PI / 2 + u * turns * Math.PI * 2; return [cx + Math.cos(a) * r * (1 - u * .85), cy + Math.sin(a) * r * (1 - u * .85)]; });
+// The domain glyph: a dome over the floor line with the eclipse inside (S53, S56–S58).
+const DOMAIN_GLYPH = [arc(0, .55, .9, Math.PI, Math.PI * 2, 20), L(-.95, .55, .95, .55), ring(0, .05, .2)];
 export const SIGNATURE_GLYPHS = Object.freeze({
   // S37–S42 (design rules 18 Oct 2026): ice spikes, stepped shafts, water drill, three breathings.
   S37: [L(-.9, .65, .9, .65), [[-.8, .65], [-.55, -.1], [-.3, .65], [0, -.6], [.3, .65], [.55, -.1], [.8, .65]]],
@@ -41,7 +43,9 @@ export const SIGNATURE_GLYPHS = Object.freeze({
   S50: [ngon(0, 0, .55, 4), L(-.85, -.8, -.85, .8), L(.85, -.8, .85, .8)],
   S51: [ring(0, 0, .8), poly([[-.62, -.35], [.62, -.35], [0, .62]])],
   // S53 domain: a dome over the floor line with the eclipse inside.
-  S53: [arc(0, .55, .9, Math.PI, Math.PI * 2, 20), L(-.95, .55, .95, .55), ring(0, .05, .2)],
+  S53: DOMAIN_GLYPH,
+  // Every domain shares the domain glyph (like the Arcane States share the hourglass sigil).
+  S56: DOMAIN_GLYPH, S57: DOMAIN_GLYPH, S58: DOMAIN_GLYPH,
   // S54 shadow bind: a figure standing on a wavy shadow.
   S54: [ring(.5, -.62, .18), L(.5, -.42, .5, .4), wave(-.9, .6, .62, .12, 3)],
   // S55 thousand birds: two birds over a lightning zig-zag.
