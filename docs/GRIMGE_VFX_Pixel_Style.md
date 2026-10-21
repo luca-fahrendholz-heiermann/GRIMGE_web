@@ -44,6 +44,27 @@ Thesen und Xame stammen aus Pixel-Snapper-Exporten (1 Pixel = 1 Art-Pixel). Aufb
 
 Im Spiel werden sie ohne Glättung gezeichnet, sobald ein Art-Pixel mindestens einen Bildschirm-Pixel abdeckt. Liegt die Skalierung nahe an einer ganzen Zahl, rastet sie darauf ein, damit jeder Art-Pixel gleich groß ist. Im Hub werden sie mit `image-rendering: pixelated` angezeigt.
 
+## Die Figur bewegt sich mit der Waffe
+
+`weapon_body.js` legt eine Körperpose über jede Waffenbewegung. Die Helden sind Einzelbilder, deshalb arbeitet die Pose mit Neigen, Verschieben und Stauchen. Die gehaltene Waffe wandert mit.
+
+| Waffe / Bewegung | Körper |
+| --- | --- |
+| Hammer, Axt (Überkopf, Slam) | auf die Zehen, Waffe hoch, dann tief in die Hocke krachen |
+| Klingenbögen | ausholen, dann den Oberkörper durch den Schnitt drehen |
+| Speer, Stoß, Ausfall | Schritt zurück, dann mit der Reichweite nach vorn |
+| Katana (Iai) | tief hocken, dann durch das Ziehen preschen |
+| Wirbel, Drehung | der Körper dreht sich einmal mit |
+| Bogen | in den Zug zurücklehnen, Rückstoß beim Loslassen; Armbrust: Rückstoß |
+| Zauberwaffen | beim Wirken aufrichten, dann in den Zeigestoß lehnen; Harfe: wiegen |
+| Fäuste | Schulter in den Schlag, Aufwärtshaken hebt ab |
+
+Stand und Lauf je Gewichtsklasse: schwere Waffen gebeugt und schwerer im Lauf, Bogen steht zurück, Stangenwaffen lehnen nach vorn, Zauberer schweben leicht.
+
+## Abwehr je Waffe
+
+`weapon_guard.js` zeichnet beim Blocken die Pose der Waffe: Schild, Katana mit Scheide, gekreuzte Klinge, Stiel als Balken, wirbelnder Schaft, Bogen mit Windschleier, Runenbarriere, gekreuzte Fäuste. Ohne Waffe bleibt der arkane Schild. Beim perfekten Block funkelt die Pose.
+
 ## Noch offen
 
 - Bestehende ältere Effekte nach und nach auf Farbstufen und kleine weiße Kerne umstellen.

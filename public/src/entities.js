@@ -19,6 +19,7 @@ import { TransformationFx } from './transform_fx.js';
 import { weaponSprintVariant, weaponSprintStart, weaponSprintTick, weaponSprintHit } from './weapon_sprint.js';
 import { kitOf } from './weapon_kits.js';
 import { drawWeaponGuard } from './weapon_guard.js';
+import { weaponBodyPose } from './weapon_body.js';
 import { hasWeaponDown, castWeaponDown, weaponUp, weaponDive, updateWeaponKit, weaponMoveMult, weaponAttackSpeed, meleeBuffMods, targetDamageMult, onWeaponMeleeHit, afterWeaponSwing, weaponIncoming } from './weapon_kits.js';
 import { updatePrimalBond, bondMoveMultiplier, bondGainMultiplier, bondDisplacement, bondOnBlock, primalSprintVariant, renderPrimalBond, endPrimalBond, bondMelee, primalQuake } from './primals.js';
 import { createSegments, damageSegments, updateSegments, renderSegments } from './castle_segments.js';
@@ -1822,6 +1823,11 @@ export class Player extends GroundEntity {
       else { pRot = this.facing * 10; pOX = -this.facing * 11; pOY = 2; pSX = 1.08; pSY = 1.03; }
     }
 
+    // The body moves with the held weapon: hammer raised high, bow drawn, spear lunges, iai crouch (weapon_body.js).
+    const wielding = this.isAlive && (this.weapon || this.classWeapon) && !activeMoveset(this) && currentBuffForm(this)?.id !== 'A04' && !this.isGuarding && !(this.hitFlash > 0);
+    const body = wielding && (!useProc || /^attack|uppercut|heavyStrike/.test(this.state)) ? weaponBodyPose(this) : null;
+    if (body) { useProc = true; pRot += body.rot; pOX += body.ox; pOY += body.oy; pSX *= body.sx; pSY *= body.sy; if (body.cadence) cadence *= body.cadence; }
+
     if (this.state === 'attack2') reverse = true;
 
     if (this.hitFlash > 0 && this.state !== 'dead') {
@@ -1852,9 +1858,11 @@ export class Player extends GroundEntity {
     // Klingenblüte (A04): the weapon has become the petal swarm — only the swarm renderer draws it.
     // While guarding, the guard pose shows the weapon (weapon_guard.js) — no second copy in the hand.
     const armed = this.isAlive && (this.weapon || this.classWeapon) && currentBuffForm(this)?.id !== 'A04' && !(this.isGuarding && !activeMoveset(this));
-    if (armed) drawHeldWeapon(ctx, this, renderY, 'back');
+    // The weapon stays in the hands when the body shifts with it (weapon_body.js).
+    const held = (layer) => { if (!armed) return; ctx.save(); if (body) ctx.translate(body.ox, body.oy); drawHeldWeapon(ctx, this, renderY, layer); ctx.restore(); };
+    held('back');
     sprites.renderEntity(ctx, this.renderKey, this.x, renderY, renderOpts);
-    if (armed) drawHeldWeapon(ctx, this, renderY, 'front');
+    held('front');
     // HOLD charge without a weapon: the bare hands glow (with a weapon, the weapon pulses).
     const holdK = this.isAlive && !armed ? this.holdChargeLevel() : null;
     if (holdK != null) this.renderHoldHands(ctx, renderY, holdK, activeMoveset(this) ? (currentBuffForm(this)?.mat?.vein ?? FORM_PALETTES[activeMoveset(this)]?.main ?? '#c9a8ff') : '#7fd8ff');

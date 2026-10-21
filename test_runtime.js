@@ -4090,6 +4090,40 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   delete sprites.sprites.__pixelTest; delete sprites.sprites.__smoothTest;
 }
 
+// The body moves with the weapon (character animation per weapon, 21 Oct 2026).
+{
+  const WB = await import('./public/src/weapon_body.js'); const W = await import('./public/src/weapons.js');
+  const at = (weapon, motion, prog, facing = 1) => WB.weaponBodyPose({ weapon, facing, state: 'attack1', stateTimer: .3 * (1 - prog), _weaponSwingTime: .3, _weaponMotion: motion, grounded: true, animTime: 0 });
+  const raise = at('great_hammer', 'slam', .25); const crash = at('great_hammer', 'slam', .5);
+  assert(raise.rot < 0 && raise.oy < 0 && crash.oy > 0 && crash.sy < 1, 'Hammer: the body rises with the weapon raised, then crashes down into a crouch');
+  const drawn = at('bow', 'draw', .45); const drawnL = at('bow', 'draw', .45, -1);
+  assert(drawn.rot < 0 && drawn.ox < 0 && drawnL.rot > 0 && drawnL.ox > 0, 'Bow: the archer leans back into the draw (mirrored when facing left)');
+  assert(at('spear', 'lunge', .45).ox > 10 && at('spear', 'lunge', .1).ox <= 0, 'Spear: a step back, then the lunge carries the body forward');
+  const crouch = at('katana', 'iaido', .1); const dash = at('katana', 'iaido', .3);
+  assert(crouch.oy > 3 && crouch.sy < 1 && dash.ox > 10, 'Katana: crouch low, then dash through the iai draw');
+  const signs = new Set([.05, .3, .5, .7, .95].map((k) => Math.sign(at('great_axe', 'whirl', k).sx)));
+  assert(signs.has(1) && signs.has(-1), 'Whirl: the body turns once with the weapon');
+  assert(at('gauntlets', 'upper', .4).oy < -6, 'Fists: the uppercut rises');
+  assert(WB.weaponBodyPose({ facing: 1, state: 'attack1', stateTimer: .2, grounded: true }) === null, 'Bare hands keep the default motion');
+  const idleH = WB.weaponBodyPose({ weapon: 'great_hammer', facing: 1, state: 'idle', grounded: true, animTime: 0 }); const runH = WB.weaponBodyPose({ weapon: 'great_hammer', facing: 1, state: 'run', grounded: true, animTime: .3 });
+  const idleB = WB.weaponBodyPose({ weapon: 'bow', facing: 1, state: 'idle', grounded: true, animTime: 0 });
+  assert(idleH.rot > 0 && idleH.sy < 1 && runH.cadence < 1 && idleB.rot < 0, 'Stances: heavy weapons hunch and run heavier, the archer stands back');
+  // Every weapon, every motion it uses: finite, sane poses.
+  let insane = [];
+  for (const id of Object.keys(W.WEAPONS)) for (const kind of ['normal', 'heavy', 'uppercut']) for (let st = 1; st <= 4; st++) { const mo = W.weaponMotion(id, kind, st); for (let k = 0; k <= 1.001; k += .1) { const b = at(id, mo, k); if (![b.rot, b.ox, b.oy, b.sx, b.sy].every(Number.isFinite) || Math.abs(b.rot) > 40 || Math.abs(b.ox) > 30 || Math.abs(b.sx) > 1.3 || b.sy < .7 || b.sy > 1.3) insane.push(id + ':' + mo); } }
+  assert(!insane.length, 'Every weapon motion gives a sane body pose' + (insane.length ? ' (' + [...new Set(insane)].slice(0, 6).join(',') + ')' : ''));
+  // The player's render really uses it.
+  const { sprites } = await import('./public/src/sprites.js');
+  game.returnToHub(); game.setMatchMode('training'); game.startMatch();
+  const P = game.player; P.equipWeapon(null); P.equipClassWeapon('great_hammer'); P.isGuarding = false; P.hitFlash = 0;
+  P.state = 'attack1'; P._weaponMotion = 'slam'; P._weaponSwingTime = .3; P.stateTimer = .3 * .75;
+  const orig = sprites.renderEntity; let seen = null; sprites.renderEntity = function (ctx, key, x, y, opt) { if (key === P.renderKey && !seen) seen = opt; return orig.call(this, ctx, key, x, y, opt); };
+  const strictB = new Proxy({}, { get: (tt, k) => k === 'canvas' ? undefined : k === 'measureText' ? () => ({ width: 10 }) : () => {}, set: () => true });
+  try { P.render(strictB); } finally { sprites.renderEntity = orig; }
+  assert(seen && seen.procRot < 0 && seen.procOffsetY < 0, 'The sprite of the Wizard leans back with the hammer raised');
+  P.equipClassWeapon(null); P.state = 'idle'; P.stateTimer = 0;
+}
+
 const frameCallback = nextFrame;
 frameCallback(game.lastFrameTime + 16);
 game.debugVisible = true;
