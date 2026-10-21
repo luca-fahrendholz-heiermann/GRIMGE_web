@@ -23,7 +23,7 @@ import { hasWeaponDown, castWeaponDown, weaponUp, weaponDive, updateWeaponKit, w
 import { updatePrimalBond, bondMoveMultiplier, bondGainMultiplier, bondDisplacement, bondOnBlock, primalSprintVariant, renderPrimalBond, endPrimalBond, bondMelee, primalQuake } from './primals.js';
 import { createSegments, damageSegments, updateSegments, renderSegments } from './castle_segments.js';
 import { updateBuffForm, endBuffForm, isGenericBuff, currentBuffForm, renderBuffManifestation, buffVeinPainter, buffCloakColor, renderBuffGuard, levitationOffset, renderBuffCharge } from './buff_forms.js';
-import { masteryOnShieldHit, masteryTickShield, masteryChargedRelease, masteryPerfectBlock, masteryTier, currentAttacker } from './mastery.js';
+import { masteryOnShieldHit, masteryTickShield, masteryChargedRelease, masteryPerfectBlock, masteryTier, currentAttacker, masteryTick, masteryMoveMult, masteryIncoming } from './mastery.js';
 import { updateSignatureStance, renderSignatureStance, signatureHover, signatureMoveMult, signatureEvent, signatureDamageTaken, setHitContext, signatureSprintVariant, signatureCharge, signatureSprintMove, signatureDive, signatureMeleeMult } from './signature_runes.js';
 
 // Every spell a rune deck can produce: single runes plus every valid two-
@@ -417,6 +417,7 @@ export class Player extends GroundEntity {
     this.guardBreakTimer = Math.max(0, this.guardBreakTimer - dt);
     this.tornadoT = Math.max(0, (this.tornadoT ?? 0) - dt); // DOPPELTORNADO: hidden in game time (also if the move is cleared)
     masteryTickShield(this); // shield end masteries (residual shockwave, sacrifice refund)
+    masteryTick(this, dt); // mastery timers (haste, stone skin, frenzy) and Void echoes
     if (this.arcaneShieldTimer <= 0) this.arcaneShield = 0;
     this.freezeTimer = Math.max(0, this.freezeTimer - dt);
     this.slowTimer = Math.max(0, this.slowTimer - dt);
@@ -657,7 +658,7 @@ export class Player extends GroundEntity {
     const bondMult = bondMoveMultiplier(this) * (isGenericBuff(this) ? 1.08 : 1); // Wolf bond: SpeedBoost; buff forms move a little faster
     // Signature specials: hover stances glide slower, walkways / currents speed up.
     const sigMult = signatureMoveMult(this) * (this._sigBoost?.k ?? 1);
-    const combinedMult = this.slowFactor * guardMult * beastMult * focusMult * sprintMult * clashMult * burrowMult * bondMult * sigMult * weaponMoveMult(this);
+    const combinedMult = this.slowFactor * guardMult * beastMult * focusMult * sprintMult * clashMult * burrowMult * bondMult * sigMult * weaponMoveMult(this) * masteryMoveMult(this);
 
     const baseSpeed = this.moveSpeed;
     const baseDepth = this.depthSpeed;
@@ -1499,6 +1500,10 @@ export class Player extends GroundEntity {
     const incomingFromFront = Math.abs(kx) > 0.01 && Math.sign(-kx) === this.facing;
     // Signature stances (floe plates, forge shield, shard shield) soften hits.
     amount = signatureDamageTaken(this, amount, kx, hitKind);
+    // Masteries on the incoming hit: Nachtschleier dodges a melee hit, Steinhaut softens and reflects.
+    const mIn = masteryIncoming(this, amount, kx, lift, hitKind, currentAttacker());
+    if (mIn.dodged) return { dodged: true };
+    amount = mIn.amount; kx = mIn.kx; lift = mIn.lift;
     // A stance that fully evaded the hit (Schattenkonter) also cancels knockback and stagger.
     if (this._sigDodged) { this._sigDodged = false; return { dodged: true }; }
     // Weapon kits: counter stance parries a melee hit, chi ignores stagger, cursed attackers hit softer.

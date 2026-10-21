@@ -1819,16 +1819,19 @@ export class GameWorld {
           const source = this.trainingDeckSource(); const next = [];
           for (const id of preset.deck) if (next.length < MATCH_DECK_SIZE && ALL_RUNE_IDS.includes(id) && source.isRuneUnlocked(id) && deckAccepts(next, id)) next.push(id);
           deck.splice(0, deck.length, ...next);
-          result = { ok: true, preset };
+          // The player's build carries its masteries along (the opponent's training deck does not).
+          const skills = target === 'player' && preset.masteries ? this.profile.applyMasterySet(preset.masteries, { free: this.freeMasteries }) : null;
+          if (skills) this.player.masteries = new Set(this.profile.masteries);
+          result = { ok: true, preset, masteriesSkipped: skills?.skipped ?? 0 };
         }
       } else {
-        result = this.profile.loadDeckPreset(arg);
+        result = this.profile.loadDeckPreset(arg, { free: this.freeMasteries });
         if (result.ok) this.applyProfile();
       }
     } else return false;
     if (!result.ok) { this.showAnnouncement(`BUILD: ${result.reason}`, 1.2); return false; }
     const label = { 'preset-save': result.overwritten ? 'BUILD UPDATED' : 'BUILD SAVED', 'preset-overwrite': 'BUILD UPDATED', 'preset-delete': 'BUILD DELETED', 'preset-load': 'BUILD LOADED' }[action];
-    this.showAnnouncement(`${label}: ${result.preset?.name ?? ''}`, 1.3);
+    this.showAnnouncement(`${label}: ${result.preset?.name ?? ''}${result.masteriesSkipped ? ` · ${result.masteriesSkipped} MASTERIES GESPERRT` : ''}`, 1.3);
     this.refreshDeckBuilder();
     return true;
   }

@@ -771,7 +771,8 @@ export class UIManager {
       const id = escapeHtml(preset.id);
       const runes = preset.deck.map((rid) => { const rune = byId.get(rid); return rune ? `<i style="--rune-color:${rune.color}" title="${escapeHtml(rune.name)}">${rune.glyph}</i>` : ''; }).join('');
       const over = pending === `preset-overwrite:${preset.id}`; const del = pending === `preset-delete:${preset.id}`;
-      return `<div class="deck-preset ${sameDeck(preset.deck, profile.matchDeck) ? 'is-active' : ''}"><b title="${escapeHtml(preset.name)}">${escapeHtml(preset.name)}</b><span class="deck-preset-runes">${runes}</span>`
+      const skills = preset.masteries?.length ? `<em class="deck-preset-masteries" title="Masteries, die mit diesem Build geladen werden">✦ ${preset.masteries.length} MASTERIES</em>` : '';
+      return `<div class="deck-preset ${sameDeck(preset.deck, profile.matchDeck) ? 'is-active' : ''}"><b title="${escapeHtml(preset.name)}">${escapeHtml(preset.name)}</b><span class="deck-preset-runes">${runes}</span>${skills}`
         + `<button type="button" data-deck-action="preset-load" data-preset-id="${id}">LOAD</button>`
         + `<button type="button" class="${over ? 'confirm' : ''}" data-deck-action="preset-overwrite" data-preset-id="${id}" title="Overwrite with the current deck" ${profile.matchDeck.length === MATCH_DECK_SIZE ? '' : 'disabled'}>${over ? 'SURE?' : 'SAVE'}</button>`
         + `<button type="button" class="${del ? 'confirm' : ''}" data-deck-action="preset-delete" data-preset-id="${id}" title="Delete build">${del ? 'SURE?' : '✕'}</button></div>`;

@@ -176,6 +176,28 @@ test('Deck builder: favourite runes toggle and persist; presets survive the deck
   assert.ok(repaired.toJSON().deckPresets[0].name === 'Old');
 });
 
+test('Builds remember the masteries: loading re-skills them (refund + re-buy), older builds keep the current ones', () => {
+  const profile = new MageProfile({ level: 20, skillPoints: 10, unlockedRunes: ['ignis', 'ventus', 'fulgur', 'terra', 'aqua'] });
+  profile.matchDeck = [...DEFAULT_MATCH_DECK];
+  for (const id of ['fulgur.chain.1', 'fulgur.chain.2', 'ignis.inferno.1']) assert.ok(profile.unlockMastery(id), id);
+  assert.equal(profile.skillPoints, 7);
+  const saved = profile.saveDeckPreset('Sturm'); assert.ok(saved.ok); assert.deepEqual(saved.preset.masteries, ['fulgur.chain.1', 'fulgur.chain.2', 'ignis.inferno.1']);
+  profile.resetMasteries(); profile.unlockMastery('aqua.tide.1'); assert.equal(profile.skillPoints, 9);
+  const loaded = profile.loadDeckPreset(saved.preset.id);
+  assert.ok(loaded.ok && loaded.masteriesSkipped === 0);
+  assert.deepEqual([...profile.masteries].sort(), ['fulgur.chain.1', 'fulgur.chain.2', 'ignis.inferno.1']);
+  assert.equal(profile.skillPoints, 7);
+  // Survives a save / load of the profile.
+  assert.deepEqual(new MageProfile(profile.toJSON()).deckPresets[0].masteries, ['fulgur.chain.1', 'fulgur.chain.2', 'ignis.inferno.1']);
+  // Not enough points: what cannot be bought is skipped.
+  profile.resetMasteries(); profile.skillPoints = 1;
+  assert.equal(profile.loadDeckPreset(saved.preset.id).masteriesSkipped, 2); assert.equal(profile.masteries.size, 1);
+  // An older build without masteries keeps the current ones.
+  const old = new MageProfile({ level: 20, skillPoints: 5, deckPresets: [{ id: 'preset_1', name: 'Alt', deck: [...DEFAULT_MATCH_DECK] }] });
+  old.unlockMastery('fulgur.chain.1', { free: true }); old.loadDeckPreset('preset_1');
+  assert.deepEqual([...old.masteries], ['fulgur.chain.1']);
+});
+
 test('Deck categories: elements, then simple / multi / stances / summons / breathings / domains / transformations', () => {
   assert.equal(RUNE_CATEGORIES.length, 8);
   assert.deepEqual(['ignis', 'bestia', 'construct', 'ward'].map(runeCategory), ['element', 'element', 'element', 'element']);

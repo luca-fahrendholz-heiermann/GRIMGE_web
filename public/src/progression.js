@@ -213,7 +213,7 @@ export class MageProfile {
     this.deckPresets = (Array.isArray(source?.deckPresets) ? source.deckPresets : [])
       .filter((preset) => preset && Array.isArray(preset.deck))
       .slice(0, MAX_DECK_PRESETS)
-      .map((preset, i) => ({ id: String(preset.id ?? `preset_${i + 1}`), name: this.cleanPresetName(preset.name, i), deck: preset.deck.filter((id) => ALL_RUNE_IDS.includes(id)).slice(0, MATCH_DECK_SIZE) }));
+      .map((preset, i) => ({ id: String(preset.id ?? `preset_${i + 1}`), name: this.cleanPresetName(preset.name, i), deck: preset.deck.filter((id) => ALL_RUNE_IDS.includes(id)).slice(0, MATCH_DECK_SIZE), ...(Array.isArray(preset.masteries) ? { masteries: preset.masteries.filter((id) => MASTERY_NODE_IDS.includes(id)) } : {}) }));
     const savedDeck = Array.isArray(source?.matchDeck) ? source.matchDeck : DEFAULT_MATCH_DECK;
     this.matchDeck = this.sanitizeDeck(savedDeck);
     // A saved deck can lose cards when runes are retired (e.g. the archived
@@ -244,7 +244,7 @@ export class MageProfile {
       lateUnlocks: [...this.lateUnlocks], weaponXp: clone(this.weaponXp), classWeapon: this.classWeapon, bankaiClasses: [...this.bankaiClasses],
       discoveredSpells: [...this.discoveredSpells], unlockedRunes: [...this.unlockedRunes],
       matchDeck: [...this.matchDeck], progressionVersion: 3,
-      favoriteRunes: [...this.favoriteRunes], deckPresets: this.deckPresets.map((preset) => ({ ...preset, deck: [...preset.deck] }))
+      favoriteRunes: [...this.favoriteRunes], deckPresets: this.deckPresets.map((preset) => ({ ...preset, deck: [...preset.deck], ...(preset.masteries ? { masteries: [...preset.masteries] } : {}) }))
     };
   }
 
@@ -347,29 +347,46 @@ export class MageProfile {
   }
   getDeckPreset(id) { return this.deckPresets.find((preset) => preset.id === id) ?? null; }
   // Save a deck as a build. Same name (or the given id) overwrites that build.
-  saveDeckPreset(name, deck = this.matchDeck, id = null) {
+  // The build remembers the masteries too (user, 21 Oct 2026): loading it re-skills them.
+  saveDeckPreset(name, deck = this.matchDeck, id = null, masteries = this.masteries) {
     const cards = [...deck];
     if (cards.length !== MATCH_DECK_SIZE) return { ok: false, reason: 'DECK NEEDS 10 CARDS' };
     const existing = id ? this.getDeckPreset(id) : this.deckPresets.find((preset) => preset.name.toLowerCase() === this.cleanPresetName(name).toLowerCase());
     if (existing) {
       if (name != null && String(name).trim()) existing.name = this.cleanPresetName(name);
-      existing.deck = cards; this.save();
+      existing.deck = cards; existing.masteries = [...masteries]; this.save();
       return { ok: true, preset: existing, overwritten: true };
     }
     if (this.deckPresets.length >= MAX_DECK_PRESETS) return { ok: false, reason: `MAX ${MAX_DECK_PRESETS} BUILDS` };
     let n = this.deckPresets.length + 1; while (this.getDeckPreset(`preset_${n}`)) n++;
-    const preset = { id: `preset_${n}`, name: this.cleanPresetName(name), deck: cards };
+    const preset = { id: `preset_${n}`, name: this.cleanPresetName(name), deck: cards, masteries: [...masteries] };
     this.deckPresets.push(preset); this.save();
     return { ok: true, preset };
   }
   // Load a build as the match deck (rules re-checked; runes that are not legal are skipped and the deck is topped up).
-  loadDeckPreset(id) {
+  loadDeckPreset(id, { free = false } = {}) {
     const preset = this.getDeckPreset(id);
     if (!preset) return { ok: false, reason: 'BUILD NOT FOUND' };
     const deck = this.sanitizeDeck(preset.deck);
     this.matchDeck = deck.length < MATCH_DECK_SIZE ? this.topUpDeck(deck) : deck;
+    const skills = preset.masteries ? this.applyMasterySet(preset.masteries, { free }) : null; // older builds keep the current masteries
     this.save();
-    return { ok: true, preset, repaired: deck.length < preset.deck.length };
+    return { ok: true, preset, repaired: deck.length < preset.deck.length, masteriesSkipped: skills?.skipped ?? 0 };
+  }
+  // Re-skill a saved set of masteries: the current ones are refunded, the set is bought again in tier
+  // order; nodes the profile cannot own (yet) are skipped.
+  applyMasterySet(ids, { free = false } = {}) {
+    const wanted = [...new Set(ids)].filter((id) => MASTERY_NODE_IDS.includes(id)).sort((a, b) => +a.split('.')[2] - +b.split('.')[2]);
+    if (!free) this.skillPoints += this.masteries.size;
+    this.masteries.clear();
+    let skipped = 0;
+    for (const id of wanted) {
+      if (!this.canUnlockMastery(id, { free })) { skipped++; continue; }
+      if (!free) this.skillPoints -= masteryRequirement(id).cost;
+      this.masteries.add(id);
+    }
+    this.save();
+    return { applied: this.masteries.size, skipped };
   }
   deleteDeckPreset(id) {
     const index = this.deckPresets.findIndex((preset) => preset.id === id);

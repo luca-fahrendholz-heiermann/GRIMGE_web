@@ -1,4 +1,4 @@
-# GRIMGE – Mastery-System (umgesetzt, Stand 20.10.2026)
+# GRIMGE – Mastery-System (umgesetzt, Stand 21.10.2026)
 
 Grundlage: *GRIMGE_Mastery_Runensystem_Game_Design_Document.pdf* (modulares Runen-, Mastery- und Build-System) und die zwei Referenz-Builds (Witcher-Quen-Schild, Exiled Heavy Knight).
 Die Dokumente kannten den Prototyp nicht. Sie wurden deshalb auf das bestehende System übertragen, ohne Build-spezifischen Sondercode.
@@ -91,6 +91,35 @@ Nachgezogen sind Ventus (Verdrängen, Ausbreiten), Lux (Segen, Reinigung), Void 
     - III: höchstens 0,25 s pro Ereignis, egal wie viele Ziele
     - IV: ein neuer Schild übernimmt die halbe Restdauer
 
+## 3b. Dritte Äste (21.10.2026): jedes Element hat jetzt 3 Äste
+
+Alle 12 Bäume (11 Elemente + Schutz) haben jetzt je 3 Äste mit 4 Stufen, also 144 Stufen. Alle „+X %“ eines Treffers werden zu **einem** Bonus-Folgetreffer zusammengefasst; das schont das Proc-Budget.
+
+| Element | Ast | I | II | III | IV |
+|---|---|---|---|---|---|
+| Fulgur | **Überladung** | jeder 5. Blitz-Treffer lähmt | jeder 4. | Gelähmte nehmen +20 % von Blitz | jede Überladung +5 Mana |
+| Natura | **Dornen** | Gift garantiert | Gift hält länger | Vergiftete verlangsamt | +25 % auf Vergiftete |
+| Natura | **Wachstum** | heilt den nächsten Verbündeten 3 HP | 5 HP | 2 Verbündete | Verbündete erhalten 8 Schildpunkte |
+| Aqua | **Flut** | +2 Mana je Treffer | +3 Mana | doppelt auf nasse Ziele | über 80 % Mana: +20 % Schaden |
+| Aqua | **Frost** | nasse Ziele verlangsamt | stärker, länger | jeder 3. Treffer friert 0,6 s ein | Eingefrorene +30 % |
+| Ignis | **Feuersbrunst** | +15 % auf Brennende | +25 % | Brennende explodieren (8 ringsum, 1×/s) | Explosion entzündet Nachbarn |
+| Ignis | **Glut** | Brand-Ticks +1 Mana | +2 Mana | +1 HP | +1 Fokus |
+| Terra | **Beben** | jeder 4. Erd-Treffer bebt (6 ringsum) | jeder 3., größer | wirft hoch | verlangsamt |
+| Terra | **Steinhaut** | nach Erd-Treffer 2 s −10 % Schaden | −15 % | kaum Rückstoß | 20 % Nahkampf zurück |
+| Umbra | **Fluch** | Schatten verflucht 4 s: deine Treffer +10 % | +15 % | Schatten gibt den Fluch weiter | Treffer auf Verfluchte heilen 2 HP |
+| Umbra | **Nachtschleier** | nach Schatten-Treffer nächster Nahkampftreffer ausgewichen (6 s Abklingzeit) | 4 s | Ausweichen schlägt zurück (8) | +8 Mana |
+| Ventus | **Rückenwind** | 1,5 s +10 % Tempo | +20 % | +4 Ausdauer | Nahkampf +20 % mit Rückenwind |
+| Lux | **Strahlen** | blendet 0,25 s (3 s je Ziel) | 0,35 s, 2 s | Geblendete +20 % | springt weiter |
+| Void | **Riss** | Echo nach 1 s mit 20 % | 30 % | trifft Nachbarn | −3 Mana je Getroffenem |
+| Konstrukt | **Arsenal** | Nahkampf +10 % | +15 % | jeder 5. wirft eine Klinge (40 %) | Klinge lässt bluten |
+| Bestia | **Raserei** | Stapel (bis 5, 3 s): +3 % je Stapel | bis 8 | volle Stapel heilen 2 HP | volle Stapel +15 % Tempo |
+
+Neue Hooks: `masteryIncoming` (eingehender Treffer: Ausweichen, Steinhaut), `masteryTick` (Spielzeit-Timer und Void-Echos), `masteryMoveMult` (Tempo). `onDot` kennt jetzt die Status-Art (Glut).
+
+## 3c. Builds speichern die Masteries
+
+Eine gespeicherte Deck-Vorlage merkt sich jetzt auch die Masteries. Beim Laden werden die aktuellen Masteries erstattet und die gespeicherten in Stufenreihenfolge neu gekauft. Was (noch) nicht erlaubt ist, wird übersprungen und angesagt („2 MASTERIES GESPERRT“). Ältere Vorlagen ohne Masteries lassen die aktuellen stehen. In der Liste zeigt „✦ N MASTERIES“, was mitgeladen wird.
+
 ## 4. Laufzeitregeln (gegen Endlosschleifen)
 
 - **Ereignis-Kontext:** Jedes Ereignis bekommt eine Root-ID. Folgetreffer (Ketten-Sprung, Vergeltung, Entladung, Bonus) laufen eine Generation tiefer.
@@ -130,11 +159,8 @@ Im Skill-Fenster (MAGE PATHS) liegt das Panel **RUNEN-MASTERIES**:
 
 ## 7. Offen / nächste Ausbaustufe
 
-- Weitere Äste nach dem GDD:
-  - Ignition und Consume (Feuer), Flow und Restore, Spread / Velocity / Displace (Wind)
-  - Charge (Blitz), Tremor und Fracture, Growth und Entangle
-  - Lux, Void, Konstrukt, Bestia
-- Mastery-Wahl im Deck-Preset speichern (Build = Deck + Masteries).
+- ~~Weitere Äste~~ erledigt (3 je Element, 21.10.2026).
+- ~~Mastery-Wahl im Deck-Preset speichern~~ erledigt.
 
 ## 8. Freischaltung: zuerst nur Basis-Runen (Stand 20.10.2026)
 

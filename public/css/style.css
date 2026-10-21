@@ -1212,12 +1212,13 @@ body.portrait-gameplay #game-container { visibility: hidden; pointer-events: non
 .deck-presets button { padding: 5px 9px; border: 1px solid #6d5b83; border-radius: 6px; background: #1a1228; color: #e8dcff; font: 800 10px 'Rajdhani', sans-serif; letter-spacing: 1px; cursor: pointer; }
 .deck-presets button:disabled { opacity: .35; cursor: not-allowed; }
 .deck-presets button.confirm { border-color: #ff7043; color: #ffccbc; box-shadow: 0 0 8px rgba(255, 112, 67, .5); }
-.deck-preset { display: grid; grid-template-columns: minmax(70px, auto) 1fr auto auto auto; gap: 6px; align-items: center; padding: 4px 6px; border: 1px solid #3a2f50; border-radius: 6px; }
+.deck-preset { display: grid; grid-template-columns: minmax(70px, auto) 1fr auto auto auto auto; gap: 6px; align-items: center; padding: 4px 6px; border: 1px solid #3a2f50; border-radius: 6px; }
 .deck-preset b { color: #e5d5ff; font: 800 11px 'Rajdhani', sans-serif; letter-spacing: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .deck-preset.is-active { border-color: #ffd54f; box-shadow: inset 0 0 8px rgba(255, 213, 79, .25); }
 .deck-preset.is-active b::after { content: ' · ACTIVE'; color: #ffd54f; font-size: 9px; }
 .deck-preset-runes { display: flex; gap: 2px; flex-wrap: wrap; font-size: 11px; }
 .deck-preset-runes i { color: var(--rune-color); font-style: normal; }
+.deck-preset-masteries { color: #b388ff; font: 800 9px 'Rajdhani', sans-serif; font-style: normal; letter-spacing: 1px; white-space: nowrap; }
 .deck-preset-empty { margin: 0; color: #8f86a6; font-size: 10px; }
 .deck-filter { display: flex; gap: 6px; margin: 8px 16px 0; }
 .deck-filter button { padding: 4px 10px; border: 1px solid #6d5b83; border-radius: 12px; background: #1a1228; color: #d8c9ee; font: 800 10px 'Rajdhani', sans-serif; letter-spacing: 1px; cursor: pointer; }

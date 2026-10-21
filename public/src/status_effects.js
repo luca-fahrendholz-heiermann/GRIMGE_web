@@ -255,7 +255,7 @@ export class StatusEffectFx {
         const moved = Math.hypot(t.x - this.lastX, ((t.z ?? 0) - (this.lastZ ?? 0)) * 150) > 6;
         const tickDmg = (moved && def.movingDps ? def.movingDps : def.dps) * .5;
         statusDamage(t, tickDmg);
-        if (this.owner) hooks.onDot?.(t, tickDmg, this.owner);
+        if (this.owner) hooks.onDot?.(t, tickDmg, this.owner, this.kind);
         // Creeping poison (serpent breathing): it jumps to a foe nearby every 1.5 s, three generations deep.
         if (this.spreads && (this.gen ?? 0) < 3 && (this.spreadT = (this.spreadT ?? 0) + .5) >= 1.5) {
           this.spreadT = 0;

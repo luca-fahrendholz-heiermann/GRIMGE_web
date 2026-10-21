@@ -70,7 +70,14 @@ function heal(actor, amount) {
   return a;
 }
 // Clears the per-actor mastery clocks (heal window, internal cooldowns) — tests / respawn.
-export function resetMasteryRuntime(actor) { healLog.delete(actor); for (const k of ['_retaliateAt', '_purifyAt', '_dischargeAt']) actor[k] = -9; actor._instinct = 0; }
+export function resetMasteryRuntime(actor) { healLog.delete(actor); for (const k of ['_retaliateAt', '_purifyAt', '_dischargeAt']) actor[k] = -9; actor._instinct = 0; actor._overload = 0; actor._quake = 0; actor._arsenal = 0; actor._frost = 0; actor._frenzy = 0; actor.mt = {}; actor._echoes = []; }
+// Game-time mastery timers on the actor (haste, stone skin, frenzy …): dt-based, so they follow slow motion.
+const mt = (a) => (a.mt ??= {});
+const timerOn = (a, k) => (a.mt?.[k] ?? 0) > 0;
+function alliesOf(actor, x, z, r) {
+  const foeTeam = actor.team === 'blue' ? 'red' : 'blue';
+  return (gw()?.getHostileTargets?.(foeTeam) ?? []).filter((o) => o.team === actor.team && o !== actor && alive(o) && !o.isObjective && !o.isProp && !o.isStoneWall && !o.isCastle && Number.isFinite(o.hp) && Math.hypot(o.x - x, ((o.z ?? z) - z) * DEPTH_PX) < r).sort((a, b) => Math.abs(a.x - x) - Math.abs(b.x - x));
+}
 export function masteryOnHit(target, amount, hitKind, source) {
   const attacker = attackerOf(source);
   if (!attacker?.masteries?.size || !(amount > 0) || target === attacker) return;
@@ -217,6 +224,125 @@ export function masteryOnHit(target, amount, hitKind, source) {
         if (pack >= 4) heal(attacker, 3);
       }
     }
+    // ── the third branches (user, 21 Oct 2026: three branches per element) ──
+    let bonusPct = 0; // every "+X %" of this hit lands as ONE bonus follow-up
+    // Fulgur · Überladung: every 5th (4th) lightning hit paralyses; paralysed foes take more.
+    const over = tierOf(attacker, 'fulgur', 'overload');
+    if (over && has('fulgur') && once) {
+      if (over >= 3 && hasStatus(target, 'paralysis')) bonusPct += .2;
+      attacker._overload = (attacker._overload ?? 0) + 1;
+      if (attacker._overload >= (over >= 2 ? 4 : 5)) {
+        attacker._overload = 0; applyStatus(target, 'paralysis', { force: true, quiet: true });
+        combat.spawnDamageText?.(target.x, (target.y ?? 0) - 86, 'ÜBERLADEN', { color: '#fff176' });
+        if (over >= 4 && Number.isFinite(attacker.mp)) attacker.mp = Math.min(attacker.maxMp ?? attacker.mp, attacker.mp + 5);
+      }
+    }
+    // Natura · Dornen: guaranteed poison, slowing, bonus on the poisoned.
+    const thorns = tierOf(attacker, 'natura', 'thorns');
+    if (thorns && has('natura') && once) {
+      if (thorns >= 4 && hasStatus(target, 'poison')) bonusPct += .25;
+      if (!hasStatus(target, 'poison')) applyStatus(target, 'poison', { force: true, quiet: true, duration: thorns >= 2 ? 5 : 3 });
+      if (thorns >= 3) target.slow?.(1.2, .75);
+    }
+    // Natura · Wachstum: the hit heals the nearest allies.
+    const growth = tierOf(attacker, 'natura', 'growth');
+    if (growth && has('natura') && once) {
+      for (const ally of alliesOf(attacker, attacker.x, attacker.z, 220).slice(0, growth >= 3 ? 2 : 1)) {
+        ally.hp = Math.min(ally.maxHp ?? ally.hp, ally.hp + (growth >= 2 ? 5 : 3)); arc(attacker, ally, '#9ccc65', 'leech');
+        if (growth >= 4) { ally.arcaneShield = Math.max(ally.arcaneShield ?? 0, 8); ally.arcaneShieldTimer = Math.max(ally.arcaneShieldTimer ?? 0, 3); }
+      }
+    }
+    // Aqua · Flut: water hits restore mana.
+    const tide = tierOf(attacker, 'aqua', 'tide');
+    if (tide && has('aqua') && once && Number.isFinite(attacker.mp)) {
+      if (tide >= 4 && attacker.mp >= (attacker.maxMp ?? 100) * .8) bonusPct += .2;
+      const gain = (tide >= 2 ? 3 : 2) * (tide >= 3 && hasStatus(target, 'wet') ? 2 : 1);
+      attacker.mp = Math.min(attacker.maxMp ?? attacker.mp, attacker.mp + gain);
+    }
+    // Aqua · Frost: wet foes slow down and freeze; the frozen take more.
+    const frost = tierOf(attacker, 'aqua', 'frost');
+    if (frost && once) {
+      if (frost >= 4 && ((target.freezeTimer ?? 0) > 0 || hasStatus(target, 'frozen'))) bonusPct += .3;
+      if (has('aqua') && hasStatus(target, 'wet')) {
+        target.slow?.(frost >= 2 ? 1.6 : 1, frost >= 2 ? .55 : .7);
+        if (frost >= 3 && (attacker._frost = (attacker._frost ?? 0) + 1) % 3 === 0) { target.freeze?.(.6); combat.spawnDamageText?.(target.x, (target.y ?? 0) - 86, 'GEFROREN', { color: '#b3e5fc' }); }
+      }
+    }
+    // Ignis · Feuersbrunst: burning foes take more and explode.
+    const inferno = tierOf(attacker, 'ignis', 'inferno');
+    if (inferno && has('ignis') && once && hasStatus(target, 'burn')) {
+      bonusPct += inferno >= 2 ? .25 : .15;
+      if (inferno >= 3 && (target._infernoAt ?? -9) < nowS() - 1) {
+        target._infernoAt = nowS(); combat.spawnShockwave?.(target.x, (target.y ?? 0) - 30, 70, '#ff7043');
+        for (const o of foesNear(attacker, target.x, target.z, 70, new Set([target]))) { followUp(o, 8, attacker, [], { bonus: true }); if (inferno >= 4) applyStatus(o, 'burn', { force: true, quiet: true }); }
+      }
+    }
+    // Terra · Beben: every 4th (3rd) earth hit quakes around the target.
+    const quake = tierOf(attacker, 'terra', 'quake');
+    if (quake && has('terra') && once && (attacker._quake = (attacker._quake ?? 0) + 1) >= (quake >= 2 ? 3 : 4)) {
+      attacker._quake = 0; const r = quake >= 2 ? 100 : 80;
+      combat.spawnShockwave?.(target.x, (target.y ?? 0) - 6, r, '#bcaaa4'); combat.shakeCamera?.(4, .15);
+      for (const o of foesNear(attacker, target.x, target.z, r)) {
+        if (ev.budget <= 0) break; ev.budget--;
+        const prev = setStatusSource(null); try { o.takeDamage?.(6, 0, quake >= 3 ? 260 : 0, .2, false, 'spell'); } finally { setStatusSource(prev); }
+        if (quake >= 4) o.slow?.(1.2, .6);
+      }
+    }
+    // Terra · Steinhaut: an earth hit hardens your skin for 2 s.
+    const skin = tierOf(attacker, 'terra', 'stoneskin');
+    if (skin && has('terra') && once) mt(attacker).stoneskin = 2;
+    // Umbra · Fluch: shadow hits curse; every hit of yours on the cursed bites harder.
+    const curse = tierOf(attacker, 'umbra', 'curse');
+    if (curse && once) {
+      const cursed = target.curse?.by === attacker && target.curse.until > nowS();
+      if (cursed) { bonusPct += curse >= 2 ? .15 : .1; if (curse >= 4) heal(attacker, 2); }
+      if (has('umbra')) {
+        if (cursed && curse >= 3) for (const o of foesNear(attacker, target.x, target.z, 110, new Set([target])).filter((f) => !(f.curse?.by === attacker && f.curse.until > nowS())).slice(0, 1)) { o.curse = { by: attacker, until: nowS() + 4 }; arc(target, o, '#b39ddb', 'leech'); }
+        target.curse = { by: attacker, until: nowS() + 4 };
+      }
+    }
+    // Umbra · Nachtschleier: a shadow hit readies a dodge (cooldown 6 s / 4 s).
+    const veil = tierOf(attacker, 'umbra', 'veil');
+    if (veil && has('umbra') && once && !timerOn(attacker, 'veilCd')) mt(attacker).veil = 3;
+    // Ventus · Rückenwind: haste, stamina, harder melee while it blows.
+    const gale = tierOf(attacker, 'ventus', 'gale');
+    if (gale && once) {
+      if (gale >= 4 && hitKind === 'melee' && timerOn(attacker, 'gale')) bonusPct += .2;
+      if (has('ventus')) { mt(attacker).gale = 1.5; if (gale >= 3 && Number.isFinite(attacker.sp)) attacker.sp = Math.min(attacker.maxSp ?? attacker.sp, attacker.sp + 4); }
+    }
+    // Lux · Strahlen: light blinds (a short freeze), the blinded take more.
+    const rad = tierOf(attacker, 'lux', 'radiance');
+    if (rad && once) {
+      if (rad >= 3 && (target._blindUntil ?? 0) > nowS()) bonusPct += .2;
+      if (has('lux')) {
+        const blind = (o) => { if ((o._blindAt ?? -9) > nowS() - (rad >= 2 ? 2 : 3)) return false; o._blindAt = nowS(); const dur = rad >= 2 ? .35 : .25; o.freeze?.(dur); o._blindUntil = nowS() + dur + .6; return true; };
+        if (blind(target) && rad >= 4) { const o = foesNear(attacker, target.x, target.z, 110, new Set([target]))[0]; if (o && blind(o)) arc(target, o, '#ffe082'); }
+      }
+    }
+    // Void · Riss: an echo of the hit lands a second later.
+    const rift = tierOf(attacker, 'void', 'rift');
+    if (rift && has('void') && once) (attacker._echoes ??= []).push({ t: 1, target, dmg: amount * (rift >= 2 ? .3 : .2), tier: rift });
+    // Konstrukt · Arsenal: forged melee hits harder, every 5th throws a blade.
+    const ars = tierOf(attacker, 'construct', 'arsenal');
+    if (ars && has('construct') && once) {
+      if (hitKind === 'melee') bonusPct += ars >= 2 ? .15 : .1;
+      if (ars >= 3 && (attacker._arsenal = (attacker._arsenal ?? 0) + 1) % 5 === 0) {
+        const o = foesNear(attacker, target.x, target.z, 160, new Set([target]))[0];
+        if (o) { arc(target, o, '#b0bec5'); followUp(o, amount * .4, attacker, [], { bonus: true }); if (ars >= 4) applyStatus(o, 'bleed', { force: true, quiet: true }); }
+      }
+    }
+    // Bestia · Raserei: stacks of frenzy — more damage, at full stacks heal and haste.
+    const fr = tierOf(attacker, 'bestia', 'frenzy');
+    if (fr && once) {
+      const max = fr >= 2 ? 8 : 5; const T = mt(attacker);
+      if (has('bestia')) { attacker._frenzy = Math.min(max, (T.frenzy > 0 ? attacker._frenzy ?? 0 : 0) + 1); T.frenzy = 3; }
+      if (T.frenzy > 0 && attacker._frenzy) {
+        bonusPct += attacker._frenzy * .03;
+        if (attacker._frenzy >= max && fr >= 3) heal(attacker, 2);
+        if (attacker._frenzy >= max && fr >= 4) T.frenzyHaste = 1.5;
+      }
+    }
+    if (bonusPct > 0) followUp(target, amount * bonusPct, attacker, [], { bonus: true });
     // Ward · Aufrechterhalten II: your own hits extend the active shield a little.
     const sustain = tierOf(attacker, 'ward', 'sustain');
     if (sustain >= 2 && attacker.arcaneShield > 0 && attacker.arcaneShieldTimer > 0) {
@@ -228,9 +354,58 @@ export function masteryOnHit(target, amount, hitKind, source) {
   });
 }
 // Periodic damage of a status that the attacker applied (Leech III).
-export function masteryOnDot(target, amount, owner) {
+export function masteryOnDot(target, amount, owner, kind = null) {
   if (!owner?.masteries?.size) return;
   if (tierOf(owner, 'natura', 'leech') >= 3) heal(owner, amount * .5);
+  // Ignis · Glut: the burn you set feeds you.
+  const ember = tierOf(owner, 'ignis', 'ember');
+  if (ember && kind === 'burn') {
+    if (Number.isFinite(owner.mp)) owner.mp = Math.min(owner.maxMp ?? owner.mp, owner.mp + (ember >= 2 ? 2 : 1));
+    if (ember >= 3) heal(owner, 1);
+    if (ember >= 4 && Number.isFinite(owner.focus)) owner.focus = Math.min(owner.maxFocus ?? owner.focus + 1, owner.focus + 1);
+  }
+}
+// Per frame (game time): mastery timers and the delayed Void echoes.
+export function masteryTick(actor, dt) {
+  const T = actor?.mt; if (T) for (const k in T) T[k] = Math.max(0, T[k] - dt);
+  if (T && !T.frenzy) actor._frenzy = 0;
+  const q = actor?._echoes; if (!q?.length) return;
+  for (const e of q) e.t -= dt;
+  for (const e of q.filter((x) => x.t <= 0)) {
+    if (!alive(e.target)) continue;
+    inEvent(() => {
+      const hitList = [e.target, ...(e.tier >= 3 ? foesNear(actor, e.target.x, e.target.z, 70, new Set([e.target])) : [])];
+      combat.spawnShockwave?.(e.target.x, (e.target.y ?? 0) - 30, 40, '#ce93d8');
+      for (const o of hitList) { followUp(o, e.dmg, actor, [], { bonus: true, echo: true }); if (e.tier >= 4 && Number.isFinite(o.mp)) o.mp = Math.max(0, o.mp - 3); }
+    });
+  }
+  actor._echoes = q.filter((x) => x.t > 0);
+}
+// Movement multiplier from masteries (Rückenwind, Raserei IV).
+export function masteryMoveMult(actor) {
+  if (!actor?.mt) return 1;
+  const gale = timerOn(actor, 'gale') ? tierOf(actor, 'ventus', 'gale') : 0;
+  return (gale >= 2 ? 1.2 : gale ? 1.1 : 1) * (timerOn(actor, 'frenzyHaste') ? 1.15 : 1);
+}
+// An incoming hit (before guard and shield): Steinhaut softens / reflects, Nachtschleier dodges.
+export function masteryIncoming(actor, amount, kx, lift, hitKind, attacker) {
+  const out = { amount, kx, lift, dodged: false };
+  if (!actor?.masteries?.size || !(amount > 0) || hitKind === 'status' || hitKind === 'hazard') return out;
+  const veil = tierOf(actor, 'umbra', 'veil');
+  if (veil && hitKind === 'melee' && timerOn(actor, 'veil')) {
+    const T = mt(actor); T.veil = 0; T.veilCd = veil >= 2 ? 4 : 6; out.dodged = true;
+    combat.spawnDamageText?.(actor.x, (actor.y ?? 0) - 90, 'AUSGEWICHEN', { color: '#b39ddb' });
+    if (veil >= 3 && alive(attacker) && attacker.team !== actor.team) inEvent(() => { arc(actor, attacker, '#b39ddb'); followUp(attacker, 8, actor, ['umbra'], { bonus: true, counter: true }); });
+    if (veil >= 4 && Number.isFinite(actor.mp)) actor.mp = Math.min(actor.maxMp ?? actor.mp, actor.mp + 8);
+    return out;
+  }
+  const skin = tierOf(actor, 'terra', 'stoneskin');
+  if (skin && timerOn(actor, 'stoneskin')) {
+    out.amount *= skin >= 2 ? .85 : .9;
+    if (skin >= 3) { out.kx *= .35; out.lift *= .35; }
+    if (skin >= 4 && hitKind === 'melee' && alive(attacker) && attacker.team !== actor.team) inEvent(() => followUp(attacker, amount * .2, actor, ['terra'], { bonus: true, counter: true }));
+  }
+  return out;
 }
 // A status combo fired on a target (Discharge I).
 export function masteryOnCombo(target, attacker, src = null) {
