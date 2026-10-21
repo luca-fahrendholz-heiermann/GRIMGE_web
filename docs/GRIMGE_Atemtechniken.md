@@ -32,6 +32,7 @@ Später bekommt jeder Waffentyp eigene Animationen. Die Techniken bleiben dabei 
 | S81 Bestia | Biest | Reißzahnschlitz (X-Hiebe) | Reißen | Wilder Ansturm („ignoriert Angriffe“) | Wildes Zerreißen |
 | S82 Konstrukt | Schmiede (Adaption von Klang) | Funkenkette (Explosionen marschieren) | Essensäule | Hammersturm | Ambossfall (Krater) |
 | S83 Schutz | Schutz (Wasser-„Nagi“ + Blumen-Abwehr) | **Stille See:** völlige Ruhe, jeder Treffer prallt ab, danach eine Schildwelle | Schattenpflaume (Drehabwehr wirft hoch) | Schildsturm | Kuppelfall (gibt Schild) |
+| S84 Eis (nach Hyōrinmaru, Bleach) | Eisdrache (friert alles ein, was er berührt) | Eiskokon (schließt den Gegner ein, zersplittert dann) | Drachenschweif (durch die Gegner, Eisspur, friert ein) | Frostthron (Eisboden) |
 
 ## Kombos (zweite Atmung wirken, während eine läuft)
 

@@ -85,6 +85,33 @@ export const isSignatureRuneId = (id) => String(id).startsWith('sig_');
 // Domains (Sphären): a signature family with one glyph — like the Arcane States only ONE per deck.
 export const DOMAIN_RUNE_IDS = Object.freeze(SIGNATURE_RUNE_DATA.filter((d) => String(d.systemType).startsWith('Domäne')).map((d) => 'sig_' + d.id));
 export const MAX_DOMAIN_RUNES = 1;
+// Deck builder categories (user, 21 Oct 2026): element runes, then the special runes by kind.
+export const RUNE_CATEGORIES = Object.freeze([
+  { id: 'element', label: 'ELEMENTE', icon: '◆', rule: 'Elementar-Runen · je bis zu 2× · frei kombinierbar' },
+  { id: 'simple', label: 'EINFACH', icon: '✦', rule: 'Spezialrunen · je 1× · ein Effekt beim Wirken' },
+  { id: 'multi', label: 'MEHRFACH', icon: '⟳', rule: 'Spezialrunen · je 1× · zweiter Tipp oder Halten & Loslassen' },
+  { id: 'stance', label: 'HALTUNGEN', icon: '◎', rule: 'Spezialrunen · je 1× · wirken eine Zeit lang am Zauberer' },
+  { id: 'summon', label: 'BESCHWÖRUNG', icon: '⚑', rule: 'Spezialrunen · je 1× · Wesen, Objekte, Fallen, Konstrukte' },
+  { id: 'breath', label: 'ATMUNGEN', icon: '≋', rule: 'Spezialrunen · je 1× · Kampfstil für 15 s · zweite Atmung = Kombo' },
+  { id: 'domain', label: 'SPHÄREN', icon: '◓', rule: 'nur EINE Sphäre pro Deck' },
+  { id: 'arcane', label: 'VERWANDLUNG', icon: '⧗', rule: 'nur EINE Verwandlung pro Deck' }
+]);
+// Specials with a second activation (tap again / hold & release) and the ones that run as a stance.
+const MULTI_SIGS = new Set(['S38', 'S45', 'S46', 'S47', 'S49', 'S50', 'S51', 'S54', 'S55', 'S70', 'S71', 'S74']);
+const STANCE_SIGS = new Set(['S01', 'S02', 'S04', 'S07', 'S10', 'S20', 'S21', 'S25', 'S27', 'S28', 'S34', 'S39', 'S48', 'S52']);
+const SUMMON_TYPES = /Objekt|Beschwörung|Konstrukt|Turm|Falle|Bodenkontrolle|Brücke|Forge|Großkonstrukt|Plattform/i;
+const SIG_BY_ID = new Map(SIGNATURE_RUNE_DATA.map((d) => ['sig_' + d.id, d]));
+export function runeCategory(id) {
+  if (isBuffRuneId(id)) return 'arcane';
+  if (isDomainRuneId(id)) return 'domain';
+  if (id === 'doppel' || id === 'mortis') return 'summon';
+  const d = SIG_BY_ID.get(id); if (!d) return 'element';
+  if (String(d.systemType).startsWith('Atemtechnik')) return 'breath';
+  if (MULTI_SIGS.has(d.id)) return 'multi';
+  if (STANCE_SIGS.has(d.id)) return 'stance';
+  if (SUMMON_TYPES.test(d.systemType)) return 'summon';
+  return 'simple';
+}
 export const isDomainRuneId = (id) => DOMAIN_RUNE_IDS.includes(id);
 export const ALL_RUNE_IDS = Object.freeze(['ignis', 'ventus', 'fulgur', 'terra', 'aqua', 'bestia', 'construct', 'void', 'lux', 'umbra', 'natura', 'ward', 'doppel', 'mortis', ...BUFF_RUNE_IDS, ...SIGNATURE_RUNE_IDS]);
 // Elemental runes combine and may be in a deck twice. Special runes (DOPPEL,

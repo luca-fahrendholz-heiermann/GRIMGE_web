@@ -1294,7 +1294,8 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
     assert(game.updateMatchDeck('favorite', 'sig_S46') && prof.isFavoriteRune('sig_S46'), 'The star marks a rune as favourite');
     ui.deckFilter = 'favorites'; game.refreshDeckBuilder();
     const favHtml = document.getElementById('deck-builder-content').innerHTML;
-    assert(favHtml.includes('data-rune-id="sig_S46"') && !favHtml.includes('data-rune-id="ignis"') && (favHtml.match(/<article/g) ?? []).length === 1, 'The FAVORITES filter lists only favourite runes');
+    const favCards = favHtml.match(/<article[\s\S]*?<\/article>/g) ?? [];
+    assert(favCards.length === 1 && favCards[0].includes('data-rune-id="sig_S46"') && favHtml.includes('deck-strip'), 'The FAVORITES filter lists only favourite runes (the deck stays visible as ten slots above)');
     ui.deckFilter = 'deck'; game.refreshDeckBuilder();
     assert(document.getElementById('deck-builder-content').innerHTML.includes('data-rune-id="ignis"') && !document.getElementById('deck-builder-content').innerHTML.includes('data-rune-id="sig_S46"'), 'The IN DECK filter lists only the runes in the deck');
     ui.deckFilter = 'all'; ui.toggleDeckBuilder(false);
@@ -2545,7 +2546,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   const step = (n, dt = 1 / 60) => { for (let i = 0; i < n; i++) { P.update(dt, neutral, game.battlefield, game); game.updateProjectiles(dt); spells.update(dt, game); } };
   const cast = (id, target = null) => spells.cast(P, spells.resolveSpell([{ id: 'sig_' + id }]), game, null, target);
   const ids = Object.keys(core.SIGNATURES);
-  assert(ids.length === 83 && ids.every((id) => core.signatureImpl(id)?.cast) && sigMod.SIGNATURE_RUNE_IDS.every((id) => isSpecialRune(id) && runeManaCost(id) >= 28 && runeManaCost(id) <= 46), 'All 83 signature specials (atlas S01–S36 + S37–S83) are special runes with their own mechanic and bound mana');
+  assert(ids.length === 84 && ids.every((id) => core.signatureImpl(id)?.cast) && sigMod.SIGNATURE_RUNE_IDS.every((id) => isSpecialRune(id) && runeManaCost(id) >= 28 && runeManaCost(id) <= 46), 'All 84 signature specials (atlas S01–S36 + S37–S84) are special runes with their own mechanic and bound mana');
   assert(ids.every((id) => spellHowTo('sig_' + id)?.effect?.length > 40) && !spells.resolveSpell([{ id: 'sig_S03' }, { id: 'ignis' }]), 'Signature specials explain themselves in the grimoire and never fuse');
   // Every special casts, runs and renders (strict canvas) without errors.
   const strict = new Proxy({}, { get: (t, k) => (k === 'ellipse' || k === 'arc') ? (x, y, rx, ry) => { if (rx < 0 || (k === 'ellipse' && ry < 0)) throw new Error('IndexSizeError ' + k); } : (k === 'canvas' ? undefined : () => {}), set: () => true });
@@ -3914,7 +3915,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   const charged = (dir) => { ready(); P.beginCharge(dir); P.chargeTimer = P.chargeMaxTime * .1; P.chargeDir = dir; return P.releaseCharge(); };
   let bad = 0; const strict = new Proxy({}, { get: (t, k) => (k === 'arc' || k === 'ellipse') ? (x, y, r1, r2) => { if (r1 < 0 || (k === 'ellipse' && r2 < 0)) bad++; } : k === 'canvas' ? undefined : k === 'measureText' ? () => ({ width: 10 }) : () => {}, set: () => true });
   const renderAll = () => { for (const sp of spells.activeSpells) sp.render?.(strict); core.SIGNATURES && P.signature?.impl.stance.render?.(strict, P, P.signature, P.y, 'front'); };
-  assert(Object.keys(BR.BREATH_RUNES).length === 12 && ['ventus', 'terra', 'natura', 'lux', 'umbra', 'void', 'bestia', 'construct', 'ward'].length === 9, 'Every element has its breathing rune (12 base styles)');
+  assert(Object.keys(BR.BREATH_RUNES).length === 13 && ['ventus', 'terra', 'natura', 'lux', 'umbra', 'void', 'bestia', 'construct', 'ward'].length === 9, 'Every element has its breathing rune (12 base styles)');
   const broken = [];
   const styles = Object.keys(BR.BREATH_STYLES);
   for (const style of styles) {
@@ -3930,7 +3931,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
       } catch (err) { broken.push(style + ':' + move + ' ' + err.message); }
     }
   }
-  assert(!broken.length && !bad, 'All 16 breathing styles: charge forward / up, sprint attack and air dive each hit and render cleanly ' + broken.slice(0, 6).join(' | '));
+  assert(!broken.length && !bad, 'All 17 breathing styles: charge forward / up, sprint attack and air dive each hit and render cleanly ' + broken.slice(0, 6).join(' | '));
   // Wind sprint: spin into a whirlwind, then burst forward — foes fly away in depth too.
   setup('S75'); const w = foeAt(420, .52); const z0 = w.z; P.sprintActive = true; P.vx = 320; P.startSprintAttack(); step(50);
   assert(P.lastSprintAttack === 'WIRBELSTOSS' && w.hp < 3000 && Math.abs(w.z - z0) > .01, 'Wind sprint WIRBELSTOSS: a whirlwind spin, then a burst forward — the foe flies away in depth too');

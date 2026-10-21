@@ -1,7 +1,7 @@
 // GRIMGE Prototype — UI & HUD Controller matching Setup Mockup Exactly
 import { MASTERY_TREES, masteryRequirement, analyzeBuild } from './mastery_data.js';
 import { spells } from './spells.js';
-import { MAGE_SKILL_TREE, SKILL_RUNE_UNLOCKS, ALL_RUNE_IDS, runeUnlockLabel, isBuffRuneId, isSignatureRuneId, isDomainRuneId, maxRuneCopies, MAX_DECK_PRESETS, MATCH_DECK_SIZE, DECK_PRESET_NAME_MAX } from './progression.js';
+import { MAGE_SKILL_TREE, SKILL_RUNE_UNLOCKS, RUNE_CATEGORIES, runeCategory, ALL_RUNE_IDS, runeUnlockLabel, isBuffRuneId, isSignatureRuneId, isDomainRuneId, maxRuneCopies, MAX_DECK_PRESETS, MATCH_DECK_SIZE, DECK_PRESET_NAME_MAX } from './progression.js';
 import { recognizer } from './recognizer.js';
 import { sprites } from './sprites.js';
 import { runeManaCost, SPELL_RECIPES, lookupRecipe, SOLO_RUNES, spellHowTo } from './spell_catalog.js';
@@ -109,7 +109,7 @@ export class UIManager {
     this.resetDeckBtn = document.getElementById('reset-deck-btn');
     this.deckPresetsEl = document.getElementById('deck-presets');
     this.deckFilterEl = document.getElementById('deck-filter');
-    this.deckFilter = 'all'; this.pendingPresetAction = null; this.lastDeckSource = null;
+    this.deckFilter = 'all'; this.deckCategory = 'element'; this.pendingPresetAction = null; this.lastDeckSource = null;
 
     this.cards = [
       document.getElementById('card-0'),
@@ -238,6 +238,14 @@ export class UIManager {
     });
     this.deckPresetsEl?.addEventListener('keydown', (e) => {
       if (e.code === 'Enter' && e.target?.id === 'deck-preset-name') { e.preventDefault(); this.savePresetFromInput(); }
+    });
+    // Category tabs: only one category is listed at a time (no endless scrolling).
+    this.deckCategoryEl = document.getElementById('deck-categories');
+    this.deckCategoryEl?.addEventListener('pointerdown', (e) => {
+      const cat = e.target?.closest?.('[data-deck-category]')?.getAttribute?.('data-deck-category');
+      if (!cat) return;
+      e.preventDefault(); e.stopPropagation();
+      this.deckCategory = cat; this.deckFilter = 'all'; this.renderDeckBuilder(this.lastDeckSource);
     });
     this.deckFilterEl?.addEventListener('pointerdown', (e) => {
       const filter = e.target?.closest?.('[data-deck-filter]')?.getAttribute?.('data-deck-filter');
@@ -810,13 +818,28 @@ export class UIManager {
     };
     // Filter: all runes, only favourites, or only the runes in the deck.
     const shown = (rune) => this.deckFilter === 'favorites' ? !!profile.isFavoriteRune?.(rune.id) : this.deckFilter === 'deck' ? profile.getRuneCopies(rune.id) > 0 : true;
-    const deckRunes = recognizer.runes.filter((rune) => ALL_RUNE_IDS.includes(rune.id) && shown(rune));
-    const section = (title, list) => (list.length ? (title ? `<h4 class="deck-section-title">${title}</h4>` : '') + list.map(card).join('') : '');
-    const html = section('', deckRunes.filter((rune) => !isBuffRuneId(rune.id) && !isSignatureRuneId(rune.id)))
-      + section('✦ SIGNATURE SPECIALS — SPECIAL RUNES · EACH ONCE PER DECK · OWN MULTI-STROKE GLYPH · NO COMBINATION', deckRunes.filter((rune) => isSignatureRuneId(rune.id) && !isDomainRuneId(rune.id)))
-      + section('◓ DOMAINS — SPECIAL RUNES · ONLY ONE OF ALL PER DECK · ONE DOME GLYPH · OWN ABILITY INSIDE', deckRunes.filter((rune) => isDomainRuneId(rune.id)))
-      + section('⧗ ARCANE STATES — SPECIAL RUNES · ONLY ONE OF ALL PER DECK · ONE HOURGLASS SIGIL', deckRunes.filter((rune) => isBuffRuneId(rune.id)));
-    this.deckBuilderContent.innerHTML = html || `<p class="deck-empty">${this.deckFilter === 'favorites' ? 'No favorites yet — tap ☆ on a rune to mark it.' : 'The deck is empty.'}</p>`;
+    const allRunes = recognizer.runes.filter((rune) => ALL_RUNE_IDS.includes(rune.id));
+    const byId = new Map(allRunes.map((r) => [r.id, r]));
+    // Category tabs with "in deck / available" counts.
+    if (this.deckCategoryEl) {
+      this.deckCategoryEl.innerHTML = RUNE_CATEGORIES.map((c) => {
+        const runes = allRunes.filter((r) => runeCategory(r.id) === c.id);
+        const inDeck = profile.matchDeck.filter((id) => runeCategory(id) === c.id).length;
+        return `<button type="button" data-deck-category="${c.id}" class="${this.deckFilter === 'all' && this.deckCategory === c.id ? 'active' : ''}"><i>${c.icon}</i><b>${c.label}</b><small>${inDeck ? inDeck + ' im Deck · ' : ''}${runes.length}</small></button>`;
+      }).join('');
+    }
+    // The deck itself as ten big slots (tap a card to take one copy out).
+    const strip = `<div class="deck-strip">${Array.from({ length: MATCH_DECK_SIZE }, (_, i) => { const id = profile.matchDeck[i]; const r = id && byId.get(id); return r ? `<button type="button" class="deck-slot filled" style="--rune-color:${r.color}" data-deck-action="remove" data-rune-id="${r.id}" title="Aus dem Deck nehmen"><b>${r.glyph}</b><span>${r.name}</span></button>` : '<div class="deck-slot"></div>'; }).join('')}</div>`;
+    let html = '';
+    if (this.deckFilter === 'all') {
+      const cat = RUNE_CATEGORIES.find((c) => c.id === this.deckCategory) ?? RUNE_CATEGORIES[0];
+      const list = allRunes.filter((r) => runeCategory(r.id) === cat.id);
+      html = `<h4 class="deck-section-title">${cat.icon} ${cat.label} — ${cat.rule}</h4>` + list.map(card).join('');
+    } else {
+      // Favourites / in deck: everything that matches, grouped by category.
+      for (const cat of RUNE_CATEGORIES) { const list = allRunes.filter((r) => runeCategory(r.id) === cat.id && shown(r)); if (list.length) html += `<h4 class="deck-section-title">${cat.icon} ${cat.label}</h4>` + list.map(card).join(''); }
+    }
+    this.deckBuilderContent.innerHTML = strip + (html || `<p class="deck-empty">${this.deckFilter === 'favorites' ? 'Noch keine Favoriten — tippe ☆ auf einer Rune.' : 'Das Deck ist leer.'}</p>`);
   }
 
   // The grimoire lists every rune gesture and every recipe straight from the

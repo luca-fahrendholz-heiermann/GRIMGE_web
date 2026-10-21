@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { MageProfile, MAGE_SKILL_TREE, applyMageProfile, DEFAULT_MATCH_DECK, MAX_DECK_PRESETS, DOMAIN_RUNE_IDS, deckAccepts } from './public/src/progression.js';
+import { MageProfile, MAGE_SKILL_TREE, applyMageProfile, DEFAULT_MATCH_DECK, MAX_DECK_PRESETS, DOMAIN_RUNE_IDS, deckAccepts, runeCategory, RUNE_CATEGORIES } from './public/src/progression.js';
 
 let passed = 0;
 function test(name, fn) {
@@ -174,6 +174,15 @@ test('Deck builder: favourite runes toggle and persist; presets survive the deck
   const repaired = new MageProfile({ level: 20, favoriteRunes: ['lux'], deckPresets: [preset], matchDeck: ['ignis', 'ignis', 'aqua', 'aqua', 'terra', 'terra', 'ventus', 'ventus', 'fulgur', 'buff_T26'] });
   assert.ok(repaired.deckRepaired && repaired.deckPresets.length === 1 && repaired.isFavoriteRune('lux'));
   assert.ok(repaired.toJSON().deckPresets[0].name === 'Old');
+});
+
+test('Deck categories: elements, then simple / multi / stances / summons / breathings / domains / transformations', () => {
+  assert.equal(RUNE_CATEGORIES.length, 8);
+  assert.deepEqual(['ignis', 'bestia', 'construct', 'ward'].map(runeCategory), ['element', 'element', 'element', 'element']);
+  assert.equal(runeCategory('sig_S74'), 'multi'); assert.equal(runeCategory('sig_S71'), 'multi');
+  assert.equal(runeCategory('sig_S48'), 'stance'); assert.equal(runeCategory('sig_S43'), 'summon'); assert.equal(runeCategory('mortis'), 'summon');
+  assert.equal(runeCategory('sig_S84'), 'breath'); assert.equal(runeCategory('sig_S40'), 'breath');
+  assert.equal(runeCategory('sig_S57'), 'domain'); assert.equal(runeCategory('buff_A04'), 'arcane'); assert.equal(runeCategory('sig_S03'), 'simple');
 });
 
 test('Domains: only ONE domain per deck (like the Arcane States), all share one glyph family', () => {

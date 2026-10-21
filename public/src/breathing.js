@@ -84,6 +84,13 @@ export const BREATH_STYLES = Object.freeze({
     up: { kind: 'rising', look: 'shield', name: 'SCHATTENPFLAUME' },
     sprint: { kind: 'charge', look: 'shield', name: 'SCHILDSTURM' },
     dive: { kind: 'crash', look: 'shield', name: 'KUPPELFALL', shield: 30 } },
+  // Ice (user, 21 Oct 2026; after Hyōrinmaru, adapted): an ice dragon that freezes what it
+  // touches, an ice cocoon that shatters, an ice dragon-tail trail, a frost throne crash.
+  ice: { name: 'EISATMUNG', ramp: ramp('#0d3b5c', '#4fc3f7', '#c8f1ff'), status: 'frozen', trail: 'ice', mark: 'snow',
+    forward: { kind: 'torrent', look: 'ice', name: 'EISDRACHE', len: 400, dmg: 28, push: 160, depth: 46, freeze: true },
+    up: { kind: 'pillar', look: 'ice', name: 'EISKOKON', cocoon: true },
+    sprint: { kind: 'flash', look: 'ice', name: 'DRACHENSCHWEIF', dist: 230, after: 'freeze', trail: 'ice' },
+    dive: { kind: 'crash', look: 'ice', name: 'FROSTTHRON' } },
   // ── derived styles (combos, see BREATH_COMBOS) ──
   serpent: { name: 'SCHLANGENATMUNG', ramp: ramp('#1b3a2b', '#66bb6a', '#c8e6c9'), status: 'bleed', trail: 'ribbon', mark: 'scales', derived: true,
     forward: { kind: 'flash', look: 'serpent', name: 'GIFTZAHN', dist: 200, after: 'bleed', behind: true },
@@ -107,7 +114,7 @@ export const BREATH_STYLES = Object.freeze({
     dive: { kind: 'crash', look: 'sound', name: 'DONNERGROLLEN-FALL' } }
 });
 // Signature rune → base style.
-export const BREATH_RUNES = Object.freeze({ S40: 'water', S41: 'flame', S42: 'thunder', S75: 'wind', S76: 'stone', S77: 'flower', S78: 'sun', S79: 'moon', S80: 'mist', S81: 'beast', S82: 'forge', S83: 'ward' });
+export const BREATH_RUNES = Object.freeze({ S40: 'water', S41: 'flame', S42: 'thunder', S75: 'wind', S76: 'stone', S77: 'flower', S78: 'sun', S79: 'moon', S80: 'mist', S81: 'beast', S82: 'forge', S83: 'ward', S84: 'ice' });
 // Derived styles: the active base style + the newly cast one (either order).
 export const BREATH_COMBOS = Object.freeze({ 'beast+water': 'serpent', 'flame+flower': 'love', 'flower+moon': 'insect', 'forge+thunder': 'sound' });
 export const comboOf = (a, b) => BREATH_COMBOS[[a, b].sort().join('+')] ?? null;
@@ -119,7 +126,7 @@ const powerOf = (p, st) => (st.quality?.power ?? 1) * (st.mark ? MARK.dmg : 1);
 const alive = (t) => t && !t.isDead && t.lifeState !== 'Dead' && t.lifeState !== 'Dying' && (t.hp ?? 1) > 0;
 const foes = (gw, p) => foesOf(gw, p.team).filter((t) => !t.isProp);
 const inLane = (t, x0, x1, z, depth) => t.x >= Math.min(x0, x1) - 14 && t.x <= Math.max(x0, x1) + 14 && Math.abs(((t.z ?? z) - z) * DEPTH) < depth;
-const statusFor = { ignite: 'burn', paralyze: 'paralysis', poison: 'poison', bleed: 'bleed', wet: 'wet' };
+const statusFor = { ignite: 'burn', paralyze: 'paralysis', poison: 'poison', bleed: 'bleed', wet: 'wet', freeze: 'frozen' };
 function strike(p, st, t, dmg, kx, lift, stun, force = false) {
   hit(t, Math.round(dmg * powerOf(p, st)), kx, lift, stun);
   const s = styleOf(st).status; if (s && (force || (st.hits = (st.hits ?? 0) + 1) % 3 === 0)) applyStatus(t, s, { force });
@@ -150,6 +157,7 @@ function piece(ctx, look, x, y, s, t, R, f = 1, seed = 0) {
       ctx.fillStyle = R.core; ctx.fillRect(Math.round(x + f * 3 * s), Math.round(y - 13 * s), 2, 2);
       break;
     }
+    case 'ice': { plate(ctx, [[x - 6 * s, y], [x - 3 * s, y - 14 * s], [x + f * 2 * s, y - 22 * s], [x + 5 * s, y - 10 * s], [x + 6 * s, y]], R.mat, 950 + seed, { alpha: 1, glowEdge: .6 }); ctx.fillStyle = R.core; ctx.fillRect(Math.round(x - 1), Math.round(y - 15 * s), 2, Math.round(6 * s)); break; }
     case 'bolt': { ctx.strokeStyle = R.mid; ctx.lineWidth = 3 * s; ctx.beginPath(); ctx.moveTo(x - 6 * s, y - 16 * s); ctx.lineTo(x + 2 * s, y - 8 * s); ctx.lineTo(x - 2 * s, y - 6 * s); ctx.lineTo(x + 6 * s, y + 2 * s); ctx.stroke(); ctx.strokeStyle = R.core; ctx.lineWidth = 1; ctx.stroke(); break; }
     case 'wind': case 'mist': { ctx.strokeStyle = look === 'mist' ? R.light : R.mid; ctx.lineWidth = 2 * s; ctx.beginPath(); ctx.arc(x, y - 10 * s, 9 * s, t * 10 + seed, t * 10 + seed + 4); ctx.stroke(); if (look === 'mist') { ctx.fillStyle = R.mid; ctx.globalAlpha *= .8; ctx.beginPath(); ctx.arc(x + 4 * s, y - 8 * s, 7 * s, 0, TAU); ctx.fill(); } break; }
     case 'rock': { plate(ctx, [[x - 8 * s, y], [x - 5 * s, y - 12 * s], [x + 2 * s, y - 18 * s], [x + 8 * s, y - 6 * s], [x + 6 * s, y]], R.mat, 900 + seed, { alpha: 1, glowEdge: .3 }); break; }
@@ -169,6 +177,7 @@ function groundFx(look, x, z, team, r = 60, gw = null) {
   else if (look === 'water' || look === 'wave' || look === 'wheel' || look === 'serpent') environment.add('water', x, z, { radius: r * .8, team });
   else if (look === 'rock') { environment.add('crater', x, z, { radius: r * .6, team }); environment.add('crack', x, z, { radius: r, team }); environment.add('rubble', x, z, { radius: r * .7, team }); }
   else if (look === 'bolt') environment.electrify?.(x, z, r, team, 8, gw);
+  else if (look === 'ice') environment.add('ice', x, z, { radius: r * .8, team });
   else if (look === 'blast' || look === 'sound') { environment.add('crater', x, z, { radius: r * .5, team }); environment.add('scorch', x, z, { radius: r * .5, team }); }
   else if (look === 'claw') environment.add('crack', x, z, { radius: r * .8, team });
 }
@@ -182,7 +191,7 @@ function torrent(p, st, k, m) {
     for (const t of foes(gw, p)) {
       if (s.hit.has(t)) continue;
       const dx = (t.x - s.x) * f; const wob = m.look === 'serpent' || m.look === 'love' ? Math.sin(dx / 40) * 20 : 0;
-      if (dx > 0 && dx < head && Math.abs(((t.z ?? s.z) - s.z) * DEPTH - wob) < (m.depth ?? 40)) { s.hit.add(t); strike(p, st, t, dmg, f * (m.push ?? 300), 140, .45, true); if (s.hit.size === 1) quake(5 + 4 * k, .25, 3); }
+      if (dx > 0 && dx < head && Math.abs(((t.z ?? s.z) - s.z) * DEPTH - wob) < (m.depth ?? 40)) { s.hit.add(t); strike(p, st, t, dmg, f * (m.push ?? 300), m.freeze ? 40 : 140, .45, true); if (m.freeze) groundFx('ice', t.x, t.z ?? s.z, p.team, 40); if (s.hit.size === 1) quake(5 + 4 * k, .25, 3); }
     }
     s.acc += dt; if (m.scorch && s.acc > .09 && s.t < .55) { s.acc = 0; groundFx(m.look, s.x + f * head, s.z, p.team, 40); }
     if (m.look === 'wave' && s.t < .02) groundFx('water', s.x + f * len * .6, s.z, p.team, 70);
@@ -195,8 +204,9 @@ function torrent(p, st, k, m) {
       const wav = m.look === 'serpent' || m.look === 'love' ? Math.sin(u * 14 - s.t * 16) * 18 : Math.sin(u * 9 - s.t * 18) * 10 * u;
       piece(ctx, m.look, x, y + wav, .9 + 1.3 * u, s.t, R, f, i);
     }
-    // The head: a bigger flare of the element.
+    // The head: a bigger flare of the element (the ice dragon gets jaws).
     piece(ctx, m.look, s.x + f * (26 + head), y, 2.6, s.t, R, f, 99);
+    if (m.look === 'ice') { const hx = s.x + f * (40 + head); plate(ctx, [[hx, y - 30], [hx + f * 34, y - 22], [hx + f * 8, y - 14]], R.mat, 960, { alpha: 1, glowEdge: .8 }); plate(ctx, [[hx, y - 8], [hx + f * 30, y - 4], [hx + f * 6, y + 2]], R.mat, 961, { alpha: 1, glowEdge: .8 }); }
     ctx.restore();
   } }), st.quality);
 }
@@ -300,14 +310,15 @@ function pillar(p, st, k, m, gw) {
   const x = t0 ? t0.x : p.x + f * 140; const z = t0 ? (t0.z ?? p.z) : p.z;
   emit(new SigSequence({ mat: R.mat, seed: 4900 }, p, { dur: .9, x, z, data: { done: false }, tick: (s, dt, gw2) => {
     if (s.done || s.t < .22) return; s.done = true;
-    for (const t of foes(gw2, p)) if (Math.hypot(t.x - x, ((t.z ?? z) - z) * DEPTH) < 54) strike(p, st, t, 28 + 20 * k, 0, 760, .7, true);
+    for (const t of foes(gw2, p)) if (Math.hypot(t.x - x, ((t.z ?? z) - z) * DEPTH) < 54) { if (m.cocoon) { strike(p, st, t, 16 + 10 * k, 0, 0, .7); applyStatus(t, 'frozen', { force: true, duration: 1.2 }); s.cocooned = [...(s.cocooned ?? []), t]; } else strike(p, st, t, 28 + 20 * k, 0, 760, .7, true); }
     groundFx(m.look, x, z, p.team, 50, gw2); quake(m.look === 'rock' ? 9 : 7, .3, 4);
-  }, draw: (ctx, s) => {
+  }, steps: m.cocoon ? [{ at: .75, fn: (s) => { for (const t of s.cocooned ?? []) if (alive(t)) { strike(p, st, t, 24 + 16 * k, 0, 320, .5); combat.spawnHitSparks?.(t.x, (t.y ?? 0) - 40, 1, '#e0f7fa', 22); } if (s.cocooned?.length) quake(7, .25, 4); } }] : [], draw: (ctx, s) => {
     const y = groundYForDepth(z); ctx.save();
     if (s.t < .22) { ctx.globalAlpha = .6 + .4 * Math.sin(s.t * 40); ctx.strokeStyle = R.mid; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(x, y, 30, 9, 0, 0, TAU); ctx.stroke(); ctx.restore(); return; }
     const kk = Math.min(1, (s.t - .22) / .12); const a = 1 - Math.max(0, (s.t - .6) / .3); ctx.globalAlpha = a; const H = 150 * kk;
     if (m.look === 'bolt') { const pts = Array.from({ length: 8 }, (_, i) => [x + (i && i < 7 ? Math.sin(i * 2.3 + s.t * 30) * 10 : 0), y - 260 + i * 260 / 7]); thread(ctx, pts, R.mid, 9, a); thread(ctx, pts, R.core, 3, a); }
     else if (m.look === 'rock') plate(ctx, [[x - 22, y], [x - 14, y - H], [x, y - H - 18], [x + 14, y - H], [x + 22, y]], R.mat, 4901, { alpha: a, glowEdge: .4 });
+    else if (m.look === 'ice') { const hh = Math.min(H, 96); plate(ctx, [[x - 26, y], [x - 30, y - hh * .6], [x - 12, y - hh], [x + 12, y - hh * .95], [x + 30, y - hh * .55], [x + 24, y]], R.mat, 4902, { alpha: a * .85, glowEdge: .9 }); if (s.t > .75) for (let i = 0; i < 8; i++) { const ang = i / 8 * TAU; piece(ctx, 'ice', x + Math.cos(ang) * 40 * (s.t - .75) * 4, y - 40 + Math.sin(ang) * 30 * (s.t - .75) * 4, 1, s.t, R, f, i); } }
     else for (let i = 0; i < 7; i++) piece(ctx, m.look, x + Math.sin(i * 1.7) * 8, y - i * H / 6, 1.8 - i * .1, s.t, R, f, i);
     ctx.restore();
   } }), st.quality);
@@ -481,14 +492,14 @@ function drawMark(ctx, x, y, R, shape, t, f = 1) {
     bolts: [[[-3, -72], [1, -66], [-2, -64], [3, -58]], [[6, -48], [2, -42], [6, -40]]], swirls: [[[-5, -66], [0, -70], [4, -66], [0, -62]]], cracks: [[[-6, -70], [-2, -64], [-5, -58]], [[4, -48], [0, -42]]],
     blossom: [[[-4, -66], [0, -70], [4, -66], [0, -62], [-4, -66]]], sunburst: [[[-6, -66], [6, -66]], [[0, -72], [0, -60]], [[-4, -70], [4, -62]]], crescents: [[[-5, -70], [-1, -64], [-5, -58]]],
     clouds: [[[-6, -64], [-2, -68], [2, -64], [6, -68]]], fangs: [[[-6, -68], [-3, -60]], [[0, -68], [3, -60]]], rivets: [[[-5, -66], [5, -66]], [[-5, -60], [5, -60]]], runes: [[[-4, -70], [4, -70], [0, -60], [-4, -70]]],
-    scales: [[[-6, -64], [-3, -67], [0, -64], [3, -67], [6, -64]]], hearts: [[[-4, -66], [0, -62], [4, -66], [2, -69], [0, -67], [-2, -69], [-4, -66]]], wings: [[[-6, -62], [-1, -66], [-6, -70]], [[6, -62], [1, -66], [6, -70]]], notes: [[[-3, -60], [-3, -70], [3, -72]]]
+    scales: [[[-6, -64], [-3, -67], [0, -64], [3, -67], [6, -64]]], snow: [[[0, -72], [0, -60]], [[-5, -69], [5, -63]], [[-5, -63], [5, -69]]], hearts: [[[-4, -66], [0, -62], [4, -66], [2, -69], [0, -67], [-2, -69], [-4, -66]]], wings: [[[-6, -62], [-1, -66], [-6, -70]], [[6, -62], [1, -66], [6, -70]]], notes: [[[-3, -60], [-3, -70], [3, -72]]]
   }[shape] ?? [];
   for (const ln of lines) { ctx.beginPath(); ln.forEach(([px, py], i) => { const [qx, qy] = at(px, py); i ? ctx.lineTo(qx, qy) : ctx.moveTo(qx, qy); }); ctx.stroke(); }
   ctx.restore();
 }
 
 // Pieces sprinkled along the swing trail.
-const TRAIL_LOOK = { petals: 'petal', crescent: 'moon', gust: 'wind', mist: 'mist', claw: 'claw', shield: 'shield', sting: 'sting', notes: 'sound', flame: 'flame' };
+const TRAIL_LOOK = { ice: 'ice', petals: 'petal', crescent: 'moon', gust: 'wind', mist: 'mist', claw: 'claw', shield: 'shield', sting: 'sting', notes: 'sound', flame: 'flame' };
 
 // ── the stance ────────────────────────────────────────────────────────────
 function breathStance() {

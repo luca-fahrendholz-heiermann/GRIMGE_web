@@ -1515,3 +1515,23 @@ code {
 
 /* Pixel-art character sprites stay crisp when scaled in the hub. */
 img.pixel-art { image-rendering: pixelated; image-rendering: crisp-edges; }
+
+/* Deck builder (21 Oct 2026): category tabs, the deck as ten slots, bigger touch targets. */
+.deck-categories { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin: 10px 16px 0; }
+.deck-categories button { display: grid; justify-items: center; gap: 1px; padding: 8px 4px; border: 2px solid #4a3d63; border-radius: 9px; background: #1a1228; color: #d8c9ee; cursor: pointer; }
+.deck-categories button i { font-style: normal; font-size: 20px; line-height: 1; color: #ffd27a; }
+.deck-categories button b { font: 800 12px 'Rajdhani', sans-serif; letter-spacing: 1px; }
+.deck-categories button small { font-size: 10px; color: #a99cc4; }
+.deck-categories button.active { border-color: #ffd54f; background: #2a1d3d; box-shadow: 0 0 10px rgba(255, 213, 79, .35); }
+.deck-strip { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 5px; margin-bottom: 6px; }
+.deck-slot { min-height: 52px; border: 2px dashed #3d3554; border-radius: 8px; display: grid; place-items: center; align-content: center; gap: 2px; background: rgba(12, 9, 22, .6); }
+.deck-slot.filled { border: 2px solid var(--rune-color); background: color-mix(in srgb, var(--rune-color) 18%, #120d20); color: #fff; cursor: pointer; padding: 3px; }
+.deck-slot.filled b { font-size: 20px; color: var(--rune-color); line-height: 1; }
+.deck-slot.filled span { font: 700 9px 'Rajdhani', sans-serif; letter-spacing: .5px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.deck-builder-content { grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; }
+.deck-rune { padding: 12px; gap: 5px 10px; }
+.deck-rune b { font-size: 15px; } .deck-rune span { font-size: 11px; line-height: 1.3; }
+.deck-rune button { width: 38px; height: 38px; font-size: 20px; border-radius: 8px; }
+.deck-filter button { padding: 7px 14px; font-size: 12px; }
+.deck-section-title { font-size: 13px; margin-top: 4px; }
+@media (max-width: 720px) { .deck-strip { grid-template-columns: repeat(5, minmax(0, 1fr)); } .deck-categories b { font-size: 10px; } }
