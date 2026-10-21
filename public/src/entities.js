@@ -414,6 +414,7 @@ export class Player extends GroundEntity {
     this.attackBufferTimer = Math.max(0, this.attackBufferTimer - dt);
     if (this.attackBufferTimer <= 0) this.queuedAttack = null;
     this.guardBreakTimer = Math.max(0, this.guardBreakTimer - dt);
+    this.tornadoT = Math.max(0, (this.tornadoT ?? 0) - dt); // DOPPELTORNADO: hidden in game time (also if the move is cleared)
     masteryTickShield(this); // shield end masteries (residual shockwave, sacrifice refund)
     if (this.arcaneShieldTimer <= 0) this.arcaneShield = 0;
     this.freezeTimer = Math.max(0, this.freezeTimer - dt);
@@ -837,7 +838,8 @@ export class Player extends GroundEntity {
     if (!this.isAlive || this.isGuarding || !this.grounded || this.chargeTimer > 0) return false;
     if (ACTION_STATES.has(this.state)) return false;
     // Normal mode: the ground charge-down is the weapon-specific buff / debuff (weapon_kits.js).
-    if (direction === 'down' && !activeMoveset(this) && !hasWeaponDown(this)) return false;
+    // A breathing stance takes the charge-down for its mark — also with bare hands.
+    if (direction === 'down' && !activeMoveset(this) && !hasWeaponDown(this) && !this.signature?.impl?.stance?.charge) return false;
     // Inside a transformation / manifest the charge feeds a form technique:
     // held for FULL_CHARGE_TIME it becomes the FULL version and can be held.
     this.formCharge = activeMoveset(this) ? { elapsed: 0 } : null;
@@ -1706,6 +1708,8 @@ export class Player extends GroundEntity {
   render(ctx) {
     // Burrowed: only the travelling dirt mound (drawn by the spell) is visible.
     if (this.burrowed) return;
+    // Wind breathing DOPPELTORNADO: the Wizard has become the tornado (drawn by the move).
+    if (this.tornadoT > 0) return;
     // Levitation-state Arcane States let the Wizard hover above his shadow.
     const renderY = this.y - (this.isMounted ? (this.mountedSummon.definition.riderOffsetY ?? 42) : 0) - levitationOffset(this) - signatureHover(this);
     // Prepared spell components trail behind the Wizard in world space. They

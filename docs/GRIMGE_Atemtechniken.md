@@ -10,7 +10,7 @@ Recherche: Kimetsu-no-Yaiba-Wiki („Atemtechniken“, alle 14 Atmungs-Artikel, 
 | Kombo-Finisher | kurze Fassung der Vorwärts-Technik |
 | Aufladen **vorwärts** | Signatur-Technik |
 | Aufladen **hoch** | aufsteigende Technik (Launcher) |
-| Aufladen **runter** | **Mal erwacht** (siehe unten) |
+| Aufladen **runter** | **Mal erwacht** (siehe unten), funktioniert auch ohne Waffe |
 | **Sprint-Angriff** | Ansturm des Stils |
 | **Sprint-Sprung / Luft runter** | Einschlag des Stils mit Bodeneffekt (Krater, Glut, Pfützen, Strom, Blüten …) |
 
@@ -23,7 +23,7 @@ Später bekommt jeder Waffentyp eigene Animationen. Die Techniken bleiben dabei 
 | S40 Aqua | Wasser | Flutwelle (Strom) | Wasserrad | Gezeitenschnitt (Hiebfolge mit Drehungen) | Wasserfallbecken (Pfützen) |
 | S41 Ignis | Flamme | Flammenschlange (rollt weit, Glutspur) | Steigende Glut mit Feuersäule | **Glutschnitt:** durch den Gegner, Feuerspur dahinter, der Getroffene geht hinter dir in Flammen auf | Fallendes Feuer (Glut) |
 | S42 Fulgur | Donner | Donnerschlag (ein Blitz durch alle in der Linie, „Hekireki Issen“) | Himmelsblitz auf den nächsten Gegner | Blitzschritt (durchbohrender Ausfall) | Donnerfall (Strom am Boden) |
-| S75 Ventus | Wind | Sturmsicheln (Wind-Sicheln fächern aus) | Staubsturm (wirft hoch) | **Wirbelstoß:** Drehung um die eigene Achse mit Wirbel, dann Vorstoß, Gegner fliegen auch in die Tiefe | Taifun (radialer Windstoß) |
+| S75 Ventus | Wind | Sturmsicheln (Wind-Sicheln fächern aus) | Staubsturm (wirft hoch) | **Doppeltornado:** du wirst zum waagerechten Bohr-Tornado, ein zweiter Wirbel verflicht sich mit dir (nach Kibas „Fang over Fang“, adaptiert), mehrere Treffer, am Ende fliegen alle in alle Richtungen | Taifun (radialer Windstoß) |
 | S76 Terra | Stein | Serpentinwurf (Steinwaffe fliegt hin und zurück, Kettenwaffe des Vorbilds) | Felssäule unter dem Gegner | Bergrutsch (unaufhaltsam, schiebt mit und wirft) | Kraterschlag (Krater, Risse, Geröll) |
 | S77 Natura | Blume | Purpurgewand (geschwungener Hieb, Blütensturm) | Wirbelnder Pfirsich | Neun Pfingstrosen (Hiebfolge) | Blütenfall (heilt) – Treffer heilen dich etwas |
 | S78 Lux | Sonne (Ursprung) | Sonnendrache (größter Strom) | Untergehende Sonne (Salto rückwärts) | Sonnenspur (wie Glutschnitt) | Sonnensturz |

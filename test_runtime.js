@@ -3933,14 +3933,15 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   }
   assert(!broken.length && !bad, 'All 17 breathing styles: charge forward / up, sprint attack and air dive each hit and render cleanly ' + broken.slice(0, 6).join(' | '));
   // Wind sprint: spin into a whirlwind, then burst forward — foes fly away in depth too.
-  setup('S75'); const w = foeAt(420, .52); const z0 = w.z; P.sprintActive = true; P.vx = 320; P.startSprintAttack(); step(50);
-  assert(P.lastSprintAttack === 'WIRBELSTOSS' && w.hp < 3000 && Math.abs(w.z - z0) > .01, 'Wind sprint WIRBELSTOSS: a whirlwind spin, then a burst forward — the foe flies away in depth too');
+  setup('S75'); const w = foeAt(420, .52); const z0 = w.z; let windHits = 0; const wOrig = w.takeDamage.bind(w); w.takeDamage = (...args) => { windHits++; return wOrig(...args); };
+  P.sprintActive = true; P.vx = 320; P.executeAttack(neutral, 'normal'); const hidden = P.tornadoT > 0; step(60);
+  assert(P.lastSprintAttack === 'DOPPELTORNADO' && hidden && windHits >= 3 && Math.abs(w.z - z0) > .01 && !(P.tornadoT > 0), 'Wind sprint DOPPELTORNADO (real sprint + attack input): the Wizard becomes a horizontal twin tornado, drills through the foe several times and throws it away in depth too (' + windHits + ' hits)');
   // Fire sprint: a trail of fire behind, the cut foe bursts into flames after you are through.
   setup('S41'); const fz = foeAt(380); P.sprintActive = true; P.vx = 320; P.startSprintAttack(); step(10); const passHp = fz.hp; step(20);
   assert(P.x > fz.x && fz.hp < passHp && STATUS.hasStatus(fz, 'burn') && environment.effects.some((e) => e.type === 'scorch'), 'Fire sprint GLUTSCHNITT: through the foe, a fire trail behind — the cut foe bursts into flames');
   // Charge down: the mark awakens (damage / speed up, blade hot) and spreads to allies nearby.
   setup('S40'); const ally = new Minion(330, .5, 'blue', 'melee', 0); game.battlefield.placeOnSurface(ally); game.minions.push(ally); const allySpeed = ally.speed;
-  charged('down');
+  ready(); assert(!P.weapon && !P.classWeapon && P.beginCharge('down', 'touch'), 'In a breathing the charge-down works with bare hands too'); P.chargeTimer = P.chargeMaxTime * .1; P.releaseCharge();
   assert(P.signature.mark && P.signature.impl.stance.meleeMult(P, P.signature) > 1 && P.signature.impl.stance.moveMult(P, P.signature) > 1 && ally.breathMark && ally.speed > allySpeed, 'Charge down: MAL ERWACHT — stronger and faster, and the mark spreads to the ally next to you');
   const hpMark = P.hp; step(60); assert(P.hp < hpMark, 'The mark burns a little HP (the racing heart)');
   // Combos: a second breathing derives a new style along the family tree.

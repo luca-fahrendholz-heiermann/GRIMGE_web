@@ -42,7 +42,7 @@ export const BREATH_STYLES = Object.freeze({
   wind: { name: 'WINDATMUNG', ramp: ramp('#1f5c50', '#7fe0c5', '#d7fff4'), status: null, trail: 'gust', mark: 'swirls',
     forward: { kind: 'crescents', look: 'wind', name: 'STURMSICHELN', count: 5 },
     up: { kind: 'rising', look: 'wind', name: 'STAUBSTURM', lift: 760 },
-    sprint: { kind: 'vortex', look: 'wind', name: 'WIRBELSTOSS' },
+    sprint: { kind: 'drill', look: 'wind', name: 'DOPPELTORNADO' },
     dive: { kind: 'crash', look: 'wind', name: 'TAIFUN' } },
   stone: { name: 'STEINATMUNG', ramp: ramp('#3e2f22', '#8d7a66', '#d2c3ad', '#f3ead8'), status: null, trail: 'shards', mark: 'cracks',
     forward: { kind: 'boomerang', look: 'rock', name: 'SERPENTINWURF' },
@@ -270,6 +270,59 @@ function vortex(p, st, k, m) {
     ctx.restore();
   } }), st.quality);
 }
+// DRILL (wind sprint; user, 21 Oct 2026: "horizontaler Wirbel wie Kibas Twin Tornado / Fang over
+// Fang", adapted): the Wizard turns into a HORIZONTAL tornado drilling forward, a second tornado
+// weaves around him; both drill through the foes several times, at the end everyone hit is
+// thrown away in x and depth.
+function drill(p, st, k, m) {
+  const R = styleOf(st).ramp; const f = p.facing || 1; const wind = .12; const run = .55; const dist = 300 + 90 * k; const x0 = p.x; const z0 = p.z;
+  p.tornadoT = wind + run; // game seconds the sprite stays hidden: the Wizard IS the tornado
+  emit(new SigSequence({ mat: R.mat, seed: 4650 }, p, { dur: wind + run + .4, data: { hits: new Map(), next: 0, done: false, twinZ: z0 }, tick: (s, dt, gw) => {
+    if (s.t < wind) { swing(p, .1); return; }
+    if (s.t < wind + run) {
+      p.state = 'dash'; p.stateTimer = .08; p.invulnerableTimer = Math.max(p.invulnerableTimer ?? 0, .1);
+      const u = (s.t - wind) / run; p.x = x0 + f * dist * u; clampToArena(p, gw?.battlefield?.boundsOverride ?? null);
+      s.twinZ = Math.max(.04, Math.min(.96, z0 + Math.sin(u * Math.PI * 4) * .09)); // the twin weaves across the lane
+      s.next -= dt; if (s.next > 0) return; s.next = .07;
+      let any = false;
+      for (const t of foes(gw, p)) {
+        const near = (zz) => Math.abs(t.x - p.x) < 52 && Math.abs(((t.z ?? zz) - zz) * DEPTH) < 40;
+        if (!(near(p.z) || near(s.twinZ)) || (s.hits.get(t) ?? 0) >= 5) continue;
+        s.hits.set(t, (s.hits.get(t) ?? 0) + 1); strike(p, st, t, 6 + 4 * k, f * 40, 40, .2); t.x += (p.x + f * 20 - t.x) * .35; any = true;
+      }
+      if (any) quake(2, .06, 1);
+      return;
+    }
+    if (!s.done) {
+      s.done = true; p.vx = 0; p.tornadoT = 0;
+      for (const t of s.hits.keys()) { if (!alive(t)) continue; strike(p, st, t, 18 + 14 * k, 0, 320, .6, true); blowAway(t, p.x - f * 20, p.z, 800); }
+      if (s.hits.size) quake(9, .3, 5);
+    }
+  }, draw: (ctx, s) => {
+    if (s.t < wind) { ctx.save(); for (let i = 0; i < 3; i++) { ctx.strokeStyle = i % 2 ? R.light : R.mid; ctx.lineWidth = 2; const ang = s.t * 40 + i * 2; ctx.beginPath(); ctx.ellipse(p.x, (p.y ?? 0) - 34, 24 + i * 6, 8 + i * 2, 0, ang, ang + 3.4); ctx.stroke(); } ctx.restore(); return; }
+    const after = s.t >= wind + run; const a = after ? Math.max(0, 1 - (s.t - wind - run) / .4) : 1;
+    ctx.save(); ctx.globalAlpha = a; ctx.lineCap = 'round';
+    // A horizontal helix: narrow tip in front, widening backwards, spinning fast.
+    const helix = (x, z, phase, scale) => {
+      const yc = groundYForDepth(z) - 34; const L = 120 * scale; const n = 18;
+      for (let strand = 0; strand < 3; strand++) {
+        let prev = null;
+        for (let i = 0; i <= n; i++) {
+          const u = i / n; const px = x + f * 34 * scale - f * L * u; const r = (4 + 30 * u) * scale; const ang = s.t * 36 + u * 13 + strand * 2.1 + phase;
+          const py = yc + Math.sin(ang) * r; const front = Math.cos(ang) > 0;
+          if (prev) { ctx.strokeStyle = front ? R.core : (strand % 2 ? R.mid : R.light); ctx.lineWidth = front ? 3 : 2; ctx.beginPath(); ctx.moveTo(prev[0], prev[1]); ctx.lineTo(px, py); ctx.stroke(); }
+          prev = [px, py];
+        }
+      }
+      // Dust and speed lines behind the drill.
+      for (let i = 0; i < 4; i++) { ctx.strokeStyle = R.light; ctx.lineWidth = 2; const yy = yc - 20 + i * 13; ctx.beginPath(); ctx.moveTo(x - f * (L * .9), yy); ctx.lineTo(x - f * (L * .9 + 30 + i * 8), yy); ctx.stroke(); }
+    };
+    const z = p.z;
+    if (!after) { helix(p.x, z, 0, 1); helix(p.x - f * 10, s.twinZ === z ? z + .05 : s.twinZ, Math.PI, .8); }
+    else for (let i = 0; i < 10; i++) piece(ctx, 'wind', p.x + Math.cos(i * .63) * 60 * (1 - a + .4), (p.y ?? 0) - 10 + Math.sin(i * .63) * 18, 1.4, s.t, R, f, i);
+    ctx.restore();
+  } }), st.quality);
+}
 // CRESCENTS: blades of the element fan out down the lane (wind sickles, chaotic moon blades).
 function crescents(p, st, k, m) {
   const R = styleOf(st).ramp; const f = p.facing || 1; const n = m.count ?? 5; const chaos = m.look === 'moon';
@@ -462,7 +515,7 @@ function orbit(p, st, k, m, gw) {
     ctx.restore();
   } }), st.quality);
 }
-const KINDS = { torrent, flash, vortex, crescents, rising, pillar, boomerang, flurry, charge, blasts, calm, orbit, crash: (p, st, k, m, gw) => crash(p, st, m, gw) };
+const KINDS = { torrent, flash, vortex, drill, crescents, rising, pillar, boomerang, flurry, charge, blasts, calm, orbit, crash: (p, st, k, m, gw) => crash(p, st, m, gw) };
 function runMove(p, st, move, k, gw) {
   if (!move) return false;
   p.lastBreathMove = move.name;
