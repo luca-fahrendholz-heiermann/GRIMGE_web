@@ -1134,7 +1134,8 @@ export class Player extends GroundEntity {
     // can never be thrown — it is the Sprint Attack.
     const sprinting = this.sprintActive && this.grounded && !ACTION_STATES.has(this.state) && this.canAttack;
     if (sprinting && (attackKind === 'normal' || attackKind === 'heavy')) {
-      return this.weapon ? this.throwWeapon() : this.startSprintAttack();
+      // A breathing stance overrides the weapon: no throw, the style's sprint attack.
+      return this.weapon && !this.signature?.impl?.stance?.sprintMove ? this.throwWeapon() : this.startSprintAttack();
     }
     // Attack while standing on a field weapon picks it up.
     if (attackKind === 'normal' && !ACTION_STATES.has(this.state) && this.grounded) {

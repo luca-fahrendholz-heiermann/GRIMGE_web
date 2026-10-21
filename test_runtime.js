@@ -3855,7 +3855,8 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   game.returnToHub(); game.setMatchMode('training'); game.startMatch(); game.selectTrainingMap('waterfalls');
   const P = game.player; const dummy = game.trainingDummy; dummy.homeX = dummy.x = 1600;
   const neutral = { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false };
-  const step = (n) => { for (let i = 0; i < n; i++) { P.update(1 / 60, neutral, game.battlefield, game); for (const m of game.minions) m.update?.(1 / 60, game, game.battlefield); spells.update(1 / 60, game); } };
+  // The foes stand still (no AI swings that could interrupt the sprint attack: deterministic).
+  const step = (n) => { for (let i = 0; i < n; i++) { P.update(1 / 60, neutral, game.battlefield, game); spells.update(1 / 60, game); } };
   const sprintAt = (weapon, foeX) => {
     spells.clearRuntime(); game.minions = []; P.equipClassWeapon(weapon); P.x = 300; P.z = .5; P.facing = 1; P.grounded = true; P.elevation = 0; P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.sprintStrike = null; game.battlefield.placeOnSurface(P);
     const m = new Minion(foeX, .5, 'red', 'melee', 0); m.maxHp = m.hp = 3000; m.passive = true; game.battlefield.placeOnSurface(m); game.minions.push(m);
@@ -3953,6 +3954,25 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   // Ward: still sea — every hit is turned away for a moment.
   setup('S83'); charged('forward'); const hpCalm = P.hp; P.invulnerableTimer = 0; P.takeDamage(30, -100, 0, .2, false, 'melee');
   assert(P.hp === hpCalm, 'Ward breathing STILLE SEE: in total calm every hit is turned away');
+  // With a weapon the breathing overrides the weapon moves (user, 21 Oct 2026).
+  const moveOf = (weapon, field, act) => {
+    setup('S41'); if (field) { P.equipClassWeapon(null); P.equipWeapon(weapon); } else P.equipClassWeapon(weapon); foeAt(400); P.lastBreathMove = null; P.lastWeaponDive = null; P.weaponBuff = null;
+    if (act === 'sprint') { P.sprintActive = true; P.vx = 320; P.executeAttack(neutral, 'normal'); }
+    else if (act === 'dive') { P.elevation = 90; P.grounded = false; P.isSprintJump = true; P.executeAttack(neutral, 'dive'); }
+    else charged(act);
+    return P.lastBreathMove;
+  };
+  const results = {
+    classSprint: moveOf('katana', false, 'sprint'), classUp: moveOf('bow', false, 'up'), classDown: moveOf('sword_shield', false, 'down'),
+    classForward: moveOf('great_hammer', false, 'forward'), classDive: moveOf('great_hammer', false, 'dive'), fieldSprint: moveOf('great_axe', true, 'sprint')
+  };
+  const fieldKept = P.weapon === 'great_axe';
+  assert(results.classSprint === 'GLUTSCHNITT' && results.classUp === 'STEIGENDE GLUT' && results.classForward === 'FLAMMENSCHLANGE' && results.classDive === 'FALLENDES FEUER' && P.lastWeaponDive == null,
+    'With a class weapon the breathing overrides the weapon moves (sprint, charge up / forward, dive) ' + JSON.stringify(results));
+  assert(results.fieldSprint === 'GLUTSCHNITT' && fieldKept, 'A picked-up field weapon is not thrown in a breathing: the sprint attack is the breathing move');
+  setup('S41'); P.equipClassWeapon('sword_shield'); P.weaponBuff = null; charged('down');
+  assert(P.signature.mark && !P.weaponBuff, 'Charge down with a weapon awakens the mark (not the weapon buff)');
+  P.equipWeapon(null); P.equipClassWeapon(null);
   if (P.signature) core.endStance(P, 'replaced'); spells.clearRuntime(); game.minions = []; ready(); dummy.homeX = dummy.x = 512;
 }
 

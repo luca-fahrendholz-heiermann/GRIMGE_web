@@ -16,6 +16,8 @@ Recherche: Kimetsu-no-Yaiba-Wiki („Atemtechniken“, alle 14 Atmungs-Artikel, 
 
 Später bekommt jeder Waffentyp eigene Animationen. Die Techniken bleiben dabei gleich.
 
+**Mit Waffe:** Die Atmung hat Vorrang. Sprint-Angriff, alle Aufladerichtungen und der Sturz sind die Atmungstechniken, nicht die Waffen-Techniken. Eine aufgehobene Feldwaffe wird in einer Atmung nicht geworfen.
+
 ## Die Atmungen (Vorbild → Adaption)
 
 | Rune | Atmung | Vorwärts | Hoch | Sprint | Sturz |

@@ -94,7 +94,7 @@ export const RUNE_CATEGORIES = Object.freeze([
   { id: 'summon', label: 'BESCHWÖRUNG', icon: '⚑', rule: 'Spezialrunen · je 1× · Wesen, Objekte, Fallen, Konstrukte' },
   { id: 'breath', label: 'ATMUNGEN', icon: '≋', rule: 'Spezialrunen · je 1× · Kampfstil für 15 s · zweite Atmung = Kombo' },
   { id: 'domain', label: 'SPHÄREN', icon: '◓', rule: 'nur EINE Sphäre pro Deck' },
-  { id: 'arcane', label: 'VERWANDLUNG', icon: '⧗', rule: 'nur EINE Verwandlung pro Deck' }
+  { id: 'arcane', label: 'ARCANE STATE', icon: '⧗', rule: 'nur EIN Arcane State pro Deck (nicht die Fokus-Transformation)' }
 ]);
 // Specials with a second activation (tap again / hold & release) and the ones that run as a stance.
 const MULTI_SIGS = new Set(['S38', 'S45', 'S46', 'S47', 'S49', 'S50', 'S51', 'S54', 'S55', 'S70', 'S71', 'S74']);
