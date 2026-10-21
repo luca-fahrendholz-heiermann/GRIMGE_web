@@ -209,7 +209,7 @@ function torrent(p, st, k, m) {
       piece(ctx, m.look, x, y + wav + bodyY, (.9 + 1.3 * u) * bodyScale, s.t, R, f, i);
     }
     // The head: the weapon's projectile / blade / tip — else a bigger flare of the element (the ice dragon gets jaws).
-    if (!drawHead(ctx, d, s.x + f * (40 + head), y - 10 + (dk === 'heavy' ? 0 : 0), 1.3, s.t, R, f)) piece(ctx, m.look, s.x + f * (26 + head), y, 2.6, s.t, R, f, 99);
+    if (!drawHead(ctx, d, s.x + f * (40 + head), y - 10, 1.3, s.t, R, f)) piece(ctx, m.look, s.x + f * (26 + head), y, 2.6, s.t, R, f, 99);
     if (m.look === 'ice' && dk === 'none') { const hx = s.x + f * (40 + head); plate(ctx, [[hx, y - 30], [hx + f * 34, y - 22], [hx + f * 8, y - 14]], R.mat, 960, { alpha: 1, glowEdge: .8 }); plate(ctx, [[hx, y - 8], [hx + f * 30, y - 4], [hx + f * 6, y + 2]], R.mat, 961, { alpha: 1, glowEdge: .8 }); }
     ctx.restore();
   } }), st.quality);
