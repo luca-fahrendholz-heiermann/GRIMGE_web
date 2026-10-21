@@ -18,6 +18,7 @@ import { environment } from './environment.js';
 import { groundYForDepth, clampToArena } from './world.js';
 import { applyStatus, hasStatus } from './status_effects.js';
 import { deliveryOf, drawHead, drawFlourish } from './breathing_weapons.js';
+import { RayCrownFx } from './cast_circle.js';
 
 // ── palettes (dark, mid, light, core: pixel-art ramps) ───────────────────
 const hexRgb = (h) => { const n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
@@ -59,7 +60,7 @@ export const BREATH_STYLES = Object.freeze({
   sun: { name: 'SONNENATMUNG', power: 1.45, ramp: ramp('#8a3a00', '#ff9100', '#ffd54f', '#fffde7'), status: 'burn', trail: 'flame', mark: 'sunburst',
     forward: { kind: 'torrent', look: 'sun', name: 'SONNENDRACHE', len: 420, dmg: 34, push: 300, depth: 46, scorch: true },
     up: { kind: 'rising', look: 'sun', name: 'UNTERGEHENDE SONNE', backflip: true },
-    sprint: { kind: 'flash', look: 'sun', name: 'SONNENSPUR', dist: 240, after: 'ignite', trail: 'scorch' },
+    sprint: { kind: 'flash', look: 'sun', name: 'SONNENSPUR', dist: 240, after: 'solar', trail: 'scorch' },
     dive: { kind: 'crash', look: 'sun', name: 'SONNENSTURZ' } },
   moon: { name: 'MONDATMUNG', ramp: ramp('#2a1550', '#7e57c2', '#d1c4e9'), status: 'bleed', trail: 'crescent', mark: 'crescents',
     forward: { kind: 'crescents', look: 'moon', name: 'NACHTPALAST', count: 9 },
@@ -135,7 +136,7 @@ const powerOf = (p, st) => (st.quality?.power ?? 1) * (st.mark ? MARK.dmg : 1) *
 const alive = (t) => t && !t.isDead && t.lifeState !== 'Dead' && t.lifeState !== 'Dying' && (t.hp ?? 1) > 0;
 const foes = (gw, p) => foesOf(gw, p.team).filter((t) => !t.isProp);
 const inLane = (t, x0, x1, z, depth) => t.x >= Math.min(x0, x1) - 14 && t.x <= Math.max(x0, x1) + 14 && Math.abs(((t.z ?? z) - z) * DEPTH) < depth;
-const statusFor = { ignite: 'burn', paralyze: 'paralysis', poison: 'poison', bleed: 'bleed', wet: 'wet', freeze: 'frozen', scald: 'burn' };
+const statusFor = { solar: 'burn', ignite: 'burn', paralyze: 'paralysis', poison: 'poison', bleed: 'bleed', wet: 'wet', freeze: 'frozen', scald: 'burn' };
 function strike(p, st, t, dmg, kx, lift, stun, force = false) {
   hit(t, Math.round(dmg * powerOf(p, st)), kx, lift, stun);
   const s = styleOf(st).status; if (s && (force || (st.hits = (st.hits ?? 0) + 1) % 3 === 0)) applyStatus(t, s, { force });
@@ -279,7 +280,7 @@ function flash(p, st, k, m) {
     if (ranged) {
       // A bow / crossbow / thrown weapon: the Wizard stays, a piercing shot covers the same lane.
       s.x1 = x0 + f * dist; s.moved = true; s.shot = true;
-      for (const t of foes(gw, p)) if (inLane(t, x0, s.x1, z0, 36)) { s.hit.push(t); strike(p, st, t, m.after === 'ignite' ? dmg * .7 : dmg, f * (m.after === 'blind' ? 60 : 180), 160, .6, m.after === 'paralyze'); if (statusFor[m.after]) applyStatus(t, statusFor[m.after], { force: true }); if (m.after === 'blind' || m.after === 'scald') t.freeze?.(.6); }
+      for (const t of foes(gw, p)) if (inLane(t, x0, s.x1, z0, 36)) { s.hit.push(t); strike(p, st, t, m.after === 'ignite' ? dmg * .7 : dmg, f * (m.after === 'blind' ? 60 : 180), 160, .6, m.after === 'paralyze'); if (statusFor[m.after]) applyStatus(t, statusFor[m.after], { force: true }); if (m.after === 'blind' || m.after === 'scald' || m.after === 'solar') t.freeze?.(.6); }
       if (m.trail === 'scorch' || m.trail === 'ice') for (let x = Math.min(x0, s.x1); x < Math.max(x0, s.x1); x += 46) groundFx(m.look, x, z0, p.team, 36);
       quake(s.hit.length ? 7 : 3, .25, s.hit.length ? 3 : 0);
       return;
@@ -288,7 +289,7 @@ function flash(p, st, k, m) {
     p.x = target; clampToArena(p, gw?.battlefield?.boundsOverride ?? null); gw?.battlefield?.placeOnSurface?.(p);
     s.x1 = p.x; s.moved = true; p.invulnerableTimer = Math.max(p.invulnerableTimer ?? 0, .3);
     if (m.behind) p.facing = -f; // turns to bite from behind
-    for (const t of foes(gw, p)) if (inLane(t, x0, s.x1, z0, 36)) { s.hit.push(t); strike(p, st, t, m.after === 'ignite' ? dmg * .7 : dmg, f * (m.after === 'blind' ? 60 : 180), 160, .6, m.after === 'paralyze'); if (statusFor[m.after]) applyStatus(t, statusFor[m.after], { force: true }); if (m.after === 'blind' || m.after === 'scald') t.freeze?.(.6); }
+    for (const t of foes(gw, p)) if (inLane(t, x0, s.x1, z0, 36)) { s.hit.push(t); strike(p, st, t, m.after === 'ignite' ? dmg * .7 : dmg, f * (m.after === 'blind' ? 60 : 180), 160, .6, m.after === 'paralyze'); if (statusFor[m.after]) applyStatus(t, statusFor[m.after], { force: true }); if (m.after === 'blind' || m.after === 'scald' || m.after === 'solar') t.freeze?.(.6); }
     if (m.after === 'scald') for (let x = Math.min(x0, s.x1); x < Math.max(x0, s.x1); x += 52) groundFx('steam', x, z0, p.team, 34);
     if (m.trail === 'scorch' || m.trail === 'ice') for (let x = Math.min(x0, s.x1); x < Math.max(x0, s.x1); x += 46) groundFx(m.look, x, z0, p.team, 36);
     quake(s.hit.length ? 9 : 4, .3, s.hit.length ? 4 : 0);
@@ -424,26 +425,57 @@ function crescents(p, st, k, m) {
     ctx.restore();
   } }), st.quality);
 }
+// Each style rises its own way (no weapon): hit area, forward travel, number of hits.
+const RISE = Object.freeze({
+  wheel: { advance: 70, hits: 2 }, wind: { lift: 780 }, petal: { around: true, hits: 2 }, moon: { wall: true }, mist: { hits: 3 },
+  claw: { hits: 2 }, shield: { around: true }, love: { advance: 90, hits: 3 }, sting: { advance: 80, hits: 3 }, sound: { around: true, hits: 3 }
+});
 // RISING: a rising arc launches everything in front high up (plus the element shooting up).
 function rising(p, st, k, m) {
   const R = styleOf(st).ramp; const f = p.facing || 1; swing(p, .35);
   const dk = m.delivery?.kind;
   if (m.backflip && p.grounded) { p.grounded = false; p.vElevation = 260; p.vx = -f * 120; }
   else if (p.grounded) { p.grounded = false; p.vElevation = dk === 'fist' ? 560 : dk === 'polearm' ? 480 : 300; } // fist: rising uppercut, polearm: vault
-  emit(new SigSequence({ mat: R.mat, seed: 4800 }, p, { dur: .7, data: { hit: new Set() }, tick: (s, dt, gw) => {
-    if (s.t > .3) return;
-    for (const t of foes(gw, p)) if (!s.hit.has(t) && (t.x - p.x) * f > -20 && (t.x - p.x) * f < 120 && Math.abs(((t.z ?? p.z) - p.z) * DEPTH) < 40) { s.hit.add(t); strike(p, st, t, 22 + 16 * k, f * 80, m.lift ?? 640, .6, true); if (s.hit.size === 1) quake(6, .25, 3); }
+  const rs = dk && dk !== 'none' ? {} : (RISE[m.look] ?? {}); const hits = rs.hits ?? 1; const x0 = p.x;
+  emit(new SigSequence({ mat: R.mat, seed: 4800 }, p, { dur: rs.wall ? 1 : .7, data: { hit: new Set(), wave: 0 }, tick: (s, dt, gw) => {
+    if (rs.advance && s.t < .3) p.x = x0 + f * rs.advance * (s.t / .3);
+    const window = rs.wall ? .9 : .3; if (s.t > window) return;
+    const wave = Math.min(hits - 1, Math.floor(s.t / (window / hits))); if (wave !== s.wave) { s.wave = wave; s.hit.clear(); }
+    const last = wave === hits - 1;
+    for (const t of foes(gw, p)) {
+      const dx = (t.x - p.x) * f; const near = rs.around ? Math.hypot(t.x - p.x, ((t.z ?? p.z) - p.z) * DEPTH) < 90 : rs.wall ? Math.abs(dx - 50) < 30 : dx > -20 && dx < 120;
+      if (s.hit.has(t) || !near || (!rs.around && Math.abs(((t.z ?? p.z) - p.z) * DEPTH) > (rs.wall ? 60 : 40))) continue;
+      s.hit.add(t); strike(p, st, t, (22 + 16 * k) / (last ? 1 : 2.4), f * 80, last ? (rs.lift ?? m.lift ?? 640) : 160, .6, last); if (s.hit.size === 1) quake(last ? 6 : 3, .2, last ? 3 : 1);
+    }
   }, draw: (ctx, s) => {
     const kk = Math.min(1, s.t / .3); const a = 1 - Math.max(0, (s.t - .35) / .35); const cx = p.x + f * 30; const by = (p.y ?? groundYForDepth(p.z));
     ctx.save(); ctx.globalAlpha = a;
     for (let i = 0; i < 9; i++) { const u = i / 8 * kk; const ang = (f > 0 ? .9 : Math.PI - .9) - f * u * 2.6; piece(ctx, m.look, cx + Math.cos(ang) * 46, by - 30 + Math.sin(ang) * 54, 1.3, s.t, R, f, i); }
     if (m.pillar || m.look === 'wind' || m.look === 'mist') for (let i = 0; i < 6; i++) piece(ctx, m.look, cx + f * 30 + Math.sin(i + s.t * 9) * 8, by - i * 24 * kk, 1.5, s.t, R, f, i + 20);
+    if (!dk || dk === 'none') drawRiseStyle(ctx, m.look, p, s.t, kk, R, f, by);
     // The weapon in the rise: a fist leading a spiral of the element, a spear thrust skyward, an upward iai line.
     if (dk === 'fist') { for (let i = 0; i < 6; i++) piece(ctx, m.look, p.x + Math.sin(i * 1.4 + s.t * 20) * 10, by + i * 14, 1.3 - i * .1, s.t, R, f, i + 30); ctx.save(); ctx.translate(p.x + f * 10, by - 70); ctx.rotate(-f * Math.PI / 2); drawHead(ctx, m.delivery, 0, 0, 1.2, s.t, R, 1); ctx.restore(); }
     if (dk === 'polearm' && kk < 1) { ctx.save(); ctx.translate(p.x + f * 20, by - 40); ctx.rotate(-f * .9); drawHead(ctx, m.delivery, 40 * kk, 0, 1.3, s.t, R, f); ctx.restore(); }
     if (dk === 'iai' && kk < 1) { ctx.fillStyle = R.mid; ctx.fillRect(Math.round(cx + f * 10) - 2, Math.round(by - 20 - 120 * kk), 4, Math.round(120 * kk)); ctx.fillStyle = R.core; ctx.fillRect(Math.round(cx + f * 10) - 1, Math.round(by - 20 - 120 * kk), 2, Math.round(120 * kk)); }
     ctx.restore();
   } }), st.quality);
+}
+// The style's own rise (drawn on top of the arc).
+function drawRiseStyle(ctx, look, p, t, kk, R, f, by) {
+  const px = p.x; const cy = by - 40;
+  switch (look) {
+    case 'wheel': for (let i = 0; i < 12; i++) { const a = i / 12 * TAU + t * 14 * f; piece(ctx, 'wave', px + f * 10 + Math.cos(a) * 42, cy + Math.sin(a) * 42 + 10, 1.1, t, R, f, i); } break; // a vertical water wheel
+    case 'wind': for (let i = 0; i < 10; i++) { const a = t * 18 + i * .9; piece(ctx, 'wind', px + f * 50 + Math.cos(a) * (10 + i * 3), by - i * 18 * kk, 1 + i * .08, t, R, f, i); } break; // a tornado column
+    case 'petal': for (let i = 0; i < 14; i++) { const a = i * .8 + t * 10; piece(ctx, 'petal', px + Math.cos(a) * (30 + i * 3), by - 10 - i * 8 * kk + Math.sin(a) * 8, 1, t, R, f, i); } break; // a petal spiral all around
+    case 'moon': { const wx = px + f * 50; ctx.fillStyle = R.mid; ctx.beginPath(); ctx.ellipse(wx, by - 50, 18, 60 * Math.min(1, kk * 2), 0, -Math.PI / 2, Math.PI / 2, f < 0); ctx.ellipse(wx - f * 10, by - 50, 10, 48 * Math.min(1, kk * 2), 0, Math.PI / 2, -Math.PI / 2, f > 0); ctx.closePath(); ctx.fill(); ctx.strokeStyle = R.core; ctx.lineWidth = 2; ctx.stroke(); break; } // a standing crescent wall
+    case 'mist': for (let i = 1; i <= 3; i++) { const a = -Math.PI / 2 + f * kk * TAU * (i / 3); piece(ctx, 'mist', px + Math.cos(a) * 30, cy + Math.sin(a) * 30, 1.6, t, R, f, i); } break; // somersault afterimages
+    case 'claw': for (const d of [1, -1]) { ctx.strokeStyle = R.light; ctx.lineWidth = 4; for (let i = -1; i <= 1; i++) { ctx.beginPath(); ctx.moveTo(px + f * (20 + i * 8), by - 10); ctx.lineTo(px + f * (60 + i * 8 + d * 20), by - 10 - 90 * kk); ctx.stroke(); } } break; // X rip upward
+    case 'shield': { ctx.strokeStyle = R.mid; ctx.lineWidth = 4; ctx.beginPath(); ctx.ellipse(px, by - 30, 70 * kk, 60 * kk, 0, Math.PI, TAU); ctx.stroke(); ctx.strokeStyle = R.light; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(px, by, 70 * kk, 20 * kk, 0, 0, TAU); ctx.stroke(); break; } // the guard dome turning out
+    case 'love': for (let i = 0; i < 3; i++) { ctx.strokeStyle = i % 2 ? R.light : R.mid; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(px + f * (20 + i * 22), cy - i * 12, 26, f > 0 ? -2 + i * .4 : Math.PI + 2 - i * .4, f > 0 ? .6 + i * .4 : Math.PI - .6 - i * .4, f < 0); ctx.stroke(); } break; // three leaping whip arcs
+    case 'sting': for (let i = 0; i < 3; i++) { const sx = px + f * (30 + i * 16); ctx.strokeStyle = R.light; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(sx, cy - 30 + i * 10); ctx.lineTo(sx + f * 26, cy - 10 + i * 10); ctx.stroke(); piece(ctx, 'sting', sx, cy - 10 + i * 10, 1, t, R, f, i); } break; // butterfly stabs
+    case 'sound': for (const o of [0, Math.PI]) { const a = t * 20 + o; ctx.fillStyle = R.mid; ctx.beginPath(); ctx.arc(px + Math.cos(a) * 46, cy + Math.sin(a) * 18, 9, 0, TAU); ctx.fill(); ctx.strokeStyle = R.light; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(px, cy, 46 * kk + 10, 18 * kk + 5, 0, 0, TAU); ctx.stroke(); } break; // twin blades spinning with rings
+    default: break;
+  }
 }
 // PILLAR: the element erupts under the nearest foe ahead (rock pillar, lightning, forge eruption).
 function pillar(p, st, k, m, gw) {
@@ -478,11 +510,17 @@ function crash(p, st, m, gw) {
   const heavy = m.look === 'rock' || m.look === 'blast' || m.look === 'sound' || m.look === 'sun' || dk === 'heavy'; // a hammer always lands like a meteor
   emit(new SigSequence({ mat: R.mat, seed: 5000 }, p, { dur: 2, data: { landed: false, lt: 0 }, tick: (s, dt, gw2) => {
     if (!s.landed) {
+      // Wild styles cut all around while still falling (beast, love, sound, insect).
+      if (!p.grounded && ['claw', 'love', 'sound', 'sting'].includes(m.look) && (s.cut = (s.cut ?? 0) + dt) > .08) { s.cut = 0; for (const t of foes(gw2, p)) if (Math.hypot(t.x - p.x, ((t.z ?? p.z) - p.z) * DEPTH) < 70) strike(p, st, t, 5 + 3, 0, 20, .15); }
       if (!p.grounded && s.t < 1.4) return;
       s.landed = true; s.lt = s.t; s.x = p.x; s.z = p.z; p.vx = 0;
       const r = heavy ? 120 : 95;
       for (const t of foes(gw2, p)) { const d = Math.hypot(t.x - p.x, ((t.z ?? p.z) - p.z) * DEPTH); if (d < r) { strike(p, st, t, (heavy ? 34 : 26) * (1 - d / r * .4), 0, m.look === 'wind' ? 300 : 480, .6, true); blowAway(t, p.x, p.z, m.look === 'wind' ? 760 : 380); } }
       groundFx(m.look, p.x, p.z, p.team, r * .8, gw2);
+      // Style extras on landing.
+      if (m.look === 'moon') crescentRing(p, st, p.x, p.z);
+      if (m.look === 'mist' || m.look === 'sun') for (const t of foes(gw2, p)) if (Math.hypot(t.x - p.x, ((t.z ?? p.z) - p.z) * DEPTH) < r) t.freeze?.(.6); // blinding mist / light
+      if (m.look === 'wave' || m.look === 'water') for (const t of foes(gw2, p)) if (Math.hypot(t.x - p.x, ((t.z ?? p.z) - p.z) * DEPTH) < r) applyStatus(t, 'wet', { force: true });
       if (m.shield) { p.arcaneShield = Math.max(p.arcaneShield ?? 0, m.shield); p.arcaneShieldTimer = Math.max(p.arcaneShieldTimer ?? 0, 4); }
       if (styleOf(st).heals) for (const a of [p]) a.hp = Math.min(a.maxHp, a.hp + 10);
       quake(heavy ? 14 : 9, .35, heavy ? 6 : 4);
@@ -490,16 +528,26 @@ function crash(p, st, m, gw) {
       s.dur = s.lt + .6;
     }
   }, draw: (ctx, s) => {
-    if (!s.landed) { ctx.save(); for (let i = 0; i < 4; i++) piece(ctx, m.look, p.x, (p.y ?? 0) - 60 + i * 16, 1.4, s.t, R, f, i); ctx.restore(); return; }
+    if (!s.landed) { ctx.save(); for (let i = 0; i < 4; i++) { ctx.globalAlpha = 1 - i * .22; piece(ctx, m.look, p.x - f * i * 9, (p.y ?? 0) - 52 - i * 18, .9 - i * .15, s.t, R, f, i); } ctx.restore(); return; } // a comet trail above the falling Wizard
     const kk = Math.min(1, (s.t - s.lt) / .3); const a = 1 - Math.max(0, (s.t - s.lt - .25) / .35); const y = groundYForDepth(s.z);
     ctx.save(); ctx.globalAlpha = a; const r = (heavy ? 120 : 95) * kk;
     ctx.strokeStyle = R.mid; ctx.lineWidth = 4; ctx.beginPath(); ctx.ellipse(s.x, y, r, r * .3, 0, 0, TAU); ctx.stroke();
     for (let i = 0; i < 12; i++) { const ang = i / 12 * TAU; piece(ctx, m.look, s.x + Math.cos(ang) * r * .8, y + Math.sin(ang) * r * .24, 1.4, s.t, R, f, i); }
     if (m.look === 'shield') { ctx.strokeStyle = R.light; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(s.x, y, r * .7, r * .9, 0, Math.PI, TAU); ctx.stroke(); }
+    if (m.look === 'rock') for (let i = 0; i < 8; i++) { const ang = i / 8 * TAU; const sx = s.x + Math.cos(ang) * r * .7; const sy = y + Math.sin(ang) * r * .2; plate(ctx, [[sx - 7, sy], [sx - 2, sy - 22 * kk], [sx + 3, sy - 26 * kk], [sx + 7, sy]], R.mat, 5010 + i, { alpha: 1, glowEdge: .4 }); }
+    if (m.look === 'wave' || m.look === 'water') for (let i = 0; i < 6; i++) { const ang = i / 6 * TAU; const sx = s.x + Math.cos(ang) * r * .6; const sy = y + Math.sin(ang) * r * .18; for (let j = 0; j < 4; j++) piece(ctx, 'wave', sx, sy - j * 16 * kk, 1 - j * .15, s.t, R, f, i * 4 + j); }
+    if (m.look === 'sun') for (let i = 0; i < 6; i++) { const ang = i / 6 * TAU; const sx = s.x + Math.cos(ang) * r * .7; ctx.fillStyle = R.light; ctx.fillRect(Math.round(sx) - 3, Math.round(y + Math.sin(ang) * r * .2 - 90 * kk), 6, Math.round(90 * kk)); }
     // The weapon driven into the ground at the center (spear, fist, blade, sigil), pointing down.
     if (dk && dk !== 'none' && dk !== 'heavy' && kk < 1) { ctx.translate(s.x, y - 30); ctx.rotate(Math.PI / 2); drawHead(ctx, m.delivery, 0, 0, 1.4, s.t, R, 1); }
     ctx.restore();
   } }), st.quality);
+}
+// A ring of crescent blades flying out in every direction (moon landing).
+function crescentRing(p, st, x, z) {
+  const R = styleOf(st).ramp; const blades = Array.from({ length: 8 }, (_, i) => ({ a: i / 8 * TAU, r: 10, hit: new Set() }));
+  emit(new SigSequence({ mat: R.mat, seed: 5050 }, p, { dur: .5, x, z, data: { blades }, tick: (s, dt, gw) => {
+    for (const bl of s.blades) { bl.r += 380 * dt; const bx = x + Math.cos(bl.a) * bl.r; const bz = z + Math.sin(bl.a) * bl.r / DEPTH; for (const t of foes(gw, p)) if (!bl.hit.has(t) && Math.hypot(t.x - bx, ((t.z ?? bz) - bz) * DEPTH) < 22) { bl.hit.add(t); strike(p, st, t, 8, Math.cos(bl.a) * 200, 60, .25); } }
+  }, draw: (ctx, s) => { ctx.save(); ctx.globalAlpha = 1 - s.t / .5; for (const bl of s.blades) { const bx = x + Math.cos(bl.a) * bl.r; const by = groundYForDepth(z + Math.sin(bl.a) * bl.r / DEPTH) - 30; piece(ctx, 'moon', bx, by + 10, 1.2, s.t, R, Math.cos(bl.a) >= 0 ? 1 : -1, 1); } ctx.restore(); } }), st.quality);
 }
 // BOOMERANG: a spinning stone weapon hurled forward drills through and comes back.
 function boomerang(p, st, k, m) {
@@ -701,6 +749,7 @@ function runMove(p, st, move, k, gw) {
 function awakenMark(p, st, gw) {
   if ((st.markCd ?? 0) > st.t) { combat.spawnDamageText?.(p.x, (p.y ?? 0) - 90, 'MAL ERSCHÖPFT', { color: '#9e9e9e' }); return true; }
   st.mark = { t: MARK.dur }; st.markCd = st.t + MARK.cooldown; swing(p, .45);
+  if (st.style === 'sun') emit(new RayCrownFx(p, { life: 1.2 }), st.quality);
   combat.spawnDamageText?.(p.x, (p.y ?? 0) - 100, 'MAL ERWACHT', { color: styleOf(st).ramp.light, isCrit: true });
   combat.spawnShockwave?.(p.x, (p.y ?? 0) - 40, 70, styleOf(st).ramp.mid); quake(6, .3, 3);
   // Resonance: the mark spreads to allies nearby (they grow faster and heal a little).
@@ -803,6 +852,7 @@ function castBreath(c, id) {
   const derived = running && running !== base ? comboOf(running, base) : null;
   const style = derived ?? base;
   startStance(p, id, c.quality, { arcs: [], style, baseStyle: base });
+  if (style === 'sun') emit(new RayCrownFx(p, { life: 1.4, size: 1.2 }), c.quality); // the origin of all styles shines
   if (derived) { c.gw?.showAnnouncement?.(`ABGELEITET: ${BREATH_STYLES[derived].name}`, 1.6); combat.spawnShockwave?.(p.x, (p.y ?? 0) - 40, 90, BREATH_STYLES[derived].ramp.mid); }
 }
 for (const id of Object.keys(BREATH_RUNES)) defineSignature(id, { cast(c) { castBreath(c, id); }, stance: breathStance() });

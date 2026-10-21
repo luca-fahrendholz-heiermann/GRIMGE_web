@@ -1699,13 +1699,26 @@ export class GameWorld {
 
   // Training: try a class weapon (fixed part of the Wizard, never thrown;
   // sprint + attack is the sprint attack). V / the CLASS WEAPON button.
+  // Class choice (user, 21 Oct 2026; the hub UI follows): the class = the class weapon. It decides the
+  // Bankai, is saved in the profile and worn in every match. classOptions() feeds the coming hub screen.
+  classOptions() {
+    return Object.keys(WEAPONS).filter((id) => id !== 'ice_sword').map((id) => ({
+      id, name: WEAPONS[id].name, family: WEAPONS[id].family, selected: this.profile.classWeapon === id,
+      weaponLevel: this.profile.weaponLevel(id), bankai: this.profile.isBankaiUnlocked(id)
+    }));
+  }
+  setClassWeapon(id) {
+    if (id !== null && (!WEAPONS[id] || id === 'ice_sword')) return false;
+    this.profile.setClassWeapon(id);
+    this.player?.equipClassWeapon(id);
+    ui.renderDeckBuilder?.(this.profile);
+    return true;
+  }
   cycleClassWeapon() {
     if (this.activeMode?.id !== 'training' || !this.isMatchRunning()) return null;
     const order = [null, ...Object.keys(WEAPONS).filter((id) => id !== 'ice_sword')];
     const next = order[(order.indexOf(this.player.classWeapon ?? null) + 1) % order.length];
-    this.player.equipClassWeapon(next);
-    this.profile.setClassWeapon?.(next); // the class: decides the Bankai and is worn in every match
-    ui.renderDeckBuilder?.(this.profile);
+    this.setClassWeapon(next); // the class: decides the Bankai and is worn in every match
     this.showAnnouncement(next ? `CLASS WEAPON: ${WEAPONS[next].name}` : 'CLASS WEAPON: NONE (BARE HANDS)', 1.2);
     return next;
   }

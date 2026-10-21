@@ -31,3 +31,26 @@ export class CastCircleFx {
     ctx.restore();
   }
 }
+
+// The golden ray crown (user reference 4: a holy armour with light rays): rays of light fan out
+// behind the caster — light (Lux) spells, the Sun breathing and the holy Arcane States.
+export class RayCrownFx {
+  constructor(caster, { life = 1.1, color = '#ffd54f', core = '#fffde7', size = 1 } = {}) {
+    this.owner = caster; this.x = caster.x; this.z = caster.z; this.life = life; this.color = color; this.core = core; this.size = size;
+    this.t = 0; this.isFinished = false; this.team = caster.team;
+  }
+  get y() { return groundYForDepth(this.owner.z) - .5; } // just behind the caster in the painter order
+  update(dt) { this.t += dt; this.x = this.owner.x; this.z = this.owner.z - .002; if (this.t >= this.life) this.isFinished = true; } // a hair behind the caster
+  render(ctx) {
+    const p = this.owner; const k = this.t / this.life; const grow = Math.min(1, this.t / .18); const a = Math.min(1, (1 - k) * 2.5);
+    const cx = p.x; const cy = (p.y ?? groundYForDepth(p.z)) - 50; const rot = this.t * .5;
+    ctx.save(); ctx.globalAlpha = a;
+    for (let i = 0; i < 14; i++) {
+      const ang = rot + i * TAU / 14; const long = i % 2 === 0; const L = (long ? 96 : 62) * grow * this.size; const w = long ? .17 : .11;
+      ctx.fillStyle = long ? this.color : this.core;
+      ctx.beginPath(); ctx.moveTo(cx + Math.cos(ang - w) * 14, cy + Math.sin(ang - w) * 14); ctx.lineTo(cx + Math.cos(ang) * L, cy + Math.sin(ang) * L); ctx.lineTo(cx + Math.cos(ang + w) * 14, cy + Math.sin(ang + w) * 14); ctx.closePath(); ctx.fill();
+    }
+    ctx.fillStyle = this.core; for (let i = 0; i < 8; i++) { const ang = -rot * 1.5 + i * TAU / 8; ctx.fillRect(Math.round(cx + Math.cos(ang) * 70 * grow) - 2, Math.round(cy + Math.sin(ang) * 70 * grow) - 2, 4, 4); }
+    ctx.restore();
+  }
+}

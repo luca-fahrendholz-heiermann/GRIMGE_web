@@ -13,6 +13,9 @@
 // combat engines (the former Ninefold / Eidolon manifests) and get the
 // atlas look and names; T01–T40 run on the generic engine below.
 import { bankaiStyleOf } from './bankai.js';
+import { RayCrownFx } from './cast_circle.js';
+// The holy Arcane States: their transformation is crowned by golden rays (Göttlicher Riese, Sonnenwyrm).
+const HOLY_STATES = new Set(['A01', 'T40']);
 import { BUFF_FORM_DATA } from './buff_forms_data.js';
 import { FORM_MOVESETS, registerFormPalette, FormStrikeSpell } from './form_moves.js';
 import { FORM_SPRINT_ATTACKS, FORM_FX_HOOKS } from './form_actions.js';
@@ -201,7 +204,7 @@ export function activateBuffForm(player, id, quality = { duration: 1, power: 1, 
     player.ninefoldTimer = 0; player.eidolonTimer = 0;
   }
   player.buffForm = { id, timer: duration, total: duration, age: active ? (player.buffForm?.age ?? 1) : 0, power: quality.power ?? 1, intro: !active };
-  if (!active) { emit(new TransformationFx(player, transitionStyleOf(form))); buffTransformFx(player, form, 'in'); }
+  if (!active) { emit(new TransformationFx(player, transitionStyleOf(form))); buffTransformFx(player, form, 'in'); if (HOLY_STATES.has(id)) emit(new RayCrownFx(player, { life: 1.6, size: 1.4, color: form.mat?.edge ?? '#ffd54f' })); }
   combat.spawnShockwave(player.x, player.y - 40, 80 * (quality.area ?? 1), form.mat.vein);
   combat.spawnShockwave(player.x, player.y - 4, 50, form.mat.edge);
   const title = id === 'A04' ? bankaiStyleOf(player).name : form.title?.toUpperCase(); // Bankai: the class decides

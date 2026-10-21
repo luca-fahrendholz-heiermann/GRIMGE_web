@@ -18,6 +18,7 @@ import { renderInfusion } from './nature_spells.js';
 import { TransformationFx } from './transform_fx.js';
 import { weaponSprintVariant, weaponSprintStart, weaponSprintTick, weaponSprintHit } from './weapon_sprint.js';
 import { kitOf } from './weapon_kits.js';
+import { drawWeaponGuard } from './weapon_guard.js';
 import { hasWeaponDown, castWeaponDown, weaponUp, weaponDive, updateWeaponKit, weaponMoveMult, weaponAttackSpeed, meleeBuffMods, targetDamageMult, onWeaponMeleeHit, afterWeaponSwing, weaponIncoming } from './weapon_kits.js';
 import { updatePrimalBond, bondMoveMultiplier, bondGainMultiplier, bondDisplacement, bondOnBlock, primalSprintVariant, renderPrimalBond, endPrimalBond, bondMelee, primalQuake } from './primals.js';
 import { createSegments, damageSegments, updateSegments, renderSegments } from './castle_segments.js';
@@ -1844,7 +1845,8 @@ export class Player extends GroundEntity {
     if (formCloak) this.renderFormCloak(ctx, renderY, renderOpts, formCloak, 'back');
     // Astral weapon: the rear-hand piece behind the body, the front one in front.
     // Klingenblüte (A04): the weapon has become the petal swarm — only the swarm renderer draws it.
-    const armed = this.isAlive && (this.weapon || this.classWeapon) && currentBuffForm(this)?.id !== 'A04';
+    // While guarding, the guard pose shows the weapon (weapon_guard.js) — no second copy in the hand.
+    const armed = this.isAlive && (this.weapon || this.classWeapon) && currentBuffForm(this)?.id !== 'A04' && !(this.isGuarding && !activeMoveset(this));
     if (armed) drawHeldWeapon(ctx, this, renderY, 'back');
     sprites.renderEntity(ctx, this.renderKey, this.x, renderY, renderOpts);
     if (armed) drawHeldWeapon(ctx, this, renderY, 'front');
@@ -1876,24 +1878,8 @@ export class Player extends GroundEntity {
       ctx.restore();
     }
     // Forms show their own guard (tail cocoon, astral palm, light shield).
-    if (this.isGuarding && this.isAlive && !activeMoveset(this)) {
-      const isPerfect = this.perfectBlockFlash > 0;
-      const shieldX = this.x + this.facing * 26;
-      const shieldY = renderY - 40;
-      ctx.save();
-      ctx.translate(shieldX, shieldY);
-      ctx.scale(this.facing, 1);
-      ctx.fillStyle = isPerfect ? 'rgba(180, 160, 40, .85)' : 'rgba(33, 104, 154, .78)';
-      ctx.strokeStyle = isPerfect ? '#fff176' : '#b9f4ff';
-      ctx.lineWidth = isPerfect ? 3.5 : 2.5;
-      ctx.shadowColor = isPerfect ? '#ffd740' : '#3ad8ff'; ctx.shadowBlur = isPerfect ? 18 : 10;
-      ctx.beginPath();
-      ctx.moveTo(0, -25); ctx.lineTo(14, -16); ctx.lineTo(14, 14); ctx.lineTo(0, 25); ctx.lineTo(-14, 14); ctx.lineTo(-14, -16); ctx.closePath();
-      ctx.fill(); ctx.stroke();
-      ctx.shadowBlur = 0; ctx.strokeStyle = 'rgba(255,255,255,.82)'; ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(0, -18); ctx.lineTo(0, 17); ctx.moveTo(-9, -2); ctx.lineTo(9, -2); ctx.stroke();
-      ctx.restore();
-    }
+    // The guard is drawn the way the held weapon blocks (weapon_guard.js).
+    if (this.isGuarding && this.isAlive && !activeMoveset(this)) this.lastGuardKind = drawWeaponGuard(ctx, this, this.x, renderY, this.facing || 1, this.perfectBlockFlash > 0, this.animTime ?? 0);
     if (this.arcaneShield > 0 && this.isAlive) {
       ctx.save(); ctx.strokeStyle = 'rgba(194, 164, 255, .9)'; ctx.fillStyle = 'rgba(137, 98, 255, .12)'; ctx.lineWidth = 2;
       ctx.shadowColor = '#b388ff'; ctx.shadowBlur = 14; ctx.beginPath(); ctx.ellipse(this.x, renderY - 37, 32, 45, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.restore();

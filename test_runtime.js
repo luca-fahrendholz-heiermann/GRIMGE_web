@@ -4016,6 +4016,58 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   if (P.signature) core.endStance(P, 'replaced'); spells.clearRuntime(); game.minions = []; ready(); dummy.homeX = dummy.x = 512;
 }
 
+// Guard per weapon, class choice, own rises / crashes, the Sun's light, infusions breathe, the ray crown (21 Oct 2026).
+{
+  const WG = await import('./public/src/weapon_guard.js'); const BR = await import('./public/src/breathing.js'); const core = await import('./public/src/signature_core.js'); const { Minion } = await import('./public/src/entities.js');
+  game.returnToHub(); game.setMatchMode('training'); game.startMatch(); game.selectTrainingMap('waterfalls');
+  const P = game.player; const dummy = game.trainingDummy; dummy.homeX = dummy.x = 1600;
+  const neutral = { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false };
+  const step = (n) => { for (let i = 0; i < n; i++) { P.update(1 / 60, neutral, game.battlefield, game); spells.update(1 / 60, game); } };
+  const ready = () => { P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.grounded = true; P.elevation = 0; P.vElevation = 0; P.invulnerableTimer = 0; };
+  const foeAt = (x, z = .5) => { const m = new Minion(x, z, 'red', 'melee', 0); m.maxHp = m.hp = 3000; game.battlefield.placeOnSurface(m); game.minions.push(m); return m; };
+  const setup = (id, style = null) => { spells.clearRuntime(); game.minions = []; if (P.signature) core.endStance(P, 'replaced'); P.equipWeapon(null); P.equipClassWeapon(null); P.x = 300; P.z = .5; P.facing = 1; P.hp = P.maxHp; ready(); game.battlefield.placeOnSurface(P); if (id) spells.cast(P, spells.resolveSpell([{ id: 'sig_' + id }]), game); if (style) P.signature.style = style; };
+  const charged = (dir) => { ready(); P.beginCharge(dir); P.chargeTimer = P.chargeMaxTime * .1; P.chargeDir = dir; return P.releaseCharge(); };
+  let bad = 0; const strict = new Proxy({}, { get: (tt, k) => (k === 'arc' || k === 'ellipse') ? (x, y, r1, r2) => { if (r1 < 0 || (k === 'ellipse' && r2 < 0)) bad++; } : k === 'canvas' ? undefined : k === 'measureText' ? () => ({ width: 10 }) : () => {}, set: () => true });
+  // Guard per weapon.
+  const kinds = ['sword_shield', 'katana', 'dual_swords', 'great_hammer', 'spear', 'bow', 'harp', 'gauntlets', null].map((w) => { P.equipClassWeapon(w); return WG.guardKindOf(P); });
+  for (const w of ['sword_shield', 'katana', 'great_hammer', 'spear', 'bow', 'harp', 'gauntlets', null]) { P.equipClassWeapon(w); WG.drawWeaponGuard(strict, P, P.x, P.y, 1, true, .5); WG.drawWeaponGuard(strict, P, P.x, P.y, -1, false, 1.2); }
+  assert(kinds.join() === 'shield,sheath,blade,heavy,pole,bow,barrier,fist,arcane' && !bad, 'Guard per weapon: shield, katana sheath block, crossed blade, haft bar, spinning shaft, bow brace, rune barrier, crossed fists, bare hands (all render)');
+  P.equipClassWeapon('great_hammer'); ready(); P.isGuarding = true; P.render(strict); assert(P.lastGuardKind === 'heavy', 'The Wizard draws the guard of the weapon he holds'); P.isGuarding = false; P.equipClassWeapon(null);
+  // Class choice (technical; the hub UI follows).
+  const opts = game.classOptions();
+  assert(opts.length >= 35 && !opts.some((o) => o.id === 'ice_sword') && game.setClassWeapon('katana') && game.profile.classWeapon === 'katana' && P.classWeapon === 'katana' && game.classOptions().find((o) => o.id === 'katana').selected && !game.setClassWeapon('no_such_weapon'), 'Class choice API: options (name, family, weapon level, Bankai state), choosing saves and equips, unknown weapons are refused');
+  game.setClassWeapon(null);
+  // Every style rises its own way.
+  setup('S40'); const xw = P.x; foeAt(400); charged('up'); step(25); assert(P.x > xw + 40, 'Water WASSERRAD: the rise rolls forward as a water wheel');
+  setup('S83'); const behind = foeAt(240); charged('up'); step(30); assert(behind.hp < 3000, 'Ward SCHATTENPFLAUME: the guard dome turns out all around (also hits behind)');
+  setup('S80'); const mistFoe = foeAt(360); let mistHits = 0; const mo = mistFoe.takeDamage.bind(mistFoe); mistFoe.takeDamage = (...a) => { mistHits++; return mo(...a); }; charged('up'); step(30); assert(mistHits >= 3, 'Mist MONDNEBEL: a somersault with three cuts');
+  // Crash extras.
+  setup('S79'); const side = foeAt(300, .78); P.elevation = 90; P.grounded = false; P.executeAttack(neutral, 'dive'); step(50); assert(side.hp < 3000, 'Moon NEUMOND: crescents fly out in every direction on landing');
+  setup('S81'); const wild = foeAt(330); P.elevation = 160; P.grounded = false; let wildHits = 0; const wo = wild.takeDamage.bind(wild); wild.takeDamage = (...a) => { wildHits++; return wo(...a); }; P.executeAttack(neutral, 'dive'); step(50); assert(wildHits >= 2, 'Beast WILDES ZERREISSEN: it cuts all around while still falling');
+  // The Sun's light blinds.
+  setup('S78'); const sunFoe = foeAt(380); P.sprintActive = true; P.vx = 320; P.executeAttack(neutral, 'normal'); step(8); assert(sunFoe.freezeTimer > 0 || STATUS.hasStatus(sunFoe, 'burn'), 'Sun SONNENSPUR: the light blinds (and burns)');
+  // The ray crown: Sun breathing and light spells.
+  setup('S78'); assert(spells.activeSpells.some((s) => s.constructor.name === 'RayCrownFx'), 'Sun breathing raises the golden ray crown');
+  setup(null); spells.cast(P, spells.resolveSpell([{ id: 'lux' }]), game); assert(spells.activeSpells.some((s) => s.constructor.name === 'RayCrownFx'), 'Light (Lux) spells raise the golden ray crown');
+  for (const sp of spells.activeSpells) sp.render?.(strict); assert(!bad, 'The ray crown renders cleanly');
+  // Infusion: the blade breathes.
+  setup(null); spells.cast(P, spells.resolveSpell([{ id: 'construct' }, { id: 'ignis' }]), game);
+  assert(P.weaponInfusion?.element === 'fire' && P.signature?.style === 'flame' && P.signature.timer <= 8.01, 'Konstrukt + Ignis: the flame blade also breathes — a short flame breathing (8 s)');
+  if (P.signature) core.endStance(P, 'replaced'); P.weaponInfusion = null; spells.clearRuntime(); game.minions = []; dummy.homeX = dummy.x = 512;
+}
+
+// Pixel heroes (Thesen, Xame) are drawn crisp: no smoothing, scale snapped to whole screen pixels.
+{
+  const { sprites } = await import('./public/src/sprites.js');
+  const frame = { canvas: {}, width: 82, height: 123, anchorX: 41, anchorY: 121 };
+  sprites.sprites.__pixelTest = { ...frame, pixel: true, procFull: true };
+  sprites.sprites.__smoothTest = { ...frame };
+  const draw = (key, zoom) => { const log = { scale: [] }; const ctx = { getTransform: () => ({ a: zoom }), save() {}, restore() {}, translate() {}, rotate() {}, drawImage() {}, scale(x, y) { log.scale.push(y); }, set imageSmoothingEnabled(v) { log.smooth = v; }, get imageSmoothingEnabled() { return log.smooth; } }; sprites.renderEntity(ctx, key, 0, 0, { state: 'land', procScaleY: 1, procScaleX: 1 }); return log; };
+  const px = draw('__pixelTest', 1.25); const sm = draw('__smoothTest', 1.25); const tiny = draw('__pixelTest', .5);
+  assert(px.smooth === false && Math.abs(px.scale[0] * 1.25 - 1) < 1e-9 && sm.smooth === true && tiny.smooth === true, 'Pixel heroes are drawn crisp (no smoothing, snapped to one screen pixel per art pixel); smooth sprites and strong downscales keep smoothing');
+  delete sprites.sprites.__pixelTest; delete sprites.sprites.__smoothTest;
+}
+
 const frameCallback = nextFrame;
 frameCallback(game.lastFrameTime + 16);
 game.debugVisible = true;

@@ -1145,6 +1145,8 @@ export function renderPixelated(ctx, pixelSize, draw) {
     canvas.width = w; canvas.height = h;
     const layerCtx = canvas.getContext?.('2d');
     if (!layerCtx) { draw(ctx); return false; }
+    // Pixel-art rule: no soft shadow glows in the VFX layer — every effect keeps hard edges (the contour pass outlines it).
+    try { Object.defineProperty(layerCtx, 'shadowBlur', { get: () => 0, set: () => {}, configurable: true }); } catch { /* read-only in some engines */ }
     pixelLayer = { canvas, ctx: layerCtx };
   }
   const lctx = pixelLayer.ctx;

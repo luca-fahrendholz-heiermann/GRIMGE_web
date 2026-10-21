@@ -16,6 +16,7 @@
 // Weapon infusions are rune spells too (CONSTRUCT = the weapon rune):
 //   construct + ignis / aqua / fulgur / natura / umbra / bestia
 //   = flame / frost / storm / venom / blood (life steal) / rending (bleed).
+import { startStance, signatureImpl } from './signature_core.js';
 import { audio } from './audio.js';
 import { combat } from './combat.js';
 import { groundYForDepth } from './world.js';
@@ -244,12 +245,18 @@ export function castNatureSpell(system, caster, id, quality, target, game) {
   const inf = INFUSION_SPELLS[id];
   if (inf) {
     caster.weaponInfusion = { ...inf, id, t: 12 * (q.duration ?? 1), hits: 0 };
+    // The infused blade breathes (user, 21 Oct 2026: breathings take over the weapon element buffs):
+    // a short stance of the matching breathing style (8 s).
+    const breath = INFUSION_BREATH[id];
+    if (breath && caster === globalThis.window?.gameWorld?.player && signatureImpl(breath.rune)) /* stances run on the player only */ { startStance(caster, breath.rune, q, { arcs: [], style: breath.style, baseStyle: breath.style }); caster.signature.timer = Math.min(caster.signature.timer, 8 * (q.duration ?? 1)); }
     combat.spawnShockwave(caster.x + f * 18, caster.y - 46, 30, inf.color);
     audio.playSpell?.('aura_shock');
     return true;
   }
   return false;
 }
+// Konstrukt + element → the breathing the blade carries.
+const INFUSION_BREATH = Object.freeze({ flame_edge: { rune: 'S41', style: 'flame' }, frost_edge: { rune: 'S84', style: 'ice' }, storm_edge: { rune: 'S42', style: 'thunder' }, venom_edge: { rune: 'S77', style: 'insect' }, blood_edge: { rune: 'S79', style: 'moon' }, rending_edge: { rune: 'S81', style: 'beast' } });
 export const isNatureOrInfusion = (id) => NATURE_SPELL_IDS.includes(id) || !!INFUSION_SPELLS[id];
 
 // Infusion on a melee hit (called from weapon_kits.onWeaponMeleeHit).

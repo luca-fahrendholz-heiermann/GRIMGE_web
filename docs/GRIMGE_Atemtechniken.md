@@ -101,3 +101,47 @@ Angelehnt an das Demon-Slayer-Mal, adaptiert:
 - **Preis:** 1,5 HP pro Sekunde, das rasende Herz.
 - **Resonanz:** Das Mal breitet sich auf Verbündete in der Nähe aus. Sie werden schneller und heilen etwas.
 - **Abklingzeit:** 14 s.
+
+## Eigener Aufstieg und Absturz ohne Waffe
+
+Ohne Waffe steigt jede Atmung auf ihre eigene Art auf (Aufladen hoch):
+
+| Atmung | Aufstieg |
+| --- | --- |
+| Wasser | WASSERRAD: rollt als Wasserrad nach vorn, 2 Treffer |
+| Wind | hoher Wirbel, schleudert weit nach oben |
+| Blume | Blütenkreis rundherum, 2 Treffer |
+| Mond | stehende Sichelwand |
+| Nebel | Salto mit 3 Schnitten |
+| Bestie | 2 Klauenhiebe |
+| Schutz | Schutzkuppel rundherum, trifft auch hinten |
+| Liebe / Insekt | Vorstoß mit 3 Treffern |
+| Klang | Klangring rundherum, 3 Treffer |
+
+Der Absturz (Sprung + Angriff nach unten):
+
+- Beim Fallen zieht ein Kometenschweif in der Farbe der Atmung hinter der Figur her. Die graue Säule bei Stein ist weg.
+- Bestie, Liebe, Klang und Insekt schneiden schon im Fall rundherum.
+- Bei der Landung:
+  - Mond: Sicheln fliegen in alle Richtungen.
+  - Nebel und Sonne: blenden (kurzes Einfrieren).
+  - Wasser: Fontänen, die nass machen.
+  - Stein: Felsspitzen im Ring.
+  - Sonne: Lichtsäulen.
+
+## Sonne: Licht statt nur Feuer
+
+Die Sonne blendet. Die Sonnenspur (Sprint-Angriff) verbrennt und friert kurz ein. Beim Start und beim Mal erscheint der goldene Strahlenkranz.
+
+## Waffen-Infusion → kurze Atmung
+
+Konstrukt + Element (Waffen-Infusion) startet beim Spieler zusätzlich eine kurze Atmung von höchstens 8 s:
+
+| Infusion | Atmung |
+| --- | --- |
+| Flammenklinge | Flamme |
+| Frostklinge | Eis |
+| Sturmklinge | Donner |
+| Giftklinge | Insekt |
+| Blutklinge | Mond |
+| Reißklinge | Bestie |
