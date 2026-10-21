@@ -17,6 +17,7 @@ import { combat } from './combat.js';
 import { environment } from './environment.js';
 import { groundYForDepth, clampToArena } from './world.js';
 import { applyStatus } from './status_effects.js';
+import { deliveryOf, drawHead, drawFlourish } from './breathing_weapons.js';
 
 // ── palettes (dark, mid, light, core: pixel-art ramps) ───────────────────
 const hexRgb = (h) => { const n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
@@ -198,15 +199,18 @@ function torrent(p, st, k, m) {
   }, draw: (ctx, s) => {
     const y = groundYForDepth(s.z) - 26; const head = 30 + Math.min(1, s.t / .55) * len; const a = 1 - Math.max(0, (s.t - .55) / .35);
     ctx.save(); ctx.globalAlpha = a;
+    // The weapon shapes the body: an arrow's tail (thinner), a fissure along the ground (heavy), a straight thrust (polearm).
+    const d = m.delivery; const dk = d?.kind ?? 'none';
+    const bodyScale = dk === 'ranged' ? .6 : dk === 'polearm' ? .75 : 1; const bodyY = dk === 'heavy' ? 18 : 0; const straight = dk === 'polearm' || dk === 'ranged';
     const n = 20;
     for (let i = 0; i < n; i++) {
       const u = i / (n - 1); const x = s.x + f * (20 + head * u);
-      const wav = m.look === 'serpent' || m.look === 'love' ? Math.sin(u * 14 - s.t * 16) * 18 : Math.sin(u * 9 - s.t * 18) * 10 * u;
-      piece(ctx, m.look, x, y + wav, .9 + 1.3 * u, s.t, R, f, i);
+      const wav = straight ? Math.sin(u * 20 - s.t * 30) * 4 : m.look === 'serpent' || m.look === 'love' ? Math.sin(u * 14 - s.t * 16) * 18 : Math.sin(u * 9 - s.t * 18) * 10 * u;
+      piece(ctx, m.look, x, y + wav + bodyY, (.9 + 1.3 * u) * bodyScale, s.t, R, f, i);
     }
-    // The head: a bigger flare of the element (the ice dragon gets jaws).
-    piece(ctx, m.look, s.x + f * (26 + head), y, 2.6, s.t, R, f, 99);
-    if (m.look === 'ice') { const hx = s.x + f * (40 + head); plate(ctx, [[hx, y - 30], [hx + f * 34, y - 22], [hx + f * 8, y - 14]], R.mat, 960, { alpha: 1, glowEdge: .8 }); plate(ctx, [[hx, y - 8], [hx + f * 30, y - 4], [hx + f * 6, y + 2]], R.mat, 961, { alpha: 1, glowEdge: .8 }); }
+    // The head: the weapon's projectile / blade / tip — else a bigger flare of the element (the ice dragon gets jaws).
+    if (!drawHead(ctx, d, s.x + f * (40 + head), y - 10 + (dk === 'heavy' ? 0 : 0), 1.3, s.t, R, f)) piece(ctx, m.look, s.x + f * (26 + head), y, 2.6, s.t, R, f, 99);
+    if (m.look === 'ice' && dk === 'none') { const hx = s.x + f * (40 + head); plate(ctx, [[hx, y - 30], [hx + f * 34, y - 22], [hx + f * 8, y - 14]], R.mat, 960, { alpha: 1, glowEdge: .8 }); plate(ctx, [[hx, y - 8], [hx + f * 30, y - 4], [hx + f * 6, y + 2]], R.mat, 961, { alpha: 1, glowEdge: .8 }); }
     ctx.restore();
   } }), st.quality);
 }
@@ -214,14 +218,24 @@ function torrent(p, st, k, m) {
 function flash(p, st, k, m) {
   const R = styleOf(st).ramp; const f = p.facing || 1; const dist = (m.dist ?? 220) * (.85 + .5 * k); const dmg = 30 + 24 * k;
   const x0 = p.x; const z0 = p.z;
+  if (m.delivery?.kind === 'ranged') swing(p, .35); // the archer plants and shoots (no sprint momentum)
   emit(new SigSequence({ mat: R.mat, seed: 4400 }, p, { dur: .75, x: x0, z: z0, data: { hit: [], x1: x0, moved: false, after: false }, steps: [{ at: .07, fn: (s, gw) => {
     let target = x0 + f * dist;
+    const ranged = m.delivery?.kind === 'ranged';
+    if (ranged) {
+      // A bow / crossbow / thrown weapon: the Wizard stays, a piercing shot covers the same lane.
+      s.x1 = x0 + f * dist; s.moved = true; s.shot = true;
+      for (const t of foes(gw, p)) if (inLane(t, x0, s.x1, z0, 36)) { s.hit.push(t); strike(p, st, t, m.after === 'ignite' ? dmg * .7 : dmg, f * (m.after === 'blind' ? 60 : 180), 160, .6, m.after === 'paralyze'); if (statusFor[m.after]) applyStatus(t, statusFor[m.after], { force: true }); if (m.after === 'blind') t.freeze?.(.6); }
+      if (m.trail === 'scorch' || m.trail === 'ice') for (let x = Math.min(x0, s.x1); x < Math.max(x0, s.x1); x += 46) groundFx(m.look, x, z0, p.team, 36);
+      quake(s.hit.length ? 7 : 3, .25, s.hit.length ? 3 : 0);
+      return;
+    }
     if (m.behind) { const t = foes(gw, p).filter((o) => (o.x - x0) * f > 0 && Math.abs(((o.z ?? z0) - z0) * DEPTH) < 40).sort((a, b) => Math.abs(a.x - x0) - Math.abs(b.x - x0))[0]; if (t) target = t.x + f * 46; }
     p.x = target; clampToArena(p, gw?.battlefield?.boundsOverride ?? null); gw?.battlefield?.placeOnSurface?.(p);
     s.x1 = p.x; s.moved = true; p.invulnerableTimer = Math.max(p.invulnerableTimer ?? 0, .3);
     if (m.behind) p.facing = -f; // turns to bite from behind
     for (const t of foes(gw, p)) if (inLane(t, x0, s.x1, z0, 36)) { s.hit.push(t); strike(p, st, t, m.after === 'ignite' ? dmg * .7 : dmg, f * (m.after === 'blind' ? 60 : 180), 160, .6, m.after === 'paralyze'); if (statusFor[m.after]) applyStatus(t, statusFor[m.after], { force: true }); if (m.after === 'blind') t.freeze?.(.6); }
-    if (m.trail === 'scorch') for (let x = Math.min(x0, s.x1); x < Math.max(x0, s.x1); x += 46) groundFx(m.look, x, z0, p.team, 36);
+    if (m.trail === 'scorch' || m.trail === 'ice') for (let x = Math.min(x0, s.x1); x < Math.max(x0, s.x1); x += 46) groundFx(m.look, x, z0, p.team, 36);
     quake(s.hit.length ? 9 : 4, .3, s.hit.length ? 4 : 0);
   } }, { at: .32, fn: (s) => {
     // After-effect: the cut foes burst into flames / crescent blades linger / the serpent bites again.
@@ -237,11 +251,25 @@ function flash(p, st, k, m) {
     const y = groundYForDepth(s.z) - 40;
     if (!s.moved) { sparks(ctx, [[x0, y]], R.mat, s.t, 4401, 14, 1); return; }
     const a = 1 - kk; const n = 11; const roll = Math.floor(s.t * 40);
+    if (s.shot) {
+      // The piercing shot: the weapon's projectile races down the lane, the element trailing it.
+      const u = Math.min(1, Math.max(0, (s.t - .07) / .16)); const hx = x0 + (s.x1 - x0) * u;
+      ctx.save(); ctx.globalAlpha = a; for (let i = 0; i < 8; i++) piece(ctx, m.look, hx - f * (16 + i * 18), y + 30, 1.1 - i * .08, s.t, R, f, i); ctx.restore();
+      if (u < 1) drawHead(ctx, m.delivery, hx, y, 1.2, s.t, R, f);
+    }
     const pts = Array.from({ length: n }, (_, i) => [x0 + (s.x1 - x0) * i / (n - 1), y + (m.look === 'bolt' && i && i < n - 1 ? Math.sin(i * 2.7 + roll) * 13 : m.look === 'mist' ? Math.sin(i * 1.3) * 10 : 0)]);
-    if (m.look === 'bolt') { thread(ctx, pts, R.mid, 8 * a + 1, a); thread(ctx, pts, R.core, 2.5, a); }
+    if (s.shot) { /* drawn above */ }
+    else if (m.look === 'bolt') { thread(ctx, pts, R.mid, 8 * a + 1, a); thread(ctx, pts, R.core, 2.5, a); }
     else { ctx.save(); ctx.globalAlpha = a; for (let i = 0; i < n; i++) piece(ctx, m.look, pts[i][0], pts[i][1] + 30, 1.2, s.t, R, f, i); ctx.restore(); thread(ctx, pts, R.core, 2, a * .9); }
     // The burst on the hit foes after the cut.
     if (s.after) for (const t of s.hit) { const ty = t.y ?? groundYForDepth(t.z ?? s.z); ctx.save(); ctx.globalAlpha = a; for (let i = 0; i < 5; i++) piece(ctx, m.look === 'bolt' ? 'bolt' : m.look, t.x + (i - 2) * 8, ty - 4 - (i % 2) * 14, 1.6, s.t, R, f, i + 7); ctx.restore(); }
+    // Blades: the cut marks open on the foes (opaque crossing blades in the element).
+    const dk = m.delivery?.kind;
+    if ((dk === 'iai' || dk === 'blade') && s.moved && !s.shot && kk < .7) for (const t of s.hit) {
+      const ty = (t.y ?? groundYForDepth(t.z ?? s.z)) - 40; ctx.save(); ctx.globalAlpha = Math.min(1, (.7 - kk) * 3);
+      for (const dir of dk === 'iai' ? [1] : [1, -1]) { ctx.fillStyle = R.mid; ctx.strokeStyle = R.dark; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(t.x - 30, ty - 26 * dir); ctx.lineTo(t.x + 30, ty + 22 * dir); ctx.lineTo(t.x + 30, ty + 27 * dir); ctx.lineTo(t.x - 30, ty - 21 * dir); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.strokeStyle = R.core; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(t.x - 30, ty - 24 * dir); ctx.lineTo(t.x + 30, ty + 24 * dir); ctx.stroke(); }
+      ctx.restore();
+    }
   } }), st.quality);
 }
 // VORTEX: spin on the spot (a whirlwind forms, foes around are cut), then burst forward —
@@ -519,8 +547,11 @@ const KINDS = { torrent, flash, vortex, drill, crescents, rising, pillar, boomer
 function runMove(p, st, move, k, gw) {
   if (!move) return false;
   p.lastBreathMove = move.name;
-  combat.spawnDamageText?.(p.x, (p.y ?? 0) - 96, move.name, { color: styleOf(st).ramp.light });
-  (KINDS[move.kind] ?? torrent)(p, st, k, move, gw);
+  // The weapon delivers the move in its own style (same effect): breathing_weapons.js.
+  const delivery = deliveryOf(p); const R = styleOf(st).ramp;
+  combat.spawnDamageText?.(p.x, (p.y ?? 0) - 96, move.name, { color: R.light });
+  if (delivery.kind !== 'none' && move.kind !== 'drill') emit(new SigSequence({ mat: R.mat, seed: 7800 }, p, { dur: .32, draw: (ctx, s, kk) => drawFlourish(ctx, delivery, p.x, p.y ?? groundYForDepth(p.z), kk, s.t, R, p.facing || 1) }), st.quality);
+  (KINDS[move.kind] ?? torrent)(p, st, k, { ...move, delivery }, gw);
   return true;
 }
 

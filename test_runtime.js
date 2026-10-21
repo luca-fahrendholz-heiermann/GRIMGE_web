@@ -3907,7 +3907,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   const step = (n) => { for (let i = 0; i < n; i++) { P.update(1 / 60, neutral, game.battlefield, game); spells.update(1 / 60, game); } };
   const ready = () => { P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.grounded = true; P.elevation = 0; P.vElevation = 0; P.invulnerableTimer = 0; P.sprintStrike = null; };
   const setup = (id, style = null) => {
-    spells.clearRuntime(); game.minions = []; if (P.signature) core.endStance(P, 'replaced'); P.equipClassWeapon(null);
+    spells.clearRuntime(); game.minions = []; if (P.signature) core.endStance(P, 'replaced'); P.equipClassWeapon(null); P.equipWeapon(null);
     P.x = 300; P.z = .5; P.facing = 1; P.hp = P.maxHp; ready(); game.battlefield.placeOnSurface(P);
     spells.cast(P, spells.resolveSpell([{ id: 'sig_' + id }]), game);
     if (style) P.signature.style = style;
@@ -3972,6 +3972,13 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   assert(results.fieldSprint === 'GLUTSCHNITT' && fieldKept, 'A picked-up field weapon is not thrown in a breathing: the sprint attack is the breathing move');
   setup('S41'); P.equipClassWeapon('sword_shield'); P.weaponBuff = null; charged('down');
   assert(P.signature.mark && !P.weaponBuff, 'Charge down with a weapon awakens the mark (not the weapon buff)');
+  // The weapon delivers the breathing move in its style — same effect (bow: a piercing fire shot, the archer stays).
+  const WD = await import('./public/src/breathing_weapons.js');
+  assert(WD.deliveryOf({ classWeapon: 'bow' }).projectile === 'arrow' && WD.deliveryOf({ classWeapon: 'katana' }).kind === 'iai' && WD.deliveryOf({ classWeapon: 'great_hammer' }).kind === 'heavy' && WD.deliveryOf({ classWeapon: 'harp' }).kind === 'caster' && WD.deliveryOf({}).kind === 'none', 'Weapon delivery kinds: bow = arrow shot, katana = iai, hammer = heavy, harp = caster, bare hands = none');
+  setup('S41'); P.equipClassWeapon('bow'); const shotFoe = foeAt(470); const xBow = P.x; P.sprintActive = true; P.vx = 320; P.executeAttack(neutral, 'normal'); step(10); const shotHp = shotFoe.hp; step(25);
+  assert(Math.abs(P.x - xBow) < 30 && shotFoe.hp < 3000 && shotFoe.hp < shotHp && STATUS.hasStatus(shotFoe, 'burn'), 'Bow + fire sprint: the archer stays, a piercing fire shot covers the lane — the foe still bursts into flames');
+  setup('S41'); P.equipClassWeapon('bow'); const dragonFoe = foeAt(560); charged('forward'); step(60); renderAll();
+  assert(dragonFoe.hp < 3000 && STATUS.hasStatus(dragonFoe, 'burn') && !bad, 'Bow + flame forward: the fire dragon flies as the tail of a fire arrow — same burn and reach');
   P.equipWeapon(null); P.equipClassWeapon(null);
   if (P.signature) core.endStance(P, 'replaced'); spells.clearRuntime(); game.minions = []; ready(); dummy.homeX = dummy.x = 512;
 }

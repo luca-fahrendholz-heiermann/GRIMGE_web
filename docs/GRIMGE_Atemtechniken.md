@@ -18,6 +18,20 @@ Später bekommt jeder Waffentyp eigene Animationen. Die Techniken bleiben dabei 
 
 **Mit Waffe:** Die Atmung hat Vorrang. Sprint-Angriff, alle Aufladerichtungen und der Sturz sind die Atmungstechniken, nicht die Waffen-Techniken. Eine aufgehobene Feldwaffe wird in einer Atmung nicht geworfen.
 
+## Atmung × Waffe (breathing_weapons.js)
+
+Die Wirkung bleibt gleich (Schaden, Status, Reichweite, Bodeneffekt). Die Waffe bestimmt die Ausführung, deckend gezeichnet:
+
+| Waffenart | Auftakt | Kopf der Technik | Besonderheit |
+|---|---|---|---|
+| Klingen (Schwert, Doppelklingen, Runenklinge, Dolche) | dicke Element-Sichel mit weißer Schneide | fliegende Klingen-Sichel | Kreuzschnitte auf den Getroffenen |
+| Katana / Odachi | flacher Ziehschnitt mit Glanzpunkt | schmale Sichel | ein Iai-Schnitt auf den Getroffenen |
+| Bogen, Armbrust, Wurfklingen, Chakram, Karten | Bogen spannen, Sehne schnappt | Pfeil / Bolzen / Klinge / Ring / Karte vorn, das Element ist der Schweif | Durchzüge werden zum durchschlagenden Schuss, der Schütze bleibt stehen |
+| Axt, Hammer, Streitkolben | Überkopf-Schmetterschlag, Boden bricht | Felsspalt mit Element-Stacheln, Körper am Boden | – |
+| Speer, Glefe, Sense, Stab | Stoß mit Element-Spitze | lange Speerspitze, gerader Körper | – |
+| Stäbe, Orb, Ruten, Harfe, Fächer, Talisman | aufrechter Zauberkreis | rotierende Siegelkugel | – |
+| Fäuste, Klauen | Faustschlag mit Ringen | Element-Faust mit Schockringen | – |
+
 ## Die Atmungen (Vorbild → Adaption)
 
 | Rune | Atmung | Vorwärts | Hoch | Sprint | Sturz |
