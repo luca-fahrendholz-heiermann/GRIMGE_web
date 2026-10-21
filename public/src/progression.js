@@ -157,7 +157,7 @@ export const skillRuneUnlock = (runeId) => SKILL_RUNE_UNLOCKS.find((entry) => en
 //   special domain    boss drop only
 export const LATE_RUNE_LEVEL = Object.freeze({ domain: 10, arcane: 8, bankai: 8 });
 export const WEAPON_XP_PER_LEVEL = 80;
-const DOMAIN_ELEMENT = Object.freeze({ sig_S57: 'ignis', sig_S58: 'natura', sig_S61: 'fulgur', sig_S62: 'umbra', sig_S63: 'ventus', sig_S64: 'terra', sig_S65: 'aqua', sig_S66: 'bestia', sig_S67: 'construct', sig_S68: 'void', sig_S69: 'lux' });
+const DOMAIN_ELEMENT = Object.freeze({ sig_S57: 'ignis', sig_S58: 'natura', sig_S61: 'fulgur', sig_S62: 'umbra', sig_S63: 'ventus', sig_S64: 'terra', sig_S65: 'aqua', sig_S66: 'bestia', sig_S67: 'construct', sig_S68: 'void', sig_S69: 'lux', sig_S85: 'ward' });
 const ARCANE_ELEMENT = Object.freeze({
   buff_B01: 'ignis', buff_B02: 'void', buff_T02: 'ignis', buff_T04: 'aqua', buff_T05: 'terra', buff_T06: 'fulgur', buff_T08: 'construct', buff_T13: 'construct',
   buff_T23: 'void', buff_T24: 'umbra', buff_T35: 'aqua', buff_T37: 'natura', buff_T38: 'terra', buff_T39: 'lux', buff_T40: 'lux',

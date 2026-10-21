@@ -26,6 +26,7 @@
 //   S67 KONSTRUKT · KLINGENSCHMIEDE floating blades dive at the foes
 //   S68 VOID   · LEERE             drains the foes' mana into the caster, rifts
 //   S69 LUX    · SONNENHEILIGTUM   pillars of light punish, the caster heals
+//   S85 SCHUTZ · BOLLWERK          a shield for you and your allies that keeps refilling, hex walls shove the foes
 // Only the caster sees the domain's name — the opponent has to find out by playing.
 import { defineSignature, emit, foesOf, hit, plate, sparks, sigSink, TAU, DEPTH } from './signature_core.js';
 import { offerRecast } from './recast.js';
@@ -34,6 +35,7 @@ import { audio } from './audio.js';
 import { groundYForDepth } from './world.js';
 import { applyStatus, hasStatus } from './status_effects.js';
 import { ghostOf } from './buff_signatures.js';
+import { applyWard } from './mastery.js';
 
 // potency: every domain rule hits this much harder (user, 20 Oct 2026: foes inside barely
 // suffered); suppress: the trapped cannot cast, attack slower; drain: mana lost by a
@@ -372,6 +374,51 @@ export const DOMAIN_RULES = Object.freeze({
       ctx.globalAlpha = fade; ctx.fillStyle = '#fff176'; ctx.beginPath(); ctx.arc(x, sy, 22 * k, 0, TAU); ctx.fill(); ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(x, sy, 12 * k, 0, TAU); ctx.fill();
       ctx.fillStyle = '#c9a227'; for (const side of [-1, 1]) for (const o of [.55, .8]) { ctx.globalAlpha = fade * .8; ctx.fillRect(Math.round(x + side * rx * o - 6), Math.round(y - h * .6), 12, Math.round(h * .6 - ry * .2)); ctx.fillStyle = '#fff59d'; ctx.fillRect(Math.round(x + side * rx * o - 8), Math.round(y - h * .62), 16, 4); ctx.fillStyle = '#c9a227'; }
     }
+  },
+  // S85 — Schutz: the bulwark — a shield that keeps refilling for you and your allies (it runs through
+  // the Ward rules, so the Schutz masteries work on it); hex walls shove the trapped foes away.
+  S85: {
+    name: 'BOLLWERK', finaleLabel: 'SCHLIESSEN: AEGIS-BRUCH', slow: .75,
+    pal: { bands: ['#0c0818', '#150f29', '#1f1739', '#2a1f4a'], floor: '#120c22', crack: '#b388ff', wall: '#5e35b1', rim: '#b388ff', rimLight: '#ede7f6', shell: '#d1c4e9', mat: mat('#0c0818', '#2a1f4a', '#5e35b1', '#b388ff', '#ede7f6', '#d1c4e9') },
+    caster(d, dt, p, gw) {
+      // On opening: one big Ward shield (capacity scales with the rune quality).
+      if (!d.warded) { d.warded = true; applyWard(p, Math.round(50 * d.power), d.life + 1, ['ward']); d.fx.push({ type: 'ward', t: 0, x: p.x, z: p.z ?? d.cz, big: true }); }
+      // Every 1.5 s every ally inside gets 12 shield points back (up to 80) and the shield is held up.
+      for (const a of d.alliesInside(gw)) {
+        if (!d.every(a, 1.5, 'ward')) continue;
+        a.arcaneShield = Math.min(80, (a.arcaneShield ?? 0) + 12); a.arcaneShieldTimer = Math.max(a.arcaneShieldTimer ?? 0, 1.6);
+        d.fx.push({ type: 'ward', t: 0, x: a.x, z: a.z ?? d.cz });
+      }
+    },
+    foe(d, dt, t) {
+      // A hex wall slams up between the caster and the foe and shoves it back.
+      if (!d.every(t, 1.4)) return;
+      const dir = Math.sign(t.x - d.owner.x) || 1;
+      hit(t, Math.round(8 * d.power), dir * 300, 60, .35);
+      d.fx.push({ type: 'hexwall', t: 0, x: t.x - dir * 18, z: t.z ?? d.cz, dir });
+    },
+    finale(d, gw, left) {
+      // AEGIS-BRUCH: the whole shield breaks outward — its remaining capacity hits every foe inside.
+      const p = d.owner; const stored = Math.max(0, p.arcaneShield ?? 0);
+      for (const t of d.foesInside(gw)) { hit(t, Math.round((12 + left * 4) * d.power + stored * .5), Math.sign(t.x - p.x || 1) * 380, 180, .6, true); d.fx.push({ type: 'hexwall', t: 0, x: t.x, z: t.z ?? d.cz, dir: Math.sign(t.x - p.x || 1), big: true }); }
+      p.arcaneShield = 0; p.arcaneShieldTimer = 0;
+      d.fx.push({ type: 'ward', t: 0, x: p.x, z: p.z ?? d.cz, big: true });
+    },
+    interior(ctx, d, x, y, rx, ry, h, k, fade) {
+      // A lattice of hexagonal shield panels, shields floating and turning slowly.
+      const hex = (cx, cy, r) => { ctx.beginPath(); for (let i = 0; i < 6; i++) { const a = i / 6 * TAU + Math.PI / 6; const px = cx + Math.cos(a) * r; const py = cy + Math.sin(a) * r; i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); } ctx.closePath(); };
+      ctx.strokeStyle = '#5e35b1'; ctx.lineWidth = 2;
+      for (let row = 0; row < 5; row++) for (let col = -5; col <= 5; col++) {
+        const r = 15 * k; const cx = x + col * r * 1.75 + (row % 2) * r * .87; const cy = y - h * .15 - row * r * 1.5;
+        ctx.globalAlpha = fade * (.35 + .3 * Math.max(0, Math.sin(d.t * 2 - row - col * .5))); hex(cx, cy, r); ctx.stroke();
+      }
+      for (let i = 0; i < 4; i++) {
+        const a = d.t * .6 + i * TAU / 4; const sx = x + Math.cos(a) * rx * .6; const sy = y - h * .55 + Math.sin(a) * 12 * k; const w = 9 * k * (.6 + .4 * Math.abs(Math.cos(a)));
+        ctx.globalAlpha = fade;
+        ctx.fillStyle = '#b388ff'; ctx.beginPath(); ctx.moveTo(sx, sy - 13 * k); ctx.lineTo(sx + w, sy - 8 * k); ctx.lineTo(sx + w, sy + 4 * k); ctx.lineTo(sx, sy + 13 * k); ctx.lineTo(sx - w, sy + 4 * k); ctx.lineTo(sx - w, sy - 8 * k); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = '#ede7f6'; ctx.fillRect(Math.round(sx - 1), Math.round(sy - 8 * k), 2, Math.round(14 * k));
+      }
+    }
   }
 });
 export const DOMAIN_IDS = Object.freeze(Object.keys(DOMAIN_RULES));
@@ -547,6 +594,17 @@ class DomainShell {
       } else if (f.type === 'beam') {
         const bw = (f.big ? 22 : 14) * (1 - Math.max(0, f.t - .2) * 1.5);
         if (bw > 0) { ctx.fillStyle = '#fff59d'; ctx.fillRect(Math.round(f.x - bw), Math.round(fy - DOMAIN.height), Math.round(bw * 2), Math.round(DOMAIN.height)); ctx.fillStyle = '#ffffff'; ctx.fillRect(Math.round(f.x - bw * .4), Math.round(fy - DOMAIN.height), Math.round(bw * .8), Math.round(DOMAIN.height)); }
+      } else if (f.type === 'ward') {
+        // A hexagonal shield shell closes around an ally.
+        const wr = (f.big ? 46 : 32) * fk; ctx.strokeStyle = '#b388ff'; ctx.lineWidth = f.big ? 4 : 3; ctx.beginPath();
+        for (let i = 0; i < 6; i++) { const a = i / 6 * TAU + Math.PI / 6; const px = f.x + Math.cos(a) * wr * .8; const py = fy - 40 + Math.sin(a) * wr; i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); }
+        ctx.closePath(); ctx.stroke(); ctx.fillStyle = '#ede7f6'; ctx.fillRect(Math.round(f.x - 2), Math.round(fy - 40 - wr * .5), 4, Math.round(wr));
+      } else if (f.type === 'hexwall') {
+        // A wall of shield hexes slams up and shoves the foe.
+        const wh = (f.big ? 110 : 76) * fk; const wx = f.x;
+        ctx.fillStyle = '#5e35b1'; ctx.fillRect(Math.round(wx - 5), Math.round(fy - wh), 10, Math.round(wh));
+        ctx.strokeStyle = '#b388ff'; ctx.lineWidth = 2; for (let i = 0; i < 4; i++) { const cy = fy - wh * (i + .5) / 4; ctx.beginPath(); ctx.moveTo(wx, cy - 9); ctx.lineTo(wx + 7, cy - 4); ctx.lineTo(wx + 7, cy + 4); ctx.lineTo(wx, cy + 9); ctx.lineTo(wx - 7, cy + 4); ctx.lineTo(wx - 7, cy - 4); ctx.closePath(); ctx.stroke(); }
+        ctx.fillStyle = '#ede7f6'; ctx.fillRect(Math.round(wx - 1), Math.round(fy - wh), 2, Math.round(wh));
       } else if (f.type === 'hands') {
         for (const side of [-1, 1]) { const hh = (f.big ? 70 : 50) * fk; plate(ctx, [[f.x + side * 6 - 4, fy], [f.x + side * 10, fy - hh], [f.x + side * 16, fy - hh - 6], [f.x + side * 6 + 4, fy]], pal.mat, 5450 + (side > 0 ? 1 : 0), { alpha: fa, glowEdge: 1.1 }); }
       }

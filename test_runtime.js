@@ -2546,7 +2546,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   const step = (n, dt = 1 / 60) => { for (let i = 0; i < n; i++) { P.update(dt, neutral, game.battlefield, game); game.updateProjectiles(dt); spells.update(dt, game); } };
   const cast = (id, target = null) => spells.cast(P, spells.resolveSpell([{ id: 'sig_' + id }]), game, null, target);
   const ids = Object.keys(core.SIGNATURES);
-  assert(ids.length === 84 && ids.every((id) => core.signatureImpl(id)?.cast) && sigMod.SIGNATURE_RUNE_IDS.every((id) => isSpecialRune(id) && runeManaCost(id) >= 28 && runeManaCost(id) <= 46), 'All 84 signature specials (atlas S01–S36 + S37–S84) are special runes with their own mechanic and bound mana');
+  assert(ids.length === 85 && ids.every((id) => core.signatureImpl(id)?.cast) && sigMod.SIGNATURE_RUNE_IDS.every((id) => isSpecialRune(id) && runeManaCost(id) >= 28 && runeManaCost(id) <= 46), 'All 85 signature specials (atlas S01–S36 + S37–S85) are special runes with their own mechanic and bound mana');
   assert(ids.every((id) => spellHowTo('sig_' + id)?.effect?.length > 40) && !spells.resolveSpell([{ id: 'sig_S03' }, { id: 'ignis' }]), 'Signature specials explain themselves in the grimoire and never fuse');
   // Every special casts, runs and renders (strict canvas) without errors.
   const strict = new Proxy({}, { get: (t, k) => (k === 'ellipse' || k === 'arc') ? (x, y, rx, ry) => { if (rx < 0 || (k === 'ellipse' && ry < 0)) throw new Error('IndexSizeError ' + k); } : (k === 'canvas' ? undefined : () => {}), set: () => true });
@@ -3141,9 +3141,10 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
       S66: (d, st) => st.fx.has('wolf'),
       S67: (d, st) => st.fx.has('blade'),
       S68: (d, st) => st.foeMp < 100 && P.mp > st.mpStart,
-      S69: (d, st) => P.hp > st.hpStart
+      S69: (d, st) => P.hp > st.hpStart,
+      S85: (d, st) => st.fx.has('hexwall') && st.fx.has('ward') && P.arcaneShield > 0
     };
-    const elementNames = { S63: 'AUGE DES ORKANS', S64: 'STEINGRAB', S65: 'TIEFSEE', S66: 'JAGDGRUND', S67: 'KLINGENSCHMIEDE', S68: 'LEERE', S69: 'SONNENHEILIGTUM' };
+    const elementNames = { S63: 'AUGE DES ORKANS', S64: 'STEINGRAB', S65: 'TIEFSEE', S66: 'JAGDGRUND', S67: 'KLINGENSCHMIEDE', S68: 'LEERE', S69: 'SONNENHEILIGTUM', S85: 'BOLLWERK' };
     const failedEl = [];
     for (const [id, check] of Object.entries(elementCheck)) {
       reset(); foeIn(); E.mp = 100; P.mp = 20; P.hp = P.maxHp - 50;
@@ -3154,9 +3155,11 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
       if (dom.rule.name !== elementNames[id] || !(E.hp < E.maxHp) || !check(dom, st)) failedEl.push(id);
       for (const tt of [.1, .5, 1.2, 2]) { const t0 = dom.t; dom.t = tt; dom.render(strict); for (const sp of spells.activeSpells) sp.render?.(strict); dom.t = t0; }
     }
-    assert(!failedEl.length && !bad, 'Element domains (Ventus, Terra, Aqua, Bestia, Konstrukt, Void, Lux) each work with their own effect and render cleanly' + (failedEl.length ? ' (' + failedEl.join(',') + ')' : ''));
+    assert(!failedEl.length && !bad, 'Element domains (Ventus, Terra, Aqua, Bestia, Konstrukt, Void, Lux, Schutz) each work with their own effect and render cleanly' + (failedEl.length ? ' (' + failedEl.join(',') + ')' : ''));
     const { DOMAIN_RUNE_IDS } = await import('./public/src/progression.js');
-    assert(DOMAIN_RUNE_IDS.length === 15, 'Every rune element has its own domain, plus the special domains (15 in total)');
+    assert(DOMAIN_RUNE_IDS.length === 16 && DOMAIN_RUNE_IDS.includes('sig_S85'), 'Every rune element (also SCHUTZ) has its own domain, plus the special domains (16 in total)');
+    { reset(); foeIn(); P.arcaneShield = 0; const dw = D.openDomain(P, null, core.SIGNATURES.S85, 'S85'); for (let i = 0; i < 90; i++) run(1 / 60); const sh = P.arcaneShield; const hpW = E.hp; dw.closeWithFinale(game);
+      assert(sh > 0 && P.arcaneShield === 0 && hpW - E.hp > sh * .5, 'S85 BOLLWERK: AEGIS-BRUCH breaks the shield outward — its capacity hits the foes inside'); }
     // Only the caster sees the domain name; the opponent has to find out by playing.
     const names = (dom) => { const texts = []; const rec = new Proxy({}, { get: (t, k) => k === 'fillText' ? (txt) => texts.push(String(txt)) : k === 'canvas' ? undefined : () => {}, set: () => true }); const shell = spells.activeSpells.find((sp) => sp.domain === dom); dom.t = DOMAIN_T; shell?.render(rec); return texts; };
     const DOMAIN_T = 1.2;

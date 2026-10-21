@@ -170,7 +170,7 @@ Zu Beginn spielt man nur Basis-Runen. Alles andere wird nach und nach freigescha
 |---|---|
 | Basis-Runen | 5 Start-Elemente. Bestia, Konstrukt, Void, Lux, Natura und Umbra kosten je **1 Skillpunkt** (beliebige Reihenfolge, Panel RUNEN FREISCHALTEN). Doppel und Mortis kosten 2 Skillpunkte und brauchen Mage-Level 8 bzw. 10. Jeder Punkt ist eine Wahl: Rune, Passiv oder Mastery. |
 | Spezialrunen (ohne Domänen) | Mage-Level (S01 ab Level 5, dann vier pro Level) |
-| **Element-Domänen** (S57, S58, S61–S69) | **Boss-Drop** oder **Element-Meisterschaft**: Runen-Level 10 des Elements (durch Zeichnen dieser Rune) |
+| **Element-Domänen** (S57, S58, S61–S69, S85 Schutz · Bollwerk) | **Boss-Drop** oder **Element-Meisterschaft**: Runen-Level 10 des Elements (durch Zeichnen dieser Rune) |
 | **Spezial-Domänen** (S53, S56, S59, S60) | nur **Boss-Drop** |
 | **Arcane States / Transformationen** | **Boss-Drop** oder Runen-Level 8 ihres Elements (z. B. Risswild und Schlackenkern über Ignis, Korallenschild und Kältestillstand über Aqua) |
 | **Bankai** (eine Rune, A04) | Passt sich der gewählten Klasse an (Schwarm aus Klingenblättern, Pfeilen, Splittern, Runen, Noten, Karten …, eigene Wunde). Freischaltung **pro Klasse**: Boss-Drop mit dieser Klasse oder **Klassenwaffe Level 8** (ein Punkt je Nahkampftreffer, 80 Punkte pro Level). |
