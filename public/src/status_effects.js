@@ -167,7 +167,7 @@ function tryCombo(t, elements) {
     comboText(t, 'FEUERSTURM!', '#ff7043');
     return burn;
   }
-  if (has('aqua') && hasStatus(t, 'burn')) {
+  if (has('aqua') && hasStatus(t, 'burn') && !t.statuses.burn.scald) { // a scald (steam) cannot be put out
     const fx = applyStatus(t, 'wet', { quiet: true }); // wet puts the fire out (see applyStatus)
     comboText(t, 'GELÖSCHT', '#b3e5fc');
     return fx;
@@ -193,9 +193,10 @@ export function applyStatus(target, kind, { duration = null, force = false, quie
   if (current && !current.isFinished) { current.dur = Math.max(current.dur, current.t + (duration ?? def.duration)); return current; }
   if (!force && (target.statusImmuneUntil?.[kind] ?? 0) > nowS()) return null;
   // Water puts out the fire: steam instead of flames.
-  if (kind === 'wet' && hasStatus(target, 'burn')) { target.statuses.burn.end(); combat.spawnShockwave?.(target.x, (target.y ?? 0) - 40, 26, '#eceff1'); }
+  if (kind === 'wet' && hasStatus(target, 'burn') && !target.statuses.burn.scald) { target.statuses.burn.end(); combat.spawnShockwave?.(target.x, (target.y ?? 0) - 40, 26, '#eceff1'); }
   const fx = new StatusEffectFx(target, kind, duration ?? def.duration);
   fx.owner = source?.castBy ?? null; // who applied it (Leech III heals from its ticks)
+  fx.ownerTeam = fx.owner?.team ?? source?.team ?? null;
   target.statuses[kind] = fx; active.add(fx);
   if (kind === 'frozen') target.freeze?.(fx.dur);
   if (!quiet) combat.spawnDamageText?.(target.x, (target.y ?? 0) - 92, def.label, { color: def.color });
@@ -255,6 +256,13 @@ export class StatusEffectFx {
         const tickDmg = (moved && def.movingDps ? def.movingDps : def.dps) * .5;
         statusDamage(t, tickDmg);
         if (this.owner) hooks.onDot?.(t, tickDmg, this.owner);
+        // Creeping poison (serpent breathing): it jumps to a foe nearby every 1.5 s, three generations deep.
+        if (this.spreads && (this.gen ?? 0) < 3 && (this.spreadT = (this.spreadT ?? 0) + .5) >= 1.5) {
+          this.spreadT = 0;
+          const gw = globalThis.window?.gameWorld;
+          const next = (gw?.getHostileTargets?.(this.ownerTeam) ?? []).find((o) => o !== t && !o.isProp && !o.isObjective && !o.isStoneWall && !o.isCastle && !hasStatus(o, 'poison') && (o.hp ?? 1) > 0 && Math.hypot(o.x - t.x, ((o.z ?? 0) - (t.z ?? 0)) * 150) < 110);
+          if (next) { const fx = applyStatus(next, 'poison', { force: true, quiet: true }); if (fx) { fx.spreads = true; fx.gen = (this.gen ?? 0) + 1; fx.owner = this.owner; fx.ownerTeam = this.ownerTeam; combat.spawnDamageText?.(next.x, (next.y ?? 0) - 92, 'GIFT KRIECHT', { color: '#9ccc65' }); } }
+        }
         this.lastX = t.x; this.lastZ = t.z;
       }
     }

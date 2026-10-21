@@ -75,6 +75,20 @@ Nach dem Stammbaum: Wasser → Schlange, Flamme → Liebe, Blume → Insekt, Don
 
 Andere Paare wechseln einfach zur neuen Atmung. Eine Kombo kostet das Mana beider Atmungs-Runen, denn jede wird einzeln gezeichnet und bezahlt.
 
+**Kombo-Eigenheiten** (der Grund, zwei Runen zu bezahlen; wirken bei Techniken und Normalangriffen):
+
+| Kombo | Eigenheit |
+|---|---|
+| Dampf | **Verbrühen:** Der Brand lässt sich nicht durch Wasser löschen, das Ziel ist zusätzlich nass. Blitz-Folgetreffer lösen damit direkt SCHOCK aus. |
+| Schlange | **Kriechendes Gift:** Das Gift springt alle 1,5 s auf einen Gegner in der Nähe über, bis zu 3 Generationen. |
+| Insekt | **Giftstapel:** Jeder Stich auf ein vergiftetes Ziel macht Bonusschaden und verlängert das Gift. |
+| Liebe | **Bezaubern:** Treffer verlangsamen, jeder 3. Treffer lässt den Gegner kurz bezaubert erstarren. |
+| Klang | **Resonanz:** Jeder 4. Treffer auf denselben Gegner löst eine Schallexplosion um ihn aus. |
+
+**Timing:** Mit der zweiten Atmung beginnt die abgeleitete Atmung bei vollen 15 s, die Restzeit der ersten verfällt. Am besten wirkst du die zweite kurz bevor die erste endet.
+
+**Sonnenatmung = Ursprung:** wie im Anime die stärkste Atmung. Alle Techniken wirken 1,45-mal so stark, dafür kostet sie 46 Mana (die anderen 32–34).
+
 **Nebel ≠ Dampf:** Nebel (Void) ist kalt und still. Er versteckt dich und täuscht die Gegner. Dampf (Wasser + Feuer) ist heiß und laut. Er drückt die Gegner weg und verbrüht sie.
 
 ## Mal erwacht (Aufladen runter)

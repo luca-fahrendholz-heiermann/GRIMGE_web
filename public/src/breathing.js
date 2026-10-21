@@ -16,7 +16,7 @@ import { defineSignature, startStance, emit, SigSequence, foesOf, hit, plate, th
 import { combat } from './combat.js';
 import { environment } from './environment.js';
 import { groundYForDepth, clampToArena } from './world.js';
-import { applyStatus } from './status_effects.js';
+import { applyStatus, hasStatus } from './status_effects.js';
 import { deliveryOf, drawHead, drawFlourish } from './breathing_weapons.js';
 
 // ── palettes (dark, mid, light, core: pixel-art ramps) ───────────────────
@@ -55,7 +55,8 @@ export const BREATH_STYLES = Object.freeze({
     up: { kind: 'rising', look: 'petal', name: 'WIRBELNDER PFIRSICH' },
     sprint: { kind: 'flurry', look: 'petal', name: 'NEUN PFINGSTROSEN', hits: 5, dist: 190 },
     dive: { kind: 'crash', look: 'petal', name: 'BLÜTENFALL' } },
-  sun: { name: 'SONNENATMUNG', ramp: ramp('#8a3a00', '#ff9100', '#ffd54f', '#fffde7'), status: 'burn', trail: 'flame', mark: 'sunburst',
+  // The Sun is the origin of every style (as in the anime): everything it does hits 1.45× harder (it costs more mana).
+  sun: { name: 'SONNENATMUNG', power: 1.45, ramp: ramp('#8a3a00', '#ff9100', '#ffd54f', '#fffde7'), status: 'burn', trail: 'flame', mark: 'sunburst',
     forward: { kind: 'torrent', look: 'sun', name: 'SONNENDRACHE', len: 420, dmg: 34, push: 300, depth: 46, scorch: true },
     up: { kind: 'rising', look: 'sun', name: 'UNTERGEHENDE SONNE', backflip: true },
     sprint: { kind: 'flash', look: 'sun', name: 'SONNENSPUR', dist: 240, after: 'ignite', trail: 'scorch' },
@@ -93,29 +94,29 @@ export const BREATH_STYLES = Object.freeze({
     sprint: { kind: 'flash', look: 'ice', name: 'DRACHENSCHWEIF', dist: 230, after: 'freeze', trail: 'ice' },
     dive: { kind: 'crash', look: 'ice', name: 'FROSTTHRON' } },
   // ── derived styles (combos, see BREATH_COMBOS) ──
-  serpent: { name: 'SCHLANGENATMUNG', ramp: ramp('#1b3a2b', '#66bb6a', '#c8e6c9'), status: 'bleed', trail: 'ribbon', mark: 'scales', derived: true,
+  serpent: { name: 'SCHLANGENATMUNG', trait: 'creepingPoison', ramp: ramp('#1b3a2b', '#66bb6a', '#c8e6c9'), status: 'bleed', trail: 'ribbon', mark: 'scales', derived: true,
     forward: { kind: 'flash', look: 'serpent', name: 'GIFTZAHN', dist: 200, after: 'bleed', behind: true },
     up: { kind: 'orbit', look: 'serpent', name: 'SPULENDROSSEL' },
     sprint: { kind: 'torrent', look: 'serpent', name: 'SCHLÄNGELNDE SCHLANGE', len: 300, dmg: 24, push: 200, depth: 60 },
     dive: { kind: 'crash', look: 'serpent', name: 'SCHLANGENBISS' } },
-  love: { name: 'LIEBESATMUNG', ramp: ramp('#880e4f', '#ff4081', '#ffb2dd'), status: null, trail: 'ribbon', mark: 'hearts', derived: true,
+  love: { name: 'LIEBESATMUNG', trait: 'charm', ramp: ramp('#880e4f', '#ff4081', '#ffb2dd'), status: null, trail: 'ribbon', mark: 'hearts', derived: true,
     forward: { kind: 'torrent', look: 'love', name: 'PEITSCHENHERZ', len: 340, dmg: 28, push: 240, depth: 70 },
     up: { kind: 'rising', look: 'love', name: 'KATZENSCHAUER' },
     sprint: { kind: 'flurry', look: 'love', name: 'KATZENKLAUE', hits: 6, dist: 200 },
     dive: { kind: 'crash', look: 'love', name: 'LIEBESTORNADO' } },
-  insect: { name: 'INSEKTENATMUNG', ramp: ramp('#2e1a47', '#ab47bc', '#e1bee7'), status: 'poison', trail: 'sting', mark: 'wings', derived: true,
+  insect: { name: 'INSEKTENATMUNG', trait: 'toxin', ramp: ramp('#2e1a47', '#ab47bc', '#e1bee7'), status: 'poison', trail: 'sting', mark: 'wings', derived: true,
     forward: { kind: 'flash', look: 'sting', name: 'BIENENSTICH', dist: 240, after: 'poison' },
     up: { kind: 'rising', look: 'sting', name: 'SCHMETTERLINGSTANZ' },
     sprint: { kind: 'flurry', look: 'sting', name: 'FACETTENAUGE', hits: 6, dist: 180 },
     dive: { kind: 'crash', look: 'sting', name: 'LIBELLENFALL' } },
   // Steam (water + flame; user, 21 Oct 2026): hot pressure — scalds, pushes, blinds for a moment.
   // Mist (void) hides you; steam presses and scalds.
-  steam: { name: 'DAMPFATMUNG', ramp: ramp('#8d8d8d', '#eceff1', '#ffffff', '#ff7043'), status: 'burn', trail: 'steam', mark: 'steam', derived: true,
+  steam: { name: 'DAMPFATMUNG', trait: 'scald', ramp: ramp('#8d8d8d', '#eceff1', '#ffffff', '#ff7043'), status: 'burn', trail: 'steam', mark: 'steam', derived: true,
     forward: { kind: 'torrent', look: 'steam', name: 'DRUCKSTRAHL', len: 340, dmg: 26, push: 560, depth: 48 },
     up: { kind: 'pillar', look: 'steam', name: 'DAMPFGEYSIR' },
     sprint: { kind: 'flash', look: 'steam', name: 'ZISCHWOLKE', dist: 220, after: 'scald' },
     dive: { kind: 'crash', look: 'steam', name: 'DRUCKEXPLOSION' } },
-  sound: { name: 'KLANGATMUNG', ramp: ramp('#3b2a00', '#ffca28', '#fff3c4'), status: 'paralysis', trail: 'notes', mark: 'notes', derived: true,
+  sound: { name: 'KLANGATMUNG', trait: 'resonance', ramp: ramp('#3b2a00', '#ffca28', '#fff3c4'), status: 'paralysis', trail: 'notes', mark: 'notes', derived: true,
     forward: { kind: 'blasts', look: 'sound', name: 'DONNERGROLLEN', count: 5 },
     up: { kind: 'rising', look: 'sound', name: 'HALLENDE HIEBE' },
     sprint: { kind: 'charge', look: 'sound', name: 'SAITENSPIEL' },
@@ -130,7 +131,7 @@ export const MARK = Object.freeze({ dur: 10, dmg: 1.25, speed: 1.2, drain: 1.5, 
 
 // ── helpers ──────────────────────────────────────────────────────────────
 const styleOf = (st) => BREATH_STYLES[st.style] ?? BREATH_STYLES.water;
-const powerOf = (p, st) => (st.quality?.power ?? 1) * (st.mark ? MARK.dmg : 1);
+const powerOf = (p, st) => (st.quality?.power ?? 1) * (st.mark ? MARK.dmg : 1) * (styleOf(st).power ?? 1);
 const alive = (t) => t && !t.isDead && t.lifeState !== 'Dead' && t.lifeState !== 'Dying' && (t.hp ?? 1) > 0;
 const foes = (gw, p) => foesOf(gw, p.team).filter((t) => !t.isProp);
 const inLane = (t, x0, x1, z, depth) => t.x >= Math.min(x0, x1) - 14 && t.x <= Math.max(x0, x1) + 14 && Math.abs(((t.z ?? z) - z) * DEPTH) < depth;
@@ -139,6 +140,43 @@ function strike(p, st, t, dmg, kx, lift, stun, force = false) {
   hit(t, Math.round(dmg * powerOf(p, st)), kx, lift, stun);
   const s = styleOf(st).status; if (s && (force || (st.hits = (st.hits ?? 0) + 1) % 3 === 0)) applyStatus(t, s, { force });
   if (styleOf(st).heals && Number.isFinite(p.hp)) p.hp = Math.min(p.maxHp, p.hp + 3);
+  applyTrait(p, st, t, dmg);
+}
+// Combo traits (user, 21 Oct 2026): what only a derived breathing can do — the reason to pay for two runes.
+function applyTrait(p, st, t, dmg = 10) {
+  if (!alive(t)) return;
+  switch (styleOf(st).trait) {
+    case 'scald': {
+      // Steam scalds: the burn cannot be put out by water, and the foe is wet too (lightning → SCHOCK).
+      const fx = applyStatus(t, 'burn', { force: true, quiet: true }); if (fx) fx.scald = true;
+      applyStatus(t, 'wet', { quiet: true });
+      break;
+    }
+    case 'creepingPoison': { const fx = applyStatus(t, 'poison', { force: true, quiet: true }); if (fx) { fx.spreads = true; fx.gen = fx.gen ?? 0; } break; }
+    case 'toxin': {
+      // Insect: every sting on a poisoned foe adds to the venom.
+      if (hasStatus(t, 'poison')) { hit(t, Math.max(2, Math.round(dmg * .3 * powerOf(p, st))), 0, 0, .1); const fx = t.statuses.poison; fx.dur = Math.min(fx.t + 8, fx.dur + 1); combat.spawnDamageText?.(t.x, (t.y ?? 0) - 96, 'GIFT +', { color: '#ce93d8' }); }
+      else applyStatus(t, 'poison', { force: true, quiet: true });
+      break;
+    }
+    case 'charm': {
+      // Love: struck foes slow down; every third hit leaves them charmed for a moment.
+      t.slow?.(1.2, .6);
+      if ((st.charm = (st.charm ?? 0) + 1) % 3 === 0) { t.freeze?.(.7); combat.spawnDamageText?.(t.x, (t.y ?? 0) - 96, '♥ BEZAUBERT', { color: '#ff4081' }); }
+      break;
+    }
+    case 'resonance': {
+      // Sound: every fourth hit on the same foe rings out as a blast around it.
+      t._resonance = (t._resonance ?? 0) + 1;
+      if (t._resonance >= 4) {
+        t._resonance = 0;
+        for (const o of foes(globalThis.window?.gameWorld, p)) if (Math.hypot(o.x - t.x, ((o.z ?? t.z) - (t.z ?? 0)) * DEPTH) < 75) hit(o, Math.round(14 * powerOf(p, st)), Math.sign(o.x - t.x || 1) * 220, 120, .35);
+        combat.spawnShockwave?.(t.x, (t.y ?? 0) - 30, 75, styleOf(st).ramp.light); combat.spawnDamageText?.(t.x, (t.y ?? 0) - 100, '♪ RESONANZ', { color: styleOf(st).ramp.light, isCrit: true }); quake(5, .18, 2);
+      }
+      break;
+    }
+    default: break;
+  }
 }
 // Depth-aware push (3D): away from a point in x AND z.
 function blowAway(t, fromX, fromZ, power) {
@@ -712,6 +750,7 @@ function breathStance() {
         if (h.target.isProp) continue;
         const s = styleOf(st).status; if (s && (st.hits = (st.hits ?? 0) + 1) % 3 === 0) applyStatus(h.target, s);
         if (st.mark) applyStatus(h.target, 'burn'); // the marked blade is hot
+        applyTrait(p, st, h.target, 8);
         if (styleOf(st).heals && Number.isFinite(p.hp)) p.hp = Math.min(p.maxHp, p.hp + 2);
       }
       // Combo finisher: a short version of the signature move.

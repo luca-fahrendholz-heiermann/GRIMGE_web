@@ -2242,14 +2242,14 @@ export const SIGNATURE_RUNE_DATA = Object.freeze([
   "systemType": "Atemtechnik · Kampfstil",
   "duration": 15,
   "targeting": "self",
-  "mana": 32,
+  "mana": 46,
   "palette": [
    "#5a2600",
    "#ff9100",
    "#ffd54f",
    "#fffde7"
   ],
-  "howTo": "Sun breathing for 15 s, the root of all styles. Charge forward: a sun dragon rolls far down the lane and burns. Charge up: a setting-sun backflip cut. Charge down: the mark awakens. Sprint attack: a solar trail cut, the foes burst into flames behind you. Air down: a solar crash with scorched ground.",
+  "howTo": "Sun breathing for 15 s, the root and the strongest of all styles: everything hits 1.45x harder (higher mana cost). Charge forward: a sun dragon rolls far down the lane and burns. Charge up: a setting-sun backflip cut. Charge down: the mark awakens. Sprint attack: a solar trail cut, the foes burst into flames behind you. Air down: a solar crash with scorched ground.",
   "roles": "",
   "inspiration": "",
   "identity": "Sonnenflammen mit hellen Sonnenscheiben.",

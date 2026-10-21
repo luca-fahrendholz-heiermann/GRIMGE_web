@@ -3949,11 +3949,24 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   setup('S40'); spells.cast(P, spells.resolveSpell([{ id: 'sig_S81' }]), game);
   const serpent = P.signature?.style; setup('S41'); spells.cast(P, spells.resolveSpell([{ id: 'sig_S77' }]), game); const love = P.signature?.style;
   setup('S77'); spells.cast(P, spells.resolveSpell([{ id: 'sig_S79' }]), game); const insect = P.signature?.style; setup('S42'); spells.cast(P, spells.resolveSpell([{ id: 'sig_S82' }]), game); const sound = P.signature?.style;
-  setup('S40'); spells.cast(P, spells.resolveSpell([{ id: 'sig_S41' }]), game); const steam = P.signature?.style;
+  setup('S40'); P.signature.timer = 1.2; spells.cast(P, spells.resolveSpell([{ id: 'sig_S41' }]), game); const steam = P.signature?.style;
+  assert(P.signature.timer > 14, 'A combo starts its timer from the beginning (cast the second breathing just before the first runs out for the most time)');
   setup('S40'); spells.cast(P, spells.resolveSpell([{ id: 'sig_S78' }]), game); const plain = P.signature?.style;
   assert(serpent === 'serpent' && love === 'love' && insect === 'insect' && sound === 'sound' && steam === 'steam' && plain === 'sun', 'Breathing combos: water + beast = serpent, flame + flower = love, flower + moon = insect, thunder + forge = sound, water + flame = steam (unrelated pairs just switch)');
   // A combo always costs both runes: each breathing binds its own mana when it is drawn.
   { const { runeManaCost } = await import('./public/src/spell_catalog.js'); assert(runeManaCost('sig_S40') > 0 && runeManaCost('sig_S41') > 0, 'A combo costs the mana of both breathing runes (each is drawn and paid on its own)'); }
+  // Combo traits: what only a derived breathing can do.
+  const traitHit = (style, id, n = 1) => { setup(id, style); const m = foeAt(360); for (let i = 0; i < n; i++) { ready(); P.executeAttack(neutral, 'normal'); step(18); } return m; };
+  { const m = traitHit('steam', 'S40'); STATUS.applyStatus(m, 'wet'); assert(STATUS.hasStatus(m, 'burn') && STATUS.hasStatus(m, 'wet'), 'Steam trait VERBRÜHEN: the burn survives water and the foe is wet too (lightning follow-ups → SCHOCK)'); }
+  { setup('S40', 'serpent'); const a1 = foeAt(360); const a2 = foeAt(420); ready(); P.executeAttack(neutral, 'normal'); step(150); assert(STATUS.hasStatus(a1, 'poison') && STATUS.hasStatus(a2, 'poison'), 'Serpent trait KRIECHENDES GIFT: the poison jumps to the foe nearby'); }
+  { const m = traitHit('love', 'S41', 3); assert(m.slowTimer > 0, 'Love trait BEZAUBERN: struck foes slow down, every third hit charms'); }
+  { setup('S77', 'insect'); const m = foeAt(360); STATUS.applyStatus(m, 'poison', { force: true }); const before = m.statuses.poison.dur; ready(); P.executeAttack(neutral, 'normal'); step(18); assert(m.statuses.poison.dur > before, 'Insect trait GIFTSTAPEL: a sting on a poisoned foe adds to the venom'); }
+  { setup('S42', 'sound'); const m = foeAt(360); const n2 = foeAt(400); for (let i = 0; i < 4; i++) { ready(); P.executeAttack(neutral, 'normal'); step(18); } assert(n2.hp < 3000 && m._resonance === 0, 'Sound trait RESONANZ: every fourth hit on a foe rings out as a blast around it'); }
+  // The Sun is the origin: it hits harder than the Flame (and costs more).
+  { setup('S41'); const f1 = foeAt(400); charged('forward'); step(60); const flameDmg = 3000 - f1.hp;
+    setup('S78'); const s1 = foeAt(400); charged('forward'); step(60); const sunDmg = 3000 - s1.hp;
+    const { runeManaCost } = await import('./public/src/spell_catalog.js');
+    assert(sunDmg > flameDmg * 1.3 && runeManaCost('sig_S78') > runeManaCost('sig_S41'), 'Sun breathing is the strongest (origin of all styles) and costs more mana (' + sunDmg + ' vs ' + flameDmg + ')'); }
   // Ward: still sea — every hit is turned away for a moment.
   setup('S83'); charged('forward'); const hpCalm = P.hp; P.invulnerableTimer = 0; P.takeDamage(30, -100, 0, .2, false, 'melee');
   assert(P.hp === hpCalm, 'Ward breathing STILLE SEE: in total calm every hit is turned away');
