@@ -971,6 +971,16 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
     const fired = P.lastHoldAction === 'REACH'; const shotsAuto = spells.activeSpells.filter((sp) => sp.isWeaponShot).length; touch.finishAttackGesture(right());
     assert(fired && shotsAuto > 0 && spells.activeSpells.filter((sp) => sp.isWeaponShot).length === shotsAuto && mp1 - P.mp > HOLD_MANA.lane - 2, 'Touch hold: at full charge it releases on its own — exactly once');
     resetDuel();
+    // Bare hands (user, 21 Oct 2026): the touch HOLD and the touch charge-down work without a weapon too.
+    P.equipWeapon(null); P.equipClassWeapon(null); P.mp = P.maxMp; P.lastHoldAction = null; spells.clearRuntime();
+    fakeNow += 1000; touch.beginAttackGesture(right()); fakeNow += 350; game.tickTouchHold();
+    const bareHold = P.chargeDir === 'hold' && P.chargeTimer > 0; touch.finishAttackGesture(right());
+    assert(!P.weapon && !P.classWeapon && bareHold && P.lastHoldAction === 'REACH' && spells.activeSpells.some((sp) => sp.isWeaponShot), 'Touch hold with bare hands: the HOLD fires an arcane air slash');
+    resetDuel(); P.equipWeapon(null); P.equipClassWeapon(null); P.mp = P.maxMp; P.lastWeaponDown = null;
+    fakeNow += 1000; touch.beginAttackGesture(right()); fakeNow += 200; windowListeners.pointermove?.(right(0, 90));
+    const bareDown = P.chargeDir === 'down' && P.chargeTimer > 0; fakeNow += 200; for (let i = 0; i < 12; i++) P.update(1 / 60, neutralInput, game.battlefield, game); touch.finishAttackGesture(right(0, 90));
+    assert(bareDown && P.lastWeaponDown === 'ARKANER STOSS', 'Touch hold-and-drag down with bare hands: the charge-down fires ARKANER STOSS');
+    resetDuel();
   }
   useRealClock();
   resetDuel();
@@ -2635,7 +2645,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   assert(P.state === 'uppercut' && dummy.hp < dummy.maxHp, 'Base UP charged heavy: a rising launcher');
   ready(); dummy.hp = dummy.maxHp; const downStarted = P.beginCharge('down', 'key');
   P.chargeTimer = P.chargeMaxTime * .3; P.chargeDir = 'down'; const downFired = P.releaseCharge();
-  assert(!downStarted && !downFired && dummy.hp === dummy.maxHp, 'Normal mode: no generic ground charge-down (the low sweep is gone)');
+  assert(downStarted && downFired && P.lastWeaponDown === 'ARKANER STOSS', 'Bare hands: the ground charge-down is ARKANER STOSS (no more low sweep)');
   ready(); dummy.homeX = dummy.x = 512;
 }
 
@@ -3707,7 +3717,10 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
     assert(dummy.hp < dummy.maxHp && spells.activeSpells.some((s) => s.kind === 'circle'), 'Warlock FANGZIRKEL: a binding circle rises under the foe and traps it');
     spells.clearRuntime(); P.equipClassWeapon('claws'); ready(); P.mp = P.maxMp; K.castWeaponDown(P, game, spells); P.hp = P.maxHp - 50; const before = P.hp; K.onWeaponMeleeHit(P, dummy, 40, spells);
     assert(P.hp > before && P.weaponBuff?.kind === 'frenzy', 'Claws BLUTRAUSCH: melee hits heal (life steal)');
-    P.weaponBuff = null; P.equipClassWeapon(null); ready(); assert(!P.beginCharge('down', 'key'), 'Without a weapon there is no ground charge-down');
+    P.weaponBuff = null; P.equipClassWeapon(null); ready(); P.mp = P.maxMp; dummy.hp = dummy.maxHp; dummy.x = P.x + 60;
+    assert(P.beginCharge('down', 'key'), 'Without a weapon the ground charge-down works too');
+    P.chargeTimer = P.chargeMaxTime * .3; P.chargeDir = 'down'; const mp0 = P.mp; const relB = P.releaseCharge(); assert(relB && P.mp === mp0 - 8 && dummy.hp < dummy.maxHp && spells.activeSpells.some((sp) => sp.kind === 'arcanePulse'), 'Bare hands ARKANER STOSS: the palms strike the ground, an arcane wave shoves the foes away (8 mana)');
+    for (const sp of spells.activeSpells) sp.render?.(strict);
     P.chargeTimer = 0; P.state = 'idle';
   }
   P.equipClassWeapon(null); spells.clearRuntime(); dummy.homeX = dummy.x = 512;

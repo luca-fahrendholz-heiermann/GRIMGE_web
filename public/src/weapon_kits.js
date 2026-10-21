@@ -66,7 +66,12 @@ export const WEAPON_KITS = Object.freeze({
   ritual_fan: { down: D('RÜCKENWIND', 'tailwind', 8, { dur: 6, move: 1.3 }), up: U('AUFWIND', 'melody', { gust: true }), dive: V('FALLWIND', 'gust') }
 });
 export const kitOf = (player) => WEAPON_KITS[player?.weapon ?? player?.classWeapon] ?? null;
-export const hasWeaponDown = (player) => !!kitOf(player)?.down;
+// Bare hands have a charge-down too (user, 21 Oct 2026): ARKANER STOSS — the palms strike the ground,
+// an arcane wave shoves every foe nearby away. Up / air down keep the generic bare-hand moves.
+export const BARE_DOWN = D('ARKANER STOSS', 'arcanePulse', 8, { radius: 105, dmg: 10, push: 300 });
+const unarmed = (player) => !(player?.weapon ?? player?.classWeapon);
+const downOf = (player) => kitOf(player)?.down ?? (unarmed(player) ? BARE_DOWN : null);
+export const hasWeaponDown = (player) => !!downOf(player);
 const hueOf = (player) => astralHue(player.weapon ?? player.classWeapon);
 const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now()) / 1000;
 const foes = (player, game, objectives = false) => (game?.getHostileTargets?.(player.team, objectives) ?? []).filter((t) => t && !t.isDead && (t.hp ?? 1) > 0 && t.lifeState !== 'Dead');
@@ -112,6 +117,13 @@ const KIT_PAINTERS = {
   // Rage: jagged red aura spikes around the Wizard.
   rage: (ctx, fx, k, a) => { const p = fx.player; for (let i = 0; i < 9; i++) { const ang = -Math.PI / 2 + (i - 4) * .32; const L = 30 + 12 * Math.sin(fx.t * 14 + i); poly(ctx, [[p.x + Math.cos(ang) * 14 - 3, p.y - 46 + Math.sin(ang) * 14], [p.x + Math.cos(ang) * L, p.y - 46 + Math.sin(ang) * L], [p.x + Math.cos(ang) * 14 + 3, p.y - 46 + Math.sin(ang) * 14]], i % 2 ? '#ff1744' : '#ff8a65', a * .8); } },
   // Earthbreaker: cracked ground plates bursting up in a ring.
+  // Bare hands: two arcane rings rush out, rune shards fly with them, a palm sigil glows where the hands struck.
+  arcanePulse: (ctx, fx, k, a, y) => {
+    const r = fx.radius * Math.min(1, k * 2.2); const r2 = fx.radius * Math.min(1, k * 1.5);
+    ring(ctx, fx.x, y, r, '#7fd8ff', 3, a); ring(ctx, fx.x, y, r2, '#e1f5fe', 2, a * .9);
+    for (let i = 0; i < 8; i++) { const ang = i / 8 * TAU + .2; const px = fx.x + Math.cos(ang) * r * .92; const py = y + Math.sin(ang) * r * .3 - 6; poly(ctx, [[px, py - 6], [px + 3, py], [px, py + 6], [px - 3, py]], '#7fd8ff', a, '#ffffff'); }
+    const g = 1 - k; ctx.globalAlpha = a * g; ctx.fillStyle = '#e1f5fe'; ctx.beginPath(); ctx.ellipse(fx.x, y, 18, 6, 0, 0, TAU); ctx.fill(); ctx.fillStyle = '#ffffff'; ctx.fillRect(Math.round(fx.x - 2), Math.round(y - 2), 4, 4);
+  },
   shatter: (ctx, fx, k, a, y) => { for (let i = 0; i < 10; i++) { const ang = i / 10 * TAU; const r = fx.radius * Math.min(1, k * 2.5); const px = fx.x + Math.cos(ang) * r; const py = y + Math.sin(ang) * r * .32; const h = 16 * Math.sin(Math.min(1, k * 2) * Math.PI); poly(ctx, [[px - 7, py], [px - 4, py - h], [px + 5, py - h * .8], [px + 7, py]], '#6d5a48', a, '#ffd180'); } ring(ctx, fx.x, y, fx.radius * Math.min(1, k * 2.5), '#ffd180', 2, a); },
   // Marks over an enemy (hunter mark / curse / soul mark / shatter).
   mark: (ctx, fx, k, a) => { const t = fx.target; if (!t) return; const x = t.x; const y = (t.y ?? 0) - (t.heroKey ? 104 : 70) + Math.sin(fx.t * 5) * 2; ctx.globalAlpha = a; ctx.strokeStyle = fx.hue; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, 9, 0, TAU); ctx.moveTo(x - 14, y); ctx.lineTo(x + 14, y); ctx.moveTo(x, y - 14); ctx.lineTo(x, y + 14); ctx.stroke(); poly(ctx, [[x - 3, y], [x, y - 3], [x + 3, y], [x, y + 3]], fx.hue, a); },
@@ -161,7 +173,7 @@ const fx = (spells, player, kind, data) => { const f = new KitFx(player, kind, {
 
 // ── Charge DOWN: weapon-specific buff / debuff ───────────────────────────
 export function castWeaponDown(player, game, spells) {
-  const kit = kitOf(player); const d = kit?.down; if (!d) return false;
+  const d = downOf(player); if (!d) return false;
   if (player.freeMana < d.mana) return noMana(player);
   player.mp -= d.mana;
   const f = player.facing || 1;
@@ -172,6 +184,10 @@ export function castWeaponDown(player, game, spells) {
   combat.spawnDamageText(player.x, player.y - 92, d.name, { color: hueOf(player) });
   switch (d.kind) {
     case 'counter': buff({ t: d.dur }); fx(spells, player, 'counter', { dur: d.dur }); break;
+    case 'arcanePulse': {
+      for (const t of foes(player, game)) if (!t.isObjective && !t.isProp && distOf(t, player) < d.radius) t.takeDamage?.(d.dmg, Math.sign(t.x - player.x || f) * d.push, 90, .4, false, 'melee');
+      fx(spells, player, 'arcanePulse', { radius: d.radius, dur: .55, hue: '#7fd8ff' }); combat.shakeCamera(6, .2); break;
+    }
     case 'rage': buff(); fx(spells, player, 'rage', { dur: d.dur }); break;
     case 'shatter': {
       for (const t of foes(player, game)) if (distOf(t, player) < d.radius) { mark(t, 'shatter', d.dur); t.takeDamage?.(10, Math.sign(t.x - player.x || f) * 120, 80, .5, false, 'melee'); fx(spells, player, 'mark', { target: t, dur: d.dur, hue: '#ffd180' }); }
