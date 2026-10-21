@@ -4137,6 +4137,20 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   P.equipClassWeapon(null); P.state = 'idle'; P.stateTimer = 0;
 }
 
+// Hard colour steps for the pixel VFX layer (older effects: no soft glows, small white cores).
+{
+  const PS = await import('./public/src/pixel_steps.js');
+  assert(PS.stepAlpha(.1) === 0 && PS.stepAlpha(.3) === .5 && PS.stepAlpha(.8) === 1 && PS.stepColor('rgba(255, 255, 255, .25)') === 'rgba(255, 255, 255, 0.5)' && PS.stepColor('#ff0000') === '#ff0000', 'Pixel steps: alpha snaps to 0 / .5 / 1 (faint washes vanish, bodies turn opaque)');
+  const st = PS.steppedStops([[0, '#ffffff'], [1, 'rgba(255, 112, 67, 0)']]);
+  const firstWhiteEnd = st.findIndex(([o, c]) => c !== st[0][1]);
+  assert(st.length >= 4 && st[0][1] === 'rgba(255, 255, 255, 1)' && st[firstWhiteEnd - 1][0] <= .23 && !st.at(-1)[1].endsWith(', 1)'), 'Pixel steps: a soft white glow gradient becomes flat bands with only a small white core');
+  // The hardened context snaps what effects set (a fake context with real accessors).
+  class FakeCtx { constructor() { this._a = 1; this._f = '#000'; this._s = '#000'; } get globalAlpha() { return this._a; } set globalAlpha(v) { this._a = v; } get fillStyle() { return this._f; } set fillStyle(v) { this._f = v; } get strokeStyle() { return this._s; } set strokeStyle(v) { this._s = v; } createRadialGradient() { const stops = []; return { stops, addColorStop: (o, c) => stops.push([o, c]) }; } }
+  const fc = PS.hardenContext(new FakeCtx()); fc.globalAlpha = .3; fc.fillStyle = 'rgba(0, 0, 0, .9)';
+  const g = fc.createRadialGradient(0, 0, 0, 0, 0, 10); g.addColorStop(0, '#ffffff'); g.addColorStop(1, 'rgba(0, 0, 255, 0)'); fc.strokeStyle = g;
+  assert(fc.globalAlpha === .5 && fc.fillStyle === 'rgba(0, 0, 0, 1)' && fc.strokeStyle.stops.length >= 4, 'Pixel steps: the hardened VFX layer snaps alpha, rgba colours and gradients');
+}
+
 const frameCallback = nextFrame;
 frameCallback(game.lastFrameTime + 16);
 game.debugVisible = true;

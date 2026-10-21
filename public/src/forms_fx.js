@@ -80,7 +80,7 @@ export function drawFocusAura(ctx, x, feetY, t, intensity, { height = 88, ready 
       }
     }
     c.restore();
-  });
+  }, { hard: true });
   if (ready) {
     // Pulsing ring at the feet and a hint how to transform.
     const pulse = .6 + .4 * Math.sin(t * 6);
@@ -208,7 +208,7 @@ export function drawEidolonGuardian(ctx, x, feetY, facing, t, age, fade, layer =
       c.beginPath(); c.moveTo(side * 18, -194); c.quadraticCurveTo(side * 44, -206, side * 40, -236); c.quadraticCurveTo(side * 34, -210, side * 12, -200); c.closePath(); c.fill(); c.stroke();
     }
     c.restore();
-  });
+  }, { hard: true });
 }
 
 // ── Guard poses of the forms (front layer) ───────────────────────────────
@@ -236,7 +236,7 @@ export function drawFormGuard(ctx, x, feetY, facing, t, form) {
       c.closePath(); c.fill(); c.stroke();
     }
     c.restore();
-  });
+  }, { hard: true });
 }
 
 // ── Ninefold Beast Form: flame fox spirit ────────────────────────────────
@@ -321,5 +321,5 @@ export function drawNinefoldSpirit(ctx, x, feetY, facing, t, age, fade, layer = 
     c.beginPath(); c.moveTo(-14, -14); c.lineTo(-2, -16); c.lineTo(-6, -9); c.closePath(); c.fill();
     c.restore();
     c.restore();
-  });
+  }, { hard: true });
 }

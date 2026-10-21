@@ -6,6 +6,7 @@
 // Collisions are always evaluated in world/ground coordinates, never from
 // particles or the projected render.
 import { audio } from './audio.js';
+import { hardenContext } from './pixel_steps.js';
 import { combat } from './combat.js';
 import { groundDistance, groundYForDepth } from './world.js';
 import { environment } from './environment.js';
@@ -1108,7 +1109,8 @@ export class ShieldBubbleSpell {
 // characters (chunky, hard-edged effects as in the reference videos).
 // ─────────────────────────────────────────────────────────────────────────
 
-let pixelLayer = null;
+// Two low-res layers: the plain one (ground, shadows) and the HARD one for spell effects (pixel_steps.js).
+const pixelLayers = { plain: null, hard: null };
 // Sprite-style outline for the VFX layer (user, 21 Oct 2026: spells must fit the pixel-art
 // character designs — dark, hue-tinted contours, hard pixel edges). Every effect drawn into
 // the low-res layer gets a 1-art-pixel contour in a darkened version of its own colour.
@@ -1134,12 +1136,14 @@ function outlined(doc, layer, w, h) {
   return comp.canvas;
 }
 
-export function renderPixelated(ctx, pixelSize, draw) {
+// hard: spell / form effects — alpha, rgba colours and gradients snap to hard colour steps.
+export function renderPixelated(ctx, pixelSize, draw, { hard = false } = {}) {
   const target = ctx.canvas;
   const transform = typeof ctx.getTransform === 'function' ? ctx.getTransform() : null;
   const doc = globalThis.document;
   if (!(target?.width > 0) || !(transform && 'a' in transform) || typeof doc?.createElement !== 'function' || pixelSize <= 1) { draw(ctx); return false; }
   const w = Math.ceil(target.width / pixelSize); const h = Math.ceil(target.height / pixelSize);
+  const key = hard ? 'hard' : 'plain'; let pixelLayer = pixelLayers[key];
   if (!pixelLayer || pixelLayer.canvas.width !== w || pixelLayer.canvas.height !== h) {
     const canvas = doc.createElement('canvas');
     canvas.width = w; canvas.height = h;
@@ -1147,7 +1151,8 @@ export function renderPixelated(ctx, pixelSize, draw) {
     if (!layerCtx) { draw(ctx); return false; }
     // Pixel-art rule: no soft shadow glows in the VFX layer — every effect keeps hard edges (the contour pass outlines it).
     try { Object.defineProperty(layerCtx, 'shadowBlur', { get: () => 0, set: () => {}, configurable: true }); } catch { /* read-only in some engines */ }
-    pixelLayer = { canvas, ctx: layerCtx };
+    if (hard) hardenContext(layerCtx);
+    pixelLayer = pixelLayers[key] = { canvas, ctx: layerCtx };
   }
   const lctx = pixelLayer.ctx;
   lctx.setTransform(1, 0, 0, 1, 0, 0);

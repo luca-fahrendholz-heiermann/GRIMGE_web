@@ -832,7 +832,7 @@ export class SpellSystem {
 
   renderBatch(ctx, batch) {
     if (!batch.length) return;
-    renderPixelated(ctx, this.pixelSizeFor(ctx), (layer) => { for (const spell of batch) this.renderSafely(layer, spell); });
+    renderPixelated(ctx, this.pixelSizeFor(ctx), (layer) => { for (const spell of batch) this.renderSafely(layer, spell); }, { hard: true });
   }
 
   // One broken effect must never freeze the game loop: it is logged once

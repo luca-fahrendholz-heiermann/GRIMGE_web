@@ -1,5 +1,6 @@
 // GRIMGE Prototype — Combat Feedback, Hitstop, Camera & Particle VFX Engine
 import { audio } from './audio.js';
+import { stepAlpha } from './pixel_steps.js';
 const MAX_PARTICLES = 500;
 
 export class CombatEngine {
@@ -297,7 +298,7 @@ export class CombatEngine {
     // 2. Draw Particles
     for (const p of this.particles) {
       ctx.save();
-      ctx.globalAlpha = p.alpha;
+      ctx.globalAlpha = stepAlpha(p.alpha); // pixel style: hard alpha steps, no soft fades
 
       if (p.type === 'shockwave') {
         ctx.beginPath();
@@ -309,18 +310,15 @@ export class CombatEngine {
         ctx.fillStyle = p.color;
         ctx.fillRect(p.x - p.size * 0.5, p.y - p.size * 0.5, p.size, p.size);
       } else if (p.type === 'elemental') {
-        // Cheap glow: a faint larger disc + the solid core (a per-particle shadowBlur
-        // cost ~1.5 ms each and made big spells drop frames).
-        ctx.fillStyle = p.color;
-        ctx.globalAlpha = p.alpha * .35;
-        ctx.beginPath(); ctx.arc(p.x, p.y, p.size * 2, 0, Math.PI * 2); ctx.fill();
-        ctx.globalAlpha = p.alpha;
-        ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill();
+        // Pixel style (user, 21 Oct 2026): a hard square in the element colour with a small white
+        // core — no soft halo, no additive wash.
+        const sz = Math.max(2, Math.round(p.size * 1.6)); const px = Math.round(p.x - sz / 2); const py = Math.round(p.y - sz / 2);
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.fillStyle = p.color; ctx.fillRect(px, py, sz, sz);
+        if (sz >= 4) { const c = Math.max(1, Math.round(sz / 3)); ctx.fillStyle = '#ffffff'; ctx.fillRect(px + ((sz - c) >> 1), py + ((sz - c) >> 1), c, c); }
       } else if (p.type === 'dust') {
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        ctx.fillStyle = p.color;
-        ctx.fill();
+        const sz = Math.max(2, Math.round(p.size * 1.7));
+        ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = p.color; ctx.fillRect(Math.round(p.x - sz / 2), Math.round(p.y - sz / 2), sz, sz);
       }
       ctx.restore();
     }
