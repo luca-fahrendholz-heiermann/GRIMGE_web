@@ -1,0 +1,570 @@
+// GRIMGE Prototype — breathing styles (user, 21 Oct 2026; researched from the Kimetsu no
+// Yaiba wiki "Atemtechniken", adapted — own looks, no copies). A breathing rune puts the
+// Wizard into a 15 s stance; every input becomes a move of that style:
+//   normal attack     the swing leaves the element's trail (every 3rd hit applies its status)
+//   charge FORWARD    the style's signature move          charge UP   its rising move
+//   charge DOWN       MAL ERWACHT — the Demon Slayer Mark: a mark in the style's shape glows on
+//                     the body, damage / speed up, the blade turns hot (hits burn), a little HP
+//                     is burnt each second (heart racing) — and it SPREADS to allies nearby
+//   sprint attack     the style's rush                    sprint jump / air down   its crash
+//                     with an effect on the ground (crater, scorch, puddles, mist, blooms …)
+// Every element has a base style; casting a second breathing while one is active derives
+// a new one along the family tree (water → serpent, flame → love, flower → insect,
+// thunder → sound): BREATH_COMBOS.
+// Later every weapon type will animate these moves its own way; the moves stay the same.
+import { defineSignature, startStance, emit, SigSequence, foesOf, hit, plate, thread, ribbon, sparks, TAU, DEPTH } from './signature_core.js';
+import { combat } from './combat.js';
+import { environment } from './environment.js';
+import { groundYForDepth, clampToArena } from './world.js';
+import { applyStatus } from './status_effects.js';
+
+// ── palettes (dark, mid, light, core: pixel-art ramps) ───────────────────
+const hexRgb = (h) => { const n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
+const ramp = (dark, mid, light, core = '#ffffff') => { const [r, g, b] = hexRgb(mid); return { dark, mid, light, core, mat: { kind: 'crystal', dark, body: mid, facet: light, vein: mid, edge: core, spark: core, core: '#ffffff', glow: `rgba(${r},${g},${b},`, edgeGlow: 'rgba(255,255,255,' } }; };
+
+// ── the styles ────────────────────────────────────────────────────────────
+// Each move: { kind, look, …params }. Kinds are the shared building blocks below.
+export const BREATH_STYLES = Object.freeze({
+  water: { name: 'WASSERATMUNG', ramp: ramp('#0b3c8c', '#2f8fff', '#9fdcff'), status: 'wet', trail: 'ribbon', mark: 'waves',
+    forward: { kind: 'torrent', look: 'wave', name: 'FLUTWELLE', len: 380, dmg: 26, push: 460, depth: 44 },
+    up: { kind: 'rising', look: 'wheel', name: 'WASSERRAD' },
+    sprint: { kind: 'flurry', look: 'wave', name: 'GEZEITENSCHNITT', hits: 4, dist: 200 },
+    dive: { kind: 'crash', look: 'water', name: 'WASSERFALLBECKEN' } },
+  flame: { name: 'FLAMMENATMUNG', ramp: ramp('#7a1206', '#ff5a1f', '#ffb300', '#fff1c2'), status: 'burn', trail: 'flame', mark: 'flames',
+    forward: { kind: 'torrent', look: 'flame', name: 'FLAMMENSCHLANGE', len: 360, dmg: 30, push: 260, depth: 40, scorch: true },
+    up: { kind: 'rising', look: 'flame', name: 'STEIGENDE GLUT', pillar: true },
+    sprint: { kind: 'flash', look: 'flame', name: 'GLUTSCHNITT', dist: 230, after: 'ignite', trail: 'scorch' },
+    dive: { kind: 'crash', look: 'flame', name: 'FALLENDES FEUER' } },
+  thunder: { name: 'DONNERATMUNG', ramp: ramp('#6b5a00', '#ffe03d', '#fff6b0'), status: 'paralysis', trail: 'bolt', mark: 'bolts',
+    forward: { kind: 'flash', look: 'bolt', name: 'DONNERSCHLAG', dist: 220, after: 'paralyze' },
+    up: { kind: 'pillar', look: 'bolt', name: 'HIMMELSBLITZ' },
+    dive: { kind: 'crash', look: 'bolt', name: 'DONNERFALL' } },
+  wind: { name: 'WINDATMUNG', ramp: ramp('#1f5c50', '#7fe0c5', '#d7fff4'), status: null, trail: 'gust', mark: 'swirls',
+    forward: { kind: 'crescents', look: 'wind', name: 'STURMSICHELN', count: 5 },
+    up: { kind: 'rising', look: 'wind', name: 'STAUBSTURM', lift: 760 },
+    sprint: { kind: 'vortex', look: 'wind', name: 'WIRBELSTOSS' },
+    dive: { kind: 'crash', look: 'wind', name: 'TAIFUN' } },
+  stone: { name: 'STEINATMUNG', ramp: ramp('#3e2f22', '#8d7a66', '#d2c3ad', '#f3ead8'), status: null, trail: 'shards', mark: 'cracks',
+    forward: { kind: 'boomerang', look: 'rock', name: 'SERPENTINWURF' },
+    up: { kind: 'pillar', look: 'rock', name: 'FELSSÄULE' },
+    sprint: { kind: 'charge', look: 'rock', name: 'BERGRUTSCH' },
+    dive: { kind: 'crash', look: 'rock', name: 'KRATERSCHLAG' } },
+  flower: { name: 'BLUMENATMUNG', ramp: ramp('#7a1f4a', '#f06292', '#ffc1e3'), status: null, trail: 'petals', mark: 'blossom', heals: true,
+    forward: { kind: 'torrent', look: 'petal', name: 'PURPURGEWAND', len: 300, dmg: 26, push: 220, depth: 42 },
+    up: { kind: 'rising', look: 'petal', name: 'WIRBELNDER PFIRSICH' },
+    sprint: { kind: 'flurry', look: 'petal', name: 'NEUN PFINGSTROSEN', hits: 5, dist: 190 },
+    dive: { kind: 'crash', look: 'petal', name: 'BLÜTENFALL' } },
+  sun: { name: 'SONNENATMUNG', ramp: ramp('#8a3a00', '#ff9100', '#ffd54f', '#fffde7'), status: 'burn', trail: 'flame', mark: 'sunburst',
+    forward: { kind: 'torrent', look: 'sun', name: 'SONNENDRACHE', len: 420, dmg: 34, push: 300, depth: 46, scorch: true },
+    up: { kind: 'rising', look: 'sun', name: 'UNTERGEHENDE SONNE', backflip: true },
+    sprint: { kind: 'flash', look: 'sun', name: 'SONNENSPUR', dist: 240, after: 'ignite', trail: 'scorch' },
+    dive: { kind: 'crash', look: 'sun', name: 'SONNENSTURZ' } },
+  moon: { name: 'MONDATMUNG', ramp: ramp('#2a1550', '#7e57c2', '#d1c4e9'), status: 'bleed', trail: 'crescent', mark: 'crescents',
+    forward: { kind: 'crescents', look: 'moon', name: 'NACHTPALAST', count: 9 },
+    up: { kind: 'rising', look: 'moon', name: 'MONDWALL' },
+    sprint: { kind: 'flash', look: 'moon', name: 'MONDSCHATTEN', dist: 220, after: 'bleed', blades: true },
+    dive: { kind: 'crash', look: 'moon', name: 'NEUMOND' } },
+  mist: { name: 'NEBELATMUNG', ramp: ramp('#37474f', '#b0bec5', '#eceff1'), status: null, trail: 'mist', mark: 'clouds',
+    forward: { kind: 'flurry', look: 'mist', name: 'WOLKENMEER', hits: 6, dist: 230, zigzag: true },
+    up: { kind: 'rising', look: 'mist', name: 'MONDNEBEL' },
+    sprint: { kind: 'flash', look: 'mist', name: 'DUNSTSCHNITT', dist: 210, after: 'blind' },
+    dive: { kind: 'crash', look: 'mist', name: 'NEBELFALL' } },
+  beast: { name: 'BIESTATMUNG', ramp: ramp('#3e2723', '#a1887f', '#e0d4cd'), status: 'bleed', trail: 'claw', mark: 'fangs',
+    forward: { kind: 'flurry', look: 'claw', name: 'REISSZAHNSCHLITZ', hits: 5, dist: 210 },
+    up: { kind: 'rising', look: 'claw', name: 'REISSEN' },
+    sprint: { kind: 'charge', look: 'claw', name: 'WILDER ANSTURM' },
+    dive: { kind: 'crash', look: 'claw', name: 'WILDES ZERREISSEN' } },
+  forge: { name: 'SCHMIEDEATMUNG', ramp: ramp('#4a2c00', '#ffab00', '#ffe082'), status: 'burn', trail: 'shards', mark: 'rivets',
+    forward: { kind: 'blasts', look: 'blast', name: 'FUNKENKETTE', count: 4 },
+    up: { kind: 'pillar', look: 'blast', name: 'ESSENSÄULE' },
+    sprint: { kind: 'charge', look: 'blast', name: 'HAMMERSTURM' },
+    dive: { kind: 'crash', look: 'blast', name: 'AMBOSSFALL' } },
+  ward: { name: 'SCHUTZATMUNG', ramp: ramp('#0d3b66', '#90caf9', '#e3f2fd'), status: null, trail: 'shield', mark: 'runes',
+    forward: { kind: 'calm', look: 'shield', name: 'STILLE SEE' },
+    up: { kind: 'rising', look: 'shield', name: 'SCHATTENPFLAUME' },
+    sprint: { kind: 'charge', look: 'shield', name: 'SCHILDSTURM' },
+    dive: { kind: 'crash', look: 'shield', name: 'KUPPELFALL', shield: 30 } },
+  // ── derived styles (combos, see BREATH_COMBOS) ──
+  serpent: { name: 'SCHLANGENATMUNG', ramp: ramp('#1b3a2b', '#66bb6a', '#c8e6c9'), status: 'bleed', trail: 'ribbon', mark: 'scales', derived: true,
+    forward: { kind: 'flash', look: 'serpent', name: 'GIFTZAHN', dist: 200, after: 'bleed', behind: true },
+    up: { kind: 'orbit', look: 'serpent', name: 'SPULENDROSSEL' },
+    sprint: { kind: 'torrent', look: 'serpent', name: 'SCHLÄNGELNDE SCHLANGE', len: 300, dmg: 24, push: 200, depth: 60 },
+    dive: { kind: 'crash', look: 'serpent', name: 'SCHLANGENBISS' } },
+  love: { name: 'LIEBESATMUNG', ramp: ramp('#880e4f', '#ff4081', '#ffb2dd'), status: null, trail: 'ribbon', mark: 'hearts', derived: true,
+    forward: { kind: 'torrent', look: 'love', name: 'PEITSCHENHERZ', len: 340, dmg: 28, push: 240, depth: 70 },
+    up: { kind: 'rising', look: 'love', name: 'KATZENSCHAUER' },
+    sprint: { kind: 'flurry', look: 'love', name: 'KATZENKLAUE', hits: 6, dist: 200 },
+    dive: { kind: 'crash', look: 'love', name: 'LIEBESTORNADO' } },
+  insect: { name: 'INSEKTENATMUNG', ramp: ramp('#2e1a47', '#ab47bc', '#e1bee7'), status: 'poison', trail: 'sting', mark: 'wings', derived: true,
+    forward: { kind: 'flash', look: 'sting', name: 'BIENENSTICH', dist: 240, after: 'poison' },
+    up: { kind: 'rising', look: 'sting', name: 'SCHMETTERLINGSTANZ' },
+    sprint: { kind: 'flurry', look: 'sting', name: 'FACETTENAUGE', hits: 6, dist: 180 },
+    dive: { kind: 'crash', look: 'sting', name: 'LIBELLENFALL' } },
+  sound: { name: 'KLANGATMUNG', ramp: ramp('#3b2a00', '#ffca28', '#fff3c4'), status: 'paralysis', trail: 'notes', mark: 'notes', derived: true,
+    forward: { kind: 'blasts', look: 'sound', name: 'DONNERGROLLEN', count: 5 },
+    up: { kind: 'rising', look: 'sound', name: 'HALLENDE HIEBE' },
+    sprint: { kind: 'charge', look: 'sound', name: 'SAITENSPIEL' },
+    dive: { kind: 'crash', look: 'sound', name: 'DONNERGROLLEN-FALL' } }
+});
+// Signature rune → base style.
+export const BREATH_RUNES = Object.freeze({ S40: 'water', S41: 'flame', S42: 'thunder', S75: 'wind', S76: 'stone', S77: 'flower', S78: 'sun', S79: 'moon', S80: 'mist', S81: 'beast', S82: 'forge', S83: 'ward' });
+// Derived styles: the active base style + the newly cast one (either order).
+export const BREATH_COMBOS = Object.freeze({ 'beast+water': 'serpent', 'flame+flower': 'love', 'flower+moon': 'insect', 'forge+thunder': 'sound' });
+export const comboOf = (a, b) => BREATH_COMBOS[[a, b].sort().join('+')] ?? null;
+export const MARK = Object.freeze({ dur: 10, dmg: 1.25, speed: 1.2, drain: 1.5, spread: 170, allyDur: 6, cooldown: 14 });
+
+// ── helpers ──────────────────────────────────────────────────────────────
+const styleOf = (st) => BREATH_STYLES[st.style] ?? BREATH_STYLES.water;
+const powerOf = (p, st) => (st.quality?.power ?? 1) * (st.mark ? MARK.dmg : 1);
+const alive = (t) => t && !t.isDead && t.lifeState !== 'Dead' && t.lifeState !== 'Dying' && (t.hp ?? 1) > 0;
+const foes = (gw, p) => foesOf(gw, p.team).filter((t) => !t.isProp);
+const inLane = (t, x0, x1, z, depth) => t.x >= Math.min(x0, x1) - 14 && t.x <= Math.max(x0, x1) + 14 && Math.abs(((t.z ?? z) - z) * DEPTH) < depth;
+const statusFor = { ignite: 'burn', paralyze: 'paralysis', poison: 'poison', bleed: 'bleed', wet: 'wet' };
+function strike(p, st, t, dmg, kx, lift, stun, force = false) {
+  hit(t, Math.round(dmg * powerOf(p, st)), kx, lift, stun);
+  const s = styleOf(st).status; if (s && (force || (st.hits = (st.hits ?? 0) + 1) % 3 === 0)) applyStatus(t, s, { force });
+  if (styleOf(st).heals && Number.isFinite(p.hp)) p.hp = Math.min(p.maxHp, p.hp + 3);
+}
+// Depth-aware push (3D): away from a point in x AND z.
+function blowAway(t, fromX, fromZ, power) {
+  const dx = t.x - fromX; const dz = ((t.z ?? fromZ) - fromZ) * DEPTH; const d = Math.hypot(dx, dz) || 1;
+  if ('kbVelX' in t) t.kbVelX = dx / d * power; else t.x += dx / d * power * .08;
+  if (Number.isFinite(t.z)) { if ('kbVelZ' in t) t.kbVelZ = dz / d * power / DEPTH; t.z = Math.max(.04, Math.min(.96, t.z + dz / d * power / DEPTH * .12)); }
+}
+const quake = (amp, dur = .25, stop = 0) => { combat.shakeCamera?.(amp, dur); if (stop) combat.triggerHitstop?.(stop); };
+function swing(p, dur = .3) { p.state = 'heavyStrike'; p.stateTimer = Math.max(p.stateTimer ?? 0, dur); p.canAttack = false; p.vx = 0; p.vz = 0; }
+
+// ── the look of one element piece (drawn along paths, in the pixel layer) ─
+function piece(ctx, look, x, y, s, t, R, f = 1, seed = 0) {
+  const a = Math.sin(t * 9 + seed) * .5 + .5;
+  switch (look) {
+    case 'flame': case 'sun': case 'love': {
+      const cols = look === 'love' ? [R.dark, R.mid, R.light, R.core] : [R.dark, R.mid, R.light, R.core];
+      cols.forEach((c, i) => { const k = 1 - i * .24; ctx.fillStyle = c; ctx.beginPath(); ctx.moveTo(x - 7 * s * k, y + 4 * s * k); ctx.quadraticCurveTo(x - 3 * s * k, y - 14 * s * k, x + f * (3 + a * 3) * s * k, y - (20 + a * 8) * s * k); ctx.quadraticCurveTo(x + 4 * s * k, y - 8 * s * k, x + 7 * s * k, y + 4 * s * k); ctx.closePath(); ctx.fill(); });
+      if (look === 'sun' && seed % 3 === 0) { ctx.fillStyle = R.core; ctx.beginPath(); ctx.arc(x, y - 10 * s, 4 * s, 0, TAU); ctx.fill(); }
+      break;
+    }
+    case 'wave': case 'water': case 'wheel': case 'serpent': {
+      ctx.fillStyle = R.mid; ctx.beginPath(); ctx.ellipse(x, y - 8 * s, 9 * s, 6 * s, 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = R.light; ctx.beginPath(); ctx.ellipse(x - f * 2 * s, y - 10 * s, 5 * s, 3 * s, 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = R.core; ctx.fillRect(Math.round(x + f * 3 * s), Math.round(y - 13 * s), 2, 2);
+      break;
+    }
+    case 'bolt': { ctx.strokeStyle = R.mid; ctx.lineWidth = 3 * s; ctx.beginPath(); ctx.moveTo(x - 6 * s, y - 16 * s); ctx.lineTo(x + 2 * s, y - 8 * s); ctx.lineTo(x - 2 * s, y - 6 * s); ctx.lineTo(x + 6 * s, y + 2 * s); ctx.stroke(); ctx.strokeStyle = R.core; ctx.lineWidth = 1; ctx.stroke(); break; }
+    case 'wind': case 'mist': { ctx.strokeStyle = look === 'mist' ? R.light : R.mid; ctx.lineWidth = 2 * s; ctx.beginPath(); ctx.arc(x, y - 10 * s, 9 * s, t * 10 + seed, t * 10 + seed + 4); ctx.stroke(); if (look === 'mist') { ctx.fillStyle = R.mid; ctx.globalAlpha *= .8; ctx.beginPath(); ctx.arc(x + 4 * s, y - 8 * s, 7 * s, 0, TAU); ctx.fill(); } break; }
+    case 'rock': { plate(ctx, [[x - 8 * s, y], [x - 5 * s, y - 12 * s], [x + 2 * s, y - 18 * s], [x + 8 * s, y - 6 * s], [x + 6 * s, y]], R.mat, 900 + seed, { alpha: 1, glowEdge: .3 }); break; }
+    case 'petal': { for (let i = 0; i < 2; i++) { const ang = t * 6 + seed + i * 2.6; const px = x + Math.cos(ang) * 6 * s; const py = y - 10 * s + Math.sin(ang) * 5 * s; ctx.fillStyle = i ? R.light : R.mid; ctx.beginPath(); ctx.ellipse(px, py, 5 * s, 2.5 * s, ang, 0, TAU); ctx.fill(); } break; }
+    case 'moon': { ctx.fillStyle = R.light; ctx.beginPath(); ctx.arc(x, y - 10 * s, 9 * s, -1.4, 1.4); ctx.arc(x - 4 * s, y - 10 * s, 7 * s, 1.2, -1.2, true); ctx.closePath(); ctx.fill(); break; }
+    case 'claw': { ctx.strokeStyle = R.light; ctx.lineWidth = 2 * s; for (let i = -1; i <= 1; i++) { ctx.beginPath(); ctx.moveTo(x - 6 * s + i * 4 * s, y - 18 * s); ctx.lineTo(x + 6 * s + i * 4 * s, y); ctx.stroke(); } break; }
+    case 'blast': { ctx.fillStyle = R.dark; ctx.beginPath(); ctx.arc(x, y - 10 * s, 10 * s, 0, TAU); ctx.fill(); ctx.fillStyle = R.mid; ctx.beginPath(); ctx.arc(x, y - 10 * s, 7 * s, 0, TAU); ctx.fill(); ctx.fillStyle = R.core; ctx.beginPath(); ctx.arc(x, y - 10 * s, 3 * s, 0, TAU); ctx.fill(); break; }
+    case 'shield': { ctx.strokeStyle = R.mid; ctx.lineWidth = 2.5 * s; ctx.beginPath(); ctx.moveTo(x - 7 * s, y - 18 * s); ctx.lineTo(x + 7 * s, y - 18 * s); ctx.lineTo(x + 7 * s, y - 8 * s); ctx.lineTo(x, y); ctx.lineTo(x - 7 * s, y - 8 * s); ctx.closePath(); ctx.stroke(); break; }
+    case 'sting': { ctx.strokeStyle = R.light; ctx.lineWidth = 2 * s; ctx.beginPath(); ctx.moveTo(x - f * 10 * s, y - 10 * s); ctx.lineTo(x + f * 10 * s, y - 10 * s); ctx.stroke(); ctx.fillStyle = R.mid; ctx.beginPath(); ctx.ellipse(x - f * 4 * s, y - 14 * s, 5 * s, 2 * s, -.6 * f, 0, TAU); ctx.fill(); break; }
+    case 'sound': { ctx.strokeStyle = R.mid; ctx.lineWidth = 2 * s; ctx.beginPath(); ctx.arc(x, y - 10 * s, (6 + a * 6) * s, 0, TAU); ctx.stroke(); ctx.fillStyle = R.core; ctx.font = `${Math.round(10 * s)}px monospace`; ctx.fillText('♪', x - 3 * s, y - 6 * s); break; }
+    default: { ctx.fillStyle = R.mid; ctx.beginPath(); ctx.arc(x, y - 10 * s, 6 * s, 0, TAU); ctx.fill(); }
+  }
+}
+// Ground effects of an impact / trail, per look.
+function groundFx(look, x, z, team, r = 60, gw = null) {
+  if (look === 'flame' || look === 'sun') environment.add('scorch', x, z, { radius: r * .7, team });
+  else if (look === 'water' || look === 'wave' || look === 'wheel' || look === 'serpent') environment.add('water', x, z, { radius: r * .8, team });
+  else if (look === 'rock') { environment.add('crater', x, z, { radius: r * .6, team }); environment.add('crack', x, z, { radius: r, team }); environment.add('rubble', x, z, { radius: r * .7, team }); }
+  else if (look === 'bolt') environment.electrify?.(x, z, r, team, 8, gw);
+  else if (look === 'blast' || look === 'sound') { environment.add('crater', x, z, { radius: r * .5, team }); environment.add('scorch', x, z, { radius: r * .5, team }); }
+  else if (look === 'claw') environment.add('crack', x, z, { radius: r * .8, team });
+}
+
+// ── building blocks ───────────────────────────────────────────────────────
+// TORRENT: a body of the element rolls far down the lane (flame serpent, flood, sun dragon …).
+function torrent(p, st, k, m) {
+  const R = styleOf(st).ramp; const f = p.facing || 1; const len = m.len * (.75 + .5 * k); const dmg = m.dmg * (.8 + .6 * k);
+  emit(new SigSequence({ mat: R.mat, seed: 4300 }, p, { dur: .9, data: { hit: new Set(), acc: 0 }, tick: (s, dt, gw) => {
+    const head = 30 + Math.min(1, s.t / .55) * len;
+    for (const t of foes(gw, p)) {
+      if (s.hit.has(t)) continue;
+      const dx = (t.x - s.x) * f; const wob = m.look === 'serpent' || m.look === 'love' ? Math.sin(dx / 40) * 20 : 0;
+      if (dx > 0 && dx < head && Math.abs(((t.z ?? s.z) - s.z) * DEPTH - wob) < (m.depth ?? 40)) { s.hit.add(t); strike(p, st, t, dmg, f * (m.push ?? 300), 140, .45, true); if (s.hit.size === 1) quake(5 + 4 * k, .25, 3); }
+    }
+    s.acc += dt; if (m.scorch && s.acc > .09 && s.t < .55) { s.acc = 0; groundFx(m.look, s.x + f * head, s.z, p.team, 40); }
+    if (m.look === 'wave' && s.t < .02) groundFx('water', s.x + f * len * .6, s.z, p.team, 70);
+  }, draw: (ctx, s) => {
+    const y = groundYForDepth(s.z) - 26; const head = 30 + Math.min(1, s.t / .55) * len; const a = 1 - Math.max(0, (s.t - .55) / .35);
+    ctx.save(); ctx.globalAlpha = a;
+    const n = 20;
+    for (let i = 0; i < n; i++) {
+      const u = i / (n - 1); const x = s.x + f * (20 + head * u);
+      const wav = m.look === 'serpent' || m.look === 'love' ? Math.sin(u * 14 - s.t * 16) * 18 : Math.sin(u * 9 - s.t * 18) * 10 * u;
+      piece(ctx, m.look, x, y + wav, .9 + 1.3 * u, s.t, R, f, i);
+    }
+    // The head: a bigger flare of the element.
+    piece(ctx, m.look, s.x + f * (26 + head), y, 2.6, s.t, R, f, 99);
+    ctx.restore();
+  } }), st.quality);
+}
+// FLASH: one flash THROUGH every foe in line, landing behind them; an after-effect follows.
+function flash(p, st, k, m) {
+  const R = styleOf(st).ramp; const f = p.facing || 1; const dist = (m.dist ?? 220) * (.85 + .5 * k); const dmg = 30 + 24 * k;
+  const x0 = p.x; const z0 = p.z;
+  emit(new SigSequence({ mat: R.mat, seed: 4400 }, p, { dur: .75, x: x0, z: z0, data: { hit: [], x1: x0, moved: false, after: false }, steps: [{ at: .07, fn: (s, gw) => {
+    let target = x0 + f * dist;
+    if (m.behind) { const t = foes(gw, p).filter((o) => (o.x - x0) * f > 0 && Math.abs(((o.z ?? z0) - z0) * DEPTH) < 40).sort((a, b) => Math.abs(a.x - x0) - Math.abs(b.x - x0))[0]; if (t) target = t.x + f * 46; }
+    p.x = target; clampToArena(p, gw?.battlefield?.boundsOverride ?? null); gw?.battlefield?.placeOnSurface?.(p);
+    s.x1 = p.x; s.moved = true; p.invulnerableTimer = Math.max(p.invulnerableTimer ?? 0, .3);
+    if (m.behind) p.facing = -f; // turns to bite from behind
+    for (const t of foes(gw, p)) if (inLane(t, x0, s.x1, z0, 36)) { s.hit.push(t); strike(p, st, t, m.after === 'ignite' ? dmg * .7 : dmg, f * (m.after === 'blind' ? 60 : 180), 160, .6, m.after === 'paralyze'); if (statusFor[m.after]) applyStatus(t, statusFor[m.after], { force: true }); if (m.after === 'blind') t.freeze?.(.6); }
+    if (m.trail === 'scorch') for (let x = Math.min(x0, s.x1); x < Math.max(x0, s.x1); x += 46) groundFx(m.look, x, z0, p.team, 36);
+    quake(s.hit.length ? 9 : 4, .3, s.hit.length ? 4 : 0);
+  } }, { at: .32, fn: (s) => {
+    // After-effect: the cut foes burst into flames / crescent blades linger / the serpent bites again.
+    s.after = true;
+    for (const t of s.hit) {
+      if (!alive(t)) continue;
+      if (m.after === 'ignite') { strike(p, st, t, dmg * .8, f * 120, 260, .5, true); applyStatus(t, 'burn', { force: true, duration: 5 }); groundFx(m.look, t.x, t.z ?? z0, p.team, 44); }
+      if (m.blades) strike(p, st, t, dmg * .4, 0, 60, .3);
+      if (m.behind) strike(p, st, t, dmg * .5, -f * 220, 120, .4, true);
+    }
+    if (s.hit.length && (m.after === 'ignite' || m.behind || m.blades)) quake(m.after === 'ignite' ? 8 : 5, .3, 3);
+  } }], draw: (ctx, s, kk) => {
+    const y = groundYForDepth(s.z) - 40;
+    if (!s.moved) { sparks(ctx, [[x0, y]], R.mat, s.t, 4401, 14, 1); return; }
+    const a = 1 - kk; const n = 11; const roll = Math.floor(s.t * 40);
+    const pts = Array.from({ length: n }, (_, i) => [x0 + (s.x1 - x0) * i / (n - 1), y + (m.look === 'bolt' && i && i < n - 1 ? Math.sin(i * 2.7 + roll) * 13 : m.look === 'mist' ? Math.sin(i * 1.3) * 10 : 0)]);
+    if (m.look === 'bolt') { thread(ctx, pts, R.mid, 8 * a + 1, a); thread(ctx, pts, R.core, 2.5, a); }
+    else { ctx.save(); ctx.globalAlpha = a; for (let i = 0; i < n; i++) piece(ctx, m.look, pts[i][0], pts[i][1] + 30, 1.2, s.t, R, f, i); ctx.restore(); thread(ctx, pts, R.core, 2, a * .9); }
+    // The burst on the hit foes after the cut.
+    if (s.after) for (const t of s.hit) { const ty = t.y ?? groundYForDepth(t.z ?? s.z); ctx.save(); ctx.globalAlpha = a; for (let i = 0; i < 5; i++) piece(ctx, m.look === 'bolt' ? 'bolt' : m.look, t.x + (i - 2) * 8, ty - 4 - (i % 2) * 14, 1.6, s.t, R, f, i + 7); ctx.restore(); }
+  } }), st.quality);
+}
+// VORTEX: spin on the spot (a whirlwind forms, foes around are cut), then burst forward —
+// everyone hit flies away in x AND depth.
+function vortex(p, st, k, m) {
+  const R = styleOf(st).ramp; const f = p.facing || 1; const spin = .34; const dash = .2; const dist = 220 + 100 * k;
+  const startX = p.x;
+  emit(new SigSequence({ mat: R.mat, seed: 4600 }, p, { dur: spin + dash + .35, data: { hitSpin: new Map(), hitDash: new Set(), next: 0 }, tick: (s, dt, gw) => {
+    if (s.t < spin) {
+      swing(p, .1); s.next -= dt;
+      if (s.next <= 0) { s.next = .09; for (const t of foes(gw, p)) if (Math.hypot(t.x - p.x, ((t.z ?? p.z) - p.z) * DEPTH) < 78 && (s.hitSpin.get(t) ?? 0) < 3) { s.hitSpin.set(t, (s.hitSpin.get(t) ?? 0) + 1); strike(p, st, t, 6, 0, 30, .2); t.x += (p.x - t.x) * .2; } }
+      return;
+    }
+    if (s.t < spin + dash) {
+      p.state = 'dash'; p.stateTimer = .08; p.invulnerableTimer = Math.max(p.invulnerableTimer ?? 0, .1);
+      const prev = p.x; p.x = startX + f * dist * Math.min(1, (s.t - spin) / dash); clampToArena(p, gw?.battlefield?.boundsOverride ?? null);
+      for (const t of foes(gw, p)) if (!s.hitDash.has(t) && inLane(t, prev, p.x, p.z, 60)) { s.hitDash.add(t); strike(p, st, t, 20 + 16 * k, 0, 220, .5, true); blowAway(t, p.x - f * 30, p.z, 720); if (s.hitDash.size === 1) quake(8, .3, 4); }
+      return;
+    }
+    p.vx = 0;
+  }, draw: (ctx, s) => {
+    const y = (p.y ?? groundYForDepth(p.z)); const spinning = s.t < spin + dash; const a = spinning ? 1 : 1 - (s.t - spin - dash) / .35;
+    ctx.save(); ctx.globalAlpha = a; ctx.lineCap = 'round';
+    for (let ring = 0; ring < 4; ring++) { const r = 26 + ring * 14; const ang = s.t * 26 + ring; ctx.strokeStyle = ring % 2 ? R.light : R.mid; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(p.x, y - 20 - ring * 14, r, r * .32, 0, ang, ang + 3.6); ctx.stroke(); }
+    if (s.t >= spin) for (let i = 0; i < 5; i++) { ctx.strokeStyle = R.core; ctx.lineWidth = 2; const yy = y - 20 - i * 12; ctx.beginPath(); ctx.moveTo(p.x - f * 20, yy); ctx.lineTo(p.x - f * (60 + i * 10), yy); ctx.stroke(); }
+    ctx.restore();
+  } }), st.quality);
+}
+// CRESCENTS: blades of the element fan out down the lane (wind sickles, chaotic moon blades).
+function crescents(p, st, k, m) {
+  const R = styleOf(st).ramp; const f = p.facing || 1; const n = m.count ?? 5; const chaos = m.look === 'moon';
+  const blades = Array.from({ length: n }, (_, i) => ({ x: p.x + f * 20, z: p.z, vz: (i - (n - 1) / 2) * (chaos ? .14 : .08) + (chaos ? Math.sin(i * 3.1) * .05 : 0), v: 560 + (chaos ? (i % 3) * 120 : i * 30), s: chaos ? .7 + (i % 3) * .35 : 1.2 + i * .12, hit: new Set(), delay: i * (chaos ? .03 : .06) }));
+  emit(new SigSequence({ mat: R.mat, seed: 4700 }, p, { dur: .9, data: { blades }, tick: (s, dt, gw) => {
+    for (const b of s.blades) {
+      if (s.t < b.delay) continue;
+      b.x += f * b.v * dt; b.z = Math.max(.03, Math.min(.97, b.z + b.vz * dt));
+      for (const t of foes(gw, p)) if (!b.hit.has(t) && Math.abs(t.x - b.x) < 20 * b.s && Math.abs(((t.z ?? b.z) - b.z) * DEPTH) < 24 * b.s) { b.hit.add(t); strike(p, st, t, (chaos ? 9 : 13) + 8 * k, f * 160, 80, .3); }
+    }
+    if (s.t < .03) quake(3, .15);
+  }, draw: (ctx, s) => {
+    ctx.save(); const a = 1 - Math.max(0, (s.t - .6) / .3); ctx.globalAlpha = a;
+    for (const b of s.blades) { if (s.t < b.delay) continue; const y = groundYForDepth(b.z) - 36; ctx.fillStyle = R.mid; ctx.beginPath(); ctx.arc(b.x, y, 18 * b.s, f > 0 ? -1.3 : Math.PI - 1.3, f > 0 ? 1.3 : Math.PI + 1.3); ctx.arc(b.x - f * 8 * b.s, y, 14 * b.s, f > 0 ? 1.1 : Math.PI + 1.1, f > 0 ? -1.1 : Math.PI - 1.1, true); ctx.closePath(); ctx.fill(); ctx.strokeStyle = R.core; ctx.lineWidth = 1.5; ctx.stroke(); }
+    ctx.restore();
+  } }), st.quality);
+}
+// RISING: a rising arc launches everything in front high up (plus the element shooting up).
+function rising(p, st, k, m) {
+  const R = styleOf(st).ramp; const f = p.facing || 1; swing(p, .35);
+  if (m.backflip && p.grounded) { p.grounded = false; p.vElevation = 260; p.vx = -f * 120; }
+  else if (p.grounded) { p.grounded = false; p.vElevation = 300; }
+  emit(new SigSequence({ mat: R.mat, seed: 4800 }, p, { dur: .7, data: { hit: new Set() }, tick: (s, dt, gw) => {
+    if (s.t > .3) return;
+    for (const t of foes(gw, p)) if (!s.hit.has(t) && (t.x - p.x) * f > -20 && (t.x - p.x) * f < 120 && Math.abs(((t.z ?? p.z) - p.z) * DEPTH) < 40) { s.hit.add(t); strike(p, st, t, 22 + 16 * k, f * 80, m.lift ?? 640, .6, true); if (s.hit.size === 1) quake(6, .25, 3); }
+  }, draw: (ctx, s) => {
+    const kk = Math.min(1, s.t / .3); const a = 1 - Math.max(0, (s.t - .35) / .35); const cx = p.x + f * 30; const by = (p.y ?? groundYForDepth(p.z));
+    ctx.save(); ctx.globalAlpha = a;
+    for (let i = 0; i < 9; i++) { const u = i / 8 * kk; const ang = (f > 0 ? .9 : Math.PI - .9) - f * u * 2.6; piece(ctx, m.look, cx + Math.cos(ang) * 46, by - 30 + Math.sin(ang) * 54, 1.3, s.t, R, f, i); }
+    if (m.pillar || m.look === 'wind' || m.look === 'mist') for (let i = 0; i < 6; i++) piece(ctx, m.look, cx + f * 30 + Math.sin(i + s.t * 9) * 8, by - i * 24 * kk, 1.5, s.t, R, f, i + 20);
+    ctx.restore();
+  } }), st.quality);
+}
+// PILLAR: the element erupts under the nearest foe ahead (rock pillar, lightning, forge eruption).
+function pillar(p, st, k, m, gw) {
+  const R = styleOf(st).ramp; const f = p.facing || 1; swing(p, .3);
+  const t0 = foes(gw, p).filter((o) => (o.x - p.x) * f > 0 && Math.hypot(o.x - p.x, ((o.z ?? p.z) - p.z) * DEPTH) < 320).sort((a, b) => Math.abs(a.x - p.x) - Math.abs(b.x - p.x))[0];
+  const x = t0 ? t0.x : p.x + f * 140; const z = t0 ? (t0.z ?? p.z) : p.z;
+  emit(new SigSequence({ mat: R.mat, seed: 4900 }, p, { dur: .9, x, z, data: { done: false }, tick: (s, dt, gw2) => {
+    if (s.done || s.t < .22) return; s.done = true;
+    for (const t of foes(gw2, p)) if (Math.hypot(t.x - x, ((t.z ?? z) - z) * DEPTH) < 54) strike(p, st, t, 28 + 20 * k, 0, 760, .7, true);
+    groundFx(m.look, x, z, p.team, 50, gw2); quake(m.look === 'rock' ? 9 : 7, .3, 4);
+  }, draw: (ctx, s) => {
+    const y = groundYForDepth(z); ctx.save();
+    if (s.t < .22) { ctx.globalAlpha = .6 + .4 * Math.sin(s.t * 40); ctx.strokeStyle = R.mid; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(x, y, 30, 9, 0, 0, TAU); ctx.stroke(); ctx.restore(); return; }
+    const kk = Math.min(1, (s.t - .22) / .12); const a = 1 - Math.max(0, (s.t - .6) / .3); ctx.globalAlpha = a; const H = 150 * kk;
+    if (m.look === 'bolt') { const pts = Array.from({ length: 8 }, (_, i) => [x + (i && i < 7 ? Math.sin(i * 2.3 + s.t * 30) * 10 : 0), y - 260 + i * 260 / 7]); thread(ctx, pts, R.mid, 9, a); thread(ctx, pts, R.core, 3, a); }
+    else if (m.look === 'rock') plate(ctx, [[x - 22, y], [x - 14, y - H], [x, y - H - 18], [x + 14, y - H], [x + 22, y]], R.mat, 4901, { alpha: a, glowEdge: .4 });
+    else for (let i = 0; i < 7; i++) piece(ctx, m.look, x + Math.sin(i * 1.7) * 8, y - i * H / 6, 1.8 - i * .1, s.t, R, f, i);
+    ctx.restore();
+  } }), st.quality);
+}
+// CRASH (air down / sprint jump): straight down, the landing is the impact — radial blast,
+// ground effects (crater, scorch, puddle, electrified ground, blooms …), debris, shake by weight.
+function crash(p, st, m, gw) {
+  const R = styleOf(st).ramp; const f = p.facing || 1;
+  p.state = 'dive'; p.stateTimer = 1.2; p.vElevation = -1150; p.vx = f * 120; p.airLatch = null;
+  const heavy = m.look === 'rock' || m.look === 'blast' || m.look === 'sound' || m.look === 'sun';
+  emit(new SigSequence({ mat: R.mat, seed: 5000 }, p, { dur: 2, data: { landed: false, lt: 0 }, tick: (s, dt, gw2) => {
+    if (!s.landed) {
+      if (!p.grounded && s.t < 1.4) return;
+      s.landed = true; s.lt = s.t; s.x = p.x; s.z = p.z; p.vx = 0;
+      const r = heavy ? 120 : 95;
+      for (const t of foes(gw2, p)) { const d = Math.hypot(t.x - p.x, ((t.z ?? p.z) - p.z) * DEPTH); if (d < r) { strike(p, st, t, (heavy ? 34 : 26) * (1 - d / r * .4), 0, m.look === 'wind' ? 300 : 480, .6, true); blowAway(t, p.x, p.z, m.look === 'wind' ? 760 : 380); } }
+      groundFx(m.look, p.x, p.z, p.team, r * .8, gw2);
+      if (m.shield) { p.arcaneShield = Math.max(p.arcaneShield ?? 0, m.shield); p.arcaneShieldTimer = Math.max(p.arcaneShieldTimer ?? 0, 4); }
+      if (styleOf(st).heals) for (const a of [p]) a.hp = Math.min(a.maxHp, a.hp + 10);
+      quake(heavy ? 14 : 9, .35, heavy ? 6 : 4);
+      combat.spawnShockwave?.(p.x, (p.y ?? 0) - 6, r, R.light);
+      s.dur = s.lt + .6;
+    }
+  }, draw: (ctx, s) => {
+    if (!s.landed) { ctx.save(); for (let i = 0; i < 4; i++) piece(ctx, m.look, p.x, (p.y ?? 0) - 60 + i * 16, 1.4, s.t, R, f, i); ctx.restore(); return; }
+    const kk = Math.min(1, (s.t - s.lt) / .3); const a = 1 - Math.max(0, (s.t - s.lt - .25) / .35); const y = groundYForDepth(s.z);
+    ctx.save(); ctx.globalAlpha = a; const r = (heavy ? 120 : 95) * kk;
+    ctx.strokeStyle = R.mid; ctx.lineWidth = 4; ctx.beginPath(); ctx.ellipse(s.x, y, r, r * .3, 0, 0, TAU); ctx.stroke();
+    for (let i = 0; i < 12; i++) { const ang = i / 12 * TAU; piece(ctx, m.look, s.x + Math.cos(ang) * r * .8, y + Math.sin(ang) * r * .24, 1.4, s.t, R, f, i); }
+    if (m.look === 'shield') { ctx.strokeStyle = R.light; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(s.x, y, r * .7, r * .9, 0, Math.PI, TAU); ctx.stroke(); }
+    ctx.restore();
+  } }), st.quality);
+}
+// BOOMERANG: a spinning stone weapon hurled forward drills through and comes back.
+function boomerang(p, st, k, m) {
+  const R = styleOf(st).ramp; const f = p.facing || 1; swing(p, .3); const range = 260 + 100 * k;
+  emit(new SigSequence({ mat: R.mat, seed: 5100 }, p, { dur: 1.1, data: { out: new Set(), back: new Set(), bx: p.x, bz: p.z }, tick: (s, dt, gw) => {
+    const u = s.t / 1.1; const d = Math.sin(Math.min(1, u) * Math.PI) * range; s.bx = p.x + f * d; s.bz = p.z;
+    const set = u < .5 ? s.out : s.back;
+    for (const t of foes(gw, p)) if (!set.has(t) && Math.abs(t.x - s.bx) < 26 && Math.abs(((t.z ?? s.bz) - s.bz) * DEPTH) < 30) { set.add(t); strike(p, st, t, 20 + 14 * k, f * (u < .5 ? 220 : -160), 120, .45, true); quake(5, .18, 2); }
+  }, draw: (ctx, s) => {
+    const y = groundYForDepth(s.bz) - 34; const ang = s.t * 24;
+    ctx.save(); ctx.translate(s.bx, y); ctx.rotate(ang);
+    plate(ctx, [[-16, -6], [-6, -16], [8, -14], [16, 2], [6, 14], [-10, 12]], R.mat, 5101, { alpha: 1, glowEdge: .3 });
+    ctx.restore();
+    thread(ctx, [[p.x + f * 12, (p.y ?? 0) - 40], [s.bx, y]], R.dark, 2, .9);
+  } }), st.quality);
+}
+// FLURRY: a rushing flurry of cuts (fangs, nine peonies, zig-zag mist, cat claws, six stings).
+function flurry(p, st, k, m) {
+  const R = styleOf(st).ramp; const f = p.facing || 1; const n = m.hits ?? 5; const dist = (m.dist ?? 200) * (.85 + .4 * k); const dur = .42; const x0 = p.x; const z0 = p.z;
+  emit(new SigSequence({ mat: R.mat, seed: 5200 }, p, { dur: dur + .35, data: { count: new Map(), next: 0, marks: [] }, tick: (s, dt, gw) => {
+    if (s.t > dur) { p.vx = 0; return; }
+    swing(p, .08); p.invulnerableTimer = Math.max(p.invulnerableTimer ?? 0, .08);
+    const u = s.t / dur; p.x = x0 + f * dist * u; if (m.zigzag) p.z = Math.max(.05, Math.min(.95, z0 + Math.sin(u * Math.PI * 4) * .12));
+    clampToArena(p, gw?.battlefield?.boundsOverride ?? null);
+    s.next -= dt; if (s.next > 0) return; s.next = dur / n;
+    s.marks.push({ x: p.x + f * 30, z: p.z, t: s.t, rot: (s.marks.length % 2 ? 1 : -1) * .8 });
+    let any = false;
+    for (const t of foes(gw, p)) if (Math.abs(t.x - (p.x + f * 30)) < 60 && Math.abs(((t.z ?? p.z) - p.z) * DEPTH) < 44 && (s.count.get(t) ?? 0) < n) { s.count.set(t, (s.count.get(t) ?? 0) + 1); strike(p, st, t, 8 + 5 * k, f * 60, 50, .25); any = true; }
+    if (any) quake(2, .08, 1);
+  }, draw: (ctx, s) => {
+    ctx.save();
+    for (const mk of s.marks) { const age = s.t - mk.t; if (age > .3) continue; const y = groundYForDepth(mk.z) - 40; ctx.globalAlpha = 1 - age / .3; ctx.strokeStyle = R.light; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(mk.x - 22 * Math.cos(mk.rot), y - 22 * Math.sin(mk.rot)); ctx.lineTo(mk.x + 22 * Math.cos(mk.rot), y + 22 * Math.sin(mk.rot)); ctx.stroke(); piece(ctx, m.look, mk.x, y + 14, 1.2, s.t, R, f, mk.t * 10); }
+    if (m.zigzag && s.t < dur) for (let i = 1; i <= 3; i++) { ctx.globalAlpha = .3 / i; piece(ctx, 'mist', p.x - f * i * 22, (p.y ?? 0) - 6, 2, s.t, R, f, i); }
+    ctx.restore();
+  } }), st.quality);
+}
+// CHARGE: an unstoppable rush (invulnerable): foes are pushed along, then thrown at the end.
+function charge(p, st, k, m) {
+  const R = styleOf(st).ramp; const f = p.facing || 1; const dur = .45; const dist = 240 + 80 * k; const x0 = p.x;
+  emit(new SigSequence({ mat: R.mat, seed: 5300 }, p, { dur: dur + .4, data: { carried: new Set(), acc: 0, done: false }, tick: (s, dt, gw) => {
+    if (s.t <= dur) {
+      p.state = 'dash'; p.stateTimer = .08; p.invulnerableTimer = Math.max(p.invulnerableTimer ?? 0, .1);
+      p.x = x0 + f * dist * (s.t / dur); clampToArena(p, gw?.battlefield?.boundsOverride ?? null);
+      for (const t of foes(gw, p)) if (!s.carried.has(t) && (t.x - p.x) * f > -10 && (t.x - p.x) * f < 50 && Math.abs(((t.z ?? p.z) - p.z) * DEPTH) < 44) { s.carried.add(t); strike(p, st, t, 10 + 6 * k, 0, 0, .5); }
+      for (const t of s.carried) { t.x = p.x + f * 40; if ('kbVelX' in t) t.kbVelX = 0; }
+      s.acc += dt; if (s.acc > .1) { s.acc = 0; groundFx(m.look === 'rock' ? 'claw' : m.look, p.x - f * 20, p.z, p.team, 30, gw); }
+      return;
+    }
+    if (!s.done) {
+      s.done = true; p.vx = 0;
+      for (const t of s.carried) { strike(p, st, t, 22 + 16 * k, f * 900, 320, .7, true); if ('kbVelX' in t) t.kbVelX = f * 900; }
+      if (s.carried.size) quake(m.look === 'rock' || m.look === 'blast' ? 13 : 10, .32, 6);
+    }
+  }, draw: (ctx, s) => {
+    const y = (p.y ?? 0); ctx.save(); const a = s.t <= dur ? 1 : 1 - (s.t - dur) / .4; ctx.globalAlpha = a;
+    for (let i = 0; i < 6; i++) piece(ctx, m.look, p.x - f * (10 + i * 16), y - 6 - (i % 2) * 18, 1.5 - i * .15, s.t, R, f, i);
+    if (m.look === 'shield') { ctx.strokeStyle = R.light; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(p.x + f * 24, y - 40, 30, f > 0 ? -1.2 : Math.PI - 1.2, f > 0 ? 1.2 : Math.PI + 1.2); ctx.stroke(); }
+    ctx.restore();
+  } }), st.quality);
+}
+// BLASTS: a chain of blasts marches down the lane (forge sparks, sound booms).
+function blasts(p, st, k, m) {
+  const R = styleOf(st).ramp; const f = p.facing || 1; const n = m.count ?? 4; swing(p, .3);
+  const spots = Array.from({ length: n }, (_, i) => ({ x: p.x + f * (70 + i * 70 * (.9 + .3 * k)), z: p.z, at: .12 + i * .12, done: false }));
+  emit(new SigSequence({ mat: R.mat, seed: 5400 }, p, { dur: .12 + n * .12 + .45, data: { spots }, tick: (s, dt, gw) => {
+    for (const sp of s.spots) {
+      if (sp.done || s.t < sp.at) continue; sp.done = true;
+      for (const t of foes(gw, p)) if (Math.hypot(t.x - sp.x, ((t.z ?? sp.z) - sp.z) * DEPTH) < 50) { strike(p, st, t, 14 + 10 * k, f * 260, 200, .45, true); }
+      groundFx(m.look, sp.x, sp.z, p.team, 40, gw); quake(5, .15, 2);
+    }
+  }, draw: (ctx, s) => {
+    ctx.save();
+    for (const sp of s.spots) { if (s.t < sp.at) continue; const age = s.t - sp.at; if (age > .4) continue; const y = groundYForDepth(sp.z); const kk = age / .4; ctx.globalAlpha = 1 - kk; const r = 14 + 34 * kk;
+      ctx.fillStyle = R.dark; ctx.beginPath(); ctx.arc(sp.x, y - 24, r, 0, TAU); ctx.fill(); ctx.fillStyle = R.mid; ctx.beginPath(); ctx.arc(sp.x, y - 24, r * .7, 0, TAU); ctx.fill(); ctx.fillStyle = R.core; ctx.beginPath(); ctx.arc(sp.x, y - 24, r * .3, 0, TAU); ctx.fill();
+      if (m.look === 'sound') { ctx.strokeStyle = R.light; ctx.lineWidth = 2; for (let i = 0; i < 2; i++) { ctx.beginPath(); ctx.ellipse(sp.x, y - 24, r * (1.2 + i * .4), r * (1.2 + i * .4) * .6, 0, 0, TAU); ctx.stroke(); } } }
+    ctx.restore();
+  } }), st.quality);
+}
+// CALM (ward): total stillness — for a moment every hit is turned away and answered, then a
+// shield wave pushes forward.
+function calm(p, st, k, m) {
+  const R = styleOf(st).ramp; const f = p.facing || 1; const dur = 1.1 + .6 * k; st.calmUntil = st.t + dur; swing(p, dur);
+  emit(new SigSequence({ mat: R.mat, seed: 5500 }, p, { dur: dur + .4, data: { waved: false, hit: new Set() }, tick: (s, dt, gw) => {
+    p.vx = 0;
+    if (!s.waved && s.t >= dur) { s.waved = true; for (const t of foes(gw, p)) if ((t.x - p.x) * f > -20 && (t.x - p.x) * f < 160 && Math.abs(((t.z ?? p.z) - p.z) * DEPTH) < 50) strike(p, st, t, 18 + 14 * k, f * 520, 120, .5, true); quake(6, .2, 3); }
+  }, draw: (ctx, s) => {
+    const y = (p.y ?? 0); ctx.save(); ctx.lineWidth = 2;
+    if (s.t < dur) { ctx.globalAlpha = .55 + .25 * Math.sin(s.t * 6); ctx.strokeStyle = R.mid; ctx.beginPath(); ctx.ellipse(p.x, y - 40, 44, 56, 0, 0, TAU); ctx.stroke(); ctx.strokeStyle = R.light; ctx.beginPath(); ctx.ellipse(p.x, y, 50, 14, 0, 0, TAU); ctx.stroke(); }
+    else { const kk = (s.t - dur) / .4; ctx.globalAlpha = 1 - kk; ctx.strokeStyle = R.light; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(p.x + f * (30 + 120 * kk), y - 40, 40, f > 0 ? -1.2 : Math.PI - 1.2, f > 0 ? 1.2 : Math.PI + 1.2); ctx.stroke(); }
+    ctx.restore();
+  } }), st.quality);
+}
+// ORBIT (serpent): the Wizard coils around the nearest foe, cutting from every side.
+function orbit(p, st, k, m, gw) {
+  const R = styleOf(st).ramp; const f = p.facing || 1;
+  const t0 = foes(gw, p).filter((o) => Math.hypot(o.x - p.x, ((o.z ?? p.z) - p.z) * DEPTH) < 260).sort((a, b) => Math.abs(a.x - p.x) - Math.abs(b.x - p.x))[0];
+  if (!t0) return rising(p, st, k, { ...m, look: 'serpent' });
+  const cx = t0.x; const cz = t0.z ?? p.z;
+  emit(new SigSequence({ mat: R.mat, seed: 5600 }, p, { dur: .8, data: { step: 0 }, tick: (s, dt, gw2) => {
+    const step = Math.floor(s.t / .14); p.invulnerableTimer = Math.max(p.invulnerableTimer ?? 0, .1);
+    if (step < 4 && step >= s.step) {
+      s.step = step + 1; const ang = step * Math.PI / 2 + Math.PI;
+      p.x = cx + Math.cos(ang) * 50; p.z = Math.max(.04, Math.min(.96, cz + Math.sin(ang) * 50 / DEPTH)); p.facing = Math.sign(cx - p.x) || f; swing(p, .1);
+      if (alive(t0)) { strike(p, st, t0, 10 + 6 * k, 0, step === 3 ? 600 : 40, .3, step === 3); quake(step === 3 ? 7 : 2, .12, step === 3 ? 4 : 1); }
+    }
+  }, draw: (ctx, s) => {
+    const y = groundYForDepth(cz); ctx.save(); ctx.globalAlpha = 1 - Math.max(0, (s.t - .55) / .25);
+    for (let i = 0; i < 16; i++) { const ang = i / 16 * TAU * Math.min(1, s.t / .56); piece(ctx, 'serpent', cx + Math.cos(ang) * 50, y + Math.sin(ang) * 15 - 10, 1.3, s.t, R, f, i); }
+    ctx.restore();
+  } }), st.quality);
+}
+const KINDS = { torrent, flash, vortex, crescents, rising, pillar, boomerang, flurry, charge, blasts, calm, orbit, crash: (p, st, k, m, gw) => crash(p, st, m, gw) };
+function runMove(p, st, move, k, gw) {
+  if (!move) return false;
+  p.lastBreathMove = move.name;
+  combat.spawnDamageText?.(p.x, (p.y ?? 0) - 96, move.name, { color: styleOf(st).ramp.light });
+  (KINDS[move.kind] ?? torrent)(p, st, k, move, gw);
+  return true;
+}
+
+// ── MAL ERWACHT (the Demon Slayer Mark, adapted) ──────────────────────────
+function awakenMark(p, st, gw) {
+  if ((st.markCd ?? 0) > st.t) { combat.spawnDamageText?.(p.x, (p.y ?? 0) - 90, 'MAL ERSCHÖPFT', { color: '#9e9e9e' }); return true; }
+  st.mark = { t: MARK.dur }; st.markCd = st.t + MARK.cooldown; swing(p, .45);
+  combat.spawnDamageText?.(p.x, (p.y ?? 0) - 100, 'MAL ERWACHT', { color: styleOf(st).ramp.light, isCrit: true });
+  combat.spawnShockwave?.(p.x, (p.y ?? 0) - 40, 70, styleOf(st).ramp.mid); quake(6, .3, 3);
+  // Resonance: the mark spreads to allies nearby (they grow faster and heal a little).
+  const allies = [...(gw?.minions ?? []), ...(gw?.primal ? [gw.primal] : [])].filter((a) => a && a.team === p.team && alive(a) && Math.hypot(a.x - p.x, ((a.z ?? p.z) - p.z) * DEPTH) < MARK.spread);
+  for (const a of allies) { a.breathMark = { t: MARK.allyDur, look: styleOf(st).mark, color: styleOf(st).ramp.mid }; if (Number.isFinite(a.hp)) a.hp = Math.min(a.maxHp ?? a.hp, a.hp + 12); if (Number.isFinite(a.speed) && !a._markSpeed) { a._markSpeed = a.speed; a.speed *= 1.25; } }
+  st.markAllies = allies;
+  return true;
+}
+// The mark on the body: element-shaped lines on face, chest and arm.
+function drawMark(ctx, x, y, R, shape, t, f = 1) {
+  ctx.save(); ctx.globalAlpha = .75 + .25 * Math.sin(t * 6); ctx.strokeStyle = R.mid; ctx.lineWidth = 2; ctx.lineCap = 'round';
+  const at = (px, py) => [x + f * px, y + py];
+  const lines = {
+    flames: [[[-4, -62], [-1, -70], [2, -64], [4, -72]], [[-6, -40], [-2, -50], [1, -42]]], waves: [[[-6, -64], [-2, -67], [2, -64], [6, -67]], [[-7, -44], [-2, -47], [3, -44]]],
+    bolts: [[[-3, -72], [1, -66], [-2, -64], [3, -58]], [[6, -48], [2, -42], [6, -40]]], swirls: [[[-5, -66], [0, -70], [4, -66], [0, -62]]], cracks: [[[-6, -70], [-2, -64], [-5, -58]], [[4, -48], [0, -42]]],
+    blossom: [[[-4, -66], [0, -70], [4, -66], [0, -62], [-4, -66]]], sunburst: [[[-6, -66], [6, -66]], [[0, -72], [0, -60]], [[-4, -70], [4, -62]]], crescents: [[[-5, -70], [-1, -64], [-5, -58]]],
+    clouds: [[[-6, -64], [-2, -68], [2, -64], [6, -68]]], fangs: [[[-6, -68], [-3, -60]], [[0, -68], [3, -60]]], rivets: [[[-5, -66], [5, -66]], [[-5, -60], [5, -60]]], runes: [[[-4, -70], [4, -70], [0, -60], [-4, -70]]],
+    scales: [[[-6, -64], [-3, -67], [0, -64], [3, -67], [6, -64]]], hearts: [[[-4, -66], [0, -62], [4, -66], [2, -69], [0, -67], [-2, -69], [-4, -66]]], wings: [[[-6, -62], [-1, -66], [-6, -70]], [[6, -62], [1, -66], [6, -70]]], notes: [[[-3, -60], [-3, -70], [3, -72]]]
+  }[shape] ?? [];
+  for (const ln of lines) { ctx.beginPath(); ln.forEach(([px, py], i) => { const [qx, qy] = at(px, py); i ? ctx.lineTo(qx, qy) : ctx.moveTo(qx, qy); }); ctx.stroke(); }
+  ctx.restore();
+}
+
+// Pieces sprinkled along the swing trail.
+const TRAIL_LOOK = { petals: 'petal', crescent: 'moon', gust: 'wind', mist: 'mist', claw: 'claw', shield: 'shield', sting: 'sting', notes: 'sound', flame: 'flame' };
+
+// ── the stance ────────────────────────────────────────────────────────────
+function breathStance() {
+  return {
+    duration: 15,
+    hint: (p, st) => `${styleOf(st).name} · ↑ ${styleOf(st).up.name} · → ${styleOf(st).forward.name} · ↓ MAL`,
+    moveMult: (p, st) => (st.mark ? MARK.speed : 1),
+    meleeMult: (p, st) => (st.mark ? MARK.dmg : 1),
+    damageTaken(p, st, amount) {
+      if (st.calmUntil > st.t) {
+        // Stille See: the hit is turned away and answered.
+        combat.spawnHitSparks?.(p.x + (p.facing || 1) * 20, (p.y ?? 0) - 42, p.facing || 1, styleOf(st).ramp.light, 12);
+        p._sigDodged = true; st.counter = (st.counter ?? 0) + 1;
+        return 0;
+      }
+      return amount;
+    },
+    onEvent(p, st, type, info, gw) {
+      const f = p.facing || 1;
+      if (type === 'attack') st.arcs.push({ t: 0, step: info.step ?? 1, f, big: (info.step ?? 1) >= 3 });
+      if (type === 'hit') for (const h of info.hits ?? []) {
+        if (h.target.isProp) continue;
+        const s = styleOf(st).status; if (s && (st.hits = (st.hits ?? 0) + 1) % 3 === 0) applyStatus(h.target, s);
+        if (st.mark) applyStatus(h.target, 'burn'); // the marked blade is hot
+        if (styleOf(st).heals && Number.isFinite(p.hp)) p.hp = Math.min(p.maxHp, p.hp + 2);
+      }
+      // Combo finisher: a short version of the signature move.
+      if (type === 'attack' && (info.step ?? 1) >= 3) { const fw = styleOf(st).forward; if (fw.kind === 'torrent') torrent(p, st, .2, { ...fw, len: fw.len * .55, dmg: fw.dmg * .7 }); else if (fw.kind === 'crescents') crescents(p, st, .2, { ...fw, count: 3 }); }
+    },
+    // Charged release: forward / up = the style's moves, down = the mark.
+    charge(p, st, dir, ratio, gw) {
+      const k = Math.max(.3, Math.min(1, ratio ?? .6)); const s = styleOf(st);
+      if (dir === 'down') return awakenMark(p, st, gw);
+      if (dir === 'up') return runMove(p, st, s.up, k, gw);
+      if (dir === 'forward' || dir === 'back') return runMove(p, st, s.forward, k, gw);
+      return false;
+    },
+    sprintMove(p, st, gw) { const s = styleOf(st); if (!s.sprint) return false; return runMove(p, st, s.sprint, .7, gw); },
+    // Thunder keeps its lightning-step sprint (a piercing lunge variant).
+    sprint: (p, st) => (styleOf(st).sprint ? null : { name: 'BLITZSCHRITT', primal: true, pierce: true, lungeSpeed: 1.8, carryMult: 1, recoilMult: 1.1, damageMult: 1.1, color: styleOf(st).ramp.mid }),
+    diveMove(p, st, gw) { return runMove(p, st, { ...styleOf(st).dive, kind: 'crash' }, 1, gw) || true; },
+    update(p, st, dt) {
+      for (const a of st.arcs) a.t += dt; st.arcs = st.arcs.filter((a) => a.t < (a.big ? .4 : .28));
+      if (st.mark) {
+        st.mark.t -= dt;
+        if (Number.isFinite(p.hp) && p.hp > 2) p.hp -= MARK.drain * dt; // the racing heart
+        if (st.mark.t <= 0) { st.mark = null; for (const a of st.markAllies ?? []) { if (a._markSpeed) { a.speed = a._markSpeed; a._markSpeed = null; } a.breathMark = null; } }
+      }
+      for (const a of st.markAllies ?? []) if (a.breathMark) { a.breathMark.t -= dt; if (a.breathMark.t <= 0) { if (a._markSpeed) { a.speed = a._markSpeed; a._markSpeed = null; } a.breathMark = null; } }
+    },
+    end(p, st) { for (const a of st.markAllies ?? []) { if (a._markSpeed) { a.speed = a._markSpeed; a._markSpeed = null; } a.breathMark = null; } },
+    render(ctx, p, st, ry, layer) {
+      const s = styleOf(st); const R = s.ramp;
+      if (layer !== 'front') { if (st.t < 1) { ctx.save(); for (let i = 0; i < 8; i++) { const a = i / 8 * TAU + st.t * 4; piece(ctx, s.trail === 'flame' ? 'flame' : s.forward.look, p.x + Math.cos(a) * 24, ry - 30 + Math.sin(a) * 26, .8 * (1 - st.t), st.t, R, p.facing || 1, i); } ctx.restore(); } return; }
+      // The swing trail of the element.
+      for (const a of st.arcs) {
+        const k = a.t / (a.big ? .4 : .28); const Rr = a.big ? 70 : 48; const cx = p.x + a.f * 16; const cy = ry - 40; const fade = 1 - k;
+        const a0 = a.step % 2 ? -1.2 : 1.2; const a1 = -a0;
+        const pts = Array.from({ length: 9 }, (_, i) => { const u = a0 + (a1 - a0) * (i / 8) * Math.min(1, k * 3); return [cx + a.f * Math.cos(u) * Rr, cy + Math.sin(u) * Rr * .8]; });
+        if (s.trail === 'bolt') { thread(ctx, pts.map(([x, y], i) => [x + (i % 2 ? 4 : -4), y + (i % 2 ? -3 : 3)]), R.mid, 3, fade); thread(ctx, pts, R.core, 1.2, fade); }
+        else ribbon(ctx, pts, (i, n) => (a.big ? 9 : 6) * Math.sin((i / n) * Math.PI) + 1, R.mat, 4200 + a.step, st.t, fade);
+        if (s.trail !== 'bolt' && s.trail !== 'ribbon') { ctx.save(); ctx.globalAlpha = fade; const look = s.trail === 'shards' ? (st.style === 'forge' ? 'blast' : 'rock') : TRAIL_LOOK[s.trail] ?? 'flame'; for (let i = 2; i < 9; i += 3) piece(ctx, look, pts[i][0], pts[i][1] + 10, .9, st.t, R, a.f, i); ctx.restore(); }
+      }
+      if (st.mark) drawMark(ctx, p.x, ry, R, s.mark, st.t, p.facing || 1);
+      for (const a of st.markAllies ?? []) if (a.breathMark && alive(a)) drawMark(ctx, a.x, (a.y ?? 0) + 14, R, a.breathMark.look, st.t, a.facing || 1);
+    }
+  };
+}
+
+// Cast: start the base style — or derive a new one from the style already running.
+function castBreath(c, id) {
+  const p = c.caster; const base = BREATH_RUNES[id];
+  const running = p.signature && BREATH_RUNES[p.signature.id] ? p.signature.baseStyle : null;
+  const derived = running && running !== base ? comboOf(running, base) : null;
+  const style = derived ?? base;
+  startStance(p, id, c.quality, { arcs: [], style, baseStyle: base });
+  if (derived) { c.gw?.showAnnouncement?.(`ABGELEITET: ${BREATH_STYLES[derived].name}`, 1.6); combat.spawnShockwave?.(p.x, (p.y ?? 0) - 40, 90, BREATH_STYLES[derived].ramp.mid); }
+}
+for (const id of Object.keys(BREATH_RUNES)) defineSignature(id, { cast(c) { castBreath(c, id); }, stance: breathStance() });

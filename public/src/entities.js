@@ -23,7 +23,7 @@ import { updatePrimalBond, bondMoveMultiplier, bondGainMultiplier, bondDisplacem
 import { createSegments, damageSegments, updateSegments, renderSegments } from './castle_segments.js';
 import { updateBuffForm, endBuffForm, isGenericBuff, currentBuffForm, renderBuffManifestation, buffVeinPainter, buffCloakColor, renderBuffGuard, levitationOffset, renderBuffCharge } from './buff_forms.js';
 import { masteryOnShieldHit, masteryTickShield, masteryChargedRelease, masteryPerfectBlock, masteryTier, currentAttacker } from './mastery.js';
-import { updateSignatureStance, renderSignatureStance, signatureHover, signatureMoveMult, signatureEvent, signatureDamageTaken, setHitContext, signatureSprintVariant } from './signature_runes.js';
+import { updateSignatureStance, renderSignatureStance, signatureHover, signatureMoveMult, signatureEvent, signatureDamageTaken, setHitContext, signatureSprintVariant, signatureCharge, signatureSprintMove, signatureDive, signatureMeleeMult } from './signature_runes.js';
 
 // Every spell a rune deck can produce: single runes plus every valid two-
 // and three-rune recipe that its cards allow (copies respected).
@@ -889,6 +889,8 @@ export class Player extends GroundEntity {
     }
     const chargeRatio = 1 - (this.chargeTimer / this.chargeMaxTime);
     this.chargeTimer = 0;
+    // A breathing stance turns every charged direction into its move (down = the mark).
+    if (this.isAlive && this.chargeDir !== 'hold' && chargeRatio >= .05 && signatureCharge(this, this.chargeDir ?? 'forward', chargeRatio)) return true;
     if (this.chargeDir === 'hold') { if (this.isAlive) this.state = 'idle'; return this.isAlive ? this.holdAttack(chargeRatio) : false; }
     // Ground charge-down = the weapon-specific buff / debuff (no generic move without a weapon).
     if (this.chargeDir === 'down') { this.state = 'idle'; return this.isAlive && chargeRatio >= .05 ? castWeaponDown(this, window.gameWorld, spells) : false; }
@@ -1158,6 +1160,8 @@ export class Player extends GroundEntity {
       this.triggerMeleeHitbox(up.damage, this.facing * up.knockback, up.lift, 0.5, false, { hitstopTicks: up.hitstopTicks, hitReaction: up.hitReaction });
       return true;
     }
+    // A breathing stance dives its own way (sprint jump or plain air down): the crash.
+    if (!this.grounded && (attackKind === 'dive' || move.z > 0.55) && !activeMoveset(this) && signatureDive(this)) { this.diveAim = false; this.lastSprintAttack = this.lastBreathMove; return true; }
     if (!this.grounded && (attackKind === 'dive' || move.z > 0.55) && this.isSprintJump && !this.sprintDive && !activeMoveset(this) && kitOf(this)?.dive) {
       // Sprint jump + down with a class weapon: the weapon's own dive, slanted at the foe below.
       const style = kitOf(this).dive.style;
@@ -1292,6 +1296,8 @@ export class Player extends GroundEntity {
     // Arcane State: the form's sprint attack is a special and costs mana (else a plain one).
     if (form && this.buffForm?.timer > 0) { if (this.freeMana >= FORM_SPECIAL_MANA.sprint) this.mp -= FORM_SPECIAL_MANA.sprint; else form = null; }
     // Primal Bond: the Unity sprint attack with the bond's carry / push.
+    // A breathing stance has its own sprint attack (wind vortex, fire trail cut …).
+    if (!form && signatureSprintMove(this)) { this.cancelSprint(); this.canAttack = false; this.lastSprintAttack = this.lastBreathMove ?? 'ATEM-ANSTURM'; return true; }
     const primal = form ? null : (signatureSprintVariant(this) ?? primalSprintVariant(this));
     // A class weapon has its own sprint attack (weapon_sprint.js).
     const variant = form ? FORM_SPRINT_ATTACKS[form]
@@ -1420,6 +1426,7 @@ export class Player extends GroundEntity {
     const bladeLook = WEAPONS[this.weapon ?? this.classWeapon]?.look;
     // Every swing is a status source (blades bleed); castBy lets masteries react to it.
     const prevStatusSource = setStatusSource({ team: this.team, statusElements: isBladeLook(bladeLook) ? ['blade'] : [], statusChance: isFinisher ? 2 : 1, castBy: this });
+    dmg *= signatureMeleeMult(this); // breathing: the awakened mark
     // Letztes Gefecht (skill): melee and charged hits below 25 % HP hit harder.
     if (this.buildModifiers?.lastStand && this.hp < this.maxHp * .25) dmg *= 1 + this.buildModifiers.lastStand;
     // Weapon reach / sweeps behind (scythe); the default reach stays 78 px.

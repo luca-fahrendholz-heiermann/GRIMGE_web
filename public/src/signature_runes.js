@@ -13,6 +13,7 @@ import {
 import './signature_abilities_a.js';
 import './signature_abilities_b.js';
 import './signature_abilities_c.js';
+import './breathing.js'; // S40–S42, S75–S83 breathing styles (+ derived combos)
 import './signature_abilities_d.js'; // S37–S44 (design rules: ice spikes, shafts, water drill, breathings, objects)
 import './signature_abilities_e.js'; // S45–S48 (two-stage spells, counter charges)
 import './signature_abilities_f.js'; // S50–S52 (mirror prison, blood cross, challenge)
@@ -90,6 +91,11 @@ export function signatureSprintVariant(player) {
   const st = player.signature;
   return st?.impl.stance.sprint ? st.impl.stance.sprint(player, st) : null;
 }
+// Breathing stances: a charged release / sprint attack / air dive becomes the style's move.
+export function signatureCharge(player, dir, ratio) { const st = player.signature; return !!st?.impl.stance.charge?.(player, st, dir, ratio, world); }
+export function signatureSprintMove(player) { const st = player.signature; return !!st?.impl.stance.sprintMove?.(player, st, world); }
+export function signatureDive(player) { const st = player.signature; return !!st?.impl.stance.diveMove?.(player, st, world); }
+export function signatureMeleeMult(player) { const st = player.signature; const m = st?.impl.stance.meleeMult; return typeof m === 'function' ? m(player, st) : (m ?? 1); }
 export function signatureDamageTaken(player, amount, kx, kind) {
   const st = player.signature;
   return st?.impl.stance.damageTaken ? st.impl.stance.damageTaken(player, st, amount, kx, kind) : amount;

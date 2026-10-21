@@ -2545,7 +2545,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   const step = (n, dt = 1 / 60) => { for (let i = 0; i < n; i++) { P.update(dt, neutral, game.battlefield, game); game.updateProjectiles(dt); spells.update(dt, game); } };
   const cast = (id, target = null) => spells.cast(P, spells.resolveSpell([{ id: 'sig_' + id }]), game, null, target);
   const ids = Object.keys(core.SIGNATURES);
-  assert(ids.length === 74 && ids.every((id) => core.signatureImpl(id)?.cast) && sigMod.SIGNATURE_RUNE_IDS.every((id) => isSpecialRune(id) && runeManaCost(id) >= 28 && runeManaCost(id) <= 46), 'All 74 signature specials (atlas S01–S36 + S37–S74) are special runes with their own mechanic and bound mana');
+  assert(ids.length === 83 && ids.every((id) => core.signatureImpl(id)?.cast) && sigMod.SIGNATURE_RUNE_IDS.every((id) => isSpecialRune(id) && runeManaCost(id) >= 28 && runeManaCost(id) <= 46), 'All 83 signature specials (atlas S01–S36 + S37–S83) are special runes with their own mechanic and bound mana');
   assert(ids.every((id) => spellHowTo('sig_' + id)?.effect?.length > 40) && !spells.resolveSpell([{ id: 'sig_S03' }, { id: 'ignis' }]), 'Signature specials explain themselves in the grimoire and never fuse');
   // Every special casts, runs and renders (strict canvas) without errors.
   const strict = new Proxy({}, { get: (t, k) => (k === 'ellipse' || k === 'arc') ? (x, y, rx, ry) => { if (rx < 0 || (k === 'ellipse' && ry < 0)) throw new Error('IndexSizeError ' + k); } : (k === 'canvas' ? undefined : () => {}), set: () => true });
@@ -3892,6 +3892,66 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   const xame = { canvas: 'v1', frames: { idle: [f0, f1] }, hold: { idle: 28 } };
   assert(sprites.resolveFrame(xame, 'idle', 0, 0).canvas === 'v1' && sprites.resolveFrame(xame, 'idle', .5, 0).canvas === 'v2' && sprites.resolveFrame(xame, 'idle', 1, 0).canvas === 'v1', 'Xame: v1 and v2 alternate as a calm idle animation (about half a second each)');
   P.heroKey = keep.hero; P.focusTransformTimer = keep.focus; sprites.sprites.thesen = keep.a; sprites.sprites.thesen_focus = keep.b;
+}
+
+// Breathing styles for every element (user, 21 Oct 2026): every charged direction, the sprint
+// attack and the air dive are moves of the style; charge down awakens the spreading mark;
+// a second breathing derives a new style.
+{
+  const BR = await import('./public/src/breathing.js'); const core = await import('./public/src/signature_core.js'); const { Minion } = await import('./public/src/entities.js'); const { environment } = await import('./public/src/environment.js');
+  game.returnToHub(); game.setMatchMode('training'); game.startMatch(); game.selectTrainingMap('waterfalls');
+  const P = game.player; const dummy = game.trainingDummy; dummy.homeX = dummy.x = 1600;
+  const neutral = { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false };
+  const step = (n) => { for (let i = 0; i < n; i++) { P.update(1 / 60, neutral, game.battlefield, game); spells.update(1 / 60, game); } };
+  const ready = () => { P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.grounded = true; P.elevation = 0; P.vElevation = 0; P.invulnerableTimer = 0; P.sprintStrike = null; };
+  const setup = (id, style = null) => {
+    spells.clearRuntime(); game.minions = []; if (P.signature) core.endStance(P, 'replaced'); P.equipClassWeapon(null);
+    P.x = 300; P.z = .5; P.facing = 1; P.hp = P.maxHp; ready(); game.battlefield.placeOnSurface(P);
+    spells.cast(P, spells.resolveSpell([{ id: 'sig_' + id }]), game);
+    if (style) P.signature.style = style;
+  };
+  const foeAt = (x, z = .5) => { const m = new Minion(x, z, 'red', 'melee', 0); m.maxHp = m.hp = 3000; m.passive = true; game.battlefield.placeOnSurface(m); game.minions.push(m); return m; };
+  const charged = (dir) => { ready(); P.beginCharge(dir); P.chargeTimer = P.chargeMaxTime * .1; P.chargeDir = dir; return P.releaseCharge(); };
+  let bad = 0; const strict = new Proxy({}, { get: (t, k) => (k === 'arc' || k === 'ellipse') ? (x, y, r1, r2) => { if (r1 < 0 || (k === 'ellipse' && r2 < 0)) bad++; } : k === 'canvas' ? undefined : k === 'measureText' ? () => ({ width: 10 }) : () => {}, set: () => true });
+  const renderAll = () => { for (const sp of spells.activeSpells) sp.render?.(strict); core.SIGNATURES && P.signature?.impl.stance.render?.(strict, P, P.signature, P.y, 'front'); };
+  assert(Object.keys(BR.BREATH_RUNES).length === 12 && ['ventus', 'terra', 'natura', 'lux', 'umbra', 'void', 'bestia', 'construct', 'ward'].length === 9, 'Every element has its breathing rune (12 base styles)');
+  const broken = [];
+  const styles = Object.keys(BR.BREATH_STYLES);
+  for (const style of styles) {
+    const id = Object.entries(BR.BREATH_RUNES).find(([, v]) => v === style)?.[0] ?? 'S40';
+    for (const move of ['forward', 'up', 'sprint', 'dive']) {
+      setup(id, style); const m = foeAt(move === 'up' ? 360 : 400); if (move === 'dive') { m.x = 300; }
+      try {
+        if (move === 'forward' || move === 'up') charged(move);
+        else if (move === 'sprint') { P.sprintActive = true; P.vx = 320; P.startSprintAttack(); }
+        else { P.elevation = 90; P.grounded = false; P.executeAttack(neutral, 'dive'); }
+        step(130); renderAll();
+        if (m.hp >= 3000) broken.push(style + ':' + move);
+      } catch (err) { broken.push(style + ':' + move + ' ' + err.message); }
+    }
+  }
+  assert(!broken.length && !bad, 'All 16 breathing styles: charge forward / up, sprint attack and air dive each hit and render cleanly ' + broken.slice(0, 6).join(' | '));
+  // Wind sprint: spin into a whirlwind, then burst forward — foes fly away in depth too.
+  setup('S75'); const w = foeAt(420, .52); const z0 = w.z; P.sprintActive = true; P.vx = 320; P.startSprintAttack(); step(50);
+  assert(P.lastSprintAttack === 'WIRBELSTOSS' && w.hp < 3000 && Math.abs(w.z - z0) > .01, 'Wind sprint WIRBELSTOSS: a whirlwind spin, then a burst forward — the foe flies away in depth too');
+  // Fire sprint: a trail of fire behind, the cut foe bursts into flames after you are through.
+  setup('S41'); const fz = foeAt(380); P.sprintActive = true; P.vx = 320; P.startSprintAttack(); step(10); const passHp = fz.hp; step(20);
+  assert(P.x > fz.x && fz.hp < passHp && STATUS.hasStatus(fz, 'burn') && environment.effects.some((e) => e.type === 'scorch'), 'Fire sprint GLUTSCHNITT: through the foe, a fire trail behind — the cut foe bursts into flames');
+  // Charge down: the mark awakens (damage / speed up, blade hot) and spreads to allies nearby.
+  setup('S40'); const ally = new Minion(330, .5, 'blue', 'melee', 0); game.battlefield.placeOnSurface(ally); game.minions.push(ally); const allySpeed = ally.speed;
+  charged('down');
+  assert(P.signature.mark && P.signature.impl.stance.meleeMult(P, P.signature) > 1 && P.signature.impl.stance.moveMult(P, P.signature) > 1 && ally.breathMark && ally.speed > allySpeed, 'Charge down: MAL ERWACHT — stronger and faster, and the mark spreads to the ally next to you');
+  const hpMark = P.hp; step(60); assert(P.hp < hpMark, 'The mark burns a little HP (the racing heart)');
+  // Combos: a second breathing derives a new style along the family tree.
+  setup('S40'); spells.cast(P, spells.resolveSpell([{ id: 'sig_S81' }]), game);
+  const serpent = P.signature?.style; setup('S41'); spells.cast(P, spells.resolveSpell([{ id: 'sig_S77' }]), game); const love = P.signature?.style;
+  setup('S77'); spells.cast(P, spells.resolveSpell([{ id: 'sig_S79' }]), game); const insect = P.signature?.style; setup('S42'); spells.cast(P, spells.resolveSpell([{ id: 'sig_S82' }]), game); const sound = P.signature?.style;
+  setup('S40'); spells.cast(P, spells.resolveSpell([{ id: 'sig_S41' }]), game); const plain = P.signature?.style;
+  assert(serpent === 'serpent' && love === 'love' && insect === 'insect' && sound === 'sound' && plain === 'flame', 'Breathing combos: water + beast = serpent, flame + flower = love, flower + moon = insect, thunder + forge = sound (unrelated pairs just switch)');
+  // Ward: still sea — every hit is turned away for a moment.
+  setup('S83'); charged('forward'); const hpCalm = P.hp; P.invulnerableTimer = 0; P.takeDamage(30, -100, 0, .2, false, 'melee');
+  assert(P.hp === hpCalm, 'Ward breathing STILLE SEE: in total calm every hit is turned away');
+  if (P.signature) core.endStance(P, 'replaced'); spells.clearRuntime(); game.minions = []; ready(); dummy.homeX = dummy.x = 512;
 }
 
 const frameCallback = nextFrame;
