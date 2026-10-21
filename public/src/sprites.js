@@ -14,6 +14,11 @@ export class SpriteManager {
     this.summonSprites = {};
     this.loaded = false;
     this.heroDefs = {
+      // The user's pixel-art characters (21 Oct 2026), prepared by tools/prepare_pixel_characters.cjs:
+      // one shared crop per character, so frames / variants swap without a jump.
+      thesen: { name: 'Thesen', prepared: ['char_thesen.png'], weapon: 'Bone Spear', role: 'Horned Warrior / Focus Transformation' },
+      thesen_focus: { name: 'Thesen (Focus)', prepared: ['char_thesen_focus.png'], weapon: 'Bone Spear', role: 'Focus form: cape and spear' },
+      xame: { name: 'Xame', prepared: ['char_xame_0.png', 'char_xame_1.png'], hold: 28, weapon: 'Void-Flame Spear', role: 'Skull Warlock / Void Flames' },
       paladin: { name: 'Valerius the Vanguard', file: 'char_paladin.png', weapon: 'Greatsword & Shield', role: 'Balanced / Heavy Impact' },
       berserker: { name: 'Torin the Marauder', file: 'char_berserker.png', weapon: 'Dual Axes', role: 'Aggressive / High Speed' },
       mage: { name: 'Ignis the Archmage', file: 'char_mage.png', weapon: 'Grimoire of Runes', role: 'Spellcaster / High Mana' },
@@ -34,6 +39,7 @@ export class SpriteManager {
 
   async loadAll() {
     const promises = Object.entries(this.heroDefs).map(([key, def]) => {
+      if (def.prepared) return this.loadPreparedSprite(key, def.prepared.map((f) => `assets/sprites/${f}`), def);
       if (!def.file) return Promise.resolve();
       return this.loadAndProcessSprite(key, `assets/sprites/${def.file}`);
     });
@@ -59,6 +65,25 @@ export class SpriteManager {
     await this.loadSheetSprites();
     this.loaded = true;
     console.log('⚔️ All GRIMGE character sprites processed & cached.');
+  }
+
+  // Prepared pixel sprites: already transparent and cropped to one shared frame, so they are
+  // NOT re-cropped (that would misalign the frames). Several files = the idle animation.
+  loadPreparedSprite(key, srcs, def = {}) {
+    const load = (src) => new Promise((resolve) => { const img = new Image(); img.onload = () => resolve(img); img.onerror = () => { console.error(`Failed to load sprite: ${src}`); resolve(null); }; img.src = src; });
+    return Promise.all(srcs.map(load)).then((imgs) => {
+      if (imgs.some((img) => !img)) return null;
+      const frames = imgs.map((img) => this.preparedFrame(img));
+      const spr = { ...frames[0], pixel: true, procFull: true };
+      if (frames.length > 1) { spr.frames = { idle: frames }; spr.hold = { idle: def.hold ?? 30 }; }
+      this.sprites[key] = spr;
+      return spr;
+    });
+  }
+  preparedFrame(img) {
+    const make = (fill) => { const c = document.createElement('canvas'); c.width = img.width; c.height = img.height; const x = c.getContext('2d'); x.imageSmoothingEnabled = false; x.drawImage(img, 0, 0); if (fill) { x.globalCompositeOperation = 'source-in'; x.fillStyle = fill; x.fillRect(0, 0, c.width, c.height); } return c; };
+    const canvas = make(null);
+    return { canvas, flashCanvas: make('#ffffff'), hurtCanvas: make('#ff2222'), width: canvas.width, height: canvas.height, anchorX: canvas.width * .5, anchorY: canvas.height - 2 };
   }
 
   loadAndProcessSprite(key, src) {
@@ -554,7 +579,7 @@ export class SpriteManager {
         anchorX: spr.anchorX, anchorY: spr.anchorY
       };
     }
-    const holdTicks = CLIP_TIMING[animKey] ?? CLIP_TIMING._default;
+    const holdTicks = spr.hold?.[animKey] ?? CLIP_TIMING[animKey] ?? CLIP_TIMING._default;
     const loops = !(animKey === 'attack' || animKey === 'dead' || animKey === 'hurt'
       || animKey === 'uppercut' || animKey === 'dive');
     const cadence = opts.cadence || 1.0;
@@ -623,7 +648,8 @@ export class SpriteManager {
       sx = procScaleX ?? 1.0;
       sy = procScaleY ?? 1.0;
     } else {
-      const proc = spr.frames ? 0.4 : 1.0;
+      // Sheets carry their own motion; prepared sprites (idle frames only) keep the full procedural motion.
+      const proc = spr.frames && !spr.procFull ? 0.4 : 1.0;
       switch (state) {
         case 'idle':
           sy = 1.0 + Math.sin(animTime * 3) * 0.025 * proc;

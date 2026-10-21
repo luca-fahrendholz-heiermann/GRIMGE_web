@@ -1692,6 +1692,10 @@ export class Player extends GroundEntity {
   clearPreparedRunes() { this.preparedRunes = []; this.slottedSpells = []; this.selectedSpellIndex = 0; }
   updateGhosts(dt) { this.ghosts = this.ghosts.filter(g => (g.alpha -= dt * 3.5) > 0); }
 
+  // The sprite to draw: during the Focus transformation a hero with a focus variant
+  // (e.g. Thesen: cape and spear) shows it.
+  get renderKey() { return this.focusTransformTimer > 0 && sprites.sprites[this.heroKey + '_focus'] ? this.heroKey + '_focus' : this.heroKey; }
+
   render(ctx) {
     // Burrowed: only the travelling dirt mound (drawn by the spell) is visible.
     if (this.burrowed) return;
@@ -1736,7 +1740,7 @@ export class Player extends GroundEntity {
     if (this.isAlive && this.chargeTimer > 0 && !buffActive) this.renderChargeAura(ctx, renderY);
     // Body forms glow along the Wizard's own silhouette (chakra cloak).
     const formCloak = this.isAlive ? this.formCloakColor() : null;
-    for (const g of this.ghosts) sprites.renderEntity(ctx, this.heroKey, g.x, g.y, { facing: g.facing, state: g.state, animTime: g.animTime, alpha: g.alpha, hitFlash: 1 });
+    for (const g of this.ghosts) sprites.renderEntity(ctx, this.renderKey, g.x, g.y, { facing: g.facing, state: g.state, animTime: g.animTime, alpha: g.alpha, hitFlash: 1 });
 
     let useProc = false;
     let pRot = 0, pOX = 0, pOY = 0, pSX = 1.0, pSY = 1.0;
@@ -1830,7 +1834,7 @@ export class Player extends GroundEntity {
     // Klingenblüte (A04): the weapon has become the petal swarm — only the swarm renderer draws it.
     const armed = this.isAlive && (this.weapon || this.classWeapon) && currentBuffForm(this)?.id !== 'A04';
     if (armed) drawHeldWeapon(ctx, this, renderY, 'back');
-    sprites.renderEntity(ctx, this.heroKey, this.x, renderY, renderOpts);
+    sprites.renderEntity(ctx, this.renderKey, this.x, renderY, renderOpts);
     if (armed) drawHeldWeapon(ctx, this, renderY, 'front');
     // HOLD charge without a weapon: the bare hands glow (with a weapon, the weapon pulses).
     const holdK = this.isAlive && !armed ? this.holdChargeLevel() : null;
@@ -1952,13 +1956,13 @@ export class Player extends GroundEntity {
         const a = i / 8 * Math.PI * 2;
         // The cloak streams upward: copies above the body reach further.
         const lift = Math.sin(a) < 0 ? 1.8 : 1;
-        sprites.renderEntity(ctx, this.heroKey, this.x + Math.cos(a) * flicker, renderY + Math.sin(a) * flicker * lift, { ...renderOpts, hitFlash: 0, tint: cloak.edge, alpha: .5 * cloak.fade });
+        sprites.renderEntity(ctx, this.renderKey, this.x + Math.cos(a) * flicker, renderY + Math.sin(a) * flicker * lift, { ...renderOpts, hitFlash: 0, tint: cloak.edge, alpha: .5 * cloak.fade });
       }
       return;
     }
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
-    sprites.renderEntity(ctx, this.heroKey, this.x, renderY, { ...renderOpts, hitFlash: 0, tint: cloak.inner, alpha: (.22 + Math.sin(this.animTime * 9) * .05) * cloak.fade });
+    sprites.renderEntity(ctx, this.renderKey, this.x, renderY, { ...renderOpts, hitFlash: 0, tint: cloak.inner, alpha: (.22 + Math.sin(this.animTime * 9) * .05) * cloak.fade });
     ctx.restore();
   }
 

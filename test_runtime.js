@@ -3879,6 +3879,21 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   P.equipClassWeapon(null); P.elevation = 0; P.grounded = true; P.isSprintJump = false; P.state = 'idle'; spells.clearRuntime(); game.minions = []; dummy.homeX = dummy.x = 512;
 }
 
+// The user's pixel characters (21 Oct 2026): Thesen switches to its cape-and-spear sprite in the
+// Focus transformation; Xame's two images are its idle animation.
+{
+  const { sprites } = await import('./public/src/sprites.js');
+  const P = game.player; const keep = { hero: P.heroKey, focus: P.focusTransformTimer, a: sprites.sprites.thesen, b: sprites.sprites.thesen_focus };
+  assert(sprites.heroDefs.thesen?.prepared && sprites.heroDefs.thesen_focus?.prepared && sprites.heroDefs.xame?.prepared?.length === 2, 'Thesen (base + focus variant) and Xame (two idle frames) are hero sprites');
+  sprites.sprites.thesen = sprites.sprites.thesen ?? { canvas: {} }; sprites.sprites.thesen_focus = sprites.sprites.thesen_focus ?? { canvas: {} };
+  P.heroKey = 'thesen'; P.focusTransformTimer = 0; const plain = P.renderKey; P.focusTransformTimer = 2; const focus = P.renderKey;
+  assert(plain === 'thesen' && focus === 'thesen_focus', 'Thesen: the Focus transformation shows the cape-and-spear sprite (v2), otherwise the base (v1)');
+  const f0 = { canvas: 'v1', width: 1, height: 1 }; const f1 = { canvas: 'v2', width: 1, height: 1 };
+  const xame = { canvas: 'v1', frames: { idle: [f0, f1] }, hold: { idle: 28 } };
+  assert(sprites.resolveFrame(xame, 'idle', 0, 0).canvas === 'v1' && sprites.resolveFrame(xame, 'idle', .5, 0).canvas === 'v2' && sprites.resolveFrame(xame, 'idle', 1, 0).canvas === 'v1', 'Xame: v1 and v2 alternate as a calm idle animation (about half a second each)');
+  P.heroKey = keep.hero; P.focusTransformTimer = keep.focus; sprites.sprites.thesen = keep.a; sprites.sprites.thesen_focus = keep.b;
+}
+
 const frameCallback = nextFrame;
 frameCallback(game.lastFrameTime + 16);
 game.debugVisible = true;

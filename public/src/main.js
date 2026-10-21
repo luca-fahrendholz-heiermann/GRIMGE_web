@@ -2548,7 +2548,7 @@ export class GameWorld {
     this.attachBattlefieldCallbacks();
     const spawn = this.battlefield.getSpawn('blue');
     this.player = new Player(spawn.x, spawn.z);
-    this.player.heroKey = this.selectedHeroKey ?? ui.getSelectedHero?.() ?? 'paladin';
+    this.player.heroKey = this.selectedHeroKey ?? ui.getSelectedHero?.() ?? 'thesen';
     if (this.profile?.classWeapon) this.player.equipClassWeapon(this.profile.classWeapon);
     this.enemyChampion = new EnemyChampion(ARENA_LAYOUT.spawns.redCastle.x, ARENA_LAYOUT.spawns.redCastle.z, 'warlord');
     this.battlefield.placeOnSurface(this.player);

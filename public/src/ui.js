@@ -81,10 +81,11 @@ export class UIManager {
     this.selectedMode = 'siege';
     this.hubSwipeStart = null;
     try {
-      this.selectedHero = window.localStorage?.getItem?.('grimge-selected-hero') || 'astral';
+      // Thesen is the base character (user, 21 Oct 2026); the v2 key resets older saved picks once.
+      this.selectedHero = window.localStorage?.getItem?.('grimge-selected-hero-v2') || 'thesen';
       this.selectedCompanion = window.localStorage?.getItem?.('grimge-selected-companion') || 'wolf';
     } catch {
-      this.selectedHero = 'astral'; this.selectedCompanion = 'wolf';
+      this.selectedHero = 'thesen'; this.selectedCompanion = 'wolf';
     }
     this.resultsOverlay = document.getElementById('results-overlay');
     this.playMatchBtn = document.getElementById('play-match-btn');
@@ -542,7 +543,7 @@ export class UIManager {
     });
   }
 
-  getSelectedHero() { return this.selectedHero || 'astral'; }
+  getSelectedHero() { return this.selectedHero || 'thesen'; }
 
   setHubPage(page) {
     const valid = ['character', 'deck', 'skills', 'modes', 'freeplay', 'settings'];
@@ -583,7 +584,7 @@ export class UIManager {
     const details = this.hubHeroDetails()[hero];
     if (!details) return;
     this.selectedHero = hero;
-    try { window.localStorage?.setItem?.('grimge-selected-hero', hero); } catch { /* optional preference */ }
+    try { window.localStorage?.setItem?.('grimge-selected-hero-v2', hero); } catch { /* optional preference */ }
     window.gameWorld?.setSelectedHero?.(hero);
     this.toggleHubSelection(null);
     this.renderHub(window.gameWorld?.profile);
@@ -599,6 +600,8 @@ export class UIManager {
 
   hubHeroDetails() {
     return {
+      thesen: { name: 'THESEN', title: 'HORNED WARRIOR', attack: 130, health: 205, file: 'char_thesen.png' },
+      xame: { name: 'XAME', title: 'SKULL WARLOCK', attack: 136, health: 190, file: 'char_xame_0.png' },
       astral: { name: 'ASTRAL', title: 'STARBORN WANDERER', attack: 124, health: 192, file: 'char_astral.png', profilePortrait: 'portrait_astral.png' },
       astral_v2: { name: 'ASTRAL II', title: 'UNHOODED STARBORN', attack: 124, health: 192, file: 'char_astral_v2.png', profilePortrait: 'portrait_astral.png' },
       paladin: { name: 'PALADIN', title: 'ARCANE VANGUARD', attack: 120, health: 200 },

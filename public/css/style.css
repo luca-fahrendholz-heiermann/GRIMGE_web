@@ -1512,3 +1512,6 @@ code {
 .spell-slot.is-recast { animation: recast-pulse .5s ease-in-out infinite alternate; background: conic-gradient(var(--slot-color) calc(var(--recast, 0) * 360deg), rgba(0,0,0,.35) 0); }
 .spell-slot.is-recast .slot-glyph { color: #fff; text-shadow: 0 0 10px var(--slot-color), 0 0 4px #fff; }
 @keyframes recast-pulse { from { box-shadow: 0 0 6px var(--slot-color); } to { box-shadow: 0 0 18px var(--slot-color), 0 0 4px #fff inset; } }
+
+/* Pixel-art character sprites stay crisp when scaled in the hub. */
+img.pixel-art { image-rendering: pixelated; image-rendering: crisp-edges; }
