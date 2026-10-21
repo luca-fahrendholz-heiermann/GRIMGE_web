@@ -3916,7 +3916,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   const charged = (dir) => { ready(); P.beginCharge(dir); P.chargeTimer = P.chargeMaxTime * .1; P.chargeDir = dir; return P.releaseCharge(); };
   let bad = 0; const strict = new Proxy({}, { get: (t, k) => (k === 'arc' || k === 'ellipse') ? (x, y, r1, r2) => { if (r1 < 0 || (k === 'ellipse' && r2 < 0)) bad++; } : k === 'canvas' ? undefined : k === 'measureText' ? () => ({ width: 10 }) : () => {}, set: () => true });
   const renderAll = () => { for (const sp of spells.activeSpells) sp.render?.(strict); core.SIGNATURES && P.signature?.impl.stance.render?.(strict, P, P.signature, P.y, 'front'); };
-  assert(Object.keys(BR.BREATH_RUNES).length === 13 && ['ventus', 'terra', 'natura', 'lux', 'umbra', 'void', 'bestia', 'construct', 'ward'].length === 9, 'Every element has its breathing rune (12 base styles)');
+  assert(Object.keys(BR.BREATH_STYLES).length === 18 && Object.keys(BR.BREATH_RUNES).length === 13 && ['ventus', 'terra', 'natura', 'lux', 'umbra', 'void', 'bestia', 'construct', 'ward'].length === 9, 'Every element has its breathing rune (12 base styles)');
   const broken = [];
   const styles = Object.keys(BR.BREATH_STYLES);
   for (const style of styles) {
@@ -3932,7 +3932,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
       } catch (err) { broken.push(style + ':' + move + ' ' + err.message); }
     }
   }
-  assert(!broken.length && !bad, 'All 17 breathing styles: charge forward / up, sprint attack and air dive each hit and render cleanly ' + broken.slice(0, 6).join(' | '));
+  assert(!broken.length && !bad, 'All 18 breathing styles: charge forward / up, sprint attack and air dive each hit and render cleanly ' + broken.slice(0, 6).join(' | '));
   // Wind sprint: spin into a whirlwind, then burst forward — foes fly away in depth too.
   setup('S75'); const w = foeAt(420, .52); const z0 = w.z; let windHits = 0; const wOrig = w.takeDamage.bind(w); w.takeDamage = (...args) => { windHits++; return wOrig(...args); };
   P.sprintActive = true; P.vx = 320; P.executeAttack(neutral, 'normal'); const hidden = P.tornadoT > 0; step(60);
@@ -3949,8 +3949,11 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   setup('S40'); spells.cast(P, spells.resolveSpell([{ id: 'sig_S81' }]), game);
   const serpent = P.signature?.style; setup('S41'); spells.cast(P, spells.resolveSpell([{ id: 'sig_S77' }]), game); const love = P.signature?.style;
   setup('S77'); spells.cast(P, spells.resolveSpell([{ id: 'sig_S79' }]), game); const insect = P.signature?.style; setup('S42'); spells.cast(P, spells.resolveSpell([{ id: 'sig_S82' }]), game); const sound = P.signature?.style;
-  setup('S40'); spells.cast(P, spells.resolveSpell([{ id: 'sig_S41' }]), game); const plain = P.signature?.style;
-  assert(serpent === 'serpent' && love === 'love' && insect === 'insect' && sound === 'sound' && plain === 'flame', 'Breathing combos: water + beast = serpent, flame + flower = love, flower + moon = insect, thunder + forge = sound (unrelated pairs just switch)');
+  setup('S40'); spells.cast(P, spells.resolveSpell([{ id: 'sig_S41' }]), game); const steam = P.signature?.style;
+  setup('S40'); spells.cast(P, spells.resolveSpell([{ id: 'sig_S78' }]), game); const plain = P.signature?.style;
+  assert(serpent === 'serpent' && love === 'love' && insect === 'insect' && sound === 'sound' && steam === 'steam' && plain === 'sun', 'Breathing combos: water + beast = serpent, flame + flower = love, flower + moon = insect, thunder + forge = sound, water + flame = steam (unrelated pairs just switch)');
+  // A combo always costs both runes: each breathing binds its own mana when it is drawn.
+  { const { runeManaCost } = await import('./public/src/spell_catalog.js'); assert(runeManaCost('sig_S40') > 0 && runeManaCost('sig_S41') > 0, 'A combo costs the mana of both breathing runes (each is drawn and paid on its own)'); }
   // Ward: still sea — every hit is turned away for a moment.
   setup('S83'); charged('forward'); const hpCalm = P.hp; P.invulnerableTimer = 0; P.takeDamage(30, -100, 0, .2, false, 'melee');
   assert(P.hp === hpCalm, 'Ward breathing STILLE SEE: in total calm every hit is turned away');

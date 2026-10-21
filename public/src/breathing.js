@@ -108,6 +108,13 @@ export const BREATH_STYLES = Object.freeze({
     up: { kind: 'rising', look: 'sting', name: 'SCHMETTERLINGSTANZ' },
     sprint: { kind: 'flurry', look: 'sting', name: 'FACETTENAUGE', hits: 6, dist: 180 },
     dive: { kind: 'crash', look: 'sting', name: 'LIBELLENFALL' } },
+  // Steam (water + flame; user, 21 Oct 2026): hot pressure — scalds, pushes, blinds for a moment.
+  // Mist (void) hides you; steam presses and scalds.
+  steam: { name: 'DAMPFATMUNG', ramp: ramp('#8d8d8d', '#eceff1', '#ffffff', '#ff7043'), status: 'burn', trail: 'steam', mark: 'steam', derived: true,
+    forward: { kind: 'torrent', look: 'steam', name: 'DRUCKSTRAHL', len: 340, dmg: 26, push: 560, depth: 48 },
+    up: { kind: 'pillar', look: 'steam', name: 'DAMPFGEYSIR' },
+    sprint: { kind: 'flash', look: 'steam', name: 'ZISCHWOLKE', dist: 220, after: 'scald' },
+    dive: { kind: 'crash', look: 'steam', name: 'DRUCKEXPLOSION' } },
   sound: { name: 'KLANGATMUNG', ramp: ramp('#3b2a00', '#ffca28', '#fff3c4'), status: 'paralysis', trail: 'notes', mark: 'notes', derived: true,
     forward: { kind: 'blasts', look: 'sound', name: 'DONNERGROLLEN', count: 5 },
     up: { kind: 'rising', look: 'sound', name: 'HALLENDE HIEBE' },
@@ -117,7 +124,7 @@ export const BREATH_STYLES = Object.freeze({
 // Signature rune → base style.
 export const BREATH_RUNES = Object.freeze({ S40: 'water', S41: 'flame', S42: 'thunder', S75: 'wind', S76: 'stone', S77: 'flower', S78: 'sun', S79: 'moon', S80: 'mist', S81: 'beast', S82: 'forge', S83: 'ward', S84: 'ice' });
 // Derived styles: the active base style + the newly cast one (either order).
-export const BREATH_COMBOS = Object.freeze({ 'beast+water': 'serpent', 'flame+flower': 'love', 'flower+moon': 'insect', 'forge+thunder': 'sound' });
+export const BREATH_COMBOS = Object.freeze({ 'beast+water': 'serpent', 'flame+flower': 'love', 'flower+moon': 'insect', 'forge+thunder': 'sound', 'flame+water': 'steam' });
 export const comboOf = (a, b) => BREATH_COMBOS[[a, b].sort().join('+')] ?? null;
 export const MARK = Object.freeze({ dur: 10, dmg: 1.25, speed: 1.2, drain: 1.5, spread: 170, allyDur: 6, cooldown: 14 });
 
@@ -127,7 +134,7 @@ const powerOf = (p, st) => (st.quality?.power ?? 1) * (st.mark ? MARK.dmg : 1);
 const alive = (t) => t && !t.isDead && t.lifeState !== 'Dead' && t.lifeState !== 'Dying' && (t.hp ?? 1) > 0;
 const foes = (gw, p) => foesOf(gw, p.team).filter((t) => !t.isProp);
 const inLane = (t, x0, x1, z, depth) => t.x >= Math.min(x0, x1) - 14 && t.x <= Math.max(x0, x1) + 14 && Math.abs(((t.z ?? z) - z) * DEPTH) < depth;
-const statusFor = { ignite: 'burn', paralyze: 'paralysis', poison: 'poison', bleed: 'bleed', wet: 'wet', freeze: 'frozen' };
+const statusFor = { ignite: 'burn', paralyze: 'paralysis', poison: 'poison', bleed: 'bleed', wet: 'wet', freeze: 'frozen', scald: 'burn' };
 function strike(p, st, t, dmg, kx, lift, stun, force = false) {
   hit(t, Math.round(dmg * powerOf(p, st)), kx, lift, stun);
   const s = styleOf(st).status; if (s && (force || (st.hits = (st.hits ?? 0) + 1) % 3 === 0)) applyStatus(t, s, { force });
@@ -158,6 +165,14 @@ function piece(ctx, look, x, y, s, t, R, f = 1, seed = 0) {
       ctx.fillStyle = R.core; ctx.fillRect(Math.round(x + f * 3 * s), Math.round(y - 13 * s), 2, 2);
       break;
     }
+    case 'steam': {
+      const r = (7 + a * 4) * s;
+      ctx.fillStyle = R.dark; ctx.beginPath(); ctx.arc(x + 2 * s, y - 8 * s, r, 0, TAU); ctx.fill();
+      ctx.fillStyle = R.mid; ctx.beginPath(); ctx.arc(x - 3 * s, y - 10 * s, r, 0, TAU); ctx.arc(x + 4 * s, y - 13 * s, r * .8, 0, TAU); ctx.fill();
+      ctx.fillStyle = R.light; ctx.beginPath(); ctx.arc(x - 4 * s, y - 13 * s, r * .45, 0, TAU); ctx.fill();
+      ctx.fillStyle = R.core; ctx.fillRect(Math.round(x), Math.round(y - 10 * s), 2, 2);
+      break;
+    }
     case 'ice': { plate(ctx, [[x - 6 * s, y], [x - 3 * s, y - 14 * s], [x + f * 2 * s, y - 22 * s], [x + 5 * s, y - 10 * s], [x + 6 * s, y]], R.mat, 950 + seed, { alpha: 1, glowEdge: .6 }); ctx.fillStyle = R.core; ctx.fillRect(Math.round(x - 1), Math.round(y - 15 * s), 2, Math.round(6 * s)); break; }
     case 'bolt': { ctx.strokeStyle = R.mid; ctx.lineWidth = 3 * s; ctx.beginPath(); ctx.moveTo(x - 6 * s, y - 16 * s); ctx.lineTo(x + 2 * s, y - 8 * s); ctx.lineTo(x - 2 * s, y - 6 * s); ctx.lineTo(x + 6 * s, y + 2 * s); ctx.stroke(); ctx.strokeStyle = R.core; ctx.lineWidth = 1; ctx.stroke(); break; }
     case 'wind': case 'mist': { ctx.strokeStyle = look === 'mist' ? R.light : R.mid; ctx.lineWidth = 2 * s; ctx.beginPath(); ctx.arc(x, y - 10 * s, 9 * s, t * 10 + seed, t * 10 + seed + 4); ctx.stroke(); if (look === 'mist') { ctx.fillStyle = R.mid; ctx.globalAlpha *= .8; ctx.beginPath(); ctx.arc(x + 4 * s, y - 8 * s, 7 * s, 0, TAU); ctx.fill(); } break; }
@@ -179,6 +194,7 @@ function groundFx(look, x, z, team, r = 60, gw = null) {
   else if (look === 'rock') { environment.add('crater', x, z, { radius: r * .6, team }); environment.add('crack', x, z, { radius: r, team }); environment.add('rubble', x, z, { radius: r * .7, team }); }
   else if (look === 'bolt') environment.electrify?.(x, z, r, team, 8, gw);
   else if (look === 'ice') environment.add('ice', x, z, { radius: r * .8, team });
+  else if (look === 'steam') { environment.add('smoke', x, z, { radius: r, team }); environment.add('water', x, z, { radius: r * .5, team }); }
   else if (look === 'blast' || look === 'sound') { environment.add('crater', x, z, { radius: r * .5, team }); environment.add('scorch', x, z, { radius: r * .5, team }); }
   else if (look === 'claw') environment.add('crack', x, z, { radius: r * .8, team });
 }
@@ -225,7 +241,7 @@ function flash(p, st, k, m) {
     if (ranged) {
       // A bow / crossbow / thrown weapon: the Wizard stays, a piercing shot covers the same lane.
       s.x1 = x0 + f * dist; s.moved = true; s.shot = true;
-      for (const t of foes(gw, p)) if (inLane(t, x0, s.x1, z0, 36)) { s.hit.push(t); strike(p, st, t, m.after === 'ignite' ? dmg * .7 : dmg, f * (m.after === 'blind' ? 60 : 180), 160, .6, m.after === 'paralyze'); if (statusFor[m.after]) applyStatus(t, statusFor[m.after], { force: true }); if (m.after === 'blind') t.freeze?.(.6); }
+      for (const t of foes(gw, p)) if (inLane(t, x0, s.x1, z0, 36)) { s.hit.push(t); strike(p, st, t, m.after === 'ignite' ? dmg * .7 : dmg, f * (m.after === 'blind' ? 60 : 180), 160, .6, m.after === 'paralyze'); if (statusFor[m.after]) applyStatus(t, statusFor[m.after], { force: true }); if (m.after === 'blind' || m.after === 'scald') t.freeze?.(.6); }
       if (m.trail === 'scorch' || m.trail === 'ice') for (let x = Math.min(x0, s.x1); x < Math.max(x0, s.x1); x += 46) groundFx(m.look, x, z0, p.team, 36);
       quake(s.hit.length ? 7 : 3, .25, s.hit.length ? 3 : 0);
       return;
@@ -234,7 +250,8 @@ function flash(p, st, k, m) {
     p.x = target; clampToArena(p, gw?.battlefield?.boundsOverride ?? null); gw?.battlefield?.placeOnSurface?.(p);
     s.x1 = p.x; s.moved = true; p.invulnerableTimer = Math.max(p.invulnerableTimer ?? 0, .3);
     if (m.behind) p.facing = -f; // turns to bite from behind
-    for (const t of foes(gw, p)) if (inLane(t, x0, s.x1, z0, 36)) { s.hit.push(t); strike(p, st, t, m.after === 'ignite' ? dmg * .7 : dmg, f * (m.after === 'blind' ? 60 : 180), 160, .6, m.after === 'paralyze'); if (statusFor[m.after]) applyStatus(t, statusFor[m.after], { force: true }); if (m.after === 'blind') t.freeze?.(.6); }
+    for (const t of foes(gw, p)) if (inLane(t, x0, s.x1, z0, 36)) { s.hit.push(t); strike(p, st, t, m.after === 'ignite' ? dmg * .7 : dmg, f * (m.after === 'blind' ? 60 : 180), 160, .6, m.after === 'paralyze'); if (statusFor[m.after]) applyStatus(t, statusFor[m.after], { force: true }); if (m.after === 'blind' || m.after === 'scald') t.freeze?.(.6); }
+    if (m.after === 'scald') for (let x = Math.min(x0, s.x1); x < Math.max(x0, s.x1); x += 52) groundFx('steam', x, z0, p.team, 34);
     if (m.trail === 'scorch' || m.trail === 'ice') for (let x = Math.min(x0, s.x1); x < Math.max(x0, s.x1); x += 46) groundFx(m.look, x, z0, p.team, 36);
     quake(s.hit.length ? 9 : 4, .3, s.hit.length ? 4 : 0);
   } }, { at: .32, fn: (s) => {
@@ -663,14 +680,14 @@ function drawMark(ctx, x, y, R, shape, t, f = 1) {
     bolts: [[[-3, -72], [1, -66], [-2, -64], [3, -58]], [[6, -48], [2, -42], [6, -40]]], swirls: [[[-5, -66], [0, -70], [4, -66], [0, -62]]], cracks: [[[-6, -70], [-2, -64], [-5, -58]], [[4, -48], [0, -42]]],
     blossom: [[[-4, -66], [0, -70], [4, -66], [0, -62], [-4, -66]]], sunburst: [[[-6, -66], [6, -66]], [[0, -72], [0, -60]], [[-4, -70], [4, -62]]], crescents: [[[-5, -70], [-1, -64], [-5, -58]]],
     clouds: [[[-6, -64], [-2, -68], [2, -64], [6, -68]]], fangs: [[[-6, -68], [-3, -60]], [[0, -68], [3, -60]]], rivets: [[[-5, -66], [5, -66]], [[-5, -60], [5, -60]]], runes: [[[-4, -70], [4, -70], [0, -60], [-4, -70]]],
-    scales: [[[-6, -64], [-3, -67], [0, -64], [3, -67], [6, -64]]], snow: [[[0, -72], [0, -60]], [[-5, -69], [5, -63]], [[-5, -63], [5, -69]]], hearts: [[[-4, -66], [0, -62], [4, -66], [2, -69], [0, -67], [-2, -69], [-4, -66]]], wings: [[[-6, -62], [-1, -66], [-6, -70]], [[6, -62], [1, -66], [6, -70]]], notes: [[[-3, -60], [-3, -70], [3, -72]]]
+    scales: [[[-6, -64], [-3, -67], [0, -64], [3, -67], [6, -64]]], snow: [[[0, -72], [0, -60]], [[-5, -69], [5, -63]], [[-5, -63], [5, -69]]], steam: [[[-4, -60], [-6, -65], [-4, -70]], [[3, -60], [1, -65], [3, -70]]], hearts: [[[-4, -66], [0, -62], [4, -66], [2, -69], [0, -67], [-2, -69], [-4, -66]]], wings: [[[-6, -62], [-1, -66], [-6, -70]], [[6, -62], [1, -66], [6, -70]]], notes: [[[-3, -60], [-3, -70], [3, -72]]]
   }[shape] ?? [];
   for (const ln of lines) { ctx.beginPath(); ln.forEach(([px, py], i) => { const [qx, qy] = at(px, py); i ? ctx.lineTo(qx, qy) : ctx.moveTo(qx, qy); }); ctx.stroke(); }
   ctx.restore();
 }
 
 // Pieces sprinkled along the swing trail.
-const TRAIL_LOOK = { ice: 'ice', petals: 'petal', crescent: 'moon', gust: 'wind', mist: 'mist', claw: 'claw', shield: 'shield', sting: 'sting', notes: 'sound', flame: 'flame' };
+const TRAIL_LOOK = { steam: 'steam', ice: 'ice', petals: 'petal', crescent: 'moon', gust: 'wind', mist: 'mist', claw: 'claw', shield: 'shield', sting: 'sting', notes: 'sound', flame: 'flame' };
 
 // ── the stance ────────────────────────────────────────────────────────────
 function breathStance() {

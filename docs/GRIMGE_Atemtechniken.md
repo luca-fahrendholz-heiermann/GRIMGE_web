@@ -71,8 +71,11 @@ Nach dem Stammbaum: Wasser → Schlange, Flamme → Liebe, Blume → Insekt, Don
 | Flamme + Blume | **Liebe** | peitschenartige, gewundene Hiebe mit großer Breite |
 | Blume + Mond | **Insekt** | Bienenstich (Stoß mit Gift), Facettenauge (6 Stiche) |
 | Donner + Schmiede | **Klang** | Donnergrollen-Explosionen mit Schallringen |
+| Wasser + Feuer | **Dampf** | heißer Druck statt Nebel: Druckstrahl (schiebt weit, verbrüht), Dampfgeysir, Zischwolke (verbrüht und blendet kurz), Druckexplosion mit Dampfwolke |
 
-Andere Paare wechseln einfach zur neuen Atmung.
+Andere Paare wechseln einfach zur neuen Atmung. Eine Kombo kostet das Mana beider Atmungs-Runen, denn jede wird einzeln gezeichnet und bezahlt.
+
+**Nebel ≠ Dampf:** Nebel (Void) ist kalt und still. Er versteckt dich und täuscht die Gegner. Dampf (Wasser + Feuer) ist heiß und laut. Er drückt die Gegner weg und verbrüht sie.
 
 ## Mal erwacht (Aufladen runter)
 
