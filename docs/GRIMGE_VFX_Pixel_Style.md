@@ -26,7 +26,24 @@ Wackeln und Hitstop gibt es nur beim **echten Aufprall** und skaliert mit der Wu
 
 Beim reinen Wirken gibt es kein pauschales Wackeln mehr. Nur große Sonderrunen bekommen einen kleinen Ruck.
 
+## Kein weiches Leuchten
+
+In der Pixel-Ebene der Effekte ist `shadowBlur` abgeschaltet. Jeder Effekt behält harte Kanten, und der Konturpass umrandet ihn.
+
+## Goldener Strahlenkranz (Vorlage 4)
+
+`RayCrownFx` in `cast_circle.js` zeigt 14 Strahlen hinter der Figur, abwechselnd lang in Gold und kurz in Weiß, dazu kreisende Funken. Er erscheint:
+
+- bei Licht-Zaubern (Lux)
+- beim Start der Sonnenatmung und beim Sonnen-Mal
+- bei den heiligen Arcane States A01 und T40
+
+## Pixel-Helden
+
+Thesen und Xame stammen aus Pixel-Snapper-Exporten (1 Pixel = 1 Art-Pixel). Aufbereitet werden sie mit `node tools/prepare_pixel_characters.cjs --snapped [Ordner]`: harte Alpha-Kante, ein gemeinsamer Ausschnitt, die Varianten werden automatisch aufeinander ausgerichtet.
+
+Im Spiel werden sie ohne Glättung gezeichnet, sobald ein Art-Pixel mindestens einen Bildschirm-Pixel abdeckt. Liegt die Skalierung nahe an einer ganzen Zahl, rastet sie darauf ein, damit jeder Art-Pixel gleich groß ist. Im Hub werden sie mit `image-rendering: pixelated` angezeigt.
+
 ## Noch offen
 
-- Bestehende ältere Effekte nach und nach auf Farbstufen und kleine weiße Kerne umstellen. Das betrifft vor allem weiche, weiße Glow-Kreise.
-- Lichtstrahlenkranz (Vorlage 4) für Lux- und heilige Verwandlungen.
+- Bestehende ältere Effekte nach und nach auf Farbstufen und kleine weiße Kerne umstellen.

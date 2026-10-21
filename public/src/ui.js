@@ -638,6 +638,9 @@ export class UIManager {
       this.hubHeroPreview.src = processed?.toDataURL?.() || `assets/sprites/${details.file || `char_${this.selectedHero}.png`}`;
     }
     if (this.hubModesHeroPreview) this.hubModesHeroPreview.src = processed?.toDataURL?.() || `assets/sprites/${details.file || `char_${this.selectedHero}.png`}`;
+    // Pixel-art heroes (Thesen, Xame) are scaled up without smoothing in the hub too.
+    const crisp = sprites.sprites[this.selectedHero]?.pixel ? 'pixelated' : '';
+    for (const img of [this.hubHeroPreview, this.hubModesHeroPreview, this.hubArtProfilePortrait, this.hubModesProfilePortrait, this.hubFreePlayProfilePortrait]) if (img?.style) img.style.imageRendering = crisp;
     if (this.hubHeroName) this.hubHeroName.textContent = details.name;
     if (this.hubHeroClass) this.hubHeroClass.textContent = details.title;
     if (this.hubArtHeroName) this.hubArtHeroName.textContent = details.name;

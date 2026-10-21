@@ -1,5 +1,6 @@
 // GRIMGE — prepares the user's pixel-art character images as game sprites (21 Oct 2026).
 //   node tools/prepare_pixel_characters.cjs [sourceDir]
+//   node tools/prepare_pixel_characters.cjs --snapped [sourceDir]   (pixel-perfect "-pixel-snapper" exports)
 // The sources are upscaled pixel art (one art pixel ≈ GRID source pixels, slightly noisy).
 // Every character pair (base + variant / idle frame) gets ONE shared crop so swapping
 // the frames never jumps; each art pixel is sampled back to its true size (majority
@@ -8,7 +9,8 @@
 const path = require('path');
 const io = require('./png_io.cjs');
 
-const SRC = process.argv[2] ?? 'C:/Dev/unity_projects/GRIMGE/Docs/References/03_characters';
+const SNAPPED = process.argv[2] === '--snapped';
+const SRC = process.argv[SNAPPED ? 3 : 2] ?? (SNAPPED ? path.join(require('os').homedir(), 'Downloads') : 'C:/Dev/unity_projects/GRIMGE/Docs/References/03_characters');
 const OUT = path.join(__dirname, '..', 'public', 'assets', 'sprites');
 const GRID = 6.5; // detected period of the art-pixel grid in all four sources
 const SETS = [
@@ -41,7 +43,37 @@ function sampleCell(img, cx, cy) {
   return [Math.round(best.r / best.c), Math.round(best.g / best.c), Math.round(best.b / best.c)];
 }
 
+// Pixel-perfect sources (one source pixel = one art pixel): no resampling, only hard alpha and
+// the pair aligned to each other (the exports differ by a pixel or two in size and offset).
+function snappedSet(set) {
+  const imgs = set.files.map((f) => io.readPng(path.join(SRC, f.replace('.png', '-pixel-snapper.png'))));
+  const at = (img, x, y) => { if (x < 0 || y < 0 || x >= img.w || y >= img.h) return null; const i = (y * img.w + x) * 4; return opaque(img.px, i) && !isGroundLine(img, x, y) ? i : null; };
+  // Best offset of every variant onto the base: the most art pixels of (nearly) the same colour.
+  const base = imgs[0]; const offs = imgs.map((img, k) => {
+    if (!k) return [0, 0]; let best = [0, 0, -1];
+    for (let dy = -6; dy <= 6; dy++) for (let dx = -6; dx <= 6; dx++) {
+      let score = 0; for (let y = 0; y < base.h; y += 2) for (let x = 0; x < base.w; x += 2) { const a = at(base, x, y); const b = at(img, x + dx, y + dy); if (a === null || b === null) continue; if (Math.abs(base.px[a] - img.px[b]) + Math.abs(base.px[a + 1] - img.px[b + 1]) + Math.abs(base.px[a + 2] - img.px[b + 2]) < 24) score++; }
+      if (score > best[2]) best = [dx, dy, score];
+    }
+    return [best[0], best[1]];
+  });
+  // Shared crop in base coordinates.
+  const boxes = imgs.map((img, k) => { const b = bbox(img); return { minX: b.minX - offs[k][0], minY: b.minY - offs[k][1], maxX: b.maxX - offs[k][0], maxY: b.maxY - offs[k][1] }; });
+  const box = { minX: Math.min(...boxes.map((b) => b.minX)), minY: Math.min(...boxes.map((b) => b.minY)), maxX: Math.max(...boxes.map((b) => b.maxX)), maxY: Math.max(...boxes.map((b) => b.maxY)) };
+  const pad = 2; const w = box.maxX - box.minX + 1 + pad * 2; const h = box.maxY - box.minY + 1 + pad * 2;
+  imgs.forEach((img, k) => {
+    const px = Buffer.alloc(w * h * 4);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const i = at(img, box.minX - pad + x + offs[k][0], box.minY - pad + y + offs[k][1]); if (i === null) continue;
+      const o = (y * w + x) * 4; px[o] = img.px[i]; px[o + 1] = img.px[i + 1]; px[o + 2] = img.px[i + 2]; px[o + 3] = 255;
+    }
+    io.writePng(path.join(OUT, set.out[k]), { w, h, px });
+    console.log(`${set.files[k]} (snapped, offset ${offs[k]}) → ${set.out[k]} (${w}×${h})`);
+  });
+}
+
 for (const set of SETS) {
+  if (SNAPPED) { snappedSet(set); continue; }
   const imgs = set.files.map((f) => io.readPng(path.join(SRC, f)));
   const boxes = imgs.map(bbox);
   const box = { minX: Math.min(...boxes.map((b) => b.minX)), minY: Math.min(...boxes.map((b) => b.minY)), maxX: Math.max(...boxes.map((b) => b.maxX)), maxY: Math.max(...boxes.map((b) => b.maxY)) };

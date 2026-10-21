@@ -630,11 +630,19 @@ export class SpriteManager {
     if (tint && !hitFlash) frame.canvas = this.tintedCanvas(frame.canvas, tint);
     // Contour-bound detail: paint only where the current frame has pixels.
     if (maskPaint && !hitFlash && !tint) frame.canvas = this.maskedCanvas(frame.canvas, maskPaint);
-    const renderScale = targetScale ?? (visualHeight / frame.height);
+    let renderScale = targetScale ?? (visualHeight / frame.height);
+    let smooth = true;
+    if (spr.pixel) {
+      // Pixel heroes stay crisp: no smoothing once an art pixel covers a screen pixel, and a scale
+      // close to a whole number of screen pixels snaps to it (every art pixel the same size).
+      const base = Math.abs(ctx.getTransform?.()?.a ?? 1) || 1; const d = renderScale * base; const n = Math.round(d);
+      if (n >= 1 && Math.abs(d - n) < n * .12) renderScale = n / base;
+      smooth = renderScale * base < .95;
+    }
 
     ctx.save();
     ctx.globalAlpha = alpha;
-    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingEnabled = smooth;
     if ('imageSmoothingQuality' in ctx) ctx.imageSmoothingQuality = 'high';
 
     // The round ground shadow is drawn for every actor by shadows.js.
