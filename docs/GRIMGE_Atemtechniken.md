@@ -32,6 +32,17 @@ Die Wirkung bleibt gleich (Schaden, Status, Reichweite, Bodeneffekt). Die Waffe 
 | Stäbe, Orb, Ruten, Harfe, Fächer, Talisman | aufrechter Zauberkreis | rotierende Siegelkugel | – |
 | Fäuste, Klauen | Faustschlag mit Ringen | Element-Faust mit Schockringen | – |
 
+### Jede Technik in Waffenform
+
+| Technik | Bogen / Fernkampf | Hammer / Axt | Stab / Instrument | Faust | Speer | Klinge / Katana |
+|---|---|---|---|---|---|---|
+| Aufladen hoch | Teleport hoch über den Gegner, **Pfeilregen** nach unten | Element-Säule unter dem Gegner | Säule aus dem Zauberkreis | hoher Aufwärtshaken mit Element-Spirale | Stabhochsprung-Stoß | Aufwärts-Sichel, Katana: senkrechter Ziehschnitt |
+| Hiebfolge | Pfeilsalve, der Schütze bleibt stehen | marschierende Erdstöße mit Rissen | Siegelkugel-Salve | Faust-Hagel | weite Stiche | deckende Klingen-Sicheln |
+| Ansturm | Riesenpfeil trägt die Gegner mit | Felsspalt vorneweg | Siegel vorneweg | Faust vorneweg | Lanze vorneweg | Sichel vorneweg |
+| Sturz | Pfeilregen aus der Luft | Meteor-Einschlag mit größerem Radius | Siegel im Einschlag | Meteor-Faust | Speer rammt in den Boden | fallende Klinge |
+| Sicheln / Säule / Explosionen | Pfeile statt Sicheln, ein Pfeil fliegt auf die Säulen-Stelle, Pfeile vor jeder Explosion | – | Kugeln statt Sicheln | Fäuste statt Sicheln | Spitzen statt Sicheln | Sicheln |
+
+
 ## Die Atmungen (Vorbild → Adaption)
 
 | Rune | Atmung | Vorwärts | Hoch | Sprint | Sturz |

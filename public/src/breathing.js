@@ -364,15 +364,17 @@ function crescents(p, st, k, m) {
     if (s.t < .03) quake(3, .15);
   }, draw: (ctx, s) => {
     ctx.save(); const a = 1 - Math.max(0, (s.t - .6) / .3); ctx.globalAlpha = a;
-    for (const b of s.blades) { if (s.t < b.delay) continue; const y = groundYForDepth(b.z) - 36; ctx.fillStyle = R.mid; ctx.beginPath(); ctx.arc(b.x, y, 18 * b.s, f > 0 ? -1.3 : Math.PI - 1.3, f > 0 ? 1.3 : Math.PI + 1.3); ctx.arc(b.x - f * 8 * b.s, y, 14 * b.s, f > 0 ? 1.1 : Math.PI + 1.1, f > 0 ? -1.1 : Math.PI - 1.1, true); ctx.closePath(); ctx.fill(); ctx.strokeStyle = R.core; ctx.lineWidth = 1.5; ctx.stroke(); }
+    const dk = m.delivery?.kind; const own = dk && dk !== 'none' && dk !== 'blade' && dk !== 'iai';
+    for (const b of s.blades) { if (s.t < b.delay) continue; const y = groundYForDepth(b.z) - 36; if (own && drawHead(ctx, m.delivery, b.x, y, b.s * .8, s.t, R, f)) { piece(ctx, m.look, b.x - f * 26, y + 26, b.s * .7, s.t, R, f, 3); continue; } ctx.fillStyle = R.mid; ctx.beginPath(); ctx.arc(b.x, y, 18 * b.s, f > 0 ? -1.3 : Math.PI - 1.3, f > 0 ? 1.3 : Math.PI + 1.3); ctx.arc(b.x - f * 8 * b.s, y, 14 * b.s, f > 0 ? 1.1 : Math.PI + 1.1, f > 0 ? -1.1 : Math.PI - 1.1, true); ctx.closePath(); ctx.fill(); ctx.strokeStyle = R.core; ctx.lineWidth = 1.5; ctx.stroke(); }
     ctx.restore();
   } }), st.quality);
 }
 // RISING: a rising arc launches everything in front high up (plus the element shooting up).
 function rising(p, st, k, m) {
   const R = styleOf(st).ramp; const f = p.facing || 1; swing(p, .35);
+  const dk = m.delivery?.kind;
   if (m.backflip && p.grounded) { p.grounded = false; p.vElevation = 260; p.vx = -f * 120; }
-  else if (p.grounded) { p.grounded = false; p.vElevation = 300; }
+  else if (p.grounded) { p.grounded = false; p.vElevation = dk === 'fist' ? 560 : dk === 'polearm' ? 480 : 300; } // fist: rising uppercut, polearm: vault
   emit(new SigSequence({ mat: R.mat, seed: 4800 }, p, { dur: .7, data: { hit: new Set() }, tick: (s, dt, gw) => {
     if (s.t > .3) return;
     for (const t of foes(gw, p)) if (!s.hit.has(t) && (t.x - p.x) * f > -20 && (t.x - p.x) * f < 120 && Math.abs(((t.z ?? p.z) - p.z) * DEPTH) < 40) { s.hit.add(t); strike(p, st, t, 22 + 16 * k, f * 80, m.lift ?? 640, .6, true); if (s.hit.size === 1) quake(6, .25, 3); }
@@ -381,6 +383,10 @@ function rising(p, st, k, m) {
     ctx.save(); ctx.globalAlpha = a;
     for (let i = 0; i < 9; i++) { const u = i / 8 * kk; const ang = (f > 0 ? .9 : Math.PI - .9) - f * u * 2.6; piece(ctx, m.look, cx + Math.cos(ang) * 46, by - 30 + Math.sin(ang) * 54, 1.3, s.t, R, f, i); }
     if (m.pillar || m.look === 'wind' || m.look === 'mist') for (let i = 0; i < 6; i++) piece(ctx, m.look, cx + f * 30 + Math.sin(i + s.t * 9) * 8, by - i * 24 * kk, 1.5, s.t, R, f, i + 20);
+    // The weapon in the rise: a fist leading a spiral of the element, a spear thrust skyward, an upward iai line.
+    if (dk === 'fist') { for (let i = 0; i < 6; i++) piece(ctx, m.look, p.x + Math.sin(i * 1.4 + s.t * 20) * 10, by + i * 14, 1.3 - i * .1, s.t, R, f, i + 30); ctx.save(); ctx.translate(p.x + f * 10, by - 70); ctx.rotate(-f * Math.PI / 2); drawHead(ctx, m.delivery, 0, 0, 1.2, s.t, R, 1); ctx.restore(); }
+    if (dk === 'polearm' && kk < 1) { ctx.save(); ctx.translate(p.x + f * 20, by - 40); ctx.rotate(-f * .9); drawHead(ctx, m.delivery, 40 * kk, 0, 1.3, s.t, R, f); ctx.restore(); }
+    if (dk === 'iai' && kk < 1) { ctx.fillStyle = R.mid; ctx.fillRect(Math.round(cx + f * 10) - 2, Math.round(by - 20 - 120 * kk), 4, Math.round(120 * kk)); ctx.fillStyle = R.core; ctx.fillRect(Math.round(cx + f * 10) - 1, Math.round(by - 20 - 120 * kk), 2, Math.round(120 * kk)); }
     ctx.restore();
   } }), st.quality);
 }
@@ -395,7 +401,11 @@ function pillar(p, st, k, m, gw) {
     groundFx(m.look, x, z, p.team, 50, gw2); quake(m.look === 'rock' ? 9 : 7, .3, 4);
   }, steps: m.cocoon ? [{ at: .75, fn: (s) => { for (const t of s.cocooned ?? []) if (alive(t)) { strike(p, st, t, 24 + 16 * k, 0, 320, .5); combat.spawnHitSparks?.(t.x, (t.y ?? 0) - 40, 1, '#e0f7fa', 22); } if (s.cocooned?.length) quake(7, .25, 4); } }] : [], draw: (ctx, s) => {
     const y = groundYForDepth(z); ctx.save();
-    if (s.t < .22) { ctx.globalAlpha = .6 + .4 * Math.sin(s.t * 40); ctx.strokeStyle = R.mid; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(x, y, 30, 9, 0, 0, TAU); ctx.stroke(); ctx.restore(); return; }
+    if (s.t < .22) {
+      ctx.globalAlpha = .6 + .4 * Math.sin(s.t * 40); ctx.strokeStyle = R.mid; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(x, y, 30, 9, 0, 0, TAU); ctx.stroke();
+      if (m.delivery?.kind === 'ranged') { const u = s.t / .22; const sx = s.x0 ?? (s.x0 = p.x); const ax = sx + (x - sx) * u; const ay = (groundYForDepth(z) - 50) - Math.sin(u * Math.PI) * 90 + u * 50; ctx.globalAlpha = 1; ctx.translate(ax, ay); ctx.rotate(f * (u - .5) * 1.6); drawHead(ctx, m.delivery, 0, 0, 1.1, s.t, R, f); }
+      ctx.restore(); return;
+    }
     const kk = Math.min(1, (s.t - .22) / .12); const a = 1 - Math.max(0, (s.t - .6) / .3); ctx.globalAlpha = a; const H = 150 * kk;
     if (m.look === 'bolt') { const pts = Array.from({ length: 8 }, (_, i) => [x + (i && i < 7 ? Math.sin(i * 2.3 + s.t * 30) * 10 : 0), y - 260 + i * 260 / 7]); thread(ctx, pts, R.mid, 9, a); thread(ctx, pts, R.core, 3, a); }
     else if (m.look === 'rock') plate(ctx, [[x - 22, y], [x - 14, y - H], [x, y - H - 18], [x + 14, y - H], [x + 22, y]], R.mat, 4901, { alpha: a, glowEdge: .4 });
@@ -409,7 +419,8 @@ function pillar(p, st, k, m, gw) {
 function crash(p, st, m, gw) {
   const R = styleOf(st).ramp; const f = p.facing || 1;
   p.state = 'dive'; p.stateTimer = 1.2; p.vElevation = -1150; p.vx = f * 120; p.airLatch = null;
-  const heavy = m.look === 'rock' || m.look === 'blast' || m.look === 'sound' || m.look === 'sun';
+  const dk = m.delivery?.kind;
+  const heavy = m.look === 'rock' || m.look === 'blast' || m.look === 'sound' || m.look === 'sun' || dk === 'heavy'; // a hammer always lands like a meteor
   emit(new SigSequence({ mat: R.mat, seed: 5000 }, p, { dur: 2, data: { landed: false, lt: 0 }, tick: (s, dt, gw2) => {
     if (!s.landed) {
       if (!p.grounded && s.t < 1.4) return;
@@ -430,6 +441,8 @@ function crash(p, st, m, gw) {
     ctx.strokeStyle = R.mid; ctx.lineWidth = 4; ctx.beginPath(); ctx.ellipse(s.x, y, r, r * .3, 0, 0, TAU); ctx.stroke();
     for (let i = 0; i < 12; i++) { const ang = i / 12 * TAU; piece(ctx, m.look, s.x + Math.cos(ang) * r * .8, y + Math.sin(ang) * r * .24, 1.4, s.t, R, f, i); }
     if (m.look === 'shield') { ctx.strokeStyle = R.light; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(s.x, y, r * .7, r * .9, 0, Math.PI, TAU); ctx.stroke(); }
+    // The weapon driven into the ground at the center (spear, fist, blade, sigil), pointing down.
+    if (dk && dk !== 'none' && dk !== 'heavy' && kk < 1) { ctx.translate(s.x, y - 30); ctx.rotate(Math.PI / 2); drawHead(ctx, m.delivery, 0, 0, 1.4, s.t, R, 1); }
     ctx.restore();
   } }), st.quality);
 }
@@ -459,11 +472,12 @@ function flurry(p, st, k, m) {
     s.next -= dt; if (s.next > 0) return; s.next = dur / n;
     s.marks.push({ x: p.x + f * 30, z: p.z, t: s.t, rot: (s.marks.length % 2 ? 1 : -1) * .8 });
     let any = false;
-    for (const t of foes(gw, p)) if (Math.abs(t.x - (p.x + f * 30)) < 60 && Math.abs(((t.z ?? p.z) - p.z) * DEPTH) < 44 && (s.count.get(t) ?? 0) < n) { s.count.set(t, (s.count.get(t) ?? 0) + 1); strike(p, st, t, 8 + 5 * k, f * 60, 50, .25); any = true; }
+    const reach = m.delivery?.kind === 'polearm' ? 90 : 60;
+    for (const t of foes(gw, p)) if (Math.abs(t.x - (p.x + f * 30)) < reach && Math.abs(((t.z ?? p.z) - p.z) * DEPTH) < 44 && (s.count.get(t) ?? 0) < n) { s.count.set(t, (s.count.get(t) ?? 0) + 1); strike(p, st, t, 8 + 5 * k, f * 60, 50, .25); any = true; }
     if (any) quake(2, .08, 1);
   }, draw: (ctx, s) => {
     ctx.save();
-    for (const mk of s.marks) { const age = s.t - mk.t; if (age > .3) continue; const y = groundYForDepth(mk.z) - 40; ctx.globalAlpha = 1 - age / .3; ctx.strokeStyle = R.light; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(mk.x - 22 * Math.cos(mk.rot), y - 22 * Math.sin(mk.rot)); ctx.lineTo(mk.x + 22 * Math.cos(mk.rot), y + 22 * Math.sin(mk.rot)); ctx.stroke(); piece(ctx, m.look, mk.x, y + 14, 1.2, s.t, R, f, mk.t * 10); }
+    for (const mk of s.marks) { const age = s.t - mk.t; if (age > .3) continue; const y = groundYForDepth(mk.z) - 40; ctx.globalAlpha = 1 - age / .3; if (m.delivery?.kind && m.delivery.kind !== 'none') { ctx.save(); ctx.translate(mk.x, y); ctx.rotate(mk.rot * .4); drawHead(ctx, m.delivery, 0, 0, .9, s.t, R, f); ctx.restore(); piece(ctx, m.look, mk.x, y + 14, 1, s.t, R, f, mk.t * 10); continue; } ctx.strokeStyle = R.light; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(mk.x - 22 * Math.cos(mk.rot), y - 22 * Math.sin(mk.rot)); ctx.lineTo(mk.x + 22 * Math.cos(mk.rot), y + 22 * Math.sin(mk.rot)); ctx.stroke(); piece(ctx, m.look, mk.x, y + 14, 1.2, s.t, R, f, mk.t * 10); }
     if (m.zigzag && s.t < dur) for (let i = 1; i <= 3; i++) { ctx.globalAlpha = .3 / i; piece(ctx, 'mist', p.x - f * i * 22, (p.y ?? 0) - 6, 2, s.t, R, f, i); }
     ctx.restore();
   } }), st.quality);
@@ -489,6 +503,7 @@ function charge(p, st, k, m) {
     const y = (p.y ?? 0); ctx.save(); const a = s.t <= dur ? 1 : 1 - (s.t - dur) / .4; ctx.globalAlpha = a;
     for (let i = 0; i < 6; i++) piece(ctx, m.look, p.x - f * (10 + i * 16), y - 6 - (i % 2) * 18, 1.5 - i * .15, s.t, R, f, i);
     if (m.look === 'shield') { ctx.strokeStyle = R.light; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(p.x + f * 24, y - 40, 30, f > 0 ? -1.2 : Math.PI - 1.2, f > 0 ? 1.2 : Math.PI + 1.2); ctx.stroke(); }
+    if (s.t <= dur) drawHead(ctx, m.delivery, p.x + f * 46, y - 40, 1.4, s.t, R, f);
     ctx.restore();
   } }), st.quality);
 }
@@ -504,6 +519,7 @@ function blasts(p, st, k, m) {
     }
   }, draw: (ctx, s) => {
     ctx.save();
+    if (m.delivery?.kind === 'ranged') for (const sp of s.spots) { const u = (s.t - (sp.at - .14)) / .14; if (u < 0 || u >= 1) continue; const gy = groundYForDepth(sp.z); ctx.save(); ctx.translate(sp.x - f * 40 * (1 - u), gy - 24 - 120 * (1 - u)); ctx.rotate(f * .9); drawHead(ctx, m.delivery, 0, 0, 1, s.t, R, f); ctx.restore(); }
     for (const sp of s.spots) { if (s.t < sp.at) continue; const age = s.t - sp.at; if (age > .4) continue; const y = groundYForDepth(sp.z); const kk = age / .4; ctx.globalAlpha = 1 - kk; const r = 14 + 34 * kk;
       ctx.fillStyle = R.dark; ctx.beginPath(); ctx.arc(sp.x, y - 24, r, 0, TAU); ctx.fill(); ctx.fillStyle = R.mid; ctx.beginPath(); ctx.arc(sp.x, y - 24, r * .7, 0, TAU); ctx.fill(); ctx.fillStyle = R.core; ctx.beginPath(); ctx.arc(sp.x, y - 24, r * .3, 0, TAU); ctx.fill();
       if (m.look === 'sound') { ctx.strokeStyle = R.light; ctx.lineWidth = 2; for (let i = 0; i < 2; i++) { ctx.beginPath(); ctx.ellipse(sp.x, y - 24, r * (1.2 + i * .4), r * (1.2 + i * .4) * .6, 0, 0, TAU); ctx.stroke(); } } }
@@ -543,7 +559,78 @@ function orbit(p, st, k, m, gw) {
     ctx.restore();
   } }), st.quality);
 }
+// ── weapon variants (breathing × weapon): same effect, the weapon's delivery ─────────────
+// A projectile drawn pointing straight down (arrow rain).
+function headDown(ctx, d, x, y, s, t, R) { ctx.save(); ctx.translate(x, y); ctx.rotate(Math.PI / 2); drawHead(ctx, d, 0, 0, s, t, R, 1); ctx.restore(); }
+// ARROW RAIN (bow charge up: the archer appears high above the foe like the spiral sphere, then
+// rains element arrows; bow dive: from where it is in the air) — the spot is hit again and again.
+function arrowRain(p, st, k, m, gw, teleport) {
+  const R = styleOf(st).ramp; const f = p.facing || 1; const d = m.delivery;
+  const t0 = foes(gw, p).filter((o) => (o.x - p.x) * f > -40 && Math.hypot(o.x - p.x, ((o.z ?? p.z) - p.z) * DEPTH) < 360).sort((a, b) => Math.abs(a.x - p.x) - Math.abs(b.x - p.x))[0];
+  const tx = t0 ? t0.x : p.x + f * (teleport ? 150 : 40); const tz = t0 ? (t0.z ?? p.z) : p.z;
+  if (teleport) { combat.spawnShockwave?.(p.x, (p.y ?? 0) - 40, 30, R.mid); p.x = tx - f * 24; p.z = tz; clampToArena(p, gw?.battlefield?.boundsOverride ?? null); p.grounded = false; p.elevation = Math.max(p.elevation ?? 0, 120); /* high, but still below the HUD */ p.invulnerableTimer = Math.max(p.invulnerableTimer ?? 0, .5); }
+  p.state = 'heavyStrike'; p.stateTimer = .6; p.vx = 0; p.vz = 0; p.vElevation = 0; p.airLatch = null;
+  const n = 12; const arrows = Array.from({ length: n }, (_, i) => ({ at: .12 + i * .035, x: tx + Math.sin(i * 2.39) * 62, z: Math.max(.03, Math.min(.97, tz + Math.cos(i * 1.7) * .1)), done: false }));
+  const end = .12 + n * .035 + .16;
+  emit(new SigSequence({ mat: R.mat, seed: 7900 }, p, { dur: end + .5, data: { arrows, fin: false }, tick: (s, dt, gw2) => {
+    if (s.t < end) p.vElevation = Math.max(p.vElevation ?? 0, 0); // hover while shooting
+    for (const a of s.arrows) {
+      if (a.done || s.t < a.at + .16) continue; a.done = true;
+      for (const t of foes(gw2, p)) if (Math.hypot(t.x - a.x, ((t.z ?? a.z) - a.z) * DEPTH) < 32) strike(p, st, t, 6 + 5 * k, 0, 60, .25);
+      if (s.arrows.indexOf(a) % 4 === 0) groundFx(m.look, a.x, a.z, p.team, 26, gw2);
+    }
+    if (!s.fin && s.t > end) { s.fin = true; for (const t of foes(gw2, p)) if (Math.hypot(t.x - tx, ((t.z ?? tz) - tz) * DEPTH) < 84) strike(p, st, t, 10 + 8 * k, 0, 220, .4, true); quake(7, .25, 3); }
+  }, draw: (ctx, s) => {
+    ctx.save();
+    if (s.t < end) { ctx.globalAlpha = .7; ctx.strokeStyle = R.mid; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(tx, groundYForDepth(tz), 64, 19, 0, 0, TAU); ctx.stroke(); ctx.globalAlpha = 1; }
+    for (const a of s.arrows) {
+      if (s.t < a.at) continue; const gy = groundYForDepth(a.z); const sy = (p.y ?? gy) - 30; const kk = Math.min(1, (s.t - a.at) / .16);
+      if (kk < 1) { const y = sy + (gy - 10 - sy) * kk; piece(ctx, m.look, a.x, y - 26, .8, s.t, R, f, a.at * 30); headDown(ctx, d, a.x, y, 1, s.t, R); }
+      else if (s.t - a.at < .5) { ctx.globalAlpha = 1 - (s.t - a.at - .16) / .34; headDown(ctx, d, a.x, gy - 12, .9, s.t, R); ctx.globalAlpha = 1; }
+    }
+    ctx.restore();
+  } }), st.quality);
+}
+// VOLLEY (ranged / caster flurry): the shooter stays and fires shot after shot down the lane.
+function volley(p, st, k, m) {
+  const R = styleOf(st).ramp; const f = p.facing || 1; const n = m.hits ?? 5; const range = (m.dist ?? 200) * 1.6; swing(p, .5);
+  emit(new SigSequence({ mat: R.mat, seed: 7950 }, p, { dur: n * .08 + .55, data: { shots: [], next: 0, fired: 0 }, tick: (s, dt, gw) => {
+    s.next -= dt; if (s.fired < n && s.next <= 0) { s.next = .08; s.fired++; s.shots.push({ x: p.x + f * 24, z: p.z, x0: p.x, done: false }); }
+    for (const sh of s.shots) {
+      if (sh.done) continue; sh.x += f * 950 * dt; if (Math.abs(sh.x - sh.x0) > range) { sh.done = true; continue; }
+      const t = foes(gw, p).find((o) => Math.abs(o.x - sh.x) < 20 && Math.abs(((o.z ?? sh.z) - sh.z) * DEPTH) < 30);
+      if (t) { sh.done = true; strike(p, st, t, 9 + 5 * k, f * 80, 40, .25); quake(2, .06, 1); }
+    }
+  }, draw: (ctx, s) => { for (const sh of s.shots) { if (sh.done) continue; const y = groundYForDepth(sh.z) - 42; piece(ctx, m.look, sh.x - f * 22, y + 26, .8, s.t, R, f, 2); drawHead(ctx, m.delivery, sh.x, y, 1, s.t, R, f); } } }), st.quality);
+}
+// PIERCING SHOT (ranged charge): one huge projectile carries every foe it meets down the lane.
+function piercingShot(p, st, k, m) {
+  const R = styleOf(st).ramp; const f = p.facing || 1; const dur = .45; const dist = 260 + 80 * k; const x0 = p.x + f * 30; swing(p, .5);
+  emit(new SigSequence({ mat: R.mat, seed: 7970 }, p, { dur: dur + .4, data: { carried: new Set(), done: false, sx: x0 }, tick: (s, dt, gw) => {
+    if (s.t <= dur) {
+      s.sx = x0 + f * dist * (s.t / dur);
+      for (const t of foes(gw, p)) if (!s.carried.has(t) && Math.abs(t.x - s.sx) < 30 && Math.abs(((t.z ?? p.z) - p.z) * DEPTH) < 44) { s.carried.add(t); strike(p, st, t, 10 + 6 * k, 0, 0, .5); }
+      for (const t of s.carried) { t.x = s.sx + f * 22; if ('kbVelX' in t) t.kbVelX = 0; }
+      return;
+    }
+    if (!s.done) { s.done = true; for (const t of s.carried) { strike(p, st, t, 22 + 16 * k, f * 900, 320, .7, true); if ('kbVelX' in t) t.kbVelX = f * 900; } if (s.carried.size) quake(10, .3, 5); }
+  }, draw: (ctx, s) => { if (s.t > dur + .05) return; const y = groundYForDepth(p.z) - 44; for (let i = 0; i < 6; i++) piece(ctx, m.look, s.sx - f * (30 + i * 20), y + 30, 1.4 - i * .15, s.t, R, f, i); drawHead(ctx, m.delivery, s.sx, y, 2.4, s.t, R, f); } }), st.quality);
+}
+// GROUND SLAMS (heavy flurry): the hammer pounds the ground, earth shocks march forward.
+function groundSlams(p, st, k, m) {
+  const R = styleOf(st).ramp; const f = p.facing || 1; const n = Math.max(3, Math.ceil((m.hits ?? 5) / 2)); swing(p, .2 + n * .14);
+  const spots = Array.from({ length: n }, (_, i) => ({ x: p.x + f * (55 + i * 62), z: p.z, at: .1 + i * .14, done: false }));
+  emit(new SigSequence({ mat: R.mat, seed: 7990 }, p, { dur: .1 + n * .14 + .4, data: { spots }, tick: (s, dt, gw) => {
+    for (const sp of s.spots) { if (sp.done || s.t < sp.at) continue; sp.done = true; for (const t of foes(gw, p)) if (Math.hypot(t.x - sp.x, ((t.z ?? sp.z) - sp.z) * DEPTH) < 48) strike(p, st, t, 13 + 8 * k, f * 120, 280, .4); groundFx(m.look, sp.x, sp.z, p.team, 34, gw); environment.add('crack', sp.x, sp.z, { radius: 40, team: p.team }); quake(5, .14, 2); }
+  }, draw: (ctx, s) => { for (const sp of s.spots) { if (s.t < sp.at) continue; const age = s.t - sp.at; if (age > .35) continue; const gy = groundYForDepth(sp.z); ctx.save(); ctx.globalAlpha = 1 - age / .35; drawHead(ctx, m.delivery, sp.x, gy - 26, 1.2, s.t, R, f); for (let i = 0; i < 4; i++) piece(ctx, m.look, sp.x + (i - 1.5) * 14, gy - 4 - age * 60, 1, s.t, R, f, i); ctx.restore(); } } }), st.quality);
+}
 const KINDS = { torrent, flash, vortex, drill, crescents, rising, pillar, boomerang, flurry, charge, blasts, calm, orbit, crash: (p, st, k, m, gw) => crash(p, st, m, gw) };
+// Per weapon: moves that are delivered by a different building block (same damage, status, ground effects).
+const WEAPON_KINDS = {
+  ranged: { rising: (p, st, k, m, gw) => arrowRain(p, st, k, m, gw, true), crash: (p, st, k, m, gw) => arrowRain(p, st, k, m, gw, false), flurry: volley, charge: piercingShot },
+  caster: { flurry: volley, rising: pillar },
+  heavy: { flurry: groundSlams, rising: pillar }
+};
 function runMove(p, st, move, k, gw) {
   if (!move) return false;
   p.lastBreathMove = move.name;
@@ -551,7 +638,7 @@ function runMove(p, st, move, k, gw) {
   const delivery = deliveryOf(p); const R = styleOf(st).ramp;
   combat.spawnDamageText?.(p.x, (p.y ?? 0) - 96, move.name, { color: R.light });
   if (delivery.kind !== 'none' && move.kind !== 'drill') emit(new SigSequence({ mat: R.mat, seed: 7800 }, p, { dur: .32, draw: (ctx, s, kk) => drawFlourish(ctx, delivery, p.x, p.y ?? groundYForDepth(p.z), kk, s.t, R, p.facing || 1) }), st.quality);
-  (KINDS[move.kind] ?? torrent)(p, st, k, { ...move, delivery }, gw);
+  (WEAPON_KINDS[delivery.kind]?.[move.kind] ?? KINDS[move.kind] ?? torrent)(p, st, k, { ...move, delivery }, gw);
   return true;
 }
 

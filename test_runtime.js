@@ -3979,6 +3979,23 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   assert(Math.abs(P.x - xBow) < 30 && shotFoe.hp < 3000 && shotFoe.hp < shotHp && STATUS.hasStatus(shotFoe, 'burn'), 'Bow + fire sprint: the archer stays, a piercing fire shot covers the lane — the foe still bursts into flames');
   setup('S41'); P.equipClassWeapon('bow'); const dragonFoe = foeAt(560); charged('forward'); step(60); renderAll();
   assert(dragonFoe.hp < 3000 && STATUS.hasStatus(dragonFoe, 'burn') && !bad, 'Bow + flame forward: the fire dragon flies as the tail of a fire arrow — same burn and reach');
+  // Every move kind is delivered in the weapon's style (bow: arrow rain from above on charge up / dive, volleys, a carrying shot …).
+  setup('S41'); P.equipClassWeapon('bow'); const rainFoe = foeAt(520); charged('up');
+  const above = Math.abs(P.x - rainFoe.x) < 40 && P.elevation > 100; step(70);
+  assert(above && rainFoe.hp < 3000, 'Bow + charge up: the archer appears high above the foe and rains fire arrows down (no launcher from a bow)');
+  const weaponBroken = [];
+  for (const weapon of ['bow', 'great_hammer', 'harp', 'gauntlets', 'spear', 'katana']) for (const style of styles) for (const move of weapon === 'bow' ? ['forward', 'up', 'sprint', 'dive'] : ['up', 'sprint', 'dive']) {
+    const id = Object.entries(BR.BREATH_RUNES).find(([, v]) => v === style)?.[0] ?? 'S40';
+    setup(id, style); P.equipClassWeapon(weapon); const m = foeAt(move === 'up' ? 380 : 420); if (move === 'dive') m.x = 330;
+    try {
+      if (move === 'forward' || move === 'up') charged(move);
+      else if (move === 'sprint') { P.sprintActive = true; P.vx = 320; P.executeAttack(neutral, 'normal'); }
+      else { P.elevation = 90; P.grounded = false; P.executeAttack(neutral, 'dive'); }
+      step(130); renderAll();
+      if (m.hp >= 3000) weaponBroken.push(weapon + ':' + style + ':' + move);
+    } catch (err) { weaponBroken.push(weapon + ':' + style + ':' + move + ' ' + err.message); }
+  }
+  assert(!weaponBroken.length && !bad, 'Every breathing move hits and renders cleanly with every weapon style (bow, hammer, harp, fists, spear, katana) ' + weaponBroken.slice(0, 6).join(' | '));
   P.equipWeapon(null); P.equipClassWeapon(null);
   if (P.signature) core.endStance(P, 'replaced'); spells.clearRuntime(); game.minions = []; ready(); dummy.homeX = dummy.x = 512;
 }
