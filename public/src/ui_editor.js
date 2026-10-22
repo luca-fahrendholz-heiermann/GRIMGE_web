@@ -232,9 +232,9 @@ async function openScreen(id) {
   busy = false;
 }
 async function scanAll() {
-  const back = current;
+  if (busy) return; busy = true; const back = current; /* no screen switch while collecting */
   for (const b of BUILTIN) { status(`sammle Funktionen: ${b.name} …`); current = b.id; restoreAll(); try { await runInGame(b.setup); } catch { /* skip */ } scan(); }
-  current = back; await openScreen(back); status(`${registry.size} Funktionen gesammelt`);
+  current = back; busy = false; await openScreen(back); status(`${registry.size} Funktionen gesammelt`);
 }
 function renderScreenList() {
   const list = $('screen-list'); const groups = {};
