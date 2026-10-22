@@ -1,6 +1,6 @@
 # GRIMGE – UI-Editor
 
-Öffnen: lokalen Server starten (`node server.js`) und `http://localhost:3000/editor.html` aufrufen.
+Öffnen: **`start_editor.bat`** doppelklicken. Sie startet den Server auf Port 3100 (neben dem Spiel auf 3000) und öffnet `http://localhost:3100/editor.html`. Läuft der Server schon, wird nur der Editor geöffnet. Das Schließen des Fensters beendet den Server. Alternativ: `node server.js` und `/editor.html` aufrufen.
 
 Der Editor lädt das echte Spiel in einem Rahmen, genau in der gewählten Zielgröße (Desktop 1280×720, Handy quer 844×390, Tablet 1180×820). Er öffnet die einzelnen Screens per Code. Darüber liegt eine Bearbeitungsebene.
 
