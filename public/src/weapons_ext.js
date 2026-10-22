@@ -211,7 +211,7 @@ export const EXT_PIECES = {
 // own collision (capturable / reflectable like spell projectiles).
 const PIECE_OF_SHOT = { arrow: 'arrow', bolt: 'bolt', knife: 'knife', chakram: 'chakram', card: 'card', orb: 'orb', rune: 'rune', hex: 'hex', light: 'light', note: 'note', talisman: 'talisman', gust: 'gust', wave: 'gust' };
 export class WeaponShot {
-  constructor(owner, shot, hue, drawPiece, { power = 1, index = 0, count = 1, vzExtra = 0, height = null } = {}) {
+  constructor(owner, shot, hue, drawPiece, { power = 1, index = 0, count = 1, vzExtra = 0, height = null, delay = 0 } = {}) {
     const f = owner.facing || 1;
     this.owner = owner; this.team = owner.team; this.shot = shot; this.hue = hue; this.drawPiece = drawPiece;
     this.kind = shot.kind; this.facing = f;
@@ -222,10 +222,12 @@ export class WeaponShot {
     this.pierce = !!shot.pierce; this.ricochet = shot.ricochet ?? 0; this.homing = shot.homing ?? 0;
     this.joker = shot.allJokers || (shot.joker && index === Math.floor(count / 2));
     this.hitSet = new Set(); this.isFinished = false; this.isCapturableProjectile = true; this.isWeaponShot = true; this.spin = 0;
+    this.delay = delay; // released later (the bow is drawn first): rides with the owner until then
   }
   get y() { return groundYForDepth(this.z) - this.height; }
   targets(gw) { return (gw?.getHostileTargets(this.team) ?? []).filter((t) => t && !t.isDead && !t.isDestroyed && (!t.lifeState || t.lifeState === 'Alive') && !this.hitSet.has(t)); }
   update(dt, gw) {
+    if (this.delay > 0) { this.delay -= dt; const f = this.owner.facing || 1; this.facing = f; this.vx = f * Math.abs(this.vx); this.x = this.owner.x + f * 22; this.z = this.owner.z; return; }
     this.t += dt; this.spin += dt * 20;
     if (this.sealed != null) { this.sealed -= dt; if (this.sealed <= 0) this.burst(gw); return; }
     if (this.homing) {
@@ -263,6 +265,7 @@ export class WeaponShot {
     audio.playImpact?.(true);
   }
   render(ctx) {
+    if (this.delay > 0) return; // still on the string
     const a = Math.atan2(this._vz * 150 * .32, this.vx);
     ctx.save(); ctx.translate(this.x, this.y);
     if (this.kind === 'chakram' || this.kind === 'card' || (this.kind === 'talisman' && this.sealed != null)) ctx.rotate(this.kind === 'talisman' ? 0 : this.spin);

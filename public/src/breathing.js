@@ -671,10 +671,12 @@ function arrowRain(p, st, k, m, gw, teleport) {
   const R = styleOf(st).ramp; const f = p.facing || 1; const d = m.delivery;
   const t0 = foes(gw, p).filter((o) => (o.x - p.x) * f > -40 && Math.hypot(o.x - p.x, ((o.z ?? p.z) - p.z) * DEPTH) < 360).sort((a, b) => Math.abs(a.x - p.x) - Math.abs(b.x - p.x))[0];
   const tx = t0 ? t0.x : p.x + f * (teleport ? 150 : 40); const tz = t0 ? (t0.z ?? p.z) : p.z;
-  if (teleport) { combat.spawnShockwave?.(p.x, (p.y ?? 0) - 40, 30, R.mid); p.x = tx - f * 24; p.z = tz; clampToArena(p, gw?.battlefield?.boundsOverride ?? null); p.grounded = false; p.elevation = Math.max(p.elevation ?? 0, 120); /* high, but still below the HUD */ p.invulnerableTimer = Math.max(p.invulnerableTimer ?? 0, .5); }
+  if (teleport) { combat.spawnShockwave?.(p.x, (p.y ?? 0) - 40, 30, R.mid); p.x = tx - f * 8; p.z = tz; clampToArena(p, gw?.battlefield?.boundsOverride ?? null); p.grounded = false; p.elevation = Math.max(p.elevation ?? 0, 140); /* high above the foe (user, 22 Oct 2026), still below the HUD chips */ p.invulnerableTimer = Math.max(p.invulnerableTimer ?? 0, .5); }
   p.state = 'heavyStrike'; p.stateTimer = .6; p.vx = 0; p.vz = 0; p.vElevation = 0; p.airLatch = null;
+  p._weaponMotion = 'draw'; p._weaponSwingTime = .6;
   const n = 12; const arrows = Array.from({ length: n }, (_, i) => ({ at: .12 + i * .035, x: tx + Math.sin(i * 2.39) * 62, z: Math.max(.03, Math.min(.97, tz + Math.cos(i * 1.7) * .1)), done: false }));
   const end = .12 + n * .035 + .16;
+  p.aerialAim = end + .15; // the archer lies flat in the air, the bow pointing down (entities.js render)
   emit(new SigSequence({ mat: R.mat, seed: 7900 }, p, { dur: end + .5, data: { arrows, fin: false }, tick: (s, dt, gw2) => {
     if (s.t < end) p.vElevation = Math.max(p.vElevation ?? 0, 0); // hover while shooting
     for (const a of s.arrows) {

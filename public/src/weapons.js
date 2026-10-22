@@ -287,10 +287,10 @@ export function drawAstralPiece(ctx, piece, hue, { intensity = .8, time = perfor
 }
 
 // Projectiles of a ranged / magic weapon shot (count, spread, charge power).
-export function makeWeaponShots(player, shot, weaponId, { power = 1, volley = 0, low = false } = {}) {
+export function makeWeaponShots(player, shot, weaponId, { power = 1, volley = 0, low = false, delay = 0 } = {}) {
   const hue = astralHue(weaponId); const count = (shot.count ?? 1) + volley;
   const cfg = volley ? { ...shot, spread: Math.max(shot.spread ?? 0, .22) } : low ? { ...shot, slow: Math.min(shot.slow ?? 1, .45) } : shot;
-  return Array.from({ length: count }, (_, index) => new WeaponShot(player, cfg, hue, drawAstralPiece, { power, index, count, height: low ? (player.worldHeight ?? 0) + 14 : null }));
+  return Array.from({ length: count }, (_, index) => new WeaponShot(player, cfg, hue, drawAstralPiece, { power, index, count, height: low ? (player.worldHeight ?? 0) + 14 : null, delay }));
 }
 
 // Draws a weapon pointing along +x from (0,0) (pickups and thrown weapons).

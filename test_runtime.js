@@ -3631,8 +3631,11 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   // Slot model: tap = melee on the lane, ranged only on the castle; HOLD = the weapon's ranged move everywhere.
   const { HOLD_MANA } = await import('./public/src/hold_actions.js');
   P.mp = P.maxMp; P.reservedMana = 0;
-  P.equipClassWeapon('bow'); ready(); P.executeAttack(neutral, 'normal');
-  assert(!spells.activeSpells.some((s) => s.isWeaponShot), 'On the lane a bow tap is melee (no arrow)');
+  P.equipClassWeapon('bow'); ready(); const mpLane = P.mp; P.executeAttack(neutral, 'normal');
+  const laneArrow = spells.activeSpells.find((s) => s.isWeaponShot && s.kind === 'arrow');
+  assert(laneArrow && laneArrow.delay > 0 && laneArrow.life < .6 && P.mp === mpLane, 'On the lane a bow tap shoots a short-range arrow (no mana), released when the string is let go');
+  for (let i = 0; i < 8; i++) spells.update(1 / 60, game); assert(laneArrow.delay > 0 || laneArrow.t === 0 ? true : laneArrow.x > P.x + 22, 'The lane arrow flies after the release');
+  for (let i = 0; i < 30; i++) spells.update(1 / 60, game); assert(laneArrow.x > P.x + 100 || laneArrow.isFinished, 'The lane arrow really flies forward');
   spells.clearRuntime(); ready(); let mp0 = P.mp; P.surfaceId = 'blueCastleUpperPlatform'; P.executeAttack(neutral, 'normal');
   assert(spells.activeSpells.some((s) => s.isWeaponShot && s.kind === 'arrow') && mp0 - P.mp === 1, 'On the castle the bow tap fires an arrow for 1 mana');
   spells.clearRuntime(); P.surfaceId = null; ready(); mp0 = P.mp; P.beginCharge('hold', 'key'); P.chargeTimer = P.chargeMaxTime * .5; P.releaseCharge();
@@ -4036,8 +4039,8 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   assert(dragonFoe.hp < 3000 && STATUS.hasStatus(dragonFoe, 'burn') && !bad, 'Bow + flame forward: the fire dragon flies as the tail of a fire arrow — same burn and reach');
   // Every move kind is delivered in the weapon's style (bow: arrow rain from above on charge up / dive, volleys, a carrying shot …).
   setup('S41'); P.equipClassWeapon('bow'); const rainFoe = foeAt(520); charged('up');
-  const above = Math.abs(P.x - rainFoe.x) < 40 && P.elevation > 100; step(70);
-  assert(above && rainFoe.hp < 3000, 'Bow + charge up: the archer appears high above the foe and rains fire arrows down (no launcher from a bow)');
+  const above = Math.abs(P.x - rainFoe.x) < 20 && P.elevation >= 139; const flat = P.aerialAim > 0 && P._weaponMotion === 'draw'; step(70);
+  assert(above && flat && rainFoe.hp < 3000, 'Bow + charge up: the archer appears high right above the foe, lies flat with the bow pointing down and rains fire arrows (no launcher from a bow)');
   const weaponBroken = [];
   for (const weapon of ['bow', 'great_hammer', 'harp', 'gauntlets', 'spear', 'katana']) for (const style of styles) for (const move of weapon === 'bow' ? ['forward', 'up', 'sprint', 'dive'] : ['up', 'sprint', 'dive']) {
     const id = Object.entries(BR.BREATH_RUNES).find(([, v]) => v === style)?.[0] ?? 'S40';

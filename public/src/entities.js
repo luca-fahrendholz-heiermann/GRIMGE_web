@@ -416,7 +416,8 @@ export class Player extends GroundEntity {
     this.attackBufferTimer = Math.max(0, this.attackBufferTimer - dt);
     if (this.attackBufferTimer <= 0) this.queuedAttack = null;
     this.guardBreakTimer = Math.max(0, this.guardBreakTimer - dt);
-    this.tornadoT = Math.max(0, (this.tornadoT ?? 0) - dt); // DOPPELTORNADO: hidden in game time (also if the move is cleared)
+    this.tornadoT = Math.max(0, (this.tornadoT ?? 0) - dt);
+    this.aerialAim = this.grounded ? 0 : Math.max(0, (this.aerialAim ?? 0) - dt); // aerial bow shot pose (breathing arrow rain) // DOPPELTORNADO: hidden in game time (also if the move is cleared)
     masteryTickShield(this); // shield end masteries (residual shockwave, sacrifice refund)
     masteryTick(this, dt); // mastery timers (haste, stone skin, frenzy) and Void echoes
     if (this.arcaneShieldTimer <= 0) this.arcaneShield = 0;
@@ -1248,8 +1249,17 @@ export class Player extends GroundEntity {
       for (const shot of makeWeaponShots(this, ranged, this.weapon ?? this.classWeapon)) spells.addSpell(shot, 'B');
       if (attack.shot) return true;
     }
+    // Archers shoot on the lane too (user, 22 Oct 2026: "der Bogen schießt nicht richtig Pfeile ab"):
+    // a short-range arrow without mana, released when the string is let go; the full range stays
+    // the HOLD shot and the castle battlements.
+    if (attack.shot && WEAPONS[this.weapon ?? this.classWeapon]?.family === 'Ranger') {
+      const lane = { ...attack.shot, life: (attack.shot.life ?? .9) * .45, damage: Math.round((attack.shot.damage ?? 14) * .85) };
+      const loose = (this._weaponMotion === 'draw' ? .55 : this._weaponMotion === 'aim' ? .3 : .15) * (attack.time ?? .22);
+      for (const shot of makeWeaponShots(this, lane, this.weapon ?? this.classWeapon, { delay: loose })) spells.addSpell(shot, 'B');
+      return true;
+    }
     if (attack.shot) {
-      // A bow / staff / card on the lane: a short melee bash with the weapon.
+      // A staff / card / caster on the lane: a short melee bash with the weapon.
       const dmg = Math.max(14, Math.round((attack.shot.damage ?? 16) * (attack.shot.count ?? 1) * .7));
       const bash = this.triggerMeleeHitbox(dmg, this.facing * (attack.finisher ? 320 : 170) * (attack.finisher ? 1 : .3), attack.finisher ? 160 : 10, attack.finisher ? .6 : .35, !!attack.finisher, { hitstopTicks: 3, hitReaction: attack.finisher ? 'finisher' : 'light', reach: 66 });
       if (!bash && !attack.finisher) this._whiffRecovery = attack.time * .5;
@@ -1827,6 +1837,9 @@ export class Player extends GroundEntity {
     const wielding = this.isAlive && (this.weapon || this.classWeapon) && !activeMoveset(this) && currentBuffForm(this)?.id !== 'A04' && !this.isGuarding && !(this.hitFlash > 0);
     const body = wielding && (!useProc || /^attack|uppercut|heavyStrike/.test(this.state)) ? weaponBodyPose(this) : null;
     if (body) { useProc = true; pRot += body.rot; pOX += body.ox; pOY += body.oy; pSX *= body.sx; pSY *= body.sy; if (body.cadence) cadence *= body.cadence; }
+    // Aerial bow shot (breathing arrow rain): the body lies flat, face to the ground, centred over the spot.
+    const aerial = this.aerialAim > 0 && this.isAlive && !this.grounded;
+    if (aerial) { useProc = true; pRot = 90; pOX = -(this.facing || 1) * 34; pOY = -30; pSX = 1; pSY = 1; }
 
     if (this.state === 'attack2') reverse = true;
 
@@ -1859,7 +1872,13 @@ export class Player extends GroundEntity {
     // While guarding, the guard pose shows the weapon (weapon_guard.js) — no second copy in the hand.
     const armed = this.isAlive && (this.weapon || this.classWeapon) && currentBuffForm(this)?.id !== 'A04' && !(this.isGuarding && !activeMoveset(this));
     // The weapon stays in the hands when the body shifts with it (weapon_body.js).
-    const held = (layer) => { if (!armed) return; ctx.save(); if (body) ctx.translate(body.ox, body.oy); drawHeldWeapon(ctx, this, renderY, layer); ctx.restore(); };
+    const held = (layer) => {
+      if (!armed) return; ctx.save();
+      // Lying flat in the air: the weapon turns with the body (a bow then points straight down).
+      if (aerial) { const f = this.facing || 1; ctx.translate(this.x + pOX, renderY + pOY); ctx.rotate(f * Math.PI / 2); ctx.translate(-this.x, -renderY); }
+      else if (body) ctx.translate(body.ox, body.oy);
+      drawHeldWeapon(ctx, this, renderY, layer); ctx.restore();
+    };
     held('back');
     sprites.renderEntity(ctx, this.renderKey, this.x, renderY, renderOpts);
     held('front');
