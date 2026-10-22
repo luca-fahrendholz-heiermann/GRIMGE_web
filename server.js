@@ -28,6 +28,32 @@ const MIME_TYPES = {
   '.ogg': 'audio/ogg'
 };
 
+const UI_SPEC_DIR = path.join(__dirname, 'docs', 'ui_spec');
+function handleUiSpec(req, res) {
+  const json = path.join(UI_SPEC_DIR, 'ui_editor_spec.json');
+  if (req.method === 'GET') {
+    fs.readFile(json, 'utf8', (err, data) => {
+      if (err) { res.writeHead(404, { 'Content-Type': 'application/json' }); res.end('null'); return; }
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-cache' }); res.end(data);
+    });
+    return;
+  }
+  if (req.method !== 'POST') { res.writeHead(405); res.end(); return; }
+  let body = ''; let tooBig = false;
+  req.on('data', (chunk) => { body += chunk; if (body.length > 5e6) { tooBig = true; req.destroy(); } });
+  req.on('end', () => {
+    if (tooBig) return;
+    try {
+      const { spec, markdown } = JSON.parse(body);
+      if (!spec || !Array.isArray(spec.screens)) throw new Error('no spec');
+      fs.mkdirSync(UI_SPEC_DIR, { recursive: true });
+      fs.writeFileSync(json, JSON.stringify(spec, null, 1));
+      if (typeof markdown === 'string') fs.writeFileSync(path.join(UI_SPEC_DIR, 'UI_EDITOR_SPEC.md'), markdown);
+      res.writeHead(200, { 'Content-Type': 'application/json' }); res.end('{"ok":true}');
+    } catch (err) { res.writeHead(400, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ ok: false, error: String(err.message) })); }
+  });
+}
+
 const server = http.createServer((req, res) => {
   let reqUrl = req.url.split('?')[0];
   try {
@@ -40,6 +66,9 @@ const server = http.createServer((req, res) => {
     return;
   }
   if (reqUrl === '/') reqUrl = '/index.html';
+
+  // UI editor (public/editor.html): the layout spec is saved into the repo so it can be carried into the code.
+  if (reqUrl === '/api/ui-spec') { handleUiSpec(req, res); return; }
 
   const safePath = path.normalize(reqUrl).replace(/^(\.\.[\/\\])+/, '');
   let filePath = path.join(PUBLIC_DIR, safePath);

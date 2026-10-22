@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GRIMGE · UI-Editor</title>
+  <style>
+    :root { --bg: #0f0b19; --panel: #171126; --line: #3a2f50; --ink: #efe6ff; --sub: #a99cc4; --gold: #ffd54f; --sel: #4fc3f7; --add: #b388ff; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font: 13px/1.35 'Segoe UI', system-ui, sans-serif; overflow: hidden; }
+    button, select, input, textarea { font: inherit; color: var(--ink); background: #22193a; border: 1px solid var(--line); border-radius: 6px; }
+    button { padding: 5px 9px; cursor: pointer; } button:hover { border-color: var(--gold); } button.primary { background: #4a3a10; border-color: var(--gold); color: var(--gold); font-weight: 700; }
+    button.on { background: #12324a; border-color: var(--sel); color: #bfe9ff; }
+    input, select, textarea { padding: 4px 6px; width: 100%; } textarea { resize: vertical; min-height: 56px; }
+    label { display: block; color: var(--sub); font-size: 11px; margin: 8px 0 3px; letter-spacing: .5px; text-transform: uppercase; }
+    #app { display: grid; grid-template-columns: 240px 1fr 300px; grid-template-rows: 46px 1fr; height: 100%; }
+    #top { grid-column: 1 / 4; display: flex; gap: 8px; align-items: center; padding: 6px 10px; border-bottom: 1px solid var(--line); background: var(--panel); }
+    #top b { color: var(--gold); letter-spacing: 2px; margin-right: 8px; } #top .grow { flex: 1; } #top select { width: auto; }
+    #status { color: var(--sub); font-size: 12px; }
+    aside { background: var(--panel); border-right: 1px solid var(--line); overflow: auto; padding: 10px; }
+    #inspector { border-right: 0; border-left: 1px solid var(--line); }
+    h3 { margin: 4px 0 8px; font-size: 12px; letter-spacing: 1.5px; color: var(--gold); }
+    .screen-item { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border: 1px solid transparent; border-radius: 6px; cursor: pointer; margin-bottom: 2px; }
+    .screen-item:hover { border-color: var(--line); } .screen-item.active { border-color: var(--gold); background: #2a2010; }
+    .screen-item small { color: var(--sub); margin-left: auto; font-size: 10px; } .screen-item .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--add); flex: none; }
+    .screen-item .dot.builtin { background: #4fc3f7; } .screen-item .edited { color: var(--gold); }
+    .group-title { color: var(--sub); font-size: 10px; letter-spacing: 1.5px; margin: 12px 0 4px; }
+    #stage-wrap { position: relative; overflow: hidden; background: repeating-conic-gradient(#120d1e 0 25%, #0d0916 0 50%) 0 0 / 24px 24px; }
+    #stage { position: absolute; left: 0; top: 0; transform-origin: 0 0; box-shadow: 0 0 0 1px var(--line), 0 10px 40px #000; background: #000; }
+    #frame { position: absolute; inset: 0; border: 0; width: 100%; height: 100%; }
+    #blank { position: absolute; inset: 0; background: linear-gradient(#1b1430, #0d0a17); display: none; }
+    #blank::after { content: ''; position: absolute; inset: 0; background-image: linear-gradient(#ffffff0d 1px, transparent 1px), linear-gradient(90deg, #ffffff0d 1px, transparent 1px); background-size: 40px 40px; }
+    #overlay { position: absolute; inset: 0; }
+    #overlay.pass { pointer-events: none; }
+    .box { position: absolute; border: 1px dashed #4fc3f799; cursor: move; }
+    .box:hover { border-color: var(--sel); background: #4fc3f714; }
+    .box.sel { border: 2px solid var(--sel); background: #4fc3f71c; z-index: 5; }
+    .box.changed { border-color: var(--gold); } .box.hiddenEl { background: repeating-linear-gradient(45deg, #ff525233 0 6px, transparent 6px 12px); }
+    .box .tag { position: absolute; left: -1px; top: -16px; font-size: 10px; padding: 0 4px; background: #0b1a26; color: #bfe9ff; white-space: nowrap; display: none; border-radius: 3px; }
+    .box:hover .tag, .box.sel .tag { display: block; }
+    .box .grip { position: absolute; right: -5px; bottom: -5px; width: 10px; height: 10px; background: var(--sel); cursor: nwse-resize; display: none; }
+    .box.sel .grip { display: block; }
+    .added { position: absolute; display: flex; align-items: center; justify-content: center; text-align: center; cursor: move; font: 800 14px 'Rajdhani', 'Segoe UI', sans-serif; letter-spacing: 1px; outline: 1px dashed #b388ffaa; overflow: hidden; }
+    .added.k-button { border: 2px solid #ffd54f; border-radius: 10px; box-shadow: inset 0 -3px 0 #0006; }
+    .added.k-panel { border: 2px solid #5e35b1; border-radius: 8px; }
+    .added.k-icon { border: 2px solid #ffd54f; border-radius: 50%; font-size: 22px; }
+    .added.k-text { outline-style: dotted; }
+    .added.sel { outline: 2px solid var(--add); z-index: 6; }
+    .added .grip { position: absolute; right: 0; bottom: 0; width: 10px; height: 10px; background: var(--add); cursor: nwse-resize; display: none; }
+    .added.sel .grip { display: block; }
+    .row { display: flex; gap: 6px; } .row > * { flex: 1; }
+    .muted { color: var(--sub); font-size: 12px; } .code { font-family: Consolas, monospace; font-size: 11px; color: #bfe9ff; word-break: break-all; }
+    .hint { color: var(--sub); font-size: 11px; margin-top: 10px; border-top: 1px solid var(--line); padding-top: 8px; }
+    #add-tools { display: flex; flex-wrap: wrap; gap: 4px; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div id="top">
+      <b>GRIMGE · UI-EDITOR</b>
+      <select id="viewport"></select>
+      <button id="mode-edit" class="on" title="Elemente anklicken, ziehen, Größe ändern">✥ Bearbeiten</button>
+      <button id="mode-play" title="Das Spiel normal bedienen (z. B. ein Menü öffnen), danach „Neu erfassen“">▶ Spielen</button>
+      <button id="rescan" title="Elemente des aktuell sichtbaren Bildes neu erfassen">⟳ Neu erfassen</button>
+      <button id="scan-all" title="Alle Screens einmal öffnen, damit alle vorhandenen Funktionen zur Auswahl stehen">Alle Funktionen sammeln</button>
+      <span class="grow"></span>
+      <span id="status">lädt …</span>
+      <button id="import">Import</button>
+      <button id="export">Export JSON</button>
+      <button id="save" class="primary" title="Speichert docs/ui_spec/ui_editor_spec.json + UI_EDITOR_SPEC.md (lokaler Server)">💾 Speichern</button>
+      <input id="import-file" type="file" accept="application/json" hidden>
+    </div>
+    <aside id="screens">
+      <h3>SCREENS</h3>
+      <div id="screen-list"></div>
+      <button id="new-screen" style="width:100%;margin-top:8px">+ Neuer Screen</button>
+      <div class="hint">Ein neuer Screen bekommt sofort eine ID (screen_1, screen_2 …). Buttons können über „Zu Screen wechseln“ darauf verweisen.</div>
+    </aside>
+    <div id="stage-wrap">
+      <div id="stage">
+        <iframe id="frame" title="GRIMGE"></iframe>
+        <div id="blank"></div>
+        <div id="overlay"></div>
+      </div>
+    </div>
+    <aside id="inspector">
+      <h3>SCREEN</h3>
+      <div id="screen-props"></div>
+      <h3 style="margin-top:14px">NEUES ELEMENT</h3>
+      <div id="add-tools">
+        <button data-add="button">+ Button</button><button data-add="text">+ Text</button><button data-add="panel">+ Panel</button><button data-add="icon">+ Icon</button>
+      </div>
+      <h3 style="margin-top:14px">AUSWAHL</h3>
+      <div id="element-props"><p class="muted">Ein Element im Bild anklicken.</p></div>
+      <div class="hint">Ziehen = verschieben · Ecke unten rechts = Größe · Pfeiltasten = 1 px (Shift: 10 px) · Entf = neues Element löschen / Änderung zurücksetzen.</div>
+    </aside>
+  </div>
+  <script type="module" src="src/ui_editor.js"></script>
+</body>
+</html>

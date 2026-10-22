@@ -4162,6 +4162,23 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   assert(fc.globalAlpha === .5 && fc.fillStyle === 'rgba(0, 0, 0, 1)' && fc.strokeStyle.stops.length >= 4, 'Pixel steps: the hardened VFX layer snaps alpha, rgba colours and gradients');
 }
 
+// UI editor spec (public/editor.html): screens, ids, functions, readable export.
+{
+  const U = await import('./public/src/ui_editor_spec.js');
+  const spec = U.emptySpec('desktop'); const hub = U.ensureScreen(spec, 'hub_character', { name: 'Hub' });
+  const c = U.ensureChange(hub, 'button[data-hub-action="mastery"]', { label: 'Mastery', fn: 'data-hub-action=mastery' }); c.move = { dx: 60 / 1280, dy: -20 / 720 };
+  const s1 = U.addCustomScreen(spec, { name: 'Shop' }); const s2 = U.addCustomScreen(spec);
+  c.function = { type: 'navigate', screen: s1.id };
+  const b = U.addElement(hub, 'button'); b.text = 'SHOP'; b.comment = 'öffnet den Shop';
+  U.ensureChange(hub, '#nothing'); U.pruneScreen(hub);
+  const md = U.specToMarkdown(spec);
+  assert(s1.id === 'screen_1' && s2.id === 'screen_2' && b.id === 'hub_character_el1' && hub.changes.length === 1 && md.includes('+60 px / −20 px') && md.includes('wechselt zu Screen `screen_1` („Shop“)') && md.includes('öffnet den Shop'), 'UI editor: new screens get their id at once, buttons can point at them, the readable spec lists moves, links and comments');
+  U.removeScreen(spec, 'screen_1'); const round = U.sanitizeSpec(JSON.parse(JSON.stringify(spec)));
+  assert(round.screens.length === 2 && round.screens[0].changes[0].function.type === 'custom' && /gelöscht/.test(round.screens[0].changes[0].comment) && U.nextScreenId(round) === 'screen_1', 'UI editor: deleting a screen turns links to it into comments; the spec survives a save / load');
+  const html = (await import('node:fs')).readFileSync('./public/editor.html', 'utf8'); const srv = (await import('node:fs')).readFileSync('./server.js', 'utf8');
+  assert(html.includes('src/ui_editor.js') && srv.includes("'/api/ui-spec'") && srv.includes('UI_EDITOR_SPEC.md'), 'UI editor page and its save endpoint exist (docs/ui_spec)');
+}
+
 const frameCallback = nextFrame;
 frameCallback(game.lastFrameTime + 16);
 game.debugVisible = true;
