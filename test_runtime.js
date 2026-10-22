@@ -658,6 +658,10 @@ const dungeonStarter = game.minions[0];
 dungeonStarter.takeDamage(999);
 game.awardRunXp(dungeonStarter.runXpValue);
 assert(game.modeState.run.pending && game.modeState.run.options.length === 2, 'The first defeated Dungeon scout grants the first two-Rune level-up choice');
+{ const offered = new Set(); const savedRun = { ...game.modeState.run, deck: [...game.modeState.run.deck], options: [...game.modeState.run.options] };
+  for (let i = 0; i < 400; i++) { game.queueRunRuneChoice(); for (const r of game.modeState.run.options) offered.add(r.id); }
+  Object.assign(game.modeState.run, savedRun);
+  assert(![...offered].some((id) => id.startsWith('transform_') || !spells.resolveSpell([{ id }])), 'Dungeon rune choices only offer runes that work on their own (no VOID IMPLOSION / transformation runes)'); }
 game.minions = []; // mirrors the runtime's dead-minion cleanup before the pick is chosen
 game.chooseRunRune(game.modeState.run.options[0].id);
 const dungeonHostiles = () => game.minions.filter((minion) => minion.team === 'red' && !minion.isDead);

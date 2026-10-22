@@ -2033,7 +2033,9 @@ export class GameWorld {
   queueRunRuneChoice() {
     const run = this.modeState?.run;
     if (!run) return;
-    const pool = recognizer.runes.filter((rune) => rune.id !== 'special');
+    // Only runes that work on their own (user, 22 Oct 2026: VOID IMPLOSION was offered but only works inside a
+    // transformation), and the deck rules hold (one domain, one Arcane State, specials once).
+    const pool = recognizer.runes.filter((rune) => rune.id !== 'special' && !String(rune.id).startsWith('transform_') && !!spells.resolveSpell([{ id: rune.id }]) && deckAccepts(run.deck, rune.id));
     const preferred = pool.filter((rune) => !run.deck.includes(rune.id));
     const source = preferred.length >= 2 ? preferred : pool;
     const firstIndex = Math.floor(Math.random() * source.length);
