@@ -633,6 +633,7 @@ export class SpellSystem {
   // masteries, HP sacrifice, element tags for retaliation.
   castArcaneShield(caster, quality = RUNE_GRADE_PROFILES.B, tags = this.castElements ?? ['aqua', 'terra'], { capacity = 90, duration = 5, color = '#b388ff', particles = 'fulgur', sacrifice = 0 } = {}) {
     applyWard(caster, capacity * quality.power, duration * quality.duration, tags, { sacrifice });
+    if (tags.includes('ward') && particles === 'fulgur') particles = 'ward'; // the Schutz rune sheds violet shards, not sparks
     audio.playSpell('arcane_shield');
     combat.spawnShockwave(caster.x, caster.y - 32, 52, color);
     combat.spawnElementalParticles(caster.x, caster.y - 30, particles, Math.round(18 * quality.particles));

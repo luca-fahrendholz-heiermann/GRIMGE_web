@@ -283,7 +283,7 @@ export const SPELL_HOW_TO = Object.freeze({
   sandstorm_bastion: 'A whirl of sand and stone around you deflects incoming shots for a while.',
   blizzard_surge: 'A freezing gale in front of you freezes minions and slows everything it hits.',
   aura_shock: 'A frost-lightning pulse blasts nearby enemies away from you (short cooldown).',
-  arcane_aegis: 'The chosen ally gets a shield that absorbs damage for a while.',
+  arcane_aegis: 'Tap: you get a shield that absorbs damage for a while. Drag the slot onto an ally to shield that ally instead.',
   stone_wall: 'Raises a wall along your swipe. It blocks enemies and their projectiles until it is broken or expires; you cannot walk through it either.',
   construct_bulwark: 'A short, low wall along your swipe — quick cover against shots.',
   dragon_breath: 'A wide cone of fire in front of you that widens with distance and burns everything inside.',

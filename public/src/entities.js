@@ -20,6 +20,7 @@ import { weaponSprintVariant, weaponSprintStart, weaponSprintTick, weaponSprintH
 import { kitOf } from './weapon_kits.js';
 import { drawWeaponGuard } from './weapon_guard.js';
 import { weaponBodyPose } from './weapon_body.js';
+import { drawWardShell } from './ward_shell.js';
 import { hasWeaponDown, castWeaponDown, weaponUp, weaponDive, updateWeaponKit, weaponMoveMult, weaponAttackSpeed, meleeBuffMods, targetDamageMult, onWeaponMeleeHit, afterWeaponSwing, weaponIncoming } from './weapon_kits.js';
 import { updatePrimalBond, bondMoveMultiplier, bondGainMultiplier, bondDisplacement, bondOnBlock, primalSprintVariant, renderPrimalBond, endPrimalBond, bondMelee, primalQuake } from './primals.js';
 import { createSegments, damageSegments, updateSegments, renderSegments } from './castle_segments.js';
@@ -1913,10 +1914,8 @@ export class Player extends GroundEntity {
     // Forms show their own guard (tail cocoon, astral palm, light shield).
     // The guard is drawn the way the held weapon blocks (weapon_guard.js).
     if (this.isGuarding && this.isAlive && !activeMoveset(this)) this.lastGuardKind = drawWeaponGuard(ctx, this, this.x, renderY, this.facing || 1, this.perfectBlockFlash > 0, this.animTime ?? 0);
-    if (this.arcaneShield > 0 && this.isAlive) {
-      ctx.save(); ctx.strokeStyle = 'rgba(194, 164, 255, .9)'; ctx.fillStyle = 'rgba(137, 98, 255, .12)'; ctx.lineWidth = 2;
-      ctx.shadowColor = '#b388ff'; ctx.shadowBlur = 14; ctx.beginPath(); ctx.ellipse(this.x, renderY - 37, 32, 45, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.restore();
-    }
+    // The shield: a crisp hexagonal shell that cracks as it runs low (ward_shell.js).
+    if (this.arcaneShield > 0 && this.isAlive) drawWardShell(ctx, this.x, renderY, { frac: Math.min(1, this.arcaneShield / Math.max(1, this.shieldCapacity ?? this.arcaneShield)), t: this.animTime ?? 0 });
     // Frozen: the Little-Fighter ice block (a FROZEN status draws its own block).
     if (this.freezeTimer > 0 && this.isAlive && !hasStatus(this, 'frozen') && !hasStatus(this, 'paralysis')) drawIceBlock(ctx, this.x, renderY, 50, 90, this.animTime ?? 0);
   }

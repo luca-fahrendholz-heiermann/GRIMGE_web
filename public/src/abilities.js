@@ -6,6 +6,7 @@
 // Collisions are always evaluated in world/ground coordinates, never from
 // particles or the projected render.
 import { audio } from './audio.js';
+import { drawWardShell } from './ward_shell.js';
 import { hardenContext } from './pixel_steps.js';
 import { combat } from './combat.js';
 import { groundDistance, groundYForDepth } from './world.js';
@@ -1093,13 +1094,9 @@ export class ShieldBubbleSpell {
     }
   }
   render(ctx) {
-    ctx.save();
-    ctx.globalCompositeOperation = 'lighter';
-    ctx.strokeStyle = 'rgba(179,136,255,.85)'; ctx.lineWidth = 2;
-    ctx.fillStyle = 'rgba(179,136,255,.14)';
-    const r = 24 + Math.sin(performance.now() * .008) * 2;
-    ctx.beginPath(); ctx.arc(this.x, this.y - 26, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    ctx.restore();
+    // The same crisp hex shell as the Wizard's own shield, a little smaller for minions.
+    this.t = (this.t ?? 0) + 1 / 60; this.cap ??= Math.max(1, this.target.arcaneShield ?? 1);
+    drawWardShell(ctx, this.x, this.y, { frac: Math.min(1, (this.target.arcaneShield ?? 0) / this.cap), t: this.t, scale: this.target.heroKey ? 1 : .72 });
   }
 }
 

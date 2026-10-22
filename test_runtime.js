@@ -1056,8 +1056,10 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
   const ally = new Minion(380, .5, 'blue', 'melee', 0);
   game.battlefield.placeOnSurface(ally); game.minions.push(ally);
   slotFused(['aqua', 'terra']);
-  game.castSlotAt(0);
-  assert(game.targeting.active?.mode === 'ally' && game.targeting.active.entity === P, 'Arcane Aegis defaults to the caster and waits for an ally');
+  P.arcaneShield = 0; game.castSlotAt(0);
+  assert(!game.targeting.active && P.arcaneShield > 0, 'Arcane Aegis / Schutz: a tap shields the caster at once (no waiting for a target)');
+  P.arcaneShield = 0; P.arcaneShieldTimer = 0; P.arcaneShieldCooldown = 0; slotFused(['aqua', 'terra']); game.beginSlotAim(0);
+  assert(game.targeting.active?.mode === 'ally', 'Dragging the slot out still picks an ally');
   const allyScreen = screenOf(ally.x, ally.z);
   game.targeting.pointerDown(allyScreen, 9); game.targeting.pointerUp(allyScreen, 9);
   const allyHp = ally.hp;

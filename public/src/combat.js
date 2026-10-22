@@ -153,6 +153,9 @@ export class CombatEngine {
     } else if (element === 'fulgur' || element === 'lightning') {
       color = '#ffe600';
       grav = 0;
+    } else if (element === 'ward') {
+      color = '#b388ff'; // Schutz: violet shield shards
+      grav = -30;
     } else if (element === 'terra' || element === 'earth') {
       color = '#8d6e63';
       grav = 400;

@@ -1323,7 +1323,10 @@ export class GameWorld {
     this.player.selectedSpellIndex = this.player.slottedSpells.indexOf(slot);
     // Two-stage spell waiting for its second press: stage 2 fires at once (no aiming).
     if (slot.recast) return this.castSpellSlot(slot, true);
-    // Ground / placement / ally spells first ask for their target.
+    // Ally spells (Schutz / Aegis): a tap shields the caster at once (user, 22 Oct 2026: waiting for a
+    // target blocked everything); dragging the slot onto an ally shields that ally (beginSlotAim).
+    if (slot.definition.targetingMode === TARGETING.ALLY) return this.castSpellSlot(slot, true);
+    // Ground / placement spells first ask for their target.
     if (needsTarget(slot.definition)) {
       this.targeting.begin(slot, 'tap');
       if (this.inputMode === 'desktop' && this.input.mouse.hasMoved) this.targeting.setPointFromScreen(this.input.mouse);
