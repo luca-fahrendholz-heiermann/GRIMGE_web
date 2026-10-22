@@ -7,14 +7,14 @@ import { WEAPONS } from './weapons.js';
 
 // Swarm piece shapes per class family; status = what the unleashed cuts leave.
 const FAMILY_STYLE = Object.freeze({
-  Guardian: { name: 'KLINGENBLÜTE', shape: 'petal', status: 'bleed' },
+  Guardian: { name: 'SCHILDSPLITTER', shape: 'shard', status: 'bleed' },
   Bladedancer: { name: 'KLINGENBLÜTE', shape: 'petal', status: 'bleed' },
   Ronin: { name: 'KLINGENBLÜTE', shape: 'petal', status: 'bleed', pink: true },
   Lancer: { name: 'SPEERREGEN', shape: 'arrow', status: 'bleed' },
   Shadow: { name: 'SCHATTENKLINGEN', shape: 'fang', status: 'bleed' },
   Reaper: { name: 'SENSENMOND', shape: 'fang', status: 'bleed' },
   Runeblade: { name: 'RUNENKLINGEN', shape: 'rune', status: 'paralysis' },
-  Spiritbound: { name: 'GEISTERKLINGEN', shape: 'petal', status: 'bleed' },
+  Spiritbound: { name: 'GEISTERKLINGEN', shape: 'fang', status: 'bleed' },
   Berserker: { name: 'SPLITTERORKAN', shape: 'shard', status: 'paralysis' },
   Ranger: { name: 'PFEILSCHWARM', shape: 'arrow', status: 'bleed' },
   Monk: { name: 'FAUSTFEUER', shape: 'ember', status: 'burn' },
@@ -48,7 +48,7 @@ export function bankaiStyleFor(weaponId) {
   cache.set(key, style);
   return style;
 }
-// The style that is drawn right now: the Wizard's class weapon (the player is the
-// only one with a class; anyone else falls back to the blade petals).
-export const bankaiStyleOf = (actor) => bankaiStyleFor(actor?.classWeapon ?? actor?.weapon ?? null);
+// The style that is drawn right now: the weapon the Wizard HOLDS (user, 21 Oct 2026: "je nach
+// Waffe die man trägt") — a picked-up weapon first, else the class weapon; bare hands: blade petals.
+export const bankaiStyleOf = (actor) => bankaiStyleFor(actor?.weapon ?? actor?.classWeapon ?? null);
 export const activeBankaiStyle = () => bankaiStyleOf(globalThis.window?.gameWorld?.player);

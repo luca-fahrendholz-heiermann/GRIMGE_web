@@ -171,8 +171,17 @@ export function renderBuffCharge(ctx, player, renderY, dir, k, full) {
 export function currentBuffForm(player) {
   if (player.ninefoldTimer > 0) return BUFF_FORMS.B01;
   if (player.eidolonTimer > 0) return BUFF_FORMS.B02;
-  if (player.buffForm?.timer > 0) return BUFF_FORMS[player.buffForm.id] ?? null;
+  if (player.buffForm?.timer > 0) return formFor(player, player.buffForm.id);
   return null;
+}
+// Bankai (A04) takes the colours of the held weapon's swarm everywhere (aura, veins, shockwaves),
+// not only in the swarm pieces — one form variant per weapon style, cached.
+const bankaiForms = new Map();
+function formFor(player, id) {
+  const form = BUFF_FORMS[id] ?? null; if (id !== 'A04' || !form) return form;
+  const style = bankaiStyleOf(player); let v = bankaiForms.get(style);
+  if (!v) { v = Object.freeze({ ...form, mat: style.mat, title: style.name }); bankaiForms.set(style, v); }
+  return v;
 }
 
 // Fade of the manifestation: assemble on transform-in, dissolve on the way out.
@@ -189,7 +198,7 @@ export function buffFade(player) {
 
 // Cast the buff rune. Returns false when another buff is still active.
 export function activateBuffForm(player, id, quality = { duration: 1, power: 1, area: 1, particles: 1 }, spells = null) {
-  const form = BUFF_FORMS[id];
+  const form = formFor(player, id);
   if (!form || !player) return false;
   setBuffSpellSink(spells);
   const active = currentBuffForm(player);
@@ -219,13 +228,13 @@ export function updateBuffForm(player, dt) {
   if (b.id === 'B01') b.timer = player.ninefoldTimer;
   else if (b.id === 'B02') b.timer = player.eidolonTimer;
   else b.timer = Math.max(0, b.timer - dt);
-  updateMorphology(player, BUFF_FORMS[b.id], dt);
+  updateMorphology(player, formFor(player, b.id), dt);
   if (b.timer <= 0 || !player.isAlive) endBuffForm(player);
 }
 
 export function endBuffForm(player) {
   if (!player.buffForm) return;
-  const form = BUFF_FORMS[player.buffForm.id];
+  const form = formFor(player, player.buffForm.id);
   if (form && player.isAlive) { combat.spawnShockwave(player.x, player.y - 40, 46, form.mat.edge); buffTransformFx(player, form, 'out'); }
   if (player.buffForm.id === 'B01') player.ninefoldTimer = 0;
   if (player.buffForm.id === 'B02') player.eidolonTimer = 0;

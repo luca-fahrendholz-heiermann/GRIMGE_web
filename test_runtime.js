@@ -2377,7 +2377,11 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   fresh.setClassWeapon(null); assert(!fresh.isRuneUnlocked('buff_A04'), 'Without a class there is no Bankai');
   fresh.setClassWeapon('katana'); assert(fresh.isRuneUnlocked('buff_A04') && new MageProfile(fresh.toJSON()).isRuneUnlocked('buff_A04'), 'The earned Bankai stays with its class (saved)');
   { const BK = await import('./public/src/bankai.js'); const k = BK.bankaiStyleFor('katana'); const bw = BK.bankaiStyleFor('bow'); const hm = BK.bankaiStyleFor('great_hammer'); const harp = BK.bankaiStyleFor('harp');
-    assert(k.shape === 'petal' && bw.shape === 'arrow' && hm.shape === 'shard' && harp.shape === 'note' && bw.name !== hm.name && hm.status !== k.status, 'Bankai adapts to the class: blade petals, arrow swarm, shard storm, sound swarm — own name and wound'); }
+    assert(k.shape === 'petal' && bw.shape === 'arrow' && hm.shape === 'shard' && harp.shape === 'note' && bw.name !== hm.name && hm.status !== k.status, 'Bankai adapts to the class: blade petals, arrow swarm, shard storm, sound swarm — own name and wound');
+    const BF = await import('./public/src/buff_forms.js'); const Pb = game.player; Pb.buffForm = { id: 'A04', timer: 5, total: 5, age: 1, power: 1 };
+    Pb.equipClassWeapon('katana'); Pb.equipWeapon('bow'); const fBow = BF.currentBuffForm(Pb); Pb.equipWeapon(null); const fKat = BF.currentBuffForm(Pb); Pb.equipClassWeapon(null); const fBare = BF.currentBuffForm(Pb);
+    assert(fBow.title === 'PFEILSCHWARM' && fBow.mat !== BK.PINK_MAT && fKat.title === 'KLINGENBLÜTE' && fKat.mat === BK.PINK_MAT && fBare.mat === BK.PINK_MAT && BK.bankaiStyleFor('sword_shield').shape !== 'petal', 'Bankai follows the weapon you HOLD (a picked-up bow over the class katana) — aura and swarm in its colours');
+    Pb.buffForm = null; }
   const drop = fresh.rollBossDrop(() => 0);
   assert(drop && fresh.isRuneUnlocked(drop.runeId) && new MageProfile(fresh.toJSON()).isRuneUnlocked(drop.runeId), 'A boss drops a locked late rune — kept in the save');
   game.returnToHub(); game.setMatchMode('training'); game.startMatch();
