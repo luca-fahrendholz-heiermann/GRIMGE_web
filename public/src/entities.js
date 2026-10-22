@@ -1872,7 +1872,7 @@ export class Player extends GroundEntity {
     // Astral weapon: the rear-hand piece behind the body, the front one in front.
     // Klingenblüte (A04): the weapon has become the petal swarm — only the swarm renderer draws it.
     // While guarding, the guard pose shows the weapon (weapon_guard.js) — no second copy in the hand.
-    const armed = this.isAlive && (this.weapon || this.classWeapon) && currentBuffForm(this)?.id !== 'A04' && !(this.isGuarding && !activeMoveset(this));
+    const armed = this.isAlive && (this.weapon || this.classWeapon) && currentBuffForm(this)?.id !== 'A04' && !(this.isGuarding && !activeMoveset(this)) && !this.signature?.impl?.stance?.hidesWeapon?.(this, this.signature);
     // The weapon stays in the hands when the body shifts with it (weapon_body.js).
     const held = (layer) => {
       if (!armed) return; ctx.save();

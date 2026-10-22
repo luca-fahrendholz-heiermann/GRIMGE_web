@@ -2500,7 +2500,7 @@ export const SIGNATURE_RUNE_DATA = Object.freeze([
   "id": "S87",
   "name": "Edles Opfer",
   "group": "G · Objekte, Geometrie und Atemtechniken (Designregeln 18.10.2026)",
-  "systemType": "Zweistufig · Schild → Opfer",
+  "systemType": "Dreistufig · Schild → Opfer → Richtspruch",
   "duration": 10,
   "targeting": "self",
   "mana": 36,
@@ -2510,15 +2510,15 @@ export const SIGNATURE_RUNE_DATA = Object.freeze([
    "#d50000",
    "#ff8a80"
   ],
-  "howTo": "Stage 1 LEBENSSCHILD: a blue aura, a big shield (110, Schutz masteries apply) that also heals 3 HP per second while it holds. Tap again: EDLE SELBSTAUFOPFERUNG — the remaining shield and 20 % of your HP are converted into attack power for 10 s (up to ×1.9 melee), a red aura with black lightning, every hit sends a black bolt into the target.",
+  "howTo": "Stage 1 LEBENSSCHILD: a blue aura, a big shield (110, Schutz masteries apply) that also heals 3 HP per second while it holds. Tap again: EDLE SELBSTAUFOPFERUNG — the remaining shield and 20 % of your HP are converted into attack power for 10 s (up to ×1.9 melee) — inside a bright blue aura tight to the body, outside black lightning with dark-red edges; every hit sends a black bolt into the target, and the energy flows into your astral weapon (black, crimson edges), which grows with time and hits. Tap a third time (or when the rage ends): ASTRALER RICHTSPRUCH — the giant weapon comes down and its slash runs across half the arena.",
   "roles": "",
   "inspiration": "",
-  "identity": "Erst eine blaue Aura mit großem Schild, dann rote Aura und schwarze Blitze rund um den Zauberer.",
+  "identity": "Erst eine blaue Aura mit großem Schild, dann innen eng anliegendes blaues Leuchten, außen schwarze Blitze mit dunkelroter Kante; die schwarze Astralwaffe wächst und schlägt über die halbe Arena.",
   "anim": [
-   "Eine blaue Aura flammt auf.",
-   "Der Lebensschild hält und heilt.",
-   "Erneut tippen: alles wird geopfert.",
-   "Rote Aura, schwarze Blitze: jeder Treffer schlägt mit Blitz ein."
+   "Eine blaue Aura flammt auf, der Lebensschild hält und heilt.",
+   "Erneut tippen: alles wird geopfert, schwarze Blitze brechen hervor.",
+   "Die Energie fließt in die Astralwaffe, sie wächst.",
+   "Richtspruch: ein Schlag über die halbe Arena."
   ],
   "arena": "Erst durchhalten, dann alles in Angriffskraft verwandeln.",
   "synergy": "",

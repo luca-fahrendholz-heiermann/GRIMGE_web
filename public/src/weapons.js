@@ -304,6 +304,21 @@ export function drawWeaponShape(ctx, weapon, scale = 1, options = {}) {
   ctx.restore();
 }
 
+// A weapon in flat, opaque colours (EDLES OPFER: the class's astral weapon turned black with crimson
+// edges, like the black lightning). Drawn along +x from (0,0); line widths stay crisp at any scale.
+export function drawWeaponSolid(ctx, weapon, scale = 1, { fill = '#0a0006', edge = '#8b0000', inner = '#ff1744', detail = '#3a0010', mainOnly = false } = {}) {
+  const pieces = PIECES[weapon] ?? PIECES.sword_shield;
+  ctx.save(); ctx.scale(scale, scale); ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.globalCompositeOperation = 'source-over'; ctx.shadowBlur = 0;
+  const one = (piece) => {
+    const shape = shapeOf(piece);
+    traceParts(ctx, shape.parts, { fill: edge, edge, edgeWidth: 6 / scale, line: edge, lineGrow: 5 / scale });
+    traceParts(ctx, shape.parts, { fill, edge: inner, edgeWidth: 1.6 / scale, line: fill, lineGrow: 0, detail }); // dark details: the weapon reads black
+  };
+  one(pieces.main);
+  if (pieces.off && !mainOnly) { ctx.translate(pieces.off === 'shield' ? -2 : 0, pieces.off === 'shield' ? 14 : 9); one(pieces.off); }
+  ctx.restore();
+}
+
 // Current swing of the held weapon: motion name, progress and pose.
 export function weaponSwing(player, weaponId = player.weapon ?? player.classWeapon) {
   const swinging = player.stateTimer > 0 && /^attack|uppercut|heavyStrike/.test(player.state);

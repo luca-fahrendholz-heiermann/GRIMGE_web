@@ -4208,9 +4208,26 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
     assert(W.nobleSacrifice(P) && P.signature.phase === 'sacrifice' && P.arcaneShield === 0 && P.hp === hpBefore - Math.floor(hpBefore * .2) && meleeBefore === 1, 'EDLE SELBSTAUFOPFERUNG: the shield and 20 % HP are given up');
     const power = P.signature.power; assert(power > 1.7 && power <= 1.9 && Math.abs(power - (1 + Math.min(.9, (shield + Math.floor(hpBefore * .2) * 1.5) / 160))) < 1e-9, 'EDLE SELBSTAUFOPFERUNG: converted into attack power (×' + power.toFixed(2) + ', capped ×1.9)');
     const m = foeAt(350); ready(); P.executeAttack(neutral, 'normal'); step(12); assert(m.hp < 3000 && (P.signature.bolts?.length ?? 0) + 1 > 0, 'Every hit in the sacrifice sends a black bolt');
-    assert(!W.nobleSacrifice(P), 'The sacrifice happens only once'); }
+    assert(!W.nobleSacrifice(P), 'The sacrifice happens only once');
+    const c0 = P.signature.charge; ready(); P.executeAttack(neutral, 'normal'); step(30); assert(P.signature.charge > c0 + .05, 'The energy flows into the astral weapon: it grows with time and every hit');
+    const near = foeAt(500); const far = foeAt(300 + 480); const out = foeAt(300 + 600); const before = [near.hp, far.hp];
+    assert(W.astralJudgement(P, game) && P.signature.phase === 'judgement', 'Tap 3: ASTRALER RICHTSPRUCH');
+    step(45); assert(near.hp < before[0] && far.hp <= before[1] - 34 && out.hp === 3000, 'ASTRALER RICHTSPRUCH: the giant weapon slash runs across half the arena (hits 480 px away, not beyond)');
+    step(60); assert(!P.signature, 'After the judgement the stance ends'); }
+  // The rage ends in the judgement by itself; the slot taps run the three stages in order.
+  setup('S87'); W.nobleSacrifice(P); P.signature.timer = .1; step(2); assert(P.signature?.phase === 'judgement', 'When the rage runs out, the judgement comes by itself');
+  { setup('S87'); spells.clearRuntime(); if (P.signature) core.endStance(P, 'replaced');
+    const { recognizer } = await import('./public/src/recognizer.js'); P.mp = P.maxMp;
+    const slot = game.slotRuneSpell({ ...recognizer.runes.find((r) => r.id === 'sig_S87'), grade: 'B', quality: .8 }); game.castSlotAt(slot.position);
+    const ph1 = P.signature?.phase; game.castSlotAt(slot.position); const ph2 = P.signature?.phase; game.castSlotAt(slot.position); const ph3 = P.signature?.phase;
+    assert(ph1 === 'shield' && ph2 === 'sacrifice' && ph3 === 'judgement', 'EDLES OPFER from the slot: tap = Lebensschild, tap = Selbstaufopferung, tap = Richtspruch (' + [ph1, ph2, ph3].join(' → ') + ')'); }
   let bad = 0; const strict = new Proxy({}, { get: (tt, k) => (k === 'arc' || k === 'ellipse') ? (x, y, r1, r2) => { if (r1 < 0 || (k === 'ellipse' && r2 < 0)) bad++; } : k === 'canvas' ? undefined : k === 'measureText' ? () => ({ width: 10 }) : () => {}, set: () => true });
-  for (const id of ['S86', 'S87']) { setup(id); if (id === 'S86') { charged('down'); step(3); } else W.nobleSacrifice(P); for (const layer of ['back', 'front']) core.signatureImpl(id).stance.render(strict, P, P.signature, P.y, layer); for (const sp of spells.activeSpells) sp.render?.(strict); }
+  for (const id of ['S86', 'S87']) { setup(id); if (id === 'S86') { charged('down'); step(3); } else { W.nobleSacrifice(P); P.signature.charge = 1; } for (const layer of ['back', 'front']) core.signatureImpl(id).stance.render(strict, P, P.signature, P.y, layer); for (const sp of spells.activeSpells) sp.render?.(strict); }
+  setup('S87'); W.nobleSacrifice(P); W.astralJudgement(P, game); for (let i = 0; i < 6; i++) { step(10); for (const sp of spells.activeSpells) sp.render?.(strict); }
+  { let depth = 0; let worst = 0; const counting = new Proxy({}, { get: (tt, k) => k === 'save' ? () => { depth++; } : k === 'restore' ? () => { depth--; worst = Math.min(worst, depth); } : k === 'canvas' ? undefined : k === 'getTransform' ? () => ({ a: 1 }) : k === 'measureText' ? () => ({ width: 10 }) : () => {}, set: () => true });
+    for (const id of ['S86', 'S87']) { setup(id); if (id === 'S87') { W.nobleSacrifice(P); P.signature.charge = .6; } for (const layer of ['back', 'front']) core.signatureImpl(id).stance.render(counting, P, P.signature, P.y, layer); }
+    setup('S87'); W.nobleSacrifice(P); W.astralJudgement(P, game); for (let i = 0; i < 4; i++) { step(12); for (const sp of spells.activeSpells) sp.render?.(counting); }
+    assert(depth === 0 && worst === 0, 'WILLE / EDLES OPFER drawing leaves the canvas state balanced (every save has its restore; ' + depth + ')'); }
   assert(!bad, 'WILLE and EDLES OPFER render cleanly (auras, black lightning, foresight brackets)');
   if (P.signature) core.endStance(P, 'replaced'); spells.clearRuntime(); game.minions = []; dummy.homeX = dummy.x = 512;
 }

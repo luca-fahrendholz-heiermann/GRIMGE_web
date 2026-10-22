@@ -356,10 +356,10 @@ runes.push(
     ['Der Blick wird scharf.', 'Schwarzer Stahl zieht über die Fäuste.', 'Der Wille trifft vor der Faust.', 'Ein Ausbruch des Willens: die Schwachen fallen.'],
     'Willens-Haltung: Schilde brechen, ausweichen, schwache Gegner niederzwingen.'),
   // After the Exiled Heavy Knight build of the GDD (the origin of the combo).
-  X('S87', 'Edles Opfer', 'Zweistufig · Schild → Opfer', 'self', 36, ['#0d47a1', '#42a5f5', '#d50000', '#ff8a80'], 10,
-    'Stage 1 LEBENSSCHILD: a blue aura, a big shield (110, Schutz masteries apply) that also heals 3 HP per second while it holds. Tap again: EDLE SELBSTAUFOPFERUNG — the remaining shield and 20 % of your HP are converted into attack power for 10 s (up to ×1.9 melee), a red aura with black lightning, every hit sends a black bolt into the target.',
-    'Erst eine blaue Aura mit großem Schild, dann rote Aura und schwarze Blitze rund um den Zauberer.',
-    ['Eine blaue Aura flammt auf.', 'Der Lebensschild hält und heilt.', 'Erneut tippen: alles wird geopfert.', 'Rote Aura, schwarze Blitze: jeder Treffer schlägt mit Blitz ein.'],
+  X('S87', 'Edles Opfer', 'Dreistufig · Schild → Opfer → Richtspruch', 'self', 36, ['#0d47a1', '#42a5f5', '#d50000', '#ff8a80'], 10,
+    'Stage 1 LEBENSSCHILD: a blue aura, a big shield (110, Schutz masteries apply) that also heals 3 HP per second while it holds. Tap again: EDLE SELBSTAUFOPFERUNG — the remaining shield and 20 % of your HP are converted into attack power for 10 s (up to ×1.9 melee) — inside a bright blue aura tight to the body, outside black lightning with dark-red edges; every hit sends a black bolt into the target, and the energy flows into your astral weapon (black, crimson edges), which grows with time and hits. Tap a third time (or when the rage ends): ASTRALER RICHTSPRUCH — the giant weapon comes down and its slash runs across half the arena.',
+    'Erst eine blaue Aura mit großem Schild, dann innen eng anliegendes blaues Leuchten, außen schwarze Blitze mit dunkelroter Kante; die schwarze Astralwaffe wächst und schlägt über die halbe Arena.',
+    ['Eine blaue Aura flammt auf, der Lebensschild hält und heilt.', 'Erneut tippen: alles wird geopfert, schwarze Blitze brechen hervor.', 'Die Energie fließt in die Astralwaffe, sie wächst.', 'Richtspruch: ein Schlag über die halbe Arena.'],
     'Erst durchhalten, dann alles in Angriffskraft verwandeln.')
 );
 

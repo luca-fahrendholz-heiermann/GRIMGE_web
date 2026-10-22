@@ -16,14 +16,20 @@
 // S87 EDLES OPFER — after the Exiled Heavy Knight build the GDD named (the source of the combo):
 //   stage 1   LEBENSSCHILD: a blue aura flares up, a big Ward shield (Schutz masteries apply) that
 //             also heals while it holds.
-//   stage 2   (tap again) EDLE SELBSTAUFOPFERUNG: the remaining shield and 20 % of the HP are
-//             converted into attack power for 10 s — a red aura, black lightning crackling around
-//             the Wizard, every hit sends a black bolt into the target.
+//   stage 2   (tap again) EDLE SELBSTAUFOPFERUNG (like a "rage" transformation): the remaining
+//             shield and 20 % of the HP become attack power for 10 s — inside a bright blue aura tight
+//             to the body, outside black lightning with dark-red edges; every hit sends a black bolt
+//             into the target. The energy flows into the class's astral weapon (black, crimson edges),
+//             which grows with time and every hit.
+//   stage 3   (tap again, or by itself when the rage ends) ASTRALER RICHTSPRUCH: the giant weapon
+//             comes down and its slash runs across half the arena.
 import { defineSignature, startStance, emit, SigSequence, foesOf, hit, TAU, DEPTH } from './signature_core.js';
 import { combat } from './combat.js';
 import { groundYForDepth } from './world.js';
 import { applyWard } from './mastery.js';
 import { offerRecast } from './recast.js';
+import { drawWeaponSolid, astralTipLength } from './weapons.js';
+import { ghostOf } from './buff_signatures.js';
 
 const R = Object.freeze({ steel: '#14121a', steelLit: '#3a3446', crimson: '#d50032', red: '#ff1744', spark: '#ff8a80', white: '#ffffff' });
 const alive = (t) => t && !t.isDead && t.lifeState !== 'Dead' && t.lifeState !== 'Dying' && (t.hp ?? 1) > 0;
@@ -32,12 +38,12 @@ const quake = (m, d) => combat.shakeCamera?.(m, d);
 const rnd = (seed) => { const x = Math.sin(seed * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
 
 // A jagged black bolt with a crimson edge, from (x0, y0) toward (x1, y1).
-function blackBolt(ctx, x0, y0, x1, y1, seed, width = 3) {
+function blackBolt(ctx, x0, y0, x1, y1, seed, width = 3, edge = R.crimson) {
   const pts = [[x0, y0]]; const n = 5;
   for (let i = 1; i < n; i++) { const u = i / n; const j = (rnd(seed + i) - .5) * 14; pts.push([x0 + (x1 - x0) * u - (y1 - y0) / 40 * j, y0 + (y1 - y0) * u + (x1 - x0) / 40 * j]); }
   pts.push([x1, y1]);
   const line = (c, w) => { ctx.strokeStyle = c; ctx.lineWidth = w; ctx.beginPath(); pts.forEach(([x, y], i) => (i ? ctx.lineTo(Math.round(x), Math.round(y)) : ctx.moveTo(Math.round(x), Math.round(y)))); ctx.stroke(); };
-  line(R.crimson, width + 2); line('#0a0006', width); // a BLACK bolt with a crimson edge
+  line(edge, width + 2); line('#0a0006', width); // a BLACK bolt with a coloured edge
 }
 // Pixel flame tongues around the body silhouette (the aura). pal: [dark, mid, light].
 function auraFlames(ctx, p, ry, t, pal, k = 1, n = 18) {
@@ -196,65 +202,144 @@ defineSignature('S86', {
 // ═════════════════════════════════════════════════════════════════════════
 // S87 EDLES OPFER
 // ═════════════════════════════════════════════════════════════════════════
-const NOBLE = Object.freeze({ window: 10, shield: 110, heal: 3, sacrificeDur: 10, hpShare: .2, maxBonus: .9, perPoint: 1 / 160, boltEvery: .25 });
-const BLUE = ['#0d47a1', '#42a5f5', '#e3f2fd']; const RED = ['#4a0000', '#d50000', '#ff8a80'];
+const NOBLE = Object.freeze({ window: 10, shield: 110, heal: 3, sacrificeDur: 10, hpShare: .2, maxBonus: .9, perPoint: 1 / 160, boltEvery: .25,
+  growPerSec: .07, growPerHit: .05, judgeDur: 1.25, judgeAt: .5, judgeDamage: 34, judgeDamagePerCharge: 56 });
+const BLUE = ['#0d47a1', '#42a5f5', '#e3f2fd']; const DARK_RED = '#7f0000';
+const weaponOf = (p) => p.weapon ?? p.classWeapon ?? 'rune_greatsword'; // bare hands: an astral greatsword
 
 export function nobleSacrifice(p) {
   const st = p.signature; if (st?.id !== 'S87' || st.phase !== 'shield') return false;
   const left = Math.max(0, p.arcaneShield ?? 0);
   p.arcaneShield = 0; p.arcaneShieldTimer = 0; p.shieldWatch = false; p.sacrificedHp = 0;
   let paid = 0; if (Number.isFinite(p.hp)) { paid = Math.floor(p.hp * NOBLE.hpShare); if (p.hp - paid < 1) paid = Math.max(0, p.hp - 1); p.hp -= paid; }
-  st.phase = 'sacrifice'; st.power = 1 + Math.min(NOBLE.maxBonus, (left + paid * 1.5) * NOBLE.perPoint); st.timer = NOBLE.sacrificeDur; st.flash = .6; st.boltAt = new WeakMap();
+  st.phase = 'sacrifice'; st.power = 1 + Math.min(NOBLE.maxBonus, (left + paid * 1.5) * NOBLE.perPoint); st.timer = NOBLE.sacrificeDur; st.flash = .6; st.boltAt = new WeakMap(); st.charge = 0;
   combat.spawnDamageText?.(p.x, (p.y ?? 0) - 118, 'EDLE SELBSTAUFOPFERUNG', { color: '#ff5252', isCrit: true });
   combat.spawnDamageText?.(p.x, (p.y ?? 0) - 100, `ANGRIFF ×${st.power.toFixed(2)}`, { color: '#ff8a80' });
-  combat.spawnShockwave?.(p.x, (p.y ?? 0) - 40, 90, '#d50000'); quake(10, .35); combat.triggerHitstop?.(5);
+  combat.spawnShockwave?.(p.x, (p.y ?? 0) - 40, 90, '#42a5f5'); quake(10, .35); combat.triggerHitstop?.(5);
+  return true;
+}
+
+// Stage 3: the grown astral weapon comes down; its slash runs across half the arena.
+export function astralJudgement(p, gw = globalThis.window?.gameWorld) {
+  const st = p.signature; if (st?.id !== 'S87' || st.phase !== 'sacrifice') return false;
+  const charge = Math.min(1, st.charge ?? 0); const f = p.facing || 1; const weapon = weaponOf(p);
+  const reach = Math.max(500, (gw?.battlefield?.width ?? gw?.renderWidth ?? 1280) * .5);
+  st.phase = 'judgement'; st.timer = NOBLE.judgeDur; st.judgeT = 0;
+  p.state = 'heavyStrike'; p.stateTimer = NOBLE.judgeAt + .1; p._weaponSwingTime = NOBLE.judgeAt + .1; p.vx = 0; p.vz = 0; p.canAttack = false; p.invulnerableTimer = Math.max(p.invulnerableTimer ?? 0, NOBLE.judgeAt);
+  combat.spawnDamageText?.(p.x, (p.y ?? 0) - 126, 'ASTRALER RICHTSPRUCH', { color: '#ff1744', isCrit: true });
+  const dmg = Math.round((NOBLE.judgeDamage + NOBLE.judgeDamagePerCharge * charge) * st.power);
+  const scale = 2.2 + 3.2 * charge; const x0 = p.x; const z0 = p.z;
+  emit(new SigSequence(st.sig, p, { dur: NOBLE.judgeDur, x: x0, z: z0, steps: [{ at: NOBLE.judgeAt, fn: (s, gw2) => {
+    for (const t of foesOf(gw2, p.team)) {
+      const dx = (t.x - x0) * f; if (dx < -30 || dx > reach || Math.abs(((t.z ?? z0) - z0) * DEPTH) > 70) continue;
+      hit(t, dmg, f * 520, 320, .7, true);
+    }
+    quake(16, .6); combat.triggerHitstop?.(9); combat.spawnShockwave?.(x0 + f * 60, groundYForDepth(z0) - 10, 120, '#7f0000');
+  } }], draw: (ctx, s, k) => {
+    const gy = groundYForDepth(z0); const tt = s.t;
+    // The giant weapon: raised behind (0 → judgeAt), swung down in front, then fading.
+    const raise = Math.min(1, tt / (NOBLE.judgeAt * .7)); const swing = Math.max(0, Math.min(1, (tt - NOBLE.judgeAt * .7) / (NOBLE.judgeAt * .3)));
+    const ang = swing > 0 ? -2.5 + swing * 2.9 : -1.2 - raise * 1.3; const fade = tt < NOBLE.judgeAt + .25 ? 1 : Math.max(0, 1 - (tt - NOBLE.judgeAt - .25) / .5);
+    if (fade > 0) {
+      ctx.save(); ctx.globalAlpha = fade; ctx.translate(Math.round(s.x + f * 10), Math.round(gy - 52)); ctx.scale(f, 1); ctx.rotate(ang);
+      drawWeaponSolid(ctx, weapon, scale * (1 + raise * .15), { mainOnly: true }); ctx.restore();
+    }
+    // The slash: a black crescent with a dark-red edge that rushes across half the arena.
+    if (tt >= NOBLE.judgeAt) {
+      const u = Math.min(1, (tt - NOBLE.judgeAt) / .45); const a = 1 - Math.max(0, (tt - NOBLE.judgeAt - .35) / .4);
+      const front = s.x + f * reach * u; const h = 60 + 70 * charge;
+      ctx.save(); ctx.globalAlpha = Math.max(0, a);
+      // The torn ground behind the wave.
+      ctx.fillStyle = '#0a0006'; ctx.fillRect(Math.round(Math.min(s.x, front)), Math.round(gy - 3), Math.round(Math.abs(front - s.x)), 6);
+      ctx.fillStyle = DARK_RED; ctx.fillRect(Math.round(Math.min(s.x, front)), Math.round(gy - 4), Math.round(Math.abs(front - s.x)), 2);
+      for (const [col, wdt] of [[DARK_RED, 14], ['#0a0006', 9], ['#ff1744', 2]]) {
+        ctx.strokeStyle = col; ctx.lineWidth = wdt; ctx.beginPath(); ctx.ellipse(Math.round(front - f * 24), Math.round(gy - h * .55), 34, h * .6, 0, f > 0 ? -1.3 : Math.PI - 1.3, f > 0 ? 1.3 : Math.PI + 1.3); ctx.stroke();
+      }
+      for (let i = 0; i < 5; i++) { const bx = s.x + f * reach * u * (i + 1) / 6; blackBolt(ctx, bx, gy - 8, bx + f * 20, gy - 40 - rnd(i + Math.floor(tt * 16)) * h * .6, 500 + i + Math.floor(tt * 16), 2, DARK_RED); }
+      ctx.restore();
+    }
+  } }), st.quality);
   return true;
 }
 
 defineSignature('S87', {
   cast(c) {
     const p = c.caster;
-    startStance(p, 'S87', c.quality, { phase: 'shield', power: 1, flash: .5 });
+    startStance(p, 'S87', c.quality, { phase: 'shield', power: 1, flash: .5, charge: 0 });
     applyWard(p, Math.round(NOBLE.shield * (c.quality?.power ?? 1)), NOBLE.window, ['ward', 'lux']);
     combat.spawnDamageText?.(p.x, (p.y ?? 0) - 110, 'LEBENSSCHILD', { color: '#90caf9', isCrit: true });
     combat.spawnShockwave?.(p.x, (p.y ?? 0) - 40, 70, '#42a5f5');
-    offerRecast(p, { window: NOBLE.window, label: 'EDLE SELBSTAUFOPFERUNG', valid: () => p.signature?.id === 'S87' && p.signature.phase === 'shield', stage2: () => nobleSacrifice(p), expire: () => {} });
+    offerRecast(p, {
+      window: NOBLE.window, label: 'EDLE SELBSTAUFOPFERUNG',
+      valid: () => p.signature?.id === 'S87' && (p.signature.phase === 'shield' || p.signature.phase === 'sacrifice'),
+      // Tap 2: the sacrifice (the slot stays open); tap 3: the judgement.
+      stage2: (gw) => {
+        const ph = p.signature?.phase;
+        if (ph === 'shield') return nobleSacrifice(p) ? { again: true, label: 'ASTRALER RICHTSPRUCH', window: NOBLE.sacrificeDur } : false;
+        if (ph === 'sacrifice') return astralJudgement(p, gw);
+        return false;
+      },
+      expire: () => {}
+    });
   },
   stance: {
     duration: NOBLE.window + .5,
-    hint: (p, st) => (st.phase === 'shield' ? 'LEBENSSCHILD · ERNEUT TIPPEN: EDLE SELBSTAUFOPFERUNG' : `EDLE SELBSTAUFOPFERUNG · ANGRIFF ×${st.power.toFixed(2)}`),
+    hint: (p, st) => (st.phase === 'shield' ? 'LEBENSSCHILD · ERNEUT TIPPEN: EDLE SELBSTAUFOPFERUNG' : st.phase === 'sacrifice' ? `ANGRIFF ×${st.power.toFixed(2)} · WAFFE ${Math.round(Math.min(1, st.charge) * 100)} % · ERNEUT TIPPEN: RICHTSPRUCH` : 'ASTRALER RICHTSPRUCH'),
     meleeMult: (p, st) => (st.phase === 'sacrifice' ? st.power : 1),
+    // The held weapon has become the growing black astral weapon (drawn by the stance).
+    hidesWeapon: (p, st) => st.phase !== 'shield',
+    counter: (p, st) => (st.phase === 'sacrifice' ? { n: Math.round(Math.min(1, st.charge) * 5), max: 5 } : null),
     onEvent(p, st, type, info) {
       if (type !== 'hit' || st.phase !== 'sacrifice') return;
-      // Every hit sends a black bolt into the target (a little extra, at most every 0.25 s per target).
+      // Every hit sends a black bolt into the target (at most every 0.25 s per target) and feeds the weapon.
       for (const h of info.hits ?? []) {
         const t = h.target; if (!alive(t) || t.isProp) continue;
+        st.charge = Math.min(1, (st.charge ?? 0) + NOBLE.growPerHit);
         if ((st.boltAt.get(t) ?? -9) > st.t - NOBLE.boltEvery) continue; st.boltAt.set(t, st.t);
         hit(t, Math.round(5 * st.power), 0, 0, .15);
         st.bolts = [...(st.bolts ?? []), { x: t.x, y: (t.y ?? groundYForDepth(t.z)) - 46, t: 0 }];
       }
     },
-    update(p, st, dt) {
+    update(p, st, dt, gw) {
       st.flash = Math.max(0, (st.flash ?? 0) - dt);
       for (const b of st.bolts ?? []) b.t += dt; if (st.bolts) st.bolts = st.bolts.filter((b) => b.t < .18);
       // Lebensschild: the shield heals while it holds.
       if (st.phase === 'shield' && p.arcaneShield > 0 && Number.isFinite(p.hp)) p.hp = Math.min(p.maxHp ?? p.hp, p.hp + NOBLE.heal * dt);
+      if (st.phase === 'sacrifice') {
+        st.charge = Math.min(1, (st.charge ?? 0) + NOBLE.growPerSec * dt); // the energy flows into the weapon
+        if (st.timer <= .15) astralJudgement(p, gw); // the rage ends in the judgement anyway
+      }
     },
     render(ctx, p, st, ry, layer) {
-      const t = st.t; const sac = st.phase === 'sacrifice';
-      const k = Math.min(1, st.t / .25) * (sac ? 1.15 : 1) * (1 + (st.flash ?? 0) * .8);
-      if (layer === 'back') { auraFlames(ctx, p, ry, t, sac ? RED : BLUE, k); return; }
-      auraFlames(ctx, p, ry, t + 3.1, sac ? RED : BLUE, k * .55, 8);
-      if (!sac) return;
-      // Black lightning crackling around the Wizard (re-drawn a dozen times per second).
-      const frame = Math.floor(t * 12);
-      for (let i = 0; i < 4; i++) {
-        const a = rnd(frame * 7 + i) * TAU; const x0 = p.x + Math.cos(a) * 14; const y0 = ry - 44 + Math.sin(a) * 30;
-        blackBolt(ctx, x0, y0, x0 + Math.cos(a) * (22 + rnd(frame + i * 3) * 22), y0 + Math.sin(a) * (16 + rnd(frame + i * 5) * 20) - 8, frame * 13 + i);
+      const t = st.t; const f = p.facing || 1;
+      if (st.phase === 'shield') {
+        const k = Math.min(1, st.t / .25) * (1 + (st.flash ?? 0) * .8);
+        auraFlames(ctx, p, ry, layer === 'back' ? t : t + 3.1, BLUE, layer === 'back' ? k : k * .55, layer === 'back' ? 18 : 8);
+        return;
       }
-      for (const b of st.bolts ?? []) blackBolt(ctx, p.x + (p.facing || 1) * 14, ry - 50, b.x, b.y, 300 + Math.floor(b.t * 60), 3);
+      if (st.phase === 'judgement') return; // the judgement draws itself
+      const frame = Math.floor(t * 12);
+      if (layer === 'back') {
+        // Inside: a bright blue aura tight to the body — the Wizard's own silhouette, slightly larger, pulsing.
+        const pulse = .85 + .15 * Math.sin(t * 14); const grow = 1 + (st.flash ?? 0) * .1;
+        for (const [col, k, a] of [['#0d47a1', 1.22 * grow, pulse], ['#2196f3', 1.14 * grow, 1], ['#90caf9', 1.08, 1], ['#ffffff', 1.035, .9]]) ghostOf(ctx, p, p.x, ry + 44.5 * (k - 1), p.state, p.animTime ?? 0, f, a, col, k);
+        // The weapon in the hand turns into the black astral weapon and grows, held up over the shoulder.
+        const c = Math.min(1, st.charge ?? 0); const sc = 1.1 + 2.1 * c; const tip = astralTipLength(weaponOf(p)) * sc;
+        const hx = p.x + f * 12; const hy = ry - 46; const a = -2.15 + Math.sin(t * 3) * .05;
+        ctx.save(); ctx.translate(Math.round(hx), Math.round(hy)); ctx.scale(f, 1); ctx.rotate(a);
+        drawWeaponSolid(ctx, weaponOf(p), sc, { mainOnly: true }); /* the giant: only the main piece (no sheath / off-hand) */ ctx.restore();
+        // The energy streams from the body into the weapon.
+        for (let i = 0; i < 2; i++) { const u = .35 + .55 * rnd(frame + i); blackBolt(ctx, p.x, ry - 50, hx + f * Math.cos(a) * tip * u, hy + Math.sin(a) * tip * u, frame * 5 + i, 2, DARK_RED); }
+        return;
+      }
+      // Outside: black lightning with dark-red edges crackling around the Wizard.
+      for (let i = 0; i < 4; i++) {
+        const a = rnd(frame * 7 + i) * TAU; const x0 = p.x + Math.cos(a) * 18; const y0 = ry - 44 + Math.sin(a) * 34;
+        blackBolt(ctx, x0, y0, x0 + Math.cos(a) * (22 + rnd(frame + i * 3) * 24), y0 + Math.sin(a) * (16 + rnd(frame + i * 5) * 22) - 8, frame * 13 + i, 3, DARK_RED);
+      }
+      for (const b of st.bolts ?? []) blackBolt(ctx, p.x + f * 14, ry - 50, b.x, b.y, 300 + Math.floor(b.t * 60), 3, DARK_RED);
     },
-    end(p, st) { if (st.phase === 'sacrifice') combat.spawnShockwave?.(p.x, (p.y ?? 0) - 40, 50, '#d50000'); }
+    end(p, st) { if (st.phase !== 'shield') combat.spawnShockwave?.(p.x, (p.y ?? 0) - 40, 50, DARK_RED); }
   }
 });
 
