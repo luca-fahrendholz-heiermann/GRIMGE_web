@@ -102,7 +102,10 @@ function conquerorBurst(p, st, gw, radius = WILL.conqRadius, small = false) {
     ctx.strokeStyle = R.crimson; ctx.lineWidth = 2; ctx.stroke();
     const n = small ? 5 : 8; const flick = Math.floor(s.t * 20);
     for (let i = 0; i < n; i++) {
-      if ((i + flick) % 2) continue; /* they flicker: half of them per frame */ const ang = i / n * TAU + rnd(i) * .3; const rr = r * (.55 + rnd(i + 20) * .45); const r0 = r * .22; /* radiate from a ring around the body, not one clump */ blackBolt(ctx, x + Math.cos(ang) * r0, y - 40 + Math.sin(ang) * r0 * .55, x + Math.cos(ang) * rr, y - 30 + Math.sin(ang) * rr * .35, 70 + i * 3 + flick, 2);
+      if ((i + flick) % 2) continue; // they flicker: half of them per frame
+      // Radiate from a ring around the body (not one clump at the centre).
+      const ang = i / n * TAU + rnd(i) * .3; const rr = r * (.55 + rnd(i + 20) * .45); const r0 = r * .22;
+      blackBolt(ctx, x + Math.cos(ang) * r0, y - 40 + Math.sin(ang) * r0 * .55, x + Math.cos(ang) * rr, y - 30 + Math.sin(ang) * rr * .35, 70 + i * 3 + flick, 2);
     }
     ctx.restore();
   } }), st.quality);
