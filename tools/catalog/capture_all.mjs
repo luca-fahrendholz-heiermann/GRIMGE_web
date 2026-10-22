@@ -103,6 +103,29 @@ for (const [id, name, tier, desc] of spellList) {
   manifest.spells.push({ id, name, tier, desc, status: r, frames, casterAlive: alive });
 }
 
+// Breathings (Atmungen, S75–S84 + S40–S42): one row per breathing — normal hit, charge forward / up /
+// down (the mark), sprint attack and crash, in slow motion with a foe in reach.
+manifest.breaths = [];
+const breathList = JSON.parse(await evaluate(`(async () => { const PR = await import('./src/progression.js'); return JSON.stringify(Object.keys(window.__C.SPELL_DEFINITIONS).filter((id) => PR.runeCategory(id) === 'breath')); })()`));
+const BREATH_MOVES = [
+  ['normal', `P.executeAttack(${'{ keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false }'}, 'normal')`, 200],
+  ['forward', "P.beginCharge('forward', 'touch'); P.chargeTimer = P.chargeMaxTime * .1; P.chargeDir = 'forward'; P.releaseCharge()", 420],
+  ['up', "P.beginCharge('up', 'touch'); P.chargeTimer = P.chargeMaxTime * .1; P.chargeDir = 'up'; P.releaseCharge()", 420],
+  ['down', "P.beginCharge('down', 'touch'); P.chargeTimer = P.chargeMaxTime * .1; P.chargeDir = 'down'; P.releaseCharge()", 420],
+  ['sprint', "P.sprintActive = true; P.vx = 320; P.startSprintAttack ? P.startSprintAttack() : P.executeAttack({ keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false }, 'normal')", 330],
+  ['dive', "P.grounded = false; P.elevation = 120; P.vElevation = 0; P.executeAttack({ keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false }, 'dive')", 420]
+];
+for (const id of breathList) {
+  for (const [tag, action, wait] of BREATH_MOVES) {
+    await evaluate(`(() => { window.__reset(300, 440); const g = window.gameWorld; const P = g.player; if (P.signature) window.__core.endStance(P, 'replaced'); window.__S.cast(P, window.__C.SPELL_DEFINITIONS['${id}'], g); g.targetTimeScale = g.timeScale = .35; P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.grounded = true; P.elevation = 0; P.mp = P.maxMp; ${action}; return 1; })()`);
+    await sleep(wait); await shoot(`breath_${id}_${tag}`, clip);
+  }
+  await evaluate(`(() => { const P = window.gameWorld.player; if (P.signature) window.__core.endStance(P, 'replaced'); return 1; })()`);
+  await slow(1);
+  manifest.breaths.push({ id, moves: BREATH_MOVES.map(([t]) => t) });
+  console.log('breath', id);
+}
+
 // Status effects (on the dummy) and every status combo (a second foe stands next to it).
 const sparring = (on) => evaluate(`(() => { const g = window.gameWorld; if (!!g.modeState?.sparring !== ${on}) g.toggleSparringPartner(); const E = g.enemyChampion; if (${on}) { E.passive = true; E.lifeState = 'Alive'; E.hp = E.maxHp; E.x = 625; E.z = .55; E.elevation = 0; g.battlefield.placeOnSurface(E); } return 1; })()`);
 manifest.statuses = [];

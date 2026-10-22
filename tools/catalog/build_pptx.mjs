@@ -12,6 +12,10 @@ const imp = (f) => import(pathToFileURL(path.join(projectSrc, f)).href);
 const { SPELL_RECIPES, SPELL_DEFINITIONS } = await imp('spell_catalog.js');
 const { BUFF_FORM_DATA } = await imp('buff_forms_data.js');
 const { SIGNATURE_RUNE_DATA } = await imp('signature_runes_data.js');
+const { runeCategory, RUNE_CATEGORIES } = await imp('progression.js');
+const { runeManaCost } = await imp('spell_catalog.js');
+const CAT_LABEL = Object.fromEntries(RUNE_CATEGORIES.map((c) => [c.id, c.label]));
+const manaOf = (id) => { try { const m = runeManaCost(id); return Number.isFinite(m) && m > 0 ? `${m} Mana` : ''; } catch { return ''; } };
 const manifest = JSON.parse(fs.readFileSync(path.join(shotDir, 'manifest.json'), 'utf8'));
 const img = (name) => path.join(shotDir, name + '.jpg');
 const RUNE_NAME = { ignis: 'Ignis', ventus: 'Ventus', fulgur: 'Fulgur', terra: 'Terra', aqua: 'Aqua', bestia: 'Bestia', construct: 'Konstrukt', void: 'Void', lux: 'Lux', umbra: 'Umbra', natura: 'Natura', doppel: 'Doppel', mortis: 'Mortis' };
@@ -80,13 +84,15 @@ const INFUSION = ['flame_edge', 'frost_edge', 'storm_edge', 'venom_edge', 'blood
 const SOLO = ['shadow_doppelganger', 'revenant_call'];
 const arity = (sp) => (recipeOf[sp.id] ?? []).map((r) => r.split('+').length);
 const groups = [
-  ['Elementar-Runen (einzeln)', 'Ein Runensymbol = ein Spell.', (sp) => arity(sp).includes(1) && !NATURE.includes(sp.id) && !SOLO.includes(sp.id)],
-  ['Zweier-Kombinationen', 'Zwei Runen in einem Slot-Chord fusionieren zu einem neuen Spell.', (sp) => arity(sp).includes(2) && !NATURE.includes(sp.id) && !INFUSION.includes(sp.id)],
-  ['Dreier-Kombinationen', 'Drei Runen - die staerksten Fusionen.', (sp) => arity(sp).includes(3) && !NATURE.includes(sp.id)],
+  ['Elementar-Runen (einzeln)', 'Ein Runensymbol = ein Spell.', (sp) => arity(sp).includes(1) && !NATURE.includes(sp.id) && !SOLO.includes(sp.id) && !sigIds.has(sp.id)],
+  ['Zweier-Kombinationen', 'Zwei Runen in einem Slot-Chord fusionieren zu einem neuen Spell.', (sp) => arity(sp).includes(2) && !NATURE.includes(sp.id) && !INFUSION.includes(sp.id) && !sigIds.has(sp.id)],
+  ['Dreier-Kombinationen', 'Drei Runen - die staerksten Fusionen.', (sp) => arity(sp).includes(3) && !NATURE.includes(sp.id) && !sigIds.has(sp.id)],
   ['NATURA & Heilung', 'Neue Elementar-Rune Natura: Heilkreise, Dornen, Gift, Weltenbaum.', (sp) => NATURE.includes(sp.id)],
   ['Waffen-Infusionen', 'Konstrukt + Element: Element-Effekte auf der Waffe (12 s).', (sp) => INFUSION.includes(sp.id)],
   ['Solo-Spezialrunen', 'Komplexe Glyphe, keine Kombination noetig.', (sp) => SOLO.includes(sp.id)],
-  ['Signatur-Spezialrunen', 'Eigene Mehrstrich-Glyphe, eigene Mechanik (S01-S54). Zweistufige Runen zeigen zusaetzlich Stufe 2 (erneut tippen).', (sp) => sigIds.has(sp.id)]
+  // Special runes in the deck builder's categories (21 Oct 2026): Einfach, Mehrfach, Haltungen, Beschwoerung, Atmungen, Sphaeren.
+  ...RUNE_CATEGORIES.filter((c) => !['element', 'arcane'].includes(c.id)).map((c) => [`Spezialrunen: ${c.label}`, c.rule + (c.id === 'multi' ? '. Zweistufige Runen zeigen zusaetzlich Stufe 2 (erneut tippen).' : '') + (c.id === 'breath' ? '. Jede Atmung hat zusaetzlich eine eigene Seite mit allen Angriffen.' : ''), (sp) => sigIds.has(sp.id) && runeCategory(sp.id) === c.id]),
+  ['Weitere Spezialrunen', 'Eigene Mehrstrich-Glyphe, eigene Mechanik.', (sp) => sigIds.has(sp.id)]
 ];
 const FRAME_LABEL = ['1 Wirken', '2 Flug / Aufbau', '3 Wirkung', '4 Stufe 2', '5 Stufe 2: Wirkung'];
 function spellSlides(title, list) {
@@ -105,7 +111,8 @@ function spellSlides(title, list) {
       const def = SPELL_DEFINITIONS[sp.id] ?? {};
       const recipe = recipeOf[sp.id]?.[0];
       const sig = sigIds.has(sp.id) ? SIGNATURE_RUNE_DATA.find((d) => 'sig_' + d.id === sp.id) : null;
-      const head = `${def.name ?? sp.name}${recipe ? '  -  ' + recipe : ''}${sig ? '  -  ' + sig.id : ''}`;
+      const mana = manaOf(sp.id); const cat = sig ? CAT_LABEL[runeCategory(sp.id)] : '';
+      const head = `${def.name ?? sp.name}${recipe ? '  -  ' + recipe : ''}${sig ? '  -  ' + sig.id : ''}${cat ? '  -  ' + cat : ''}${mana ? '  -  ' + mana : ''}`;
       const desc = String(sig?.howTo ?? def.desc ?? sp.desc ?? '').slice(0, 260);
       s.addText([{ text: head, options: { bold: true, color: ACC, fontSize: 12, breakLine: true } }, { text: desc, options: { color: SUB, fontSize: 10 } }], { x: 0.4, y: y + FH + 0.04, w: 12.5, h: 0.95, fontFace: FONT, valign: 'top' });
     });
@@ -121,6 +128,21 @@ for (const [title, text, pick] of groups) {
 }
 const rest = manifest.spells.filter((sp) => !used.has(sp.id));
 if (rest.length) { section('Weitere Spells', `Ohne Runen-Rezept (z. B. von Transformationen gewaehrt): ${rest.length}`); spellSlides('Weitere Spells', rest); }
+
+// Breathings: one slide each with every move (Atmungen, 21 Oct 2026).
+if (manifest.breaths?.length) {
+  section('Atmungen', `${manifest.breaths.length} Atemtechniken (Kampfstil fuer 15 s). Aufladen vorwaerts / hoch = Techniken der Atmung, runter = Mal erwacht, Sprint-Angriff und Sturz im Stil der Atmung. Eine zweite Atmung waehrend der ersten ergibt eine Kombo (kostet beide Runen).`);
+  const MOVE_LABEL = { normal: 'Normaler Treffer', forward: 'Aufladen vorwaerts', up: 'Aufladen hoch', down: 'Aufladen runter: Mal erwacht', sprint: 'Sprint-Angriff', dive: 'Sturz (Luft runter)' };
+  for (const br of manifest.breaths) {
+    const sig = SIGNATURE_RUNE_DATA.find((d) => 'sig_' + d.id === br.id); const def = SPELL_DEFINITIONS[br.id] ?? {};
+    const s = base(`${sig?.name ?? def.name ?? br.id}  -  ${sig?.id ?? ''}  -  ${manaOf(br.id)}`, String(sig?.howTo ?? def.desc ?? '').slice(0, 300));
+    br.moves.forEach((mv, i) => {
+      const x = FX[i % 3]; const y = i < 3 ? 1.15 : 1.15 + FH + 0.55;
+      s.addImage({ path: img(`breath_${br.id}_${mv}`), x, y, w: FW, h: FH });
+      s.addText(MOVE_LABEL[mv] ?? mv, { x, y: y + FH + 0.02, w: FW, h: 0.3, fontSize: 11, color: ACC, fontFace: FONT });
+    });
+  }
+}
 
 // Status effects (6 per slide) and combos (6 per slide).
 function grid(title, cells) {
@@ -146,7 +168,7 @@ if (manifest.duel?.length) {
 
 // Weapons: one slide each — combo, hold, charge down, charge up, air dive.
 if (manifest.weapons?.length) {
-  section('Waffen', `${manifest.weapons.length} Waffen der Klassen: Kombo (auf der Lane Nahkampf), Halten = Fernangriff der Waffe, Charge runter = waffenspezifischer Buff / Debuff, Charge hoch = Launcher, in der Luft runter = Sturzangriff.`);
+  section('Waffen', `${manifest.weapons.length} Waffen der Klassen: Kombo (auf der Lane Nahkampf, Boegen schiessen kurze Pfeile), Halten = Fernangriff der Waffe, Charge runter = waffenspezifischer Buff / Debuff, Charge hoch = Launcher, in der Luft runter = Sturzangriff.`);
   for (const w of manifest.weapons) {
     const s = base(`${w.name}${w.family ? '  (' + w.family + ')' : ''}`, w.desc);
     const cells = [['combo', 'Kombo'], ['hold', 'Halten: Fernangriff'], ['down', 'Charge runter: ' + w.downName], ['up', 'Charge hoch: ' + w.upName], ['dive', 'Luft runter: ' + w.diveName]];
