@@ -2566,7 +2566,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   const step = (n, dt = 1 / 60) => { for (let i = 0; i < n; i++) { P.update(dt, neutral, game.battlefield, game); game.updateProjectiles(dt); spells.update(dt, game); } };
   const cast = (id, target = null) => spells.cast(P, spells.resolveSpell([{ id: 'sig_' + id }]), game, null, target);
   const ids = Object.keys(core.SIGNATURES);
-  assert(ids.length === 85 && ids.every((id) => core.signatureImpl(id)?.cast) && sigMod.SIGNATURE_RUNE_IDS.every((id) => isSpecialRune(id) && runeManaCost(id) >= 28 && runeManaCost(id) <= 46), 'All 85 signature specials (atlas S01–S36 + S37–S85) are special runes with their own mechanic and bound mana');
+  assert(ids.length === 87 && ids.every((id) => core.signatureImpl(id)?.cast) && sigMod.SIGNATURE_RUNE_IDS.every((id) => isSpecialRune(id) && runeManaCost(id) >= 28 && runeManaCost(id) <= 46), 'All 87 signature specials (atlas S01–S36 + S37–S87) are special runes with their own mechanic and bound mana');
   assert(ids.every((id) => spellHowTo('sig_' + id)?.effect?.length > 40) && !spells.resolveSpell([{ id: 'sig_S03' }, { id: 'ignis' }]), 'Signature specials explain themselves in the grimoire and never fuse');
   // Every special casts, runs and renders (strict canvas) without errors.
   const strict = new Proxy({}, { get: (t, k) => (k === 'ellipse' || k === 'arc') ? (x, y, rx, ry) => { if (rx < 0 || (k === 'ellipse' && ry < 0)) throw new Error('IndexSizeError ' + k); } : (k === 'canvas' ? undefined : () => {}), set: () => true });
@@ -4179,6 +4179,40 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   assert(round.screens.length === 2 && round.screens[0].changes[0].function.type === 'custom' && /gelöscht/.test(round.screens[0].changes[0].comment) && U.nextScreenId(round) === 'screen_1', 'UI editor: deleting a screen turns links to it into comments; the spec survives a save / load');
   const html = (await import('node:fs')).readFileSync('./public/editor.html', 'utf8'); const srv = (await import('node:fs')).readFileSync('./server.js', 'utf8');
   assert(html.includes('src/ui_editor.js') && srv.includes("'/api/ui-spec'") && srv.includes('UI_EDITOR_SPEC.md'), 'UI editor page and its save endpoint exist (docs/ui_spec)');
+}
+
+// S86 WILLE (after Haki) and S87 EDLES OPFER (after the Exiled Heavy Knight), 23 Oct 2026.
+{
+  const core = await import('./public/src/signature_core.js'); const { Minion } = await import('./public/src/entities.js'); const W = await import('./public/src/will_runes.js');
+  game.returnToHub(); game.setMatchMode('training'); game.startMatch(); game.selectTrainingMap('waterfalls');
+  const P = game.player; const dummy = game.trainingDummy; dummy.homeX = dummy.x = 1600;
+  const neutral = { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false };
+  const step = (n) => { for (let i = 0; i < n; i++) { P.update(1 / 60, neutral, game.battlefield, game); spells.update(1 / 60, game); } };
+  const ready = () => { P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.grounded = true; P.elevation = 0; P.vElevation = 0; P.invulnerableTimer = 0; };
+  const foeAt = (x, hp = 3000) => { const m = new Minion(x, .5, 'red', 'melee', 0); m.maxHp = 3000; m.hp = hp; game.battlefield.placeOnSurface(m); game.minions.push(m); return m; };
+  const setup = (id) => { spells.clearRuntime(); game.minions = []; if (P.signature) core.endStance(P, 'replaced'); P.equipWeapon(null); P.equipClassWeapon(null); P.x = 300; P.z = .5; P.facing = 1; P.hp = P.maxHp; P.mp = P.maxMp; P.arcaneShield = 0; P.arcaneShieldTimer = 0; ready(); game.battlefield.placeOnSurface(P); spells.cast(P, spells.resolveSpell([{ id: 'sig_' + id }]), game); };
+  const charged = (dir) => { ready(); P.beginCharge(dir); P.chargeTimer = P.chargeMaxTime * .1; P.chargeDir = dir; return P.releaseCharge(); };
+  const hitFrom = (att, amount, kx = -120) => { const prev = STATUS.setStatusSource({ team: att.team, statusElements: [], castBy: att }); try { return P.takeDamage(amount, kx, 0, .2, false, 'melee'); } finally { STATUS.setStatusSource(prev); } };
+  // WILLE
+  setup('S86'); assert(P.signature?.id === 'S86', 'S86 WILLE starts a 15 s stance');
+  { const m = foeAt(420); m.arcaneShield = 40; charged('forward'); step(30); assert(m.arcaneShield === 0 && m.hp < 3000 && m.kbVelX > 300, 'WILLE · WILLENSSTOSS: the blow lands up to 140 px ahead, breaks the shield and knocks back'); }
+  setup('S86'); { const weak = foeAt(360, 1000); const strong = foeAt(420, 3000); charged('up'); step(5); const strongHp = strong.hp; charged('up'); step(5);
+    assert((weak.isDead || weak.hp <= 0) && strong.hp < 3000 && strong.freezeTimer > 0 && strong.hp === strongHp, 'WILLE · HERRSCHERWILLE: weak foes drop unconscious, the others are stunned; a second burst waits for the cooldown'); }
+  setup('S86'); { const att = foeAt(340); charged('down'); let dodged = 0; for (let i = 0; i < 4; i++) { P.invulnerableTimer = 0; step(25); const r = hitFrom(att, 20); if (r?.dodged) dodged++; }
+    assert(dodged === 3 && P.hp === P.maxHp - 20, 'WILLE · VORAHNUNG: the next three hits are sidestepped, the fourth lands'); }
+  setup('S86'); { const m = foeAt(350); m.arcaneShield = 50; ready(); P.executeAttack(neutral, 'normal'); step(12); assert(m.arcaneShield <= 20, 'WILLE · RÜSTUNGSWILLE: melee hits tear 30 points out of enemy shields'); }
+  // EDLES OPFER
+  setup('S87'); P.hp = P.maxHp - 40; const hp0 = P.hp; step(60);
+  assert(P.signature?.phase === 'shield' && P.arcaneShield > 100 && P.hp > hp0, 'S87 EDLES OPFER · LEBENSSCHILD: a big Ward shield that heals while it holds (blue aura)');
+  { const meleeBefore = core.signatureImpl('S87').stance.meleeMult(P, P.signature); const hpBefore = P.hp; const shield = P.arcaneShield;
+    assert(W.nobleSacrifice(P) && P.signature.phase === 'sacrifice' && P.arcaneShield === 0 && P.hp === hpBefore - Math.floor(hpBefore * .2) && meleeBefore === 1, 'EDLE SELBSTAUFOPFERUNG: the shield and 20 % HP are given up');
+    const power = P.signature.power; assert(power > 1.7 && power <= 1.9 && Math.abs(power - (1 + Math.min(.9, (shield + Math.floor(hpBefore * .2) * 1.5) / 160))) < 1e-9, 'EDLE SELBSTAUFOPFERUNG: converted into attack power (×' + power.toFixed(2) + ', capped ×1.9)');
+    const m = foeAt(350); ready(); P.executeAttack(neutral, 'normal'); step(12); assert(m.hp < 3000 && (P.signature.bolts?.length ?? 0) + 1 > 0, 'Every hit in the sacrifice sends a black bolt');
+    assert(!W.nobleSacrifice(P), 'The sacrifice happens only once'); }
+  let bad = 0; const strict = new Proxy({}, { get: (tt, k) => (k === 'arc' || k === 'ellipse') ? (x, y, r1, r2) => { if (r1 < 0 || (k === 'ellipse' && r2 < 0)) bad++; } : k === 'canvas' ? undefined : k === 'measureText' ? () => ({ width: 10 }) : () => {}, set: () => true });
+  for (const id of ['S86', 'S87']) { setup(id); if (id === 'S86') { charged('down'); step(3); } else W.nobleSacrifice(P); for (const layer of ['back', 'front']) core.signatureImpl(id).stance.render(strict, P, P.signature, P.y, layer); for (const sp of spells.activeSpells) sp.render?.(strict); }
+  assert(!bad, 'WILLE and EDLES OPFER render cleanly (auras, black lightning, foresight brackets)');
+  if (P.signature) core.endStance(P, 'replaced'); spells.clearRuntime(); game.minions = []; dummy.homeX = dummy.x = 512;
 }
 
 const frameCallback = nextFrame;

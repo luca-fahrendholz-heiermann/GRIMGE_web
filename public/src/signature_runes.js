@@ -14,6 +14,7 @@ import './signature_abilities_a.js';
 import './signature_abilities_b.js';
 import './signature_abilities_c.js';
 import './breathing.js'; // S40–S42, S75–S83 breathing styles (+ derived combos)
+import './will_runes.js'; // S86 WILLE (after Haki), S87 EDLES OPFER (after the Exiled Heavy Knight)
 import './signature_abilities_d.js'; // S37–S44 (design rules: ice spikes, shafts, water drill, breathings, objects)
 import './signature_abilities_e.js'; // S45–S48 (two-stage spells, counter charges)
 import './signature_abilities_f.js'; // S50–S52 (mirror prison, blood cross, challenge)
