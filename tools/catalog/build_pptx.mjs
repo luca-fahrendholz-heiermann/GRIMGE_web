@@ -109,7 +109,7 @@ function spellSlides(title, list) {
         tag(s, FRAME_LABEL[j], x, y);
       });
       const def = SPELL_DEFINITIONS[sp.id] ?? {};
-      const recipe = recipeOf[sp.id]?.[0];
+      const recipe = sigIds.has(sp.id) ? null : recipeOf[sp.id]?.[0]; // special runes: their id is shown instead
       const sig = sigIds.has(sp.id) ? SIGNATURE_RUNE_DATA.find((d) => 'sig_' + d.id === sp.id) : null;
       const mana = manaOf(sp.id); const cat = sig ? CAT_LABEL[runeCategory(sp.id)] : '';
       const head = `${def.name ?? sp.name}${recipe ? '  -  ' + recipe : ''}${sig ? '  -  ' + sig.id : ''}${cat ? '  -  ' + cat : ''}${mana ? '  -  ' + mana : ''}`;
