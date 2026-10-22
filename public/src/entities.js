@@ -73,10 +73,11 @@ const UNITY_LANE_DEPTH = 6;               // u — the full depth range z 0…1
 export const UNITY_MOVEMENT = Object.freeze({
   walkSpeed: 6.0 * UNITY_PX,               // 6.0 u/s lateral   → 144 px/s
   depthSpeed: 3.9 / UNITY_LANE_DEPTH,      // 3.9 u/s depth     → 0.65 z/s
-  // Jump raised on request (Unity: 9 u/s / 25 u/s², apex ≈ 0.44 hero heights):
-  // 13.5 u/s with 34 u/s² peaks at ≈ 0.73 hero heights in ≈ 0.79 s.
-  jumpVelocity: 13.5 * UNITY_PX,           // 13.5 u/s          → 324 px/s
-  gravity: 34.0 * UNITY_PX                 // 34 u/s²           → 816 px/s²
+  // Jump raised on request (Unity: 9 u/s / 25 u/s², apex ≈ 0.44 hero heights), again on 22 Oct 2026
+  // ("der Sprung wirkt zu tief für Air Fights"): 18.5 u/s with 41 u/s² peaks at ≈ 1.15 hero heights
+  // in ≈ 0.9 s. Lifts / launchers keep their heights (their impulse scales with the gravity).
+  jumpVelocity: 18.5 * UNITY_PX,           // 18.5 u/s          → 444 px/s
+  gravity: 41.0 * UNITY_PX                 // 41 u/s²           → 984 px/s²
 });
 const DEPTH_SPEED = UNITY_MOVEMENT.depthSpeed;
 

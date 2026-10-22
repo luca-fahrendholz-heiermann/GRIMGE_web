@@ -1616,11 +1616,11 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
   // Movement values ported from the Unity project (24 px per unit, 60 Hz).
   const { UNITY_MOVEMENT } = await import('./public/src/entities.js');
   resetForm();
-  assert(P.moveSpeed === 144 && Math.abs(P.depthSpeed - .65) < 1e-9 && P.jumpForce === 324 && UNITY_MOVEMENT.gravity === 816, 'Walk 6 u/s and depth 3.9 u/s from the Unity asset; the jump is raised (13.5 u/s, 34 u/s²)');
+  assert(P.moveSpeed === 144 && Math.abs(P.depthSpeed - .65) < 1e-9 && P.jumpForce === 444 && UNITY_MOVEMENT.gravity === 984, 'Walk 6 u/s and depth 3.9 u/s from the Unity asset; the jump is raised for air fights (18.5 u/s, 41 u/s²)');
   P.performJump();
   let apex = 0; let airTicks = 0;
   for (let i = 0; i < 120; i++) { P.update(1 / 60, neutralInput, game.battlefield, game); apex = Math.max(apex, P.elevation); airTicks++; if (P.grounded && i > 2) break; }
-  assert(Math.abs(apex - 64.3) < 4 && Math.abs(airTicks / 60 - .79) < .06, `A jump peaks at ~0.73 hero heights (${apex.toFixed(1)} px) and lasts ~0.79 s (${(airTicks / 60).toFixed(2)} s)`);
+  assert(Math.abs(apex - 98) < 5 && Math.abs(airTicks / 60 - .9) < .06, `A jump peaks at ~1.1 hero heights (${apex.toFixed(1)} px) and lasts ~0.9 s (${(airTicks / 60).toFixed(2)} s)`);
   resetForm(); P.backdashCooldown = 0; P.backdashSuppressTimer = 0;
   const dashFrom = P.x;
   P.triggerBackdash();
