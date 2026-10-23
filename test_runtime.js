@@ -3998,7 +3998,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   const setup = (id, style = null) => {
     spells.clearRuntime(); game.minions = []; if (P.signature) core.endStance(P, 'replaced'); P.equipClassWeapon(null); P.equipWeapon(null);
     P.x = 300; P.z = .5; P.facing = 1; P.hp = P.maxHp; ready(); game.battlefield.placeOnSurface(P);
-    spells.cast(P, spells.resolveSpell([{ id: 'sig_' + id }]), game);
+    spells.cast(P, spells.resolveSpell([{ id: 'sig_' + id }]), game); P.mp = P.maxMp; // skills cost mana (the moves are tested, not the budget)
     if (style) P.signature.style = style;
   };
   const foeAt = (x, z = .5) => { const m = new Minion(x, z, 'red', 'melee', 0); m.maxHp = m.hp = 3000; m.passive = true; game.battlefield.placeOnSurface(m); game.minions.push(m); return m; };

@@ -234,7 +234,7 @@ const TOUCH_SPRINT_MIN_TIME = 0.6;     // collisions may eat the distance
 //   modeRegen   factor per game mode id (empty = 1 everywhere until balancing)
 //   onHit       mana back per landed melee hit (at most onHitMax hits per swing), onFinisher on top for a finisher
 // Passives / masteries may scale an actor with manaRegenMult / manaOnHitMult.
-export const MANA_BALANCE = Object.freeze({ regen: 9, modeRegen: Object.freeze({}), onHit: 1.5, onHitMax: 3, onFinisher: 4 });
+export const MANA_BALANCE = Object.freeze({ regen: 5.5, modeRegen: Object.freeze({}), onHit: 1.5, onHitMax: 3, onFinisher: 4 });
 const MANA_REGEN = MANA_BALANCE.regen;
 // Focus values from the Unity CharacterDefinition (character_base_fighter).
 const FOCUS_DECAY_RATE = 1.0;    // per second (_focusDecayPerTick 1/60), after the grace period
