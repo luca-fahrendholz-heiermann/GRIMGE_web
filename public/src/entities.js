@@ -22,7 +22,7 @@ import { kitOf } from './weapon_kits.js';
 import { drawWeaponGuard } from './weapon_guard.js';
 import { weaponBodyPose } from './weapon_body.js';
 import { drawWardShell } from './ward_shell.js';
-import { hasWeaponDown, castWeaponDown, weaponUp, weaponDive, updateWeaponKit, weaponMoveMult, weaponAttackSpeed, meleeBuffMods, targetDamageMult, onWeaponMeleeHit, afterWeaponSwing, weaponIncoming } from './weapon_kits.js';
+import { hasWeaponDown, castWeaponDown, weaponUp, weaponHasUpSkill, weaponDive, updateWeaponKit, weaponMoveMult, weaponAttackSpeed, meleeBuffMods, targetDamageMult, onWeaponMeleeHit, afterWeaponSwing, weaponIncoming } from './weapon_kits.js';
 import { updatePrimalBond, bondMoveMultiplier, bondGainMultiplier, bondDisplacement, bondOnBlock, primalSprintVariant, renderPrimalBond, endPrimalBond, bondMelee, primalQuake } from './primals.js';
 import { createSegments, damageSegments, updateSegments, renderSegments } from './castle_segments.js';
 import { updateBuffForm, endBuffForm, isGenericBuff, currentBuffForm, renderBuffManifestation, buffVeinPainter, buffCloakColor, renderBuffGuard, levitationOffset, renderBuffCharge } from './buff_forms.js';
@@ -49,6 +49,11 @@ export function deckSpellOptions(ids = []) {
 
 // Mana price of an Arcane State heavy technique (short / full release).
 export const ARCANE_TECH_MANA = Object.freeze({ short: 5, full: 12 });
+// Charge-activated SKILLS cost mana like runes (user, 23 Oct 2026: "sonst werden sie gespammt" — e.g. the breathing
+// forward charge back and forth): stance charges (breathing, Wille, Edles Opfer …), the weapon's charged-UP skill and
+// stance sprint / dive moves. The plain heavy / uppercut without a skill stays free (the combo is the playstyle).
+export const CHARGE_SKILL_MANA = Object.freeze({ short: 5, full: 12, move: 4, fullAt: .7 });
+const chargeSkillCost = (ratio) => (ratio >= CHARGE_SKILL_MANA.fullAt ? CHARGE_SKILL_MANA.full : CHARGE_SKILL_MANA.short);
 const ACTION_STATES = new Set(['attack1', 'attack2', 'attack3', 'uppercut', 'heavyStrike', 'dive', 'dash', 'hurt']);
 // Deliberately the shared prototype baseline, not the future weapon system.
 // Every future weapon may replace this table, but must retain its timing and
@@ -993,6 +998,8 @@ export class Player extends GroundEntity {
     return { vx: side * Math.max(speed * .35, Math.min(speed * 1.4, best / t)) };
   }
 
+  noManaFeedback() { combat.spawnDamageText(this.x, this.y - 70, 'NO MANA', { color: '#64b5f6' }); combat.spawnShockwave(this.x + (this.facing || 1) * 20, this.y - 40, 22, '#64b5f6'); }
+
   releaseCharge() {
     // Transformations / manifests: one of six form techniques (or the HOLD pull).
     if (this.formCharge) {
@@ -1004,7 +1011,11 @@ export class Player extends GroundEntity {
     const chargeRatio = 1 - (this.chargeTimer / this.chargeMaxTime);
     this.chargeTimer = 0;
     // A breathing stance turns every charged direction into its move (down = the mark).
-    if (this.isAlive && this.chargeDir !== 'hold' && chargeRatio >= .05 && signatureCharge(this, this.chargeDir ?? 'forward', chargeRatio)) return true;
+    if (this.isAlive && this.chargeDir !== 'hold' && chargeRatio >= .05 && this.signature?.impl?.stance?.charge) {
+      const cost = chargeSkillCost(chargeRatio);
+      if (this.freeMana < cost) { this.noManaFeedback(); this.state = 'idle'; return false; }
+      if (signatureCharge(this, this.chargeDir ?? 'forward', chargeRatio)) { this.mp -= cost; return true; }
+    }
     if (this.chargeDir === 'hold') { if (this.isAlive) this.state = 'idle'; return this.isAlive ? this.holdAttack(chargeRatio) : false; }
     // Ground charge-down = the weapon-specific buff / debuff (no generic move without a weapon).
     if (this.chargeDir === 'down') { this.state = 'idle'; return this.isAlive && chargeRatio >= .05 ? castWeaponDown(this, window.gameWorld, spells) : false; }
@@ -1017,7 +1028,11 @@ export class Player extends GroundEntity {
     const kbMult = 1 + chargeRatio * 0.6;
     const dir = this.chargeDir ?? 'forward';
     // Charged UP: the weapon's own launcher (bow arrow, harp melody, staff pillar, rising cut …).
-    if (dir === 'up' && weaponUp(this, chargeRatio, spells, window.gameWorld)) return true;
+    if (dir === 'up' && weaponHasUpSkill(this)) {
+      const cost = chargeSkillCost(chargeRatio);
+      if (this.freeMana < cost) { this.noManaFeedback(); this.state = 'idle'; return false; }
+      if (weaponUp(this, chargeRatio, spells, window.gameWorld)) { this.mp -= cost; return true; }
+    }
     // Ranged weapons: the charged UP is a lifting volley.
     const weaponHeavy = this.weaponProfile?.heavy;
     if (weaponHeavy?.shot && dir === 'up') {
@@ -1085,7 +1100,7 @@ export class Player extends GroundEntity {
     let closestDist = GRAB_RANGE;
     for (const t of targets) {
       if (!t.isAlive && !t.hp) continue;
-      if (t.isSceneObject && (!t.throwable || t.flight)) continue; // rooted scene objects cannot be grabbed
+      if (t.isSceneObject) continue; // scene objects are thrown with sprint + forward swipe, not grabbed
       const dx = Math.abs(t.x - this.x);
       const dz = Math.abs((t.z ?? this.z) - this.z);
       const dist = Math.hypot(dx, dz * 150);
@@ -1098,8 +1113,6 @@ export class Player extends GroundEntity {
       if (grabForm && this.grabCooldown <= 0) { this.grabCooldown = .5; spells.addSpell(new FormGrabFx(this, null, grabForm), 'B'); }
       return false;
     }
-    // A throwable scene object (boulder, keg, barrel, icicle) is picked up and thrown.
-    if (closest.isSceneObject && closest.throwBy?.(this)) { this.grabCooldown = .8; this.isGuarding = false; this.state = 'attack1'; this.stateTimer = .3; this.canAttack = false; combat.spawnDamageText(this.x, this.y - 55, 'WURF', { color: '#ffd740' }); return true; }
     if (grabForm) spells.addSpell(new FormGrabFx(this, closest, grabForm), 'B');
     this.grabCooldown = 1.5;
     this.isGuarding = false;
@@ -1252,6 +1265,11 @@ export class Player extends GroundEntity {
     // style); otherwise — bare hands or the class's own fixed weapon, which
     // can never be thrown — it is the Sprint Attack.
     const sprinting = this.sprintActive && this.grounded && !ACTION_STATES.has(this.state) && this.canAttack;
+    if (sprinting && attackKind === 'heavy') {
+      // A throwable scene object right ahead (boulder, keg, barrel, icicle) is picked up and thrown.
+      const obj = (window.gameWorld?.getHostileTargets?.(this.team, true) ?? []).find((o) => o.isSceneObject && o.throwable && !o.flight && !o.isDead && (o.x - this.x) * (this.facing || 1) > -10 && (o.x - this.x) * (this.facing || 1) < 70 && Math.abs(((o.z ?? this.z) - this.z) * 150) < 26);
+      if (obj?.throwBy(this, 460)) { this.cancelSprint(); this.state = 'attack1'; this.stateTimer = .3; this.canAttack = false; combat.spawnDamageText(this.x, this.y - 55, 'WURF', { color: '#ffd740' }); return true; }
+    }
     if (sprinting && (attackKind === 'normal' || attackKind === 'heavy')) {
       // A breathing stance overrides the weapon: no throw, the style's sprint attack.
       return this.weapon && !this.signature?.impl?.stance?.sprintMove ? this.throwWeapon() : this.startSprintAttack();
@@ -1302,7 +1320,7 @@ export class Player extends GroundEntity {
       return true;
     }
     // A breathing stance dives its own way (sprint jump or plain air down): the crash.
-    if (!this.grounded && (attackKind === 'dive' || move.z > 0.55) && !activeMoveset(this) && signatureDive(this)) { this.diveAim = false; this.lastSprintAttack = this.lastBreathMove; return true; }
+    if (!this.grounded && (attackKind === 'dive' || move.z > 0.55) && !activeMoveset(this) && this.signature?.impl?.stance?.diveMove && this.freeMana >= CHARGE_SKILL_MANA.move && signatureDive(this) && (this.mp -= CHARGE_SKILL_MANA.move, true)) { this.diveAim = false; this.lastSprintAttack = this.lastBreathMove; return true; }
     if (!this.grounded && (attackKind === 'dive' || move.z > 0.55) && this.isSprintJump && !this.sprintDive && !activeMoveset(this) && kitOf(this)?.dive) {
       // Sprint jump + down with a class weapon: the weapon's own dive, slanted at the foe below.
       const style = kitOf(this).dive.style;
@@ -1553,7 +1571,7 @@ export class Player extends GroundEntity {
     if (form && this.buffForm?.timer > 0) { if (this.freeMana >= FORM_SPECIAL_MANA.sprint) this.mp -= FORM_SPECIAL_MANA.sprint; else form = null; }
     // Primal Bond: the Unity sprint attack with the bond's carry / push.
     // A breathing stance has its own sprint attack (wind vortex, fire trail cut …).
-    if (!form && signatureSprintMove(this)) { this.cancelSprint(); this.canAttack = false; this.lastSprintAttack = this.lastBreathMove ?? 'ATEM-ANSTURM'; return true; }
+    if (!form && this.signature?.impl?.stance?.sprintMove && this.freeMana >= CHARGE_SKILL_MANA.move && signatureSprintMove(this) && (this.mp -= CHARGE_SKILL_MANA.move, true)) { this.cancelSprint(); this.canAttack = false; this.lastSprintAttack = this.lastBreathMove ?? 'ATEM-ANSTURM'; return true; }
     const primal = form ? null : (signatureSprintVariant(this) ?? primalSprintVariant(this));
     // A class weapon has its own sprint attack (weapon_sprint.js).
     const variant = form ? FORM_SPRINT_ATTACKS[form]

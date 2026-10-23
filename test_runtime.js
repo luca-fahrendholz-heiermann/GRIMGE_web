@@ -2877,6 +2877,14 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   assert(P.x > dummy.x && dummy.hp < dummy.maxHp && STATUS.hasStatus(dummy, 'paralysis'), 'S42 DONNERATMUNG charged: one flash — the Wizard strikes through the foe and stands behind it (paralysed)');
   reset(); cast('S40'); dummy.homeX = dummy.x = P.x + 300; dummy.hp = dummy.maxHp; dummy.statusImmuneUntil = {}; charged(); step(45);
   assert(dummy.hp < dummy.maxHp && STATUS.hasStatus(dummy, 'wet'), 'S40 WASSERATMUNG charged: a towering flood wave sweeps the lane and soaks');
+  // Charge-activated skills cost mana like runes (user, 23 Oct 2026: no endless breathing forward-charge spam).
+  { const EN = await import('./public/src/entities.js'); const C = EN.CHARGE_SKILL_MANA;
+    reset(); cast('S41'); P.mp = P.maxMp; P.reservedMana = 0; const free0 = P.freeMana; charged(); const paid = free0 - P.freeMana;
+    reset(); cast('S41'); P.mp = P.boundMana + (P.reservedMana ?? 0) + C.full - 1; const mp1 = P.mp; dummy.homeX = dummy.x = P.x + 330; dummy.hp = dummy.maxHp; charged(); const blocked = P.mp === mp1; step(50);
+    assert(paid === C.full && blocked && dummy.hp === dummy.maxHp, 'A breathing charge costs mana (' + C.short + ' short / ' + C.full + ' full) — without the mana nothing fires (paid ' + paid + ')');
+    reset(); P.equipClassWeapon('harp'); P.mp = P.maxMp; const f1 = P.freeMana; P.state = 'idle'; P.canAttack = true; P.beginCharge('up'); P.chargeTimer = P.chargeMaxTime * .1; P.releaseCharge(); const upPaid = f1 - P.freeMana;
+    P.equipClassWeapon(null); P.mp = P.maxMp; const f2 = P.freeMana; P.state = 'idle'; P.canAttack = true; P.beginCharge('forward'); P.chargeTimer = P.chargeMaxTime * .1; P.releaseCharge();
+    assert(upPaid === C.full && P.freeMana === f2, 'The charged-UP skill of the weapon costs mana; the plain heavy without a skill stays free'); }
   reset();
 }
 
@@ -4487,8 +4495,8 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   clean(); { const du = add('dust', 400, .5, { text: 'TEST' }); du.feed('ventus', 9); envStep(.05); assert(du.revealed, 'DUST: wind blows it away and reveals the inscription'); }
   clean(); { const cl = add('climb_wall', 400, .5); const spear = { weapon: 'spear', team: 'blue' }; hitWith(cl, ['blade'], 10, 0, 'melee', spear); hitWith(cl, ['blade'], 10, 0, 'melee', spear); envStep(.05);
     assert(cl.steps.length === 2 && cl.steps.every(registered), 'CLIMB WALL: spear hits leave steps in the rock'); }
-  clean(); { const bo = add('boulder', 230, .5); P.x = 200; P.z = .5; P.isGuarding = true; P.grabCooldown = 0; const ok = P.attemptGrab(game.getHostileTargets(P.team, true)); const flying = !!bo.flight; envStep(1);
-    assert(ok && flying && !bo.flight && bo.x > 260, 'THROW: guard + down on a throwable object (boulder) picks it up and throws it'); P.isGuarding = false; }
+  clean(); { const bo = add('boulder', 230, .5); P.x = 200; P.z = .5; P.facing = 1; P.state = 'idle'; P.canAttack = true; P.sprintActive = true; P.grounded = true; const ok = P.executeAttack({ keys: {}, move: { x: 1, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 } }, 'heavy'); const flying = !!bo.flight; envStep(1);
+    assert(ok && flying && !bo.flight && bo.x > 260, 'THROW: sprint + forward swipe in front of a throwable object (boulder) picks it up and throws it'); P.sprintActive = false; }
   clean(); { const keg = add('powder_keg', 300, .5); P.x = 340; P.z = .5; const Mn = globalThis.__GrimgeMinion; const mi = new Mn(220, .5, 'red', 'melee', 1); game.battlefield.placeOnSurface(mi); game.minions.push(mi);
     for (let i = 0; i < 120 && keg.fuse < 0 && !keg.isDead; i++) { mi.update(1 / 60, game, game.battlefield); ENV.update(1 / 60, game, []); }
     assert(keg.fuse >= 0 || keg.isDead, 'AI: a melee minion lights the powder keg the hero stands next to'); }

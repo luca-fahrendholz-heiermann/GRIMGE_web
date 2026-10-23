@@ -367,6 +367,8 @@ export function stackedShot(player, shot) {
 }
 
 // ── Charge UP: the weapon's own launcher ─────────────────────────────────
+// Does the held weapon bring a charged-UP skill (costs mana, entities.js CHARGE_SKILL_MANA)?
+export const weaponHasUpSkill = (player) => !!kitOf(player)?.up;
 export function weaponUp(player, charge, spells, game) {
   const up = kitOf(player)?.up; if (!up) return false;
   const f = player.facing || 1; const hue = hueOf(player);

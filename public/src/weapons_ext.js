@@ -206,6 +206,29 @@ export const EXT_PIECES = {
   chakrams: { main: 'chakram', off: 'chakram' }, magic_cards: { main: 'card' }, talisman: { main: 'talisman' }, ritual_fan: { main: 'fan' }
 };
 
+// A bold, opaque music note (user, 23 Oct 2026: the harp / zither / Klangrad notes were "kleine Noten" —
+// tiny thin arcs): a dark contour, a filled head, stem and flag in the weapon colour, a light highlight,
+// plus wide sound arcs in front. Pixel crisp (integer rects), readable without any glow.
+const shade = (hex, k) => { const n = parseInt(String(hex).replace('#', '').slice(0, 6).padEnd(6, '0'), 16); const c = [n >> 16 & 255, n >> 8 & 255, n & 255].map((v) => Math.max(0, Math.min(255, Math.round(k < 0 ? v * (1 + k) : v + (255 - v) * k)))); return '#' + c.map((v) => v.toString(16).padStart(2, '0')).join(''); };
+export function drawMusicNote(ctx, x, y, size, hue, { dir = 1, double = false, arcs = 2, t = 0 } = {}) {
+  const s = Math.max(4, size); const dark = shade(hue, -.7); const light = shade(hue, .6);
+  const R = (rx, ry, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(Math.round(x + rx), Math.round(y + ry), Math.max(1, Math.round(w)), Math.max(1, Math.round(h))); };
+  const head = (hx, c, grow) => { const hw = s * .62 + grow; const hh = s * .44 + grow; for (let i = -hh; i <= hh; i += 2) { const k = Math.sqrt(Math.max(0, 1 - (i / hh) ** 2)); R(hx - hw * k, i, hw * 2 * k, 2, c); } };
+  const stem = Math.max(2, Math.round(s * .2)); const H = s * 1.9;
+  const heads = double ? [-s * .55, s * .75] : [0];
+  // Contour first (one pixel larger), then the body, then the highlight.
+  for (const [c, g] of [[dark, 2], [hue, 0]]) {
+    for (const hx of heads) { head(hx, c, g); R(hx + s * .48 - g, -H - g, stem + g * 2, H + g * 2, c); }
+    if (double) R(heads[0] + s * .48 - g, -H - g, heads[1] - heads[0] + stem + g * 2, s * .32 + g * 2, c);
+    else for (let i = 0; i < 3; i++) R(s * .48 + stem - g + i * s * .2, -H + i * s * .22 - g, s * .28 + g * 2, s * .26 + g * 2, c);
+  }
+  for (const hx of heads) R(hx - s * .3, -s * .22, s * .32, Math.max(1, s * .14), light);
+  // Sound arcs ahead of the note (they pulse outward).
+  ctx.save(); ctx.strokeStyle = hue; ctx.lineCap = 'butt';
+  for (let i = 0; i < arcs; i++) { const r = s * (1.3 + i * .55) + ((t * 18) % 4); ctx.globalAlpha = 1 - i * .25; ctx.lineWidth = Math.max(2, s * .22 - i); ctx.beginPath(); ctx.arc(x + dir * s * .3, y - s * .6, r, dir > 0 ? -.75 : Math.PI - .75, dir > 0 ? .75 : Math.PI + .75); ctx.stroke(); }
+  ctx.restore();
+}
+
 // ── Projectiles of the ranged / magic weapons ───────────────────────────
 // Spread is lateral (depth) spread; every shot is a real projectile with its
 // own collision (capturable / reflectable like spell projectiles).
@@ -213,7 +236,7 @@ const PIECE_OF_SHOT = { arrow: 'arrow', bolt: 'bolt', knife: 'knife', chakram: '
 export class WeaponShot {
   constructor(owner, shot, hue, drawPiece, { power = 1, index = 0, count = 1, vzExtra = 0, height = null, delay = 0 } = {}) {
     const f = owner.facing || 1;
-    this.owner = owner; this.team = owner.team; this.shot = shot; this.hue = hue; this.drawPiece = drawPiece;
+    this.owner = owner; this.team = owner.team; this.shot = shot; this.hue = hue; this.drawPiece = drawPiece; this.index = index; this.count = count;
     this.kind = shot.kind; this.facing = f;
     this.x = owner.x + f * 22; this.z = owner.z; this.height = height ?? (owner.worldHeight ?? 0) + 42;
     const spread = count > 1 ? (index - (count - 1) / 2) * (shot.spread ?? .2) : 0;
@@ -246,6 +269,7 @@ export class WeaponShot {
       if (out?.perfect && t.team) { this.team = t.team; this.vx *= -1; this._vz *= -1; this.hitSet.clear(); this.life = Math.max(this.life, .6); return; }
       if (this.shot.slow) t.slow?.(1.2, this.shot.slow);
       combat.spawnHitSparks(t.x, (t.y ?? this.y) - 30, Math.sign(this.vx) || 1, this.hue, 8);
+      if (this.kind === 'note') combat.spawnShockwave(t.x, (t.y ?? this.y) - 32, 22 * (this.shot.size ?? 1), this.hue); // a sound ring on impact
       if (this.shot.seal) { this.sealed = this.shot.seal; this.x = t.x; this.vx = 0; this._vz = 0; return; }
       if (this.joker || this.shot.explode) { this.burst(gw); return; }
       if (this.ricochet > 0) {
@@ -267,6 +291,8 @@ export class WeaponShot {
   render(ctx) {
     if (this.delay > 0) return; // still on the string
     const a = Math.atan2(this._vz * 150 * .32, this.vx);
+    // Notes: a bold upright music note with sound arcs (no thin rotating arcs).
+    if (this.kind === 'note') { ctx.save(); ctx.globalAlpha = Math.min(1, this.life * 4); const fan = (this.index - (this.count - 1) / 2) * 16; drawMusicNote(ctx, this.x, this.y + 6 + fan, 9 * (this.shot.size ?? 1) * (this.count > 1 ? .8 : 1), this.joker ? '#ffffff' : this.hue, { dir: Math.sign(this.vx) || 1, double: this.count === 1 && (this.shot.size ?? 1) >= 1.5, arcs: this.count > 1 ? 1 : 2, t: this.t }); ctx.restore(); return; }
     ctx.save(); ctx.translate(this.x, this.y);
     if (this.kind === 'chakram' || this.kind === 'card' || (this.kind === 'talisman' && this.sealed != null)) ctx.rotate(this.kind === 'talisman' ? 0 : this.spin);
     else ctx.rotate(a);

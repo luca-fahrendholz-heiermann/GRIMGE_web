@@ -24,6 +24,7 @@ import { klingenbluete, petal } from './buff_v32_bloom.js';
 import { combat } from './combat.js';
 import { environment } from './environment.js';
 import { groundYForDepth } from './world.js';
+import { drawMusicNote } from './weapons_ext.js';
 
 const snap = Math.round;
 const mir = (a, f) => (f > 0 ? a : Math.PI - a);
@@ -104,8 +105,10 @@ export const ITEMS = {
     line(ctx, [0, 1, 2, 0].map((i) => { const q = -ang * 1.5 + Math.PI + i * TAU / 3; return [x + Math.cos(q) * L * .7, y + Math.sin(q) * L * .64]; }), m.spark, 1, a);
     plate(ctx, [[x, y - L * .2], [x + L * .18, y], [x, y + L * .2], [x - L * .18, y]], m, seed + 11, { alpha: a, core: 1 });
   },
-  // Cards, chakrams, talismans, notes: the style's own piece (bankai.js shape).
-  card(ctx, x, y, ang, L, m, a, seed) { petal(ctx, x, y, ang, L * .55, a, seed); }
+  // Cards, chakrams, talismans: the style's own piece (bankai.js shape).
+  card(ctx, x, y, ang, L, m, a, seed) { petal(ctx, x, y, ang, L * .55, a, seed); },
+  // KLANGRAD (Resonant): big opaque music notes with sound arcs.
+  note(ctx, x, y, ang, L, m, a, seed) { ctx.save(); ctx.globalAlpha = a; drawMusicNote(ctx, x, y + L * .3, L * .55, m.body, { dir: Math.cos(ang) >= 0 ? 1 : -1, double: seed % 2 === 0, arcs: 1, t: seed }); ctx.restore(); }
 };
 
 // ── Strike helpers ───────────────────────────────────────────────────────
@@ -361,7 +364,7 @@ const FAMILY_NAMES = {
   Occultist: ['FLUCHSTRAHL', 'GROSSER FLUCHSTRAHL', 'FLUCHSÄULE', 'FLUCHTURM', 'FLUCHBANN', 'FLUCHGERICHT'],
   Oracle: ['LICHTSTRAHL', 'GROSSER LICHTSTRAHL', 'LICHTSÄULE', 'LICHTTURM', 'LICHTBANN', 'LICHTGERICHT']
 };
-const FAMILY_ITEM = { Beastborn: ITEMS.claw };
+const FAMILY_ITEM = { Beastborn: ITEMS.claw, Resonant: ITEMS.note };
 export const BANKAI_ARSENAL_IDS = Object.freeze(Object.keys(ARSENALS));
 
 // The arsenal of an actor's held weapon (null = the blade-petal swarm).
