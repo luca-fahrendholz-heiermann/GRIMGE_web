@@ -41,6 +41,10 @@ const match = async (mode) => { closeAll(); home(); gw.setMatchMode(mode); gw.st
 const INTERACTIVE = 'button, a[href], input, select, textarea, [role="button"], [data-hub-action], [data-hub-tab], [data-deck-action], [data-deck-cat], [data-mastery-id], [data-map-id], .card-overlay, [onclick]';
 const BLOCKS = '#top-hud-bar > *, #bottom-hud-bar > *, #objective-hud, #training-controls, #announcement-banner:not(:empty), #touch-joystick, #rune-cards-row, #bottom-right-actions, #match-clock-box, .hub-art-header, .hub-art-actions, .hub-art-hero, .hub-art-logo, .hub-topbar, .run-rune-options, .deck-categories, .deck-presets';
 const FN_SKIP = new Set(['data-hub-page', 'data-uied']);
+// Single pieces inside a block (user, 23 Oct 2026: the hub's sprite and the name under it were ONE element):
+// images and text fields count on their own — but never inside a button (a button moves as one unit).
+const LEAVES = '#ui-layer img, #ui-layer [id], #ui-layer b, #ui-layer strong, #ui-layer span, #ui-layer small, #ui-layer em, #ui-layer h1, #ui-layer h2, #ui-layer h3, #ui-layer h4, #ui-layer p, #ui-layer label';
+const isLeaf = (el) => el.tagName === 'IMG' || !!el.id || [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim().length > 0); // own text (also with nested values)
 
 // ── state ──
 const $ = (id) => document.getElementById(id);
@@ -125,7 +129,9 @@ function scan() {
   const probe = d.createElement('style'); probe.textContent = '* { pointer-events: auto !important; }'; d.head.appendChild(probe);
   const out = []; const seen = new Set();
   try {
-    for (const el of d.querySelectorAll(INTERACTIVE + ', ' + BLOCKS)) {
+    const blocks = new Set(d.querySelectorAll(INTERACTIVE + ', ' + BLOCKS));
+    const leaves = [...d.querySelectorAll(LEAVES)].filter((el) => !blocks.has(el) && isLeaf(el) && !el.parentElement?.closest(INTERACTIVE));
+    for (const el of [...blocks, ...leaves]) {
       if (seen.has(el) || el.closest('#safe-area-probe, #rotate-overlay')) continue; seen.add(el);
       const r = el.getBoundingClientRect();
       if (r.width < 8 || r.height < 8 || r.right <= 0 || r.bottom <= 0 || r.left >= W || r.top >= H || r.width * r.height > W * H * .8) continue;

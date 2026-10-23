@@ -25,6 +25,25 @@ Alle Waffen haben 3 normale Angriffe plus Finisher. Längere Waffenkombos nehmen
 
 Der Finisher ist der bisherige letzte Angriff der Waffe, verstärkt. Der letzte Kettenangriff schleudert nicht mehr weg, damit der Finisher folgen kann.
 
+## Abzweige per Wischen (umgesetzt)
+
+| Folge | Geste | Ergebnis |
+| --- | --- | --- |
+| A1 (oder A2 / A3) → | **Wischen hoch** | **Hochschlag-Abzweig**: Der Gegner fliegt höher als beim normalen Hochschlag, der Held bleibt unten und kann nachsetzen. |
+| A1 A2 → | **Wischen vorwärts** | **Rundumfeger**: ein weiter Schwung rundherum, trifft auch hinten. |
+| A1 A2 A3 → | **Wischen vorwärts** | **Schockwelle** der Waffe (Fernwaffen: eine Salve). |
+| A1 A2 A3 → | **Tippen im Takt** | **Finisher** (wie bisher) |
+| aus dem Stand | Wischen | normaler schwerer Angriff (wie bisher) |
+
+**Nachsetzen nach dem Hochschlag-Abzweig:**
+- Trifft der Hochschlag, öffnet sich ein kurzes Fenster (0,45 s), in dem der Held geduckt sprungbereit steht.
+- **Tippen** im Fenster: Er springt dem Gegner hinterher und schlägt sofort zu. Weiteres Tippen setzt die Luftkombo fort.
+- **Springen** geht auch von Hand.
+- **Ohne Tipp** passiert nichts von selbst; man muss sich aktiv entscheiden.
+- **Grenzen gegen Einseitigkeit:** Der Abzweig kommt einmal pro Kette, in der Luft gibt es höchstens 3 Treffer pro Sprung (Luft-Latch). Danach fällt der Gegner.
+
+Halten bleibt unverändert für Aufladen (Halten + Ziehen) und die HOLD-Fähigkeit (Halten ohne Ziehen). So hat keine Geste zwei Bedeutungen.
+
 ## Sturz in Laufrichtung
 
 - Ein Wischen nach unten in der Luft folgt dem **Winkel** des Wischens. Flach gewischt stürzt flach, steil gewischt stürzt steil. Es wird nicht mehr auf den nächsten Gegner gezielt.

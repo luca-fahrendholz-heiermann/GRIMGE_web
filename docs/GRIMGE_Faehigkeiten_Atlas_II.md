@@ -243,22 +243,28 @@ So ist die Rüstung für alle da, und die Klasse hat ihren Mehrwert.
 
 ---
 
-## 9. Kombo-Abzweigungen (manuelle Ergänzung)
+## 9. Kombo-Abzweigungen (manuell, ergänzend) – umgesetzt am 23.10.2026
 
 ![Kombo-Abzweigungen](konzepte/abzweigungen.png)
 
-Angelehnt an die klassischen „Charge“-Abzweige aus Massen-Kampfspielen, aber mit GRIMGE-Eingaben:
+Die Abzweige laufen über die **Wisch-Gesten, die es schon gibt**, je nach Kombo-Schritt. Die Skizze zeigt noch die erste Idee mit „Halten“; die wurde verworfen, weil Halten schon für Aufladen und die HOLD-Fähigkeit steht.
 
-| Folge | Ergebnis | Rolle |
+| Folge | Geste | Ergebnis |
 | --- | --- | --- |
-| A1 → **Halten** | Hochschlag (Launcher) | Luftkombo-Start |
-| A1 A2 → **Halten** | Rundumfeger | Gruppen-Abstand |
-| A1 A2 A3 → **Halten** | Schockwelle nach vorn (Waffen-typisch) | Fernstoß |
-| A1 A2 A3 → **Takt** | **Finisher** (gibt es) | Belohnung für Timing |
+| A1 (oder A2 / A3) → | **Wischen hoch** | **Hochschlag-Abzweig**: Der Gegner fliegt höher als beim normalen Hochschlag, der Held bleibt unten und kann nachsetzen. |
+| A1 A2 → | **Wischen vorwärts** | **Rundumfeger**: ein weiter Schwung rundherum, trifft auch hinten. |
+| A1 A2 A3 → | **Wischen vorwärts** | **Schockwelle** der Waffe (Fernwaffen: eine Salve). |
+| A1 A2 A3 → | **Tippen im Takt** | **Finisher** (wie bisher) |
+| aus dem Stand | Wischen | normaler schwerer Angriff (wie bisher) |
 
-Jede Waffe bekommt ihre eigenen drei Abzweig-Techniken. Die Finisher-Mechanik bleibt unverändert.
+**Nachsetzen nach dem Hochschlag-Abzweig:**
+- Trifft der Hochschlag, öffnet sich ein kurzes Fenster (0,45 s), in dem der Held geduckt sprungbereit steht.
+- **Tippen** im Fenster: Er springt dem Gegner hinterher und schlägt sofort zu. Weiteres Tippen setzt die Luftkombo fort.
+- **Springen** geht auch von Hand.
+- **Ohne Tipp** passiert nichts von selbst; man muss sich aktiv entscheiden.
+- **Grenzen gegen Einseitigkeit:** Der Abzweig kommt einmal pro Kette, in der Luft gibt es höchstens 3 Treffer pro Sprung (Luft-Latch). Danach fällt der Gegner.
 
----
+Halten bleibt unverändert für Aufladen (Halten + Ziehen) und die HOLD-Fähigkeit (Halten ohne Ziehen). So hat keine Geste zwei Bedeutungen.
 
 ## 10. Reihenfolge-Vorschlag
 

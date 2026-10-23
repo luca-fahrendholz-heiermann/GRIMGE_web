@@ -4270,6 +4270,21 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
     assert(buffered === 'buffer' && E.finisherGrade(ch, ch.peak) === 'perfect' && E.finisherGrade(ch, 0) === 'early' && E.finisherGrade(ch, ch.peak + ch.good + .01) === 'late', 'Finisher timing grades: early / buffer / good / perfect / late'); }
   { toLastStep(); waitTo(1); let glint = 0; const ctxG = new Proxy({}, { get: (tt, k) => k === 'fillRect' ? () => { glint++; } : k === 'canvas' ? undefined : () => {}, set: () => true }); P.renderFinisherGlint(ctxG, P.y); assert(glint > 0, 'At the finisher moment the weapon flashes in the hand (every mode, not only Training)'); }
   { toLastStep(); waitTo(.9); let bad = 0; const strict = new Proxy({}, { get: (tt, k) => k === 'arc' ? (x, y, r) => { if (r < 0) bad++; } : k === 'canvas' ? undefined : k === 'measureText' ? () => ({ width: 10 }) : () => {}, set: () => true }); P.renderFinisherRing(strict, P.y); assert(!bad, 'The finisher ring renders'); }
+  // Combo branches by swipe (user, 23 Oct 2026): A1 + up = launcher (+ follow-up), A1 A2 + forward = sweep, A1 A2 A3 + forward = shockwave.
+  const chainTo = (n, weapon = null) => { reset(weapon); const m = foe(); for (let i = 0; i < n; i++) { m.x = 340; P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.finisherChance = null; P.executeAttack(neutral, 'normal'); if (i < n - 1) step(2); } return m; };
+  { const m = chainTo(1); P.lastBranch = null; assert(P.executeAttack(neutral, 'uppercut') && P.queuedAttack === 'branch', 'A1 + swipe up during the swing: the launcher branch is queued (no stutter)');
+    for (let i = 0; i < 30 && P.lastBranch !== 'launch'; i++) step(1);
+    assert(P.lastBranch === 'launch' && P.grounded && P.followUp && (m.vElevation > 0 || (m.elevation ?? 0) > 0), 'Launcher branch: the foe flies up, the Wizard stays down and can follow');
+    P.executeAttack(neutral, 'normal'); for (let i = 0; i < 40 && P.grounded; i++) step(1);
+    assert(!P.grounded, 'NACHSETZEN: a tap in the window jumps after the launched foe'); for (let i = 0; i < 20; i++) step(1);
+    assert((P.airLatchCount ?? 0) >= 1 || /^attack/.test(P.state), 'NACHSETZEN: the follow strike lands in the air (the air combo continues by taps, max 3 latches)'); }
+  { const m = chainTo(1); P.executeAttack(neutral, 'uppercut'); for (let i = 0; i < 30 && P.lastBranch !== 'launch'; i++) step(1); for (let i = 0; i < 70; i++) step(1);
+    assert(P.grounded && !P.followUp, 'Without a tap the follow window closes — nothing happens by itself (no one-button autopilot)'); }
+  { const m = chainTo(2); const behind = foe(); behind.x = 260; P.executeAttack(neutral, 'heavy'); for (let i = 0; i < 30 && P.lastBranch !== 'sweep'; i++) step(1); step(4);
+    assert(P.lastBranch === 'sweep' && behind.hp < 5000, 'A1 A2 + swipe forward: the sweep branch hits all around (also behind)'); }
+  { chainTo(3); const n0 = spells.activeSpells.filter((x) => x.isWeaponShot).length; P.executeAttack(neutral, 'heavy'); for (let i = 0; i < 40 && P.lastBranch !== 'wave'; i++) step(1);
+    assert(P.lastBranch === 'wave' && spells.activeSpells.filter((x) => x.isWeaponShot).length > n0, 'A1 A2 A3 + swipe forward: the shockwave branch runs forward'); }
+  { reset(); P.lastBranch = null; foe(); P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.executeAttack(neutral, 'heavy'); assert(P.lastBranch === null && P.state === 'heavyStrike', 'From standing a swipe stays the plain heavy attack'); }
   // Outside Training: no ring, no labels — the window still works (timing + hitstop only).
   assert(E.finisherGuideShown(), 'In Training the finisher guide (ring, PERFEKT label) is shown');
   game.returnToHub(); game.setMatchMode('arena'); game.startMatch();

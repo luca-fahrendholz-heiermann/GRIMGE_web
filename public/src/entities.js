@@ -475,6 +475,15 @@ export class Player extends GroundEntity {
     this.pullCooldown = Math.max(0, (this.pullCooldown ?? 0) - dt);
     if (this.slowTimer <= 0) this.slowFactor = 1;
     this.comboResetTimer = Math.max(0, this.comboResetTimer - dt);
+    // Launcher branch: the follow window; a tap queued during the launch swing jumps after the foe.
+    if (this.followUp) {
+      this.followUp.t -= dt;
+      if (this.followUp.queued && this.canAttack && this.grounded) this.autoFollow();
+      else if (this.followUp.t <= 0 && !this.followUp.queued) this.followUp = null;
+    }
+    if (this._followStrikeT > 0 && (this._followStrikeT -= dt) <= 0) {
+      if (!this.grounded && this.isAlive) { this.canAttack = true; this.state = 'jump'; this.executeAttack({ keys: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 } }, 'normal'); }
+    }
     // A finisher salvo: stab after stab, the last one launches.
     if (this._flurry) {
       const fl = this._flurry;
@@ -1218,6 +1227,15 @@ export class Player extends GroundEntity {
     if (ACTION_STATES.has(this.state) || !this.canAttack) {
       // The last chain step connected: the press is judged against the finisher window.
       if (attackKind === 'normal' && this.finisherChance && /^attack/.test(this.state) && this.stateTimer > 0) return this.pressFinisherWindow(input);
+      // Combo branches (user, 23 Oct 2026): a SWIPE during the chain picks a branch by the step —
+      // up = launcher (with a follow-up window), forward on step 2 = sweep, forward on step 3 = shockwave.
+      if ((attackKind === 'uppercut' || attackKind === 'heavy') && this.grounded && this.comboStep >= 1 && /^attack[123]$/.test(this.state)) {
+        this.queuedBranch = this.branchFor(attackKind); this.finisherChance = null;
+        this.queuedAttack = 'branch'; this.attackBufferTimer = Math.max(0, this.stateTimer) + .15;
+        return true;
+      }
+      // Launcher branch landed: a tap follows the foe up (queued until the launch swing ends).
+      if (attackKind === 'normal' && this.followUp && this.grounded) { this.followUp.queued = true; return true; }
       const canBuffer = attackKind === 'normal' && /^attack[123]$/.test(this.state) && this.stateTimer <= MELEE_BASELINE.bufferWindow;
       if (canBuffer) {
         this.queuedAttack = 'normal';
@@ -1233,6 +1251,10 @@ export class Player extends GroundEntity {
     const diveDir = attackKind === 'dive' ? this.diveDir : null; this.diveDir = null;
     if (diveDir && Math.abs(diveDir.x) > Math.abs(diveDir.y) * .15) this.facing = Math.sign(diveDir.x);
     const slope = (min = 0) => (diveDir ? Math.sign(diveDir.x || this.facing || 1) * Math.max(min, Math.min(1.4, Math.abs(diveDir.x) / Math.max(1, Math.abs(diveDir.y)))) : null);
+    // A branch (queued from the chain) or a swipe right after a connected chain step.
+    if (attackKind === 'branch') return this.comboBranch(this.queuedBranch ?? { kind: 'launch' });
+    if ((attackKind === 'uppercut' || attackKind === 'heavy') && this.grounded && this.comboStep >= 1 && this.comboResetTimer > 0) return this.comboBranch(this.branchFor(attackKind));
+    if (attackKind === 'normal' && this.followUp && this.grounded) return this.autoFollow();
     if (attackKind === 'uppercut' || input.keys?.KeyU) {
       const up = weapon ? { ...MELEE_BASELINE.uppercut, ...weapon.uppercut } : MELEE_BASELINE.uppercut;
       this.state = 'uppercut'; this.stateTimer = up.time; this._weaponSwingTime = up.time; this.vElevation = 280 * PLAYER_ARC_SCALE;
@@ -1372,6 +1394,52 @@ export class Player extends GroundEntity {
         combat.shakeCamera(4, .12); const tgt = this.lastMeleeHits?.[0]?.target ?? this.lastMeleeHits?.[0]; if (tgt?.x != null) combat.spawnShockwave(tgt.x, (tgt.y ?? this.y) - 40, 26, '#ffffff');
       }
     }
+    return true;
+  }
+
+  // ── Combo branches ──
+  branchFor(attackKind) {
+    if (attackKind === 'uppercut') return { kind: 'launch', step: this.comboStep };
+    return { kind: this.comboStep >= 3 ? 'wave' : this.comboStep === 2 ? 'sweep' : 'heavy', step: this.comboStep };
+  }
+  comboBranch(b) {
+    const weapon = this.weaponProfile; const f = this.facing || 1; const N = { keys: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 } };
+    this.queuedBranch = null; this.comboStep = 0; this.finisherChance = null; this.canAttack = false; this.vx = 0; this.vz = 0; this.lastBranch = b.kind;
+    if (b.kind === 'heavy') { this.canAttack = true; this.state = 'idle'; this.stateTimer = 0; return this.executeAttack(N, 'heavy'); }
+    if (b.kind === 'launch') {
+      // Hochschlag-Abzweig: the foe flies higher than from a plain uppercut; the Wizard stays down, ready to follow.
+      const up = weapon ? { ...MELEE_BASELINE.uppercut, ...weapon.uppercut } : MELEE_BASELINE.uppercut;
+      this.state = 'uppercut'; this.stateTimer = .3; this._weaponSwingTime = .3; this.setWeaponMotion('uppercut'); audio.playSlash(1.25);
+      if (!weapon) combat.spawnSlashArc(this.x, this.y - 25, f, { radius: 50, angleStart: -1.3, angleEnd: .6, color: '#ffea00', glow: '#ff9800', width: 6 });
+      const hit = this.triggerMeleeHitbox(Math.round(up.damage * 1.1), f * 60, Math.max(up.lift, 480) * 1.2, .5, false, { hitstopTicks: 6, hitReaction: 'strong' });
+      const t = this.lastMeleeHits?.[0];
+      if (hit && t) { this.followUp = { t: .45, target: t, queued: false }; if (finisherGuideShown()) combat.spawnDamageText(this.x, this.y - 110, 'NACHSETZEN: TIPPEN', { color: '#69f0ae' }); }
+      return true;
+    }
+    if (b.kind === 'sweep') {
+      // Rundumfeger: one wide swing all around (front and back), pushes everyone away.
+      this.state = 'attack2'; this.stateTimer = .34; this._weaponSwingTime = .34; this._weaponMotion = 'whirl'; audio.playSlash(.95);
+      if (!weapon) combat.spawnSlashArc(this.x, this.y - 22, f, { radius: 62, angleStart: -Math.PI, angleEnd: Math.PI, color: '#ffffff', glow: '#ffd54f', width: 5 });
+      this.triggerMeleeHitbox(Math.round((weapon?.combo?.[1]?.damage ?? 34) * 1.2), f * 300, 120, .45, false, { hitstopTicks: 4, hitReaction: 'strong', reach: 72, behind: true });
+      return true;
+    }
+    // Schockwelle: a ground shock runs forward (ranged weapons: a volley).
+    this.state = 'heavyStrike'; this.stateTimer = .34; this._weaponSwingTime = .34; this.setWeaponMotion('heavy'); audio.playSlash(.8);
+    const id = this.weapon ?? this.classWeapon;
+    const shot = WEAPONS[id]?.ranged ? { ...(WEAPONS[id].heavy?.shot ?? { kind: 'arrow', speed: 900, damage: 18, life: .8 }), damage: 18 } : { kind: 'wave', speed: 640, damage: 26, knock: 360, life: .42, size: 1.4, pierce: true };
+    for (const s of makeWeaponShots(this, shot, id, { volley: WEAPONS[id]?.ranged ? 2 : 0, low: !WEAPONS[id]?.ranged })) spells.addSpell(s, 'B');
+    combat.spawnShockwave(this.x + f * 26, this.y - 6, 40, '#ffd54f'); combat.shakeCamera(4, .12);
+    return true;
+  }
+  // Nachsetzen: the Wizard jumps after the launched foe and strikes at once (the air combo follows by taps).
+  autoFollow() {
+    const fu = this.followUp; this.followUp = null; const t = fu?.target;
+    if (!t || t.isDead || t.lifeState === 'Dead' || (t.hp ?? 1) <= 0) return false;
+    const f = Math.sign(t.x - this.x) || this.facing || 1; this.facing = f;
+    this.grounded = false; this.state = 'jump'; this.stateTimer = 0; this.isSprintJump = false; this.canAttack = false;
+    this.vElevation = this.jumpForce * 1.12; this.jumpsLeft = Math.max(0, (this.jumpsLeft ?? 1) - 1);
+    this.vx = Math.max(-420, Math.min(420, (t.x - f * AIR_LATCH_GAP - this.x) / .3));
+    this._followStrikeT = .2; audio.playJump(); combat.spawnDust(this.x, this.y, 4);
     return true;
   }
 
@@ -1966,6 +2034,8 @@ export class Player extends GroundEntity {
     const wielding = this.isAlive && (this.weapon || this.classWeapon) && !activeMoveset(this) && currentBuffForm(this)?.id !== 'A04' && !this.isGuarding && !(this.hitFlash > 0);
     const body = wielding && (!useProc || /^attack|uppercut|heavyStrike/.test(this.state)) ? weaponBodyPose(this) : null;
     if (body) { useProc = true; pRot += body.rot; pOX += body.ox; pOY += body.oy; pSX *= body.sx; pSY *= body.sy; if (body.cadence) cadence *= body.cadence; }
+    // Launcher branch: crouched, ready to jump after the foe.
+    if (this.followUp && this.isAlive && this.grounded) { useProc = true; pOY += 3; pSY *= .94; pSX *= 1.04; }
     // Finisher window: the Wizard winds up (leans back, gathers) toward the moment.
     if (this.finisherChance && this.isAlive) { const u = Math.min(1, this.finisherElapsed() / this.finisherChance.peak); useProc = true; pRot += -(this.facing || 1) * 7 * u; pOX += -(this.facing || 1) * 3 * u; pSY *= 1 + .03 * u; pSX *= 1 - .02 * u; }
     // Aerial bow shot (breathing arrow rain): the body lies flat, face to the ground, centred over the spot.
