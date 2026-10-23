@@ -22,6 +22,7 @@ import { drawWyrmHead, stoneRing, ACID_GLASS, ghostOf } from './buff_signatures.
 import { giantHand } from './buff_v32_extra.js';
 import { spiritArm } from './buff_v32_hands.js';
 import { petal } from './buff_v32_bloom.js';
+import { rubberArm, cracks, dome, boom, explode } from './arcane_devil.js';
 
 export const FORM_SPECIAL_MANA = Object.freeze({ sprint: 4, dive: 4 });
 // Delayed follow-up hits in game time (puppets, echoes); ticked from Player.update.
@@ -65,7 +66,11 @@ export const FORM_SPRINTS = {
   A01: { ...RAM, recoilMult: 1.9, damageMult: 1.4, impact: 'giant' }, // Göttlicher Riese: giant shoulder
   A02: { ...RAM, lift: 120, impact: 'ape' },        // Mystischer Affe: two-fist charge, quake
   A03: { ...LUNGE, impact: 'hands' },               // Tausendhand: fists strike along the dash
-  A04: { ...LUNGE, impact: 'petals' }               // Klingenblüte: the swarm cuts through the lane
+  A04: { ...LUNGE, impact: 'petals' },              // Klingenblüte: the swarm cuts through the lane
+  A05: { ...LUNGE, lungeSpeed: 1.7, reach: 120, impact: 'rubber' }, // Dehnleib: a stretched ram, the foe bounces away
+  A06: { ...RAM, impact: 'quake' },                 // Beben: a quake ram, everything around wobbles
+  A07: { ...PIERCE, windup: .02, lungeSpeed: 1.9, impact: 'room' }, // Raum: a cut through everything on the line
+  A08: { ...LEAP, leap: 180, impact: 'blast' }      // Sprengleib: a blast-driven leap, the impact explodes
 };
 for (const [id, mech] of Object.entries(FORM_SPRINTS)) {
   const form = BUFF_FORMS[id]; if (!form) continue;
@@ -90,6 +95,10 @@ const IMPACTS = {
   giant: () => combat.shakeCamera(10, .3),
   petals: (p, struck) => { for (const delay of [.06, .12, .18, .24]) later(delay, () => { if (!struck.isDead) struck.takeDamage?.(5, (p.facing || 1) * 60, 10, .1, false, 'melee'); }); },
   hands: (p, struck) => { for (const delay of [.08, .16, .24]) later(delay, () => { if (!struck.isDead) struck.takeDamage?.(7, (p.facing || 1) * 90, 20, .15, false, 'melee'); }); },
+  rubber: (p, struck) => { if ('kbVelX' in struck) struck.kbVelX = (p.facing || 1) * 520; },
+  quake: (p, struck, game) => { for (const t of foes(p, game)) if (t !== struck && Math.hypot(t.x - struck.x, ((t.z ?? p.z) - (struck.z ?? p.z)) * DEPTH) < 120) applyStatuses(t, ['stun'], p, p.facing); for (const o of environment.props) if (o.isSceneObject && !o.isDead && Math.hypot(o.x - struck.x, (o.z - (struck.z ?? p.z)) * DEPTH) < 110) o.takeDamage(20, (p.facing || 1) * 340, 0, 0, false, 'melee'); },
+  room: (p, struck) => { struck.slow?.(1, .3); },
+  blast: (p, struck, game) => explode(game, { team: p.team, caster: p, facing: p.facing || 1, power: 1 }, struck.x, struck.z ?? p.z, 70, 20),
   ape: (p, struck, game) => { for (const t of foes(p, game)) if (Math.hypot(t.x - struck.x, ((t.z ?? p.z) - (struck.z ?? p.z)) * DEPTH) < 90) t.takeDamage?.(10, Math.sign(t.x - struck.x || 1) * 220, 120, .3, false, 'spell'); combat.shakeCamera(7, .2); }
 };
 FORM_FX_HOOKS.impact = (player, formKey, hits, game) => {
@@ -101,6 +110,10 @@ FORM_FX_HOOKS.impact = (player, formKey, hits, game) => {
 
 // Looks along the dash: q = { p, f, x, y (chest), k (0 wind-up … 1 struck), fade, t, mat }.
 const SPRINT_LOOKS = {
+  A05: (ctx, q) => rubberArm(ctx, q.x - q.f * 30, q.y, q.x + q.f * (20 + 50 * q.k), q.y - 2, q.mat, q.fade, 9),
+  A06: (ctx, q) => cracks(ctx, q.x + q.f * (20 + 20 * q.k), q.y, 16 + 20 * q.k, 4, q.fade, '#ffffff', 7),
+  A07: (ctx, q) => { line(ctx, [[q.x - q.f * 60, q.y + 10], [q.x + q.f * 40, q.y - 10]], '#ffffff', 3, q.fade); line(ctx, [[q.x - q.f * 60, q.y + 10], [q.x + q.f * 40, q.y - 10]], q.mat.body, 1.5, q.fade); },
+  A08: (ctx, q) => boom(ctx, q.x - q.f * 24, q.y + 20, 20, q.k, 3),
   T02: (ctx, q) => { const m = { ...q.mat, kind: 'crust' }; plate(ctx, [[q.x + q.f * 8, q.y - 22], [q.x + q.f * 34, q.y - 14], [q.x + q.f * 38, q.y + 14], [q.x + q.f * 8, q.y + 22]], m, 9401, { alpha: q.fade, lit: 1, glowEdge: 1.2 }); fallout(ctx, [[q.x - q.f * 10, q.y + 30]], q.mat, q.t, 9402, { count: 8, alpha: q.fade }); },
   T04: (ctx, q) => { const c = crystal(q.mat); for (let i = -2; i <= 2; i++) plate(ctx, [[q.x + q.f * 18, q.y + i * 9 - 4], [q.x + q.f * (34 + (i % 2 ? 8 : 0)), q.y + i * 9], [q.x + q.f * 18, q.y + i * 9 + 4]], c, 9410 + i, { alpha: q.fade, glowEdge: 1 }); band(ctx, [[q.x + q.f * 16, q.y - 24], [q.x + q.f * 22, q.y], [q.x + q.f * 16, q.y + 24]], () => 4, c, 9415, { t: q.t, alpha: q.fade }); },
   T05: (ctx, q) => { ctx.save(); ctx.globalAlpha = q.fade; ctx.fillStyle = '#05040a'; ctx.beginPath(); ctx.arc(q.x + q.f * 20, q.y, 8 + 6 * q.k, 0, TAU); ctx.fill(); ctx.restore(); for (let i = 0; i < 6; i++) shard(ctx, q.x + q.f * 20 + Math.cos(q.t * 9 + i) * 22, q.y + Math.sin(q.t * 9 + i) * 14, 5, q.t * 9 + i, q.mat, 9420 + i, q.fade); },
@@ -154,7 +167,11 @@ export const FORM_DIVES = {
   A01: DIVE('giantPalm', 120, 56),
   A02: DIVE('apeSlam', 115, 50, { lift: 260 }),
   A03: DIVE('palms', 105, 46, { st: ['stun'] }),
-  A04: DIVE('petalStorm', 108, 46, { st: ['bleed'] })
+  A04: DIVE('petalStorm', 108, 46, { st: ['bleed'] }),
+  A05: DIVE('rubberDrop', 110, 44, { lift: 300 }),
+  A06: DIVE('quakeDrop', 130, 48, { st: ['stun'], ground: 'crack' }),
+  A07: DIVE('roomDrop', 120, 42),
+  A08: DIVE('blastDrop', 120, 52, { st: ['burn'], ground: 'scorch' })
 };
 
 export class FormDiveFx {
@@ -205,6 +222,10 @@ export class FormDiveFx {
   }
 }
 const DIVE_FALL = {
+  rubberDrop: (ctx, q) => { for (const sg of [-1, 1]) rubberArm(ctx, q.x, q.y - 40, q.x + sg * 16, q.y + 10, q.m, 1, 8); },
+  quakeDrop: (ctx, q) => cracks(ctx, q.x, q.y + 6, 18, q.t * 10, 1, '#ffffff', 6),
+  roomDrop: (ctx, q) => dome(ctx, q.x, q.y + 20, 40, q.m, .8, q.t),
+  blastDrop: (ctx, q) => boom(ctx, q.x, q.y + 10, 16, (q.t * 3) % 1, 2),
   default: (ctx, q) => plate(ctx, [[q.x - 8, q.y - 20], [q.x + 8, q.y - 20], [q.x, q.y + 18]], q.m, 9600, { alpha: 1, glowEdge: 1.2 }),
   tails: (ctx, q) => { for (let i = 0; i < 5; i++) { const ang = Math.PI / 2 + (i - 2) * .35; band(ctx, [[q.x, q.y - 50], [q.x + Math.cos(ang) * 20, q.y - 20], [q.x + Math.cos(ang) * 30, q.y + 10]], (j, n) => 6 - j * 2, formMat('ninefold'), 9610 + i, { t: q.t, alpha: .9 }); } },
   crystalFist: (ctx, q) => plate(ctx, Array.from({ length: 6 }, (_, i) => [q.x + Math.cos(i / 6 * TAU) * 16, q.y + 10 + Math.sin(i / 6 * TAU) * 14]), crystal(q.m), 9620, { alpha: 1, glowEdge: 1.3 }),
@@ -218,6 +239,10 @@ const DIVE_FALL = {
   thunder: (ctx, q) => line(ctx, [[q.x, q.y - 120], [q.x + 8, q.y - 70], [q.x - 6, q.y - 30], [q.x, q.y]], q.m.spark, 3, 1)
 };
 const DIVE_LAND = {
+  rubberDrop: (ctx, q) => { for (let i = 0; i < 6; i++) { const a = i / 6 * TAU; rubberArm(ctx, q.x, q.y - 20, q.x + Math.cos(a) * q.R * .7 * q.k, q.y - 20 + Math.sin(a) * q.R * .22 * q.k, q.m, q.a, 7); } },
+  quakeDrop: (ctx, q) => { cracks(ctx, q.x, q.y, q.R * q.k, 6, q.a, '#ffffff', 10); groundRing(ctx, q.x, q.y, q.R * q.k, q.m, 0, q.a, 14, 9890, 3); },
+  roomDrop: (ctx, q) => dome(ctx, q.x, q.y, q.R * (1.2 - q.k * .4), q.m, q.a, q.t),
+  blastDrop: (ctx, q) => boom(ctx, q.x, q.y - 20, q.R * .7, q.k, 5),
   default: (ctx, q) => groundRing(ctx, q.x, q.y, 20 + q.R * q.k, q.m, 0, q.a, 12, 9700, 4),
   tails: (ctx, q) => { for (let i = 0; i < 9; i++) { const ang = i / 9 * TAU; band(ctx, [[q.x, q.y], [q.x + Math.cos(ang) * q.R * .5 * q.k, q.y + Math.sin(ang) * q.R * .16 * q.k - 18 * q.a], [q.x + Math.cos(ang) * q.R * q.k, q.y + Math.sin(ang) * q.R * .32 * q.k]], (j, n) => 6 - j * 2, formMat('ninefold'), 9710 + i, { t: q.t, alpha: q.a }); } },
   crystalFist: (ctx, q) => { for (let i = 0; i < 8; i++) { const ang = i / 8 * TAU; const r = q.R * q.k; plate(ctx, [[q.x + Math.cos(ang) * r * .5, q.y + Math.sin(ang) * r * .16], [q.x + Math.cos(ang) * r, q.y + Math.sin(ang) * r * .32 - 26 * q.a], [q.x + Math.cos(ang + .15) * r, q.y + Math.sin(ang + .15) * r * .32]], crystal(q.m), 9720 + i, { alpha: q.a, glowEdge: 1.2 }); } },

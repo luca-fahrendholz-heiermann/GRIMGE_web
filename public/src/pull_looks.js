@@ -12,6 +12,7 @@ import { drawWyrmHead, stoneRing, STONE, ACID_GLASS, ghostOf } from './buff_sign
 import { giantHand } from './buff_v32_extra.js';
 import { spiritArm } from './buff_v32_hands.js';
 import { petal } from './buff_v32_bloom.js';
+import { rubberArm, cracks, dome, boom } from './arcane_devil.js';
 
 // Points along hand → tip with a sag / wave (n + 1 points).
 const path = (q, n, amp = 0, freq = 2, phase = 0) => Array.from({ length: n + 1 }, (_, i) => {
@@ -23,6 +24,11 @@ const dirOf = (q) => { const dx = q.tx - q.hx; const dy = q.ty - q.hy; const l =
 const crystal = (mat) => ({ ...mat, kind: 'crystal' });
 
 export const PULL_LOOKS = {
+  // Body powers: a stretched arm / a crack line / a room tether / a fuse spark.
+  A05: (ctx, q) => rubberArm(ctx, q.hx, q.hy, q.hx + (q.tx - q.hx) * q.k, q.hy + (q.ty - q.hy) * q.k, q.mat, q.a, 8),
+  A06: (ctx, q) => { line(ctx, Array.from({ length: 8 }, (_, i) => [q.hx + (q.tx - q.hx) * q.k * i / 7, q.hy + (q.ty - q.hy) * q.k * i / 7 + (i % 2 ? 4 : -4)]), '#ffffff', 2, q.a); cracks(ctx, q.hx + (q.tx - q.hx) * q.k, q.hy + (q.ty - q.hy) * q.k, 14, q.t, q.a, '#ffffff', 5); },
+  A07: (ctx, q) => { dome(ctx, q.tx, q.ty + 30, 30 * q.k + 6, q.mat, q.a, q.t); line(ctx, [[q.hx, q.hy], [q.hx + (q.tx - q.hx) * q.k, q.hy + (q.ty - q.hy) * q.k]], q.mat.edge, 1.5, q.a); },
+  A08: (ctx, q) => { line(ctx, [[q.hx, q.hy], [q.hx + (q.tx - q.hx) * q.k, q.hy + (q.ty - q.hy) * q.k]], '#ffab00', 2, q.a); boom(ctx, q.hx + (q.tx - q.hx) * q.k, q.hy + (q.ty - q.hy) * q.k, 10, (q.t * 2) % 1, 1); },
   // Risswild: a molten rift band whips out and coils around the foe.
   B01: (ctx, q) => {
     const pts = path(q, 10, 18 * (1 - q.d), 1.5, q.t * 10);

@@ -124,3 +124,25 @@ Geheimräume liegen weit rechts der Dungeon-Räume (eigene Grenzen, eigenes Ambi
   - Dornenlinien, Wurzelring, Setzlinge und Wasser heilen ihn.
   - Ab der Hälfte zornig: schneller, mit Pilzen.
 - Besiegt droppt er eine späte Rune, eine Natur-Truhe erscheint, und das Ausgangsportal führt zurück.
+
+## 5. Körperkräfte als Arcane States (Teufelskraft-Ideen, eigene Umsetzung)
+
+Vier neue Arcane States (`public/src/arcane_devil.js`). Es gibt keine Element-Formen, also keine Überschneidung mit den Element-Transformationen. Es bleibt bei einem Arcane State pro Deck.
+
+**Gemeinsam für alle vier:**
+- Freischaltung **nur über Boss-Drops**, auch über Geheimbosse.
+- **Wasser-Schwäche:** Im Wasser läuft die Zeit dreimal so schnell ab.
+
+| Form | Passiv | Techniken (→ kurz/voll · ↑ kurz/voll · ↓ kurz/voll) |
+|---|---|---|
+| A05 DEHNLEIB | Nahkampf-Reichweite ×1,6; Blitz wirkt nicht; stumpfe Nahkampftreffer prallen ab (×0,6, der Angreifer wird zurückgestoßen) | Dehnfaust / Kautschuk-Salve · Schleuderhaken / Katapultsprung · Gummiwirbel / Ballonleib (wirft Geschosse zurück) |
+| A06 BEBEN | Jeder Treffer schickt ein Beben voraus, das Szenenobjekte umwirft | Bebenstoß / Weltriss · Himmelsbeben / Luftbruch · Erdbeben / Bruchkuppel |
+| A07 RAUM | Kuppel um den Wizard (150 px) | Tausch (Platztausch) / Raumschnitt · Versetzung / Raumwirbel (mischt Gegner und Objekte) · Raumzug / Raumbann (friert ein, dann Schnitt) |
+| A08 SPRENGLEIB | Treffer setzen Sprengmarken (bis 3), die nach 2,5 s explodieren | Sprengfinger / Kettensprengung · Sprengsäule / Feuerwerk · Sprengring / Großer Knall (zündet alle Marken) |
+
+Jede Form hat außerdem einen eigenen Sprint-Angriff, einen eigenen Luftsturz, einen HOLD-Zug und ein eigenes Aufladeritual.
+
+## 6. Bankai im Takt
+
+- Die Formation schlägt bei jedem normalen Angriff synchron mit und kehrt über die Schwungdauer der Waffe zurück. Langsame Waffen schwingen ihr Arsenal also langsamer.
+- Jeder Treffer bekommt einen **Echo-Treffer** des Arsenals. Sein Schaden wächst mit der Schwungdauer: schwere Waffen treffen härter.

@@ -11,7 +11,7 @@ import { WEAPONS, ThrownWeaponSpell, drawHeldWeapon, weaponMotion, makeWeaponSho
 import { drawBeastBomb, drawSpiritBow } from './form_attacks.js';
 import { FULL_CHARGE_TIME, activeMoveset, releaseFormTechnique, FORM_PALETTES } from './form_moves.js';
 import { releaseWeaponReach, releaseFormPull, isOnCastle, weaponReachShot } from './hold_actions.js';
-import { onStatusHit, setStatusSource, isBladeLook, hasStatus, drawIceBlock } from './status_effects.js';
+import { onStatusHit, setStatusSource, getStatusSource, isBladeLook, hasStatus, drawIceBlock } from './status_effects.js';
 import { sceneAiHint, followSceneHint } from './scene_systems.js';
 import { tryAICounterDomain, tryAISpecial, updateAIRecast } from './ai_specials.js';
 import { formDive, FORM_SPECIAL_MANA, tickFormSpecials } from './form_specials.js';
@@ -1724,7 +1724,8 @@ export class Player extends GroundEntity {
     // Letztes Gefecht (skill): melee and charged hits below 25 % HP hit harder.
     if (this.buildModifiers?.lastStand && this.hp < this.maxHp * .25) dmg *= 1 + this.buildModifiers.lastStand;
     // Weapon reach / sweeps behind (scythe); the default reach stays 78 px.
-    const reach = hitMeta.reach ?? null;
+    // Dehnleib (A05): stretched limbs — every melee swing reaches 1.6× as far.
+    const reach = this.buffForm?.id === 'A05' && this.buffForm.timer > 0 ? (hitMeta.reach ?? 78) * 1.6 : (hitMeta.reach ?? null);
     if (hitMeta.crit && Math.random() < hitMeta.crit) { dmg *= 1.5; isFinisher = true; }
     for (const target of targets) {
       if (hitMeta.hitSet?.has(target)) continue;
@@ -1804,6 +1805,11 @@ export class Player extends GroundEntity {
     const incomingFromFront = Math.abs(kx) > 0.01 && Math.sign(-kx) === this.facing;
     // Signature stances (floe plates, forge shield, shard shield) soften hits.
     amount = signatureDamageTaken(this, amount, kx, hitKind);
+    // Dehnleib (A05): lightning does nothing to rubber; blunt melee hits bounce off (×0.6, the attacker is shoved back).
+    if (this.buffForm?.id === 'A05' && this.buffForm.timer > 0) {
+      if ((getStatusSource()?.statusElements ?? []).includes('fulgur')) return { ignored: true, rubber: true };
+      if (hitKind === 'melee') { amount *= .6; const by = currentAttacker(); if (by && by !== this && 'kbVelX' in by) by.kbVelX = -Math.sign(kx || -(this.facing || 1)) * 300; }
+    }
     // Masteries on the incoming hit: Nachtschleier dodges a melee hit, Steinhaut softens and reflects.
     const mIn = masteryIncoming(this, amount, kx, lift, hitKind, currentAttacker());
     if (mIn.dodged) return { dodged: true };

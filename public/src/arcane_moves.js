@@ -304,4 +304,4 @@ export const ARCANE_CHARGE = {
   // A04: blade petals spiral into the charge point — the swarm thickens the longer you charge.
   A04: (ctx, s, mat, dir, k, t) => { const [x, y] = chargeAt(s, dir); const n = 4 + Math.floor(k * 14); for (let i = 0; i < n; i++) { const a = i / n * TAU + t * 5; const r = 34 * (1 - k * .5) + Math.sin(t * 6 + i) * 4; petal(ctx, x + Math.cos(a) * r, y + Math.sin(a) * r * .6, a + Math.PI / 2, 5, .9, 10200 + i); } }
 };
-export const CURATED_ARCANE_STATES = Object.freeze(['B01', 'B02', 'T02', 'T04', 'T05', 'T06', 'T08', 'T13', 'T23', 'T24', 'T35', 'T37', 'T38', 'T39', 'T40', 'A01', 'A02', 'A03', 'A04']);
+export const CURATED_ARCANE_STATES = Object.freeze(['B01', 'B02', 'T02', 'T04', 'T05', 'T06', 'T08', 'T13', 'T23', 'T24', 'T35', 'T37', 'T38', 'T39', 'T40', 'A01', 'A02', 'A03', 'A04', 'A05', 'A06', 'A07', 'A08']);

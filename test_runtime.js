@@ -2279,7 +2279,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   const { MageProfile, BUFF_RUNE_IDS } = await import('./public/src/progression.js');
   const neutral = { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false };
   const ids = buff.BUFF_FORM_IDS;
-  assert(ids.length === 19 && ids[0] === 'B01' && ids[1] === 'B02' && ids.includes('T40') && ['A01', 'A02', 'A03', 'A04'].every((id) => ids.includes(id)), 'The 19 curated Arcane States are registered (B01, B02, 13 atlas forms, A01 Göttlicher Riese, A02 Mystischer Affe, A03 Tausendhand, A04 Klingenblüte)');
+  assert(ids.length === 23 && ids[0] === 'B01' && ids[1] === 'B02' && ids.includes('T40') && ['A01', 'A02', 'A03', 'A04', 'A05', 'A06', 'A07', 'A08'].every((id) => ids.includes(id)), 'The 23 curated Arcane States are registered (B01, B02, 13 atlas forms, A01 Göttlicher Riese, A02 Mystischer Affe, A03 Tausendhand, A04 Klingenblüte)');
   const tForms = ids.filter((id) => /^[TA]/.test(id));
   assert(tForms.every((id) => ['forward', 'up', 'down'].every((d) => FORM_MOVESETS[id]?.[d]?.short?.make && FORM_MOVESETS[id][d].full?.make) && FORM_SPRINT_ATTACKS[id]?.name), 'Every T / A form has six charged techniques and its own sprint attack');
   assert(FORM_MOVESETS.T13.forward.short.name === 'THREAD NEEDLE' && FORM_MOVESETS.T13.forward.full.name === 'HUNDRED FILAMENTS' && FORM_SPRINT_ATTACKS.T13.name === 'SILK STRIKE', 'Technique names come straight from the atlas (T13 Fadenschlag)');
@@ -2292,7 +2292,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   const second = profile.addRuneToDeck('buff_B01');
   assert(!second.ok && /ONE ARCANE STATE/.test(second.reason), 'A second buff rune is refused (one per deck)');
   assert(profile.sanitizeDeck(['ignis', 'buff_T13', 'buff_T08', 'aqua']).filter((id) => id.startsWith('buff_')).length === 1, 'Loading a deck keeps only one buff rune');
-  assert(BUFF_RUNE_IDS.length === 19, 'All 19 Arcane State runes are offered in the deck builder');
+  assert(BUFF_RUNE_IDS.length === 23, 'All 23 Arcane State runes are offered in the deck builder');
   {
     // A04 Klingenblüte: the weapon becomes the petal swarm (no normal held weapon), its cuts bleed.
     const BF = await import('./public/src/buff_forms.js');
@@ -2349,7 +2349,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   }
   assert(fired === tForms.length * 6, `Every technique of every curated T form releases, updates and renders (${fired})`);
   // The new kinds hit.
-  const hitBy = (id, d, v, dx) => { spells.clearRuntime(); dummy.homeX = dummy.x = P.x + dx; dummy.hp = dummy.maxHp; P.buffForm = { id, timer: 10, total: 16, age: 1, power: 1 }; spells.addSpell(FORM_MOVESETS[id][d][v].make(P), 'B'); for (let i = 0; i < 90; i++) spells.update(1 / 60, game); return dummy.maxHp - dummy.hp; };
+  const hitBy = (id, d, v, dx) => { spells.clearRuntime(); P.facing = 1; P.grounded = true; P.elevation = 0; P.vElevation = 0; P.z = dummy.homeZ = dummy.z = .5; dummy.homeX = dummy.x = P.x + dx; dummy.hp = dummy.maxHp; P.buffForm = { id, timer: 10, total: 16, age: 1, power: 1 }; spells.addSpell(FORM_MOVESETS[id][d][v].make(P), 'B'); for (let i = 0; i < 90; i++) spells.update(1 / 60, game); return dummy.maxHp - dummy.hp; };
   assert(hitBy('T04', 'forward', 'short', 160) > 0, 'Korallenschild: the pearl bolt travels and hits');
   assert(hitBy('T02', 'forward', 'full', 160) > 0 && hitBy('T06', 'forward', 'full', 120) > 0, 'Unique full techniques hit: Schlackenkern lava lance, Ionspindel chain lightning');
   assert(hitBy('T40', 'forward', 'full', 220) > 0 && hitBy('T40', 'down', 'full', 180) > 0, 'T40 Sonnenwyrm: the twin wyrms hunt along the lane and the portal ritual strikes its target');
@@ -2761,7 +2761,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   const strict = new Proxy({}, { get: (t, k) => (k === 'ellipse' || k === 'arc') ? (x, y, rx, ry) => { if (rx < 0 || (k === 'ellipse' && ry < 0)) throw new Error('IndexSizeError ' + k); } : (k === 'canvas' ? undefined : (k === 'measureText' ? () => ({ width: 10 }) : (k === 'createLinearGradient' ? () => ({ addColorStop() {} }) : () => {}))), set: () => true });
   const ids = Object.keys(buff.BUFF_FORMS);
   const impacts = ids.filter((id) => FS.FORM_SPRINTS[id]).map((id) => FS.FORM_SPRINTS[id].impact);
-  assert(new Set(impacts).size === impacts.length && impacts.length === 17, 'Every Arcane State (besides the B01 / B02 engines) has its own sprint impact');
+  assert(new Set(impacts).size === impacts.length && impacts.length === 21, 'Every Arcane State (besides the B01 / B02 engines) has its own sprint impact');
   assert(ids.every((id) => FS.FORM_DIVES[id]) && new Set(ids.map((id) => FS.FORM_DIVES[id].style)).size === ids.length && ['ninefold', 'eidolon', 'ascendant'].every((k) => FS.FORM_DIVES[k]), 'Every Arcane State and Focus transformation has its own air dive');
   const broken = [];
   for (const id of ids) {
@@ -2811,6 +2811,41 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
       dummy.homeX = dummy.x = P.x + 50; dummy.homeZ = dummy.z = P.z; dummy.hp = dummy.maxHp; P._weaponSwingTime = .3; P.triggerMeleeHitbox(20, 0, 0, .1, false, {}); const e1 = P.lastBankaiEcho;
       P._weaponSwingTime = .6; P.triggerMeleeHitbox(20, 0, 0, .1, false, {}); const e2 = P.lastBankaiEcho;
       assert(Math.abs(fast - slow) < .01 && early < .5 && late < .2 && sAt(.3 * .85, .3) > .99 && AR.bankaiStrike({ state: 'idle' }) === null && e2 > e1 * 1.8, 'Bankai strikes in the beat of the swing (scaled to the weapon swing time); slow weapons echo harder (' + Math.round(e1) + ' / ' + Math.round(e2) + ')'); buff.endBuffForm(P); }
+    // Body powers (A05–A08, user 23 Oct 2026): devil-fruit ideas as own Arcane States.
+    { const DV = await import('./public/src/arcane_devil.js'); const { setStatusSource: SSS } = await import('./public/src/status_effects.js'); const { environment: ENV } = await import('./public/src/environment.js'); const PR = await import('./public/src/progression.js');
+      const start = (id) => { spells.clearRuntime(); buff.endBuffForm(P); P.equipClassWeapon(null); P.x = 300; P.z = .5; P.facing = 1; P.grounded = true; P.elevation = 0; P.hp = P.maxHp; P.mp = P.maxMp; P.invulnerableTimer = 0; P.arcaneShield = 0; P.arcaneShieldTimer = 0; spells.cast(P, spells.resolveSpell([{ id: 'buff_' + id }]), game); P.buffForm.age = 2; P.buffForm.intro = false; buff.updateBuffForm(P, 1 / 60); dummy.homeX = dummy.x = 370; dummy.homeZ = dummy.z = .5; dummy.hp = dummy.maxHp; };
+      const ready = () => { P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.comboStep = 0; P.finisherChance = null; };
+      const bad = [];
+      for (const id of DV.DEVIL_FORMS) { try { start(id); if (buff.currentBuffForm(P)?.id !== id) { bad.push(id + ' cast'); continue; }
+        for (const [dir, v] of [['forward', 'short'], ['forward', 'full'], ['up', 'short'], ['up', 'full'], ['down', 'short'], ['down', 'full']]) {
+          P.x = 300; P.z = .5; P.facing = 1; P.grounded = true; P.elevation = 0; dummy.homeX = dummy.x = 370; dummy.homeZ = dummy.z = .5; dummy.hp = dummy.maxHp;
+          spells.addSpell(FMS[id][dir][v].make(P), 'B'); for (let i = 0; i < 90; i++) { spells.update(1 / 60, game); if (i % 6 === 0) for (const sp of spells.activeSpells) sp.render?.(strict); }
+          if (dummy.hp >= dummy.maxHp) bad.push(id + ' ' + FMS[id][dir][v].name);
+        }
+        for (const layer of ['back', 'front']) buff.renderBuffManifestation(strict, P, P.y, layer);
+        for (const dir of ['forward', 'up', 'down']) DV.dome && (await import('./public/src/arcane_moves.js')).ARCANE_CHARGE[id](strict, { x: 300, y: 300, f: 1 }, buff.BUFF_FORMS[id].mat, dir, .7, 1.2);
+      } catch (e) { bad.push(id + ': ' + e.message); } }
+      assert(!bad.length, 'Body powers A05 DEHNLEIB, A06 BEBEN, A07 RAUM, A08 SPRENGLEIB: six own techniques each hit and render ' + bad.slice(0, 4).join(' | '));
+      // Dehnleib: reach ×1.6, lightning does nothing, blunt melee hits bounce.
+      start('A05'); dummy.homeX = dummy.x = P.x + 110; ready(); P.executeAttack(neutral, 'normal'); const farHit = dummy.hp < dummy.maxHp;
+      const hp0 = P.hp; let prv = SSS({ team: 'red', statusElements: ['fulgur'] }); P.takeDamage(30, 100, 0, .2, false, 'spell'); SSS(prv); const shock = hp0 - P.hp;
+      P.invulnerableTimer = 0; const hp1 = P.hp; P.takeDamage(20, 100, 0, .2, false, 'melee'); const blunt = hp1 - P.hp;
+      buff.endBuffForm(P); P.invulnerableTimer = 0; P.x = 300; dummy.homeX = dummy.x = P.x + 110; dummy.hp = dummy.maxHp; ready(); P.executeAttack(neutral, 'normal'); const plainFar = dummy.hp < dummy.maxHp;
+      assert(farHit && !plainFar && shock === 0 && blunt > 0 && blunt <= 12.5, 'DEHNLEIB: stretched reach (110 px), lightning does nothing, blunt hits bounce off (' + blunt + ')');
+      // Beben: a landed hit sends a tremor that sets a boulder ahead rolling.
+      start('A06'); dummy.homeX = dummy.x = P.x + 30; const bo = ENV.addProp('boulder', P.x + 72, .5); ready(); P.executeAttack(neutral, 'normal'); const rolled = Math.abs(bo.vx) > 0; ENV.props = ENV.props.filter((o) => o !== bo);
+      assert(rolled, 'BEBEN: every landed hit sends a tremor ahead that topples scene objects (the boulder rolls)');
+      // Raum: Tausch swaps places with the foe ahead.
+      start('A07'); dummy.homeX = dummy.x = P.x + 200; const px0 = P.x; spells.addSpell(FMS.A07.forward.short.make(P), 'B'); for (let i = 0; i < 5; i++) spells.update(1 / 60, game);
+      assert(Math.abs(P.x - (px0 + 200)) < 2 && P.facing === -1, 'RAUM: TAUSCH swaps places with the foe ahead');
+      // Sprengleib: hits set blast marks that pop.
+      start('A08'); dummy.homeX = dummy.x = P.x + 30; for (let i = 0; i < 2; i++) { ready(); P.executeAttack(neutral, 'normal'); }
+      const marks = dummy._blastMarks?.n ?? 0; const hpM = dummy.hp; for (let i = 0; i < 170; i++) buff.updateBuffForm(P, 1 / 60);
+      assert(marks === 2 && !dummy._blastMarks && dummy.hp < hpM, 'SPRENGLEIB: hits set blast marks (' + marks + ') that explode after 2.5 s');
+      // Water weakness + boss-only route.
+      start('A05'); const t0 = P.buffForm.timer; const pool = ENV.add('water', P.x, P.z, { radius: 60, life: 10 }); for (let i = 0; i < 60; i++) buff.updateBuffForm(P, 1 / 60); const drain = t0 - P.buffForm.timer; ENV.effects = ENV.effects.filter((e) => e !== pool);
+      assert(drain > 2.5 && PR.lateRuneRoute('buff_A05')?.kind === 'boss' && PR.lateRuneRoute('buff_A08')?.kind === 'boss', 'Body powers: water drains them 3× as fast; they drop only from bosses (no element route) (' + drain.toFixed(2) + ' s)');
+      buff.endBuffForm(P); P.facing = 1; }
     P.equipClassWeapon('katana'); const swarm = FMS.A04.forward.short.name;
     assert(!bad.length && names.size >= 58 && swarm === 'BLÜTENSTROM', 'Bankai arsenals: every weapon family has its own formation and six own techniques that hit and render (katana keeps the petal swarm) ' + bad.slice(0, 4).join(' | ') + ' names ' + names.size + ' ' + swarm);
     P.equipClassWeapon(null); }
