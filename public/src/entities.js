@@ -63,6 +63,30 @@ export const MELEE_BASELINE = Object.freeze({
   heavy: Object.freeze({ time: .34, damage: 48, knockback: 620, lift: 170, hitstopTicks: 6, hitReaction: 'strong' }),
   dive: Object.freeze({ time: .35, damage: 55, knockback: 200, lift: -300, hitstopTicks: 5, hitReaction: 'strong' })
 });
+// Combo chain + earned finisher (user, 23 Oct 2026, after the Unity ComboTimingGuide): every authored
+// step is a chain step (the authored last step no longer launches), and a stronger FINISHER follows
+// only when the last chain step connected and the next press lands in its timing window — a ring
+// grows to the target ring above the head: green = GOOD, gold = PERFECT (×1.3 knockback, more
+// damage, breaks guard). Too early or too late ends the chain.
+export const FINISHER_TIMING = Object.freeze({ peak: .62, good: .16, goodMin: .05, perfect: .03, lead: .06, perfectKnock: 1.3, perfectDamage: 1.15 });
+const chainCache = new WeakMap();
+export function comboChainOf(combo) {
+  let c = chainCache.get(combo); if (c) return c;
+  const last = combo[combo.length - 1];
+  const steps = combo.map((s, i) => (i === combo.length - 1 ? { ...s, finisher: false, hitReaction: 'strong' } : s));
+  const finisher = { ...last, finisher: true, earned: true, state: 'attack3', time: (last.time ?? .3) * 1.15, damage: Math.round((last.damage ?? 30) * 1.35), knockback: Math.max((last.knockback ?? 300) * 1.25, 420), lift: Math.max(last.lift ?? 0, 220), hitstopTicks: Math.max(last.hitstopTicks ?? 6, 7), hitReaction: 'finisher',
+    ...(last.shot ? { shot: { ...last.shot, damage: Math.round((last.shot.damage ?? 16) * 1.4), size: (last.shot.size ?? 1) * 1.25, pierce: true } } : {}) };
+  c = { steps, finisher }; chainCache.set(combo, c); return c;
+}
+// Timing of a press inside the last chain step (elapsed seconds since that step started).
+export function finisherGrade(chance, elapsed) {
+  const open = chance.peak - chance.good; const close = chance.peak + chance.good;
+  if (elapsed < open - chance.lead) return 'early';
+  if (elapsed < open) return 'buffer';
+  if (elapsed > close) return 'late';
+  return Math.abs(elapsed - chance.peak) <= chance.perfect ? 'perfect' : 'good';
+}
+
 // ── Movement values ported from the Unity project ─────────────────────
 // Source: C:\Dev\unity_projects\GRIMGE, character_base_fighter.asset
 // (overrides CharacterDefinition.cs defaults), CharacterMotion.cs and
@@ -431,6 +455,11 @@ export class Player extends GroundEntity {
     this.pullCooldown = Math.max(0, (this.pullCooldown ?? 0) - dt);
     if (this.slowTimer <= 0) this.slowFactor = 1;
     this.comboResetTimer = Math.max(0, this.comboResetTimer - dt);
+    if (this.finisherChance) {
+      const ch = this.finisherChance;
+      if (!/^attack/.test(this.state) || this.stateTimer <= 0 || !this.isAlive) this.finisherChance = null;
+      else if (ch.queued && this.finisherElapsed() >= ch.peak - ch.good) this.startComboFinisher(null, ch.queued);
+    }
     if (this.comboResetTimer <= 0) this.comboStep = 0;
     // Charged heavy direction follows the held direction until release
     // (K first, then W / S works as well as W / S first; stick up / down on a pad).
@@ -841,6 +870,13 @@ export class Player extends GroundEntity {
 
   beginCharge(direction = 'forward', source = 'key') {
     this.chargeSource = source;
+    // In the air a charge (hold + drag, or K + direction) is the dive (user, 23 Oct 2026): after a sprint
+    // jump it slants in the running direction; forward slants, down drops (still slanted after a sprint jump).
+    if (this.isAlive && !this.grounded && !activeMoveset(this) && !this.isGuarding && (direction === 'down' || direction === 'forward' || direction === 'back') && !ACTION_STATES.has(this.state)) {
+      const f = this.facing || 1;
+      this.diveDir = { x: (direction === 'back' ? -f : f), y: direction === 'down' && !this.isSprintJump ? 4 : 1 };
+      return this.executeAttack({ keys: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 } }, 'dive');
+    }
     if (!this.isAlive || this.isGuarding || !this.grounded || this.chargeTimer > 0) return false;
     if (ACTION_STATES.has(this.state)) return false;
     // Normal mode: the ground charge-down is the weapon-specific buff / debuff (weapon_kits.js).
@@ -1148,6 +1184,8 @@ export class Player extends GroundEntity {
       if (window.gameWorld?.tryPickupWeapon?.(this)) return true;
     }
     if (ACTION_STATES.has(this.state) || !this.canAttack) {
+      // The last chain step connected: the press is judged against the finisher window.
+      if (attackKind === 'normal' && this.finisherChance && /^attack/.test(this.state) && this.stateTimer > 0) return this.pressFinisherWindow(input);
       const canBuffer = attackKind === 'normal' && /^attack[123]$/.test(this.state) && this.stateTimer <= MELEE_BASELINE.bufferWindow;
       if (canBuffer) {
         this.queuedAttack = 'normal';
@@ -1159,6 +1197,10 @@ export class Player extends GroundEntity {
     this.cancelSprint();
     const move = moveVector(input);
     const weapon = this.weaponProfile;
+    // Dive direction from the swipe / charge: the slope (horizontal per vertical speed), signed.
+    const diveDir = attackKind === 'dive' ? this.diveDir : null; this.diveDir = null;
+    if (diveDir && Math.abs(diveDir.x) > Math.abs(diveDir.y) * .15) this.facing = Math.sign(diveDir.x);
+    const slope = (min = 0) => (diveDir ? Math.sign(diveDir.x || this.facing || 1) * Math.max(min, Math.min(1.4, Math.abs(diveDir.x) / Math.max(1, Math.abs(diveDir.y)))) : null);
     if (attackKind === 'uppercut' || input.keys?.KeyU) {
       const up = weapon ? { ...MELEE_BASELINE.uppercut, ...weapon.uppercut } : MELEE_BASELINE.uppercut;
       this.state = 'uppercut'; this.stateTimer = up.time; this._weaponSwingTime = up.time; this.vElevation = 280 * PLAYER_ARC_SCALE;
@@ -1176,7 +1218,7 @@ export class Player extends GroundEntity {
       const style = kitOf(this).dive.style;
       if (weaponDive(this, spells, window.gameWorld)) {
         this.airLatch = null;
-        if (['plunge', 'meteor', 'spin', 'pounce', 'orbDrop', 'seal'].includes(style)) { this.vx = this.diveAimAt(SPRINT_DIVE_SPEED)?.vx ?? this.facing * SPRINT_DIVE_SPEED * .8; this.vElevation = Math.min(this.vElevation, -SPRINT_DIVE_SPEED * .8); }
+        if (['plunge', 'meteor', 'spin', 'pounce', 'orbDrop', 'seal'].includes(style)) { this.vx = slope(.6) != null ? slope(.6) * SPRINT_DIVE_SPEED : (this.diveAimAt(SPRINT_DIVE_SPEED)?.vx ?? this.facing * SPRINT_DIVE_SPEED * .8); this.vElevation = Math.min(this.vElevation, -SPRINT_DIVE_SPEED * .8); }
         this.diveAim = false;
         return true;
       }
@@ -1184,7 +1226,9 @@ export class Player extends GroundEntity {
     if (!this.grounded && (attackKind === 'dive' || move.z > 0.55) && this.isSprintJump && !this.sprintDive) {
       // Sprint jump + down: a fast diagonal dive with a sweeping strike (instead of the vertical drop).
       this.airLatch = null;
-      this.state = 'dive'; this.stateTimer = 1.2; this.vElevation = -SPRINT_DIVE_SPEED; this.vx = this.diveAimAt(SPRINT_DIVE_SPEED)?.vx ?? this.facing * SPRINT_DIVE_SPEED;
+      this.state = 'dive'; this.stateTimer = 1.2; this.vElevation = -SPRINT_DIVE_SPEED;
+      // Slanted in the swipe / running direction (at least ~30°); without a direction aimed at the foe below.
+      this.vx = slope(.6) != null ? slope(.6) * SPRINT_DIVE_SPEED : (this.diveAimAt(SPRINT_DIVE_SPEED)?.vx ?? this.facing * SPRINT_DIVE_SPEED);
       this.diveAim = false;
       this.sprintDive = { hitSet: new Set() };
       this.setWeaponMotion?.('heavy'); this._weaponSwingTime = .35;
@@ -1201,7 +1245,8 @@ export class Player extends GroundEntity {
       if (weaponDive(this, spells, window.gameWorld)) return true;
       this.state = 'dive'; this.stateTimer = MELEE_BASELINE.dive.time; this.vElevation = -850 * PLAYER_ARC_SCALE;
       // A diagonal swipe: the drop slants toward the foe below.
-      if (this.diveAim) this.vx = this.diveAimAt(850 * PLAYER_ARC_SCALE)?.vx ?? this.facing * 380;
+      if (slope() != null && Math.abs(slope()) > .2) this.vx = slope() * 850 * PLAYER_ARC_SCALE; // along the swipe
+      else if (this.diveAim) this.vx = this.diveAimAt(850 * PLAYER_ARC_SCALE)?.vx ?? this.facing * 380;
       this.diveAim = false;
       audio.playSlash(0.9);
       combat.spawnSlashArc(this.x, this.y - 15, this.facing, { radius: 50, angleStart: 0.8, angleEnd: 2.2, color: '#ff5722', glow: '#d50000' });
@@ -1220,10 +1265,12 @@ export class Player extends GroundEntity {
       return true;
     }
     // A held weapon brings its own combo (length, speed, reach, finisher).
-    const combo = weapon ? weapon.combo : MELEE_BASELINE.normal;
-    this.comboStep = (this.comboStep % combo.length) + 1;
+    const chain = comboChainOf(weapon ? weapon.combo : MELEE_BASELINE.normal);
+    let attack;
+    if (this._pendingFinisher) { attack = this._pendingFinisher; this._pendingFinisher = null; this.comboStep = chain.steps.length + 1; }
+    else { this.comboStep = (this.comboStep % chain.steps.length) + 1; attack = chain.steps[this.comboStep - 1]; }
+    this.finisherChance = null;
     this.comboResetTimer = 0.65;
-    const attack = combo[this.comboStep - 1];
     // Unity: ground attacks root the Wizard — no forward lunge on a whiff.
     const swingTime = attack.time * weaponAttackSpeed(this); // Klingentanz: faster swings
     this.state = attack.state; this.stateTimer = swingTime; this._weaponSwingTime = swingTime;
@@ -1232,7 +1279,7 @@ export class Player extends GroundEntity {
     if (airborne) { this.vx *= AIR_ATTACK_MOMENTUM; this.vz *= AIR_ATTACK_MOMENTUM; } else { this.vx = 0; this.vz = 0; }
     this._whiffRecovery = 0;
     signatureEvent(this, 'attack', { step: this.comboStep, damage: attack.damage });
-    this.setWeaponMotion('combo', this.comboStep);
+    if (attack.earned) this.setWeaponMotion('heavy'); else this.setWeaponMotion('combo', this.comboStep);
     audio.playSlash(attack.finisher ? 0.85 : 1 + this.comboStep * 0.1);
     if (!weapon) combat.spawnSlashArc(this.x + this.facing * 22, this.y - 28, this.facing, { radius: attack.radius, color: attack.color, glow: attack.glow, width: attack.finisher ? 7 : 4 });
     if (attack.finisher) {
@@ -1246,6 +1293,8 @@ export class Player extends GroundEntity {
     // on the lane every tap is melee — the weapon's ranged move is the HOLD slot.
     const castle = isOnCastle(this);
     const ranged = attack.shot ?? attack.bolt;
+    if (attack.earned) this.comboStep = 0; // after the finisher the chain starts over
+    else if (this.comboStep === chain.steps.length && (attack.shot || attack.bolt)) this.openFinisherChance(swingTime);
     if (ranged && castle && this.freeMana >= 1) {
       this.mp -= 1;
       for (const shot of makeWeaponShots(this, ranged, this.weapon ?? this.classWeapon)) spells.addSpell(shot, 'B');
@@ -1275,9 +1324,37 @@ export class Player extends GroundEntity {
     if (!connected && !attack.finisher) this._whiffRecovery = attack.time * .5;
     // A single swing into the air is fine, but it never advances the combo: only hits
     // chain into the next step (and up to the finisher). A whiff starts over at step 1.
-    if (!connected) { this.comboStep = 0; this.comboResetTimer = 0; }
-    else if (airborne) this.startAirLatch(this.lastMeleeHits);
+    if (!connected) { this.comboStep = 0; this.comboResetTimer = 0; this.finisherChance = null; }
+    else {
+      if (airborne) this.startAirLatch(this.lastMeleeHits);
+      // The last chain step connected: the finisher chance opens (after this hit's hitstop).
+      if (!attack.earned && this.comboStep === chain.steps.length && this.grounded) this.openFinisherChance(swingTime);
+    }
     return true;
+  }
+
+  // ── Finisher window (Unity ComboTimingGuide) ──
+  openFinisherChance(swing) {
+    const T = FINISHER_TIMING;
+    this.finisherChance = { swing, peak: swing * T.peak, good: Math.max(T.goodMin, swing * T.good), perfect: T.perfect, lead: T.lead, queued: null };
+  }
+  finisherElapsed() { return this.finisherChance ? this.finisherChance.swing - this.stateTimer : 0; }
+  pressFinisherWindow(input) {
+    const ch = this.finisherChance; const g = finisherGrade(ch, this.finisherElapsed());
+    if (g === 'early') { combat.spawnDamageText(this.x, this.y - 104, 'ZU FRÜH', { color: '#64b5f6' }); this.finisherChance = null; return false; }
+    if (g === 'late') { combat.spawnDamageText(this.x, this.y - 104, 'ZU SPÄT', { color: '#ff5252' }); this.finisherChance = null; return false; }
+    if (g === 'buffer') { ch.queued = 'good'; return true; } // remembered just before the window: fires when it opens
+    return this.startComboFinisher(input, g);
+  }
+  startComboFinisher(input, grade) {
+    const weapon = this.weaponProfile; const chain = comboChainOf(weapon ? weapon.combo : MELEE_BASELINE.normal);
+    const perfect = grade === 'perfect'; const T = FINISHER_TIMING; const f = chain.finisher;
+    this._pendingFinisher = perfect ? { ...f, perfect: true, damage: Math.round(f.damage * T.perfectDamage), knockback: f.knockback * T.perfectKnock, guardBreak: true, ...(f.shot ? { shot: { ...f.shot, damage: Math.round(f.shot.damage * T.perfectDamage) } } : {}) } : f;
+    this.finisherChance = null; this.lastFinisherGrade = grade;
+    combat.spawnDamageText(this.x, this.y - 112, perfect ? 'PERFEKT!' : 'FINISHER', { color: perfect ? '#ffd740' : '#69f0ae', isCrit: perfect });
+    if (perfect) { combat.spawnShockwave(this.x + this.facing * 20, this.y - 36, 70, '#ffd740'); combat.shakeCamera(9, .25); }
+    this.state = 'idle'; this.stateTimer = 0; this.canAttack = true;
+    return this.executeAttack(input ?? { keys: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 } }, 'normal');
   }
 
   // Which motion the astral weapon plays (each weapon has its own set) and
@@ -1914,10 +1991,28 @@ export class Player extends GroundEntity {
     // Forms show their own guard (tail cocoon, astral palm, light shield).
     // The guard is drawn the way the held weapon blocks (weapon_guard.js).
     if (this.isGuarding && this.isAlive && !activeMoveset(this)) this.lastGuardKind = drawWeaponGuard(ctx, this, this.x, renderY, this.facing || 1, this.perfectBlockFlash > 0, this.animTime ?? 0);
+    // Finisher window: a ring grows toward the target ring (green band = GOOD, gold = PERFECT).
+    if (this.finisherChance && this.isAlive) this.renderFinisherRing(ctx, renderY);
     // The shield: a crisp hexagonal shell that cracks as it runs low (ward_shell.js).
     if (this.arcaneShield > 0 && this.isAlive) drawWardShell(ctx, this.x, renderY, { frac: Math.min(1, this.arcaneShield / Math.max(1, this.shieldCapacity ?? this.arcaneShield)), t: this.animTime ?? 0 });
     // Frozen: the Little-Fighter ice block (a FROZEN status draws its own block).
     if (this.freezeTimer > 0 && this.isAlive && !hasStatus(this, 'frozen') && !hasStatus(this, 'paralysis')) drawIceBlock(ctx, this.x, renderY, 50, 90, this.animTime ?? 0);
+  }
+
+  renderFinisherRing(ctx, renderY) {
+    const ch = this.finisherChance; const el = this.finisherElapsed(); const g = finisherGrade(ch, el);
+    const cx = Math.round(this.x); const cy = Math.round(renderY - ENTITY_VISUALS.heroHeight - 30); const R = 13;
+    const prog = el / ch.peak; const r = prog <= 1 ? R * (.2 + .8 * prog) : R * (1 + .6 * Math.min(1, prog - 1));
+    const band = R * ch.good / ch.peak;
+    const ring = (rad, color, w) => { ctx.strokeStyle = color; ctx.lineWidth = w; ctx.beginPath(); ctx.arc(cx, cy, Math.max(1, rad), 0, Math.PI * 2); ctx.stroke(); };
+    ctx.save(); ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+    ring(R + band / 2, '#1b5e20', band); // the GOOD band around the target ring
+    ring(R, g === 'perfect' ? '#ffd740' : '#ffffff', g === 'perfect' ? 3 : 2);
+    ring(r, g === 'perfect' ? '#ffd740' : g === 'good' ? '#69f0ae' : g === 'late' ? '#ff5252' : '#b0bec5', 2);
+    ctx.font = 'bold 9px monospace'; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = '#000';
+    const label = g === 'perfect' ? 'PERFEKT JETZT' : 'FINISHER'; ctx.fillStyle = g === 'perfect' ? '#ffd740' : '#69f0ae';
+    ctx.strokeText(label, cx, cy - R - 8); ctx.fillText(label, cx, cy - R - 8);
+    ctx.restore();
   }
 
   // Transformed: the full blazing aura streams upward.

@@ -3871,7 +3871,12 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   air(); P.isSprintJump = true; game.performTouchAttackGesture(50, 70);
   const vAim = P.vx; assert(P.sprintDive && vAim > 0, 'Sprint jump + diagonal swipe: the sprint dive starts');
   air(); P.isSprintJump = true; dummy.homeX = dummy.x = 340; game.performTouchAttackGesture(50, 70);
-  assert(P.sprintDive && P.vx > 0 && P.vx < vAim, 'The sprint dive is aimed: a closer foe gets a steeper dive');
+  assert(P.sprintDive && Math.abs(P.vx - vAim) < 1e-6, 'The sprint dive follows the swipe angle, not the foe position (user, 23 Oct 2026)');
+  air(); P.isSprintJump = true; game.performTouchAttackGesture(80, 60); const vFlat = P.vx; air(); P.isSprintJump = true; game.performTouchAttackGesture(20, 90);
+  assert(vFlat > vAim && P.vx > 0 && P.vx < vAim, 'A flatter swipe dives flatter, a steep one steeper (still slanted after a sprint jump)');
+  air(); P.isSprintJump = true; P.facing = 1; assert(P.beginCharge('forward', 'touch') && P.state === 'dive' && P.vx > 0 && !P.chargeTimer, 'Sprint jump + charge attack in the air: the slanted dive in the running direction');
+  air(); P.isSprintJump = true; P.facing = -1; P.beginCharge('down', 'touch'); assert(P.state === 'dive' && P.vx < 0, 'Sprint jump + charge down: also slanted, in the running direction');
+  air(); P.isSprintJump = false; P.facing = 1; P.beginCharge('down', 'touch'); assert(P.state === 'dive' && Math.abs(P.vx) < Math.abs(vAim) * .5, 'A normal jump + charge down drops nearly straight');
   air(); P.facing = 1; game.performTouchAttackGesture(-60, 60);
   assert(P.state === 'dive' && P.facing === -1, 'A diagonal down-back swipe turns around and dives that way');
   air(); game.performTouchAttackGesture(0, 70);
@@ -4230,6 +4235,36 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
     assert(depth === 0 && worst === 0, 'WILLE / EDLES OPFER drawing leaves the canvas state balanced (every save has its restore; ' + depth + ')'); }
   assert(!bad, 'WILLE and EDLES OPFER render cleanly (auras, black lightning, foresight brackets)');
   if (P.signature) core.endStance(P, 'replaced'); spells.clearRuntime(); game.minions = []; dummy.homeX = dummy.x = 512;
+}
+
+// Combo chain + earned finisher with a timing window (user, 23 Oct 2026, after the Unity ComboTimingGuide).
+{
+  const E = await import('./public/src/entities.js'); const { Minion } = E;
+  game.returnToHub(); game.setMatchMode('training'); game.startMatch(); game.selectTrainingMap('waterfalls');
+  const P = game.player; const dummy = game.trainingDummy; dummy.homeX = dummy.x = 1600; spells.clearRuntime();
+  const neutral = { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false };
+  const step = (n) => { for (let i = 0; i < n; i++) P.update(1 / 60, neutral, game.battlefield, game); };
+  const reset = (weapon = null) => { if (P.signature) { P.signature = null; } P.equipWeapon(null); P.equipClassWeapon(weapon); P.x = 300; P.z = .5; P.facing = 1; P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.grounded = true; P.elevation = 0; P.comboStep = 0; P.finisherChance = null; P.mp = P.maxMp; game.battlefield.placeOnSurface(P); game.minions = []; };
+  const foe = () => { const m = new Minion(340, .5, 'red', 'melee', 0); m.maxHp = m.hp = 5000; m.passive = true; game.battlefield.placeOnSurface(m); game.minions.push(m); return m; };
+  // Runs the chain to the last chain step; returns the target.
+  const toLastStep = (weapon = null) => { reset(weapon); const m = foe(); const chain = E.comboChainOf((P.weaponProfile ?? null) ? P.weaponProfile.combo : E.MELEE_BASELINE.normal);
+    for (let i = 0; i < chain.steps.length; i++) { m.x = 340; P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.executeAttack(neutral, 'normal'); if (i < chain.steps.length - 1) { step(2); } } return { m, chain }; };
+  const waitTo = (frac) => { const ch = P.finisherChance; while (P.finisherChance && P.finisherElapsed() < ch.peak * frac - 1e-9) step(1); };
+  { const { chain } = toLastStep(); assert(chain.steps.length === 3 && !chain.steps[2].finisher && chain.finisher.earned && P.comboStep === 3 && P.finisherChance, 'Bare hands: attack 1, 2, 3 — the third hit opens the finisher chance (the third no longer launches)'); }
+  { const { m } = toLastStep(); const hp = m.hp; waitTo(1); P.executeAttack(neutral, 'normal'); const kbPerfect = m.kbVelX;
+    assert(P.lastFinisherGrade === 'perfect' && P.state === 'attack3' && m.hp < hp && P.comboStep === 0, 'A press at the peak: PERFEKT finisher'); 
+    const { m: m2 } = toLastStep(); waitTo(.8); P.executeAttack(neutral, 'normal'); assert(P.lastFinisherGrade === 'good' && Math.abs(m2.kbVelX) < Math.abs(kbPerfect), 'A press in the green band: FINISHER (the perfect one knocks 1.3x farther)'); }
+  { toLastStep(); P.lastFinisherGrade = null; P.executeAttack(neutral, 'normal'); assert(!P.finisherChance && P.lastFinisherGrade === null, 'Mashing right after the hit is too early: no finisher (ZU FRÜH)'); }
+  { toLastStep(); P.lastFinisherGrade = null; const ch = P.finisherChance; while (P.finisherChance && P.finisherElapsed() <= ch.peak + ch.good + .02) step(1); if (P.finisherChance) P.executeAttack(neutral, 'normal'); assert(P.lastFinisherGrade === null && !P.finisherChance, 'Too late (after the green band): no finisher, the chain ends (ZU SPÄT)'); }
+  { reset(); const m = foe(); for (let i = 0; i < 2; i++) { m.x = 340; P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.executeAttack(neutral, 'normal'); step(2); } m.x = 900; P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.executeAttack(neutral, 'normal'); assert(!P.finisherChance, 'A whiffed third attack opens no finisher chance'); }
+  { const { chain } = toLastStep('great_hammer'); assert(chain.steps.length === 2 && P.finisherChance, 'Every weapon: its chain, then the finisher (hammer: 2 + finisher)');
+    const { chain: c2 } = toLastStep('dual_swords'); assert(c2.steps.length === 5 && P.finisherChance, 'Dual swords: 5 + finisher'); }
+  { toLastStep('bow'); assert(P.finisherChance, 'Ranged: the last chain shot opens the chance'); waitTo(1); const n0 = spells.activeSpells.filter((x) => x.isWeaponShot).length; P.executeAttack(neutral, 'normal');
+    const fin = spells.activeSpells.filter((x) => x.isWeaponShot).slice(n0); assert(fin.length && fin.every((x) => x.pierce), 'The bow finisher fires a big piercing arrow'); }
+  { toLastStep(); waitTo(.6); P.finisherChance.queued = null; const ch = P.finisherChance; const el = P.finisherElapsed(); const buffered = E.finisherGrade(ch, ch.peak - ch.good - ch.lead / 2);
+    assert(buffered === 'buffer' && E.finisherGrade(ch, ch.peak) === 'perfect' && E.finisherGrade(ch, 0) === 'early' && E.finisherGrade(ch, ch.peak + ch.good + .01) === 'late', 'Finisher timing grades: early / buffer / good / perfect / late'); }
+  { toLastStep(); waitTo(.9); let bad = 0; const strict = new Proxy({}, { get: (tt, k) => k === 'arc' ? (x, y, r) => { if (r < 0) bad++; } : k === 'canvas' ? undefined : k === 'measureText' ? () => ({ width: 10 }) : () => {}, set: () => true }); P.renderFinisherRing(strict, P.y); assert(!bad, 'The finisher ring renders'); }
+  reset(); dummy.homeX = dummy.x = 512;
 }
 
 const frameCallback = nextFrame;

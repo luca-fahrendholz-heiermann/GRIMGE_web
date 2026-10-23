@@ -903,6 +903,7 @@ export class GameWorld {
     if (!this.player.grounded && dy > threshold * .7 && dy > Math.abs(dx) * .45) {
       if (Math.abs(dx) > threshold * .5) this.player.facing = Math.sign(dx);
       this.player.diveAim = Math.abs(dx) > dy * .35;
+      this.player.diveDir = { x: dx, y: dy }; // the dive follows the swipe's angle (user, 23 Oct 2026)
       return this.player.executeAttack(this.input, 'dive');
     }
     // A swipe away from the facing is the backdash (a very fast swipe can end before a move event).
