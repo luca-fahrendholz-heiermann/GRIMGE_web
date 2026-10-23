@@ -25,7 +25,7 @@
 //             comes down and its slash runs across half the arena.
 import { defineSignature, startStance, emit, SigSequence, foesOf, hit, TAU, DEPTH } from './signature_core.js';
 import { combat } from './combat.js';
-import { groundYForDepth } from './world.js';
+import { groundYForDepth, clampToArena } from './world.js';
 import { applyWard } from './mastery.js';
 import { offerRecast } from './recast.js';
 import { drawWeaponSolid, astralTipLength } from './weapons.js';
@@ -70,7 +70,7 @@ function willStrike(p, st, k) {
   const f = p.facing || 1;
   p.state = 'heavyStrike'; p.stateTimer = .34; p._weaponSwingTime = .34; p.vx = 0; p.vz = 0; p.canAttack = false;
   // A short step into the blow (the will lands before the fist).
-  emit(new SigSequence(st.sig, p, { dur: .5, tick: (s, dt) => { if (s.t < .1) p.x += f * WILL.strikeDash / .1 * dt; }, steps: [{ at: .1, fn: (s, gw) => {
+  emit(new SigSequence(st.sig, p, { dur: .5, tick: (s, dt, gw) => { if (s.t < .1) { p.x += f * WILL.strikeDash / .1 * dt; clampToArena(p, gw?.battlefield?.boundsOverride ?? null); } }, steps: [{ at: .1, fn: (s, gw) => {
     for (const t of foesOf(gw, p.team)) {
       const dx = (t.x - p.x) * f; if (dx < -16 || dx > WILL.strikeReach || Math.abs(((t.z ?? p.z) - p.z) * DEPTH) > 44) continue;
       if (t.arcaneShield > 0) { t.arcaneShield = 0; combat.spawnDamageText?.(t.x, (t.y ?? 0) - 96, 'SCHILD GEBROCHEN', { color: R.red }); }
