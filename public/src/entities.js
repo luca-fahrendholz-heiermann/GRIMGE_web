@@ -228,7 +228,14 @@ const TOUCH_SPRINT_MIN_DISTANCE = 150; // guaranteed run after a sprint flick
 const TOUCH_SPRINT_MIN_TIME = 0.6;     // collisions may eat the distance
 
 // ── Resources ───────────────────────────────────────────────────────────
-const MANA_REGEN = 9;            // spent mana regenerates; bound mana stays bound
+// Mana balance in ONE place (user, 23 Oct 2026: regeneration stays on; how fast per mode is a balancing question —
+// enough to use spells and skills well, especially in combos, but no spam; passives / hits may give more back).
+//   regen       base regeneration per second (spent mana; bound mana stays bound)
+//   modeRegen   factor per game mode id (empty = 1 everywhere until balancing)
+//   onHit       mana back per landed melee hit (at most onHitMax hits per swing), onFinisher on top for a finisher
+// Passives / masteries may scale an actor with manaRegenMult / manaOnHitMult.
+export const MANA_BALANCE = Object.freeze({ regen: 9, modeRegen: Object.freeze({}), onHit: 1.5, onHitMax: 3, onFinisher: 4 });
+const MANA_REGEN = MANA_BALANCE.regen;
 // Focus values from the Unity CharacterDefinition (character_base_fighter).
 const FOCUS_DECAY_RATE = 1.0;    // per second (_focusDecayPerTick 1/60), after the grace period
 // A real transformation has no timer of its own: it burns the Focus meter
@@ -443,7 +450,7 @@ export class Player extends GroundEntity {
 
     if (this.mountedSummon?.isDead || this.mountedSummon?.rider !== this) this.dismount();
 
-    this.mp = Math.min(this.maxMp, this.mp + dt * MANA_REGEN);
+    this.mp = Math.min(this.maxMp, this.mp + dt * MANA_REGEN * (MANA_BALANCE.modeRegen[window.gameWorld?.activeMode?.id] ?? 1) * (this.manaRegenMult ?? 1));
     // Focus drains after a short grace period without gains. A full meter
     // holds while the transformation is ready to be activated.
     if (this.focusTransformTimer <= 0 && !this.primalBond && this.focus < this.maxFocus) {
@@ -1741,6 +1748,8 @@ export class Player extends GroundEntity {
     setHitContext(null);
     setStatusSource(prevStatusSource);
     if (shrine && hitAny) shrine.n--;
+    // Landed hits on fighters give a little mana back (combos feed skills; blocked hits and props do not).
+    { const landed = sigHits.filter((h) => !h.blocked && !h.target?.isProp).length; if (landed && Number.isFinite(this.mp)) this.mp = Math.min(this.maxMp, this.mp + (Math.min(landed, MANA_BALANCE.onHitMax) * MANA_BALANCE.onHit + (isFinisher ? MANA_BALANCE.onFinisher : 0)) * (this.manaOnHitMult ?? 1)); }
     // Class weapon practice for the Bankai unlock route (the player's own swings only).
     if (hitAny && this === window.gameWorld?.player && this.classWeapon) window.gameWorld.noteWeaponHit?.(this.classWeapon);
     this.lastMeleeHits = sigHits.filter((h) => !h.blocked).map((h) => h.target);

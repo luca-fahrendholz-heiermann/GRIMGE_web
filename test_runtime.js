@@ -2885,6 +2885,8 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
     reset(); P.equipClassWeapon('harp'); P.mp = P.maxMp; const f1 = P.freeMana; P.state = 'idle'; P.canAttack = true; P.beginCharge('up'); P.chargeTimer = P.chargeMaxTime * .1; P.releaseCharge(); const upPaid = f1 - P.freeMana;
     P.equipClassWeapon(null); P.mp = P.maxMp; const f2 = P.freeMana; P.state = 'idle'; P.canAttack = true; P.beginCharge('forward'); P.chargeTimer = P.chargeMaxTime * .1; P.releaseCharge();
     assert(upPaid === C.full && P.freeMana === f2, 'The charged-UP skill of the weapon costs mana; the plain heavy without a skill stays free'); }
+  { const EN = await import('./public/src/entities.js'); const B = EN.MANA_BALANCE; reset(); P.equipClassWeapon(null); dummy.homeX = dummy.x = P.x + 40; dummy.homeZ = dummy.z = P.z; P.mp = 40; const m0 = P.mp; P.triggerMeleeHitbox(10, 0, 0, .1, false, {}); const gain = P.mp - m0;
+    assert(B.regen > 0 && Math.abs(gain - B.onHit) < .01, 'A landed melee hit gives mana back (' + B.onHit + '); regeneration and all mana values live in MANA_BALANCE (gain ' + gain + ')'); }
   reset();
 }
 
