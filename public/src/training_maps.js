@@ -89,6 +89,22 @@ export const TRAINING_MAPS = Object.freeze([
     id: 'ruins', name: 'CASTLE RUINS', desc: 'Dry hay fields catch fire and spread it.', weather: 'leaves', ambient: 'breeze',
     zones: [ellipse('hay', 24, 51, 11, 10), ellipse('hay', 75, 51, 10.5, 10)],
     props: [['crate', 120, .3], ['crate', 120, .72], ['barrel', 905, .4], ['crate', 905, .78]]
+  },
+  // Scene-object yards (user, 23 Oct 2026): every interactive object to try out, with dev labels.
+  {
+    id: 'puzzle_yard', scene: 'ruins', name: 'RÄTSELHOF', desc: 'Klettern: Baum, Liane, Geysir, Eiswand, Aufwind, Geisterplattform, Seilbrücke, Kletterwand.', zones: [], weather: null,
+    props: [['withered_seedling', 690, .2], ['ledge', 790, .2, { h: 190, w: 60 }], ['shrine', 600, .3, { element: 'aqua' }], ['liana', 420, .2, { top: 220 }], ['geyser', 230, .3], ['brazier', 196, .42], ['water_barrel', 262, .18],
+      ['waterfall', 150, .12], ['jump_pad', 360, .78], ['windmill', 480, .82], ['ghost_platform', 580, .86, { h: 110 }], ['lantern', 530, .92, { lit: false }], ['rope_bridge', 880, .72, { len: 100, dir: -1, h: 120 }], ['climb_wall', 905, .45, { face: -1 }], ['basin', 680, .62], ['cracked_floor', 300, .92]]
+  },
+  {
+    id: 'element_garden', scene: 'waterfalls', name: 'ELEMENTGARTEN', desc: 'Ranke, Pilze, Blüte, Bienen, Eiszapfen, Fässer, Kohlebecken, Pulverfässer, Kristallsäule, Gong, Spiegel, Grab, Kronleuchter.', zones: [], weather: null,
+    props: [['vine', 150, .2], ['mushrooms', 230, .82], ['bloom', 330, .18], ['beehive', 430, .88], ['icicle', 470, .14], ['water_barrel', 560, .18], ['brazier', 610, .86], ['powder_keg', 650, .62], ['powder_keg', 690, .66],
+      ['crystal_pylon', 730, .14, { key: 'pylon' }], ['gong', 770, .86, { key: 'gong' }], ['stalagmite', 400, .34], ['banner', 190, .5], ['mirror', 250, .36], ['mirror', 800, .42], ['grave', 860, .2], ['chandelier', 580, .5, { h: 150 }], ['shrine', 140, .86, { element: 'ignis' }], ['magnet', 860, .68]]
+  },
+  {
+    id: 'castle_gate', scene: 'canyon', name: 'BURGTOR', desc: 'Druckplatte, Fallgitter, Hebel, Tor, Rankenvorhang, brüchige Wand, Netz, brüchiger Boden, Staub, Floß, Element-Truhe.', zones: [], weather: null,
+    props: [['pressure_plate', 330, .82, { key: 'pc' }], ['boulder', 250, .82], ['portcullis', 430, .5, { key: 'pc' }], ['lever', 500, .14, { key: 'gate1' }], ['gate', 560, .5, { key: 'gate1', latch: true }], ['curtain', 640, .5],
+      ['cracked_wall', 720, .5], ['web', 840, .5], ['chest', 890, .5, { lock: 'fulgur' }], ['cracked_floor', 220, .3], ['dust', 380, .4, { text: 'INSCHRIFT: „WAS WÄCHST, TRÄGT DICH HÖHER.“' }], ['raft', 600, .9], ['ice_lever', 780, .14, { key: 'gate1' }]]
   }
 ]);
 
@@ -96,5 +112,6 @@ export function getTrainingMap(id) {
   return TRAINING_MAPS.find((map) => map.id === id) ?? TRAINING_MAPS[0];
 }
 
-export function trainingMapScene(map) { return `assets/scenes/training/${map.id}.jpg`; }
-export function trainingMapThumb(map) { return `assets/scenes/training/${map.id}_thumb.jpg`; }
+// Scene-object yards reuse a painted scene (map.scene) instead of an own backdrop.
+export function trainingMapScene(map) { return `assets/scenes/training/${map.scene ?? map.id}.jpg`; }
+export function trainingMapThumb(map) { return `assets/scenes/training/${map.scene ?? map.id}_thumb.jpg`; }

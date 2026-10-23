@@ -119,7 +119,7 @@ const shake = (n, d = .22) => { if (n) combat.shakeCamera(n, d); };
 
 // A flying piece drawn by the arsenal's painter.
 class ArsenalBolt extends SigBolt {
-  constructor(C, o) { super(o); this.C = C; this.paint = o.paint ?? C.item; }
+  constructor(C, o) { super(o); this.C = C; this.paint = o.paint ?? C.item; this.spearTag = this.paint === ITEMS.spear; } // spears leave steps in climb walls
   render(ctx) {
     if (this.t < this.delay) return;
     const a = Math.atan2(this._vz * DEPTH * .32, this.vx);

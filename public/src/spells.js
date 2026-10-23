@@ -4,7 +4,7 @@ import { combat } from './combat.js';
 import { GroundEntity, groundDistance, groundYForDepth, ENTITY_VISUALS, ARENA_LAYOUT } from './world.js';
 import { lookupRecipe, SHADOW_STOMP } from './spell_catalog.js';
 import { environment } from './environment.js';
-import { plantFromNature, setSceneSpellSource } from './scene_objects.js';
+import { dropFromCast, setSceneSpellSource } from './scene_objects.js';
 import { sky, isSkyField } from './sky.js';
 import { ShadowStomperSpell, HaloPulseSpell, castShadowStep, alliesOf } from './light_shadow.js';
 import { raiseMirrorGate } from './portal.js';
@@ -249,8 +249,8 @@ export class SpellSystem {
     const prevSource = setStatusSource(this.castElements ? { team: caster.team, statusElements: this.castElements, quality: this.normalizeQuality(quality), castBy: caster } : null);
     try {
       const out = this.castSpellDef(caster, spellDef, gameWorld, quality, target);
-      // Nature spells may leave a wild seedling behind (scene_objects.js; water makes it grow).
-      if (this.castElements?.includes('natura')) plantFromNature(environment, caster, target);
+      // Casts may leave objects behind (scene_objects.js): nature → seedling, light → lantern, earth → stalagmite.
+      if (this.castElements?.length) dropFromCast(environment, caster, target, this.castElements);
       return out;
     } finally { this.castElements = prev; this.castCaster = prevCaster; setStatusSource(prevSource); }
   }

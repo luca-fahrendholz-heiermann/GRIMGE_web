@@ -5,6 +5,9 @@ import { recognizer } from './recognizer.js';
 import { combat } from './combat.js';
 import { spells, RUNE_GRADE_PROFILES } from './spells.js';
 import { Player, EnemyChampion, Minion, TrainingDummy } from './entities.js';
+import { isHidden } from './scene_objects.js';
+import { sceneDev } from './scene_systems.js';
+globalThis.__GrimgeMinion = Minion; // scene objects (a grave) raise minions without importing entities
 import { Battlefield } from './battlefield.js';
 import { ui } from './ui.js';
 import { VIEWPORT, ARENA_LAYOUT, ENTITY_VISUALS, groundDistance, groundYForDepth } from './world.js';
@@ -1580,7 +1583,7 @@ export class GameWorld {
       // The chosen map brings its painted terrain, weather and props.
       const map = getTrainingMap(this.trainingMapId);
       environment.setMap(map, map.zones.map(zoneToWorld));
-      for (const [kind, x, z] of map.props) environment.addProp(kind, x, z);
+      for (const [kind, x, z, opts] of map.props) environment.addProp(kind, x, z, opts);
       this.trainingDecks ??= { player: this.profile.topUpDeck(this.profile.getMatchDeck()), opponent: [...DEFAULT_MATCH_DECK] };
       this.applyTrainingDecks();
       // Field weapons: crates with a weapon inside appear now and then.
@@ -2319,6 +2322,7 @@ export class GameWorld {
       if (target.heroKey && (target.surfaceId === 'blueCastleUpperPlatform' || target.surfaceId === 'redCastleUpperPlatform')) return false;
       if (String(target.surfaceId).endsWith('CastleDeck')) return false;
       if (this.siegeMatch?.isSheltered(target)) return false;
+      if (isHidden(target) && groundDistance(minion, target) > 50) return false; // darkness (an extinguished lantern)
       return true;
     };
     // A brief lock stops the crowd from frame-by-frame target thrashing while
@@ -3025,6 +3029,7 @@ export class GameWorld {
     this.renderArenaRuneCollectibles(ctx);
     this.renderArenaTransformationRelic(ctx);
 
+    sceneDev.hints = this.activeMode?.id === 'training' || !!this.debugVisible; // scene-object labels (dev phase)
     const actors = [...this.minions, ...environment.livingProps().map((prop) => ({ y: prop.y, render: (c) => renderProp(c, prop) })), ...environment.sceneFx.map((fx) => ({ y: fx.y, render: (c) => fx.render(c) })), ...this.armory.pickups.map((pickup) => ({ y: pickup.y, render: (c) => pickup.render(c) }))];
     if (this.enemyChampion.lifeState !== 'Dead') actors.push(this.enemyChampion);
     if (this.player.lifeState !== 'Dead' && !this.player.isMounted) actors.push(this.player);

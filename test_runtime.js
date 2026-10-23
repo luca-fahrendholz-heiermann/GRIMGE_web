@@ -1389,7 +1389,7 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
     return environment.terrain;
   };
 
-  assert(TRAINING_MAPS.length === 8 && TRAINING_MAPS.every((map) => map.props.length >= 2), 'Eight selectable training maps with their own props');
+  assert(TRAINING_MAPS.length === 11 && TRAINING_MAPS.every((map) => map.props.length >= 2), 'Eleven selectable training maps with their own props (incl. the three scene-object yards)');
   let terrain = prepare('rain');
   assert(game.trainingMapId === 'rain' && game.battlefield.trainingMap.id === 'rain' && terrain.length === 2 && terrain.every((zone) => zone.type === 'water'), 'Selecting a map restarts Training on it with its painted terrain');
   const leftPool = zoneToWorld(TRAINING_MAPS.find((m) => m.id === 'rain').zones[0]);
@@ -1458,7 +1458,7 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
   const { TRAINING_MAPS } = await import('./public/src/training_maps.js');
   game.selectTrainingMap('frozen');
   const P = game.player;
-  assert(castles.castleSkinFor('blue', 'frozen') === 'frozen' && castles.castleImageSrc('frozen', 'red') === 'assets/castles/frozen_red.png' && TRAINING_MAPS.every((map) => castles.CASTLE_SKINS[map.id]), 'Every training map has its own castle skin (blue and red image)');
+  assert(castles.castleSkinFor('blue', 'frozen') === 'frozen' && castles.castleImageSrc('frozen', 'red') === 'assets/castles/frozen_red.png' && TRAINING_MAPS.every((map) => castles.CASTLE_SKINS[map.scene ?? map.id]), 'Every training map has its own castle skin (blue and red image)');
   const blueBox = castles.castleBox('frozen', 'blue'); const redBox = castles.castleBox('frozen', 'red');
   assert(blueBox.x >= 0 && redBox.x + redBox.w <= 1024 && redBox.mirrored && !blueBox.mirrored && Math.abs(blueBox.x - (1024 - redBox.x - redBox.w)) < .01, 'The blue castle stands on the left, the red one mirrored on the right, both fully on the 16:9 stage');
   const gate = castles.castleGatePoint('frozen', 'blue');
@@ -4412,6 +4412,89 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
       game.render(); } catch (e) { bad = e.message; }
     assert(!bad && depth === 0, 'Scene objects render in every state (frozen, burning, glowing, falling) with their own life bars ' + bad); }
   clean(); P.x = 300; P.z = .58;
+}
+
+// Interactive object packs (user, 23 Oct 2026: "alles umsetzen"): element objects, traversal / puzzle pieces, systems.
+{
+  const SO = await import('./public/src/scene_objects.js'); const { environment: ENV } = await import('./public/src/environment.js');
+  const { setStatusSource } = await import('./public/src/status_effects.js'); const SYS = await import('./public/src/scene_systems.js'); const { BUFF_ZONES } = await import('./public/src/zone_buffs.js');
+  const P = game.player; const dummy = game.trainingDummy; if (!game.minions.includes(dummy)) game.minions.push(dummy);
+  const step = (sec) => { for (let i = 0; i < Math.round(sec * 60); i++) { ENV.update(1 / 60, game, []); P.update(1 / 60, { keys: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false }, game.battlefield, game); } };
+  const envStep = (sec) => { for (let i = 0; i < Math.round(sec * 60); i++) ENV.update(1 / 60, game, []); };
+  const clean = () => { spells.clearRuntime(); ENV.effects = []; ENV.props = ENV.props.filter((o) => !o.isSceneObject); ENV.sceneFx = []; SO.resetSignals(); dummy.homeX = dummy.x = 700; dummy.homeZ = dummy.z = .5; dummy.hp = dummy.maxHp; P.x = 200; P.z = .5; P.hp = P.maxHp; P.grounded = true; P.elevation = 0; P.vElevation = 0; P.surfaceHeight = 0; P.surfaceId = null; P.isGuarding = false; game.battlefield.placeOnSurface(P); game.minions = game.minions.filter((m) => m === dummy); };
+  const add = (k, x, z, o) => ENV.addProp(k, x, z, o);
+  const hitWith = (o, els, amount = 10, kx = 0, kind = 'spell', by = P) => { const prev = setStatusSource({ team: 'blue', statusElements: els, castBy: by }); o.takeDamage(amount, kx, 0, 0, false, kind); setStatusSource(prev); };
+  const num = (...v) => { if (v.some((x) => typeof x === 'number' && !Number.isFinite(x))) throw new Error('NaN coordinate'); };
+  let depth = 0;
+  const exact = new Proxy({}, { get: (tg, k) => k === 'save' ? () => { depth++; } : k === 'restore' ? () => { depth--; } : k === 'measureText' ? () => ({ width: 20 }) : (k === 'ellipse' || k === 'arc') ? (x, y, rx, ry) => { num(x, y, rx, ry); if (rx < 0 || (k === 'ellipse' && ry < 0)) throw new Error('IndexSizeError'); } : (k === 'moveTo' || k === 'lineTo' || k === 'fillRect' || k === 'translate' || k === 'fillText') ? (...v) => num(...v.filter((x) => typeof x === 'number')) : (k === 'canvas' ? undefined : () => {}), set: () => true });
+  const surfaceTop = (o, i = 0) => o.surfaces[i]?.heightAt() ?? 0;
+  const registered = (s) => (game.battlefield.dynamicSurfaces ?? []).includes(s);
+
+  clean(); { let bad = ''; depth = 0; SYS.sceneDev.hints = true;
+    try { for (const k of Object.keys(SO.SCENE_KINDS)) { const o = add(k, 400, .5, {}); for (let i = 0; i < 30; i++) ENV.update(1 / 60, game, []); o.render(exact); SYS.renderSceneHint(exact, o); } for (const fx of ENV.sceneFx) fx.render(exact); } catch (e) { bad = e.message; }
+    SYS.sceneDev.hints = false;
+    assert(!bad && depth === 0 && Object.keys(SO.SCENE_KINDS).length >= 47, 'All ' + Object.keys(SO.SCENE_KINDS).length + ' scene-object kinds build, tick and render (with dev labels) ' + bad); }
+  clean(); { const v = add('vine', 300, .5); hitWith(v, ['aqua'], 30); hitWith(v, ['natura'], 10); envStep(.1);
+    const grown = v.grown && surfaceTop(v) === 90 && registered(v.surfaces[0]);
+    v.feed('ignis', 8); envStep(4); assert(grown && v.isDead && !registered(v.surfaces[0] ?? {}), 'VINE: water / nature grow it into a platform (90 px); fire burns it and the platform away'); }
+  clean(); { const m = add('mushrooms', 680, .5); hitWith(m, [], 10, 0, 'melee'); envStep(.1); const cloud = ENV.sceneFx.some((f) => f.kind === 'poison');
+    const d0 = dummy.hp; m.feed('ignis', 8); envStep(.1); assert(cloud && m.isDead && dummy.hp < d0, 'MUSHROOMS: a hit bursts a poison cloud; fire blows the spores up'); }
+  clean(); { const b = add('bloom', 220, .5); b.feed('lux', 20); P.hp = P.maxHp - 60; hitWith(b, [], 5, 0, 'melee'); envStep(.1);
+    const healed = P.hp > P.maxHp - 60; b.feed('umbra', 5); assert(healed && b.carnivore, 'BLOOM: light charges it, a hit spreads healing pollen; shadow turns it into a biter'); }
+  clean(); { const h = add('beehive', 400, .5); hitWith(h, [], 5, 0, 'melee'); envStep(.1); assert(ENV.sceneFx.some((f) => f.constructor.name === 'BeeSwarm'), 'BEEHIVE: a hit wakes a swarm'); }
+  clean(); { const i1 = add('icicle', 400, .5); i1.feed('frost', 22); const big = i1.size === 2; hitWith(i1, [], 10, 400, 'melee'); envStep(.1);
+    const shards = ENV.sceneFx.some((f) => f.constructor.name === 'ShardBurst'); const i2 = add('icicle', 500, .5); i2.feed('ignis', 9); envStep(.1);
+    assert(big && shards && ENV.effects.some((e) => e.type === 'water'), 'ICICLE: frost grows it, a heavy hit shatters it into shards, fire melts it into a puddle'); }
+  clean(); { const w = add('water_barrel', 400, .5); hitWith(w, [], 5, 100, 'melee'); envStep(1.2); assert(w.leak > 0 && ENV.effects.some((e) => e.type === 'water'), 'WATER BARREL: a hit makes it leak into a growing puddle'); }
+  clean(); { const br = add('brazier', 400, .5); hitWith(br, ['ventus'], 10); envStep(.1); const embers = ENV.effects.filter((e) => e.type === 'scorch').length >= 2;
+    hitWith(br, ['aqua'], 10); envStep(.1); assert(embers && !br.lit && ENV.sceneFx.some((f) => f.kind === 'steam'), 'BRAZIER: wind spreads its embers, water turns it into a steam cloud'); }
+  clean(); { const k1 = add('powder_keg', 650, .5); const k2 = add('powder_keg', 700, .62); P.x = 610; P.z = .5; P.grounded = false; P.elevation = 30; P.vElevation = 0; const hp0 = P.hp; const d0 = dummy.hp;
+    k1.feed('ignis', 10); envStep(.5); assert(k1.isDead && dummy.hp < d0 && P.vElevation > 300 && P.hp === hp0, 'POWDER KEG: fire → blast; an airborne hero rides it (launch, no damage)'); envStep(.6); assert(k2.isDead, 'Kegs chain: the blast lights the next keg'); }
+  clean(); { const py = add('crystal_pylon', 650, .5, { key: 'pyl' }); py.lastSourceTeam = 'blue'; const d0 = dummy.hp;
+    for (let i = 0; i < 3; i++) { py.feed('fulgur', 5); envStep(.35); } assert(dummy.hp < d0 && SO.signalOn('pyl'), 'CRYSTAL PYLON: three lightning charges discharge a chain lightning and switch its signal'); }
+  clean(); { const g = add('gong', 650, .5, { key: 'gg' }); const d0 = dummy.hp; hitWith(g, [], 5, 0, 'melee'); envStep(.1); assert(SO.signalOn('gg') && dummy.hp < d0, 'GONG: a hit sends a stunning sound wave and rings its signal'); }
+  clean(); { const jp = add('jump_pad', 200, .5); P.x = 200; P.z = .5; hitWith(jp, [], 5, 0, 'melee'); envStep(.05); assert(P.vElevation > 300 && !P.grounded, 'JUMP PAD: a hit launches whoever stands on it'); }
+  clean(); { const st = add('stalagmite', 400, .5); st.feed('terra', 70); envStep(.05); const tall = st.h >= 100 && registered(st.surfaces[0]); hitWith(st, [], 10, 400, 'melee'); envStep(.1);
+    assert(tall && st.isDead && ENV.props.some((o) => o.kind === 'stone_bridge' && !o.isDead), 'STALAGMITE: earth grows a pillar platform; a heavy hit topples it into a stone bridge'); }
+  clean(); { const wm = add('windmill', 200, .5); P.x = 200; P.z = .5; wm.feed('ventus', 5); step(.4); assert(wm.spin > 0 && (P.elevation > 10 || P.vElevation > 0), 'WINDMILL: wind spins it — its updraft carries the hero up'); }
+  clean(); { const bn = add('banner', 400, .5); bn.feed('ignis', 5); envStep(2.2); assert(bn.isDead && ENV.sceneFx.some((f) => f.kind === 'veil'), 'BANNER: fire burns it down; the fallen cloth is a veil'); }
+  clean(); { const mr = add('mirror', 400, .5); const shot = { x: 405, z: .5, vx: -300, life: 1, type: 'bolt' }; game.projectiles.push(shot); envStep(.05);
+    const back = shot.vx > 0; game.projectiles.splice(game.projectiles.indexOf(shot), 1); const m2 = add('mirror', 700, .3); mr.feed('umbra', 5); m2.feed('umbra', 5); P.x = 400; P.z = .5; envStep(.05);
+    assert(back && Math.abs(P.x - 700) < 40, 'MIRROR: reflects shots; two shadow portals teleport the hero'); }
+  clean(); { const ln = add('lantern', 300, .5); const gp = add('ghost_platform', 330, .5, { h: 110 }); envStep(.1); const solid = surfaceTop(gp) === 110;
+    ln.feed('umbra', 5); envStep(.1); assert(solid && !ln.lit && SO.isHidden(P) && surfaceTop(gp) === 0, 'LANTERN: its light makes ghost platforms solid; put out by shadow it hides who stands in the dark'); }
+  clean(); { const gv = add('grave', 400, .5); gv.lastSourceTeam = 'blue'; gv.feed('umbra', 12); envStep(.1); const sk = game.minions.find((m) => m.isSkeleton);
+    gv.feed('lux', 5); assert(sk && sk.team === 'blue' && sk.isDead, 'GRAVE: shadow raises a skeleton for the caster; light banishes it'); }
+  clean(); { const ch = add('chandelier', 700, .5); const d0 = dummy.hp; hitWith(ch, ['blade'], 40, 0, 'melee'); envStep(1); assert(dummy.hp < d0, 'CHANDELIER: cut down, it falls on whoever stands below'); }
+  clean(); { const cs = add('chest', 400, .5, { lock: 'ignis' }); hitWith(cs, ['aqua'], 20); const shut = !cs.open; hitWith(cs, ['ignis'], 20); envStep(.05); assert(shut && cs.open, 'CHEST: only its element opens the lock'); }
+  clean(); { const sh = add('shrine', 260, .5, { element: 'aqua' }); hitWith(sh, [], 5, 0, 'melee', P); const charged = P.shrineCharge?.element === 'aqua' && P.shrineCharge.n === 4;
+    sh.lastSourceTeam = 'blue'; sh.feed('aqua', 16); envStep(.05); const zone = [...BUFF_ZONES].some((z) => z.x === 260); assert(charged && zone, 'SHRINE: a hit gives element charges; a spell of its element opens a buff zone'); sh.zone && BUFF_ZONES.delete(sh.zone); P.shrineCharge = null; }
+  clean(); { const li = add('liana', 200, .5, { top: 220 }); li.feed('natura', 40); P.x = 200; P.z = .5; P.grounded = false; P.elevation = 120; P.vElevation = -10; envStep(.05); assert(P.vElevation >= 470, 'LIANA: grown, touching it in the air swings the hero on'); }
+  clean(); { const gy = add('geyser', 200, .5); for (let i = 0; i < 8; i++) { gy.feed('ignis', 8); gy.feed('aqua', 8); } envStep(.05); P.x = 200; P.z = .5; envStep(.05); assert(gy.erupt > 0 && P.vElevation > 500, 'GEYSER: fire + water build pressure — the eruption throws the hero up'); }
+  clean(); { const wf = add('waterfall', 400, .5); wf.feed('frost', 16); envStep(.05); const steps = wf.surfaces.map((s) => s.heightAt()); wf.feed('ignis', 5); assert(steps.join() === '55,110,165' && surfaceTop(wf) === 0, 'WATERFALL: frost freezes it into an ice wall with three steps; fire melts it'); }
+  clean(); { const wb = add('web', 400, .5); wb.feed('ignis', 5); envStep(2); const cw = add('cracked_wall', 500, .5); const hp0 = cw.hp; hitWith(cw, [], 20, 50, 'melee'); const light = hp0 - cw.hp; hitWith(cw, [], 20, 400, 'melee');
+    assert(wb.isDead && light <= 2 && hp0 - cw.hp >= 20 && ENV.blocksAt({ width: 24 }, 500, .9), 'WEB burns away; the CRACKED WALL only takes heavy blows and blocks the whole lane'); }
+  clean(); { const lv = add('lever', 300, .3, { key: 'g1' }); const gt = add('gate', 500, .5, { key: 'g1' }); const closed = ENV.blocksAt({ width: 24 }, 500, .5); hitWith(lv, [], 5, 0, 'melee'); envStep(1);
+    assert(closed && SO.signalOn('g1') && !ENV.blocksAt({ width: 24 }, 500, .5), 'LEVER + GATE: the lever switches the signal, the gate opens'); }
+  clean(); { add('pressure_plate', 300, .5, { key: 'pp' }); const pc = add('portcullis', 500, .5, { key: 'pp' }); const b = add('boulder', 300, .5); envStep(.6); assert(SO.signalOn('pp') && pc.noBlock, 'PRESSURE PLATE: a boulder on it presses it — the portcullis opens'); void b; }
+  clean(); { const il = add('ice_lever', 300, .5, { key: 'il' }); il.feed('ignis', 14); envStep(.1); assert(il.isDead && ENV.props.some((o) => o.kind === 'lever' && !o.isDead), 'ICE LEVER: fire frees the lever from the ice'); }
+  clean(); { const cf = add('cracked_floor', 200, .5); P.x = 200; P.z = .5; P.grounded = false; P.elevation = 10; P.vElevation = -600; envStep(1 / 60); P.grounded = true; P.elevation = 0; envStep(1 / 60); assert(cf.broken, 'CRACKED FLOOR: a fast landing breaks through'); }
+  clean(); { const rb = add('rope_bridge', 300, .5, { len: 160, h: 120 }); const deck = rb.surfaces[0].heightAt(); hitWith(rb, ['blade'], 10, 0, 'melee'); envStep(.6);
+    assert(deck === 120 && rb.cut && rb.surfaces[0].heightAt() === 0 && rb.surfaces.slice(1).map((s) => s.heightAt()).some((h) => h === 120), 'ROPE BRIDGE: a blade cuts the rope — the bridge drops into a ramp'); }
+  clean(); { const rf = add('raft', 300, .5); envStep(.05); rf.lastHitDir = 1; rf.feed('ventus', 5); envStep(.5); assert(rf.x > 330 && registered(rf.surfaces[0]), 'RAFT: wind pushes the floating platform'); }
+  clean(); { const mg = add('magnet', 400, .5); const Mn = globalThis.__GrimgeMinion; const mi = new Mn(520, .5, 'red', 'melee', 1); game.minions.push(mi); mg.lastSourceTeam = 'blue'; mg.feed('fulgur', 5); envStep(.05); assert(mi.kbVelX < 0, 'MAGNET: lightning charges it — it pulls foes in'); }
+  clean(); { const bs = add('basin', 400, .5); const h0 = surfaceTop(bs); bs.feed('aqua', 60); const h1 = surfaceTop(bs); bs.feed('ignis', 30); assert(h1 > h0 + 80 && surfaceTop(bs) < h1, 'BASIN: water raises the float platform, fire lowers it'); }
+  clean(); { const du = add('dust', 400, .5, { text: 'TEST' }); du.feed('ventus', 9); envStep(.05); assert(du.revealed, 'DUST: wind blows it away and reveals the inscription'); }
+  clean(); { const cl = add('climb_wall', 400, .5); const spear = { weapon: 'spear', team: 'blue' }; hitWith(cl, ['blade'], 10, 0, 'melee', spear); hitWith(cl, ['blade'], 10, 0, 'melee', spear); envStep(.05);
+    assert(cl.steps.length === 2 && cl.steps.every(registered), 'CLIMB WALL: spear hits leave steps in the rock'); }
+  clean(); { const bo = add('boulder', 230, .5); P.x = 200; P.z = .5; P.isGuarding = true; P.grabCooldown = 0; const ok = P.attemptGrab(game.getHostileTargets(P.team, true)); const flying = !!bo.flight; envStep(1);
+    assert(ok && flying && !bo.flight && bo.x > 260, 'THROW: guard + down on a throwable object (boulder) picks it up and throws it'); P.isGuarding = false; }
+  clean(); { const keg = add('powder_keg', 300, .5); P.x = 340; P.z = .5; const Mn = globalThis.__GrimgeMinion; const mi = new Mn(220, .5, 'red', 'melee', 1); game.battlefield.placeOnSurface(mi); game.minions.push(mi);
+    for (let i = 0; i < 120 && keg.fuse < 0 && !keg.isDead; i++) { mi.update(1 / 60, game, game.battlefield); ENV.update(1 / 60, game, []); }
+    assert(keg.fuse >= 0 || keg.isDead, 'AI: a melee minion lights the powder keg the hero stands next to'); }
+  clean(); { SO.sceneConfig.seedChance = 1; P.x = 300; P.z = .5; const out = SO.dropFromCast(ENV, P, { x: 400, z: .5 }, ['lux', 'terra'], 0); SO.sceneConfig.seedChance = 0;
+    assert(out.some((o) => o.kind === 'lantern') && out.some((o) => o.kind === 'stalagmite'), 'Runes set objects: light leaves a lantern, earth a stalagmite (chance)'); }
+  clean();
 }
 
 const frameCallback = nextFrame;

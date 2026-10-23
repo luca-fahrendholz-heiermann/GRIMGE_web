@@ -26,7 +26,10 @@ import { combat } from './combat.js';
 import { getGroundProjection, groundYForDepth } from './world.js';
 import { drawFx, fxReady } from './fx_sprites.js';
 import { applyStatus } from './status_effects.js';
-import { SCENE_KINDS, isSceneKind } from './scene_objects.js';
+import { SCENE_KINDS, isSceneKind, resetSignals } from './scene_objects.js';
+import './scene_pack_elements.js'; // element objects (vine, mushrooms, kegs, pylons …)
+import './scene_pack_puzzles.js'; // traversal / puzzle pieces (lianas, geysers, gates, plates …)
+import { renderSceneHint } from './scene_systems.js';
 
 export const GROUND_EFFECTS = Object.freeze({
   ice: Object.freeze({ life: 7, slow: null, slippery: true }),
@@ -131,7 +134,7 @@ export class EnvironmentSystem {
   }
 
   clear() {
-    this.effects = []; this.props = []; this.terrain = []; this.transient = []; this.sceneFx = []; this.map = null;
+    this.effects = []; this.props = []; this.terrain = []; this.transient = []; this.sceneFx = []; this.map = null; resetSignals();
     this.tickTimer = 0; this.ambientTimer = 7; this.gustTimer = 11; this.strike = null;
   }
 
@@ -277,9 +280,9 @@ export class EnvironmentSystem {
   }
 
   // ── props ────────────────────────────────────────────────────────────
-  addProp(kind, x, z) {
-    // Reactive scene objects (scene_objects.js): seedling / sapling / tree, log, boulder.
-    const prop = isSceneKind(kind) ? SCENE_KINDS[kind](x, z) : new BreakableProp(kind, x, z);
+  addProp(kind, x, z, opts = {}) {
+    // Reactive scene objects (scene_objects.js + packs); opts configure them (keys, links, elements).
+    const prop = isSceneKind(kind) ? SCENE_KINDS[kind](x, z, opts) : new BreakableProp(kind, x, z);
     this.props.push(prop);
     return prop;
   }
@@ -350,7 +353,7 @@ export class EnvironmentSystem {
     const actors = [gameWorld.player, gameWorld.enemyChampion, ...(gameWorld.minions ?? []), ...summons].filter((actor) => actor && !actor.isDead && actor.lifeState !== 'Dead');
     for (const actor of actors) {
       actor.onIce = false;
-      if ((actor.elevation ?? 0) > 10 || actor.burrowed || actor.isHovering) {
+      if ((actor.elevation ?? 0) > 10 || (actor.surfaceHeight ?? 0) > 10 || actor.burrowed || actor.isHovering) {
         actor._inWater = false;
         continue;
       }
@@ -704,7 +707,7 @@ export class EnvironmentSystem {
 }
 
 export function renderProp(ctx, prop) {
-  if (prop.isSceneObject) { prop.render(ctx); return; }
+  if (prop.isSceneObject) { const h = prop.flight?.h ?? 0; if (h) { ctx.save(); ctx.translate(0, -Math.round(h)); } prop.render(ctx); if (h) ctx.restore(); renderSceneHint(ctx, prop); return; }
   const x = Math.round(prop.x + (prop.shake > 0 ? Math.sin(performance.now() * .08) * 2 : 0));
   const y = Math.round(prop.y);
   if (prop.weaponId) {

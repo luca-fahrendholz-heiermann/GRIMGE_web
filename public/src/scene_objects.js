@@ -22,9 +22,10 @@ import { combat } from './combat.js';
 import { audio } from './audio.js';
 import { groundYForDepth } from './world.js';
 import { getStatusSource } from './status_effects.js';
+import { registerSurface, unregisterSurface } from './geometry.js';
 
-const DEPTH = 150;
-const TAU = Math.PI * 2;
+export const DEPTH = 150;
+export const TAU = Math.PI * 2;
 export const SEED_CHANCE = .3;
 export const MAX_WILD_SEEDS = 6;
 // Tunable at runtime (the test suite turns the random seed drop off for deterministic runs).
@@ -36,20 +37,40 @@ const ELEMENT_OF_GROUND = Object.freeze({ water: 'aqua', scorch: 'ignis', lava: 
 // Spells are read through a source set by spells.js (no import cycle).
 let spellSource = () => [];
 export const setSceneSpellSource = (fn) => { spellSource = fn; };
-const alive = (a) => a && !a.isDead && a.lifeState !== 'Dead' && (a.hp ?? 1) > 0 && !a.isProp && !a.isStoneWall && !a.isObjective;
-const actorsOf = (gw) => [gw?.player, gw?.enemyChampion, gw?.primal, ...(gw?.minions ?? []), ...(gw?.spells?.getSummons?.() ?? [])].filter(alive);
-const groundDist = (a, x, z) => Math.hypot(a.x - x, ((a.z ?? z) - z) * DEPTH);
+export const sceneSpells = () => spellSource();
+export const alive = (a) => a && !a.isDead && a.lifeState !== 'Dead' && (a.hp ?? 1) > 0 && !a.isProp && !a.isStoneWall && !a.isObjective;
+export const actorsOf = (gw) => [gw?.player, gw?.enemyChampion, gw?.primal, ...(gw?.minions ?? []), ...(gw?.spells?.getSummons?.() ?? [])].filter(alive);
+export const groundDist = (a, x, z) => Math.hypot(a.x - x, ((a.z ?? z) - z) * DEPTH);
 
 // ── crisp pixel helpers ──────────────────────────────────────────────────
-const px = (ctx, x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(Math.round(x), Math.round(y), w, h); };
+export const px = (ctx, x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(Math.round(x), Math.round(y), w, h); };
 // A filled pixel disc built from rows (no anti-aliased arcs).
-function blob(ctx, cx, cy, r, c, squash = .8) {
+export function blob(ctx, cx, cy, r, c, squash = .8) {
   ctx.fillStyle = c;
   for (let dy = -r; dy <= r; dy += 2) { const w = Math.round(Math.sqrt(Math.max(0, r * r - dy * dy))); ctx.fillRect(Math.round(cx - w), Math.round(cy + dy * squash), w * 2, 2); }
 }
-function flames(ctx, x, y, w, t, k = 1) {
+export function flames(ctx, x, y, w, t, k = 1) {
   for (let i = 0; i < 4 * k; i++) { const fx = x + ((i * 37) % w) - w / 2; const h = 8 + ((i * 13 + Math.floor(t * 12)) % 9); px(ctx, fx - 2, y - h, 4, h, i % 2 ? '#ff6d00' : '#ffb300'); px(ctx, fx - 1, y - h + 2, 2, 3, '#fff3c4'); }
 }
+
+// ── Signals: levers, plates, gongs and pylons switch gates / lifts by key ──
+const SIGNALS = new Map();
+const now = () => (globalThis.performance?.now?.() ?? Date.now()) / 1000;
+export const timeNow = now;
+export function setSignal(key, on = true, hold = 0) { if (!key) return; SIGNALS.set(key, { on: !!on, until: hold > 0 ? now() + hold : Infinity }); }
+export function signalOn(key) { const s = SIGNALS.get(key); if (!s) return false; if (s.until < now()) { SIGNALS.delete(key); return false; } return s.on; }
+export const resetSignals = () => SIGNALS.clear();
+// A standable top (landing-only, like spell platforms); heightFn may change over time.
+let surfaceId = 1;
+export function makeSurface(label, x, z, halfW, halfD, heightFn) {
+  const s = { id: `scene_${surfaceId++}`, label, xMin: x - halfW, xMax: x + halfW, zMin: z - halfD, zMax: z + halfD, landingOnly: true, isSceneSurface: true, heightAt: () => Math.max(0, heightFn()) };
+  Object.defineProperty(s, 'baseHeight', { get: () => Math.max(0, heightFn()), enumerable: true });
+  return s;
+}
+export const moveSurface = (s, x, z, halfW, halfD) => { s.xMin = x - halfW; s.xMax = x + halfW; s.zMin = z - halfD; s.zMax = z + halfD; };
+// Darkness (an extinguished lantern): minions do not pick a hidden target from afar.
+export const hideActor = (a, sec = .3) => { a.hiddenUntil = now() + sec; };
+export const isHidden = (a) => (a?.hiddenUntil ?? 0) > now();
 
 export class SceneObject {
   constructor(kind, x, z, { hp = 60, half = 14, tol = 120, blocks = true, barColor = '#b0a090' } = {}) {
@@ -57,9 +78,27 @@ export class SceneObject {
     this.maxHp = this.hp = hp; this.radius = half; this.hitRadiusX = half; this.halfX = half; this.halfZ = .05; this.noBlock = !blocks;
     this.worldHeight = 0; this.elevation = 0; this.surfaceHeight = 0; this.hitHeightTolerance = tol; this.barColor = barColor;
     this.isDead = false; this.hitFlash = 0; this.shake = 0; this.burning = 0; this.frozen = 0; this.exposure = {}; this.age = 0; this.lastHitDir = 1; this.senseT = 0;
-    this.lastSourceTeam = null;
+    this.lastSourceTeam = null; this.surfaces = []; this.throwable = false; this.flight = null;
   }
   get y() { return groundYForDepth(this.z); }
+  // Surfaces of this object stay registered while it lives (spells.clearRuntime resets the list).
+  syncSurfaces(gw) { const bf = gw?.battlefield; if (!bf) return; bf.dynamicSurfaces ??= []; for (const s of this.surfaces) if (!bf.dynamicSurfaces.includes(s)) registerSurface(gw, s); }
+  dropSurfaces(gw) { for (const s of this.surfaces) unregisterSurface(gw, s); this.surfaces = []; }
+  // Thrown (grab on a throwable object, telekinesis): an arc; the first actor in the way is hit.
+  throwBy(thrower, speed = 380) {
+    if (!this.throwable || this.flight) return false;
+    const dir = thrower.facing || 1; this.flight = { vx: dir * speed, vh: 300, h: 26, team: thrower.team, by: thrower, hit: new Set() }; this.lastHitDir = dir; this.lastSourceTeam = thrower.team;
+    return true;
+  }
+  updateFlight(dt, gw, env) {
+    const f = this.flight; f.vh -= 984 * dt; f.h += f.vh * dt; this.x += f.vx * dt;
+    for (const a of actorsOf(gw)) {
+      if (a.team === f.team || f.hit.has(a) || Math.abs(a.x - this.x) > this.halfX + 14 || Math.abs(((a.z ?? this.z) - this.z) * DEPTH) > 26) continue;
+      f.hit.add(a); a.takeDamage(22, Math.sign(f.vx) * 260, 120, .45, false, 'melee'); f.h = Math.min(f.h, 0);
+    }
+    if (f.h <= 0) { this.flight = null; this.onLand(gw, env); }
+  }
+  onLand() { this.takeDamage(20, this.lastHitDir * 200, 0, 0, false, 'melee'); combat.spawnDust(this.x, this.y, 6); }
   slow() {}
   takeDamage(amount, kx = 0, lift = 0, stun = 0, crit = false, hitKind = 'melee') {
     if (this.isDead || !(amount > 0)) return { ignored: true };
@@ -83,6 +122,8 @@ export class SceneObject {
     this.age += dt; this.hitFlash = Math.max(0, this.hitFlash - dt); this.shake = Math.max(0, this.shake - dt); this.frozen = Math.max(0, this.frozen - dt); this.wet = Math.max(0, (this.wet ?? 0) - dt);
     for (const k of Object.keys(this.exposure)) this.exposure[k] = Math.max(0, this.exposure[k] - dt * 3);
     if ((this.senseT -= dt) <= 0) { this.senseT = SENSE_TICK; this.sense(SENSE_TICK, env); }
+    if (this.flight) this.updateFlight(dt, gw, env);
+    if (this.surfaces.length) this.syncSurfaces(gw);
     this.update(dt, gw, env);
   }
   sense(dt, env) {
@@ -117,15 +158,21 @@ export const PLANT_STAGES = Object.freeze([
   Object.freeze({ name: 'BAUM', hp: 240, half: 20, tol: 220, blocks: true, grow: 0 })
 ]);
 export class Plant extends SceneObject {
-  constructor(x, z, stage = 0, { wild = false } = {}) {
+  constructor(x, z, stage = 0, { wild = false, withered = false, branches = null } = {}) {
     super('plant', x, z, { barColor: '#9be36a' });
-    this.stage = -1; this.growth = 0; this.wild = wild; this.fruitT = 10; this.growFlash = 0; this.sway = 0; this.spreadT = 0;
+    this.stage = -1; this.growth = 0; this.wild = wild; this.withered = withered; this.branchSpec = branches; this.fruitT = 10; this.growFlash = 0; this.sway = 0; this.spreadT = 0;
     this.setStage(stage);
   }
   setStage(i) {
     const st = PLANT_STAGES[i]; const k = this.stage < 0 ? 1 : this.hp / this.maxHp;
     this.stage = i; this.maxHp = st.hp; this.hp = Math.max(1, Math.round(st.hp * Math.max(k, .6)));
     this.halfX = this.hitRadiusX = this.radius = st.half; this.hitHeightTolerance = st.tol; this.noBlock = !st.blocks;
+    // A grown tree: its branches (and its crown) are landing platforms that grow out within 0.6 s.
+    if (i === 2 && !this.surfaces.length) {
+      const fresh = this.stage >= 0 && this.age > 0; this.grownAt = fresh ? this.age : -1;
+      const spec = this.branchSpec ?? [[-34, 70, 24], [34, 118, 24], [0, 165, 30]];
+      this.surfaces = spec.map(([dx, h, w]) => makeSurface('Tree branch', this.x + dx, this.z, w, .07, () => (this.isDead ? 0 : h * Math.min(1, (this.age - this.grownAt) / .6))));
+    }
   }
   get label() { return PLANT_STAGES[this.stage].name; }
   // Water and nature feed a plant instead of hurting it; fire bites harder.
@@ -136,9 +183,9 @@ export class Plant extends SceneObject {
       if (this.frozen > 0 || this.burning > 0) return;
       if (el !== 'lux') this.hp = Math.min(this.maxHp, this.hp + amount * .3);
       this.growth += amount * (el === 'natura' ? 1.4 : el === 'lux' ? .35 : 1);
-      const need = PLANT_STAGES[this.stage].grow;
+      const need = PLANT_STAGES[this.stage].grow * (this.withered ? 2 : 1);
       if (need && this.growth >= need) {
-        this.growth = 0; this.setStage(this.stage + 1); this.growFlash = .7;
+        this.growth = 0; this.withered = false; this.setStage(this.stage + 1); this.growFlash = .7;
         combat.spawnShockwave(this.x, this.y - 10 - this.stage * 20, 24 + this.stage * 22, '#9be36a');
         combat.spawnDamageText?.(this.x, this.y - 40 - this.stage * 50, `${this.label}!`, { color: '#9be36a' });
         audio.playImpact?.(false);
@@ -178,6 +225,7 @@ export class Plant extends SceneObject {
     }
   }
   onBreak(gw, env) {
+    this.dropSurfaces(gw);
     if (this.burnt || this.burning > 0) { env.puff(this.x, this.z, 30 + this.stage * 16); combat.spawnDust(this.x, this.y, 6); return; }
     combat.spawnHitSparks(this.x, this.y - 10, 1, '#7cb342', 10);
     if (this.stage === 2) env.addSceneFx(new FallingTree(this, this.lastHitDir || 1, gw));
@@ -185,7 +233,7 @@ export class Plant extends SceneObject {
   render(ctx) {
     const t = this.age; const x = Math.round(this.x + (this.shake > 0 ? Math.sin(t * 80) * 1.5 : 0)); const y = Math.round(this.y);
     const ice = this.frozen > 0; const fire = this.burning > 0;
-    const leaf = ice ? ['#4f8fa8', '#81d4fa', '#e1f5fe'] : fire ? ['#3e2a14', '#6d4c2a', '#ff9800'] : ['#2e6b22', '#4c9a35', '#a5d66f'];
+    const leaf = ice ? ['#4f8fa8', '#81d4fa', '#e1f5fe'] : fire ? ['#3e2a14', '#6d4c2a', '#ff9800'] : this.withered ? ['#5d4a2a', '#8a7040', '#b8a060'] : ['#2e6b22', '#4c9a35', '#a5d66f'];
     const bark = ['#3e2723', '#6d4c41', '#8d6e63'];
     const sway = Math.round(Math.sin(t * 6) * 3 * this.sway);
     this.shadow(ctx, 8 + this.stage * 10);
@@ -209,7 +257,8 @@ export class Plant extends SceneObject {
     if (fire) flames(ctx, x, y - (this.stage === 2 ? 96 : this.stage === 1 ? 36 : 10), 16 + this.stage * 22, t, 1 + this.stage);
     if (this.growFlash > 0) { ctx.save(); ctx.globalAlpha = this.growFlash; px(ctx, x - 1, y - 20 - this.stage * 70, 2, 20 + this.stage * 60, '#e6ff9a'); ctx.restore(); }
     if (this.hitFlash > 0) { ctx.save(); ctx.globalAlpha = .45; px(ctx, x - 6 - this.stage * 14, y - 16 - this.stage * 60, 12 + this.stage * 28, 16 + this.stage * 60, '#ffffff'); ctx.restore(); }
-    const need = PLANT_STAGES[this.stage].grow;
+    const need = PLANT_STAGES[this.stage].grow * (this.withered ? 2 : 1);
+    if (this.stage === 2) for (const s of this.surfaces) { const h = s.heightAt(); if (h > 4) { px(ctx, s.xMin, y - h, s.xMax - s.xMin, 4, '#5d4037'); px(ctx, s.xMin + 2, y - h - 3, s.xMax - s.xMin - 4, 3, leaf[1]); } }
     this.renderBars(ctx, y - [24, 58, 136][this.stage], need ? this.growth / need : null);
   }
 }
@@ -267,7 +316,7 @@ export class Log extends SceneObject {
 
 // ── BOULDER: rolls on heavy hits and wind; fire makes it glow, water cracks glowing stone ──
 export class Boulder extends SceneObject {
-  constructor(x, z) { super('boulder', x, z, { hp: 160, half: 18, tol: 60, blocks: true, barColor: '#bdbdbd' }); this.vx = 0; this.roll = 0; this.hot = 0; this.rolled = new Set(); this.throwable = true; }
+  constructor(x, z) { super('boulder', x, z, { hp: 160, half: 18, tol: 60, blocks: true, barColor: '#bdbdbd' }); this.vx = 0; this.roll = 0; this.hot = 0; this.rolled = new Set(); this.throwable = true; this.heavy = true; }
   elementDamage(el) { return el === 'ventus' ? .3 : 1; }
   onHit(amount, kx, els) { if (Math.abs(kx) >= 300 || els.has('ventus')) this.startRoll(Math.sign(kx) || this.lastHitDir); }
   startRoll(dir) { if (Math.abs(this.vx) > 60) return; this.vx = dir * 330; this.rolled.clear(); }
@@ -315,12 +364,29 @@ export class Boulder extends SceneObject {
 }
 
 // Map / editor kinds → objects.
-export const SCENE_KINDS = Object.freeze({
+export const SCENE_KINDS = {
   seedling: (x, z) => new Plant(x, z, 0), sapling: (x, z) => new Plant(x, z, 1), tree: (x, z) => new Plant(x, z, 2),
+  withered_seedling: (x, z, o) => new Plant(x, z, 0, { withered: true, ...o }),
   log: (x, z) => new Log(x, z), boulder: (x, z) => new Boulder(x, z)
-});
+};
+export function registerSceneKind(kind, factory) { SCENE_KINDS[kind] = factory; }
 export const isSceneKind = (kind) => Object.prototype.hasOwnProperty.call(SCENE_KINDS, kind);
 
+// Casts may leave objects behind (user, 23 Oct 2026: "Runen setzen Objekte"): nature → seedling,
+// light → lantern, earth → stalagmite; each kind has its own cap, all share sceneConfig.seedChance.
+const CAST_DROPS = [['natura', 'seedling', 1, MAX_WILD_SEEDS], ['lux', 'lantern', .6, 3], ['terra', 'stalagmite', .6, 3]];
+export function dropFromCast(env, caster, target, elements, roll = Math.random()) {
+  const out = [];
+  for (const [i, [el, kind, k, cap]] of CAST_DROPS.entries()) {
+    if (!elements?.includes(el) || !SCENE_KINDS[kind]) continue;
+    if (el === 'natura') { const p = plantFromNature(env, caster, target, roll); if (p) out.push(p); continue; }
+    if (roll >= sceneConfig.seedChance * k || env.props.filter((o) => o.kind === kind && o.wild && !o.isDead).length >= cap) continue;
+    const f = caster.facing || 1; const x = (Number.isFinite(target?.x) ? target.x : caster.x + f * 80) + f * (24 + i * 30); const z = Math.max(.08, Math.min(.92, Number.isFinite(target?.z) ? target.z : caster.z ?? .5));
+    if (env.props.some((o) => !o.isDead && Math.hypot(o.x - x, (o.z - z) * DEPTH) < 26)) continue;
+    const o = SCENE_KINDS[kind](x, z, {}); o.wild = true; env.props.push(o); out.push(o);
+  }
+  return out;
+}
 // Nature spells may drop a wild seedling at the target point (or in front of the caster).
 export function plantFromNature(env, caster, target = null, roll = Math.random()) {
   if (!env || !caster || roll >= sceneConfig.seedChance || !Number.isFinite(caster.x)) return null;

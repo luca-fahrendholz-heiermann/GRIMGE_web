@@ -12,6 +12,7 @@ import { drawBeastBomb, drawSpiritBow } from './form_attacks.js';
 import { FULL_CHARGE_TIME, activeMoveset, releaseFormTechnique, FORM_PALETTES } from './form_moves.js';
 import { releaseWeaponReach, releaseFormPull, isOnCastle, weaponReachShot } from './hold_actions.js';
 import { onStatusHit, setStatusSource, isBladeLook, hasStatus, drawIceBlock } from './status_effects.js';
+import { sceneAiHint, followSceneHint } from './scene_systems.js';
 import { tryAICounterDomain, tryAISpecial, updateAIRecast } from './ai_specials.js';
 import { formDive, FORM_SPECIAL_MANA, tickFormSpecials } from './form_specials.js';
 import { renderInfusion } from './nature_spells.js';
@@ -1084,6 +1085,7 @@ export class Player extends GroundEntity {
     let closestDist = GRAB_RANGE;
     for (const t of targets) {
       if (!t.isAlive && !t.hp) continue;
+      if (t.isSceneObject && (!t.throwable || t.flight)) continue; // rooted scene objects cannot be grabbed
       const dx = Math.abs(t.x - this.x);
       const dz = Math.abs((t.z ?? this.z) - this.z);
       const dist = Math.hypot(dx, dz * 150);
@@ -1096,6 +1098,8 @@ export class Player extends GroundEntity {
       if (grabForm && this.grabCooldown <= 0) { this.grabCooldown = .5; spells.addSpell(new FormGrabFx(this, null, grabForm), 'B'); }
       return false;
     }
+    // A throwable scene object (boulder, keg, barrel, icicle) is picked up and thrown.
+    if (closest.isSceneObject && closest.throwBy?.(this)) { this.grabCooldown = .8; this.isGuarding = false; this.state = 'attack1'; this.stateTimer = .3; this.canAttack = false; combat.spawnDamageText(this.x, this.y - 55, 'WURF', { color: '#ffd740' }); return true; }
     if (grabForm) spells.addSpell(new FormGrabFx(this, closest, grabForm), 'B');
     this.grabCooldown = 1.5;
     this.isGuarding = false;
@@ -1677,7 +1681,8 @@ export class Player extends GroundEntity {
     setHitContext(this);
     const bladeLook = WEAPONS[this.weapon ?? this.classWeapon]?.look;
     // Every swing is a status source (blades bleed); castBy lets masteries react to it.
-    const prevStatusSource = setStatusSource({ team: this.team, statusElements: isBladeLook(bladeLook) ? ['blade'] : [], statusChance: isFinisher ? 2 : 1, castBy: this });
+    const shrine = this.shrineCharge?.n > 0 && this.shrineCharge.until > performance.now() / 1000 ? this.shrineCharge : null; // element shrine charges (scene_pack_elements.js)
+    const prevStatusSource = setStatusSource({ team: this.team, statusElements: [...(isBladeLook(bladeLook) ? ['blade'] : []), ...(shrine ? [shrine.element] : [])], statusChance: isFinisher ? 2 : 1, castBy: this });
     dmg *= signatureMeleeMult(this); // breathing: the awakened mark
     // Letztes Gefecht (skill): melee and charged hits below 25 % HP hit harder.
     if (this.buildModifiers?.lastStand && this.hp < this.maxHp * .25) dmg *= 1 + this.buildModifiers.lastStand;
@@ -1716,6 +1721,7 @@ export class Player extends GroundEntity {
     }
     setHitContext(null);
     setStatusSource(prevStatusSource);
+    if (shrine && hitAny) shrine.n--;
     // Class weapon practice for the Bankai unlock route (the player's own swings only).
     if (hitAny && this === window.gameWorld?.player && this.classWeapon) window.gameWorld.noteWeaponHit?.(this.classWeapon);
     this.lastMeleeHits = sigHits.filter((h) => !h.blocked).map((h) => h.target);
@@ -2416,6 +2422,7 @@ export class Minion extends GroundEntity {
     const taunter = this.tauntTimer > 0 && this.tauntedBy?.isAlive !== false && !this.tauntedBy?.isDead ? this.tauntedBy : null;
     const target = taunter ?? gameWorld.findMinionTarget(this);
     const distance = target ? groundDistance(this, target) : Infinity;
+    const hint = taunter ? null : sceneAiHint(this, gameWorld); // scene objects: light a keg, duck behind cover
     if (this.freezeTimer > 0) { this.vx = this.vz = 0; }
     else if (this.hurtTimer > 0) { this.hurtTimer -= dt; this.state = 'hurt'; }
     else if (!target && this.followLeader) {
@@ -2428,6 +2435,7 @@ export class Minion extends GroundEntity {
         this.facing = desired.x ? Math.sign(desired.x) : this.facing; this.vx = desired.x * this.speed * this.slowFactor; this.vz = desired.z * (this.speed / 150) * this.slowFactor; this.state = 'run';
       }
     }
+    else if (hint && followSceneHint(this, hint, dt)) { /* the hint owns the movement this frame */ }
     else if (target && distance <= (target.isObjective ? 70 : this.attackRange)) { this.vx = this.vz = 0; this.facing = Math.sign(target.x - this.x) || this.facing; if (this.attackTimer <= 0) { this.attackTimer = this.attackCooldown; this.state = 'attack'; this.performAttack(target, gameWorld); } else { this.state = this.attackTimer > this.attackCooldown - 0.35 ? 'attack' : 'idle'; } }
     else {
       // Structures are attacked from each lane; combat units may pull a minion

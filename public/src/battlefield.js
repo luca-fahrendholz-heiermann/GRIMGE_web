@@ -13,7 +13,7 @@ export class Battlefield {
   constructor(mode = null, options = {}) {
     setGroundProjection(mode?.world === 'training' ? TRAINING_PROJECTION : null);
     this.trainingMap = mode?.world === 'training' ? getTrainingMap(options.trainingMapId) : null;
-    if (this.trainingMap) preloadCastles(this.trainingMap.id);
+    if (this.trainingMap) preloadCastles(this.trainingMap.scene ?? this.trainingMap.id);
     this.width = ARENA_LAYOUT.width;
     this.height = ARENA_LAYOUT.height;
     this.playableBounds = ARENA_LAYOUT.playableBounds;
@@ -337,7 +337,7 @@ export class Battlefield {
     // The stage is always 16:9, so the scene never needs copied edge strips.
     ctx.drawImage(image, x, y, drawW, drawH);
     // Team castles (skins) stand in the side walls, part of the backdrop.
-    renderCastles(ctx, this.trainingMap?.id, { x, y, w: drawW, h: drawH }, image);
+    renderCastles(ctx, this.trainingMap?.scene ?? this.trainingMap?.id, { x, y, w: drawW, h: drawH }, image);
   }
 
   renderBackground(ctx, camera, gameplayWidth, viewH, renderWidth = gameplayWidth, cameraOffsetX = 0, modeState = null) {
