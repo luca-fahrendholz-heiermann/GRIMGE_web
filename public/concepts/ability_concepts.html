@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>GRIMGE · Fähigkeiten-Konzepte (Storyboards)</title>
+<style>
+  body { margin: 0; background: #0f0b19; color: #efe6ff; font: 13px/1.4 'Segoe UI', sans-serif; }
+  h1 { margin: 16px 20px 4px; color: #ffd54f; letter-spacing: 2px; font-size: 18px; }
+  p.lead { margin: 0 20px 12px; color: #a99cc4; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(500px, 1fr)); gap: 14px; padding: 0 20px 20px; }
+  .card { background: #171126; border: 1px solid #3a2f50; border-radius: 8px; padding: 10px; }
+  .card h2 { margin: 0 0 4px; font-size: 14px; color: #ffd54f; letter-spacing: 1px; }
+  .card small { color: #a99cc4; display: block; margin-bottom: 6px; }
+  canvas { width: 480px; height: 270px; image-rendering: pixelated; background: #000; display: block; border-radius: 4px; }
+  .beat { font: bold 11px monospace; color: #69f0ae; margin-top: 4px; min-height: 16px; }
+</style>
+</head>
+<body>
+<h1>GRIMGE · FÄHIGKEITEN-KONZEPTE</h1>
+<p class="lead">Pixel-Storyboards zur Analyse in docs/GRIMGE_Faehigkeiten_Atlas_II.md. Alles angepasst, nicht kopiert; Figuren sind Platzhalter (die echten Sprites ersetzen sie). Jede Skizze läuft in einer Schleife; „TIPP“ zeigt, wann der Spieler drückt.</p>
+<div class="grid" id="grid"></div>
+<script>
+// Low-res pixel canvas (160×90), scaled ×3 without smoothing.
+const W = 160, H = 90, GROUND = 74;
+const PAL = { sky: '#1a1430', floor: '#3b2d22', line: '#5a4636', hero: '#e0c9a6', heroDark: '#6d4c41', foe: '#c62828', foeDark: '#5d1010', white: '#ffffff' };
+function px(c, x, y, w, h, col) { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h)); }
+function scene(c) { px(c, 0, 0, W, GROUND, PAL.sky); px(c, 0, GROUND, W, H - GROUND, PAL.floor); px(c, 0, GROUND, W, 1, PAL.line); }
+// A blocky figure: x = centre, y = feet, f = facing, pose: 0 stand, 1 lean, 2 crouch, 3 flip (rot), color pair.
+function fig(c, x, y, f = 1, pose = 0, col = PAL.hero, dark = PAL.heroDark, rot = 0) {
+  c.save(); c.translate(Math.round(x), Math.round(y)); if (rot) { c.translate(0, -8); c.rotate(rot); c.translate(0, 8); } c.scale(f, 1);
+  const lean = pose === 1 ? 2 : 0; const cr = pose === 2 ? 3 : 0;
+  px(c, -2 + lean, -16 + cr, 4, 4, col);            // head
+  px(c, -3 + lean, -12 + cr, 6, 7, dark);           // body
+  px(c, -3, -5 + cr * .6, 2, 5 - cr * .6, dark); px(c, 1, -5 + cr * .6, 2, 5 - cr * .6, dark); // legs
+  px(c, 3 + lean, -11 + cr, 3, 2, col);             // front arm
+  c.restore();
+}
+function blade(c, x, y, ang, len, col = '#e1f5fe', w = 1) { c.save(); c.translate(x, y); c.rotate(ang); px(c, 0, -w / 2, len, w, col); c.restore(); }
+function slashArc(c, x, y, r, a0, a1, col, w = 2) { c.strokeStyle = col; c.lineWidth = w; c.beginPath(); c.arc(x, y, r, a0, a1); c.stroke(); }
+function bolt(c, x0, y0, x1, y1, seed, col = '#0a0006', edge = '#d50032') { const pts = [[x0, y0]]; for (let i = 1; i < 4; i++) { const u = i / 4; pts.push([x0 + (x1 - x0) * u + Math.sin(seed * 7 + i) * 3, y0 + (y1 - y0) * u + Math.cos(seed * 5 + i) * 3]); } pts.push([x1, y1]); for (const [cl, w] of [[edge, 3], [col, 1]]) { c.strokeStyle = cl; c.lineWidth = w; c.beginPath(); pts.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.stroke(); } }
+function text(c, s, x, y, col = PAL.white) { c.fillStyle = '#000'; c.font = 'bold 7px monospace'; c.textAlign = 'center'; c.fillText(s, x + 1, y + 1); c.fillStyle = col; c.fillText(s, x, y); }
+function star(c, x, y, s, col = '#fff') { px(c, x - s, y, s * 2 + 1, 1, col); px(c, x, y - s, 1, s * 2 + 1, col); }
+const ease = (t) => 1 - (1 - Math.max(0, Math.min(1, t))) ** 3; const lerp = (a, b, t) => a + (b - a) * t;
+
+// Each concept: name, sub, dur (s), draw(c, t) returning the current beat text.
+const CONCEPTS = [
+  { id: 'schattenreigen', keys: [0.6, 1.05, 2.9, 4], name: '1 · SCHATTENREIGEN (geführte Ninja-Kette)', sub: 'Spezialrune trifft → 6 Takte: Rückwärtssalto-Schnitt · Ansturm · Hochschlag · Luftkombo ×3 · Erdhammer', dur: 5.2, draw(c, t) {
+    scene(c); let hx = 60, hy = GROUND, fx = 96, fy = GROUND, beat = ''; const T = [0, .7, 1.4, 2.0, 2.6, 3.3, 4.2];
+    if (t < T[1]) { const u = t / T[1]; px(c, lerp(62, 92, u), GROUND - 10, 3, 1, '#b0bec5'); beat = 'Kunai trifft → Kette offen'; if (u > .9) star(c, 94, GROUND - 10, 3); }
+    else if (t < T[2]) { const u = (t - T[1]) / (T[2] - T[1]); hx = lerp(60, 82, u); hy = GROUND - Math.sin(u * Math.PI) * 18; fig(c, hx, hy, 1, 0, PAL.hero, PAL.heroDark, -u * Math.PI * 2); slashArc(c, 90, GROUND - 10, 9, -2, 1, '#fff'); beat = 'TIPP 1 · Rückwärtssalto mit Schnitt'; }
+    else if (t < T[3]) { const u = (t - T[2]) / (T[3] - T[2]); hx = lerp(70, 88, ease(u)); for (let i = 0; i < 3; i++) px(c, hx - 6 - i * 5, GROUND - 10, 3, 1, '#ffffff55'); beat = 'TIPP 2 · Ansturm'; }
+    else if (t < T[4]) { const u = (t - T[3]) / (T[4] - T[3]); hx = 88; fy = GROUND - ease(u) * 34; slashArc(c, 92, GROUND - 12, 10, -1.6, .2, '#ffd54f'); beat = 'TIPP 3 · Hochschlag (Launcher)'; }
+    else if (t < T[5]) { const u = (t - T[4]) / (T[5] - T[4]); fy = GROUND - 34; hx = 90; hy = GROUND - 30; const k = Math.floor(u * 3); slashArc(c, 96, fy - 8, 7, k % 2 ? -2 : 0, k % 2 ? 0 : 2, '#fff'); star(c, 96, fy - 8, 2); beat = `TIPP ${4 + k} · Luftkombo ${k + 1}/3`; }
+    else if (t < T[6]) { const u = (t - T[5]) / (T[6] - T[5]); hx = 90; hy = lerp(GROUND - 30, GROUND, ease(u)); fy = lerp(GROUND - 34, GROUND, ease(u)); if (u > .8) { slashArc(c, 96, GROUND, 14 * u, Math.PI, Math.PI * 2, '#ffab40', 2); } beat = 'TIPP 7 · Erdhammer (Abschluss)'; }
+    else { hx = 90; beat = 'Kette vollendet: ×1,6 Schaden für jeden getroffenen Takt'; slashArc(c, 98, GROUND, 18, Math.PI, Math.PI * 2, '#ffab40', 1); }
+    fig(c, fx, fy, -1, 0, PAL.foe, PAL.foeDark); if (!(t >= T[1] && t < T[2])) fig(c, hx, hy, 1, t > T[3] && t < T[4] ? 1 : 0);
+    return beat; } },
+  { id: 'eisspiegel', keys: [0.4, 1.2, 2.5, 4.3], name: '2 · EISSPIEGEL-REIGEN (Mehrfach-Rune, Hämmern)', sub: 'Sechs Spiegel um das Ziel · jeder Tipp: ein Spiegelbild greift aus einem Spiegel an · letzter Tipp: alle zerspringen', dur: 4.6, draw(c, t) {
+    scene(c); const cx = 92, cy = GROUND - 12; const n = 6; const taps = Math.min(n, Math.floor(Math.max(0, t - .6) / .45)); let beat = t < .6 ? 'Spiegel wachsen aus dem Boden' : taps < n ? `TIPP ${taps + 1} · Spiegel ${taps + 1} greift an` : 'LETZTER TIPP · alle Spiegel zerspringen';
+    fig(c, 40, GROUND, 1); fig(c, cx, GROUND, -1, 0, PAL.foe, PAL.foeDark);
+    for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2; const mx = cx + Math.cos(a) * 26; const my = cy + Math.sin(a) * 10; const grow = Math.min(1, t / .6);
+      if (t > 4) { for (let k = 0; k < 4; k++) px(c, mx + Math.cos(k * 1.7) * (t - 4) * 30, my + Math.sin(k * 2.1) * (t - 4) * 20, 2, 2, '#b3e5fc'); continue; }
+      px(c, mx - 3, my - 10 * grow, 6, 10 * grow, i === taps - 1 ? '#ffffff' : '#81d4fa'); px(c, mx - 2, my - 9 * grow, 1, 8 * grow, '#e1f5fe');
+      if (i === taps - 1 && ((t - .6) % .45) < .3) { const u = ((t - .6) % .45) / .3; fig(c, lerp(mx, cx, u), GROUND, Math.cos(a) > 0 ? -1 : 1, 1, '#b3e5fc', '#4fc3f7'); slashArc(c, cx, cy - 2, 8, a + 2, a + 3.5, '#fff'); } }
+    return beat; } },
+  { id: 'spiralkern', keys: [0.3, 1.5, 2.8, 3.5], name: '3 · SPIRALKERN (Halten + Hämmern)', sub: 'Kugel in der Hand · jedes Tippen lässt sie wachsen (max. 5 Stufen) · loslassen = Stoß, der durch Gegner bohrt', dur: 4.2, draw(c, t) {
+    scene(c); const stage = Math.min(5, Math.floor(t / .55)); const r = 2 + stage * 2; const hx = 50; let beat = stage < 5 ? `TIPP ${stage + 1} · Kugel wächst (${stage + 1}/5)` : 'LOSLASSEN · Spiralstoß';
+    let ox = hx + 8, oy = GROUND - 10; if (t > 3.0) { const u = (t - 3) / 1.2; ox = lerp(hx + 8, 140, ease(u)); }
+    fig(c, hx, GROUND, 1, t > 3 ? 1 : 0); fig(c, 110, GROUND - (t > 3.4 ? (t - 3.4) * 30 : 0), -1, 0, PAL.foe, PAL.foeDark);
+    for (let i = 0; i < 3; i++) { const a = t * 9 + i * 2.1; slashArc(c, ox, oy, r + 1, a, a + 1.2, '#81d4fa', 1); }
+    c.fillStyle = '#4fc3f7'; c.beginPath(); c.arc(ox, oy, r, 0, 7); c.fill(); c.fillStyle = '#fff'; c.beginPath(); c.arc(ox, oy, Math.max(1, r / 3), 0, 7); c.fill();
+    return beat; } },
+  { id: 'konstruktpanzer', keys: [0.6, 1.5, 2.6, 3.2], name: '4 · KONSTRUKTPANZER (Rüstung mit Drohnen)', sub: 'Platten setzen sich zusammen · 3 Drohnen kreisen · eine fängt ein Projektil ab · Brust-Strahl als volle Technik', dur: 5, draw(c, t) {
+    scene(c); const hx = 50; let beat = '';
+    fig(c, hx, GROUND, 1); const plates = Math.min(6, Math.floor(t / .2));
+    const P = [[-3, -12, 6, 3], [-3, -9, 6, 3], [-3, -16, 4, 2], [3, -11, 3, 2], [-3, -5, 2, 5], [1, -5, 2, 5]];
+    for (let i = 0; i < plates; i++) { const [x, y, w, h] = P[i]; px(c, hx + x, GROUND + y, w, h, i % 2 ? '#90a4ae' : '#cfd8dc'); px(c, hx + x, GROUND + y, w, 1, '#ffd54f'); }
+    beat = plates < 6 ? 'Rüstung setzt sich zusammen' : '';
+    if (t > 1.3) for (let i = 0; i < 3; i++) { const a = t * 2.4 + i * 2.1; const dx = hx + Math.cos(a) * 16; const dy = GROUND - 22 + Math.sin(a) * 5; px(c, dx - 2, dy - 1, 4, 2, '#b0bec5'); px(c, dx - 1, dy - 2, 2, 1, '#4fc3f7'); }
+    if (t > 1.6 && t < 2.8) { const u = (t - 1.6) / 1.2; const bx = lerp(150, hx + 14, u); px(c, bx, GROUND - 12, 4, 2, '#ff7043'); if (u > .85) { star(c, hx + 14, GROUND - 12, 4, '#4fc3f7'); } beat = 'Drohne fängt das Projektil ab'; }
+    if (t > 3.0) { const u = Math.min(1, (t - 3) / .3); px(c, hx + 3, GROUND - 13, 110 * u, 5, '#4fc3f7'); px(c, hx + 3, GROUND - 12, 110 * u, 3, '#e1f5fe'); beat = 'Volle Technik · Kernstrahl'; fig(c, 120, GROUND, -1, 0, '#fff', '#fff'); }
+    else fig(c, 120, GROUND, -1, 0, PAL.foe, PAL.foeDark);
+    return beat; } },
+  { id: 'nullklinge', keys: [0.8, 1.75, 2.1, 3.2], name: '5 · NULLKLINGE (Anti-Magie-Schwert)', sub: 'Schwarzes Schwert mit dunkler Aura · ein Schnitt löscht Projektile und gegnerische Zauber im Bogen · Teufelsflügel im vollen Zustand', dur: 4.4, draw(c, t) {
+    scene(c); const hx = 60; let beat = 'Feuerball kommt'; const fb = lerp(150, hx + 14, Math.min(1, t / 1.6));
+    fig(c, hx, GROUND, 1); blade(c, hx + 6, GROUND - 11, -0.6 + (t > 1.5 && t < 1.9 ? (t - 1.5) * 6 : 0), 14, '#111', 3); blade(c, hx + 6, GROUND - 11, -0.6 + (t > 1.5 && t < 1.9 ? (t - 1.5) * 6 : 0), 14, '#424242', 1);
+    for (let i = 0; i < 5; i++) { const a = t * 6 + i; px(c, hx + Math.cos(a) * 7, GROUND - 10 + Math.sin(a) * 9, 1, 1, '#212121'); }
+    if (t < 1.6) { c.fillStyle = '#ff7043'; c.beginPath(); c.arc(fb, GROUND - 12, 4, 0, 7); c.fill(); }
+    else if (t < 2.4) { const u = (t - 1.6) / .8; for (let k = 0; k < 8; k++) px(c, hx + 14 + Math.cos(k) * u * 12, GROUND - 12 + Math.sin(k * 1.3) * u * 10, 1, 1, '#9e9e9e'); slashArc(c, hx + 8, GROUND - 12, 10, -1.2, 1.2, '#000', 3); beat = 'SCHNITT · der Zauber zerfällt (Asche)'; }
+    else { beat = 'Voll: Teufelsflügel, die Klinge wird größer'; const k = Math.min(1, (t - 2.4) / .5); px(c, hx - 10, GROUND - 22, 6 * k, 10 * k, '#111'); px(c, hx - 14, GROUND - 26, 4 * k, 6 * k, '#111'); }
+    return beat; } },
+  { id: 'blutfinsternis', keys: [0.4, 1.8, 2.6, 3.9], name: '6 · BLUTFINSTERNIS (Oni-Blut, HP als Munition)', sub: 'HP werden zu Waffen: Blutpistolen (Schüsse kosten HP) · Erwachen: Feuerwelle · niedrige HP = stärkere Schüsse', dur: 4.6, draw(c, t) {
+    scene(c); const hx = 50; let beat = ''; const hp = Math.max(.35, 1 - Math.floor(t / .6) * .08);
+    px(c, 8, 6, 40, 3, '#212121'); px(c, 8, 6, 40 * hp, 3, '#e53935'); text(c, 'HP', 28, 15, '#ff8a80');
+    fig(c, hx, GROUND, 1); if (t < .8) { for (let i = 0; i < 6; i++) px(c, hx + Math.cos(i + t * 5) * 6, GROUND - 10 - t * 10 + i, 1, 1, '#b71c1c'); beat = 'Blut tritt aus der Hand'; }
+    else { px(c, hx + 4, GROUND - 13, 6, 2, '#8e0000'); px(c, hx + 7, GROUND - 11, 2, 3, '#8e0000'); beat = 'Blutpistole · jeder Schuss kostet HP';
+      for (let i = 0; i < 4; i++) { const u = ((t - .8) * 1.6 - i * .25); if (u < 0 || u > 1) continue; px(c, lerp(hx + 10, 150, u), GROUND - 12, 3, 1, '#ff1744'); } }
+    if (t > 3.4) { const u = (t - 3.4) / 1.2; slashArc(c, hx, GROUND, 40 * u, Math.PI, Math.PI * 2, '#ff6d00', 2); beat = 'Erwachen: Feuerwelle (stärker je weniger HP)'; }
+    fig(c, 120, GROUND, -1, 0, PAL.foe, PAL.foeDark); return beat; } },
+  { id: 'waechtergeist', keys: [0.3, 1.5, 2.8, 3.8], name: '7 · WÄCHTERGEIST-HAGEL (Geist hinter dem Helden, Hämmern)', sub: 'Ein Schutzgeist erscheint hinter dem Helden · schnelles Tippen = Schlaghagel (mehr Tipps, mehr Treffer) · Abschluss: Wurf', dur: 4.4, draw(c, t) {
+    scene(c); const hx = 54; let beat = '';
+    const k = Math.min(1, t / .5); fig(c, hx - 4, GROUND - 4, 1, 0, '#7e57c2', '#4527a0'); c.globalAlpha = 1; fig(c, hx, GROUND, 1);
+    if (t > .6 && t < 3.4) { const n = Math.floor((t - .6) * 9); for (let i = 0; i < 4; i++) { const a = (n + i) * 1.7; px(c, hx + 10 + (i * 5) % 12, GROUND - 16 + (a % 9), 3, 2, '#b39ddb'); } star(c, 100, GROUND - 12, 2 + (n % 2)); beat = `HÄMMERN · ${Math.min(30, n)} Treffer`; }
+    else if (t >= 3.4) { beat = 'Abschluss · der Geist schleudert den Gegner'; }
+    fig(c, 100 + (t > 3.4 ? (t - 3.4) * 50 : 0), GROUND - (t > 3.4 ? Math.sin((t - 3.4) * 3) * 16 : 0), -1, 0, PAL.foe, PAL.foeDark); return beat; } },
+  { id: 'abzweigungen', keys: [1.3, 2.8, 4.3, 5.8], name: '8 · KOMBO-ABZWEIGUNGEN (manuell, ergänzend)', sub: 'Nach Angriff n ein Aufladen = eigene Technik (wie die „Charge“-Abzweige klassischer Musou-Spiele) · Finisher-Fenster bleibt', dur: 6, draw(c, t) {
+    scene(c); const rows = [['A1', '→ HALTEN', 'Hochschlag'], ['A1 A2', '→ HALTEN', 'Rundumfeger'], ['A1 A2 A3', '→ HALTEN', 'Schockwelle'], ['A1 A2 A3', '→ TAKT', 'FINISHER']];
+    const k = Math.floor(t / 1.5) % 4; rows.forEach((r, i) => { const y = 14 + i * 14; const on = i === k; text(c, r[0], 28, y, on ? '#ffd54f' : '#9e9e9e'); text(c, r[1], 72, y, on ? '#69f0ae' : '#757575'); text(c, r[2], 124, y, on ? '#ffffff' : '#757575'); });
+    const u = (t % 1.5) / 1.5; fig(c, 40, GROUND, 1, u > .6 ? 1 : 0); fig(c, 70, GROUND - (k === 0 && u > .6 ? (u - .6) * 50 : 0), -1, 0, PAL.foe, PAL.foeDark);
+    if (u > .6) { if (k === 0) slashArc(c, 48, GROUND - 10, 9, -1.8, .2, '#ffd54f'); if (k === 1) slashArc(c, 40, GROUND - 6, 16, 0, Math.PI * 2, '#ffffff', 1); if (k === 2) slashArc(c, 48, GROUND, 30 * (u - .6) * 2.5, Math.PI, Math.PI * 2, '#81d4fa'); if (k === 3) { star(c, 46, GROUND - 14, 4, '#ffd740'); } }
+    return `Pfad ${k + 1}: ${rows[k].join(' ')}`; } },
+  { id: 'hexenzeit', keys: [0.6, 1.15, 1.8, 2.6], name: '9 · ZEITSPALT (perfektes Ausweichen verlangsamt)', sub: 'Ausweichen im letzten Moment → die Welt wird 2 s langsam, nur der Held nicht (Kombo-Fenster) · in PvP nur der Gegner im Radius', dur: 4.2, draw(c, t) {
+    scene(c); const slow = t > 1.2 && t < 3.2; let beat = slow ? 'ZEITSPALT · Welt verlangsamt, Gegenangriff' : t < 1.2 ? 'Gegner greift an · Ausweichen im letzten Moment' : '';
+    if (slow) { c.fillStyle = '#4527a033'; c.fillRect(0, 0, W, H); for (let i = 0; i < 8; i++) px(c, (i * 23 + t * 4) % W, 10 + (i * 13) % 50, 1, 4, '#b39ddb'); }
+    const fx = t < 1.2 ? lerp(120, 70, t / 1.2) : 70; fig(c, fx, GROUND, -1, 1, PAL.foe, PAL.foeDark);
+    const hx = t < 1.1 ? 60 : t < 1.2 ? lerp(60, 44, (t - 1.1) * 10) : slow ? lerp(44, 78, (t - 1.2) / 2) : 78; fig(c, hx, GROUND, 1, 1, slow ? '#e1bee7' : PAL.hero); if (t > 1.1 && t < 1.3) fig(c, 60, GROUND, 1, 0, '#ffffff55', '#ffffff55');
+    if (slow && ((t * 6) % 1) < .4) slashArc(c, 74, GROUND - 10, 9, -1.5, 1.5, '#fff'); return beat; } },
+  { id: 'seilmanoever', keys: [0.3, 0.9, 1.7, 2.6], name: '10 · SEILMANÖVER (Haken + Schwung)', sub: 'Haken schießen (an Gegner oder Turm) → heranziehen und Schwungtritt · zweiter Tipp: Abstoßen in die Luft für Luftkombos', dur: 4, draw(c, t) {
+    scene(c); px(c, 128, 20, 8, GROUND - 20, '#5d4037'); px(c, 126, 18, 12, 3, '#795548'); let beat = '';
+    const hook = Math.min(1, t / .5); let hx = 30, hy = GROUND;
+    if (t < 1.4) { c.strokeStyle = '#b0bec5'; c.lineWidth = 1; c.beginPath(); c.moveTo(34, GROUND - 12); c.lineTo(lerp(34, 128, hook), lerp(GROUND - 12, 26, hook)); c.stroke(); beat = 'TIPP 1 · Haken in den Turm'; if (t > .5) { const u = (t - .5) / .9; hx = lerp(30, 110, ease(u)); hy = GROUND - Math.sin(u * Math.PI) * 30; } }
+    else { const u = Math.min(1, (t - 1.4) / 1.2); hx = lerp(110, 90, u); hy = lerp(GROUND - 10, GROUND - 46, ease(u)); beat = 'TIPP 2 · Abstoßen · Luftkombo'; if (u > .5) slashArc(c, hx + 6, hy - 8, 8, -1, 1, '#fff'); }
+    fig(c, hx, hy, 1, 1); fig(c, 96, GROUND - (t > 2 ? Math.min(40, (t - 2) * 60) : 0), -1, 0, PAL.foe, PAL.foeDark); return beat; } }
+];
+
+const grid = document.getElementById('grid'); const cards = [];
+for (const cp of CONCEPTS) {
+  const card = document.createElement('div'); card.className = 'card'; card.innerHTML = `<h2>${cp.name}</h2><small>${cp.sub}</small>`;
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H; cv.id = 'cv-' + cp.id; card.appendChild(cv);
+  const beat = document.createElement('div'); beat.className = 'beat'; card.appendChild(beat); grid.appendChild(card); cards.push({ cp, c: cv.getContext('2d'), beat });
+}
+// window.__frameAt(id, t): draw one concept at time t (for the exported strips).
+window.__frameAt = (id, t) => { const k = cards.find((x) => x.cp.id === id); if (!k) return ''; k.c.imageSmoothingEnabled = false; const b = k.cp.draw(k.c, t); k.beat.textContent = b; return b; };
+window.__pause = false;
+const t0 = performance.now();
+(function loop() { if (!window.__pause) { const t = (performance.now() - t0) / 1000; for (const k of cards) { const b = k.cp.draw(k.c, t % k.cp.dur); k.beat.textContent = b; } } requestAnimationFrame(loop); })();
+window.__concepts = CONCEPTS.map((c) => ({ id: c.id, dur: c.dur, name: c.name, keys: c.keys }));
+</script>
+</body>
+</html>
