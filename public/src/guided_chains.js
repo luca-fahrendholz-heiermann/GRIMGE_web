@@ -74,6 +74,8 @@ export class GuidedChain {
     for (const g of this.ghosts) g.t += dt; this.ghosts = this.ghosts.filter((g) => g.t < .3);
     for (const s of this.slashes) s.t += dt; this.slashes = this.slashes.filter((s) => s.t < .22);
     if (!alive(t) || !p.isAlive) { this.end(alive(t) ? 'down' : 'done'); return; }
+    // Hit in a window (the Wizard is not invulnerable there): the chain breaks.
+    if (p.state === 'hurt') { this.end('interrupted'); return; }
     // The Wizard is held by the chain: no own movement, no gravity (getEffectiveGravity).
     p.vx = 0; p.vz = 0; p.vElevation = 0; p.canAttack = false;
     p.stateTimer = Math.max(p.stateTimer ?? 0, .05);

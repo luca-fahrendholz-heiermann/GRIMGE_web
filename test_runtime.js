@@ -4320,6 +4320,8 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   setup(); { foeAt(470); cast(); for (let i = 0; i < 30 && !P.guidedChain; i++) step(1); tapWhenOpen(); const ch = P.guidedChain; for (let i = 0; i < 40 && ch.t < .3; i++) step(1); P.executeAttack(neutral, 'normal'); for (let i = 0; i < 10; i++) step(1);
     assert(ch.index >= 2, 'A press late in a beat is remembered and starts the next beat (no stutter)'); P.guidedChain?.end('test'); }
   setup(); { cast(); step(40); assert(!P.guidedChain, 'Without a hit no chain opens'); }
+  setup(); { const m = foeAt(470); cast(); for (let i = 0; i < 30 && !P.guidedChain; i++) step(1); tapWhenOpen(); for (let i = 0; i < 60 && P.guidedChain?.phase !== 'window'; i++) step(1); P.invulnerableTimer = 0; const prev = STATUS.setStatusSource({ team: 'red', statusElements: [], castBy: m }); try { P.takeDamage(15, -120, 0, .3, false, 'melee'); } finally { STATUS.setStatusSource(prev); } step(2);
+    assert(!P.guidedChain && P.lastChainResult?.reason === 'interrupted', 'A hit taken in a beat window breaks the chain (fair: no invulnerability between beats)'); }
   setup(); { foeAt(470); cast(); for (let i = 0; i < 30 && !P.guidedChain; i++) step(1); let depth = 0; let bad = 0;
     const ctxC = new Proxy({}, { get: (tt, k) => k === 'save' ? () => { depth++; } : k === 'restore' ? () => { depth--; } : k === 'arc' ? (x, y, r) => { if (r < 0) bad++; } : k === 'canvas' ? undefined : k === 'getTransform' ? () => ({ a: 1 }) : k === 'measureText' ? () => ({ width: 10 }) : () => {}, set: () => true });
     for (let b = 0; b < 4; b++) { tapWhenOpen(); for (let i = 0; i < 8; i++) { step(2); P.guidedChain?.render(ctxC, P.y); for (const sp of spells.activeSpells) sp.render?.(ctxC); } }
