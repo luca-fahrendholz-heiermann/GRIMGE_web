@@ -352,7 +352,7 @@ function renderInspector(missing = []) {
     $('c-reset').onclick = () => { c.move = { dx: 0, dy: 0 }; c.size = null; c.hidden = false; c.function = null; c.comment = ''; applyChange(c); pruneScreen(sc); autosave(); renderInspector(); drawOverlay(); };
     bindFunctionEditor(c);
   } else {
-    const a = sc.added.find((x) => x.id === selected.id); if (!a) { selected = null; renderInspector(); return; }
+    const a = sc.added.find((x) => x.id === selected.id); if (!a) { clearSelection(); renderInspector(); return; }
     box.innerHTML = `<div class="code">${esc(a.id)}</div>
       <label>Art</label><select id="a-kind">${['button', 'text', 'panel', 'icon'].map((k) => `<option ${a.kind === k ? 'selected' : ''}>${k}</option>`).join('')}</select>
       <label>Text</label><input id="a-text" value="${esc(a.text)}">
@@ -367,7 +367,7 @@ function renderInspector(missing = []) {
     const upd = () => { a.kind = $('a-kind').value; a.text = $('a-text').value; a.rect = { x: (+$('a-x').value || 0) / W, y: (+$('a-y').value || 0) / H, w: Math.max(4, +$('a-w').value || 0) / W, h: Math.max(4, +$('a-h').value || 0) / H }; a.style = { bg: $('a-bg').value, color: $('a-color').value }; autosave(); drawOverlay(); };
     for (const id of ['a-kind', 'a-x', 'a-y', 'a-w', 'a-h', 'a-bg', 'a-color']) $(id).onchange = upd; $('a-text').oninput = upd;
     $('a-comment').oninput = (e) => { a.comment = e.target.value; autosave(); };
-    $('a-del').onclick = () => { sc.added = sc.added.filter((x) => x !== a); selected = null; autosave(); renderInspector(); drawOverlay(); };
+    $('a-del').onclick = () => { sc.added = sc.added.filter((x) => x !== a); clearSelection(); autosave(); renderInspector(); drawOverlay(); };
     bindFunctionEditor(a);
   }
 }
@@ -416,7 +416,7 @@ $('save').onclick = () => save(); $('export').onclick = () => download();
 $('import').onclick = () => $('import-file').click();
 $('import-file').onchange = async (e) => { const f = e.target.files?.[0]; if (!f) return; try { spec = sanitizeSpec(JSON.parse(await f.text())); autosave(); openScreen(current); status('importiert'); } catch (err) { status('Import fehlgeschlagen: ' + err.message); } };
 $('new-screen').onclick = async () => { const s = addCustomScreen(spec); autosave(); await openScreen(s.id); $('sc-name')?.select(); };
-for (const btn of document.querySelectorAll('[data-add]')) btn.onclick = () => { const s = ensureScreen(spec, current, screenMeta(current)); const a = addElement(s, btn.dataset.add); selected = { kind: 'added', id: a.id }; autosave(); drawOverlay(); renderInspector(); };
+for (const btn of document.querySelectorAll('[data-add]')) btn.onclick = () => { const s = ensureScreen(spec, current, screenMeta(current)); const a = addElement(s, btn.dataset.add); selected = { kind: 'added', id: a.id }; multi = [selected]; autosave(); drawOverlay(); renderInspector(); };
 $('viewport').innerHTML = Object.entries(VIEWPORTS).map(([k, v]) => `<option value="${k}">${v.label}</option>`).join('');
 $('viewport').onchange = (e) => { preset = e.target.value; fit(); setTimeout(() => openScreen(current), 500); };
 window.addEventListener('resize', () => { fit(); drawOverlay(); });
