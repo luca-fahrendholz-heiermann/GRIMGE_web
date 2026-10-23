@@ -2804,6 +2804,13 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
         for (const st of [{ act: 0, guardK: 0 }, { act: 1, guardK: 0 }, { act: 0, guardK: 1 }]) { Object.assign(P.buffForm, st); for (const layer of ['back', 'front']) buff.renderBuffManifestation(exact, P, P.y, layer); }
       } catch (e) { bad.push(arch + ': ' + e.message); }
     }
+    // In time with the swing; slow weapons echo harder.
+    { const sAt = (st, total) => AR.bankaiStrike({ state: 'attack1', stateTimer: st, _weaponSwingTime: total });
+      const fast = sAt(.27, .3); const slow = sAt(.54, .6); const early = sAt(.29, .3); const late = sAt(.02, .3);
+      P.equipClassWeapon('scythe'); spells.clearRuntime(); buff.endBuffForm(P); spells.cast(P, spells.resolveSpell([{ id: 'buff_A04' }]), game); P.buffForm.age = 2;
+      dummy.homeX = dummy.x = P.x + 50; dummy.homeZ = dummy.z = P.z; dummy.hp = dummy.maxHp; P._weaponSwingTime = .3; P.triggerMeleeHitbox(20, 0, 0, .1, false, {}); const e1 = P.lastBankaiEcho;
+      P._weaponSwingTime = .6; P.triggerMeleeHitbox(20, 0, 0, .1, false, {}); const e2 = P.lastBankaiEcho;
+      assert(Math.abs(fast - slow) < .01 && early < .5 && late < .2 && sAt(.3 * .85, .3) > .99 && AR.bankaiStrike({ state: 'idle' }) === null && e2 > e1 * 1.8, 'Bankai strikes in the beat of the swing (scaled to the weapon swing time); slow weapons echo harder (' + Math.round(e1) + ' / ' + Math.round(e2) + ')'); buff.endBuffForm(P); }
     P.equipClassWeapon('katana'); const swarm = FMS.A04.forward.short.name;
     assert(!bad.length && names.size >= 58 && swarm === 'BLÜTENSTROM', 'Bankai arsenals: every weapon family has its own formation and six own techniques that hit and render (katana keeps the petal swarm) ' + bad.slice(0, 4).join(' | ') + ' names ' + names.size + ' ' + swarm);
     P.equipClassWeapon(null); }

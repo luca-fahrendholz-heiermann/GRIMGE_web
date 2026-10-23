@@ -395,21 +395,29 @@ function formation(ctx, s, pose, C, layer, kind) {
   const f = s.f; const t = pose.t; const [cx, cy] = s.chest; const L = C.L;
   const busy = ['forward', 'up', 'down'].some((d) => { const q = techOf(pose, d); return q.s > .05 || q.f > .05; });
   const al = pose.fade * (busy ? .35 : 1); if (al <= .01) return;
-  const act = clamp01(pose.act ?? 0); const g = clamp01(pose.guardK ?? 0); const bob = Math.sin(t * 2.4) * 2;
+  // In time with the Wizard's own swing (user, 23 Oct 2026: the scythe did not swing in the beat of the attack):
+  // the hit lands at the start of the swing, so the arsenal strikes at once and returns over the rest of the
+  // weapon's swing time — slow weapons swing their arsenal slower (and their echo hits harder, entities.js).
+  const act = bankaiStrike(pose.player) ?? clamp01(pose.act ?? 0); const g = clamp01(pose.guardK ?? 0); const bob = Math.sin(t * 2.4) * 2;
   const front = layer === 'front'; const guarding = g > .3;
   const draw = (x, y, a, size, seed, item = C.item) => item(ctx, snap(x), snap(y), a, size, C.mat, al, C.seed + seed, C.wid);
   switch (kind) {
     case 'back': {
       if (guarding) { if (front) draw(cx + f * 24, cy - 4, -Math.PI / 2, L * 1.4, 0); break; }
-      if (!front) { const a = mir(lerp(-1.25, -.35, act), f); draw(cx - f * 10 + Math.cos(a) * L * .55, cy - 4 + bob + Math.sin(a) * L * .55, a, L * 1.4, 0); }
+      if (!front) {
+        // Rest: raised over the shoulder; strike: a full arc down in front (scythe / axe / hammer).
+        const a = mir(lerp(-1.25, .85, act), f); const R = L * .55;
+        if (act > .2) line(ctx, Array.from({ length: 7 }, (_, i) => { const q = mir(lerp(-1.25, lerp(-1.25, .85, act), i / 6), f); return [cx - f * 10 + Math.cos(q) * L * 1.9, cy - 4 + Math.sin(q) * L * 1.9]; }), C.mat.edge, 3, al * act);
+        draw(cx - f * 10 + Math.cos(a) * R, cy - 4 + bob + Math.sin(a) * R, a, L * 1.4, 0);
+      }
       break;
     }
     case 'fan': {
       for (let i = 0; i < 6; i++) {
         if (guarding) { if (front) draw(cx + f * 26, cy - 34 + i * 12, mir(0, f), L, i); continue; }
         if (front) continue;
-        const a = mir(lerp(-2.7, -.45, i / 5) * (1 - act * .25) + Math.sin(t * 2 + i) * .04, f);
-        draw(cx - f * 8 + Math.cos(a) * L * 1.05, cy - 12 + bob + Math.sin(a) * L * .9, a, L * .9, i);
+        const a = mir(lerp(lerp(-2.7, -.45, i / 5), (i - 2.5) * .08, act) + Math.sin(t * 2 + i) * .04, f);
+        draw(cx - f * 8 + f * act * 34 + Math.cos(a) * L * 1.05, cy - 12 + bob + Math.sin(a) * L * .9, a, L * .9, i);
       }
       break;
     }
@@ -417,8 +425,8 @@ function formation(ctx, s, pose, C, layer, kind) {
       for (let i = 0; i < 5; i++) {
         if (guarding) { if (front) draw(cx + f * (20 + i * 4), cy - 6, -Math.PI / 2 + f * (i - 2) * .12, L * 1.1, i); continue; }
         if (front) continue;
-        const pa = lerp(-2.6, -.54, i / 4); const lean = act * f * .5;
-        draw(cx - f * 6 + Math.cos(pa) * 32, cy - 30 + Math.sin(pa) * 22 + Math.sin(t * 2 + i) * 2, Math.PI / 2 - lean, L * 1.05, i);
+        const pa = lerp(-2.6, -.54, i / 4); const lean = act * f * 1.3;
+        draw(cx - f * 6 + f * act * 26 + Math.cos(pa) * 32, cy - 30 + act * 14 + Math.sin(pa) * 22 + Math.sin(t * 2 + i) * 2, Math.PI / 2 - lean, L * 1.05, i);
       }
       break;
     }
@@ -426,7 +434,7 @@ function formation(ctx, s, pose, C, layer, kind) {
       for (let i = 0; i < 4; i++) {
         if (guarding) { if (front) draw(cx + f * 24, cy - 26 + i * 15, 0, L * .95, i); continue; }
         const a = i / 4 * TAU + t * 1.4; const near = Math.sin(a) > 0; if (near !== front) continue;
-        draw(cx + Math.cos(a) * 34 + f * act * 10, cy + 6 + Math.sin(a) * 9 + bob, 0, L, i);
+        draw(cx + Math.cos(a) * 34 * (1 - act * .5) + f * act * 30, cy + 6 + Math.sin(a) * 9 + bob, 0, L, i);
       }
       break;
     }
@@ -434,7 +442,7 @@ function formation(ctx, s, pose, C, layer, kind) {
       for (let w = 0; w < 2; w++) for (let j = 0; j < 5; j++) {
         if (guarding) { if (front) draw(cx + f * 22, cy - 14 + (w * 5 + j) * 4, mir((w ? .5 : -.5), f), L * 1.2, w * 5 + j); continue; }
         if (front) continue;
-        const base = w ? lerp(2.2, 2.9, j / 4) : lerp(-2.0, -2.9, j / 4); const a = mir(base + Math.sin(t * 6 + j) * .08 + act * (w ? -.4 : .4), f);
+        const base = w ? lerp(2.2, 2.9, j / 4) : lerp(-2.0, -2.9, j / 4); const a = mir(lerp(base, (w ? .25 : -.25) + (j - 2) * .06, act) + Math.sin(t * 6 + j) * .08, f);
         draw(cx - f * 6 + Math.cos(a) * (12 + j * 6), cy - 8 + Math.sin(a) * (10 + j * 5), a, L * 1.1, w * 5 + j);
       }
       break;
@@ -446,7 +454,7 @@ function formation(ctx, s, pose, C, layer, kind) {
       break;
     }
     case 'sides': {
-      const back = [cx - f * 24, cy - 4 + bob]; const fr = [cx + f * (26 + act * 30), cy + 4 - bob];
+      const back = [cx - f * 24, cy - 4 + bob]; const fr = [cx + f * (26 + act * 46), cy + 4 - bob];
       if (guarding) { if (front) { draw(cx + f * 22, cy - 14, mir(-.5, f), L * 1.2, 0); draw(cx + f * 26, cy + 6, mir(.4, f), L * 1.2, 1); } break; }
       if (front) draw(fr[0], fr[1], mir(0, f), L * 1.2, 1); else draw(back[0], back[1], mir(0, f), L * 1.2, 0);
       if (front) specks(ctx, [0, 1, 2, 3].map((i) => [fr[0] - f * (10 + i * 5), fr[1] - 6 + Math.sin(t * 9 + i) * 4]), C.mat.spark, al * .8, 2);
@@ -455,12 +463,12 @@ function formation(ctx, s, pose, C, layer, kind) {
     case 'circles': {
       if (guarding) { if (front) draw(cx + f * 26, cy - 6, t * 3, L * 1.3, 0); break; }
       if (front) break;
-      draw(cx - f * 10, cy - 8 + bob, t * 1.2, L * 1.7, 0); draw(cx - f * 10, cy - 8 + bob, -t * 2, L * .95, 1);
+      draw(cx - f * 10 + f * act * 18, cy - 8 + bob, t * 1.2 + act * 2, L * (1.7 + act * .3), 0); draw(cx - f * 10 + f * act * 18, cy - 8 + bob, -t * 2 - act * 3, L * .95, 1);
       break;
     }
     case 'wheel': {
       for (let i = 0; i < 10; i++) {
-        const a = i / 10 * TAU + t * 1.5;
+        const a = i / 10 * TAU + t * 1.5 + act * 2.5;
         if (guarding) { if (front) draw(cx + f * 24, cy - 30 + i * 6, mir(0, f), L, i); continue; }
         if (front) continue;
         draw(cx - f * 12 + Math.cos(a) * 28, cy - 10 + Math.sin(a) * 28 + bob, a + Math.PI / 2, L, i);
@@ -469,6 +477,13 @@ function formation(ctx, s, pose, C, layer, kind) {
     }
     default: break;
   }
+}
+// Strike curve of the Wizard's current swing (0…1), or null when it does not swing: up within the
+// first 15 % (the hit is at the start), then back over the rest of the weapon's own swing time.
+export function bankaiStrike(p) {
+  if (!p || !/^(attack[123]|heavyStrike|uppercut)$/.test(p.state ?? '') || !(p._weaponSwingTime > 0)) return null;
+  const k = clamp01(1 - (p.stateTimer ?? 0) / p._weaponSwingTime);
+  return k < .15 ? k / .15 : 1 - ease((k - .15) / .85);
 }
 // The weapon's grip stays in the hand, glowing — the weapon itself has become the arsenal.
 function grip(ctx, s, pose, C) {

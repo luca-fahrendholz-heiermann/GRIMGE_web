@@ -1759,6 +1759,12 @@ export class Player extends GroundEntity {
     setHitContext(null);
     setStatusSource(prevStatusSource);
     if (shrine && hitAny) shrine.n--;
+    // Bankai (A04): the unleashed arsenal strikes with every landed swing — an echo hit that grows with the
+    // weapon's swing time (slow, heavy weapons: a slower arsenal swing, but a harder echo).
+    if (this.buffForm?.id === 'A04' && this.buffForm.timer > 0) {
+      const echo = dmg * .22 * Math.max(.6, Math.min(2, (this._weaponSwingTime ?? .3) / .3));
+      for (const h of sigHits) if (!h.blocked && !h.target?.isProp && !h.target?.isDead) { h.target.takeDamage?.(echo, 0, 0, .05, false, 'spell'); this.lastBankaiEcho = echo; }
+    }
     // Landed hits on fighters give a little mana back (combos feed skills; blocked hits and props do not).
     { const landed = sigHits.filter((h) => !h.blocked && !h.target?.isProp).length; if (landed && Number.isFinite(this.mp)) this.mp = Math.min(this.maxMp, this.mp + (Math.min(landed, MANA_BALANCE.onHitMax) * MANA_BALANCE.onHit + (isFinisher ? MANA_BALANCE.onFinisher : 0)) * (this.manaOnHitMult ?? 1)); }
     // Class weapon practice for the Bankai unlock route (the player's own swings only).
