@@ -4528,7 +4528,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
     const hp1 = boss.hp; prev = setStatusSource({ team: 'blue', statusElements: ['aqua'], castBy: P }); boss.takeDamage(100, 0, 0, 0, false, 'spell'); setStatusSource(prev); const water = hp1 - boss.hp;
     assert(fire >= 150 && water <= 45, 'The Treant burns (fire ×1.6) and shrugs off water (×0.4)'); }
   { let bad = ''; try { P.x = boss.x - 200; for (let i = 0; i < 240; i++) { boss.update(1 / 60, game, game.battlefield); ENV.update(1 / 60, game, []); } boss.render({ save() {}, restore() {}, fillRect() {}, beginPath() {}, ellipse() {}, fill() {}, fillText() {}, set fillStyle(v) {}, set globalAlpha(v) {}, set font(v) {}, set textAlign(v) {} }); } catch (e) { bad = e.message; }
-    assert(!bad && ENV.sceneFx.some((f) => f.constructor.name === 'ThornLine') || ENV.props.some((o) => o.kind === 'sapling' || (o.kind === 'plant' && o.stage === 1)), 'The Treant fights: thorn lines along the lane / saplings that heal it ' + bad); }
+    assert(!bad && (ENV.sceneFx.some((f) => f.constructor.name === 'ThornLine') || ENV.props.some((o) => o.kind === 'sapling' || (o.kind === 'plant' && o.stage === 1))), 'The Treant fights: thorn lines along the lane / saplings that heal it ' + bad); }
   boss.hp = 0; boss.isDead = true; const unlocked0 = game.profile.lateUnlocks?.size ?? 0; game.updateMode(1 / 60);
   assert(s.bossDefeated && (game.modeState.secretDrops?.length ?? 0) >= 0 && ENV.sceneFx.some((f) => f.isSecretPortal && f.exit) && ENV.props.some((o) => o.kind === 'chest' && o.lock === 'natura'), 'Beaten: the late rune drops, a nature-locked chest and the way back appear');
   void unlocked0;

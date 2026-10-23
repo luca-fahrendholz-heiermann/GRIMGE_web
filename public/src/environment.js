@@ -30,6 +30,7 @@ import { SCENE_KINDS, isSceneKind, resetSignals } from './scene_objects.js';
 import './scene_pack_elements.js'; // element objects (vine, mushrooms, kegs, pylons …)
 import './scene_pack_puzzles.js'; // traversal / puzzle pieces (lianas, geysers, gates, plates …)
 import { renderSceneHint } from './scene_systems.js';
+import { BUFF_ZONES } from './zone_buffs.js';
 
 export const GROUND_EFFECTS = Object.freeze({
   ice: Object.freeze({ life: 7, slow: null, slippery: true }),
@@ -134,7 +135,7 @@ export class EnvironmentSystem {
   }
 
   clear() {
-    this.effects = []; this.props = []; this.terrain = []; this.transient = []; this.sceneFx = []; this.map = null; resetSignals();
+    this.effects = []; this.props = []; this.terrain = []; this.transient = []; this.sceneFx = []; this.map = null; resetSignals(); for (const z of [...BUFF_ZONES]) if (z.isSceneZone) BUFF_ZONES.delete(z); // shrine zones end with the match
     this.tickTimer = 0; this.ambientTimer = 7; this.gustTimer = 11; this.strike = null;
   }
 

@@ -516,7 +516,7 @@ class Shrine extends Fixture {
   react(el) { if (el === this.element && (this.exposure[el] ?? 0) >= 15 && !this.zone) { this.exposure[el] = 0; this.zoneTeam = this.lastSourceTeam ?? 'blue'; this.makeZone = true; } }
   update(dt) {
     this.cd = Math.max(0, this.cd - dt);
-    if (this.makeZone) { this.makeZone = false; this.zone = { team: this.zoneTeam, x: this.x, z: this.z, radius: 100, dmg: 1.2, move: 1.1, isFinished: false, until: this.age + 8 }; BUFF_ZONES.add(this.zone); combat.spawnShockwave(this.x, this.y - 10, 100, LOCK_COLORS[this.element]); }
+    if (this.makeZone) { this.makeZone = false; this.zone = { team: this.zoneTeam, x: this.x, z: this.z, radius: 100, dmg: 1.2, move: 1.1, isFinished: false, until: this.age + 8, isSceneZone: true }; BUFF_ZONES.add(this.zone); combat.spawnShockwave(this.x, this.y - 10, 100, LOCK_COLORS[this.element]); }
     if (this.zone && this.age > this.zone.until) { this.zone.isFinished = true; BUFF_ZONES.delete(this.zone); this.zone = null; }
   }
   onBreak() { if (this.zone) BUFF_ZONES.delete(this.zone); }
