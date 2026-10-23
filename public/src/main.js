@@ -7,6 +7,7 @@ import { spells, RUNE_GRADE_PROFILES } from './spells.js';
 import { Player, EnemyChampion, Minion, TrainingDummy } from './entities.js';
 import { isHidden } from './scene_objects.js';
 import { sceneDev } from './scene_systems.js';
+import { setupDungeonSecrets, updateDungeonSecret, renderSecretTint } from './dungeon_secrets.js';
 globalThis.__GrimgeMinion = Minion; // scene objects (a grave) raise minions without importing entities
 import { Battlefield } from './battlefield.js';
 import { ui } from './ui.js';
@@ -1922,6 +1923,8 @@ export class GameWorld {
       environment.addProp('barrel', bounds.left + 980, .82);
       environment.addProp('crate', bounds.left + 1500, .5);
     }
+    // Dungeon secrets (dungeon_secrets.js): room 2 hides the withered grove.
+    setupDungeonSecrets(this, stage, bounds);
     state.dungeonRoom = {
       ...bounds, cleared: false,
       encounters: (config.encounters ?? []).map((encounter) => ({ ...encounter, spawned: false }))
@@ -2230,6 +2233,7 @@ export class GameWorld {
     if (this.activeMode.id === 'dungeon') {
       const targetCamX = this.dungeonCameraTarget();
       state.dungeonCameraX += (targetCamX - state.dungeonCameraX) * Math.min(1, 3.5 * dt);
+      if (state.secret) { updateDungeonSecret(this); return; } // inside a secret room: no room / stage logic
       this.updateDungeonRescue();
       if (state.stage === 0) {
         // The opening scout shares room 1; its encounters start right away.
@@ -3007,6 +3011,7 @@ export class GameWorld {
     ctx.save();
     ctx.translate(0, worldY);
     this.battlefield.renderBackground(ctx, cam, this.logicalWidth, this.logicalHeight, viewW, this.cameraOffsetX, this.modeState);
+    renderSecretTint(ctx, this); // a secret room has its own ambience
     ctx.restore();
 
     // 2. World Space Layer (with Camera Shake + Dungeon Scroll)

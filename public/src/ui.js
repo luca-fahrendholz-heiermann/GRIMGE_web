@@ -874,7 +874,7 @@ export class UIManager {
       + row('Abwehr', 'Blocken (vorne), perfekter Block = Konter · Rückwärts-Wischen = Backdash (+1 Konterschuss) · nach 7 Treffern in Folge: KOMBO-BRUCH')
       + row('Geführte Kette', 'S88 Schattenreigen: Kunai trifft → 7 Takte: Salto · Ansturm (→) · Hochschlag (↑) · 3 Luftschnitte · Erdhammer (↓) — Tippen / Wischen im Fenster')
       + row('Bankai (A04)', ((n) => `${bankaiStyleOf(P).name} — Aufladen → ${n[0]} / voll ${n[1]} · ↑ ${n[2]} / voll ${n[3]} · ↓ ${n[4]} / voll ${n[5]}`)(bankaiMoveNames(P) ?? ['BLÜTENSTROM', 'TAUSEND KLINGEN', 'BLÜTENWIRBEL', 'KLINGENSÄULE', 'KLINGENTEPPICH', 'BLÜTENGRAB']))
-      + row('Szenenobjekte', 'Setzling + Wasser/Natur → Jungbaum → Baum (trägt Heilfrucht) · Feuer: brennt, steckt Boden/Nachbarn an, Wasser löscht · Frost: friert ein (spröde) · Blitz spaltet den Baum · gefällt fällt er in Schlagrichtung → Baumstamm · Felsbrocken: schwerer Schlag/Wind = rollt, Feuer = Glutfels, Wasser darauf = Riss · Natur-Zauber legen zufällig Setzlinge ab');
+      + row('Szenenobjekte', 'Setzling + Wasser/Natur → Jungbaum → Baum (trägt Heilfrucht) · Feuer: brennt, steckt Boden/Nachbarn an, Wasser löscht · Frost: friert ein (spröde) · Blitz spaltet den Baum · gefällt fällt er in Schlagrichtung → Baumstamm · Felsbrocken: schwerer Schlag/Wind = rollt, Feuer = Glutfels, Wasser darauf = Riss · Natur-Zauber legen zufällig Setzlinge ab (Licht: Laterne, Erde: Stalagmit) · Werfen: Block + runter auf Fels/Fass/Eiszapfen · Trainingskarten RÄTSELHOF / ELEMENTGARTEN / BURGTOR (alle Objekte mit Labels) · Dungeon-Geheimnis Raum 2: verdorrter Hain → Dornenhain');
   }
 
   renderGrimoireGuides() {

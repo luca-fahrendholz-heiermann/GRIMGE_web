@@ -165,7 +165,7 @@ export class Plant extends SceneObject {
   }
   setStage(i) {
     const st = PLANT_STAGES[i]; const k = this.stage < 0 ? 1 : this.hp / this.maxHp;
-    this.stage = i; this.maxHp = st.hp; this.hp = Math.max(1, Math.round(st.hp * Math.max(k, .6)));
+    this.stage = i; this.maxHp = Math.round(st.hp * (this.hpMult ?? 1)); this.hp = Math.max(1, Math.round(this.maxHp * Math.max(k, .6)));
     this.halfX = this.hitRadiusX = this.radius = st.half; this.hitHeightTolerance = st.tol; this.noBlock = !st.blocks;
     // A grown tree: its branches (and its crown) are landing platforms that grow out within 0.6 s.
     if (i === 2 && !this.surfaces.length) {

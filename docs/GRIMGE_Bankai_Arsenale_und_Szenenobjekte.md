@@ -60,3 +60,67 @@ Szenenobjekte sind neutrale, zerstörbare Props mit eigener Lebensleiste (`publi
 **Karten** können Szenenobjekte über `props` setzen: `seedling`, `sapling`, `tree`, `log`, `boulder`. Die Waterfall-Arena hat zwei Setzlinge und einen Felsbrocken am Rand.
 
 Das System ist erweiterbar: Eine neue Objektart erbt von `SceneObject` und überschreibt `react(element)`, `update()`, `onBreak()` und `render()`.
+
+## 3. Interaktive Objekte, Paket 2 (23. Okt 2026, „alles umsetzen“)
+
+**Element-Objekte** (`public/src/scene_pack_elements.js`):
+
+| Objekt | Reaktionen |
+|---|---|
+| Ranke | Wasser/Natur → Plattform (90 px); Feuer brennt sie samt Plattform weg |
+| Pilzkreis | Schlag → Giftwolke; Feuer → Sporenexplosion; Schatten → giftiger, schneller nachwachsend |
+| Riesenblüte | Licht lädt; Schlag → Heilpollen für das Team des Schlägers; Schatten → Fleischfresser |
+| Bienennest | Schlag → Schwarm jagt den nächsten Kämpfer; Rauch/Feuer beruhigt |
+| Eiszapfen | Frost wächst; Feuer → Pfütze; harter Schlag → Splitter; werfbar |
+| Wasserfass | Schlag → Leck, wachsende Pfütze; Frost → Eisfläche; werfbar |
+| Kohlebecken | Wind → Glut fliegt; Wasser → Dampfwolke (Schüsse treffen schlechter); umgestoßen → Feuer |
+| Pulverfass | Feuer/Blitz/Bruch → Explosion mit Kettenreaktion; in der Luft oder blockend = Schleuder; werfbar |
+| Kristallsäule | 3 Blitztreffer → Kettenblitz + Signal |
+| Gong | Schlag → betäubende Schallwelle + Signal; Blitz → Summen (Paralyse) |
+| Sprungplatte | Schlag oder Landung von oben → schleudert hoch |
+| Stalagmit | Erde → Säulen-Plattform; harter Schlag → Steinbrücke |
+| Windrad | Wind → Aufwind-Säule + lenkt Schüsse ab; Blitz → Mana-Generator |
+| Banner | Feuer → fällt; das Tuch schluckt Schüsse |
+| Spiegel | wirft Schüsse zurück; Licht → Strahl; zwei Schattenportale = Teleporter |
+| Laterne | Licht-Zone (Geisterplattformen); Schatten → Dunkelheit, Minions sehen dich erst aus nächster Nähe |
+| Grabstein | Schatten → Skelett für das Team des Zaubernden; Licht bannt |
+| Kronleuchter | Seil treffen → fällt auf alle darunter |
+| Truhe | nur ihr Element öffnet das Schloss (Beute) |
+| Elementschrein | Schlag → 4 Element-Ladungen für Nahkampftreffer; Zauber seines Elements → Buff-Zone |
+
+**Kletter- und Rätselbausteine** (`public/src/scene_pack_puzzles.js`):
+- Sims, Liane (Schwung), Geysir (Feuer + Wasser), gefrierbarer Wasserfall mit Eisstufen.
+- Netz, Rankenvorhang und brüchige Wand als Sperren über die ganze Lane (Axt/Hammer ×3).
+- Hebel, Eis-Hebel, Druckplatte, Tor und Fallgitter, verbunden über Signale.
+- Brüchiger Boden (Sturzangriff), Seilbrücke (kappen → Rampe), Floß, Magnet.
+- Geisterplattform (nur im Licht), Wasserbecken-Lift, Staub (Inschrift/Luke), Kletterwand (Speertreffer setzen Stufen).
+
+**Systeme** (`public/src/scene_systems.js` u. a.):
+- Ausgewachsene Bäume haben Ast-Plattformen.
+- Werfbare Objekte: Block + runter.
+- Die KI zündet Pulverfässer neben dem Helden; Fernkämpfer ducken sich beim Nachladen hinter Deckung.
+- Licht-Zauber setzen Laternen, Erd-Zauber Stalagmiten.
+- Training und Debug-Ansicht zeigen Labels mit der Lösung.
+
+**Trainingskarten:** RÄTSELHOF (Klettern), ELEMENTGARTEN (Element-Objekte), BURGTOR (Schalter, Tore, Sperren).
+
+## 4. Dungeon-Geheimnisse (`public/src/dungeon_secrets.js`)
+
+Ein Geheimnis besteht aus vier Teilen:
+1. **Hinweis:** etwas Auffälliges im Raum.
+2. **Schlüssel:** Element oder Fähigkeit, aus dem Deck, dem Runenangebot oder einem Schrein.
+3. **Weg:** eine neue Ebene.
+4. **Belohnung:** ein Geheimraum mit Geheimboss, der eine späte Rune droppt, plus Truhe und Rückweg.
+
+Geheimräume liegen weit rechts der Dungeon-Räume (eigene Grenzen, eigenes Ambiente). Ein Portal bringt hinein und zurück an die Stelle, an der man den Dungeon verlassen hat. Luken, brüchige Böden und Staub mit `link` öffnen ebenfalls Geheimräume.
+
+**Der verdorrte Hain (Raum 2):**
+- Ein zäher, welker Setzling (braucht doppelt so viel Wasser) steht am Fuß eines 205 px hohen Simses.
+- Schlüssel: Wasser- oder Natur-Zauber, die Ladungen des Wasserschreins oder das leckende Fass.
+- Der gewachsene Baum hat Äste auf 70, 118 und 165 px. Von der Krone erreicht man das Sims mit einem kurzen Sprung mit Anlauf.
+- Auf dem Sims wartet das Portal in den **Dornenhain**.
+- Dort kämpft der **Dornen-Treant**:
+  - 900 LP; Feuer ×1,6, Wasser/Natur ×0,4.
+  - Dornenlinien, Wurzelring, Setzlinge und Wasser heilen ihn.
+  - Ab der Hälfte zornig: schneller, mit Pilzen.
+- Besiegt droppt er eine späte Rune, eine Natur-Truhe erscheint, und das Ausgangsportal führt zurück.
