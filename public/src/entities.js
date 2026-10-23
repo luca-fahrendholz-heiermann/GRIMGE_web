@@ -466,6 +466,7 @@ export class Player extends GroundEntity {
     this.aerialAim = this.grounded ? 0 : Math.max(0, (this.aerialAim ?? 0) - dt); // aerial bow shot pose (breathing arrow rain) // DOPPELTORNADO: hidden in game time (also if the move is cleared)
     masteryTickShield(this); // shield end masteries (residual shockwave, sacrifice refund)
     masteryTick(this, dt); // mastery timers (haste, stone skin, frenzy) and Void echoes
+    if (this.guidedChain) this.guidedChain.update(dt, gameWorld); // a guided chain moves the Wizard and the target
     if (this.arcaneShieldTimer <= 0) this.arcaneShield = 0;
     this.freezeTimer = Math.max(0, this.freezeTimer - dt);
     this.slowTimer = Math.max(0, this.slowTimer - dt);
@@ -909,6 +910,7 @@ export class Player extends GroundEntity {
 
   beginCharge(direction = 'forward', source = 'key') {
     this.chargeSource = source;
+    if (this.guidedChain) return false;
     // In the air a charge (hold + drag, or K + direction) is the dive (user, 23 Oct 2026): after a sprint
     // jump it slants in the running direction; forward slants, down drops (still slanted after a sprint jump).
     if (this.isAlive && !this.grounded && !activeMoveset(this) && !this.isGuarding && (direction === 'down' || direction === 'forward' || direction === 'back') && !ACTION_STATES.has(this.state)) {
@@ -936,6 +938,7 @@ export class Player extends GroundEntity {
   // mode, the PULL in an Arcane State / transformation (hold_actions.js).
   holdAttack(charge = 0) {
     if (!this.isAlive || !this.grounded || this.isGuarding || ACTION_STATES.has(this.state) && this.state !== 'guard') return false;
+    if (this.guidedChain) return false;
     // A stance may own the HOLD slot (WILLE: the will wave).
     if (this.signature?.impl?.stance?.hold?.(this, this.signature, charge, window.gameWorld)) return true;
     const game = window.gameWorld;
@@ -1167,6 +1170,7 @@ export class Player extends GroundEntity {
 
   getEffectiveGravity() {
     const g = UNITY_MOVEMENT.gravity;
+    if (this.guidedChain) return 0; // the chain places the Wizard itself
     if (this.airLatch && !this.grounded) return g * AIR_LATCH_GRAVITY;
     if (!this.launcherMode) return g;
     if (Math.abs(this.vElevation) <= LAUNCHER_APEX_VEL_THRESH) return g * LAUNCHER_APEX_GRAV_SCALE;
@@ -1204,6 +1208,8 @@ export class Player extends GroundEntity {
 
   executeAttack(input, attackKind = 'normal') {
     if (!this.isAlive || this.isGuarding || this.burrowed || !window.gameWorld?.isMatchRunning?.()) return false;
+    // A guided chain (guided_chains.js) owns every attack input while it runs: taps / swipes confirm its beats.
+    if (this.guidedChain) return this.guidedChain.press(attackKind);
     // Attack while backdashing: the counter shot (once per dash).
     // Only while the dash runs or right after it ended (an interrupted dash closes the window).
     if (this.backdashCounterTimer > 0 && (this.backdashTimer > 0 || this.backdashSuppressTimer > 0)) return this.backdashCounterShot();
@@ -2034,6 +2040,8 @@ export class Player extends GroundEntity {
     const wielding = this.isAlive && (this.weapon || this.classWeapon) && !activeMoveset(this) && currentBuffForm(this)?.id !== 'A04' && !this.isGuarding && !(this.hitFlash > 0);
     const body = wielding && (!useProc || /^attack|uppercut|heavyStrike/.test(this.state)) ? weaponBodyPose(this) : null;
     if (body) { useProc = true; pRot += body.rot; pOX += body.ox; pOY += body.oy; pSX *= body.sx; pSY *= body.sy; if (body.cadence) cadence *= body.cadence; }
+    // Guided chain: its own rotation (the back-flip of Schattenreigen).
+    if (this.guidedChain?.rot) { useProc = true; pRot = this.guidedChain.rot * 180 / Math.PI; }
     // Launcher branch: crouched, ready to jump after the foe.
     if (this.followUp && this.isAlive && this.grounded) { useProc = true; pOY += 3; pSY *= .94; pSX *= 1.04; }
     // Finisher window: the Wizard winds up (leans back, gathers) toward the moment.
@@ -2116,6 +2124,7 @@ export class Player extends GroundEntity {
     // Finisher window: a ring grows toward the target ring (green band = GOOD, gold = PERFECT).
     if (this.finisherChance && this.isAlive && finisherGuideShown()) this.renderFinisherRing(ctx, renderY); // Training only
     if (this.finisherChance && this.isAlive) this.renderFinisherGlint(ctx, renderY);
+    if (this.guidedChain && this.isAlive) this.guidedChain.render(ctx, renderY);
     // The shield: a crisp hexagonal shell that cracks as it runs low (ward_shell.js).
     if (this.arcaneShield > 0 && this.isAlive) drawWardShell(ctx, this.x, renderY, { frac: Math.min(1, this.arcaneShield / Math.max(1, this.shieldCapacity ?? this.arcaneShield)), t: this.animTime ?? 0 });
     // Frozen: the Little-Fighter ice block (a FROZEN status draws its own block).

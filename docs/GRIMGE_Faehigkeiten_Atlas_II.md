@@ -88,6 +88,26 @@ Die Ketten **ergänzen** die manuelle Kombo und ersetzen sie nicht. Angriff 1–
 | 4–6 | Luftkombo, drei Treffer | Takt-Tippen |
 | 7 | Erdhammer (Abschluss) | Wischen runter |
 
+### Umgesetzt: S88 SCHATTENREIGEN (23.10.2026)
+
+- **Rune:** Mehrfach-Kategorie, 34 Mana, eigene Glyphe (Kunai im Salto-Bogen). Ein Kunai fliegt etwa 290 px weit.
+- **Kette:** Trifft der Kunai, öffnet sich die Kette (Fenster 0,8 s für den ersten Takt). Jeder weitere Takt hat ein Fenster von 0,55 s.
+- **Eingaben:** Tippen geht immer. Wischen in Richtung des Takts geht auch (→ Ansturm, ↑ Hochschlag, ↓ Erdhammer).
+- **Ablauf:** Salto-Schnitt → Ansturm → Hochschlag (beide steigen auf) → drei Luftschnitte → Erdhammer mit Druckwelle (trifft auch Gegner daneben).
+- **Schaden:** Jeder bestätigte Takt erhöht ihn um +10 %, bis ×1,6. Eine volle Kette macht etwa 190 Schaden, dazu Flächenschaden.
+- **Zeitpunkte:**
+  - Ein später Druck in einem Takt wird gemerkt und startet den nächsten, es stockt nicht.
+  - Wildes Drücken früh in einem Takt wird ignoriert.
+  - Ein verpasstes Fenster beendet die Kette sofort.
+- **Fairness:**
+  - Der Held ist nur während der Takt-Bewegungen unverwundbar, in den Fenstern nicht.
+  - Der Gegner wird beim Ende sofort losgelassen, die Kette dauert höchstens etwa 2,5 s.
+  - Laden und HOLD sind während der Kette gesperrt; die Kette besitzt die Eingaben.
+- **Hinweise:**
+  - In jedem Modus blitzt die Waffe auf, wenn der nächste Takt bestätigt werden kann.
+  - Nur im Training stehen Takt-Name und Eingabe („2/7 ANSTURM · TIPP / WISCH →“) über dem Kopf.
+- **Technik:** `guided_chains.js` enthält eine allgemeine `GuidedChain`-Klasse; Ketten sind Daten (Takte mit start / tick / accept). Donnerkette und Klingenballett lassen sich damit schnell ergänzen.
+
 **Weitere Ketten (je Klasse / Element):**
 
 | Kette | Öffner | Takte | Besonderheit |

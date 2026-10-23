@@ -71,6 +71,8 @@ export const SIGNATURE_GLYPHS = Object.freeze({
   // S86 WILLE: a crown of will over the fist (a circle). S87 EDLES OPFER: a kite shield pierced by a sword.
   S86: [poly([[-.78, -.15], [-.78, -.82], [-.38, -.45], [0, -.92], [.38, -.45], [.78, -.82], [.78, -.15]], false), ring(0, .45, .36)],
   S87: [poly([[0, -.8], [.6, -.52], [.5, .3], [0, .82], [-.5, .3], [-.6, -.52]]), L(0, -.98, 0, .98), L(-.32, -.6, .32, -.6)],
+  // S88 SCHATTENREIGEN: a kunai (blade + ring) inside a crescent of the back-flip.
+  S88: [L(-.55, .55, .55, -.55), ring(-.66, .66, .16), arc(0, 0, .85, Math.PI * .15, Math.PI * .95)],
   // S84 ice: a six-armed snowflake (three crossing lines) + the blade stroke below.
   S84: [L(0, -.9, 0, .45), L(-.68, -.62, .68, .17), L(-.68, .17, .68, -.62), L(-.85, .85, .85, .85)],
   S52: [L(0, -.85, 0, .3), ring(0, .7, .13), poly([[-.9, -.5], [-.5, 0], [-.9, .5]], false), poly([[.9, -.5], [.5, 0], [.9, .5]], false)],

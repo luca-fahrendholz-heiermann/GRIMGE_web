@@ -2566,7 +2566,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   const step = (n, dt = 1 / 60) => { for (let i = 0; i < n; i++) { P.update(dt, neutral, game.battlefield, game); game.updateProjectiles(dt); spells.update(dt, game); } };
   const cast = (id, target = null) => spells.cast(P, spells.resolveSpell([{ id: 'sig_' + id }]), game, null, target);
   const ids = Object.keys(core.SIGNATURES);
-  assert(ids.length === 87 && ids.every((id) => core.signatureImpl(id)?.cast) && sigMod.SIGNATURE_RUNE_IDS.every((id) => isSpecialRune(id) && runeManaCost(id) >= 28 && runeManaCost(id) <= 46), 'All 87 signature specials (atlas S01–S36 + S37–S87) are special runes with their own mechanic and bound mana');
+  assert(ids.length === 88 && ids.every((id) => core.signatureImpl(id)?.cast) && sigMod.SIGNATURE_RUNE_IDS.every((id) => isSpecialRune(id) && runeManaCost(id) >= 28 && runeManaCost(id) <= 46), 'All 88 signature specials (atlas S01–S36 + S37–S88) are special runes with their own mechanic and bound mana');
   assert(ids.every((id) => spellHowTo('sig_' + id)?.effect?.length > 40) && !spells.resolveSpell([{ id: 'sig_S03' }, { id: 'ignis' }]), 'Signature specials explain themselves in the grimoire and never fuse');
   // Every special casts, runs and renders (strict canvas) without errors.
   const strict = new Proxy({}, { get: (t, k) => (k === 'ellipse' || k === 'arc') ? (x, y, rx, ry) => { if (rx < 0 || (k === 'ellipse' && ry < 0)) throw new Error('IndexSizeError ' + k); } : (k === 'canvas' ? undefined : () => {}), set: () => true });
@@ -4295,6 +4295,36 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
     assert(!drew, 'In a real match the finisher window is not drawn (players read the timing and the hitstop)'); }
   game.returnToHub(); game.setMatchMode('training'); game.startMatch();
   reset(); dummy.homeX = dummy.x = 512;
+}
+
+// S88 SCHATTENREIGEN — guided chain (Fähigkeiten-Atlas II, 23 Oct 2026).
+{
+  const GC = await import('./public/src/guided_chains.js'); const { Minion } = await import('./public/src/entities.js'); const core = await import('./public/src/signature_core.js');
+  game.returnToHub(); game.setMatchMode('training'); game.startMatch(); game.selectTrainingMap('waterfalls');
+  const P = game.player; const dummy = game.trainingDummy; dummy.homeX = dummy.x = 1600;
+  const neutral = { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false };
+  const step = (n) => { for (let i = 0; i < n; i++) { P.update(1 / 60, neutral, game.battlefield, game); spells.update(1 / 60, game); for (const m of game.minions) m.update?.(1 / 60, game, game.battlefield); } };
+  const setup = () => { spells.clearRuntime(); game.minions = []; if (P.signature) core.endStance(P, 'replaced'); P.guidedChain = null; P.equipWeapon(null); P.equipClassWeapon(null); P.x = 300; P.z = .5; P.facing = 1; P.hp = P.maxHp; P.mp = P.maxMp; P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.grounded = true; P.elevation = 0; game.battlefield.placeOnSurface(P); };
+  const foeAt = (x) => { const m = new Minion(x, .5, 'red', 'melee', 0); m.maxHp = m.hp = 6000; m.passive = true; game.battlefield.placeOnSurface(m); game.minions.push(m); return m; };
+  const cast = () => spells.cast(P, spells.resolveSpell([{ id: 'sig_S88' }]), game);
+  const tapWhenOpen = (kind = 'normal', max = 90) => { for (let i = 0; i < max && P.guidedChain && P.guidedChain.phase !== 'window'; i++) step(1); if (P.guidedChain) P.executeAttack(neutral, kind); };
+  setup(); { const m = foeAt(470); cast(); for (let i = 0; i < 30 && !P.guidedChain; i++) step(1);
+    assert(P.guidedChain && P.guidedChain.target === m && m.freezeTimer > 0, 'S88 SCHATTENREIGEN: the kunai hits — the guided chain opens and holds the foe');
+    assert(!P.beginCharge('forward', 'touch'), 'During the chain the charge input is blocked (the chain owns the inputs)');
+    const hp0 = m.hp; tapWhenOpen(); step(25); assert(Math.abs(P.x - (m.x - 34)) < 40 && m.hp < hp0, 'Beat 1 SCHATTENSCHRITT-SALTO: the Wizard appears in front of the foe and back-flips through a cut');
+    tapWhenOpen('heavy'); tapWhenOpen('uppercut'); step(20); assert((m.elevation ?? 0) > 40 && !P.grounded, 'Beats 2–3: the dash, then the launcher carries both up');
+    const by = foeAt(m.x + 50); for (let i = 0; i < 3; i++) tapWhenOpen(); tapWhenOpen('dive'); for (let i = 0; i < 40 && P.guidedChain; i++) step(1);
+    assert(!P.guidedChain && P.lastChainResult?.reason === 'complete' && P.lastChainResult.beats === 7 && m.hp < hp0 - 170 && by.hp < 6000 && P.grounded, 'Beats 4–7: three air cuts and the ground hammer (shocks around) — the chain completes'); }
+  setup(); { foeAt(470); cast(); for (let i = 0; i < 30 && !P.guidedChain; i++) step(1); tapWhenOpen(); tapWhenOpen(); for (let i = 0; i < 80 && P.guidedChain; i++) step(1);
+    assert(!P.guidedChain && P.lastChainResult?.reason === 'missed' && P.canAttack, 'A missed beat window ends the chain at once (the Wizard is free again)'); }
+  setup(); { foeAt(470); cast(); for (let i = 0; i < 30 && !P.guidedChain; i++) step(1); tapWhenOpen(); const ch = P.guidedChain; for (let i = 0; i < 40 && ch.t < .3; i++) step(1); P.executeAttack(neutral, 'normal'); for (let i = 0; i < 10; i++) step(1);
+    assert(ch.index >= 2, 'A press late in a beat is remembered and starts the next beat (no stutter)'); P.guidedChain?.end('test'); }
+  setup(); { cast(); step(40); assert(!P.guidedChain, 'Without a hit no chain opens'); }
+  setup(); { foeAt(470); cast(); for (let i = 0; i < 30 && !P.guidedChain; i++) step(1); let depth = 0; let bad = 0;
+    const ctxC = new Proxy({}, { get: (tt, k) => k === 'save' ? () => { depth++; } : k === 'restore' ? () => { depth--; } : k === 'arc' ? (x, y, r) => { if (r < 0) bad++; } : k === 'canvas' ? undefined : k === 'getTransform' ? () => ({ a: 1 }) : k === 'measureText' ? () => ({ width: 10 }) : () => {}, set: () => true });
+    for (let b = 0; b < 4; b++) { tapWhenOpen(); for (let i = 0; i < 8; i++) { step(2); P.guidedChain?.render(ctxC, P.y); for (const sp of spells.activeSpells) sp.render?.(ctxC); } }
+    assert(depth === 0 && !bad, 'The chain renders cleanly (afterimages, cuts, beat glint; canvas state balanced)'); P.guidedChain?.end('test'); }
+  setup(); dummy.homeX = dummy.x = 512;
 }
 
 const frameCallback = nextFrame;
