@@ -79,6 +79,9 @@ export function comboChainOf(combo) {
   c = { steps, finisher }; chainCache.set(combo, c); return c;
 }
 // Timing of a press inside the last chain step (elapsed seconds since that step started).
+// The ring and the PERFEKT / FINISHER / ZU FRÜH / ZU SPÄT labels are a Training aid only (user, 23 Oct
+// 2026): in real matches the player reads the window from the timing and the short hitstop alone.
+export const finisherGuideShown = () => globalThis.window?.gameWorld?.activeMode?.id === 'training';
 export function finisherGrade(chance, elapsed) {
   const open = chance.peak - chance.good; const close = chance.peak + chance.good;
   if (elapsed < open - chance.lead) return 'early';
@@ -1341,8 +1344,9 @@ export class Player extends GroundEntity {
   finisherElapsed() { return this.finisherChance ? this.finisherChance.swing - this.stateTimer : 0; }
   pressFinisherWindow(input) {
     const ch = this.finisherChance; const g = finisherGrade(ch, this.finisherElapsed());
-    if (g === 'early') { combat.spawnDamageText(this.x, this.y - 104, 'ZU FRÜH', { color: '#64b5f6' }); this.finisherChance = null; return false; }
-    if (g === 'late') { combat.spawnDamageText(this.x, this.y - 104, 'ZU SPÄT', { color: '#ff5252' }); this.finisherChance = null; return false; }
+    const guide = finisherGuideShown();
+    if (g === 'early') { if (guide) combat.spawnDamageText(this.x, this.y - 104, 'ZU FRÜH', { color: '#64b5f6' }); this.finisherChance = null; return false; }
+    if (g === 'late') { if (guide) combat.spawnDamageText(this.x, this.y - 104, 'ZU SPÄT', { color: '#ff5252' }); this.finisherChance = null; return false; }
     if (g === 'buffer') { ch.queued = 'good'; return true; } // remembered just before the window: fires when it opens
     return this.startComboFinisher(input, g);
   }
@@ -1351,7 +1355,7 @@ export class Player extends GroundEntity {
     const perfect = grade === 'perfect'; const T = FINISHER_TIMING; const f = chain.finisher;
     this._pendingFinisher = perfect ? { ...f, perfect: true, damage: Math.round(f.damage * T.perfectDamage), knockback: f.knockback * T.perfectKnock, guardBreak: true, ...(f.shot ? { shot: { ...f.shot, damage: Math.round(f.shot.damage * T.perfectDamage) } } : {}) } : f;
     this.finisherChance = null; this.lastFinisherGrade = grade;
-    combat.spawnDamageText(this.x, this.y - 112, perfect ? 'PERFEKT!' : 'FINISHER', { color: perfect ? '#ffd740' : '#69f0ae', isCrit: perfect });
+    if (finisherGuideShown()) combat.spawnDamageText(this.x, this.y - 112, perfect ? 'PERFEKT!' : 'FINISHER', { color: perfect ? '#ffd740' : '#69f0ae', isCrit: perfect });
     if (perfect) { combat.spawnShockwave(this.x + this.facing * 20, this.y - 36, 70, '#ffd740'); combat.shakeCamera(9, .25); }
     this.state = 'idle'; this.stateTimer = 0; this.canAttack = true;
     return this.executeAttack(input ?? { keys: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 } }, 'normal');
@@ -1992,7 +1996,7 @@ export class Player extends GroundEntity {
     // The guard is drawn the way the held weapon blocks (weapon_guard.js).
     if (this.isGuarding && this.isAlive && !activeMoveset(this)) this.lastGuardKind = drawWeaponGuard(ctx, this, this.x, renderY, this.facing || 1, this.perfectBlockFlash > 0, this.animTime ?? 0);
     // Finisher window: a ring grows toward the target ring (green band = GOOD, gold = PERFECT).
-    if (this.finisherChance && this.isAlive) this.renderFinisherRing(ctx, renderY);
+    if (this.finisherChance && this.isAlive && finisherGuideShown()) this.renderFinisherRing(ctx, renderY); // Training only
     // The shield: a crisp hexagonal shell that cracks as it runs low (ward_shell.js).
     if (this.arcaneShield > 0 && this.isAlive) drawWardShell(ctx, this.x, renderY, { frac: Math.min(1, this.arcaneShield / Math.max(1, this.shieldCapacity ?? this.arcaneShield)), t: this.animTime ?? 0 });
     // Frozen: the Little-Fighter ice block (a FROZEN status draws its own block).

@@ -4,6 +4,8 @@ Die Mechanik ist an die Unity-Version angelehnt (`ComboTimingGuide`, `PunchAbili
 
 ## Ablauf
 
+**Ring und Schriftzüge (PERFEKT, FINISHER, ZU FRÜH, ZU SPÄT) gibt es nur im Trainingsmodus.** In echten Matches erkennt man das Fenster am Timing und am kurzen Hitstop nach dem letzten Kettentreffer. Rückstoß, Goldwelle und Ruck des perfekten Finishers bleiben überall.
+
 1. **Kette:** Jede Waffe hat ihre Angriffe (Angriff 1, 2, 3 …). Die Kette läuft nur weiter, wenn der Angriff trifft. Ein Fehlschlag beginnt sie von vorn.
 2. **Hitstop:** Der letzte Kettenangriff trifft, das Bild friert kurz ein.
 3. **Chance:** Über dem Kopf erscheint ein Ring.

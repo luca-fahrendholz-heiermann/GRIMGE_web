@@ -4264,6 +4264,15 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   { toLastStep(); waitTo(.6); P.finisherChance.queued = null; const ch = P.finisherChance; const el = P.finisherElapsed(); const buffered = E.finisherGrade(ch, ch.peak - ch.good - ch.lead / 2);
     assert(buffered === 'buffer' && E.finisherGrade(ch, ch.peak) === 'perfect' && E.finisherGrade(ch, 0) === 'early' && E.finisherGrade(ch, ch.peak + ch.good + .01) === 'late', 'Finisher timing grades: early / buffer / good / perfect / late'); }
   { toLastStep(); waitTo(.9); let bad = 0; const strict = new Proxy({}, { get: (tt, k) => k === 'arc' ? (x, y, r) => { if (r < 0) bad++; } : k === 'canvas' ? undefined : k === 'measureText' ? () => ({ width: 10 }) : () => {}, set: () => true }); P.renderFinisherRing(strict, P.y); assert(!bad, 'The finisher ring renders'); }
+  // Outside Training: no ring, no labels — the window still works (timing + hitstop only).
+  assert(E.finisherGuideShown(), 'In Training the finisher guide (ring, PERFEKT label) is shown');
+  game.returnToHub(); game.setMatchMode('arena'); game.startMatch();
+  { const P2 = game.player; assert(!E.finisherGuideShown(), 'Outside Training the ring and the PERFEKT / FINISHER labels are hidden');
+    let drew = false; const orig = P2.renderFinisherRing; P2.renderFinisherRing = () => { drew = true; }; P2.finisherChance = { swing: .3, peak: .2, good: .05, perfect: .03, lead: .06 }; P2.state = 'attack3'; P2.stateTimer = .1;
+    const strictF = new Proxy({}, { get: (tt, k) => k === 'canvas' ? undefined : k === 'measureText' ? () => ({ width: 10 }) : k === 'getTransform' ? () => ({ a: 1 }) : () => {}, set: () => true });
+    try { P2.render(strictF); } finally { P2.renderFinisherRing = orig; P2.finisherChance = null; P2.state = 'idle'; P2.stateTimer = 0; }
+    assert(!drew, 'In a real match the finisher window is not drawn (players read the timing and the hitstop)'); }
+  game.returnToHub(); game.setMatchMode('training'); game.startMatch();
   reset(); dummy.homeX = dummy.x = 512;
 }
 
