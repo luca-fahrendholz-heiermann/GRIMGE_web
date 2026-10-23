@@ -1694,7 +1694,8 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
   const dropped = game.armory.pickups.find((p) => p.weapon === 'spear');
   assert(dropped && Math.abs(dropped.x - crate.x) < 1, 'Breaking a weapon crate drops its weapon');
   P.x = dropped.x; P.z = dropped.z; game.battlefield.placeOnSurface(P); ready();
-  assert(P.executeAttack(neutral, 'normal') && P.weapon === 'spear' && !game.armory.pickups.includes(dropped), 'Attacking while standing on a weapon picks it up');
+  P.isGuarding = true; P.grabCooldown = 0;
+  assert(P.tryTakeItem() && P.weapon === 'spear' && !game.armory.pickups.includes(dropped), 'Block + down while standing on a weapon picks it up'); P.isGuarding = false;
   // The spear reaches further than the default 78 px.
   const dummy = game.trainingDummy; dummy.homeX = dummy.x = P.x + 108; dummy.homeZ = dummy.z = P.z; P.facing = 1;
   const before = dummy.hp; ready();
@@ -1712,12 +1713,13 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
   P.equipWeapon('great_axe'); ready(); P.sprintActive = true;
   dummy.homeX = dummy.x = P.x + 120; dummy.homeZ = dummy.z = P.z;
   const hpThrow = dummy.hp;
-  assert(P.executeAttack(neutral, 'normal') && !P.weapon && spells.activeSpells.some((s) => s.constructor.name === 'ThrownWeaponSpell'), 'Sprint + attack throws the held weapon');
+  assert(P.executeAttack(neutral, 'heavy') && !P.weapon && spells.activeSpells.some((s) => s.constructor.name === 'ThrownWeaponSpell'), 'Sprint + swipe throws the held weapon');
   for (let i = 0; i < 150; i++) spells.update(1 / 60, game);
   const landed = game.armory.pickups.find((p) => p.weapon === 'great_axe');
   assert(dummy.hp < hpThrow && landed, 'The thrown weapon hits and lands on the field');
   P.x = landed.x; P.z = landed.z; game.battlefield.placeOnSurface(P); ready();
-  assert(P.executeAttack(neutral, 'normal') && P.weapon === 'great_axe', 'A thrown weapon can be picked up again');
+  P.isGuarding = true; P.grabCooldown = 0;
+  assert(P.tryTakeItem() && P.weapon === 'great_axe', 'A thrown weapon can be picked up again (block + down)'); P.isGuarding = false;
   // Conjured ice sword: the finisher freezes; it shatters after its hits.
   P.equipWeapon('ice_sword'); P.comboStep = 0;
   dummy.homeX = dummy.x = P.x + 50; dummy.homeZ = dummy.z = P.z;
@@ -1768,7 +1770,7 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
   P.equipWeapon('great_axe');
   assert(P.weaponProfile?.name === 'GREAT AXE', 'A picked-up field weapon takes over the moveset');
   sprintReady();
-  assert(P.executeAttack(neutral, 'normal') && !P.weapon && thrownCount() === before + 1 && P.lastSprintAttack === null, 'Sprint + attack throws the field weapon (Little Fighter style)');
+  assert(P.executeAttack(neutral, 'heavy') && !P.weapon && thrownCount() === before + 1 && P.lastSprintAttack === null, 'Sprint + swipe throws the field weapon (Little Fighter style)');
   assert(P.weaponProfile?.name === 'KATANA', 'After the throw the class weapon moveset returns');
   P.beginDeath();
   assert(P.classWeapon === 'katana' && !game.armory.pickups.some((pk) => pk.weapon === 'katana'), 'The class weapon is not dropped on death');
@@ -4497,8 +4499,10 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   clean(); { const du = add('dust', 400, .5, { text: 'TEST' }); du.feed('ventus', 9); envStep(.05); assert(du.revealed, 'DUST: wind blows it away and reveals the inscription'); }
   clean(); { const cl = add('climb_wall', 400, .5); const spear = { weapon: 'spear', team: 'blue' }; hitWith(cl, ['blade'], 10, 0, 'melee', spear); hitWith(cl, ['blade'], 10, 0, 'melee', spear); envStep(.05);
     assert(cl.steps.length === 2 && cl.steps.every(registered), 'CLIMB WALL: spear hits leave steps in the rock'); }
-  clean(); { const bo = add('boulder', 230, .5); P.x = 200; P.z = .5; P.facing = 1; P.state = 'idle'; P.canAttack = true; P.sprintActive = true; P.grounded = true; const ok = P.executeAttack({ keys: {}, move: { x: 1, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 } }, 'heavy'); const flying = !!bo.flight; envStep(1);
-    assert(ok && flying && !bo.flight && bo.x > 260, 'THROW: sprint + forward swipe in front of a throwable object (boulder) picks it up and throws it'); P.sprintActive = false; }
+  clean(); { const bo = add('boulder', 230, .5); P.x = 200; P.z = .5; P.facing = 1; P.state = 'idle'; P.canAttack = true; P.isGuarding = true; P.grabCooldown = 0; P.carrying = null;
+    const took = P.tryTakeItem(); P.x = 260; envStep(.05); const carried = P.carrying === bo && Math.abs(bo.x - P.x) < 10 && bo.noBlock;
+    P.sprintActive = true; P.grounded = true; P.isGuarding = false; const ok = P.executeAttack({ keys: {}, move: { x: 1, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 } }, 'heavy'); const flying = !!bo.flight; envStep(1);
+    assert(took && carried && ok && flying && !bo.flight && bo.x > 300 && !P.carrying, 'CARRY + THROW: block + down lifts a throwable object (boulder) overhead, sprint + swipe throws it'); P.sprintActive = false; }
   clean(); { const keg = add('powder_keg', 300, .5); P.x = 340; P.z = .5; const Mn = globalThis.__GrimgeMinion; const mi = new Mn(220, .5, 'red', 'melee', 1); game.battlefield.placeOnSurface(mi); game.minions.push(mi);
     for (let i = 0; i < 120 && keg.fuse < 0 && !keg.isDead; i++) { mi.update(1 / 60, game, game.battlefield); ENV.update(1 / 60, game, []); }
     assert(keg.fuse >= 0 || keg.isDead, 'AI: a melee minion lights the powder keg the hero stands next to'); }

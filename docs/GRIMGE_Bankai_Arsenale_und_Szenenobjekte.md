@@ -97,7 +97,7 @@ Das System ist erweiterbar: Eine neue Objektart erbt von `SceneObject` und über
 
 **Systeme** (`public/src/scene_systems.js` u. a.):
 - Ausgewachsene Bäume haben Ast-Plattformen.
-- Werfbare Objekte: Block + runter.
+- Nehmen: Block + runter (Waffe vom Boden, werfbares Objekt über den Kopf); werfen: Sprint + Wischen (Sprint + Tippen bleibt der Sprint-Angriff).
 - Die KI zündet Pulverfässer neben dem Helden; Fernkämpfer ducken sich beim Nachladen hinter Deckung.
 - Licht-Zauber setzen Laternen, Erd-Zauber Stalagmiten.
 - Training und Debug-Ansicht zeigen Labels mit der Lösung.

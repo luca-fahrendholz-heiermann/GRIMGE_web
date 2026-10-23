@@ -802,8 +802,9 @@ export class Player extends GroundEntity {
     }
 
     if (this.isGuarding && (move.z > 0.55 || input.keys?.ArrowDown || input.keys?.KeyS)) {
+      // Block + down (user, 23 Oct 2026): take an item first (a field weapon, a throwable object), else grab a foe.
       const targets = window.gameWorld?.getHostileTargets(this.team, true) ?? [];
-      this.attemptGrab(targets);
+      if (!this.tryTakeItem()) this.attemptGrab(targets);
     }
   }
 
@@ -1102,6 +1103,18 @@ export class Player extends GroundEntity {
     return true;
   }
 
+  // Take an item (block + down): a field weapon under the feet, or a throwable scene object close by
+  // (boulder, keg, barrel, icicle) — carried overhead until thrown with sprint + swipe.
+  tryTakeItem() {
+    if (!this.isAlive || this.grabCooldown > 0 || this.carrying) return false;
+    const gw = window.gameWorld;
+    if (gw?.tryPickupWeapon?.(this)) { this.isGuarding = false; this.grabCooldown = .4; return true; }
+    const obj = (gw?.getHostileTargets?.(this.team, true) ?? []).find((o) => o.isSceneObject && o.throwable && !o.flight && !o.carriedBy && !o.isDead && Math.abs(o.x - this.x) < 46 && Math.abs(((o.z ?? this.z) - this.z) * 150) < 24);
+    if (!obj?.carryBy?.(this)) return false;
+    this.carrying = obj; this.isGuarding = false; this.grabCooldown = .4; combat.spawnDamageText(this.x, this.y - 70, 'GETRAGEN', { color: '#ffd740' });
+    return true;
+  }
+
   attemptGrab(targets) {
     if (!this.isAlive || !this.isGuarding || this.grabCooldown > 0) return false;
     let closest = null;
@@ -1273,18 +1286,15 @@ export class Player extends GroundEntity {
     // style); otherwise — bare hands or the class's own fixed weapon, which
     // can never be thrown — it is the Sprint Attack.
     const sprinting = this.sprintActive && this.grounded && !ACTION_STATES.has(this.state) && this.canAttack;
-    if (sprinting && attackKind === 'heavy') {
-      // A throwable scene object right ahead (boulder, keg, barrel, icicle) is picked up and thrown.
-      const obj = (window.gameWorld?.getHostileTargets?.(this.team, true) ?? []).find((o) => o.isSceneObject && o.throwable && !o.flight && !o.isDead && (o.x - this.x) * (this.facing || 1) > -10 && (o.x - this.x) * (this.facing || 1) < 70 && Math.abs(((o.z ?? this.z) - this.z) * 150) < 26);
-      if (obj?.throwBy(this, 460)) { this.cancelSprint(); this.state = 'attack1'; this.stateTimer = .3; this.canAttack = false; combat.spawnDamageText(this.x, this.y - 55, 'WURF', { color: '#ffd740' }); return true; }
+    // Throwing (user, 23 Oct 2026): sprint + SWIPE throws what you hold — a carried object first, else a
+    // picked-up field weapon; a sprint + tap is always the sprint attack. Items are taken with block + down.
+    if (sprinting && attackKind === 'heavy' && this.carrying && !this.carrying.isDead) {
+      const obj = this.carrying; this.carrying = null;
+      if (obj.throwBy(this, 460)) { this.cancelSprint(); this.state = 'attack1'; this.stateTimer = .3; this.canAttack = false; combat.spawnDamageText(this.x, this.y - 55, 'WURF', { color: '#ffd740' }); return true; }
     }
     if (sprinting && (attackKind === 'normal' || attackKind === 'heavy')) {
       // A breathing stance overrides the weapon: no throw, the style's sprint attack.
-      return this.weapon && !this.signature?.impl?.stance?.sprintMove ? this.throwWeapon() : this.startSprintAttack();
-    }
-    // Attack while standing on a field weapon picks it up.
-    if (attackKind === 'normal' && !ACTION_STATES.has(this.state) && this.grounded) {
-      if (window.gameWorld?.tryPickupWeapon?.(this)) return true;
+      return attackKind === 'heavy' && this.weapon && !this.signature?.impl?.stance?.sprintMove ? this.throwWeapon() : this.startSprintAttack();
     }
     if (ACTION_STATES.has(this.state) || !this.canAttack) {
       // The last chain step connected: the press is judged against the finisher window.

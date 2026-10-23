@@ -87,9 +87,13 @@ export class SceneObject {
   // Thrown (grab on a throwable object, telekinesis): an arc; the first actor in the way is hit.
   throwBy(thrower, speed = 380) {
     if (!this.throwable || this.flight) return false;
-    const dir = thrower.facing || 1; this.flight = { vx: dir * speed, vh: 300, h: 26, team: thrower.team, by: thrower, hit: new Set() }; this.lastHitDir = dir; this.lastSourceTeam = thrower.team;
+    const fromHead = this.carriedBy === thrower; this.dropCarry();
+    const dir = thrower.facing || 1; this.flight = { vx: dir * speed, vh: fromHead ? 160 : 300, h: fromHead ? 58 : 26, team: thrower.team, by: thrower, hit: new Set() }; this.lastHitDir = dir; this.lastSourceTeam = thrower.team;
     return true;
   }
+  // Carried overhead (block + down): follows the carrier, does not block; dropped when the carrier falls.
+  carryBy(carrier) { if (!this.throwable || this.flight || this.carriedBy) return false; this.carriedBy = carrier; this._noBlock = this.noBlock; this.noBlock = true; return true; }
+  dropCarry() { const c = this.carriedBy; if (!c) return; this.carriedBy = null; this.noBlock = this._noBlock ?? false; if (c.carrying === this) c.carrying = null; }
   updateFlight(dt, gw, env) {
     const f = this.flight; f.vh -= 984 * dt; f.h += f.vh * dt; this.x += f.vx * dt;
     for (const a of actorsOf(gw)) {
@@ -123,6 +127,7 @@ export class SceneObject {
     for (const k of Object.keys(this.exposure)) this.exposure[k] = Math.max(0, this.exposure[k] - dt * 3);
     if ((this.senseT -= dt) <= 0) { this.senseT = SENSE_TICK; this.sense(SENSE_TICK, env); }
     if (this.flight) this.updateFlight(dt, gw, env);
+    if (this.carriedBy) { const c = this.carriedBy; if (c.isDead || c.lifeState === 'Dead' || c.isAlive === false || c.carrying !== this) this.dropCarry(); else { this.x = c.x + (c.facing || 1) * 4; this.z = c.z; } }
     if (this.surfaces.length) this.syncSurfaces(gw);
     this.update(dt, gw, env);
   }

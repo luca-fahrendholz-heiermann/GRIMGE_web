@@ -708,7 +708,7 @@ export class EnvironmentSystem {
 }
 
 export function renderProp(ctx, prop) {
-  if (prop.isSceneObject) { const h = prop.flight?.h ?? 0; if (h) { ctx.save(); ctx.translate(0, -Math.round(h)); } prop.render(ctx); if (h) ctx.restore(); renderSceneHint(ctx, prop); return; }
+  if (prop.isSceneObject) { const h = prop.flight?.h ?? (prop.carriedBy ? 58 + (prop.carriedBy.worldHeight ?? 0) : 0); if (h) { ctx.save(); ctx.translate(0, -Math.round(h)); } prop.render(ctx); if (h) ctx.restore(); renderSceneHint(ctx, prop); return; }
   const x = Math.round(prop.x + (prop.shake > 0 ? Math.sin(performance.now() * .08) * 2 : 0));
   const y = Math.round(prop.y);
   if (prop.weaponId) {

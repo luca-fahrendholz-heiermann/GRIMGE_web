@@ -151,7 +151,7 @@ class PressurePlate extends Fixture {
   constructor(x, z, o = {}) { super('pressure_plate', x, z, { half: 20, tol: 10, blocks: false }); this.key = o.key ?? 'plate'; this.pressed = false; }
   update(dt, gw, env) {
     const on = (o) => Math.abs(o.x - this.x) < this.halfX && Math.abs(((o.z ?? this.z) - this.z) * DEPTH) < 14;
-    this.pressed = actorsOf(gw).some((a) => on(a) && (a.elevation ?? 0) + (a.surfaceHeight ?? 0) < 8) || env.props.some((o) => o !== this && o.heavy && !o.isDead && !o.flight && on(o));
+    this.pressed = actorsOf(gw).some((a) => on(a) && (a.elevation ?? 0) + (a.surfaceHeight ?? 0) < 8) || env.props.some((o) => o !== this && o.heavy && !o.isDead && !o.flight && !o.carriedBy && on(o));
     setSignal(this.key, this.pressed);
   }
   render(ctx) { const x = Math.round(this.x); const y = Math.round(this.y); const d = this.pressed ? 1 : 3; px(ctx, x - 20, y - 2, 40, 3, '#424242'); px(ctx, x - 17, y - 2 - d, 34, d, this.pressed ? '#66bb6a' : '#9e9e9e'); }

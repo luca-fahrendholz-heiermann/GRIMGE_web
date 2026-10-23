@@ -1410,7 +1410,7 @@ export class GameWorld {
     const weapon = WEAPONS[pickup.weapon];
     combat.spawnShockwave(actor.x, actor.y - 30, 34, weapon.accent);
     audio.playRuneChime?.(660);
-    if (actor === this.player) this.showAnnouncement(`${weapon.name} — ${weapon.desc} SPRINT + ATTACK THROWS IT`, 2);
+    if (actor === this.player) this.showAnnouncement(`${weapon.name} — ${weapon.desc} SPRINT + SWIPE THROWS IT`, 2);
     return true;
   }
 
