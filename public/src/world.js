@@ -141,12 +141,17 @@ export class GroundEntity {
   get worldHeight() { return this.surfaceHeight + this.elevation; }
 
   integrateElevation(dt, gravity = 1250) {
+    // Launched by a launcher (launchFloatT, set by the hit): a lighter fall and a short hang near the
+    // apex, so the attacker can meet the foe in the air (user, 23 Oct 2026: they crossed heights).
+    // (Only from the apex on — the climb stays normal, so the foe does not fly out of the picture.)
+    if (this.launchFloatT > 0) { this.launchFloatT -= dt; if (this.vElevation < 70) gravity *= Math.abs(this.vElevation) < 70 ? .38 : .6; }
     this.vElevation -= gravity * dt;
     this.elevation += this.vElevation * dt;
     if (this.elevation <= 0) {
       this.elevation = 0;
       this.vElevation = 0;
       this.grounded = true;
+      this.launchFloatT = 0;
     } else {
       this.grounded = false;
     }

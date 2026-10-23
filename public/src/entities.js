@@ -153,6 +153,25 @@ const BACKDASH_COOLDOWN = 0.8;
 // continue — then both fall from the hit point. A down swipe after 1–2 air hits ends it.
 const AIR_ATTACK_MOMENTUM = .85;
 const AIR_SWING_REACH = 40;       // max height difference an air swing can still hit
+const AIR_LAUNCHED_REACH = 75;    // … against a launched foe (it floats; air combos must connect)
+// Hitstun decay: hits 1–3 of a run stun fully, then shorter; hit 7 of one run is a COMBO BREAK (the foe
+// gets no stun and a short invulnerable breather) — the answer to endless A1-A2-A3 spam without finisher.
+const COMBO_RUN_GAP = 1.0; const COMBO_BREAK_AT = 7;
+function comboStunFor(attacker, target, stun, isFinisher) {
+  if (!target || target.isObjective || target.isProp) return stun;
+  if (attacker?._flurry) return stun; // an earned finisher salvo is not spam
+  const now = (globalThis.performance?.now?.() ?? Date.now()) / 1000; const run = target._comboRun;
+  if (!run || run.by !== attacker || now - run.last > COMBO_RUN_GAP) target._comboRun = { by: attacker, n: 1, last: now };
+  else { run.n++; run.last = now; }
+  const n = target._comboRun.n;
+  if (n >= COMBO_BREAK_AT && !isFinisher) {
+    target._comboRun = null; target.comboBreakT = .5; target.invulnerableTimer = Math.max(target.invulnerableTimer ?? 0, .35);
+    combat.spawnDamageText(target.x, (target.y ?? 0) - 96, 'KOMBO-BRUCH', { color: '#80d8ff' }); combat.spawnShockwave(target.x, (target.y ?? 0) - 36, 34, '#80d8ff');
+    if ('kbVelX' in attacker) attacker.kbVelX = -(attacker.facing || 1) * 160; // the breaking foe shoves the attacker back
+    return 0;
+  }
+  return n <= 3 ? stun : stun * Math.max(.3, 1 - (n - 3) * .18);
+}
 const AIR_LATCH_TIME = .34;
 const AIR_LATCH_GRAVITY = .22;
 const AIR_LATCH_MAX = 3;          // latches per jump (no infinite air)
@@ -476,6 +495,12 @@ export class Player extends GroundEntity {
     this.pullCooldown = Math.max(0, (this.pullCooldown ?? 0) - dt);
     if (this.slowTimer <= 0) this.slowFactor = 1;
     this.comboResetTimer = Math.max(0, this.comboResetTimer - dt);
+    // The breather after attack 3 without finisher: then the queued attack 1 fires.
+    if (this._restartDelay > 0 && !ACTION_STATES.has(this.state) && (this._restartDelay -= dt) <= 0) {
+      this._restartDelay = 0;
+      if (this.queuedAttack === 'normal' && this.isAlive && this.grounded) { this.canAttack = true; this.state = 'idle'; this.stateTimer = 0; this.queuedAttack = null; this.attackBufferTimer = 0; this.executeAttack({ keys: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 } }, 'normal'); }
+      else this.canAttack = this.canAttack || !ACTION_STATES.has(this.state);
+    }
     // Launcher branch: the follow window; a tap queued during the launch swing jumps after the foe.
     if (this.followUp) {
       this.followUp.t -= dt;
@@ -1198,6 +1223,7 @@ export class Player extends GroundEntity {
     this.state = this.grounded ? 'idle' : (this.vElevation > 0 ? 'jump' : 'fall');
     this.stateTimer = 0;
     this.canAttack = true;
+    if (this.queuedAttack === 'normal' && this.attackBufferTimer > 0 && (this._restartDelay ?? 0) > 0) { this.canAttack = false; return; } // the breather runs (update counts it down)
     if (this.queuedAttack && this.attackBufferTimer > 0) {
       const queued = this.queuedAttack;
       this.queuedAttack = null;
@@ -1324,6 +1350,12 @@ export class Player extends GroundEntity {
       this.triggerMeleeHitbox(heavy.damage, this.facing * heavy.knockback, heavy.lift, 0.48, true, { hitstopTicks: heavy.hitstopTicks, hitReaction: heavy.hitReaction, reach: heavy.reach, freeze: heavy.freeze });
       return true;
     }
+    // Air magnet: in the air, a launched foe close by pulls the swing to its height (no crossing past).
+    if (!this.grounded) {
+      const lt = (window.gameWorld?.getHostileTargets?.(this.team) ?? []).filter((t) => t.launchFloatT > 0 && (t.elevation ?? 0) > 8 && !t.isDead && (t.hp ?? 1) > 0 && Math.abs(((t.z ?? this.z) - this.z) * 150) < 40 && Math.abs(t.x - this.x) < 120 && Math.abs((t.worldHeight ?? t.elevation ?? 0) - this.worldHeight) < 130)
+        .sort((a, b) => Math.abs(a.x - this.x) - Math.abs(b.x - this.x))[0];
+      if (lt) { this.facing = Math.sign(lt.x - this.x) || this.facing; this.elevation = Math.max(4, (lt.worldHeight ?? lt.elevation ?? 0) - this.surfaceHeight); this.vElevation = Math.max(this.vElevation, 0); this.x = lt.x - this.facing * Math.min(AIR_LATCH_GAP, Math.abs(lt.x - this.x)); }
+    }
     // A held weapon brings its own combo (length, speed, reach, finisher).
     const chain = comboChainOf(weapon ? weapon.combo : MELEE_BASELINE.normal);
     let attack;
@@ -1417,7 +1449,7 @@ export class Player extends GroundEntity {
       const up = weapon ? { ...MELEE_BASELINE.uppercut, ...weapon.uppercut } : MELEE_BASELINE.uppercut;
       this.state = 'uppercut'; this.stateTimer = .3; this._weaponSwingTime = .3; this.setWeaponMotion('uppercut'); audio.playSlash(1.25);
       if (!weapon) combat.spawnSlashArc(this.x, this.y - 25, f, { radius: 50, angleStart: -1.3, angleEnd: .6, color: '#ffea00', glow: '#ff9800', width: 6 });
-      const hit = this.triggerMeleeHitbox(Math.round(up.damage * 1.1), f * 60, Math.max(up.lift, 480) * 1.2, .5, false, { hitstopTicks: 6, hitReaction: 'strong' });
+      const hit = this.triggerMeleeHitbox(Math.round(up.damage * 1.1), f * 60, 520, .5, false, { hitstopTicks: 6, hitReaction: 'strong' }); // apex ≈ 1.3 hero heights, then it floats
       const t = this.lastMeleeHits?.[0];
       if (hit && t) { this.followUp = { t: .45, target: t, queued: false }; if (finisherGuideShown()) combat.spawnDamageText(this.x, this.y - 110, 'NACHSETZEN: TIPPEN', { color: '#69f0ae' }); }
       return true;
@@ -1443,7 +1475,8 @@ export class Player extends GroundEntity {
     if (!t || t.isDead || t.lifeState === 'Dead' || (t.hp ?? 1) <= 0) return false;
     const f = Math.sign(t.x - this.x) || this.facing || 1; this.facing = f;
     this.grounded = false; this.state = 'jump'; this.stateTimer = 0; this.isSprintJump = false; this.canAttack = false;
-    this.vElevation = this.jumpForce * 1.12; this.jumpsLeft = Math.max(0, (this.jumpsLeft ?? 1) - 1);
+    // Aim the jump at the foe's height (it floats; the magnet then meets it exactly).
+    const want = Math.max(40, Math.min(150, (t.worldHeight ?? t.elevation ?? 60) - this.surfaceHeight + 10)); this.vElevation = Math.min(this.jumpForce * 1.25, Math.sqrt(2 * UNITY_MOVEMENT.gravity * want)); this.jumpsLeft = Math.max(0, (this.jumpsLeft ?? 1) - 1);
     this.vx = Math.max(-420, Math.min(420, (t.x - f * AIR_LATCH_GAP - this.x) / .3));
     this._followStrikeT = .2; audio.playJump(); combat.spawnDust(this.x, this.y, 4);
     return true;
@@ -1463,7 +1496,7 @@ export class Player extends GroundEntity {
     if (g === 'early' || g === 'late') {
       if (guide) combat.spawnDamageText(this.x, this.y - 104, g === 'early' ? 'ZU FRÜH' : 'ZU SPÄT', { color: g === 'early' ? '#64b5f6' : '#ff5252' });
       this.finisherChance = null; this.comboStep = 0;
-      this.queuedAttack = 'normal'; this.attackBufferTimer = Math.max(0, this.stateTimer) + .12;
+      this.queuedAttack = 'normal'; this.attackBufferTimer = Math.max(0, this.stateTimer) + .32; this._restartDelay = .2; // a short breather before attack 1 again
       return true;
     }
     if (g === 'buffer') { ch.queued = 'good'; return true; } // remembered just before the window: fires when it opens
@@ -1663,9 +1696,15 @@ export class Player extends GroundEntity {
       // must not hit it). Downward strikes (dives) and structures keep the old reach.
       const airLimit = !this.grounded && !hitMeta.downward && !target.isObjective ? AIR_SWING_REACH : Infinity;
       const verticalReach = Math.min(target.hitHeightTolerance ?? (target.isObjective ? 120 : 70), airLimit);
-      if (inFront && closeDepth && heightDifference <= verticalReach) {
+      // A launched foe in the air is easier to meet: a larger vertical reach for air swings.
+      const reachOk = heightDifference <= (target.launchFloatT > 0 && (target.elevation ?? 0) > 8 && !this.grounded ? Math.max(verticalReach, AIR_LAUNCHED_REACH) : verticalReach);
+      if (inFront && closeDepth && reachOk) {
         const targetDmg = dmg * targetDamageMult(this, target); // hunter mark, shattered
-        const outcome = target.takeDamage(targetDmg, kx, lift, stunDuration, isFinisher, 'melee');
+        // Hitstun decay (user, 23 Oct 2026: endless attack spam must be escapable): every further hit of
+        // the same attacker within a second stuns shorter; from the 7th hit on the foe breaks free once.
+        const stunNow = comboStunFor(this, target, stunDuration, isFinisher);
+        const outcome = target.takeDamage(targetDmg, kx, lift, stunNow, isFinisher, 'melee');
+        { if (lift >= 250) target.launchFloatT = 1.3; else if (!this.grounded && (target.elevation ?? 0) > 0) { target.launchFloatT = Math.max(target.launchFloatT ?? 0, .45); target.vElevation = Math.max(target.vElevation ?? 0, 60); } }
         if (!outcome?.ignored) onWeaponMeleeHit(this, target, targetDmg, spells);
         sigHits.push({ target, blocked: !!outcome?.blocked || (!!target.isGuarding && Math.sign(-kx) === (target.facing || 0)) });
         hitMeta.hitSet?.add(target);

@@ -1,5 +1,6 @@
 // GRIMGE Prototype — UI & HUD Controller matching Setup Mockup Exactly
 import { MASTERY_TREES, masteryRequirement, analyzeBuild } from './mastery_data.js';
+import { WEAPONS } from './weapons.js';
 import { spells } from './spells.js';
 import { MAGE_SKILL_TREE, SKILL_RUNE_UNLOCKS, RUNE_CATEGORIES, runeCategory, ALL_RUNE_IDS, runeUnlockLabel, isBuffRuneId, isSignatureRuneId, isDomainRuneId, maxRuneCopies, MAX_DECK_PRESETS, MATCH_DECK_SIZE, DECK_PRESET_NAME_MAX } from './progression.js';
 import { recognizer } from './recognizer.js';
@@ -853,6 +854,25 @@ export class UIManager {
     if (this.screenFitBtn) this.screenFitBtn.textContent = mode === 'fill' ? 'SCREEN: FILL (ZOOM)' : 'SCREEN: FIT (SAME VIEW)';
   }
 
+  // Training only (dev phase, user 23 Oct 2026): the full list of combo moves and inputs.
+  renderComboGuide() {
+    const el = document.getElementById('combo-moveset-guide'); if (!el) return;
+    const gw = window.gameWorld; if (gw?.activeMode?.id !== 'training') { el.innerHTML = ''; return; }
+    const P = gw.player; const wid = P?.weapon ?? P?.classWeapon; const wname = wid ? (WEAPONS[wid]?.name ?? wid) : 'OHNE WAFFE';
+    const fin = { spear: 'Stichsalve', glaive: 'Stichsalve', spirit_glaive: 'Geistersalve', daggers: 'Klingenwirbel', claws: 'Krallensturm', gauntlets: 'Fausthagel' }[wid] ?? 'verstärkter Schlag (bei Fernwaffen: großer Durchschlag-Schuss)';
+    const row = (k, v) => `<div class="g-item"><strong>${k}</strong>: ${v}</div>`;
+    el.innerHTML = `<h3>✦ KOMBOS & BEWEGUNGEN (TRAINING · DEV)</h3><div class="g-item"><small>Aktuelle Waffe: <b>${wname}</b></small></div>`
+      + row('Kette', 'Tippen ×3 = Angriff 1 · 2 · 3 (geht nur bei Treffer weiter)')
+      + row('Finisher', `nach Angriff 3: Hitstop, dann im Takt tippen (Ring nur im Training; grün = gut, gold = PERFEKT ×1,3) · ${fin} · verpasst: Atempause, dann wieder Angriff 1`)
+      + row('Abzweig hoch', 'A1 (A2/A3) + Wischen ↑ = Hochschlag-Abzweig · dann TIPPEN = Nachsetzen (springt hinterher, Luftkombo)')
+      + row('Abzweig vorwärts', 'A1 A2 + Wischen → = Rundumfeger · A1 A2 A3 + Wischen → = Schockwelle / Salve')
+      + row('Aus dem Stand', 'Wischen → = Ansturm · Wischen ↑ = Hochschlag · Halten + Ziehen = Aufladen (→ ↑ ↓) · Halten = HOLD (Fernangriff / Pull)')
+      + row('Luft', 'Tippen = Luftkombo (max. 3 Treffer pro Sprung, hochgeschleuderte Gegner schweben kurz) · Wischen ↓ (auch schräg) = Sturz · Aufladen in der Luft = schräger Sturz in Laufrichtung')
+      + row('Sprint', 'Sprint + Tippen = Sprint-Angriff · Sprint-Sprung + ↓ = schräger Sturz')
+      + row('Abwehr', 'Blocken (vorne), perfekter Block = Konter · Rückwärts-Wischen = Backdash (+1 Konterschuss) · nach 7 Treffern in Folge: KOMBO-BRUCH')
+      + row('Geführte Kette', 'S88 Schattenreigen: Kunai trifft → 7 Takte: Salto · Ansturm (→) · Hochschlag (↑) · 3 Luftschnitte · Erdhammer (↓) — Tippen / Wischen im Fenster');
+  }
+
   renderGrimoireGuides() {
     const deckRunes = recognizer.runes.filter((rune) => ALL_RUNE_IDS.includes(rune.id));
     const byId = new Map(recognizer.runes.map((rune) => [rune.id, rune]));
@@ -887,6 +907,7 @@ export class UIManager {
         this.toggleRecipeDetail(row.getAttribute('data-spell'));
       });
     }
+    this.renderComboGuide();
     fusions.innerHTML = [
       ['SINGLE RUNES', groups[1]],
       ['DUAL FUSIONS', groups[2]],

@@ -4246,7 +4246,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   const P = game.player; const dummy = game.trainingDummy; dummy.homeX = dummy.x = 1600; spells.clearRuntime();
   const neutral = { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false };
   const step = (n) => { for (let i = 0; i < n; i++) P.update(1 / 60, neutral, game.battlefield, game); };
-  const reset = (weapon = null) => { if (P.signature) { P.signature = null; } P.equipWeapon(null); P.equipClassWeapon(weapon); P.x = 300; P.z = .5; P.facing = 1; P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.grounded = true; P.elevation = 0; P.comboStep = 0; P.finisherChance = null; P.mp = P.maxMp; game.battlefield.placeOnSurface(P); game.minions = []; };
+  const reset = (weapon = null) => { P._restartDelay = 0; P.followUp = null; if (P.signature) { P.signature = null; } P.equipWeapon(null); P.equipClassWeapon(weapon); P.x = 300; P.z = .5; P.facing = 1; P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.grounded = true; P.elevation = 0; P.comboStep = 0; P.finisherChance = null; P.mp = P.maxMp; game.battlefield.placeOnSurface(P); game.minions = []; };
   const foe = () => { const m = new Minion(340, .5, 'red', 'melee', 0); m.maxHp = m.hp = 5000; m.passive = true; game.battlefield.placeOnSurface(m); game.minions.push(m); return m; };
   // Runs the chain to the last chain step; returns the target.
   const toLastStep = (weapon = null) => { reset(weapon); const m = foe(); const chain = E.comboChainOf((P.weaponProfile ?? null) ? P.weaponProfile.combo : E.MELEE_BASELINE.normal);
@@ -4257,7 +4257,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
     assert(P.lastFinisherGrade === 'perfect' && P.state === 'attack3' && m.hp < hp && P.comboStep === 0, 'A press at the peak: PERFEKT finisher'); 
     const { m: m2 } = toLastStep(); waitTo(.8); P.executeAttack(neutral, 'normal'); assert(P.lastFinisherGrade === 'good' && Math.abs(m2.kbVelX) < Math.abs(kbPerfect), 'A press in the green band: FINISHER (the perfect one knocks 1.3x farther)'); }
   { toLastStep(); P.lastFinisherGrade = null; const ok = P.executeAttack(neutral, 'normal'); assert(ok && !P.finisherChance && P.lastFinisherGrade === null && P.queuedAttack === 'normal', 'Mashing right after the hit is too early: no finisher — the press is kept for attack 1 (no stutter)');
-    for (let i = 0; i < 40 && P.state === 'attack3'; i++) step(1); step(1); assert(P.comboStep === 1 && P.state === 'attack1', 'After a missed timing the chain flows on with attack 1'); }
+    for (let i = 0; i < 40 && P.state === 'attack3'; i++) step(1); for (let i = 0; i < 25 && P.state !== 'attack1'; i++) step(1); assert(P.comboStep === 1 && P.state === 'attack1', 'After a missed timing the chain flows on with attack 1 (after a short breather)'); }
   { reset('spear'); const { m } = toLastStep('spear'); waitTo(1); const hp0 = m.hp; P.executeAttack(neutral, 'normal'); let hits = 0; const orig = m.takeDamage.bind(m); m.takeDamage = (...q) => { hits++; return orig(...q); }; for (let i = 0; i < 30; i++) step(1); m.takeDamage = orig;
     assert(P.lastFinisherGrade === 'perfect' && hits >= 4 && m.hp < hp0, 'Spear finisher: a salvo of stabs (' + (hits + 1) + ' hits)'); }
   { toLastStep(); P.lastFinisherGrade = null; const ch = P.finisherChance; while (P.finisherChance && P.finisherElapsed() <= ch.peak + ch.good + .02) step(1); if (P.finisherChance) P.executeAttack(neutral, 'normal'); assert(P.lastFinisherGrade === null && !P.finisherChance, 'Too late (after the green band): no finisher, the chain ends (ZU SPÄT)'); }
@@ -4285,6 +4285,16 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   { chainTo(3); const n0 = spells.activeSpells.filter((x) => x.isWeaponShot).length; P.executeAttack(neutral, 'heavy'); for (let i = 0; i < 40 && P.lastBranch !== 'wave'; i++) step(1);
     assert(P.lastBranch === 'wave' && spells.activeSpells.filter((x) => x.isWeaponShot).length > n0, 'A1 A2 A3 + swipe forward: the shockwave branch runs forward'); }
   { reset(); P.lastBranch = null; foe(); P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.executeAttack(neutral, 'heavy'); assert(P.lastBranch === null && P.state === 'heavyStrike', 'From standing a swipe stays the plain heavy attack'); }
+  // Air combos connect (user, 23 Oct 2026): launched foes float, the air magnet meets them, hitstun decays.
+  { const stepAll = (n) => { for (let i = 0; i < n; i++) { P.update(1 / 60, neutral, game.battlefield, game); for (const mm of game.minions) mm.update?.(1 / 60, game, game.battlefield); } };
+    reset(); const m = foe(); m.passive = false; P.state = 'idle'; P.canAttack = true; P.executeAttack(neutral, 'uppercut'); let air = 0; stepAll(2); for (let i = 0; i < 200 && (m.elevation ?? 0) > 0; i++) { stepAll(1); air += 1 / 60; }
+    assert(air > .95, 'A launched foe floats from the apex on (lighter fall, a hang): ' + air.toFixed(2) + ' s in the air');
+    reset(); const m2 = foe(); P.state = 'idle'; P.canAttack = true; P.executeAttack(neutral, 'uppercut'); stepAll(14); P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.jumpsLeft = 2; P.performJump(); stepAll(8);
+    const hp2 = m2.hp; P.canAttack = true; P.state = 'jump'; P.executeAttack(neutral, 'normal'); assert(m2.hp < hp2, 'Uppercut, jump, attack: the air magnet meets the launched foe at its height (no crossing past)'); }
+  { reset(); const m3 = foe(); let broke = false; for (let i = 0; i < 7; i++) { m3.x = 340; P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.triggerMeleeHitbox(5, 0, 0, .4, false, {}); if (m3.comboBreakT > 0) broke = true; }
+    assert(broke, 'Endless spam without finisher: the 7th hit in a row is a KOMBO-BRUCH (the foe breaks free)'); }
+  { const UI = await import('./public/src/ui.js'); const el = globalThis.document?.getElementById?.('combo-moveset-guide'); UI.ui.renderComboGuide?.();
+    assert(typeof UI.ui.renderComboGuide === 'function' && (!el || /KOMBOS/.test(el.innerHTML ?? '')), 'Training: the combo / move list is shown with the rune infos (dev phase)'); }
   // Outside Training: no ring, no labels — the window still works (timing + hitstop only).
   assert(E.finisherGuideShown(), 'In Training the finisher guide (ring, PERFEKT label) is shown');
   game.returnToHub(); game.setMatchMode('arena'); game.startMatch();

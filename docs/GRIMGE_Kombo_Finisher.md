@@ -49,3 +49,14 @@ Halten bleibt unverändert für Aufladen (Halten + Ziehen) und die HOLD-Fähigke
 - Ein Wischen nach unten in der Luft folgt dem **Winkel** des Wischens. Flach gewischt stürzt flach, steil gewischt stürzt steil. Es wird nicht mehr auf den nächsten Gegner gezielt.
 - Nach einem Sprint-Sprung bleibt der Sturz immer schräg (mindestens etwa 30°).
 - **Aufladen in der Luft** (Halten und Ziehen, oder K mit Richtung): Vorwärts oder runter löst den schrägen Sturz in Laufrichtung aus. Nach einem normalen Sprung fällt Runter fast gerade.
+
+## Luftkombos & Anti-Spam (23. Okt 2026)
+
+- **Schweben:** Ein hochgeschleuderter Gegner (Lift ≥ 250) steigt normal und fällt ab dem Scheitel leichter: Schwerkraft ×0,6, nahe dem Scheitel ×0,38, 1,3 s lang. Ein Lufttreffer hält ihn kurz oben (0,45 s).
+- **Luft-Magnet:** Ein Luftangriff neben einem schwebenden Gegner (< 120 px) setzt den Helden auf dessen Höhe. Kein Vorbeifliegen mehr. Gegen schwebende Gegner gilt eine Luft-Reichweite von 75 statt 40.
+- **Nachsetzen:** Der Sprung zielt auf die Höhe des Gegners (40–150 px). Der Hochschlag-Abzweig schleudert mit festem Lift 520.
+- **Hitstun-Abbau:** Treffer 1–3 einer Serie (Abstand < 1 s) betäuben voll. Danach wird jeder Treffer 18 % kürzer, minimal 30 %.
+- **KOMBO-BRUCH:** Der 7. Treffer in Folge betäubt nicht. Der Gegner ist 0,35 s unverwundbar und schubst den Angreifer zurück. Der Finisher-Wirbel ist davon ausgenommen.
+- **Atempause:** Nach einem verpassten Finisher startet Angriff 1 erst nach 0,2 s. In dieser Zeit kann der Gegner blocken oder ausweichen.
+- **Gegen Spam:** Blocken (perfekter Block = Konter), Backdash, Hitstun-Abbau, KOMBO-BRUCH, Atempause.
+- **Training (Dev):** Im Grimoire unter den Runen-Infos stehen alle Kombos und Bewegungen (`renderComboGuide`).
