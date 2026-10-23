@@ -50,6 +50,11 @@ const isLeaf = (el) => el.tagName === 'IMG' || !!el.id || [...el.childNodes].som
 const $ = (id) => document.getElementById(id);
 const frame = $('frame'); const stage = $('stage'); const overlay = $('overlay'); const wrap = $('stage-wrap');
 let spec = emptySpec(); let preset = 'desktop'; let current = 'hub_character'; let selected = null; // { kind: 'change' | 'added', target | id }
+// Ctrl / Cmd + click builds a multi-selection (user, 23 Oct 2026): dragging, arrow keys and Delete act on all of them.
+let multi = [];
+const sameSel = (a, b) => !!a && !!b && a.kind === b.kind && (a.kind === 'change' ? a.target === b.target : a.id === b.id);
+const isSelected = (sel) => multi.some((m) => sameSel(m, sel));
+const clearSelection = () => { selected = null; multi = []; };
 let scanned = []; // [{ el, target, label, fn }]
 const registry = new Map(); // fn key → { key, label, screen }
 const touched = new Map(); // element → its original inline styles (restored on screen switch)
@@ -165,8 +170,12 @@ function restoreAll() {
 function applyChange(c) {
   const el = doc()?.querySelector(c.target); if (!el) return false;
   remember(el); const { w, h } = vp();
-  el.style.translate = (c.move.dx || c.move.dy) ? `${Math.round(c.move.dx * w)}px ${Math.round(c.move.dy * h)}px` : touched.get(el).translate;
-  if (c.size) { el.style.setProperty('width', `${Math.round(c.size.w * w)}px`, 'important'); el.style.setProperty('height', `${Math.round(c.size.h * h)}px`, 'important'); el.style.boxSizing = 'border-box'; }
+  // The game scales its menus (CSS transforms): the spec stores SCREEN fractions, the element's own px are
+  // screen px divided by its scale (measured once, a translate does not change it).
+  const o0 = touched.get(el); if (!o0.k) { const r = el.getBoundingClientRect(); o0.k = { x: el.offsetWidth ? r.width / el.offsetWidth : 1, y: el.offsetHeight ? r.height / el.offsetHeight : 1 }; }
+  const kx = o0.k.x || 1; const ky = o0.k.y || 1;
+  el.style.translate = (c.move.dx || c.move.dy) ? `${(c.move.dx * w / kx).toFixed(2)}px ${(c.move.dy * h / ky).toFixed(2)}px` : touched.get(el).translate;
+  if (c.size) { el.style.setProperty('width', `${(c.size.w * w / kx).toFixed(2)}px`, 'important'); el.style.setProperty('height', `${(c.size.h * h / ky).toFixed(2)}px`, 'important'); el.style.boxSizing = 'border-box'; }
   else { const o = touched.get(el); el.style.setProperty('width', o.width, o.wp); el.style.setProperty('height', o.height, o.hp); }
   if (c.hidden) { el.dataset.uiedHidden = '1'; el.style.opacity = '.25'; el.style.outline = '2px dashed #ff5252'; }
   else { delete el.dataset.uiedHidden; el.style.opacity = touched.get(el).opacity; el.style.outline = touched.get(el).outline; }
@@ -181,14 +190,14 @@ function drawOverlay() {
   const builtin = !!BUILTIN_BY_ID[current] || !!s?.base;
   if (builtin && BUILTIN_BY_ID[current]) for (const it of scanned) {
     const r = it.el.getBoundingClientRect(); const c = s ? changeOf(s, it.target) : null;
-    const box = document.createElement('div'); box.className = 'box' + (c && !isPlain(c) ? ' changed' : '') + (c?.hidden ? ' hiddenEl' : '') + (selected?.kind === 'change' && selected.target === it.target ? ' sel' : '');
+    const box = document.createElement('div'); box.className = 'box' + (c && !isPlain(c) ? ' changed' : '') + (c?.hidden ? ' hiddenEl' : '') + (isSelected({ kind: 'change', target: it.target }) ? ' sel' : '');
     Object.assign(box.style, { left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px' });
     box.innerHTML = `<span class="tag">${esc(it.label || it.target)}${it.fn ? ' · ' + esc(it.fn) : ''}</span><i class="grip"></i>`;
     box.addEventListener('pointerdown', (e) => startDrag(e, { kind: 'change', target: it.target }, e.target.classList.contains('grip')));
     overlay.appendChild(box);
   }
   for (const a of s?.added ?? []) {
-    const d = document.createElement('div'); d.className = `added k-${a.kind}` + (selected?.kind === 'added' && selected.id === a.id ? ' sel' : '');
+    const d = document.createElement('div'); d.className = `added k-${a.kind}` + (isSelected({ kind: 'added', id: a.id }) ? ' sel' : '');
     Object.assign(d.style, { left: a.rect.x * W + 'px', top: a.rect.y * H + 'px', width: a.rect.w * W + 'px', height: a.rect.h * H + 'px', background: a.style.bg, color: a.style.color });
     d.innerHTML = `${esc(a.text)}<i class="grip"></i>`; d.title = a.id;
     d.addEventListener('pointerdown', (e) => startDrag(e, { kind: 'added', id: a.id }, e.target.classList.contains('grip')));
@@ -199,34 +208,58 @@ const isPlain = (c) => !c.hidden && !c.size && !c.comment && (!c.function || c.f
 const esc = (t) => String(t ?? '').replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
 
 // ── dragging / resizing ──
+// The spec entry behind a selection (created on demand for page elements).
+function itemOf(sel) {
+  const s = ensureScreen(spec, current, screenMeta(current));
+  if (sel.kind === 'change') { const it = scanned.find((x) => x.target === sel.target); return ensureChange(s, sel.target, { label: it?.label ?? '', fn: it?.fn ?? null }); }
+  return s.added.find((a) => a.id === sel.id) ?? null;
+}
+// Current on-screen box of a selection (px in the viewport).
+function rectOf(sel) {
+  const { w: W, h: H } = vp();
+  if (sel.kind === 'change') { const r = scanned.find((x) => x.target === sel.target)?.el.getBoundingClientRect(); return r ? { x: r.left, y: r.top, w: r.width, h: r.height } : null; }
+  const a = itemOf(sel); return a ? { x: a.rect.x * W, y: a.rect.y * H, w: a.rect.w * W, h: a.rect.h * H } : null;
+}
+function moveBy(sel, dxPx, dyPx) {
+  const { w: W, h: H } = vp(); const item = itemOf(sel); if (!item) return;
+  if (sel.kind === 'change') { item.move = { dx: item.move.dx + dxPx / W, dy: item.move.dy + dyPx / H }; applyChange(item); }
+  else { item.rect.x += dxPx / W; item.rect.y += dyPx / H; }
+}
 function startDrag(e, sel, resize) {
   if (mode !== 'edit') return;
-  e.preventDefault(); e.stopPropagation(); selected = sel; const p0 = stagePoint(e); const { w: W, h: H } = vp();
-  const s = ensureScreen(spec, current, screenMeta(current)); let item; let start;
-  if (sel.kind === 'change') {
-    const it = scanned.find((x) => x.target === sel.target); item = ensureChange(s, sel.target, { label: it?.label ?? '', fn: it?.fn ?? null });
-    const r = it?.el.getBoundingClientRect(); start = { dx: item.move.dx, dy: item.move.dy, w: item.size?.w ?? (r ? r.width / W : .1), h: item.size?.h ?? (r ? r.height / H : .05) };
-  } else { item = s.added.find((a) => a.id === sel.id); start = { ...item.rect }; }
+  e.preventDefault(); e.stopPropagation();
+  // Ctrl / Cmd + click: add to / remove from the selection (no drag when removing).
+  if (e.ctrlKey || e.metaKey) {
+    if (isSelected(sel)) { multi = multi.filter((m) => !sameSel(m, sel)); selected = multi[multi.length - 1] ?? null; renderInspector(); drawOverlay(); return; }
+    multi.push(sel);
+  } else if (!isSelected(sel)) multi = [sel];
+  selected = sel;
+  const group = multi.length > 1; if (group) resize = false; // a group only moves together
+  const p0 = stagePoint(e); const { w: W, h: H } = vp();
+  const items = multi.map((m) => { const item = itemOf(m); const r = m.kind === 'change' ? scanned.find((x) => x.target === m.target)?.el.getBoundingClientRect() : null;
+    return { m, item, start: m.kind === 'change' ? { dx: item.move.dx, dy: item.move.dy, w: item.size?.w ?? (r ? r.width / W : .1), h: item.size?.h ?? (r ? r.height / H : .05) } : { ...item.rect } }; }).filter((x) => x.item);
   renderInspector(); drawOverlay();
   const move = (ev) => {
     const p = stagePoint(ev); const fx = (p.x - p0.x) / W; const fy = (p.y - p0.y) / H; const snap = (v, unit) => (ev.altKey ? v : Math.round(v * unit) / unit);
-    if (sel.kind === 'change') {
-      if (resize) item.size = { w: Math.max(.01, snap(start.w + fx, W)), h: Math.max(.01, snap(start.h + fy, H)) };
-      else item.move = { dx: snap(start.dx + fx, W), dy: snap(start.dy + fy, H) };
-      applyChange(item);
-    } else if (resize) { item.rect.w = Math.max(.01, start.w + fx); item.rect.h = Math.max(.01, start.h + fy); }
-    else { item.rect.x = start.x + fx; item.rect.y = start.y + fy; }
+    for (const { m, item, start } of items) {
+      if (m.kind === 'change') {
+        if (resize) item.size = { w: Math.max(.01, snap(start.w + fx, W)), h: Math.max(.01, snap(start.h + fy, H)) };
+        else item.move = { dx: snap(start.dx + fx, W), dy: snap(start.dy + fy, H) };
+        applyChange(item);
+      } else if (resize) { item.rect.w = Math.max(.01, start.w + fx); item.rect.h = Math.max(.01, start.h + fy); }
+      else { item.rect.x = start.x + fx; item.rect.y = start.y + fy; }
+    }
     drawOverlay();
   };
   const up = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); autosave(); renderInspector(); };
   window.addEventListener('pointermove', move); window.addEventListener('pointerup', up);
 }
-overlay.addEventListener('pointerdown', (e) => { if (e.target === overlay && mode === 'edit') { selected = null; drawOverlay(); renderInspector(); } });
+overlay.addEventListener('pointerdown', (e) => { if (e.target === overlay && mode === 'edit' && !e.ctrlKey && !e.metaKey) { clearSelection(); drawOverlay(); renderInspector(); } });
 
 // ── screens ──
 function screenMeta(id) { const b = BUILTIN_BY_ID[id]; return b ? { name: b.name, builtin: true } : { name: screenOf(spec, id)?.name ?? id, builtin: false }; }
 async function openScreen(id) {
-  if (busy) return; busy = true; current = id; selected = null; restoreAll(); renderScreenList(); renderInspector();
+  if (busy) return; busy = true; current = id; clearSelection(); restoreAll(); renderScreenList(); renderInspector();
   const s = screenOf(spec, id); const b = BUILTIN_BY_ID[id]; const base = b ? b : (s?.base ? BUILTIN_BY_ID[s.base] : null);
   $('blank').style.display = base ? 'none' : 'block'; frame.style.visibility = base ? 'visible' : 'hidden';
   status(`öffne ${b?.name ?? s?.name ?? id} …`);
@@ -288,7 +321,19 @@ function renderInspector(missing = []) {
   }
   // Selection.
   const box = $('element-props'); const { w: W, h: H } = vp();
-  if (!selected) { box.innerHTML = '<p class="muted">Ein Element im Bild anklicken.</p>'; return; }
+  if (!selected) { box.innerHTML = '<p class="muted">Ein Element im Bild anklicken. Mit <b>Strg</b> + Klick mehrere auswählen.</p>'; return; }
+  if (multi.length > 1) {
+    const label = (m) => (m.kind === 'change' ? (scanned.find((x) => x.target === m.target)?.label || m.target) : (itemOf(m)?.text || m.id));
+    box.innerHTML = `<b>${multi.length} Elemente ausgewählt</b><div class="muted">${multi.map((m) => esc(label(m))).join(' · ')}</div>
+      <div class="row"><div><label>Δ x (px)</label><input id="g-dx" type="number" value="0"></div><div><label>Δ y (px)</label><input id="g-dy" type="number" value="0"></div></div>
+      <button id="g-move" style="margin-top:6px;width:100%">Alle verschieben</button>
+      ${alignBlock(true)}
+      <button id="g-clear" style="margin-top:8px;width:100%">Auswahl aufheben</button>`;
+    $('g-move').onclick = () => { const dx = +$('g-dx').value || 0; const dy = +$('g-dy').value || 0; for (const m of multi) moveBy(m, dx, dy); autosave(); drawOverlay(); renderInspector(); };
+    $('g-clear').onclick = () => { clearSelection(); drawOverlay(); renderInspector(); };
+    bindAlign(box);
+    return;
+  }
   const sc = ensureScreen(spec, current, screenMeta(current));
   if (selected.kind === 'change') {
     const it = scanned.find((x) => x.target === selected.target); const c = ensureChange(sc, selected.target, { label: it?.label ?? '', fn: it?.fn ?? null });
@@ -298,7 +343,9 @@ function renderInspector(missing = []) {
       <label><input id="c-hidden" type="checkbox" style="width:auto" ${c.hidden ? 'checked' : ''}> ausblenden</label>
       ${functionEditor(c.function)}
       <label>Kommentar (was genau soll passieren?)</label><textarea id="c-comment">${esc(c.comment)}</textarea>
+      ${alignBlock(false)}
       <button id="c-reset" style="margin-top:8px;width:100%">Änderungen zurücksetzen</button>`;
+    bindAlign(box);
     const upd = () => { c.move = { dx: (+$('c-dx').value || 0) / W, dy: (+$('c-dy').value || 0) / H }; const w = +$('c-w').value; const h = +$('c-h').value; c.size = w > 0 && h > 0 ? { w: w / W, h: h / H } : null; c.hidden = $('c-hidden').checked; applyChange(c); autosave(); drawOverlay(); };
     for (const id of ['c-dx', 'c-dy', 'c-w', 'c-h']) $(id).onchange = upd; $('c-hidden').onchange = upd;
     $('c-comment').oninput = (e) => { c.comment = e.target.value; autosave(); };
@@ -314,12 +361,49 @@ function renderInspector(missing = []) {
       <div class="row"><div><label>Hintergrund</label><input id="a-bg" value="${esc(a.style.bg)}"></div><div><label>Schrift</label><input id="a-color" value="${esc(a.style.color)}"></div></div>
       ${functionEditor(a.function)}
       <label>Kommentar (was genau soll passieren?)</label><textarea id="a-comment">${esc(a.comment)}</textarea>
+      ${alignBlock(false)}
       <button id="a-del" style="margin-top:8px;width:100%">Element löschen</button>`;
+    bindAlign(box);
     const upd = () => { a.kind = $('a-kind').value; a.text = $('a-text').value; a.rect = { x: (+$('a-x').value || 0) / W, y: (+$('a-y').value || 0) / H, w: Math.max(4, +$('a-w').value || 0) / W, h: Math.max(4, +$('a-h').value || 0) / H }; a.style = { bg: $('a-bg').value, color: $('a-color').value }; autosave(); drawOverlay(); };
     for (const id of ['a-kind', 'a-x', 'a-y', 'a-w', 'a-h', 'a-bg', 'a-color']) $(id).onchange = upd; $('a-text').oninput = upd;
     $('a-comment').oninput = (e) => { a.comment = e.target.value; autosave(); };
     $('a-del').onclick = () => { sc.added = sc.added.filter((x) => x !== a); selected = null; autosave(); renderInspector(); drawOverlay(); };
     bindFunctionEditor(a);
+  }
+}
+
+// The align buttons (PowerPoint-like): edges / centres, distribute, relative to the selection or the screen.
+function alignBlock(group) {
+  return `<label>Ausrichten ${group ? '' : '(am Bildschirm)'}</label>
+    <div class="row"><button data-align="left" title="linksbündig">⇤ Links</button><button data-align="hcenter" title="horizontal zentrieren">↔ Mitte</button><button data-align="right" title="rechtsbündig">Rechts ⇥</button></div>
+    <div class="row" style="margin-top:4px"><button data-align="top" title="oben ausrichten">⤒ Oben</button><button data-align="vcenter" title="vertikal zentrieren">↕ Mitte</button><button data-align="bottom" title="unten ausrichten">Unten ⤓</button></div>
+    ${group ? `<label>Gleichmäßig verteilen</label><div class="row"><button data-align="hdist">⟷ Waagerecht</button><button data-align="vdist">⟷ Senkrecht</button></div>
+    <label><input id="g-screen" type="checkbox" style="width:auto" ${alignToScreen ? 'checked' : ''}> am Bildschirm ausrichten (statt an der Auswahl)</label>` : ''}`;
+}
+function bindAlign(box) {
+  for (const b of box.querySelectorAll('[data-align]')) b.onclick = () => { alignSelection(b.dataset.align); autosave(); drawOverlay(); renderInspector(); };
+  const scr = box.querySelector('#g-screen'); if (scr) scr.onchange = (e) => { alignToScreen = e.target.checked; };
+}
+// Align / distribute the multi-selection (edges and centres of the group's bounding box).
+let alignToScreen = false;
+function alignSelection(kind, toScreen = alignToScreen) {
+  const list = (multi.length ? multi : selected ? [selected] : []).map((m) => ({ m, r: rectOf(m) })).filter((x) => x.r); if (!list.length) return;
+  const screen = toScreen || list.length === 1; const { w: W, h: H } = vp();
+  let L = Math.min(...list.map((x) => x.r.x)); let R = Math.max(...list.map((x) => x.r.x + x.r.w)); let T = Math.min(...list.map((x) => x.r.y)); let B = Math.max(...list.map((x) => x.r.y + x.r.h));
+  if (screen) { L = 0; R = W; T = 0; B = H; }
+  const cx = (L + R) / 2; const cy = (T + B) / 2;
+  if (kind === 'hdist' || kind === 'vdist') {
+    if (list.length < 2) return;
+    const hor = kind === 'hdist'; const sorted = [...list].sort((a, b) => (hor ? a.r.x + a.r.w / 2 - b.r.x - b.r.w / 2 : a.r.y + a.r.h / 2 - b.r.y - b.r.h / 2));
+    let c0 = hor ? sorted[0].r.x + sorted[0].r.w / 2 : sorted[0].r.y + sorted[0].r.h / 2; let c1 = hor ? sorted.at(-1).r.x + sorted.at(-1).r.w / 2 : sorted.at(-1).r.y + sorted.at(-1).r.h / 2;
+    if (screen) { const span = hor ? W : H; c0 = span / (sorted.length + 1); c1 = span - c0; }
+    sorted.forEach((x, i) => { const want = c0 + (c1 - c0) * i / (sorted.length - 1); const have = hor ? x.r.x + x.r.w / 2 : x.r.y + x.r.h / 2; moveBy(x.m, hor ? want - have : 0, hor ? 0 : want - have); });
+    return;
+  }
+  for (const { m, r } of list) {
+    const dx = kind === 'left' ? L - r.x : kind === 'right' ? R - (r.x + r.w) : kind === 'hcenter' ? cx - (r.x + r.w / 2) : 0;
+    const dy = kind === 'top' ? T - r.y : kind === 'bottom' ? B - (r.y + r.h) : kind === 'vcenter' ? cy - (r.y + r.h / 2) : 0;
+    moveBy(m, dx, dy);
   }
 }
 
@@ -337,18 +421,20 @@ $('viewport').innerHTML = Object.entries(VIEWPORTS).map(([k, v]) => `<option val
 $('viewport').onchange = (e) => { preset = e.target.value; fit(); setTimeout(() => openScreen(current), 500); };
 window.addEventListener('resize', () => { fit(); drawOverlay(); });
 window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && mode === 'edit') { clearSelection(); drawOverlay(); renderInspector(); return; }
   if (!selected || mode !== 'edit' || /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName ?? '')) return;
   const { w: W, h: H } = vp(); const step = e.shiftKey ? 10 : 1; const d = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] }[e.key];
   const s = ensureScreen(spec, current, screenMeta(current));
   if (d) {
     e.preventDefault();
-    if (selected.kind === 'change') { const it = scanned.find((x) => x.target === selected.target); const c = ensureChange(s, selected.target, { label: it?.label ?? '', fn: it?.fn ?? null }); c.move = { dx: c.move.dx + d[0] / W, dy: c.move.dy + d[1] / H }; applyChange(c); }
-    else { const a = s.added.find((x) => x.id === selected.id); if (a) { a.rect.x += d[0] / W; a.rect.y += d[1] / H; } }
+    for (const m of (multi.length ? multi : [selected])) moveBy(m, d[0], d[1]);
     autosave(); drawOverlay(); renderInspector();
   } else if (e.key === 'Delete') {
-    if (selected.kind === 'added') s.added = s.added.filter((x) => x.id !== selected.id);
-    else { const c = changeOf(s, selected.target); if (c) { c.move = { dx: 0, dy: 0 }; c.size = null; c.hidden = false; applyChange(c); } }
-    selected = null; pruneScreen(s); autosave(); drawOverlay(); renderInspector();
+    for (const m of (multi.length ? multi : [selected])) {
+      if (m.kind === 'added') s.added = s.added.filter((x) => x.id !== m.id);
+      else { const c = changeOf(s, m.target); if (c) { c.move = { dx: 0, dy: 0 }; c.size = null; c.hidden = false; applyChange(c); } }
+    }
+    clearSelection(); pruneScreen(s); autosave(); drawOverlay(); renderInspector();
   }
 });
 
@@ -363,4 +449,4 @@ window.addEventListener('keydown', (e) => {
   status('Spiel geladen'); await openScreen('hub_character');
 })();
 // For headless checks.
-window.__uiEditor = { get spec() { return spec; }, get scanned() { return scanned; }, get registry() { return registry; }, openScreen, scan: () => (scanned = scan()), select: (s) => { selected = s; renderInspector(); drawOverlay(); }, get current() { return current; } };
+window.__uiEditor = { get spec() { return spec; }, get scanned() { return scanned; }, get registry() { return registry; }, openScreen, scan: () => (scanned = scan()), select: (s) => { selected = s; multi = s ? [s] : []; renderInspector(); drawOverlay(); }, selectMany: (list) => { multi = [...list]; selected = list[list.length - 1] ?? null; renderInspector(); drawOverlay(); }, get multi() { return multi; }, align: (k) => { alignSelection(k); drawOverlay(); }, nudge: (dx, dy) => { for (const m of multi) moveBy(m, dx, dy); drawOverlay(); }, rectOf, get current() { return current; } };

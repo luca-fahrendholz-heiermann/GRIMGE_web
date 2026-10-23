@@ -13,6 +13,16 @@ Der Editor lädt das echte Spiel in einem Rahmen, genau in der gewählten Zielgr
   - Pfeiltasten verschieben um 1 px, mit Shift um 10 px.
   - Entf setzt eine Änderung zurück oder löscht ein neues Element.
   - Gezogen wird im 1-px-Raster; mit Alt geht es frei.
+- **Mehrfachauswahl:**
+  - **Strg + Klick** (Mac: Cmd) nimmt Elemente zur Auswahl hinzu oder entfernt sie wieder.
+  - Ziehen, Pfeiltasten und Entf wirken dann auf alle zusammen. **Esc** hebt die Auswahl auf.
+  - Im Gruppen-Panel gibt es „Alle verschieben“ um Δx/Δy.
+- **Ausrichten wie in PowerPoint:**
+  - Links, horizontal zentriert, rechts; oben, vertikal zentriert, unten.
+  - Dazu **gleichmäßig verteilen**, waagerecht oder senkrecht.
+  - Ausgerichtet wird an der Auswahl oder, per Haken, **am Bildschirm**.
+  - Ein einzelnes Element richtet sich immer am Bildschirm aus (z. B. genau mittig).
+  - Der Editor rechnet die interne Skalierung der Spielmenüs heraus; 10 px bleiben also 10 px auf dem Bildschirm.
 - **Spielen:** Das Spiel lässt sich normal bedienen, z. B. um ein Untermenü zu öffnen. Danach „Neu erfassen“.
 - **Funktion je Element:**
   - unverändert
