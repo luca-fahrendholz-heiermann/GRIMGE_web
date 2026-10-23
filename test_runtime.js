@@ -27,6 +27,8 @@ function assert(condition, name) { if (condition) { console.log(`  ✅ PASS: ${n
 
 console.log('\n🎮 Starting GRIMGE 2.5D runtime smoke test...\n');
 const game = new GameWorld();
+// Wild seedlings from nature spells are random: off for deterministic runs (the scene-object tests turn them on).
+(await import('./public/src/scene_objects.js')).sceneConfig.seedChance = 0;
 await game.init();
 // Most tests place the Wizard freely on the Siege lane; the platform ↔ lane
 // match rules get their own block (they are on by default in the game).
@@ -2386,7 +2388,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
     assert(k.shape === 'petal' && bw.shape === 'arrow' && hm.shape === 'shard' && harp.shape === 'note' && bw.name !== hm.name && hm.status !== k.status, 'Bankai adapts to the class: blade petals, arrow swarm, shard storm, sound swarm — own name and wound');
     const BF = await import('./public/src/buff_forms.js'); const Pb = game.player; Pb.buffForm = { id: 'A04', timer: 5, total: 5, age: 1, power: 1 };
     Pb.equipClassWeapon('katana'); Pb.equipWeapon('bow'); const fBow = BF.currentBuffForm(Pb); Pb.equipWeapon(null); const fKat = BF.currentBuffForm(Pb); Pb.equipClassWeapon(null); const fBare = BF.currentBuffForm(Pb);
-    assert(fBow.title === 'PFEILSCHWARM' && fBow.mat !== BK.PINK_MAT && fKat.title === 'KLINGENBLÜTE' && fKat.mat === BK.PINK_MAT && fBare.mat === BK.PINK_MAT && BK.bankaiStyleFor('sword_shield').shape !== 'petal', 'Bankai follows the weapon you HOLD (a picked-up bow over the class katana) — aura and swarm in its colours');
+    assert(fBow.title === 'STERNENBOGEN' && fBow.mat !== BK.PINK_MAT && fKat.title === 'KLINGENBLÜTE' && fKat.mat === BK.PINK_MAT && fBare.mat === BK.PINK_MAT && BK.bankaiStyleFor('sword_shield').shape !== 'petal', 'Bankai follows the weapon you HOLD (a picked-up bow over the class katana) — aura and swarm in its colours');
     Pb.buffForm = null; }
   const drop = fresh.rollBossDrop(() => 0);
   assert(drop && fresh.isRuneUnlocked(drop.runeId) && new MageProfile(fresh.toJSON()).isRuneUnlocked(drop.runeId), 'A boss drops a locked late rune — kept in the save');
@@ -2779,6 +2781,30 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
     } catch (e) { broken.push(id + ': ' + e.message); }
   }
   assert(!broken.length, 'Every Arcane State sprint attack and air dive runs, costs mana and renders ' + broken.slice(0, 4).join(' | '));
+  // Bankai arsenals (user, 23 Oct 2026): the held weapon decides the whole look and all six techniques.
+  { const AR = await import('./public/src/bankai_arsenal.js'); const { FORM_MOVESETS: FMS } = await import('./public/src/form_moves.js');
+    const num = (...v) => { if (v.some((x) => typeof x === 'number' && !Number.isFinite(x))) throw new Error('NaN coordinate'); };
+    const exact = new Proxy({}, { get: (tg, k) => (k === 'ellipse' || k === 'arc') ? (x, y, rx, ry) => { num(x, y, rx, ry); if (rx < 0 || (k === 'ellipse' && ry < 0)) throw new Error('IndexSizeError ' + k); } : (k === 'moveTo' || k === 'lineTo' || k === 'fillRect' || k === 'translate') ? (...v) => num(...v) : (k === 'canvas' ? undefined : () => {}), set: () => true });
+    const WEAP = { colossus: 'great_axe', lances: 'spear', bulwark: 'sword_shield', crescent: 'scythe', shadow: 'daggers', archer: 'bow', fists: 'gauntlets', swordring: 'rune_greatsword', sigils: 'arcane_staff', deck: 'magic_cards' };
+    const bad = []; const names = new Set(); const slots = [['forward', 'short'], ['forward', 'full'], ['up', 'short'], ['up', 'full'], ['down', 'short'], ['down', 'full']];
+    for (const [arch, wid] of Object.entries(WEAP)) {
+      try {
+        spells.clearRuntime(); buff.endBuffForm(P); P.equipClassWeapon(wid); P.x = 300; P.z = .5; P.facing = 1; P.grounded = true; P.elevation = 0;
+        if (AR.arsenalOf(P)?.style.arsenal !== arch) { bad.push(arch + ': arsenal'); continue; }
+        spells.cast(P, spells.resolveSpell([{ id: 'buff_A04' }]), game); P.buffForm.age = 2;
+        for (const n of AR.bankaiMoveNames(P)) names.add(n);
+        for (const [dir, variant] of slots) {
+          dummy.homeX = dummy.x = 370; dummy.homeZ = dummy.z = .5; dummy.hp = dummy.maxHp; dummy.elevation = 0; dummy.invulnerableTimer = 0;
+          const tech = FMS.A04[dir][variant]; spells.addSpell(tech.make(P), 'B');
+          for (let i = 0; i < 90; i++) { spells.update(1 / 60, game); if (i % 5 === 0) for (const sp of spells.activeSpells) sp.render?.(exact); }
+          if (dummy.hp >= dummy.maxHp) bad.push(arch + ' ' + tech.name + ': no hit');
+        }
+        for (const st of [{ act: 0, guardK: 0 }, { act: 1, guardK: 0 }, { act: 0, guardK: 1 }]) { Object.assign(P.buffForm, st); for (const layer of ['back', 'front']) buff.renderBuffManifestation(exact, P, P.y, layer); }
+      } catch (e) { bad.push(arch + ': ' + e.message); }
+    }
+    P.equipClassWeapon('katana'); const swarm = FMS.A04.forward.short.name;
+    assert(!bad.length && names.size >= 58 && swarm === 'BLÜTENSTROM', 'Bankai arsenals: every weapon family has its own formation and six own techniques that hit and render (katana keeps the petal swarm) ' + bad.slice(0, 4).join(' | ') + ' names ' + names.size + ' ' + swarm);
+    P.equipClassWeapon(null); }
   buff.endBuffForm(P); spells.clearRuntime(); P.grounded = true; P.elevation = 0;
 }
 
@@ -4294,7 +4320,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   { reset(); const m3 = foe(); let broke = false; for (let i = 0; i < 7; i++) { m3.x = 340; P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.triggerMeleeHitbox(5, 0, 0, .4, false, {}); if (m3.comboBreakT > 0) broke = true; }
     assert(broke, 'Endless spam without finisher: the 7th hit in a row is a KOMBO-BRUCH (the foe breaks free)'); }
   { const UI = await import('./public/src/ui.js'); const el = globalThis.document?.getElementById?.('combo-moveset-guide'); UI.ui.renderComboGuide?.();
-    assert(typeof UI.ui.renderComboGuide === 'function' && (!el || /KOMBOS/.test(el.innerHTML ?? '')), 'Training: the combo / move list is shown with the rune infos (dev phase)'); }
+    assert(typeof UI.ui.renderComboGuide === 'function' && (!el || (/KOMBOS/.test(el.innerHTML ?? '') && /Bankai/.test(el.innerHTML ?? '') && /Szenenobjekte/.test(el.innerHTML ?? ''))), 'Training: the combo / move list (incl. the Bankai techniques of the held weapon and the scene objects) is shown with the rune infos (dev phase)'); }
   // Outside Training: no ring, no labels — the window still works (timing + hitstop only).
   assert(E.finisherGuideShown(), 'In Training the finisher guide (ring, PERFEKT label) is shown');
   game.returnToHub(); game.setMatchMode('arena'); game.startMatch();
@@ -4337,6 +4363,55 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
     for (let b = 0; b < 4; b++) { tapWhenOpen(); for (let i = 0; i < 8; i++) { step(2); P.guidedChain?.render(ctxC, P.y); for (const sp of spells.activeSpells) sp.render?.(ctxC); } }
     assert(depth === 0 && !bad, 'The chain renders cleanly (afterimages, cuts, beat glint; canvas state balanced)'); P.guidedChain?.end('test'); }
   setup(); dummy.homeX = dummy.x = 512;
+}
+
+// Reactive scene objects (user, 23 Oct 2026): seedlings grow with water, burn, freeze, fall; boulders roll.
+{
+  const SO = await import('./public/src/scene_objects.js'); const { environment: ENV } = await import('./public/src/environment.js');
+  const { setStatusSource } = await import('./public/src/status_effects.js');
+  const P = game.player; const dummy = game.trainingDummy; const neutral = { keys: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 } };
+  if (!game.minions.includes(dummy)) game.minions.push(dummy);
+  const envStep = (sec) => { for (let i = 0; i < Math.round(sec * 60); i++) ENV.update(1 / 60, game, []); };
+  const clean = () => { spells.clearRuntime(); ENV.effects = []; ENV.props = ENV.props.filter((o) => !o.isSceneObject); ENV.sceneFx = []; dummy.homeX = dummy.x = 512; dummy.homeZ = dummy.z = .5; dummy.hp = dummy.maxHp; };
+  const num = (...v) => { if (v.some((x) => typeof x === 'number' && !Number.isFinite(x))) throw new Error('NaN coordinate'); };
+  let depth = 0;
+  const exact = new Proxy({}, { get: (tg, k) => k === 'save' ? () => { depth++; } : k === 'restore' ? () => { depth--; } : (k === 'ellipse' || k === 'arc') ? (x, y, rx, ry) => { num(x, y, rx, ry); if (rx < 0 || (k === 'ellipse' && ry < 0)) throw new Error('IndexSizeError'); } : (k === 'moveTo' || k === 'lineTo' || k === 'fillRect' || k === 'translate' || k === 'rotate') ? (...v) => num(...v) : (k === 'canvas' ? undefined : () => {}), set: () => true });
+
+  clean(); { const s = ENV.addProp('seedling', 300, .3);
+    assert(s.isSceneObject && s.kind === 'plant' && s.stage === 0 && s.noBlock && !ENV.blocksAt({ width: 24 }, 300, .3), 'A map seedling is a scene object (stage SETZLING) that does not block the way');
+    const hp0 = s.hp; const prev = setStatusSource({ team: 'blue', statusElements: ['aqua'] }); s.takeDamage(20, 0, 0, 0, false, 'spell'); setStatusSource(prev);
+    assert(s.hp >= hp0 && s.growth > 0, 'A water hit feeds the seedling instead of hurting it');
+    ENV.add('water', 300, .3, { radius: 50, life: 20 }); envStep(2.4); const st1 = s.stage; envStep(5);
+    assert(st1 === 1 && s.stage === 2 && !s.noBlock && ENV.blocksAt({ width: 24 }, 300, .3) && s.maxHp === 240, 'Long enough under water it grows: SETZLING → JUNGBAUM → BAUM (the tree blocks, own life bar 240)');
+    ENV.effects = []; ENV.add('scorch', 300, .3, { radius: 40 }); envStep(.6);
+    assert(s.burning > 0, 'Fire sets the tree ablaze'); ENV.effects = []; const burnHp = s.hp; envStep(1); assert(s.hp < burnHp && ENV.effects.some((e) => e.type === 'scorch'), 'A burning tree loses life and sets the ground alight');
+    const prevW = setStatusSource({ team: 'blue', statusElements: ['aqua'] }); s.takeDamage(10, 0, 0, 0, false, 'spell'); setStatusSource(prevW); envStep(.1);
+    envStep(.5); assert(s.burning <= 0 && ENV.effects.some((e) => e.type === 'smoke') && !ENV.effects.some((e) => e.type === 'scorch'), 'Water douses the burning tree and the fire under it (smoke; it does not re-ignite at once)'); }
+  clean(); { const s = ENV.addProp('sapling', 300, .3); const prev = setStatusSource({ team: 'blue', statusElements: ['frost'] }); s.takeDamage(5, 0, 0, 0, false, 'spell'); setStatusSource(prev);
+    const g0 = s.growth; ENV.add('water', 300, .3, { radius: 50 }); envStep(1); const hp1 = s.hp; s.takeDamage(10, 0, 0, 0, false, 'melee');
+    assert(s.frozen > 0 && s.growth === g0 && hp1 - s.hp >= 14, 'Frost freezes a plant: no growth, brittle (melee ×1.5)'); }
+  clean(); { const tree = ENV.addProp('tree', 300, .5); dummy.homeX = dummy.x = 400; dummy.homeZ = dummy.z = .5; const d0 = dummy.hp;
+    tree.takeDamage(999, 300, 0, 0, false, 'melee'); envStep(.9);
+    const log = ENV.props.find((o) => o.kind === 'log');
+    assert(tree.isDead && log && log.x > 360 && dummy.hp < d0, 'A cut-down tree FALLS in the hit direction: it hits whoever stands along the trunk and leaves a log');
+    assert(ENV.blocksAt({ width: 24 }, log.x + 40, .5), 'The fallen log is cover that blocks movement'); }
+  clean(); { const b = ENV.addProp('boulder', 300, .5); dummy.homeX = dummy.x = 420; dummy.homeZ = dummy.z = .5; const d0 = dummy.hp;
+    b.takeDamage(10, 400, 0, 0, false, 'melee'); envStep(1.2);
+    assert(b.x > 380 && dummy.hp < d0, 'A heavy hit sets the boulder ROLLING: it bowls over everything in its path');
+    const prev = setStatusSource({ team: 'blue', statusElements: ['ignis'] }); b.takeDamage(45, 0, 0, 0, false, 'spell'); setStatusSource(prev);
+    const hpHot = b.hp; const prevA = setStatusSource({ team: 'blue', statusElements: ['aqua'] }); b.takeDamage(1, 0, 0, 0, false, 'spell'); setStatusSource(prevA); envStep(.1);
+    assert(b.hot <= 0 && b.cracked && hpHot - b.hp >= 55, 'Fire heats the boulder to glowing stone; water on it cracks it (thermal shock)'); }
+  clean(); { SO.sceneConfig.seedChance = 1; const n0 = ENV.props.filter((o) => o.kind === 'plant').length;
+    P.x = 300; P.z = .5; P.facing = 1; P.mp = P.maxMp; spells.cast(P, spells.resolveSpell([{ id: 'natura' }, { id: 'natura' }]), game);
+    const wild = ENV.props.filter((o) => o.kind === 'plant' && o.wild);
+    SO.sceneConfig.seedChance = 0; spells.cast(P, spells.resolveSpell([{ id: 'natura' }, { id: 'natura' }]), game);
+    assert(wild.length === 1 && ENV.props.filter((o) => o.kind === 'plant').length === n0 + 1, 'A nature spell may drop a wild seedling (chance), none when the roll fails'); }
+  clean(); { let bad = ''; depth = 0;
+    try { for (const k of ['seedling', 'sapling', 'tree', 'log', 'boulder']) { const o = ENV.addProp(k, 300, .5); for (const st of [{}, { frozen: 2 }, { burning: 2 }, { hot: 3, vx: 200 }, { hitFlash: .1 }]) { Object.assign(o, { frozen: 0, burning: 0 }, st); o.render(exact); } o.isDead = true; }
+      const tr = ENV.addProp('tree', 500, .5); tr.takeDamage(999, -200, 0, 0, false, 'melee'); ENV.update(1 / 60, game, []); for (const fx of ENV.sceneFx) { fx.render(exact); fx.t = .3; fx.render(exact); }
+      game.render(); } catch (e) { bad = e.message; }
+    assert(!bad && depth === 0, 'Scene objects render in every state (frozen, burning, glowing, falling) with their own life bars ' + bad); }
+  clean(); P.x = 300; P.z = .58;
 }
 
 const frameCallback = nextFrame;

@@ -29,6 +29,7 @@ import './buff_v32_c.js'; // T25–T36
 import './buff_v32_extra.js'; // A01 / A02 from user reference art
 import './buff_v32_hands.js'; // A03 Tausendhand
 import './buff_v32_bloom.js'; // A04 Klingenblüte
+import { installBankaiArsenal } from './bankai_arsenal.js'; // A04: the held weapon's arsenal (look + techniques)
 import { combat } from './combat.js';
 import { TransformationFx, transitionStyleOf, TRANSFORM_TIMING } from './transform_fx.js';
 import { groundYForDepth } from './world.js';
@@ -149,6 +150,8 @@ for (const [id, moves] of Object.entries(ARCANE_MOVES)) {
     : [...['up', 'down'].flatMap((dir) => (moves[dir] ?? []).map((m, i) => [[dir, i ? 'full' : 'short'], m]))];
   for (const [[dir, variant], make] of slots) if (make && set[dir]?.[variant]) set[dir][variant].make = (p) => make(form, p);
 }
+// Bankai: every technique slot follows the caster's held weapon (the petal techniques stay for sword families).
+installBankaiArsenal(FORM_MOVESETS.A04);
 
 // Charge-up ritual of the active Arcane State (direction-aware); true when drawn.
 export function renderBuffCharge(ctx, player, renderY, dir, k, full) {

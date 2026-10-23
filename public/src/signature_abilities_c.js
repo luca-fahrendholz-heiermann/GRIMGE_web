@@ -88,7 +88,7 @@ defineSignature('S26', {
   cast(c) {
     const gw = c.gw; const o = c.caster; const pt = c.target ?? { x: o.x + o.facing * 120, z: o.z };
     const near = (e) => Math.hypot(e.x - pt.x, ((e.z ?? pt.z) - pt.z) * DEPTH) < 90;
-    const crate = (environment.livingProps?.() ?? []).find(near);
+    const crate = (environment.livingProps?.() ?? []).find((e) => near(e) && (!e.isSceneObject || e.throwable)); // plants / logs stay rooted
     const wall = (sigSink()?.activeSpells ?? []).find((s) => s.isStoneWall && !s.isDead && near(s));
     const small = [...(sigSink()?.getSummons?.() ?? []), ...(gw?.minions ?? [])].find((m) => m.team !== o.team && !m.isDead && !m.isBoss && !m.isTrainingDummy && near(m));
     const hero = gw?.enemyChampion?.isAlive && near(gw.enemyChampion) ? gw.enemyChampion : null;
@@ -111,7 +111,7 @@ defineSignature('S26', {
 function forgeCandidate(p) {
   let best = null; let bd = 150;
   for (const s of sigSink()?.activeSpells ?? []) if (s.isStoneWall && !s.isDead && s.team === p.team) { const d = groundDist(s, p); if (d < bd) { bd = d; best = { obj: s, tool: (s.wallHeight ?? 88) < 70 ? 'shield' : 'lance' }; } }
-  for (const prop of environment.livingProps?.() ?? []) { const d = groundDist(prop, p); if (d < bd) { bd = d; best = { obj: prop, tool: 'block' }; } }
+  for (const prop of environment.livingProps?.() ?? []) { if (prop.isSceneObject && !prop.throwable) continue; const d = groundDist(prop, p); if (d < bd) { bd = d; best = { obj: prop, tool: 'block' }; } }
   return best;
 }
 defineSignature('S27', {

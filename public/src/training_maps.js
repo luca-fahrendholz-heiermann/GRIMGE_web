@@ -54,7 +54,7 @@ const rect = (type, x0, y0, x1, y1) => ({ type, shape: 'rect', x0, y0, x1, y1 })
 const DEFAULT_PROPS = Object.freeze([['crate', 380, .22], ['crate', 650, .84], ['crate', 700, .2], ['barrel', 340, .84]]);
 
 export const TRAINING_MAPS = Object.freeze([
-  { id: 'waterfalls', name: 'WATERFALL ARENA', desc: 'Classic yard — no special terrain.', zones: [], weather: null, props: DEFAULT_PROPS },
+  { id: 'waterfalls', name: 'WATERFALL ARENA', desc: 'Classic yard — no special terrain.', zones: [], weather: null, props: [...DEFAULT_PROPS, ['seedling', 170, .2], ['seedling', 860, .84], ['boulder', 880, .28]] },
   {
     id: 'frozen', name: 'FROZEN ARENA', desc: 'Four ice fields: slippery footing; fire melts them.', weather: 'snow',
     zones: [rect('ice', 12, 34, 44, 50), rect('ice', 56, 34, 88, 50), rect('ice', 9, 57, 44, 75), rect('ice', 56, 57, 92, 75)],

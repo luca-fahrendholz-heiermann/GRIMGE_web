@@ -26,6 +26,7 @@ import { combat } from './combat.js';
 import { getGroundProjection, groundYForDepth } from './world.js';
 import { drawFx, fxReady } from './fx_sprites.js';
 import { applyStatus } from './status_effects.js';
+import { SCENE_KINDS, isSceneKind } from './scene_objects.js';
 
 export const GROUND_EFFECTS = Object.freeze({
   ice: Object.freeze({ life: 7, slow: null, slippery: true }),
@@ -118,6 +119,7 @@ export class EnvironmentSystem {
     this.props = [];
     this.terrain = [];
     this.transient = [];
+    this.sceneFx = []; // scene-object animations that are no targets (a falling tree)
     this.map = null;
     this.tickTimer = 0;
     this.ambientTimer = 7;
@@ -129,7 +131,7 @@ export class EnvironmentSystem {
   }
 
   clear() {
-    this.effects = []; this.props = []; this.terrain = []; this.transient = []; this.map = null;
+    this.effects = []; this.props = []; this.terrain = []; this.transient = []; this.sceneFx = []; this.map = null;
     this.tickTimer = 0; this.ambientTimer = 7; this.gustTimer = 11; this.strike = null;
   }
 
@@ -276,19 +278,21 @@ export class EnvironmentSystem {
 
   // ── props ────────────────────────────────────────────────────────────
   addProp(kind, x, z) {
-    const prop = new BreakableProp(kind, x, z);
+    // Reactive scene objects (scene_objects.js): seedling / sapling / tree, log, boulder.
+    const prop = isSceneKind(kind) ? SCENE_KINDS[kind](x, z) : new BreakableProp(kind, x, z);
     this.props.push(prop);
     return prop;
   }
 
   livingProps() { return this.props.filter((prop) => !prop.isDead); }
+  addSceneFx(fx) { this.sceneFx.push(fx); return fx; }
 
   blocks(entity) { return this.blocksAt(entity, entity.x, entity.z); }
 
   blocksAt(entity, x, z) {
     if ((entity.elevation ?? 0) > 34) return false;
     for (const prop of this.props) {
-      if (prop.isDead) continue;
+      if (prop.isDead || prop.noBlock) continue;
       if (Math.abs(x - prop.x) <= prop.halfX + (entity.width ?? 24) * .5 && Math.abs(z - prop.z) <= prop.halfZ + .05) return true;
     }
     return false;
@@ -392,6 +396,7 @@ export class EnvironmentSystem {
     // Props: burning barrels burst, burning ground sets crates alight.
     for (const prop of this.props) {
       if (prop.isDead) continue;
+      if (prop.isSceneObject) { prop.tick(dt, gameWorld, this); continue; } // feels elements itself
       prop.hitFlash = Math.max(0, prop.hitFlash - dt);
       prop.shake = Math.max(0, prop.shake - dt);
       const onFire = this.effects.some((effect) => effect.rules.fire && effect.contains(prop.x, prop.z, 8))
@@ -407,9 +412,11 @@ export class EnvironmentSystem {
       }
     }
     for (const prop of this.props) {
-      if (prop.isDead && !prop.broken) { prop.broken = true; this.breakProp(prop, gameWorld); }
+      if (prop.isDead && !prop.broken) { prop.broken = true; if (prop.isSceneObject) prop.onBreak(gameWorld, this); else this.breakProp(prop, gameWorld); }
     }
     this.props = this.props.filter((prop) => !prop.broken);
+    for (const fx of this.sceneFx) fx.update(dt, gameWorld, this);
+    this.sceneFx = this.sceneFx.filter((fx) => !fx.isFinished);
   }
 
   hazard(actor, amount) {
@@ -697,6 +704,7 @@ export class EnvironmentSystem {
 }
 
 export function renderProp(ctx, prop) {
+  if (prop.isSceneObject) { prop.render(ctx); return; }
   const x = Math.round(prop.x + (prop.shake > 0 ? Math.sin(performance.now() * .08) * 2 : 0));
   const y = Math.round(prop.y);
   if (prop.weaponId) {

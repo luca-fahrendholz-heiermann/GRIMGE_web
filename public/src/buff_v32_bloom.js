@@ -36,7 +36,7 @@ export function petal(ctx, x, y, a, size, alpha, seed) {
 }
 
 const SWARM = 28;
-function klingenbluete(ctx, s, pose, mat, form, layer) {
+export function klingenbluete(ctx, s, pose, mat, form, layer) {
   const f = s.f; const t = pose.t; const fade = ease(clamp01(pose.fade));
   const fw = techOf(pose, 'forward'); const up = techOf(pose, 'up'); const dn = techOf(pose, 'down'); const gr = grabOf(pose);
   const act = pose.act ?? 0; const cx = s.x; const cy = s.chest[1];

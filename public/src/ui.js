@@ -1,6 +1,8 @@
 // GRIMGE Prototype — UI & HUD Controller matching Setup Mockup Exactly
 import { MASTERY_TREES, masteryRequirement, analyzeBuild } from './mastery_data.js';
 import { WEAPONS } from './weapons.js';
+import { bankaiStyleOf } from './bankai.js';
+import { bankaiMoveNames } from './bankai_arsenal.js';
 import { spells } from './spells.js';
 import { MAGE_SKILL_TREE, SKILL_RUNE_UNLOCKS, RUNE_CATEGORIES, runeCategory, ALL_RUNE_IDS, runeUnlockLabel, isBuffRuneId, isSignatureRuneId, isDomainRuneId, maxRuneCopies, MAX_DECK_PRESETS, MATCH_DECK_SIZE, DECK_PRESET_NAME_MAX } from './progression.js';
 import { recognizer } from './recognizer.js';
@@ -870,7 +872,9 @@ export class UIManager {
       + row('Luft', 'Tippen = Luftkombo (max. 3 Treffer pro Sprung, hochgeschleuderte Gegner schweben kurz) · Wischen ↓ (auch schräg) = Sturz · Aufladen in der Luft = schräger Sturz in Laufrichtung')
       + row('Sprint', 'Sprint + Tippen = Sprint-Angriff · Sprint-Sprung + ↓ = schräger Sturz')
       + row('Abwehr', 'Blocken (vorne), perfekter Block = Konter · Rückwärts-Wischen = Backdash (+1 Konterschuss) · nach 7 Treffern in Folge: KOMBO-BRUCH')
-      + row('Geführte Kette', 'S88 Schattenreigen: Kunai trifft → 7 Takte: Salto · Ansturm (→) · Hochschlag (↑) · 3 Luftschnitte · Erdhammer (↓) — Tippen / Wischen im Fenster');
+      + row('Geführte Kette', 'S88 Schattenreigen: Kunai trifft → 7 Takte: Salto · Ansturm (→) · Hochschlag (↑) · 3 Luftschnitte · Erdhammer (↓) — Tippen / Wischen im Fenster')
+      + row('Bankai (A04)', ((n) => `${bankaiStyleOf(P).name} — Aufladen → ${n[0]} / voll ${n[1]} · ↑ ${n[2]} / voll ${n[3]} · ↓ ${n[4]} / voll ${n[5]}`)(bankaiMoveNames(P) ?? ['BLÜTENSTROM', 'TAUSEND KLINGEN', 'BLÜTENWIRBEL', 'KLINGENSÄULE', 'KLINGENTEPPICH', 'BLÜTENGRAB']))
+      + row('Szenenobjekte', 'Setzling + Wasser/Natur → Jungbaum → Baum (trägt Heilfrucht) · Feuer: brennt, steckt Boden/Nachbarn an, Wasser löscht · Frost: friert ein (spröde) · Blitz spaltet den Baum · gefällt fällt er in Schlagrichtung → Baumstamm · Felsbrocken: schwerer Schlag/Wind = rollt, Feuer = Glutfels, Wasser darauf = Riss · Natur-Zauber legen zufällig Setzlinge ab');
   }
 
   renderGrimoireGuides() {

@@ -5,29 +5,31 @@
 // level 8 or a boss drop while that class is chosen).
 import { WEAPONS } from './weapons.js';
 
-// Swarm piece shapes per class family; status = what the unleashed cuts leave.
+// Per class family: name, swarm piece shape (charge ritual / swarm), wound status and the
+// ARSENAL (bankai_arsenal.js, user 23 Oct 2026: the whole look and every technique follow
+// the weapon — a titanic axe, a spear crown, tower shields, a star bow …; swarm = blade petals).
 const FAMILY_STYLE = Object.freeze({
-  Guardian: { name: 'SCHILDSPLITTER', shape: 'shard', status: 'bleed' },
-  Bladedancer: { name: 'KLINGENBLÜTE', shape: 'petal', status: 'bleed' },
-  Ronin: { name: 'KLINGENBLÜTE', shape: 'petal', status: 'bleed', pink: true },
-  Lancer: { name: 'SPEERREGEN', shape: 'arrow', status: 'bleed' },
-  Shadow: { name: 'SCHATTENKLINGEN', shape: 'fang', status: 'bleed' },
-  Reaper: { name: 'SENSENMOND', shape: 'fang', status: 'bleed' },
-  Runeblade: { name: 'RUNENKLINGEN', shape: 'rune', status: 'paralysis' },
-  Spiritbound: { name: 'GEISTERKLINGEN', shape: 'fang', status: 'bleed' },
-  Berserker: { name: 'SPLITTERORKAN', shape: 'shard', status: 'paralysis' },
-  Ranger: { name: 'PFEILSCHWARM', shape: 'arrow', status: 'bleed' },
-  Monk: { name: 'FAUSTFEUER', shape: 'ember', status: 'burn' },
-  Arcanist: { name: 'RUNENREGEN', shape: 'rune', status: 'paralysis' },
-  Occultist: { name: 'FLUCHSIEGEL', shape: 'rune', status: 'poison' },
-  Oracle: { name: 'LICHTSIEGEL', shape: 'rune', status: 'paralysis' },
-  Resonant: { name: 'KLANGSCHWARM', shape: 'note', status: 'paralysis' },
-  Beastborn: { name: 'FANGSTURM', shape: 'fang', status: 'bleed' },
-  Trickster: { name: 'KARTENWIRBEL', shape: 'card', status: 'bleed' },
-  Fateweaver: { name: 'TALISMANFLUT', shape: 'talisman', status: 'burn' },
-  Conjured: { name: 'FROSTBLÜTE', shape: 'petal', status: 'frozen' }
+  Guardian: { name: 'SCHILDLEGION', shape: 'shard', status: 'bleed', arsenal: 'bulwark' },
+  Bladedancer: { name: 'KLINGENBLÜTE', shape: 'petal', status: 'bleed', arsenal: 'swarm' },
+  Ronin: { name: 'KLINGENBLÜTE', shape: 'petal', status: 'bleed', pink: true, arsenal: 'swarm' },
+  Lancer: { name: 'SPEERKRONE', shape: 'arrow', status: 'bleed', arsenal: 'lances' },
+  Shadow: { name: 'SCHATTENSCHWINGEN', shape: 'fang', status: 'bleed', arsenal: 'shadow' },
+  Reaper: { name: 'SENSENMOND', shape: 'fang', status: 'bleed', arsenal: 'crescent' },
+  Runeblade: { name: 'RUNENKLINGEN', shape: 'rune', status: 'paralysis', arsenal: 'swordring' },
+  Spiritbound: { name: 'GEISTERKLINGEN', shape: 'fang', status: 'bleed', arsenal: 'swordring' },
+  Berserker: { name: 'TITANENWAFFE', shape: 'shard', status: 'paralysis', arsenal: 'colossus' },
+  Ranger: { name: 'STERNENBOGEN', shape: 'arrow', status: 'bleed', arsenal: 'archer' },
+  Monk: { name: 'FAUSTFEUER', shape: 'ember', status: 'burn', arsenal: 'fists' },
+  Arcanist: { name: 'RUNENKREIS', shape: 'rune', status: 'paralysis', arsenal: 'sigils' },
+  Occultist: { name: 'FLUCHSIEGEL', shape: 'rune', status: 'poison', arsenal: 'sigils' },
+  Oracle: { name: 'LICHTSIEGEL', shape: 'rune', status: 'paralysis', arsenal: 'sigils' },
+  Resonant: { name: 'KLANGRAD', shape: 'note', status: 'paralysis', arsenal: 'deck' },
+  Beastborn: { name: 'FANGSTURM', shape: 'fang', status: 'bleed', arsenal: 'shadow' },
+  Trickster: { name: 'KARTENWIRBEL', shape: 'card', status: 'bleed', arsenal: 'deck' },
+  Fateweaver: { name: 'TALISMANFLUT', shape: 'talisman', status: 'burn', arsenal: 'deck' },
+  Conjured: { name: 'FROSTBLÜTE', shape: 'petal', status: 'frozen', arsenal: 'swarm' }
 });
-const DEFAULT_STYLE = { name: 'KLINGENBLÜTE', shape: 'petal', status: 'bleed', pink: true };
+const DEFAULT_STYLE = { name: 'KLINGENBLÜTE', shape: 'petal', status: 'bleed', pink: true, arsenal: 'swarm' };
 export const PINK_MAT = Object.freeze({ kind: 'crystal', dark: '#4a1530', body: '#ec407a', facet: '#f8bbd0', vein: '#ad1457', edge: '#fce4ec', spark: '#fff0f5', core: '#ffffff', glow: 'rgba(236,64,122,', edgeGlow: 'rgba(255,255,255,' });
 
 const hex = (h) => { const n = parseInt(String(h).replace('#', '').padEnd(6, '0').slice(0, 6), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
@@ -44,7 +46,7 @@ export function bankaiStyleFor(weaponId) {
   if (cache.has(key)) return cache.get(key);
   const w = WEAPONS[weaponId];
   const base = (w && FAMILY_STYLE[w.family]) || DEFAULT_STYLE;
-  const style = Object.freeze({ ...base, weaponId: weaponId ?? null, mat: base.pink || !w ? PINK_MAT : matFrom(w.accent ?? w.color ?? '#ec407a') });
+  const style = Object.freeze({ ...base, weaponId: weaponId ?? null, family: w?.family ?? null, mat: base.pink || !w ? PINK_MAT : matFrom(w.accent ?? w.color ?? '#ec407a') });
   cache.set(key, style);
   return style;
 }
