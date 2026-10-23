@@ -70,10 +70,19 @@ export const MELEE_BASELINE = Object.freeze({
 // damage, breaks guard). Too early or too late ends the chain.
 export const FINISHER_TIMING = Object.freeze({ peak: .62, good: .16, goodMin: .05, perfect: .03, lead: .06, perfectKnock: 1.3, perfectDamage: 1.15 });
 const chainCache = new WeakMap();
+// Every weapon: exactly THREE normal attacks, then the finisher (user, 23 Oct 2026). Longer authored
+// combos use their first three steps; shorter ones repeat a step; the authored last step (the old
+// finisher) becomes attack 3 without its launch, and the earned finisher is that step, strengthened.
+// Attack 3 lands heavier (longer hitstop) — the cue that the finisher moment comes.
 export function comboChainOf(combo) {
   let c = chainCache.get(combo); if (c) return c;
   const last = combo[combo.length - 1];
-  const steps = combo.map((s, i) => (i === combo.length - 1 ? { ...s, finisher: false, hitReaction: 'strong' } : s));
+  const normals = combo.slice(0, -1);
+  const third = { ...last, finisher: false, hitReaction: 'strong', hitstopTicks: Math.max(8, (last.hitstopTicks ?? 6) + 2), chanceStep: true };
+  const pick = normals.length >= 3 ? [normals[0], normals[1], { ...normals[2], hitstopTicks: Math.max(8, (normals[2].hitstopTicks ?? 4) + 3), chanceStep: true }]
+    : normals.length === 2 ? [normals[0], normals[1], third]
+      : normals.length === 1 ? [normals[0], { ...normals[0], state: 'attack2' }, third] : [last, { ...last, state: 'attack2' }, third];
+  const steps = pick.map((s, i) => ({ ...s, state: ['attack1', 'attack2', 'attack3'][i] }));
   const finisher = { ...last, finisher: true, earned: true, state: 'attack3', time: (last.time ?? .3) * 1.15, damage: Math.round((last.damage ?? 30) * 1.35), knockback: Math.max((last.knockback ?? 300) * 1.25, 420), lift: Math.max(last.lift ?? 0, 220), hitstopTicks: Math.max(last.hitstopTicks ?? 6, 7), hitReaction: 'finisher',
     ...(last.shot ? { shot: { ...last.shot, damage: Math.round((last.shot.damage ?? 16) * 1.4), size: (last.shot.size ?? 1) * 1.25, pierce: true } } : {}) };
   c = { steps, finisher }; chainCache.set(combo, c); return c;
@@ -900,6 +909,8 @@ export class Player extends GroundEntity {
   // mode, the PULL in an Arcane State / transformation (hold_actions.js).
   holdAttack(charge = 0) {
     if (!this.isAlive || !this.grounded || this.isGuarding || ACTION_STATES.has(this.state) && this.state !== 'guard') return false;
+    // A stance may own the HOLD slot (WILLE: the will wave).
+    if (this.signature?.impl?.stance?.hold?.(this, this.signature, charge, window.gameWorld)) return true;
     const game = window.gameWorld;
     if (activeMoveset(this)) {
       // Every Arcane State special costs mana; the Focus transformations burn Focus instead.
@@ -1331,7 +1342,11 @@ export class Player extends GroundEntity {
     else {
       if (airborne) this.startAirLatch(this.lastMeleeHits);
       // The last chain step connected: the finisher chance opens (after this hit's hitstop).
-      if (!attack.earned && this.comboStep === chain.steps.length && this.grounded) this.openFinisherChance(swingTime);
+      if (!attack.earned && this.comboStep === chain.steps.length && this.grounded) {
+        this.openFinisherChance(swingTime);
+        // The impact tells the moment is coming: a jolt and a small ring at the target.
+        combat.shakeCamera(4, .12); const tgt = this.lastMeleeHits?.[0]?.target ?? this.lastMeleeHits?.[0]; if (tgt?.x != null) combat.spawnShockwave(tgt.x, (tgt.y ?? this.y) - 40, 26, '#ffffff');
+      }
     }
     return true;
   }
@@ -1920,6 +1935,8 @@ export class Player extends GroundEntity {
     const wielding = this.isAlive && (this.weapon || this.classWeapon) && !activeMoveset(this) && currentBuffForm(this)?.id !== 'A04' && !this.isGuarding && !(this.hitFlash > 0);
     const body = wielding && (!useProc || /^attack|uppercut|heavyStrike/.test(this.state)) ? weaponBodyPose(this) : null;
     if (body) { useProc = true; pRot += body.rot; pOX += body.ox; pOY += body.oy; pSX *= body.sx; pSY *= body.sy; if (body.cadence) cadence *= body.cadence; }
+    // Finisher window: the Wizard winds up (leans back, gathers) toward the moment.
+    if (this.finisherChance && this.isAlive) { const u = Math.min(1, this.finisherElapsed() / this.finisherChance.peak); useProc = true; pRot += -(this.facing || 1) * 7 * u; pOX += -(this.facing || 1) * 3 * u; pSY *= 1 + .03 * u; pSX *= 1 - .02 * u; }
     // Aerial bow shot (breathing arrow rain): the body lies flat, face to the ground, centred over the spot.
     const aerial = this.aerialAim > 0 && this.isAlive && !this.grounded;
     if (aerial) { useProc = true; pRot = 90; pOX = -(this.facing || 1) * 34; pOY = -30; pSX = 1; pSY = 1; }
@@ -1997,12 +2014,22 @@ export class Player extends GroundEntity {
     if (this.isGuarding && this.isAlive && !activeMoveset(this)) this.lastGuardKind = drawWeaponGuard(ctx, this, this.x, renderY, this.facing || 1, this.perfectBlockFlash > 0, this.animTime ?? 0);
     // Finisher window: a ring grows toward the target ring (green band = GOOD, gold = PERFECT).
     if (this.finisherChance && this.isAlive && finisherGuideShown()) this.renderFinisherRing(ctx, renderY); // Training only
+    if (this.finisherChance && this.isAlive) this.renderFinisherGlint(ctx, renderY);
     // The shield: a crisp hexagonal shell that cracks as it runs low (ward_shell.js).
     if (this.arcaneShield > 0 && this.isAlive) drawWardShell(ctx, this.x, renderY, { frac: Math.min(1, this.arcaneShield / Math.max(1, this.shieldCapacity ?? this.arcaneShield)), t: this.animTime ?? 0 });
     // Frozen: the Little-Fighter ice block (a FROZEN status draws its own block).
     if (this.freezeTimer > 0 && this.isAlive && !hasStatus(this, 'frozen') && !hasStatus(this, 'paralysis')) drawIceBlock(ctx, this.x, renderY, 50, 90, this.animTime ?? 0);
   }
 
+  // The weapon flashes in the hand when the finisher can be confirmed (brighter at the perfect moment).
+  renderFinisherGlint(ctx, renderY) {
+    const g = finisherGrade(this.finisherChance, this.finisherElapsed()); if (g !== 'good' && g !== 'perfect') return;
+    const f = this.facing || 1; const x = Math.round(this.x + f * 18); const y = Math.round(renderY - 54); const s = g === 'perfect' ? 7 : 4;
+    ctx.save(); ctx.shadowBlur = 0; ctx.fillStyle = g === 'perfect' ? '#fff8e1' : '#ffffff';
+    ctx.fillRect(x - s, y - 1, s * 2, 2); ctx.fillRect(x - 1, y - s, 2, s * 2); ctx.fillRect(x - 2, y - 2, 4, 4);
+    if (g === 'perfect') { ctx.fillStyle = '#ffd740'; ctx.fillRect(x - s - 3, y, 3, 1); ctx.fillRect(x + s, y, 3, 1); }
+    ctx.restore();
+  }
   renderFinisherRing(ctx, renderY) {
     const ch = this.finisherChance; const el = this.finisherElapsed(); const g = finisherGrade(ch, el);
     const cx = Math.round(this.x); const cy = Math.round(renderY - ENTITY_VISUALS.heroHeight - 30); const R = 13;

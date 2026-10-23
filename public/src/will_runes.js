@@ -64,27 +64,30 @@ function auraFlames(ctx, p, ry, t, pal, k = 1, n = 18) {
 // ═════════════════════════════════════════════════════════════════════════
 // S86 WILLE
 // ═════════════════════════════════════════════════════════════════════════
-const WILL = Object.freeze({ dur: 15, melee: 1.2, shieldTear: 30, strikeReach: 140, conqRadius: 220, conqKO: .45, conqCd: 6, foresight: 4, dodges: 3 });
+const WILL = Object.freeze({ dur: 15, melee: 1.2, shieldTear: 30, strikeReach: 175, strikeDash: 46, conqRadius: 220, conqKO: .45, conqCd: 6, foresight: 4, dodges: 3, waveReach: 320, waveCd: .9 });
 
 function willStrike(p, st, k) {
   const f = p.facing || 1;
-  p.state = 'heavyStrike'; p.stateTimer = .32; p._weaponSwingTime = .32; p.vx = 0; p.vz = 0; p.canAttack = false;
-  emit(new SigSequence(st.sig, p, { dur: .45, steps: [{ at: .08, fn: (s, gw) => {
+  p.state = 'heavyStrike'; p.stateTimer = .34; p._weaponSwingTime = .34; p.vx = 0; p.vz = 0; p.canAttack = false;
+  // A short step into the blow (the will lands before the fist).
+  emit(new SigSequence(st.sig, p, { dur: .5, tick: (s, dt) => { if (s.t < .1) p.x += f * WILL.strikeDash / .1 * dt; }, steps: [{ at: .1, fn: (s, gw) => {
     for (const t of foesOf(gw, p.team)) {
-      const dx = (t.x - p.x) * f; if (dx < -10 || dx > WILL.strikeReach || Math.abs(((t.z ?? p.z) - p.z) * DEPTH) > 34) continue;
+      const dx = (t.x - p.x) * f; if (dx < -16 || dx > WILL.strikeReach || Math.abs(((t.z ?? p.z) - p.z) * DEPTH) > 44) continue;
       if (t.arcaneShield > 0) { t.arcaneShield = 0; combat.spawnDamageText?.(t.x, (t.y ?? 0) - 96, 'SCHILD GEBROCHEN', { color: R.red }); }
       hit(t, Math.round((20 + 14 * k) * (p.signature?.quality?.power ?? 1)), f * (380 + 160 * k), 90, .45, k > .8);
     }
-    quake(7, .2);
+    quake(9, .25); combat.triggerHitstop?.(4);
   } }], draw: (ctx, s, kk) => {
     // Shock rings rushing ahead of the fist (seen from the side: tall ellipses).
-    const y = groundYForDepth(s.z) - 44;
-    for (let i = 0; i < 3; i++) {
-      const u = Math.min(1, kk * 2.2 - i * .25); if (u <= 0) continue; const x = s.x + s.facing * (24 + u * WILL.strikeReach);
+    s.x = p.x; const y = groundYForDepth(s.z) - 44;
+    for (let i = 0; i < 5; i++) {
+      const u = Math.min(1, kk * 2.4 - i * .2); if (u <= 0) continue; const x = s.x + s.facing * (24 + u * WILL.strikeReach);
       ctx.save(); ctx.globalAlpha = 1 - u; ctx.strokeStyle = '#0a0006'; ctx.lineWidth = 5; ctx.beginPath(); ctx.ellipse(Math.round(x), Math.round(y), 6 + u * 6, 22 + u * 14, 0, 0, TAU); ctx.stroke();
       ctx.strokeStyle = R.crimson; ctx.lineWidth = 2; ctx.stroke(); ctx.restore();
     }
-    if (kk < .5) for (let i = 0; i < 3; i++) blackBolt(ctx, s.x + s.facing * 18, y, s.x + s.facing * (60 + rnd(i + 3) * 70), y + (rnd(i + 9) - .5) * 50, 40 + i + Math.floor(s.t * 20));
+    if (kk < .55) for (let i = 0; i < 5; i++) blackBolt(ctx, s.x + s.facing * 18, y, s.x + s.facing * (60 + rnd(i + 3) * 110), y + (rnd(i + 9) - .5) * 70, 40 + i + Math.floor(s.t * 20));
+    // The ground cracks along the blow.
+    if (kk > .2 && kk < .8) { const gy = groundYForDepth(s.z); ctx.fillStyle = '#0a0006'; ctx.fillRect(Math.round(Math.min(s.x, s.x + s.facing * WILL.strikeReach)), Math.round(gy - 2), WILL.strikeReach, 3); ctx.fillStyle = R.crimson; ctx.fillRect(Math.round(Math.min(s.x, s.x + s.facing * WILL.strikeReach)), Math.round(gy - 3), WILL.strikeReach, 1); }
   } }), st.quality);
   return true;
 }
@@ -115,6 +118,29 @@ function conquerorBurst(p, st, gw, radius = WILL.conqRadius, small = false) {
     }
     ctx.restore();
   } }), st.quality);
+}
+
+// HOLD: WILLENSWELLE — the will sent out as a travelling shock (breaks shields, stuns briefly).
+function willWave(p, st, charge = 0) {
+  if (st.t - (st.waveAt ?? -9) < WILL.waveCd) return true; st.waveAt = st.t;
+  const f = p.facing || 1; const x0 = p.x + f * 20; const z0 = p.z; const reach = WILL.waveReach * (1 + Math.min(1, charge) * .3); const hitSet = new Set();
+  p.state = 'heavyStrike'; p.stateTimer = .3; p._weaponSwingTime = .3; p.vx = 0; p.vz = 0; p.canAttack = false;
+  emit(new SigSequence(st.sig, p, { dur: .65, x: x0, z: z0, tick: (s, dt, gw) => {
+    const front = x0 + f * reach * Math.min(1, s.t / .45);
+    for (const t of foesOf(gw, p.team)) {
+      if (hitSet.has(t) || (t.x - x0) * f < -10 || (t.x - front) * f > 0 || Math.abs(((t.z ?? z0) - z0) * DEPTH) > 40) continue;
+      hitSet.add(t); if (t.arcaneShield > 0) t.arcaneShield = 0;
+      hit(t, Math.round(16 * (p.signature?.quality?.power ?? 1)), f * 300, 60, .35); t.freeze?.(.25);
+    }
+  }, draw: (ctx, s) => {
+    const u = Math.min(1, s.t / .45); const a = 1 - Math.max(0, (s.t - .45) / .2); const x = x0 + f * reach * u; const y = groundYForDepth(z0) - 40;
+    ctx.save(); ctx.globalAlpha = Math.max(0, a);
+    for (const [col, wd] of [[R.crimson, 7], ['#0a0006', 4]]) { ctx.strokeStyle = col; ctx.lineWidth = wd; ctx.beginPath(); ctx.ellipse(Math.round(x), Math.round(y), 10, 30, 0, 0, TAU); ctx.stroke(); }
+    for (let i = 0; i < 3; i++) blackBolt(ctx, x, y + (i - 1) * 16, x - f * (30 + rnd(i + Math.floor(s.t * 20)) * 40), y + (rnd(i + 5) - .5) * 40, 600 + i + Math.floor(s.t * 20), 2);
+    ctx.restore();
+  } }), st.quality);
+  combat.spawnShockwave?.(x0, (p.y ?? 0) - 40, 30, R.crimson); quake(4, .12);
+  return true;
 }
 
 function foresight(p, st) {
@@ -160,6 +186,7 @@ defineSignature('S86', {
       if (dir === 'forward' || dir === 'back') return willStrike(p, st, k);
       return false;
     },
+    hold: (p, st, charge) => willWave(p, st, charge),
     sprint: () => ({ name: 'SCHWARZER SCHRITT', primal: true, pierce: true, lungeSpeed: 1.7, carryMult: 1, recoilMult: 1.1, damageMult: 1.3, color: R.crimson }),
     update(p, st, dt, gw) {
       for (const a of st.afterimages) a.t += dt; st.afterimages = st.afterimages.filter((a) => a.t < .35);
@@ -180,6 +207,16 @@ defineSignature('S86', {
           ctx.restore();
         }
         for (const a of st.afterimages) { ctx.save(); ctx.globalAlpha = .5 * (1 - a.t / .35); ctx.strokeStyle = R.red; ctx.lineWidth = 2; ctx.strokeRect(Math.round(a.x - 14), Math.round(a.y - 86), 28, 86); ctx.restore(); }
+        // The surroundings crackle: small black-red bolts in the air and on the ground nearby.
+        const flick = Math.floor(t * 12); const hot = st.t - st.conqAt < 3 ? 2 : 1; const gy0 = groundYForDepth(p.z);
+        ctx.save(); ctx.globalAlpha = fade;
+        for (let i = 0; i < 7 * hot; i++) {
+          if (rnd(flick * 3 + i) < .3) continue;
+          const ang = rnd(flick * 11 + i * 7) * TAU; const rr = 40 + rnd(flick + i * 13) * 120 * hot; const bx = p.x + Math.cos(ang) * rr; const by = (i % 2 ? gy0 - 4 : ry - 30 - rnd(i + flick) * 60) + Math.sin(ang) * 14;
+          const len = 14 + rnd(i * 5 + flick) * 20; blackBolt(ctx, bx, by, bx + (rnd(i + 2 * flick) - .5) * len * 2, by - len, 900 + i * 17 + flick, 2);
+          ctx.fillStyle = rnd(i + flick * 7) < .5 ? R.red : R.spark; ctx.fillRect(Math.round(bx), Math.round(by - len - 2), 2, 2);
+        }
+        ctx.restore();
         return;
       }
       // Front: black-steel coating on both fists (or along the weapon hand), crimson rim, a glint.
@@ -234,8 +271,10 @@ export function astralJudgement(p, gw = globalThis.window?.gameWorld) {
       const dx = (t.x - x0) * f; if (dx < -30 || dx > reach || Math.abs(((t.z ?? z0) - z0) * DEPTH) > 70) continue;
       hit(t, dmg, f * 520, 320, .7, true);
     }
-    quake(16, .6); combat.triggerHitstop?.(9); combat.spawnShockwave?.(x0 + f * 60, groundYForDepth(z0) - 10, 120, '#7f0000');
-  } }], draw: (ctx, s, k) => {
+    quake(18, .7); combat.triggerHitstop?.(9); combat.spawnShockwave?.(x0 + f * 60, groundYForDepth(z0) - 10, 120, '#7f0000');
+  } },
+  // The rift keeps the scene shaking while it is open.
+  { at: NOBLE.judgeAt + .18, fn: () => quake(10, .25) }, { at: NOBLE.judgeAt + .36, fn: () => quake(7, .25) }, { at: NOBLE.judgeAt + .55, fn: () => quake(4, .2) }], draw: (ctx, s, k) => {
     const gy = groundYForDepth(z0); const tt = s.t;
     // The giant weapon: raised behind (0 → judgeAt), swung down in front, then fading.
     const raise = Math.min(1, tt / (NOBLE.judgeAt * .7)); const swing = Math.max(0, Math.min(1, (tt - NOBLE.judgeAt * .7) / (NOBLE.judgeAt * .3)));
@@ -257,6 +296,19 @@ export function astralJudgement(p, gw = globalThis.window?.gameWorld) {
       }
       for (let i = 0; i < 5; i++) { const bx = s.x + f * reach * u * (i + 1) / 6; blackBolt(ctx, bx, gy - 8, bx + f * 20, gy - 40 - rnd(i + Math.floor(tt * 16)) * h * .6, 500 + i + Math.floor(tt * 16), 2, DARK_RED); }
       ctx.restore();
+      // The energy rift: space itself tears open along the slash — a jagged black gap with crimson lips,
+      // bolts leaping off its edges; it widens, holds and closes again.
+      const rt = tt - NOBLE.judgeAt; const open = Math.min(1, rt / .12) * (1 - Math.max(0, (rt - .4) / .35)); if (open > 0) {
+        const len = Math.abs(front - s.x); const n = Math.max(6, Math.round(len / 18)); const cy = gy - 46; const H = (12 + 26 * charge) * open; const fl = Math.floor(tt * 18);
+        const edge = (side) => Array.from({ length: n + 1 }, (_, i) => { const u2 = i / n; const taper = Math.sin(u2 * Math.PI) ** .6; return [s.x + f * len * u2, cy + side * H * taper * (.6 + .4 * rnd(i * 7 + fl + (side > 0 ? 3 : 0)))]; });
+        const top = edge(-1); const bot = edge(1).reverse(); const poly = [...top, ...bot];
+        const path = () => { ctx.beginPath(); poly.forEach(([x, y], i) => (i ? ctx.lineTo(Math.round(x), Math.round(y)) : ctx.moveTo(Math.round(x), Math.round(y)))); ctx.closePath(); };
+        ctx.save(); path(); ctx.fillStyle = '#d50032'; ctx.lineWidth = 6; ctx.strokeStyle = '#7f0000'; ctx.stroke(); ctx.fill();
+        ctx.save(); ctx.translate(0, 0); ctx.beginPath(); const inner = [...top.map(([x, y]) => [x, cy + (y - cy) * .7]), ...bot.map(([x, y]) => [x, cy + (y - cy) * .7])]; inner.forEach(([x, y], i) => (i ? ctx.lineTo(Math.round(x), Math.round(y)) : ctx.moveTo(Math.round(x), Math.round(y)))); ctx.closePath(); ctx.fillStyle = '#0a0006'; ctx.fill(); ctx.restore();
+        ctx.strokeStyle = '#ff1744'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(Math.round(s.x), Math.round(cy)); ctx.lineTo(Math.round(front), Math.round(cy)); ctx.stroke();
+        for (let i = 0; i < 6 + Math.round(10 * charge); i++) { const [ex, ey] = poly[Math.floor(rnd(fl * 5 + i) * poly.length)]; const up = ey < cy ? -1 : 1; blackBolt(ctx, ex, ey, ex + (rnd(i + fl) - .5) * 40, ey + up * (14 + rnd(i * 3 + fl) * 30), 700 + i * 7 + fl, 2, DARK_RED); }
+        ctx.restore();
+      }
     }
   } }), st.quality);
   return true;
@@ -321,21 +373,28 @@ defineSignature('S87', {
       const frame = Math.floor(t * 12);
       if (layer === 'back') {
         // Inside: a bright blue aura tight to the body — the Wizard's own silhouette, slightly larger, pulsing.
-        const pulse = .85 + .15 * Math.sin(t * 14); const grow = 1 + (st.flash ?? 0) * .1;
-        for (const [col, k, a] of [['#0d47a1', 1.22 * grow, pulse], ['#2196f3', 1.14 * grow, 1], ['#90caf9', 1.08, 1], ['#ffffff', 1.035, .9]]) ghostOf(ctx, p, p.x, ry + 44.5 * (k - 1), p.state, p.animTime ?? 0, f, a, col, k);
+        // It grows and gets more restless as the weapon charges (jitter, more layers, a dark-red rim).
+        const c0 = Math.min(1, st.charge ?? 0); const pulse = .85 + .15 * Math.sin(t * (14 + 10 * c0)); const grow = 1 + (st.flash ?? 0) * .1 + .12 * c0;
+        const jit = (i) => (rnd(frame * 3 + i) - .5) * (1 + 4 * c0);
+        if (c0 > .35) ghostOf(ctx, p, p.x + jit(9), ry + 44.5 * (1.3 * grow - 1), p.state, p.animTime ?? 0, f, .55 + .3 * c0, '#4a0000', 1.3 * grow);
+        for (const [col, k, a, i] of [['#0d47a1', 1.22 * grow, pulse, 1], ['#2196f3', 1.14 * grow, 1, 2], ['#90caf9', 1.08 + .04 * c0, 1, 3], ['#ffffff', 1.035, .9, 4]]) ghostOf(ctx, p, p.x + jit(i), ry + 44.5 * (k - 1) + jit(i + 5) * .5, p.state, p.animTime ?? 0, f, a, col, k);
         // The weapon in the hand turns into the black astral weapon and grows, held up over the shoulder.
         const c = Math.min(1, st.charge ?? 0); const sc = 1.1 + 2.1 * c; const tip = astralTipLength(weaponOf(p)) * sc;
         const hx = p.x + f * 12; const hy = ry - 46; const a = -2.15 + Math.sin(t * 3) * .05;
         ctx.save(); ctx.translate(Math.round(hx), Math.round(hy)); ctx.scale(f, 1); ctx.rotate(a);
+        // The weapon's own aura: a jittering dark-red copy behind it, larger and wilder with the charge.
+        ctx.save(); ctx.translate((rnd(frame + 31) - .5) * 3 * c, (rnd(frame + 37) - .5) * 3 * c); drawWeaponSolid(ctx, weaponOf(p), sc * (1.08 + .06 * c), { mainOnly: true, fill: '#4a0000', edge: '#d50032', inner: '#ff1744', detail: '#4a0000' }); ctx.restore();
         drawWeaponSolid(ctx, weaponOf(p), sc, { mainOnly: true }); /* the giant: only the main piece (no sheath / off-hand) */ ctx.restore();
-        // The energy streams from the body into the weapon.
-        for (let i = 0; i < 2; i++) { const u = .35 + .55 * rnd(frame + i); blackBolt(ctx, p.x, ry - 50, hx + f * Math.cos(a) * tip * u, hy + Math.sin(a) * tip * u, frame * 5 + i, 2, DARK_RED); }
+        // The energy streams from the body into the weapon, and bolts crackle off the blade.
+        for (let i = 0; i < 2 + Math.round(2 * c); i++) { const u = .35 + .55 * rnd(frame + i); blackBolt(ctx, p.x, ry - 50, hx + f * Math.cos(a) * tip * u, hy + Math.sin(a) * tip * u, frame * 5 + i, 2, DARK_RED); }
+        for (let i = 0; i < Math.round(1 + 4 * c); i++) { const u = .3 + .7 * rnd(frame * 2 + i); const bx = hx + f * Math.cos(a) * tip * u; const by = hy + Math.sin(a) * tip * u; const o = rnd(frame + i * 9) * TAU; blackBolt(ctx, bx, by, bx + Math.cos(o) * (10 + 18 * c), by + Math.sin(o) * (10 + 18 * c), frame * 9 + i, 2, DARK_RED); }
         return;
       }
-      // Outside: black lightning with dark-red edges crackling around the Wizard.
-      for (let i = 0; i < 4; i++) {
-        const a = rnd(frame * 7 + i) * TAU; const x0 = p.x + Math.cos(a) * 18; const y0 = ry - 44 + Math.sin(a) * 34;
-        blackBolt(ctx, x0, y0, x0 + Math.cos(a) * (22 + rnd(frame + i * 3) * 24), y0 + Math.sin(a) * (16 + rnd(frame + i * 5) * 22) - 8, frame * 13 + i, 3, DARK_RED);
+      // Outside: black lightning with dark-red edges crackling around the Wizard — more and longer with the charge.
+      const cc = Math.min(1, st.charge ?? 0);
+      for (let i = 0; i < 4 + Math.round(6 * cc); i++) {
+        const a = rnd(frame * 7 + i) * TAU; const x0 = p.x + Math.cos(a) * 18; const y0 = ry - 44 + Math.sin(a) * 34; const L = 1 + cc;
+        blackBolt(ctx, x0, y0, x0 + Math.cos(a) * (22 + rnd(frame + i * 3) * 24) * L, y0 + (Math.sin(a) * (16 + rnd(frame + i * 5) * 22) - 8) * L, frame * 13 + i, 3, DARK_RED);
       }
       for (const b of st.bolts ?? []) blackBolt(ctx, p.x + f * 14, ry - 50, b.x, b.y, 300 + Math.floor(b.t * 60), 3, DARK_RED);
     },

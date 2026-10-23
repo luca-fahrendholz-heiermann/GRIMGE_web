@@ -6,8 +6,11 @@ Die Mechanik ist an die Unity-Version angelehnt (`ComboTimingGuide`, `PunchAbili
 
 **Ring und Schriftzüge (PERFEKT, FINISHER, ZU FRÜH, ZU SPÄT) gibt es nur im Trainingsmodus.** In echten Matches erkennt man das Fenster am Timing und am kurzen Hitstop nach dem letzten Kettentreffer. Rückstoß, Goldwelle und Ruck des perfekten Finishers bleiben überall.
 
-1. **Kette:** Jede Waffe hat ihre Angriffe (Angriff 1, 2, 3 …). Die Kette läuft nur weiter, wenn der Angriff trifft. Ein Fehlschlag beginnt sie von vorn.
-2. **Hitstop:** Der letzte Kettenangriff trifft, das Bild friert kurz ein.
+1. **Kette:** Bei jeder Waffe gibt es **genau 3 normale Angriffe**. Die Kette läuft nur weiter, wenn der Angriff trifft. Ein Fehlschlag beginnt sie von vorn.
+2. **Hitstop:** Angriff 3 trifft schwerer als die ersten beiden: längerer Hitstop, ein kleiner Ring am Ziel, ein Ruck.
+   - Danach holt der Held sichtbar aus (lehnt sich zurück, sammelt sich).
+   - Im richtigen Moment blitzt die Waffe in der Hand auf, im perfekten Moment heller.
+   - Diese Hinweise gehören zur Szene und gibt es in jedem Modus.
 3. **Chance:** Über dem Kopf erscheint ein Ring.
    - Ein innerer Ring wächst auf den Zielring zu. Das grüne Band ist das GOOD-Fenster.
    - Genau auf dem Zielring wird er golden und zeigt „PERFEKT JETZT“.
@@ -17,13 +20,7 @@ Die Mechanik ist an die Unity-Version angelehnt (`ComboTimingGuide`, `PunchAbili
    - Ein Druck knapp vor dem Fenster wird gemerkt und löst beim Öffnen aus.
    - Wildes Drücken direkt nach dem Treffer zählt als **ZU FRÜH**, ein Druck nach dem Band als **ZU SPÄT**. In beiden Fällen endet die Kette.
 
-| Waffe | Kette | danach |
-| --- | --- | --- |
-| ohne Waffe, Schwert & Schild, Katana, Speer … | 3 Angriffe | Finisher |
-| Großaxt, Hammer, Sense, Odachi … | 2 Angriffe | Finisher |
-| Doppelschwerter, Klauen | 5 Angriffe | Finisher |
-| Dolche, Fäuste, Doppelklinge, Kampfstab | 4 Angriffe | Finisher |
-| Bogen, Stäbe, Harfe … (Fernkampf) | 3 Schüsse | großer, durchschlagender Finisher-Schuss (die Chance öffnet ohne Trefferbestätigung) |
+Alle Waffen haben 3 normale Angriffe plus Finisher. Längere Waffenkombos nehmen ihre ersten drei Schritte, kürzere wiederholen einen Schritt. Bei Fernkampfwaffen ist der Finisher ein großer, durchschlagender Schuss.
 
 Der Finisher ist der bisherige letzte Angriff der Waffe, verstärkt. Der letzte Kettenangriff schleudert nicht mehr weg, damit der Finisher folgen kann.
 

@@ -1702,8 +1702,8 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
   P.equipWeapon('dual_swords'); P.comboStep = 0;
   dummy.homeX = dummy.x = P.x + 24; dummy.hp = dummy.maxHp; // the chain only continues while it hits
   const states = [];
-  for (let i = 0; i < 5; i++) { ready(); P.executeAttack(neutral, 'normal'); states.push(P.comboStep); }
-  assert(states.join(',') === '1,2,3,4,5', 'Dual swords chain five strikes before the combo restarts');
+  for (let i = 0; i < 4; i++) { ready(); P.finisherChance = null; P.executeAttack(neutral, 'normal'); states.push(P.comboStep); }
+  assert(states.join(',') === '1,2,3,1', 'Dual swords too: three normal attacks, then (without a timed press) the chain starts over');
   // Throwing: sprint + attack; the weapon flies, hits and lands to be picked up again.
   // Fixed free lane (no crates / barrels between thrower and dummy).
   P.x = 300; P.z = .5; game.battlefield.placeOnSurface(P); P.facing = 1;
@@ -4206,6 +4206,8 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   setup('S86'); { const att = foeAt(340); charged('down'); let dodged = 0; for (let i = 0; i < 4; i++) { P.invulnerableTimer = 0; step(25); const r = hitFrom(att, 20); if (r?.dodged) dodged++; }
     assert(dodged === 3 && P.hp === P.maxHp - 20, 'WILLE · VORAHNUNG: the next three hits are sidestepped, the fourth lands'); }
   setup('S86'); { const m = foeAt(350); m.arcaneShield = 50; ready(); P.executeAttack(neutral, 'normal'); step(12); assert(m.arcaneShield <= 20, 'WILLE · RÜSTUNGSWILLE: melee hits tear 30 points out of enemy shields'); }
+  setup('S86'); { const x0 = P.x; const m = foeAt(460); charged('forward'); step(30); assert(P.x > x0 + 30 && m.hp < 3000, 'WILLE · WILLENSSTOSS: a step into the blow, reaching farther'); }
+  setup('S86'); { const far = foeAt(560); far.arcaneShield = 40; ready(); assert(P.holdAttack(.5), 'WILLE: HOLD is the will wave'); step(40); assert(far.hp < 3000 && far.arcaneShield === 0, 'WILLE · WILLENSWELLE: the will travels ~260 px, breaks the shield'); }
   // EDLES OPFER
   setup('S87'); P.hp = P.maxHp - 40; const hp0 = P.hp; step(60);
   assert(P.signature?.phase === 'shield' && P.arcaneShield > 100 && P.hp > hp0, 'S87 EDLES OPFER · LEBENSSCHILD: a big Ward shield that heals while it holds (blue aura)');
@@ -4257,12 +4259,13 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   { toLastStep(); P.lastFinisherGrade = null; P.executeAttack(neutral, 'normal'); assert(!P.finisherChance && P.lastFinisherGrade === null, 'Mashing right after the hit is too early: no finisher (ZU FRÜH)'); }
   { toLastStep(); P.lastFinisherGrade = null; const ch = P.finisherChance; while (P.finisherChance && P.finisherElapsed() <= ch.peak + ch.good + .02) step(1); if (P.finisherChance) P.executeAttack(neutral, 'normal'); assert(P.lastFinisherGrade === null && !P.finisherChance, 'Too late (after the green band): no finisher, the chain ends (ZU SPÄT)'); }
   { reset(); const m = foe(); for (let i = 0; i < 2; i++) { m.x = 340; P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.executeAttack(neutral, 'normal'); step(2); } m.x = 900; P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.executeAttack(neutral, 'normal'); assert(!P.finisherChance, 'A whiffed third attack opens no finisher chance'); }
-  { const { chain } = toLastStep('great_hammer'); assert(chain.steps.length === 2 && P.finisherChance, 'Every weapon: its chain, then the finisher (hammer: 2 + finisher)');
-    const { chain: c2 } = toLastStep('dual_swords'); assert(c2.steps.length === 5 && P.finisherChance, 'Dual swords: 5 + finisher'); }
+  { const { chain } = toLastStep('great_hammer'); assert(chain.steps.length === 3 && P.finisherChance, 'Every weapon: three normal attacks, then the finisher (also the hammer)');
+    const { chain: c2 } = toLastStep('dual_swords'); assert(c2.steps.length === 3 && P.finisherChance && c2.steps.map((x) => x.state).join() === 'attack1,attack2,attack3' && c2.steps[2].hitstopTicks >= 8, 'Dual swords: 3 + finisher; attack 3 lands heavier (longer hitstop)'); }
   { toLastStep('bow'); assert(P.finisherChance, 'Ranged: the last chain shot opens the chance'); waitTo(1); const n0 = spells.activeSpells.filter((x) => x.isWeaponShot).length; P.executeAttack(neutral, 'normal');
     const fin = spells.activeSpells.filter((x) => x.isWeaponShot).slice(n0); assert(fin.length && fin.every((x) => x.pierce), 'The bow finisher fires a big piercing arrow'); }
   { toLastStep(); waitTo(.6); P.finisherChance.queued = null; const ch = P.finisherChance; const el = P.finisherElapsed(); const buffered = E.finisherGrade(ch, ch.peak - ch.good - ch.lead / 2);
     assert(buffered === 'buffer' && E.finisherGrade(ch, ch.peak) === 'perfect' && E.finisherGrade(ch, 0) === 'early' && E.finisherGrade(ch, ch.peak + ch.good + .01) === 'late', 'Finisher timing grades: early / buffer / good / perfect / late'); }
+  { toLastStep(); waitTo(1); let glint = 0; const ctxG = new Proxy({}, { get: (tt, k) => k === 'fillRect' ? () => { glint++; } : k === 'canvas' ? undefined : () => {}, set: () => true }); P.renderFinisherGlint(ctxG, P.y); assert(glint > 0, 'At the finisher moment the weapon flashes in the hand (every mode, not only Training)'); }
   { toLastStep(); waitTo(.9); let bad = 0; const strict = new Proxy({}, { get: (tt, k) => k === 'arc' ? (x, y, r) => { if (r < 0) bad++; } : k === 'canvas' ? undefined : k === 'measureText' ? () => ({ width: 10 }) : () => {}, set: () => true }); P.renderFinisherRing(strict, P.y); assert(!bad, 'The finisher ring renders'); }
   // Outside Training: no ring, no labels — the window still works (timing + hitstop only).
   assert(E.finisherGuideShown(), 'In Training the finisher guide (ring, PERFEKT label) is shown');
