@@ -1013,8 +1013,9 @@ export class Player extends GroundEntity {
     // A breathing stance turns every charged direction into its move (down = the mark).
     if (this.isAlive && this.chargeDir !== 'hold' && chargeRatio >= .05 && this.signature?.impl?.stance?.charge) {
       const cost = chargeSkillCost(chargeRatio);
-      if (this.freeMana < cost) { this.noManaFeedback(); this.state = 'idle'; return false; }
-      if (signatureCharge(this, this.chargeDir ?? 'forward', chargeRatio)) { this.mp -= cost; return true; }
+      // Without the mana the skill does not fire — the plain heavy below still does (no free skill spam).
+      if (this.freeMana < cost) this.noManaFeedback();
+      else if (signatureCharge(this, this.chargeDir ?? 'forward', chargeRatio)) { this.mp -= cost; return true; }
     }
     if (this.chargeDir === 'hold') { if (this.isAlive) this.state = 'idle'; return this.isAlive ? this.holdAttack(chargeRatio) : false; }
     // Ground charge-down = the weapon-specific buff / debuff (no generic move without a weapon).
@@ -1030,8 +1031,8 @@ export class Player extends GroundEntity {
     // Charged UP: the weapon's own launcher (bow arrow, harp melody, staff pillar, rising cut …).
     if (dir === 'up' && weaponHasUpSkill(this)) {
       const cost = chargeSkillCost(chargeRatio);
-      if (this.freeMana < cost) { this.noManaFeedback(); this.state = 'idle'; return false; }
-      if (weaponUp(this, chargeRatio, spells, window.gameWorld)) { this.mp -= cost; return true; }
+      if (this.freeMana < cost) this.noManaFeedback();
+      else if (weaponUp(this, chargeRatio, spells, window.gameWorld)) { this.mp -= cost; return true; }
     }
     // Ranged weapons: the charged UP is a lifting volley.
     const weaponHeavy = this.weaponProfile?.heavy;

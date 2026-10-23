@@ -2881,7 +2881,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   { const EN = await import('./public/src/entities.js'); const C = EN.CHARGE_SKILL_MANA;
     reset(); cast('S41'); P.mp = P.maxMp; P.reservedMana = 0; const free0 = P.freeMana; charged(); const paid = free0 - P.freeMana;
     reset(); cast('S41'); P.mp = P.boundMana + (P.reservedMana ?? 0) + C.full - 1; const mp1 = P.mp; dummy.homeX = dummy.x = P.x + 330; dummy.hp = dummy.maxHp; charged(); const blocked = P.mp === mp1; step(50);
-    assert(paid === C.full && blocked && dummy.hp === dummy.maxHp, 'A breathing charge costs mana (' + C.short + ' short / ' + C.full + ' full) — without the mana nothing fires (paid ' + paid + ')');
+    assert(paid === C.full && blocked && P.lastBreathMove !== 'x' && dummy.hp === dummy.maxHp, 'A breathing charge costs mana (' + C.short + ' short / ' + C.full + ' full) — without the mana the breath move does not fire (paid ' + paid + ')');
     reset(); P.equipClassWeapon('harp'); P.mp = P.maxMp; const f1 = P.freeMana; P.state = 'idle'; P.canAttack = true; P.beginCharge('up'); P.chargeTimer = P.chargeMaxTime * .1; P.releaseCharge(); const upPaid = f1 - P.freeMana;
     P.equipClassWeapon(null); P.mp = P.maxMp; const f2 = P.freeMana; P.state = 'idle'; P.canAttack = true; P.beginCharge('forward'); P.chargeTimer = P.chargeMaxTime * .1; P.releaseCharge();
     assert(upPaid === C.full && P.freeMana === f2, 'The charged-UP skill of the weapon costs mana; the plain heavy without a skill stays free'); }
