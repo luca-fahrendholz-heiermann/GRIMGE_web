@@ -18,7 +18,8 @@ Die Mechanik ist an die Unity-Version angelehnt (`ComboTimingGuide`, `PunchAbili
    - Ein Druck im grünen Band löst den FINISHER aus: stärker als der Kettenangriff, mit weitem Rückstoß und Aufwurf.
    - Im goldenen Moment wird es **PERFEKT**: ×1,3 Rückstoß, +15 % Schaden, bricht die Abwehr, mit Goldwelle und Ruck.
    - Ein Druck knapp vor dem Fenster wird gemerkt und löst beim Öffnen aus.
-   - Wildes Drücken direkt nach dem Treffer zählt als **ZU FRÜH**, ein Druck nach dem Band als **ZU SPÄT**. In beiden Fällen endet die Kette.
+   - Wildes Drücken direkt nach dem Treffer zählt als **ZU FRÜH**, ein Druck nach dem Band als **ZU SPÄT**. In beiden Fällen gibt es keinen Finisher. Der Druck geht aber nicht verloren: Sobald der Schwung endet, beginnt flüssig wieder **Angriff 1**, ohne Stocken.
+   - **Waffen-Finisher:** Speer, Glefe und Geisterglefe machen eine **Stichsalve** (5 bis 6 schnelle Stiche, der letzte schleudert). Dolche, Klauen und Fäuste machen einen Hagel aus schnellen Treffern. Die anderen Waffen nutzen ihren verstärkten Schlag.
 
 Alle Waffen haben 3 normale Angriffe plus Finisher. Längere Waffenkombos nehmen ihre ersten drei Schritte, kürzere wiederholen einen Schritt. Bei Fernkampfwaffen ist der Finisher ein großer, durchschlagender Schuss.
 

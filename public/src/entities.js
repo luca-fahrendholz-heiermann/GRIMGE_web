@@ -91,6 +91,14 @@ export function comboChainOf(combo) {
 // The ring and the PERFEKT / FINISHER / ZU FRÜH / ZU SPÄT labels are a Training aid only (user, 23 Oct
 // 2026): in real matches the player reads the window from the timing and the short hitstop alone.
 export const finisherGuideShown = () => globalThis.window?.gameWorld?.activeMode?.id === 'training';
+export const FINISHER_STYLES = Object.freeze({
+  spear: { flurry: { hits: 6, every: .055, motion: 'flurry', name: 'STICHSALVE' } },
+  glaive: { flurry: { hits: 5, every: .06, motion: 'flurry', name: 'STICHSALVE' } },
+  spirit_glaive: { flurry: { hits: 5, every: .06, motion: 'flurry', name: 'GEISTERSALVE' } },
+  daggers: { flurry: { hits: 6, every: .045, motion: 'flurry', name: 'KLINGENWIRBEL' } },
+  claws: { flurry: { hits: 6, every: .05, motion: 'flurry', name: 'KRALLENSTURM' } },
+  gauntlets: { flurry: { hits: 7, every: .045, motion: 'flurry', name: 'FAUSTHAGEL' } }
+});
 export function finisherGrade(chance, elapsed) {
   const open = chance.peak - chance.good; const close = chance.peak + chance.good;
   if (elapsed < open - chance.lead) return 'early';
@@ -467,6 +475,16 @@ export class Player extends GroundEntity {
     this.pullCooldown = Math.max(0, (this.pullCooldown ?? 0) - dt);
     if (this.slowTimer <= 0) this.slowFactor = 1;
     this.comboResetTimer = Math.max(0, this.comboResetTimer - dt);
+    // A finisher salvo: stab after stab, the last one launches.
+    if (this._flurry) {
+      const fl = this._flurry;
+      if (this.state !== 'attack3' || !this.isAlive) this._flurry = null;
+      else if ((fl.t -= dt) <= 0) {
+        fl.t += fl.every; fl.left--; const last = fl.left <= 0; const a = fl.attack;
+        this.triggerMeleeHitbox(Math.round(a.damage * (last ? .6 : .32)), this.facing * (last ? a.knockback : 60), last ? a.lift : 10, last ? .6 : .25, last, { hitstopTicks: last ? a.hitstopTicks : 1, hitReaction: last ? 'finisher' : 'light', reach: (a.reach ?? 60) + 20, guardBreak: !!a.guardBreak && last });
+        if (last) { this._flurry = null; combat.shakeCamera(6, .18); }
+      }
+    }
     if (this.finisherChance) {
       const ch = this.finisherChance;
       if (!/^attack/.test(this.state) || this.stateTimer <= 0 || !this.isAlive) this.finisherChance = null;
@@ -1308,6 +1326,12 @@ export class Player extends GroundEntity {
     const castle = isOnCastle(this);
     const ranged = attack.shot ?? attack.bolt;
     if (attack.earned) this.comboStep = 0; // after the finisher the chain starts over
+    if (attack.earned && attack.flurry) {
+      this._weaponMotion = attack.flurry.motion; this._flurry = { left: attack.flurry.hits - 1, every: attack.flurry.every, t: attack.flurry.every, attack };
+      if (attack.flurry.name && finisherGuideShown()) combat.spawnDamageText(this.x, this.y - 128, attack.flurry.name, { color: '#ffe082' });
+      this.triggerMeleeHitbox(Math.round(attack.damage * .32), this.facing * 60, 10, .3, false, { hitstopTicks: 1, hitReaction: 'light', reach: (attack.reach ?? 60) + 20 });
+      return true;
+    }
     else if (this.comboStep === chain.steps.length && (attack.shot || attack.bolt)) this.openFinisherChance(swingTime);
     if (ranged && castle && this.freeMana >= 1) {
       this.mp -= 1;
@@ -1360,14 +1384,21 @@ export class Player extends GroundEntity {
   pressFinisherWindow(input) {
     const ch = this.finisherChance; const g = finisherGrade(ch, this.finisherElapsed());
     const guide = finisherGuideShown();
-    if (g === 'early') { if (guide) combat.spawnDamageText(this.x, this.y - 104, 'ZU FRÜH', { color: '#64b5f6' }); this.finisherChance = null; return false; }
-    if (g === 'late') { if (guide) combat.spawnDamageText(this.x, this.y - 104, 'ZU SPÄT', { color: '#ff5252' }); this.finisherChance = null; return false; }
+    // Missed timing (user, 23 Oct 2026): no finisher — the press flows into attack 1 as soon as this swing
+    // ends (never swallowed, so the chain does not stutter).
+    if (g === 'early' || g === 'late') {
+      if (guide) combat.spawnDamageText(this.x, this.y - 104, g === 'early' ? 'ZU FRÜH' : 'ZU SPÄT', { color: g === 'early' ? '#64b5f6' : '#ff5252' });
+      this.finisherChance = null; this.comboStep = 0;
+      this.queuedAttack = 'normal'; this.attackBufferTimer = Math.max(0, this.stateTimer) + .12;
+      return true;
+    }
     if (g === 'buffer') { ch.queued = 'good'; return true; } // remembered just before the window: fires when it opens
     return this.startComboFinisher(input, g);
   }
   startComboFinisher(input, grade) {
     const weapon = this.weaponProfile; const chain = comboChainOf(weapon ? weapon.combo : MELEE_BASELINE.normal);
-    const perfect = grade === 'perfect'; const T = FINISHER_TIMING; const f = chain.finisher;
+    const perfect = grade === 'perfect'; const T = FINISHER_TIMING; const style = FINISHER_STYLES[this.weapon ?? this.classWeapon];
+    const f = style ? { ...chain.finisher, ...style, time: style.flurry ? style.flurry.hits * style.flurry.every + .18 : chain.finisher.time } : chain.finisher;
     this._pendingFinisher = perfect ? { ...f, perfect: true, damage: Math.round(f.damage * T.perfectDamage), knockback: f.knockback * T.perfectKnock, guardBreak: true, ...(f.shot ? { shot: { ...f.shot, damage: Math.round(f.shot.damage * T.perfectDamage) } } : {}) } : f;
     this.finisherChance = null; this.lastFinisherGrade = grade;
     if (finisherGuideShown()) combat.spawnDamageText(this.x, this.y - 112, perfect ? 'PERFEKT!' : 'FINISHER', { color: perfect ? '#ffd740' : '#69f0ae', isCrit: perfect });
