@@ -479,7 +479,7 @@ export class Player extends GroundEntity {
     if (this.followUp) {
       this.followUp.t -= dt;
       if (this.followUp.queued && this.canAttack && this.grounded) this.autoFollow();
-      else if (this.followUp.t <= 0 && !this.followUp.queued) this.followUp = null;
+      else if (this.followUp.t <= (this.followUp.queued ? -.4 : 0) || this.state === 'hurt' || !this.isAlive) this.followUp = null; // a queued tap never fires later (e.g. after being hit)
     }
     if (this._followStrikeT > 0 && (this._followStrikeT -= dt) <= 0) {
       if (!this.grounded && this.isAlive) { this.canAttack = true; this.state = 'jump'; this.executeAttack({ keys: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 } }, 'normal'); }
