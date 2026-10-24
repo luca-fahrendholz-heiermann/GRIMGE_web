@@ -1275,6 +1275,8 @@ export class Player extends GroundEntity {
     if (!this.isAlive || this.isGuarding || this.burrowed || !window.gameWorld?.isMatchRunning?.()) return false;
     // A guided chain (guided_chains.js) owns every attack input while it runs: taps / swipes confirm its beats.
     if (this.guidedChain) return this.guidedChain.press(attackKind);
+    // A stance may own attack inputs (S89 GRENZENLOS: swipe → Sog, tap → Stoß / Nichts); true = consumed.
+    if (this.signature?.impl?.stance?.attack?.(this, this.signature, attackKind, window.gameWorld)) return true;
     // Attack while backdashing: the counter shot (once per dash).
     // Only while the dash runs or right after it ended (an interrupted dash closes the window).
     if (this.backdashCounterTimer > 0 && (this.backdashTimer > 0 || this.backdashSuppressTimer > 0)) return this.backdashCounterShot();

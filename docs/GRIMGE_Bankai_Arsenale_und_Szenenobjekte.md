@@ -146,3 +146,17 @@ Jede Form hat außerdem einen eigenen Sprint-Angriff, einen eigenen Luftsturz, e
 
 - Die Formation schlägt bei jedem normalen Angriff synchron mit und kehrt über die Schwungdauer der Waffe zurück. Langsame Waffen schwingen ihr Arsenal also langsamer.
 - Jeder Treffer bekommt einen **Echo-Treffer** des Arsenals. Sein Schaden wächst mit der Schwungdauer: schwere Waffen treffen härter.
+
+## 7. S89 Grenzenlos (Raum-Haltung, eigene Adaption)
+
+Eine Haltung für 14 s (`public/src/grenzenlos.js`). Bedienung:
+
+| Eingabe | Wirkung | Mana |
+|---|---|---|
+| Wischen → | **Sog**: Ein Anziehungspunkt fliegt voraus und zieht Gegner, feindliche Schüsse und lose Objekte an. Er folgt der Tiefe des nächsten Gegners. Erneut → schiebt ihn weiter. | 8 |
+| Wischen ↑ mit Sog | Sog anheben: Gegner im Sog werden in die Luft gezogen. | – |
+| Tippen mit Sog | **Stoß** vom Sog-Punkt: Alles Gesammelte fliegt vom Wizard weg; gefangene Schüsse fliegen als eigene zurück. | 6 |
+| Tippen bis 0,7 s nach dem Sog | **Nichts**: Sog und Stoß prallen zusammen. Ein violetter Strahl löscht die ganze Bahn, Objekte darin werden zerstört. | 20 |
+| Wischen ↑ ohne Sog | Stoß rund um den Wizard. | 6 |
+| Tippen ohne Sog | Normale Kombo. | – |
+| passiv | **Unendlichkeit**: Feindliche Schüsse werden vor dem Wizard langsamer und bleiben stehen. | 1/s, solange sie hält |

@@ -2570,7 +2570,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   const step = (n, dt = 1 / 60) => { for (let i = 0; i < n; i++) { P.update(dt, neutral, game.battlefield, game); game.updateProjectiles(dt); spells.update(dt, game); } };
   const cast = (id, target = null) => spells.cast(P, spells.resolveSpell([{ id: 'sig_' + id }]), game, null, target);
   const ids = Object.keys(core.SIGNATURES);
-  assert(ids.length === 88 && ids.every((id) => core.signatureImpl(id)?.cast) && sigMod.SIGNATURE_RUNE_IDS.every((id) => isSpecialRune(id) && runeManaCost(id) >= 28 && runeManaCost(id) <= 46), 'All 88 signature specials (atlas S01–S36 + S37–S88) are special runes with their own mechanic and bound mana');
+  assert(ids.length === 89 && ids.every((id) => core.signatureImpl(id)?.cast) && sigMod.SIGNATURE_RUNE_IDS.every((id) => isSpecialRune(id) && runeManaCost(id) >= 28 && runeManaCost(id) <= 46), 'All 88 signature specials (atlas S01–S36 + S37–S88) are special runes with their own mechanic and bound mana');
   assert(ids.every((id) => spellHowTo('sig_' + id)?.effect?.length > 40) && !spells.resolveSpell([{ id: 'sig_S03' }, { id: 'ignis' }]), 'Signature specials explain themselves in the grimoire and never fuse');
   // Every special casts, runs and renders (strict canvas) without errors.
   const strict = new Proxy({}, { get: (t, k) => (k === 'ellipse' || k === 'arc') ? (x, y, rx, ry) => { if (rx < 0 || (k === 'ellipse' && ry < 0)) throw new Error('IndexSizeError ' + k); } : (k === 'canvas' ? undefined : () => {}), set: () => true });
@@ -4591,6 +4591,37 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   const exit = ENV.sceneFx.find((f) => f.isSecretPortal && f.exit); P.x = exit.x; P.z = exit.z; P.elevation = 0; P.surfaceHeight = 0; P.grounded = true; exit.t = 1; ENV.update(1 / 60, game, []);
   assert(!game.modeState.secret && Math.abs(P.x - portal.x) < 30 && game.battlefield.boundsOverride.left === L, 'The exit portal brings the Wizard back to the ledge spot in room 2');
   game.matchState = 'Menu'; game.setMatchMode('training'); game.startMatch();
+}
+
+// S89 GRENZENLOS (user, 24 Oct 2026): Sog (steerable attraction), Stoß (repulsion), Nichts (their collision), Unendlichkeit.
+{
+  const LM = await import('./public/src/grenzenlos.js'); const core = await import('./public/src/signature_core.js'); const { environment: ENV } = await import('./public/src/environment.js');
+  const P = game.player; const dummy = game.trainingDummy; const N = { keys: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false };
+  const step = (n) => { for (let i = 0; i < n; i++) { P.update(1 / 60, N, game.battlefield, game); spells.update(1 / 60, game); for (const m of game.minions) if (m !== dummy) m.update?.(1 / 60, game, game.battlefield); } };
+  const start = () => { spells.clearRuntime(); if (P.signature) core.endStance(P, 'replaced'); game.minions = game.minions.filter((m) => m === dummy); game.projectiles.length = 0; P.equipClassWeapon(null); P.x = 300; P.z = .5; P.facing = 1; P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.mp = P.maxMp; P.grounded = true; P.elevation = 0; game.battlefield.placeOnSurface(P); dummy.homeX = dummy.x = 1400; spells.cast(P, spells.resolveSpell([{ id: 'sig_S89' }]), game); };
+  const ready = () => { P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; if (P.signature) P.signature.cd = 0; };
+  const foe = (x, z = .5) => { const Mn = globalThis.__GrimgeMinion; const m = new Mn(x, z, 'red', 'melee', 0); m.maxHp = m.hp = 3000; m.passive = true; game.battlefield.placeOnSurface(m); game.minions.push(m); return m; };
+  const sogOf = () => spells.activeSpells.find((s) => s.isSogPoint && !s.isFinished);
+  start(); { const free0 = P.freeMana; ready(); const ok = P.executeAttack(N, 'heavy'); const sog = sogOf();
+    assert(P.signature?.id === 'S89' && ok && sog && free0 - P.freeMana === LM.LIMITLESS.sogMana, 'GRENZENLOS: swipe forward sends the SOG ahead (costs ' + LM.LIMITLESS.sogMana + ' mana)'); }
+  start(); { ready(); P.executeAttack(N, 'heavy'); const m = foe(470); step(20); const sog = sogOf(); const d0 = Math.abs(m.x - sog.x); step(30); const d1 = Math.abs(m.x - sog.x);
+    const shot = { x: sog.x + 60, z: sog.z, vx: -300, _vz: 0, life: 2, team: 'red', type: 'bolt' }; game.projectiles.push(shot); step(4); const held = Math.abs(shot.vx) < 1 && shot._sogHeld === sog;
+    const x0 = sog.x; ready(); P.executeAttack(N, 'heavy'); step(20); const pushed = sog.x > x0 + 20;
+    assert(d1 < d0 && held && pushed, 'SOG: it pulls foes in, catches hostile shots, and a second forward swipe pushes it further (' + Math.round(d0) + ' → ' + Math.round(d1) + ')');
+    ready(); const sx = sog.x; P.signature.sogAt = -9; P.executeAttack(N, 'normal'); step(2);
+    assert(!sogOf() && (m.kbVelX ?? 0) * Math.sign(m.x - sx || 1) > 0 && shot.team === P.team && Math.abs(shot.vx) > 100, 'STOSS: a tap bursts the Sog outward — foes are hurled away, the captured shot flies back as your own'); }
+  start(); { const bo = ENV.addProp('boulder', 560, .5); const m = foe(640); ready(); P.executeAttack(N, 'heavy'); step(3); const free0 = P.freeMana; const hp0 = m.hp; ready(); P.executeAttack(N, 'normal'); step(2);
+    assert(hp0 - m.hp >= 60 && bo.isDead && free0 - P.freeMana >= LM.LIMITLESS.voidMana - 1, 'NICHTS: a tap right after the Sog collides attraction and repulsion — a violet beam erases the lane (objects included)'); ENV.props = ENV.props.filter((o) => o !== bo); }
+  start(); { ready(); P.executeAttack(N, 'heavy'); const sog = sogOf(); const h0 = sog.h; ready(); P.executeAttack(N, 'uppercut'); const raised = sog.h > h0;
+    core.endStance(P, 'replaced'); spells.cast(P, spells.resolveSpell([{ id: 'sig_S89' }]), game); const m = foe(340); const hp0 = m.hp; ready(); P.executeAttack(N, 'uppercut'); step(2);
+    assert(raised && m.hp < hp0 && (m.kbVelX ?? 0) > 0, 'Swipe up raises the Sog — without a Sog it repels everything around the Wizard'); }
+  start(); { const shot = { x: P.x + 85, z: P.z, vx: -260, _vz: 0, life: 3, team: 'red', type: 'bolt' }; game.projectiles.push(shot); for (let i = 0; i < 8; i++) { P.update(1 / 60, N, game.battlefield, game); shot.x += shot.vx / 60; }
+    assert(Math.abs(shot.vx) < 120 && P.signature.held.has(shot), 'UNENDLICHKEIT: a hostile shot slows down in front of the Wizard (' + Math.round(shot.vx) + ')'); game.projectiles.length = 0; }
+  start(); { dummy.homeX = dummy.x = P.x + 30; dummy.hp = dummy.maxHp; ready(); P.comboStep = 0; P.executeAttack(N, 'normal'); assert(P.comboStep === 1 && !sogOf(), 'Without a Sog a tap stays the normal combo'); dummy.homeX = dummy.x = 1400; }
+  start(); { let bad = ''; try { ready(); P.executeAttack(N, 'heavy'); const strict = new Proxy({}, { get: (tg, k) => (k === 'arc' || k === 'ellipse') ? (x, y, r, ry) => { if (!(r >= 0) || (k === 'ellipse' && !(ry >= 0)) || !Number.isFinite(x)) throw new Error('bad ' + k); } : (k === 'canvas' ? undefined : () => {}), set: () => true });
+      for (let i = 0; i < 20; i++) { step(1); for (const s of spells.activeSpells) s.render?.(strict); } (await import('./public/src/signature_runes.js')).renderSignatureStance?.(strict, P, P.y, 'back'); ready(); P.signature.sogAt = P.signature.t; P.executeAttack(N, 'normal'); for (let i = 0; i < 30; i++) { step(1); for (const s of spells.activeSpells) s.render?.(strict); } } catch (e) { bad = e.message; }
+    assert(!bad, 'Grenzenlos renders cleanly (Sog, Stoß, Nichts, the shell of slowed space) ' + bad); }
+  if (P.signature) core.endStance(P, 'replaced'); spells.clearRuntime(); game.minions = game.minions.filter((m) => m === dummy); P.x = 300; P.z = .58;
 }
 
 const frameCallback = nextFrame;
