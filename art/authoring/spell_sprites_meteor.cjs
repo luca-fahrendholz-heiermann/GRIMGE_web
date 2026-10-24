@@ -99,35 +99,44 @@ function meteorTelegraph() {
   return s;
 }
 function meteorExplosion() {
-  // LF2-style long explosion: 0–1 white-yellow flash, 2–4 mottled fire, 5–7 red into brown smoke, 8–9 ash.
+  // v2 (24 Oct 2026, Visual Bible "Form zuerst"): clean shapes with a light hierarchy instead of noise.
+  // 0–1 white-yellow flash with sharp rays · 2–4 layered fireball (dark-red rim → orange → yellow → white core)
+  // with flame tongues rising · 5–7 solid smoke puffs (light top, dark underside) with dying embers · 8–9 ash rings.
   const s = new Sheet('meteor_explosion', 64, 56, 10, { anchor: 'base', baseOffset: 3 });
-  const cx = 32, cy = 34;
-  // Coarse value noise (3×3 px cells) so the mottling forms clumps, not single-pixel static.
-  const cell = (f, x, y) => { const h = Math.sin((Math.floor(x / 3) * 12.9898 + Math.floor(y / 3) * 78.233 + f * 3.7)) * 43758.5453; return h - Math.floor(h); };
+  const cx = 32, cy = 36;
+  const disc = (f, x0, y0, r, col, sq = 1) => { for (let y = Math.floor(y0 - r); y <= y0 + r; y++) for (let x = Math.floor(x0 - r); x <= x0 + r; x++) { if (((x - x0) / r) ** 2 + ((y - y0) / (r * sq)) ** 2 <= 1) s.set(f, x, y, col); } };
+  const ring = (f, x0, y0, r, w, col) => { for (let y = Math.floor(y0 - r - 1); y <= y0 + r + 1; y++) for (let x = Math.floor(x0 - r - 1); x <= x0 + r + 1; x++) { const d = Math.hypot(x - x0, (y - y0) * 1.15); if (d <= r && d >= r - w) s.set(f, x, y, col); } };
+  const tongue = (f, x0, y0, ang, len, w, col) => s.poly(f, [[x0 + Math.cos(ang + Math.PI / 2) * w, y0 + Math.sin(ang + Math.PI / 2) * w], [x0 + Math.cos(ang) * len, y0 + Math.sin(ang) * len], [x0 + Math.cos(ang - Math.PI / 2) * w, y0 + Math.sin(ang - Math.PI / 2) * w]], col);
   for (let f = 0; f < 10; f++) {
-    const r = rng(500 + f);
-    const R = f < 2 ? 12 + f * 9 : Math.min(28, 22 + f * 1.5);
-    const rise = f * 1.6;
-    // Blobby silhouette: several overlapping circles.
-    const blobs = Array.from({ length: 9 }, (_, k) => { const a = k / 9 * Math.PI * 2 + r() * .4; const rr = R * (.45 + r() * .3); return [cx + Math.cos(a) * rr * .9, cy - rise + Math.sin(a) * rr * .75 - (a > Math.PI ? 3 : 0), R * (.42 + r() * .22)]; });
-    blobs.push([cx, cy - rise, R * .7]);
-    for (let y = 0; y < 56; y++) for (let x = 0; x < 64; x++) {
-      let inside = false; let depth = 0;
-      for (const [bx, by, br] of blobs) { const d = Math.hypot(x - bx, y - by) / br; if (d < 1) { inside = true; depth = Math.max(depth, 1 - d); } }
-      if (!inside) continue;
-      const n = depth * .8 + (cell(f, x, y) - .5) * .55; // clumpy mottling
-      let col;
-      if (f <= 1) col = n > .5 ? M.white : n > .25 ? M.core : M.yellow;
-      else if (f <= 4) { const o = (f - 2) * .08; col = n > .62 + o ? M.core : n > .46 + o ? M.yellow : n > .3 + o ? M.lavaH : n > .12 + o ? M.lava : M.red; }
-      else if (f <= 7) { const heat = (7 - f) / 3; col = n > .5 - heat * .2 ? (heat > .3 ? M.lava : M.red) : n > .32 - heat * .1 ? (heat > 0 ? M.red : M.smokeL) : n > .1 ? M.smokeL : M.smoke; }
-      else col = cell(f, x + 7, y) < (f === 8 ? .75 : .45) ? (n > .25 ? M.smoke : M.smokeD) : null;
-      if (col) s.set(f, x, y, col);
+    const r = rng(700 + f);
+    if (f <= 1) {
+      const R = f ? 17 : 10;
+      for (let k = 0; k < 8; k++) { const ang = k / 8 * Math.PI * 2 + .2; tongue(f, cx, cy, ang, R + (k % 2 ? 8 : 14), 3, k % 2 ? M.yellow : M.core); }
+      disc(f, cx, cy, R, M.yellow); disc(f, cx, cy, R * .72, M.core); disc(f, cx, cy, R * .42, M.white);
+      s.outline(f, M.lavaD); continue;
     }
-    // Spiky rays on the first frames.
-    if (f <= 2) for (let k = 0; k < 10; k++) { const a = k / 10 * Math.PI * 2 + .2; s.line(f, cx + Math.cos(a) * R * .6, cy + Math.sin(a) * R * .5, cx + Math.cos(a) * (R + 8), cy + Math.sin(a) * (R + 6), k % 2 ? M.yellow : M.core); }
-    // Dripping smoke legs on the late frames (like LF2's firen_exp).
-    if (f >= 6 && f <= 8) for (let k = 0; k < 7; k++) { const x = cx - 20 + k * 6 + Math.round(r() * 3); for (let y = cy + 8 - rise; y < cy + 16 - rise + r() * 6; y++) s.set(f, x, y, M.smokeD); }
-    s.outline(f, f <= 4 ? M.lavaD : M.ash);
+    if (f <= 4) {
+      const k = f - 2; const R = 20 + k * 3; const up = k * 2.5; const y0 = cy - up;
+      // Flame tongues rising out of the ball (crisp triangles), then the layered body.
+      for (let t = 0; t < 7; t++) { const ang = -Math.PI / 2 + (t - 3) * .38 + (r() - .5) * .15; tongue(f, cx + (t - 3) * 4, y0 - R * .45, ang, R * (.8 + r() * .35) - k * 2, 4, t % 2 ? M.lava : M.red); }
+      // Each colour band is a cluster of offset discs (a lumpy fireball, no bullseye).
+      const band = (rad, col, ox, oy) => { for (const [dx, dy, kr] of [[0, 0, 1], [-.32, .1, .72], [.3, .14, .7], [-.12, -.3, .66], [.22, -.24, .6]]) disc(f, cx + ox + dx * rad, y0 + oy + dy * rad, rad * kr, col, .88); };
+      band(R * .9, M.red, 0, 0); band(R * .7, M.lava, -1, -2); band(R * (.48 - k * .06), M.lavaH, -2, -4); band(R * (.27 - k * .05), M.core, -3, -5);
+      if (k === 0) disc(f, cx - 4, y0 - 6, 4, M.white);
+      s.outline(f, M.lavaD); continue;
+    }
+    if (f <= 7) {
+      const k = f - 5; const up = 8 + k * 4; const y0 = cy - up; const heat = 1 - k / 3;
+      // Five solid smoke puffs: dark underside, mid body, light top-left; a dying ember core.
+      const puffs = [[0, 0, 13], [-12, 4, 10], [12, 4, 10], [-6, -9, 9], [7, -8, 9]];
+      for (const [dx, dy, pr] of puffs) { const rr = pr + k * 1.5; disc(f, cx + dx, y0 + dy + 2, rr, M.smokeD, .9); disc(f, cx + dx - 1, y0 + dy, rr * .85, M.smoke, .9); disc(f, cx + dx - 3, y0 + dy - 3, rr * .45, M.smokeL, .9); }
+      if (heat > .2) { disc(f, cx, y0 + 4, 7 * heat, M.red, .8); disc(f, cx, y0 + 4, 4 * heat, M.lava, .8); disc(f, cx, y0 + 4, 2 * heat, M.lavaH, .8); }
+      for (let e = 0; e < 4; e++) { const ex = cx + (e - 1.5) * 9; const ey = y0 + 14 + (e % 2) * 3; s.set(f, ex, ey, M.lava); s.set(f, ex, ey + 1, M.red); }
+      s.outline(f, M.ash); continue;
+    }
+    // Ash: thin rings of the last puffs drifting apart.
+    const k = f - 8; const y0 = cy - 20 - k * 4;
+    for (const [dx, dy, pr] of [[-9, 2, 9], [9, 0, 8], [0, -8, 7]]) ring(f, cx + dx * (1 + k * .3), y0 + dy, pr + k * 2, 2, k ? M.ash : M.smokeD);
   }
   return s;
 }
