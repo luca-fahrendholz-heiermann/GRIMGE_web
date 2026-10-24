@@ -127,6 +127,7 @@ defineSignature('S89', {
     hint: (p, st) => (st?.sog ? 'GRENZENLOS · → SOG SCHIEBEN · ↑ ANHEBEN · TIPPEN: STOSS (SOFORT: NICHTS)' : 'GRENZENLOS · → SOG · ↑ STOSS · UNENDLICHKEIT AKTIV'),
     // Inputs (entities.js executeAttack → stance.attack): true = consumed.
     attack(p, st, kind, gw) {
+      if (kind !== 'heavy' && kind !== 'uppercut' && kind !== 'normal') return false; // dives, branches, finishers stay untouched
       if (st.cd > 0) return kind !== 'normal' || !!st.sog;
       if (kind === 'heavy') {
         if (st.sog && !st.sog.isFinished) { st.sog.steerForward(); st.cd = .15; return true; }
