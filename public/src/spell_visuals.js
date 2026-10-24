@@ -42,14 +42,16 @@ export function drawSpellSprite(ctx, name, frame, x, y, { anchor = 'base', flip 
   const sheet = SPELL_SPRITE_SHEETS[name]; const image = images[name];
   if (!sheet || !image || VISUAL_FLAGS.legacy) return false;
   const f = Math.max(0, Math.min(sheet.frames - 1, Math.floor(frame)));
+  // res: the image holds res× the logical frame size (hi-res refinement) — same world size, finer pixels.
+  const res = sheet.res ?? 1; const sw = sheet.w * res; const sh = sheet.h * res;
   const w = sheet.w * SCALE; const h = sheet.h * SCALE;
   const dx = Math.round(x - w / 2);
   const dy = Math.round(anchor === 'center' ? y - h / 2 : y - h + ((sheet.baseOffset ?? 0) + sink) * SCALE);
   ctx.save();
   ctx.imageSmoothingEnabled = false;
   if (alpha < 1) ctx.globalAlpha *= Math.max(0, alpha);
-  if (flip) { ctx.translate(dx + w, dy); ctx.scale(-1, 1); ctx.drawImage(image, f * sheet.w, 0, sheet.w, sheet.h, 0, 0, w, h); }
-  else ctx.drawImage(image, f * sheet.w, 0, sheet.w, sheet.h, dx, dy, w, h);
+  if (flip) { ctx.translate(dx + w, dy); ctx.scale(-1, 1); ctx.drawImage(image, f * sw, 0, sw, sh, 0, 0, w, h); }
+  else ctx.drawImage(image, f * sw, 0, sw, sh, dx, dy, w, h);
   ctx.restore();
   return true;
 }
