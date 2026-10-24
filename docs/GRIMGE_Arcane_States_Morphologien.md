@@ -17,9 +17,10 @@
 | **Creature Manifestation** | unabhängige Energiegeschöpfe | T24 Fadenregent, T40 Sonnenwyrm, A02 Mystischer Affe |
 | **Levitation State** | schwebender Spieler mit kontrollierten Projektilen | T05 Bruchflug |
 | **Environmental State** | der Spieler verändert einen größeren Bereich der Arena | T35 Kältestillstand |
+| **Körperkraft** | der eigene Körper verändert sich (dehnen, beben, Raum, Sprengung) | A05 Dehnleib, A06 Beben, A07 Raum, A08 Sprengleib |
 | **Divine Projection** | vergrößertes Lichtbild des eigenen Körpers | A01 Göttlicher Riese |
 
-## Die 19 aktiven Arcane States (kuratiert: je eigene Techniken, Lade-Ritual und Palette)
+## Die 23 aktiven Arcane States (kuratiert: je eigene Techniken, Lade-Ritual und Palette)
 
 ### B01 Risswild · *Energy Extension* · V3.2: Tiergeist (Kyubi): neun Fuchsflammen-Schweife
 
@@ -248,6 +249,54 @@
 - **Heavies (V3.2-Abbildung):** Forward — Short: ein Blätterstrom nach vorn; Full: Sturzflut über die Lane. · Up — Short: Blütenwirbel reißt hoch; Full: Klingensäule jongliert. · Down — Short: Klingenteppich ringsum; Full: Blütengrab schnappt zu.
 - **Ausschlüsse:** Keine Kirschblüten-Kopie, keine fremde Figur.
 - Palette: `#3a1a2a` `#ec407a` `#f8bbd0` `#ffffff` · Material: Klingenstahl mit rosa Blütenschimmer.
+
+### A05 Dehnleib — Kautschukkörper · *Körperkraft* · V3.2: Körperkraft: Dehnleib
+
+- **Anker:** `sprite_alpha`, `hand_right`, `hand_left`, `root`
+- **Idle-Silhouette:** Die Arme spannen sich wie Gummistränge zu Fäusten weit vor dem Wizard; Glanzbänder laufen über den Körper.
+- **Action-Silhouette:** Arme und Beine dehnen sich weit, schnellen zurück und federn nach.
+- **Peak Manifestation:** Bei Full entfaltet sich die Körperkraft ganz.
+- **Transform-In / Out:** Der Körper glänzt auf, Glanzbänder spannen sich. / Die Spannung lässt nach.
+- **Defense · Grab · Jump:** Die Haut spannt sich, Treffer federn ab. · Der Arm dehnt sich zum Ziel. · Die Beine schnellen hoch.
+- **Heavies (V3.2-Abbildung):** Forward — Short: Dehnfaust weit über die Lane; Full: Hagel gedehnter Fäuste. · Up — Short: gedehnter Aufwärtshaken; Full: Katapultsprung. · Down — Short: Gummiwirbel ringsum; Full: Ballonleib.
+- **Ausschlüsse:** Keine fremde Figur, kein Strohhut — nur der eigene, dehnbare Körper.
+- Palette: `#3a1020` `#ff7043` `#ffe0b2` `#ffab91` · Material: glänzender, orangeroter Kautschuk.
+
+### A06 Beben — Bruchfaust · *Körperkraft* · V3.2: Körperkraft: Beben
+
+- **Anker:** `sprite_alpha`, `hand_right`, `hand_left`, `root`
+- **Idle-Silhouette:** Weiße, gezackte Risse hängen in der Luft um beide Fäuste, als wäre der Raum aus Glas.
+- **Action-Silhouette:** um die Fäuste reißt die Luft wie Glas; jeder Schlag sendet eine Bebenwelle.
+- **Peak Manifestation:** Bei Full entfaltet sich die Körperkraft ganz.
+- **Transform-In / Out:** Erste Risse springen in der Luft um die Fäuste auf. / Die Risse schließen sich.
+- **Defense · Grab · Jump:** Gesprungene Luft legt sich vor den Wizard. · Ein Beben schleudert das Ziel fort. · Die Landung reißt den Boden auf.
+- **Heavies (V3.2-Abbildung):** Forward — Short: Bebenstoß; Full: Weltriss über die Lane. · Up — Short: Himmelsbeben; Full: Luftbruch über dem Ziel. · Down — Short: Erdbeben ringsum; Full: Bruchkuppel.
+- **Ausschlüsse:** Keine fremde Figur — nur Risse und Druckwellen um den eigenen Körper.
+- Palette: `#101820` `#80cbc4` `#ffffff` `#e0f2f1` · Material: weiße Bruchlinien in der Luft, türkises Beben.
+
+### A07 Raum — Raumherrschaft · *Körperkraft* · V3.2: Körperkraft: Raum
+
+- **Anker:** `sprite_alpha`, `hand_right`, `hand_left`, `root`
+- **Idle-Silhouette:** Eine durchscheinende blaue Kuppel mit Gitterlinien umgibt den Wizard; an den Händen blitzen Schnittkanten.
+- **Action-Silhouette:** eine blaue Kuppel spannt sich um den Wizard; darin tauscht und versetzt er Dinge.
+- **Peak Manifestation:** Bei Full entfaltet sich die Körperkraft ganz.
+- **Transform-In / Out:** Eine blaue Kuppel spannt sich auf. / Die Kuppel fällt in Würfel zusammen.
+- **Defense · Grab · Jump:** Treffer werden ein Stück versetzt. · Das Ziel wird herangeholt. · Der Wizard erscheint höher.
+- **Heavies (V3.2-Abbildung):** Forward — Short: Tausch; Full: Raumschnitt durch die Kuppel. · Up — Short: Versetzung nach oben; Full: Raumwirbel. · Down — Short: Raumzug; Full: Raumbann.
+- **Ausschlüsse:** Keine fremde Figur — nur die eigene Raumkuppel.
+- Palette: `#0a1830` `#4fc3f7` `#e1f5fe` `#29b6f6` · Material: blaues Raumgitter, gläserne Kuppelhaut.
+
+### A08 Sprengleib — Funkenkörper · *Körperkraft* · V3.2: Körperkraft: Sprengleib
+
+- **Anker:** `sprite_alpha`, `hand_right`, `hand_left`, `root`
+- **Idle-Silhouette:** Rauch kräuselt sich um die Fäuste, Funken springen; über getroffenen Gegnern ticken glühende Marken.
+- **Action-Silhouette:** die Fäuste rauchen und sprühen Funken; Treffer hinterlassen tickende Marken.
+- **Peak Manifestation:** Bei Full entfaltet sich die Körperkraft ganz.
+- **Transform-In / Out:** Rauch steigt auf, Funken springen. / Der Rauch verzieht sich.
+- **Defense · Grab · Jump:** Eine Gegensprengung stößt weg. · Das Ziel wird gesprengt. · Eine Explosion trägt hoch.
+- **Heavies (V3.2-Abbildung):** Forward — Short: Sprengfinger; Full: Kettensprengung. · Up — Short: Sprengsäule; Full: Feuerwerk. · Down — Short: Sprengring; Full: Großer Knall.
+- **Ausschlüsse:** Keine fremde Figur — nur Rauch, Funken und Marken.
+- Palette: `#2a0e05` `#ff6d00` `#ffd180` `#ffea00` · Material: rauchende Haut mit Glutfunken.
 
 
 ## Archiviert (aus dem Spiel genommen, im Atlas erhalten)
