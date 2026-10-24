@@ -97,8 +97,8 @@ export const RUNE_CATEGORIES = Object.freeze([
   { id: 'arcane', label: 'ARCANE STATE', icon: '⧗', rule: 'nur EIN Arcane State pro Deck (nicht die Fokus-Transformation)' }
 ]);
 // Specials with a second activation (tap again / hold & release) and the ones that run as a stance.
-const MULTI_SIGS = new Set(['S38', 'S45', 'S46', 'S47', 'S49', 'S50', 'S51', 'S54', 'S55', 'S70', 'S71', 'S74', 'S87', 'S88', 'S90']);
-const STANCE_SIGS = new Set(['S01', 'S02', 'S04', 'S07', 'S10', 'S20', 'S21', 'S25', 'S27', 'S28', 'S34', 'S39', 'S48', 'S52', 'S86', 'S89']);
+const MULTI_SIGS = new Set(['S38', 'S45', 'S46', 'S47', 'S49', 'S50', 'S51', 'S54', 'S55', 'S70', 'S71', 'S74', 'S87', 'S88', 'S90', 'S91', 'S92', 'S93']);
+const STANCE_SIGS = new Set(['S01', 'S02', 'S04', 'S07', 'S10', 'S20', 'S21', 'S25', 'S27', 'S28', 'S34', 'S39', 'S48', 'S52', 'S86', 'S89', 'S94']);
 const SUMMON_TYPES = /Objekt|Beschwörung|Konstrukt|Turm|Falle|Bodenkontrolle|Brücke|Forge|Großkonstrukt|Plattform/i;
 const SIG_BY_ID = new Map(SIGNATURE_RUNE_DATA.map((d) => ['sig_' + d.id, d]));
 export function runeCategory(id) {

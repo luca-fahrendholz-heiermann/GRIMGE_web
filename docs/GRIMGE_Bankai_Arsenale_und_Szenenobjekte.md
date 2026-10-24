@@ -168,3 +168,15 @@ Eine Haltung für 14 s (`public/src/grenzenlos.js`). Bedienung:
 1. **Wirken:** Ein Blutschirm öffnet sich über dem Wizard. Fünf Blut-Bogenschützen schweben im Bogen darüber und schießen 3 s lang einen Pfeilregen auf das Ziel; das Zielgebiet folgt dem nächsten Gegner. Treffer machen Blutung, gelandete Pfeile hinterlassen **Blutpfützen** (neuer Bodeneffekt `blood`).
 2. **Blocken, solange der Schirm offen ist:** **Blutkuppel**. Treffer machen nur 20 %, feindliche Geschosse versickern in der Kuppel.
 3. **Erneut tippen:** **Blutzwillinge**. Aus bis zu drei auseinanderliegenden Pfützen schrauben sich je zwei Blutdrachen spiralförmig hoch. Wer in der Pfütze steht, wird in der Mitte nach oben gerissen: 50 Schaden plus Blutung, oben weitere 20.
+
+## 9. Tipp- und Hämmer-Runen, Blutfinsternis (24. Okt 2026)
+
+Tippen heißt Tippen im Angriffsbereich. Erneutes Tippen auf den Slot zählt ebenfalls.
+
+| Rune | Bedienung | Wirkung |
+|---|---|---|
+| **S91 Spiralkern** | Tippen = wachsen (6 Mana pro Stufe, bis 5; mit vollem Fokus Stufe 6 „Überladung“, der Fokus wird verbraucht) · Wischen → = gerader Wurf · Wischen ↑ = Hochwurf | Die Kugel über dem Kopf bohrt sich durch Gegner; größer ist langsamer, breiter und stärker, ab Stufe 5 mit Krater. Verbündete in der Nähe speisen sie. Ein Treffer beim Laden lässt sie früh mit halber Kraft los. Taktik: erst Mauer oder Schild, dann laden. |
+| **S92 Wächtergeist-Hagel** | Hämmern · Pause oder Wischen = Schlussschlag | Violetter Geist hinter dem Wizard: zwei Fausttreffer pro Tipp (bis 30), die Reichweite wächst mit dem Takt, Geschosse vorn werden geblockt; der Schlussschlag wächst mit den Treffern. |
+| **S93 Tausendstich** | Hämmern · Pause oder Wischen = Durchstoß | Stichhagel in der Waffenfarbe (bis 24), die Reichweite wächst mit dem Takt, Abschluss mit Durchstoß über 320 px. |
+| **S50 Eisspiegel-Reigen** (Ausbau) | bis zu 8× tippen | 7 Spiegelsprünge, der 8. Tipp ist der Spiegelsturm. Ohne weiteren Tipp zerspringen die Spiegel; der Splitterschaden wächst mit den Tipps. |
+| **S94 Blutfinsternis** | Haltung 15 s · Tippen = Blutschuss (2 HP) · Aufladen ↑ Erwachen · → Salve (6 HP) · ↓ Blutstillung | Die Blutwaffe richtet sich nach der Waffe: Pistolen ohne Waffe, Blutpfeil mit Bogen, Blutsichel mit Klingen. Je weniger HP, desto stärker (bis ×2,5). Erwachen ist eine Blutfeuer-Welle; die Blutstillung heilt pro blutendem Gegner und trinkt die Blutpfützen des Blutschirms (S90). |

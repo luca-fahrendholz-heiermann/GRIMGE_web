@@ -106,15 +106,16 @@ class MirrorPrison {
       if (this.storm.t > 1.25) { combat.shakeCamera(10, .3); this.shatter(); }
     }
   }
-  // One tap: dashes 1–4 single, the 5th is the mirror storm (every mirror at once).
+  // EISSPIEGEL-REIGEN (Fähigkeiten-Atlas II, user 24 Oct 2026: mash up to 8): taps 1–7 each send a mirror image
+  // through the foe; the 8th is the mirror storm. Stop tapping and the mirrors shatter (splinters, more taps = more).
   tap() {
     if (!this.active) return false;
     this.taps++;
-    if (this.taps <= 4) {
-      const order = [0, 2, 4, 1]; const i = order[this.taps - 1]; const o = (i + 3) % MIRRORS;
-      this.dashes.push({ from: i, to: o, t: 0, dur: .2, dir: Math.sign(this.mirrorPos(o).x - this.mirrorPos(i).x) || 1, dmg: 15 * (this.quality?.power ?? 1), hit: false });
-      audio.playSlash?.(1.4);
-      return { again: true, window: 2.5, label: this.taps < 4 ? `SPIEGELSPRUNG ${this.taps + 1}/4` : 'SPIEGELSTURM' };
+    if (this.taps <= 7) {
+      const order = [0, 2, 4, 1, 3, 5, 0]; const i = order[this.taps - 1]; const o = (i + 3) % MIRRORS;
+      this.dashes.push({ from: i, to: o, t: 0, dur: .18, dir: Math.sign(this.mirrorPos(o).x - this.mirrorPos(i).x) || 1, dmg: 12 * (this.quality?.power ?? 1), hit: false });
+      audio.playSlash?.(1.3 + this.taps * .05);
+      return { again: true, window: 1.2, label: this.taps < 7 ? `SPIEGELSPRUNG ${this.taps + 1}/8` : 'SPIEGELSTURM' };
     }
     this.storm = { t: 0, next: 0, hits: 0 }; this.life = this.t + 2;
     audio.playImpact?.(true);
@@ -125,6 +126,8 @@ class MirrorPrison {
     this.endT = this.t;
     const v = this.victim;
     if (alive(v) && this.trapped) { v.vElevation = -260; }
+    // Splinters: every mirror bursts — the more taps were mashed, the harder the shards hit.
+    for (const t of foesOf(globalThis.window?.gameWorld, this.team)) if (!t.isProp && Math.hypot(t.x - this.cx, ((t.z ?? this.cz) - this.cz) * DEPTH) < 80) hit(t, (6 + this.taps * 3) * (this.quality?.power ?? 1), Math.sign(t.x - this.cx || 1) * 160, 60, .3);
     for (let i = 0; i < MIRRORS; i++) { const m = this.mirrorPos(i); combat.spawnHitSparks?.(m.x, groundYForDepth(this.cz) + m.dz - 34, 1, ICE.edge, 6); }
     audio.playImpact?.(false);
   }
@@ -179,7 +182,7 @@ defineSignature('S50', {
     offerRecast(p, {
       window: 1.2, label: 'SPIEGEL…',
       valid: () => !shard.missed && (!shard.prison || shard.prison.active),
-      poll: () => (shard.prison && !announced ? (announced = true, { window: 2.5, label: shard.prison.trapped ? 'SPIEGELSPRUNG 1/4' : 'SPIEGELSPRUNG 1/4 (GEBLOCKT)' }) : null),
+      poll: () => (shard.prison && !announced ? (announced = true, { window: 2.5, label: shard.prison.trapped ? 'SPIEGELSPRUNG 1/8' : 'SPIEGELSPRUNG 1/8 (GEBLOCKT)' }) : null),
       stage2: () => (shard.prison ? shard.prison.tap() : { again: true }),
       expire: () => shard.prison?.shatter()
     });

@@ -71,6 +71,14 @@ export const SIGNATURE_GLYPHS = Object.freeze({
   // S86 WILLE: a crown of will over the fist (a circle). S87 EDLES OPFER: a kite shield pierced by a sword.
   S86: [poly([[-.78, -.15], [-.78, -.82], [-.38, -.45], [0, -.92], [.38, -.45], [.78, -.82], [.78, -.15]], false), ring(0, .45, .36)],
   S87: [poly([[0, -.8], [.6, -.52], [.5, .3], [0, .82], [-.5, .3], [-.6, -.52]]), L(0, -.98, 0, .98), L(-.32, -.6, .32, -.6)],
+  // S91 SPIRALKERN: a ball over a stroke (the head) with a spiral inside.
+  S91: [ring(0, -.35, .42), arc(0, -.35, .2, 0, Math.PI * 1.5), L(0, .2, 0, .85)],
+  // S92 WÄCHTERGEIST: a figure's head and shoulders with three fist marks ahead.
+  S92: [ring(-.35, -.4, .22), arc(-.35, .25, .45, Math.PI, Math.PI * 2), L(.25, -.2, .8, -.2), L(.25, .1, .8, .1)],
+  // S93 TAUSENDSTICH: three parallel stab lines with a point.
+  S93: [L(-.8, -.4, .7, -.4), L(-.8, 0, .85, 0), L(-.8, .4, .7, .4), L(.85, 0, .55, -.25)],
+  // S94 BLUTFINSTERNIS: an eclipse (a ring over a filled half) and a drop below.
+  S94: [ring(0, -.25, .45), arc(0, -.25, .45, Math.PI * .1, Math.PI * .9), L(0, .35, 0, .8)],
   // S90 BLUTSCHIRM: an umbrella — the canopy arc, the shaft and the hook.
   S90: [arc(0, 0, .8, Math.PI, Math.PI * 2), L(0, 0, 0, .75), arc(-.14, .75, .14, 0, Math.PI)],
   // S89 GRENZENLOS: two rings touching (attraction · repulsion) with a line through their meeting point.

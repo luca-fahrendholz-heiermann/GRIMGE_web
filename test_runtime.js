@@ -2570,7 +2570,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   const step = (n, dt = 1 / 60) => { for (let i = 0; i < n; i++) { P.update(dt, neutral, game.battlefield, game); game.updateProjectiles(dt); spells.update(dt, game); } };
   const cast = (id, target = null) => spells.cast(P, spells.resolveSpell([{ id: 'sig_' + id }]), game, null, target);
   const ids = Object.keys(core.SIGNATURES);
-  assert(ids.length === 90 && ids.every((id) => core.signatureImpl(id)?.cast) && sigMod.SIGNATURE_RUNE_IDS.every((id) => isSpecialRune(id) && runeManaCost(id) >= 28 && runeManaCost(id) <= 46), 'All 88 signature specials (atlas S01–S36 + S37–S88) are special runes with their own mechanic and bound mana');
+  assert(ids.length === 94 && ids.every((id) => core.signatureImpl(id)?.cast) && sigMod.SIGNATURE_RUNE_IDS.every((id) => isSpecialRune(id) && runeManaCost(id) >= 28 && runeManaCost(id) <= 46), 'All 94 signature specials (atlas S01–S36 + S37–S94) are special runes with their own mechanic and bound mana');
   assert(ids.every((id) => spellHowTo('sig_' + id)?.effect?.length > 40) && !spells.resolveSpell([{ id: 'sig_S03' }, { id: 'ignis' }]), 'Signature specials explain themselves in the grimoire and never fuse');
   // Every special casts, runs and renders (strict canvas) without errors.
   const strict = new Proxy({}, { get: (t, k) => (k === 'ellipse' || k === 'arc') ? (x, y, rx, ry) => { if (rx < 0 || (k === 'ellipse' && ry < 0)) throw new Error('IndexSizeError ' + k); } : (k === 'canvas' ? undefined : () => {}), set: () => true });
@@ -3113,12 +3113,12 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   // S50 SPIEGELKERKER: shard → six mirrors around the foe; 4 single dashes, the 5th tap is the mirror storm.
   reset(); dummy.homeX = dummy.x = 470; const s50 = game.slotRuneSpell(runeById('sig_S50')); game.castSlotAt(s50.position); frame(.4);
   const prison = spells.activeSpells.find((sp) => sp.constructor.name === 'MirrorPrison');
-  assert(prison?.trapped && P.slottedSpells.includes(s50) && /SPIEGELSPRUNG 1\/4/.test(s50.recast?.label ?? ''), 'S50: the shard hits, six ice mirrors rise around the foe (prison) and the slot waits for the dashes');
+  assert(prison?.trapped && P.slottedSpells.includes(s50) && /SPIEGELSPRUNG 1\/8/.test(s50.recast?.label ?? ''), 'S50: the shard hits, six ice mirrors rise around the foe (prison) and the slot waits for the dashes');
   let hpMirror = dummy.hp; let dashHits = 0;
-  for (let i = 0; i < 4; i++) { game.castSlotAt(s50.position); frame(.3); if (dummy.hp < hpMirror) dashHits++; hpMirror = dummy.hp; }
-  assert(dashHits === 4 && P.slottedSpells.includes(s50) && s50.recast?.label === 'SPIEGELSTURM', 'S50: every tap sends a mirror image through the foe (4 dashes), then the storm is offered');
+  for (let i = 0; i < 7; i++) { game.castSlotAt(s50.position); frame(.3); if (dummy.hp < hpMirror) dashHits++; hpMirror = dummy.hp; }
+  assert(dashHits === 7 && P.slottedSpells.includes(s50) && s50.recast?.label === 'SPIEGELSTURM', 'S50 EISSPIEGEL-REIGEN: mashing sends mirror image after mirror image through the foe (7 dashes), then the storm is offered');
   game.castSlotAt(s50.position); frame(2);
-  assert(dummy.hp < hpMirror && !P.slottedSpells.includes(s50) && prison.isFinished, 'S50: the 5th tap is the mirror storm — all mirrors at once, then they shatter and the slot is free');
+  assert(dummy.hp < hpMirror && !P.slottedSpells.includes(s50) && prison.isFinished, 'S50: the 8th tap is the mirror storm — all mirrors at once, then they shatter (splinters) and the slot is free');
   reset(); dummy.homeX = dummy.x = 900; const s50b = game.slotRuneSpell(runeById('sig_S50')); game.castSlotAt(s50b.position); frame(1.6);
   assert(!P.slottedSpells.includes(s50b) && !spells.activeSpells.some((sp) => sp.constructor.name === 'MirrorPrison'), 'S50: a missed shard builds no prison and frees the slot');
   // S51 BLUTKREUZ: a foe in the blood circle is bound to the cross; faster taps hit harder.
@@ -4647,6 +4647,43 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
       P.isGuarding = false; game.castSlotAt(s2.position); for (let i = 0; i < 60; i++) { frame(1 / 60); for (const sp of spells.activeSpells) sp.render?.(strict); } ENV.renderGround?.(strict); } catch (e) { bad = e.message; }
     assert(!bad, 'Blutschirm renders cleanly (umbrella, archers, arrows, dome, puddles, twin dragons) ' + bad); }
   if (P.signature) core.endStance(P, 'replaced'); spells.clearRuntime(); ENV.effects = []; P.slottedSpells.length = 0; P.x = 300; P.z = .58; dummy.homeX = dummy.x = 512;
+}
+
+// Tap / mash runes (user, 24 Oct 2026): S91 SPIRALKERN, S92 WÄCHTERGEIST-HAGEL, S93 TAUSENDSTICH, S94 BLUTFINSTERNIS.
+{
+  const core = await import('./public/src/signature_core.js'); const MR = await import('./public/src/mash_runes.js'); const BF = await import('./public/src/blutfinsternis.js'); const { environment: ENV } = await import('./public/src/environment.js'); const STATUS = await import('./public/src/status_effects.js');
+  const P = game.player; const dummy = game.trainingDummy; const N = { keys: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false };
+  const step = (n) => { for (let i = 0; i < n; i++) { P.update(1 / 60, N, game.battlefield, game); spells.update(1 / 60, game); ENV.update(1 / 60, game, []); } };
+  const start = (id) => { spells.clearRuntime(); if (P.signature) core.endStance(P, 'replaced'); ENV.effects = []; game.minions = game.minions.filter((m) => m === dummy); if (!game.minions.includes(dummy)) game.minions.push(dummy); P.equipClassWeapon(null); P.x = 300; P.z = .5; P.facing = 1; P.state = 'idle'; P.canAttack = true; P.hp = P.maxHp; P.mp = P.maxMp; P.isGuarding = false; P.invulnerableTimer = 0; P.arcaneShield = 0; P.grounded = true; P.elevation = 0; game.battlefield.placeOnSurface(P); dummy.homeX = dummy.x = 1400; dummy.hp = dummy.maxHp; spells.cast(P, spells.resolveSpell([{ id: 'sig_' + id }]), game); };
+  const tap = (kind = 'normal') => { P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; if (P.signature) P.signature.cd = 0; return P.executeAttack(N, kind); };
+  // SPIRALKERN
+  start('S91'); { const st = P.signature; const free0 = P.freeMana; for (let i = 0; i < 4; i++) { tap(); step(2); } const five = st.stage === 5 && free0 - P.freeMana >= 4 * MR.SPIRAL.growMana - 2;
+    P.focus = P.maxFocus; tap(); const over = st.stage === 6 && P.focus === 0;
+    dummy.homeX = dummy.x = 520; dummy.homeZ = dummy.z = .5; dummy.hp = dummy.maxHp; tap('heavy'); const ball = spells.activeSpells.find((s) => s.constructor.name === 'SpiralBall'); step(90);
+    assert(five && over && ball && !P.signature && dummy.maxHp - dummy.hp >= MR.spiralDamage(6) * .7, 'SPIRALKERN: taps grow the core (5 stages, mana each), a full Focus overcharges it; a forward swipe throws it — it drills through the foe (' + Math.round(dummy.maxHp - dummy.hp) + ')'); }
+  start('S91'); { dummy.homeX = dummy.x = 560; dummy.homeZ = dummy.z = .5; dummy.hp = dummy.maxHp; tap(); tap('uppercut'); step(120); const lob = dummy.hp < dummy.maxHp;
+    start('S91'); const Mn = globalThis.__GrimgeMinion; const ally = new Mn(320, .5, 'blue', 'melee', 0); ally.passive = true; game.minions.push(ally); const s0 = P.signature.stage; step(250); const fed = P.signature?.stage > s0;
+    start('S91'); tap(); tap(); P.invulnerableTimer = 0; P.takeDamage(10, -100, 0, .2, false, 'melee'); const early = !P.signature && spells.activeSpells.some((s) => s.constructor.name === 'SpiralBall' && s.power < .6 * (P.signature?.quality?.power ?? 1) + .1);
+    assert(lob && fed && early, 'SPIRALKERN: an up swipe lobs it onto the foe; allies close by feed it; a hit while charging lets it go early at half strength'); game.minions = game.minions.filter((m) => m !== ally); }
+  // WÄCHTERGEIST-HAGEL
+  start('S92'); { dummy.homeX = dummy.x = 400; dummy.homeZ = dummy.z = .5; dummy.hp = dummy.maxHp; const st = P.signature;
+    for (let i = 0; i < 10; i++) { tap(); step(3); } const barrage = st.hits === 20 && dummy.hp < dummy.maxHp && st.reach > 120; const before = dummy.hp; step(70);
+    assert(barrage && st.final && before - dummy.hp >= 40, 'WÄCHTERGEIST-HAGEL: mashing throws spirit fists (two per tap, reach grows with the tempo); a pause brings the finishing slam (' + Math.round(before - dummy.hp) + ')'); }
+  // TAUSENDSTICH
+  start('S93'); { dummy.homeX = dummy.x = 470; dummy.homeZ = dummy.z = .5; dummy.hp = dummy.maxHp; const st = P.signature;
+    for (let i = 0; i < 8; i++) { tap(); step(3); } const stabs = st.stabs === 8 && st.reach > 150 && dummy.hp < dummy.maxHp; const before = dummy.hp; tap('heavy');
+    assert(stabs && st.final && before - dummy.hp >= 35, 'TAUSENDSTICH: every tap one stab, the tempo stretches the reach to the foe at 170 px; a swipe ends it with the piercing thrust'); }
+  // BLUTFINSTERNIS
+  start('S94'); { dummy.homeX = dummy.x = 450; dummy.homeZ = dummy.z = .5; dummy.hp = dummy.maxHp; const hp0 = P.hp; tap(); step(30); const shot = hp0 - P.hp === BF.ECLIPSE.shotHp && dummy.hp < dummy.maxHp;
+    const fullMult = BF.eclipseMult(P); P.hp = P.maxHp * .2; const lowMult = BF.eclipseMult(P);
+    P.hp = P.maxHp * .5; P.mp = P.maxMp; dummy.hp = dummy.maxHp; P.state = 'idle'; P.canAttack = true; P.beginCharge('up'); P.chargeTimer = P.chargeMaxTime * .1; P.releaseCharge(); step(60); const wave = dummy.hp < dummy.maxHp && STATUS.hasStatus(dummy, 'burn');
+    ENV.add('blood', P.x + 20, P.z, { radius: 30, life: 10 }); const h1 = P.hp; P.mp = P.maxMp; P.state = 'idle'; P.canAttack = true; P.beginCharge('down'); P.chargeTimer = P.chargeMaxTime * .1; P.releaseCharge(); const healed = P.hp - h1;
+    assert(shot && lowMult > fullMult * 1.8 && wave && healed >= 8, 'BLUTFINSTERNIS: a tap shoots blood for 2 HP; low HP hits harder (×' + lowMult.toFixed(1) + '); charge up = blood-fire wave; charge down drinks blood puddles (+' + Math.round(healed) + ')'); }
+  { let bad = ''; const strict = new Proxy({}, { get: (tg, k) => (k === 'arc' || k === 'ellipse') ? (x, y, r, ry) => { if (!(r >= 0) || (k === 'ellipse' && !(ry >= 0)) || !Number.isFinite(x)) throw new Error('bad ' + k); } : (k === 'measureText' ? () => ({ width: 10 }) : k === 'canvas' ? undefined : () => {}), set: () => true });
+    try { const sigMod = await import('./public/src/signature_runes.js');
+      for (const id of ['S91', 'S92', 'S93', 'S94']) { start(id); dummy.homeX = dummy.x = 420; for (let i = 0; i < 40; i++) { if (i % 4 === 0) tap(); step(1); for (const sp of spells.activeSpells) sp.render?.(strict); for (const layer of ['back', 'front']) sigMod.renderSignatureStance?.(strict, P, P.y, layer); } if (P.signature) tap('heavy'); for (let i = 0; i < 40; i++) { step(1); for (const sp of spells.activeSpells) sp.render?.(strict); } } } catch (e) { bad = e.message; }
+    assert(!bad, 'The tap / mash runes render cleanly ' + bad); }
+  if (P.signature) core.endStance(P, 'replaced'); spells.clearRuntime(); ENV.effects = []; P.hp = P.maxHp; P.x = 300; P.z = .58; dummy.homeX = dummy.x = 512;
 }
 
 const frameCallback = nextFrame;
