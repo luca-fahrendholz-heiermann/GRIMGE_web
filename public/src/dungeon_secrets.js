@@ -9,9 +9,10 @@
 // a portal brings the Wizard in and back to the spot it left.
 //
 // First secret — DER VERDORRTE HAIN (dungeon room 2): a withered seedling at the foot of a high
-// rock ledge. Watered long enough (water / nature spells, the water shrine's charges, a leaking
-// barrel) it grows into a tree whose branches lead up to the ledge; on the ledge waits the portal
-// into the DORNENHAIN, where the THORN TREANT (secret boss) guards a late rune.
+// rock wall. Watered long enough (water / nature spells, the water shrine's charges, a leaking
+// barrel) it grows into a GIANT TREE whose branches are the way up (user, 24 Oct 2026: "der Baum kann
+// ruhig groß wachsen und die Äste als Plateau bilden"); in its crown the portal into the DORNENHAIN
+// opens, where the THORN TREANT (secret boss) guards a late rune.
 import { Minion } from './entities.js';
 import { environment } from './environment.js';
 import { combat } from './combat.js';
@@ -25,9 +26,12 @@ export const SECRET_BASE_X = 40000;
 
 // ── the portal (not a target; environment.sceneFx) ─────────────────────────
 export class SecretPortal {
-  constructor(x, z, h, link, { label = 'PORTAL', color = '#9be36a', exit = false } = {}) { Object.assign(this, { x, z, h, link, label, color, exit, t: 0, isFinished: false, isSecretPortal: true }); }
+  constructor(x, z, h, link, { label = 'PORTAL', color = '#9be36a', exit = false, when = null } = {}) { Object.assign(this, { x, z, h, link, label, color, exit, when, t: 0, isFinished: false, isSecretPortal: true }); }
   get y() { return groundYForDepth(this.z); }
+  // A portal with a condition (the grown tree crown) stays closed and invisible until it holds.
+  get open() { return !this.when || this.when(); }
   update(dt, gw) {
+    if (!this.open) { this.t = 0; return; }
     this.t += dt; const p = gw?.player; if (!p || p.lifeState === 'Dead' || this.t < .6) return;
     const hgt = (p.elevation ?? 0) + (p.surfaceHeight ?? 0);
     if (Math.abs(p.x - this.x) < 20 && Math.abs(((p.z ?? this.z) - this.z) * DEPTH) < 14 && Math.abs(hgt - this.h) < 34) {
@@ -36,6 +40,7 @@ export class SecretPortal {
     }
   }
   render(ctx) {
+    if (!this.open) return;
     const x = Math.round(this.x); const y = Math.round(this.y - this.h);
     for (let i = 0; i < 3; i++) { const r = 14 - i * 4; ctx.save(); ctx.globalAlpha = .55 + i * .15; ctx.strokeStyle = i === 2 ? '#ffffff' : this.color; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(x, y - 26, r, r * 1.7, 0, 0, TAU); ctx.stroke(); ctx.restore(); }
     for (let i = 0; i < 6; i++) { const a = this.t * 3 + i * 1.05; px(ctx, x + Math.cos(a) * 16, y - 26 + Math.sin(a) * 26, 2, 2, this.color); }
@@ -120,19 +125,23 @@ puzzleHooks.enterLink = (link, obj, gw, how) => {
 };
 
 // ── DER VERDORRTE HAIN (dungeon room 2) ────────────────────────────────────
-// The ledge stands a little behind the tree (z .2) and overlaps its crown, so a short run-up jump from the crown reaches it.
-export const WITHERED_GROVE = Object.freeze({ stage: 2, seedX: 1650, ledgeX: 1800, z: .26, ledgeZ: .2, ledgeH: 205, shrineX: 1480, barrelX: 1600 });
+// The giant tree's limbs alternate left / right like a spiral stair: each reaches from just past the trunk's
+// middle ~70 px outward, so neighbours overlap by ~28 px at the trunk and a straight jump up (or a short hop)
+// reaches the next one. 56 px apart in height (a jump peaks at ~100 px): one limb per jump, never two at
+// once. The last board lies in the crown, the portal on it.
+export const WITHERED_GROVE = Object.freeze({ stage: 2, seedX: 1650, z: .26, shrineX: 1480, barrelX: 1560,
+  branches: Object.freeze([[-28, 56, 42], [28, 112, 42], [-28, 168, 42], [5, 224, 40]]) });
 export function setupDungeonSecrets(gw, stage, bounds) {
   if (stage !== WITHERED_GROVE.stage) return null;
   const L = bounds.left; const g = WITHERED_GROVE;
-  const seed = environment.addProp('withered_seedling', L + g.seedX, g.z, { branches: [[-34, 70, 24], [30, 118, 24], [70, 165, 26]] });
+  const seed = environment.addProp('withered_seedling', L + g.seedX, g.z, { branches: g.branches.map((b) => [...b]), giant: true });
   seed.hpMult = 6; seed.setStage(0); seed.isSecretKey = true;
-  seed.devHint = 'GEHEIMNIS: gießen (Wasser/Natur, Schrein, Fass) → Baum → Äste → Sims → Portal';
-  const ledge = environment.addProp('ledge', L + g.ledgeX, g.ledgeZ, { h: g.ledgeH, w: 90, d: .09 });
+  seed.devHint = 'GEHEIMNIS: gießen (Wasser/Natur, Schrein, Fass) → Riesenbaum → über die Äste in die Krone → Portal';
   environment.addProp('shrine', L + g.shrineX, .5, { element: 'aqua' });
   environment.addProp('water_barrel', L + g.barrelX, g.z + .05);
-  const portal = environment.addSceneFx(new SecretPortal(L + g.ledgeX + 50, g.ledgeZ, g.ledgeH, 'thorn_grove', { color: '#9be36a' }));
-  return { seed, ledge, portal };
+  const [cdx, ch] = g.branches[g.branches.length - 1];
+  const portal = environment.addSceneFx(new SecretPortal(L + g.seedX + cdx, g.z, ch, 'thorn_grove', { color: '#9be36a', when: () => !seed.isDead && seed.stage === 2 && seed.growK() >= 1 }));
+  return { seed, portal };
 }
 
 // ── the secret boss: THORN TREANT ──────────────────────────────────────────

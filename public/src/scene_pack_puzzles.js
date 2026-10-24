@@ -34,7 +34,7 @@ const heavyWeapon = (w) => /axe|hammer/.test(w ?? '');
 const spearWeapon = (w) => /spear|glaive/.test(w ?? '');
 
 class Ledge extends Fixture {
-  constructor(x, z, o = {}) { super('ledge', x, z, { half: o.w ?? 60, tol: 10, blocks: false }); this.h = o.h ?? 180; this.w = o.w ?? 60; this.surfaces = [makeSurface('Ledge', x, z, this.w, o.d ?? .08, () => this.h)]; }
+  constructor(x, z, o = {}) { super('ledge', x, z, { half: o.w ?? 60, tol: 10, blocks: false }); this.h = o.h ?? 180; this.w = o.w ?? 60; this.surfaces = [Object.assign(makeSurface('Ledge', x, z, this.w, o.d ?? .08, () => this.h), { foothold: true })]; }
   render(ctx) {
     const x = Math.round(this.x); const y = Math.round(this.y); const top = y - this.h; const w = this.w;
     px(ctx, x - w, top, w * 2, this.h, '#4e443a');

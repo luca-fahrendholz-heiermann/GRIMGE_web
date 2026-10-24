@@ -163,23 +163,28 @@ export const PLANT_STAGES = Object.freeze([
   Object.freeze({ name: 'BAUM', hp: 240, half: 20, tol: 220, blocks: true, grow: 0 })
 ]);
 export class Plant extends SceneObject {
-  constructor(x, z, stage = 0, { wild = false, withered = false, branches = null } = {}) {
+  constructor(x, z, stage = 0, { wild = false, withered = false, branches = null, giant = false } = {}) {
     super('plant', x, z, { barColor: '#9be36a' });
-    this.stage = -1; this.growth = 0; this.wild = wild; this.withered = withered; this.branchSpec = branches; this.fruitT = 10; this.growFlash = 0; this.sway = 0; this.spreadT = 0;
+    this.stage = -1; this.growth = 0; this.wild = wild; this.withered = withered; this.branchSpec = branches; this.giant = giant; this.fruitT = 10; this.growFlash = 0; this.sway = 0; this.spreadT = 0;
     this.setStage(stage);
   }
   setStage(i) {
     const st = PLANT_STAGES[i]; const k = this.stage < 0 ? 1 : this.hp / this.maxHp;
     this.stage = i; this.maxHp = Math.round(st.hp * (this.hpMult ?? 1)); this.hp = Math.max(1, Math.round(this.maxHp * Math.max(k, .6)));
     this.halfX = this.hitRadiusX = this.radius = st.half; this.hitHeightTolerance = st.tol; this.noBlock = !st.blocks;
-    // A grown tree: its branches (and its crown) are landing platforms that grow out within 0.6 s.
+    // A grown tree: its branches (and its crown) are landing platforms that grow out within 0.6 s (a giant
+    // tree: 1.2 s). They are footholds (battlefield.js): a landing close to the end still catches, the
+    // landing sticks, and a slight up / down on the stick does not drop the Wizard off the branch.
     if (i === 2 && !this.surfaces.length) {
       const fresh = this.stage >= 0 && this.age > 0; this.grownAt = fresh ? this.age : -1;
       const spec = this.branchSpec ?? [[-34, 70, 24], [34, 118, 24], [0, 165, 30]];
-      this.surfaces = spec.map(([dx, h, w]) => makeSurface('Tree branch', this.x + dx, this.z, w, .07, () => (this.isDead ? 0 : h * Math.min(1, (this.age - this.grownAt) / .6))));
+      /* sortBias: drawn before actors at its own depth — a Wizard on a limb stands in front of the crown */
+      if (this.giant) { this.sortBias = -3; this.halfX = this.hitRadiusX = this.radius = 26; this.hitHeightTolerance = 40 + Math.max(...spec.map((b) => b[1])); }
+      this.surfaces = spec.map(([dx, h, w]) => Object.assign(makeSurface('Tree branch', this.x + dx, this.z, w, .1, () => (this.isDead ? 0 : h * this.growK())), { foothold: true, branchDx: dx, branchH: h, branchW: w }));
     }
   }
-  get label() { return PLANT_STAGES[this.stage].name; }
+  get label() { return this.giant && this.stage === 2 ? 'RIESENBAUM' : PLANT_STAGES[this.stage].name; }
+  growK() { return Math.min(1, (this.age - this.grownAt) / (this.giant ? 1.2 : .6)); }
   // Water and nature feed a plant instead of hurting it; fire bites harder.
   elementDamage(el) { return el === 'aqua' || el === 'natura' ? 0 : el === 'ignis' ? 1.5 : 1; }
   react(el, amount) {
@@ -249,6 +254,8 @@ export class Plant extends SceneObject {
     } else if (this.stage === 1) {
       px(ctx, x - 2, y - 30, 4, 28, bark[0]); px(ctx, x - 1, y - 30, 2, 28, bark[1]);
       blob(ctx, x + sway, y - 38, 12, leaf[0]); blob(ctx, x - 3 + sway, y - 41, 9, leaf[1]); blob(ctx, x - 5 + sway, y - 44, 4, leaf[2]);
+    } else if (this.giant) {
+      this.renderGiant(ctx, x, y, leaf, bark, sway, fire, ice);
     } else {
       px(ctx, x - 6, y - 74, 12, 72, bark[0]); px(ctx, x - 4, y - 74, 8, 72, bark[1]); px(ctx, x - 3, y - 70, 2, 60, bark[2]);
       px(ctx, x - 14, y - 4, 8, 4, bark[0]); px(ctx, x + 6, y - 4, 8, 4, bark[0]);
@@ -258,13 +265,69 @@ export class Plant extends SceneObject {
       blob(ctx, x - 10 + sway, y - 112, 7, leaf[2]); blob(ctx, x + 14 + sway, y - 94, 5, leaf[2]);
       if (!fire && !ice && this.fruitT < 5) for (const [fx, fy] of [[-14, -78], [10, -92], [22, -76]]) { px(ctx, x + fx + sway, y + fy, 4, 4, '#c62828'); px(ctx, x + fx + 1 + sway, y + fy, 1, 1, '#ffcdd2'); }
     }
-    if (ice) { ctx.save(); ctx.globalAlpha = .35; px(ctx, x - 8 - this.stage * 18, y - 18 - this.stage * 56, 16 + this.stage * 36, 16 + this.stage * 56, '#b3e5fc'); ctx.restore(); }
+    if (ice && !this.giant) { ctx.save(); ctx.globalAlpha = .35; px(ctx, x - 8 - this.stage * 18, y - 18 - this.stage * 56, 16 + this.stage * 36, 16 + this.stage * 56, '#b3e5fc'); ctx.restore(); }
     if (fire) flames(ctx, x, y - (this.stage === 2 ? 96 : this.stage === 1 ? 36 : 10), 16 + this.stage * 22, t, 1 + this.stage);
     if (this.growFlash > 0) { ctx.save(); ctx.globalAlpha = this.growFlash; px(ctx, x - 1, y - 20 - this.stage * 70, 2, 20 + this.stage * 60, '#e6ff9a'); ctx.restore(); }
     if (this.hitFlash > 0) { ctx.save(); ctx.globalAlpha = .45; px(ctx, x - 6 - this.stage * 14, y - 16 - this.stage * 60, 12 + this.stage * 28, 16 + this.stage * 60, '#ffffff'); ctx.restore(); }
     const need = PLANT_STAGES[this.stage].grow * (this.withered ? 2 : 1);
-    if (this.stage === 2) for (const s of this.surfaces) { const h = s.heightAt(); if (h > 4) { px(ctx, s.xMin, y - h, s.xMax - s.xMin, 4, '#5d4037'); px(ctx, s.xMin + 2, y - h - 3, s.xMax - s.xMin - 4, 3, leaf[1]); } }
-    this.renderBars(ctx, y - [24, 58, 136][this.stage], need ? this.growth / need : null);
+    if (this.stage === 2 && !this.giant) for (const s of this.surfaces) { const h = s.heightAt(); if (h > 4) { px(ctx, s.xMin, y - h, s.xMax - s.xMin, 4, '#5d4037'); px(ctx, s.xMin + 2, y - h - 3, s.xMax - s.xMin - 4, 3, leaf[1]); } }
+    this.renderBars(ctx, y - (this.giant && this.stage === 2 ? this.topH() * this.growK() + 46 : [24, 58, 136][this.stage]), need ? this.growth / need : null);
+  }
+  topH() { return Math.max(0, ...this.surfaces.map((s) => s.branchH ?? 0)); }
+  // A giant tree (dungeon secrets): a massive trunk up to the crown; every platform is a real limb growing out
+  // of it (lit bark on top, shaded underside, a brace from lower on the trunk, a leaf cluster at the tip), the
+  // highest board sits inside the crown. Leaves stay off the boards so the Wizard is never hidden.
+  renderGiant(ctx, x, y, leaf, bark, sway, fire, ice) {
+    const k = this.grownAt < 0 ? 1 : this.growK(); const top = this.topH(); const H = Math.round((top + 18) * k);
+    const ink = '#24160f';
+    // Roots: three per side, spreading wide.
+    for (const s of [-1, 1]) for (let r = 0; r < 3; r++) { const len = 16 + r * 9; const rx = x + s * (12 + r * 6); px(ctx, s > 0 ? rx : rx - len, y - 4 - r * 3, len, 4 + (2 - r), bark[0]); px(ctx, s > 0 ? rx : rx - len, y - 4 - r * 3, len, 1, bark[1]); }
+    // The trunk: 36 px at the root, 20 px at the crown; lit left edge, shaded right edge, grain and knots.
+    for (let yy = 0; yy < H; yy += 2) {
+      const w = Math.round(36 - 16 * (yy / Math.max(1, H))); const l = x - Math.round(w / 2); const ry = y - yy - 2;
+      px(ctx, l - 1, ry, w + 2, 2, ink); px(ctx, l, ry, w, 2, bark[0]); px(ctx, l + 2, ry, w - 8, 2, bark[1]); px(ctx, l + 2, ry, 3, 2, bark[2]);
+      for (const gx of [.38, .62, .8]) if (((yy >> 3) + Math.round(gx * 10)) % 3) px(ctx, l + Math.round(w * gx), ry, 1, 2, bark[0]);
+    }
+    for (const [kx, ky] of [[-5, .22], [4, .47], [-3, .71]]) { const ky2 = y - Math.round(H * ky); if (ky2 > y - H + 10) { px(ctx, x + kx - 3, ky2, 7, 5, ink); px(ctx, x + kx - 2, ky2 + 1, 5, 3, bark[0]); } }
+    if (this.split) { px(ctx, x - 1, y - H, 2, H * .7, '#1b1b1b'); px(ctx, x + 1, y - H * .8, 1, H * .4, '#ffee58'); }
+    for (const s of this.surfaces) {
+      const h = Math.round(s.heightAt()); if (h < 4) continue;
+      const by = y - h; const crown = s.branchH === top; const side = Math.sign(s.branchDx) || 1;
+      const x0 = Math.round(s.xMin); const x1 = Math.round(s.xMax); const w = x1 - x0;
+      if (!crown) {
+        // The brace: a thick limb from lower on the trunk up under the outer half of the board.
+        const tipX = side > 0 ? x1 - 14 : x0 + 14;
+        const pts = []; for (let i = 0; i <= 20; i++) { const u = i / 20; pts.push([Math.round(x + side * 6 + (tipX - x - side * 6) * u), Math.round(by + 30 - 24 * u)]); }
+        for (const [bx, byy] of pts) px(ctx, bx - 4, byy - 1, 8, 9, ink);
+        for (const [bx, byy] of pts) px(ctx, bx - 3, byy, 6, 7, bark[0]);
+        for (const [bx, byy] of pts) px(ctx, bx - 3, byy, 6, 2, bark[1]);
+      }
+      // The board: a thick limb (outline, lit top, body, shaded underside) that tapers toward its free end.
+      // Thick at the trunk (11 px), thinner over the free end (7 px).
+      const fl = side > 0 ? x0 : x0 + 14; const fw = w - 14; const tl = side > 0 ? x1 - 14 : x0;
+      px(ctx, fl - 1, by - 1, fw + 2, 13, ink); px(ctx, fl, by, fw, 11, bark[0]); px(ctx, fl, by + 9, fw, 2, ink);
+      px(ctx, tl - 1, by - 1, 16, 9, ink); px(ctx, tl, by, 14, 7, bark[0]); px(ctx, tl, by + 5, 14, 2, ink);
+      px(ctx, x0 + 1, by, w - 2, 4, bark[1]); px(ctx, x0 + 2, by, w - 4, 1, bark[2]);
+      for (let mx = x0 + 3; mx < x1 - 3; mx += 7) px(ctx, mx, by - 2, 4, 2, leaf[1]);
+      if (crown) continue;
+      // A leaf cluster at the free end — beyond and below the board, never on it.
+      const tx = side > 0 ? x1 : x0;
+      blob(ctx, tx + side * 14 + sway, by + 2, 18, leaf[0]); blob(ctx, tx + side * 22 + sway, by + 12, 12, leaf[0]);
+      blob(ctx, tx + side * 12 + sway, by - 2, 11, leaf[1]); blob(ctx, tx + side * 20 + sway, by + 8, 6, leaf[1]);
+      px(ctx, tx + side * 10 - 2 + sway, by - 8, 4, 2, leaf[2]); px(ctx, tx + side * 18 - 1 + sway, by - 2, 3, 2, leaf[2]);
+    }
+    // The crown: a big canopy over (and beside) the highest board — the board itself stays free.
+    if (k > .6) {
+      const cy = y - Math.round(top * k); const a = Math.min(1, (k - .6) / .4);
+      ctx.save(); ctx.globalAlpha = a;
+      blob(ctx, x - 58 + sway, cy - 14, 26, leaf[0]); blob(ctx, x + 60 + sway, cy - 12, 26, leaf[0]);
+      blob(ctx, x - 40 + sway, cy - 44, 34, leaf[0]); blob(ctx, x + 42 + sway, cy - 42, 34, leaf[0]); blob(ctx, x + sway, cy - 70, 42, leaf[0]);
+      blob(ctx, x - 46 + sway, cy - 22, 15, leaf[1]); blob(ctx, x + 50 + sway, cy - 20, 15, leaf[1]);
+      blob(ctx, x - 34 + sway, cy - 50, 20, leaf[1]); blob(ctx, x + 34 + sway, cy - 48, 20, leaf[1]); blob(ctx, x - 6 + sway, cy - 80, 26, leaf[1]);
+      blob(ctx, x - 18 + sway, cy - 92, 10, leaf[2]); blob(ctx, x + 26 + sway, cy - 60, 7, leaf[2]); blob(ctx, x - 44 + sway, cy - 56, 6, leaf[2]);
+      if (!fire && !ice && this.fruitT < 5) for (const [fx, fy] of [[-50, -18], [20, -56], [54, -16]]) { px(ctx, x + fx + sway, cy + fy, 4, 4, '#c62828'); px(ctx, x + fx + 1 + sway, cy + fy, 1, 1, '#ffcdd2'); }
+      ctx.restore();
+    }
   }
 }
 

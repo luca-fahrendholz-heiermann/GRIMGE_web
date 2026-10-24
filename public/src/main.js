@@ -3035,7 +3035,7 @@ export class GameWorld {
     this.renderArenaTransformationRelic(ctx);
 
     sceneDev.hints = this.activeMode?.id === 'training' || !!this.debugVisible; // scene-object labels (dev phase)
-    const actors = [...this.minions, ...environment.livingProps().map((prop) => ({ y: prop.y, render: (c) => renderProp(c, prop) })), ...environment.sceneFx.map((fx) => ({ y: fx.y, render: (c) => fx.render(c) })), ...this.armory.pickups.map((pickup) => ({ y: pickup.y, render: (c) => pickup.render(c) }))];
+    const actors = [...this.minions, ...environment.livingProps().map((prop) => ({ y: prop.y + (prop.sortBias ?? 0), render: (c) => renderProp(c, prop) })), ...environment.sceneFx.map((fx) => ({ y: fx.y, render: (c) => fx.render(c) })), ...this.armory.pickups.map((pickup) => ({ y: pickup.y, render: (c) => pickup.render(c) }))];
     if (this.enemyChampion.lifeState !== 'Dead') actors.push(this.enemyChampion);
     if (this.player.lifeState !== 'Dead' && !this.player.isMounted) actors.push(this.player);
     if (this.primal?.isTargetable) actors.push(this.primal);

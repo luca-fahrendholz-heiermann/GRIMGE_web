@@ -115,10 +115,20 @@ Ein Geheimnis besteht aus vier Teilen:
 Geheimräume liegen weit rechts der Dungeon-Räume (eigene Grenzen, eigenes Ambiente). Ein Portal bringt hinein und zurück an die Stelle, an der man den Dungeon verlassen hat. Luken, brüchige Böden und Staub mit `link` öffnen ebenfalls Geheimräume.
 
 **Der verdorrte Hain (Raum 2):**
-- Ein zäher, welker Setzling (braucht doppelt so viel Wasser) steht am Fuß eines 205 px hohen Simses.
+- Ein zäher, welker Setzling (braucht doppelt so viel Wasser) steht vor einer hohen Felswand.
 - Schlüssel: Wasser- oder Natur-Zauber, die Ladungen des Wasserschreins oder das leckende Fass.
-- Der gewachsene Baum hat Äste auf 70, 118 und 165 px. Von der Krone erreicht man das Sims mit einem kurzen Sprung mit Anlauf.
-- Auf dem Sims wartet das Portal in den **Dornenhain**.
+- Er wächst zu einem **Riesenbaum** (24.10.: kein separates Sims mehr, die Äste sind die Plattformen):
+  - vier echte Äste wie eine Wendeltreppe, abwechselnd links und rechts, auf 56, 112, 168 und 224 px;
+  - Nachbaräste überlappen am Stamm um etwa 28 px, ein gerader Sprung nach oben reicht;
+  - 56 px Abstand: ein Ast pro Sprung, zwei Ebenen auf einmal sind nicht erreichbar.
+- Äste und Simse sind **Trittflächen** (`foothold`, battlefield.js):
+  - Stick leicht hoch oder runter lässt einen nicht fallen, nur die Astenden;
+  - eine Landung bis 16 px neben dem Ende wird aufgefangen, die Landung haftet (kein Weiterrutschen);
+  - ein Sprung von einem Ast ist ein Kletter-Hüpfer (höchstens 110 px/s seitlich, auch nach Sprint);
+  - wer danach über einem anderen Ast herunterkommt, fällt senkrecht darauf;
+  - der Ast, von dem man kommt, zieht nie zurück (bewusstes Abspringen bleibt möglich).
+- Boden-Requisiten blockieren nur am Boden, nicht wer über ihnen auf einer Plattform steht.
+- In der Krone öffnet sich, sobald der Baum ausgewachsen ist, das Portal in den **Dornenhain**.
 - Dort kämpft der **Dornen-Treant**:
   - 900 LP; Feuer ×1,6, Wasser/Natur ×0,4.
   - Dornenlinien, Wurzelring, Setzlinge und Wasser heilen ihn.

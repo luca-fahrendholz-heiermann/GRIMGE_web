@@ -4553,7 +4553,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   clean();
 }
 
-// Dungeon secret: DER VERDORRTE HAIN (user, 23 Oct 2026) — water the withered seedling, climb the tree to the ledge,
+// Dungeon secret: DER VERDORRTE HAIN (user, 23 / 24 Oct 2026) — water the withered seedling, climb the giant tree's branches to the crown,
 // the portal leads into the DORNENHAIN; the THORN TREANT drops a late rune; the portal brings the Wizard back.
 {
   const DS = await import('./public/src/dungeon_secrets.js'); const { environment: ENV } = await import('./public/src/environment.js');
@@ -4561,25 +4561,45 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   game.matchState = 'Menu'; game.setMatchMode('dungeon'); game.startMatch(); game.spawnDungeonStage(2);
   const P = game.player; const L = game.battlefield.boundsOverride.left; const g = DS.WITHERED_GROVE;
   const envStep = (sec) => { for (let i = 0; i < Math.round(sec * 60); i++) ENV.update(1 / 60, game, []); };
-  const input = (mx) => ({ keys: {}, move: { x: mx, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false });
+  const input = (mx, mz = 0) => ({ keys: {}, move: { x: mx, z: mz }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false });
   game.minions = game.minions.filter((m) => m.team !== 'red');
   const seed = ENV.props.find((o) => o.kind === 'plant' && o.withered);
-  const ledge = ENV.props.find((o) => o.kind === 'ledge'); const portal = ENV.sceneFx.find((f) => f.isSecretPortal);
-  assert(seed && seed.stage === 0 && seed.withered && seed.maxHp >= 150 && ledge?.h === g.ledgeH && portal?.link === 'thorn_grove' && ENV.props.some((o) => o.kind === 'shrine' && o.element === 'aqua'), 'Room 2 hides the withered grove: a sturdy withered seedling, a high ledge with a portal, a water shrine (the key without a water deck)');
+  const portal = ENV.sceneFx.find((f) => f.isSecretPortal);
+  assert(seed && seed.giant && seed.stage === 0 && seed.withered && seed.maxHp >= 150 && !ENV.props.some((o) => o.kind === 'ledge') && portal?.link === 'thorn_grove' && !portal.open && ENV.props.some((o) => o.kind === 'shrine' && o.element === 'aqua'), 'Room 2 hides the withered grove: a sturdy withered seedling (a giant tree to be), a closed portal, a water shrine (the key without a water deck) — no separate ledge');
   // The water shrine: its charges put water on melee hits — enough hits grow the tree.
   const shrine = ENV.props.find((o) => o.kind === 'shrine'); { const prev = setStatusSource({ team: 'blue', statusElements: [], castBy: P }); shrine.takeDamage(5, 0, 0, 0, false, 'melee'); setStatusSource(prev); }
   assert(P.shrineCharge?.element === 'aqua', 'Hitting the shrine gives the Wizard water charges');
   for (let i = 0; i < 14 && seed.stage < 2; i++) { const prev = setStatusSource({ team: 'blue', statusElements: ['aqua'], castBy: P }); seed.takeDamage(16, 0, 0, 0, false, 'melee'); setStatusSource(prev); }
-  envStep(.8);
+  envStep(1.3);
   const tops = seed.surfaces.map((s) => Math.round(s.heightAt()));
-  assert(seed.stage === 2 && !seed.withered && tops.join() === '70,118,165' && seed.surfaces.every((s) => game.battlefield.dynamicSurfaces.includes(s)), 'Watered long enough, it grows into a tree whose branches (70 / 118 / 165 px) are platforms');
-  // Real physics: from the crown a running jump lands on the ledge.
-  const crown = seed.surfaces[2]; P.x = (crown.xMin + crown.xMax) / 2; P.z = g.z; P.elevation = 0; P.vElevation = 0; P.grounded = true; P.surfaceId = crown.id; P.surfaceHeight = 165; P.state = 'idle'; P.jumpsLeft = 1;
-  for (let i = 0; i < 8; i++) P.update(1 / 60, input(1), game.battlefield, game); P.performJump(); let onLedge = false; for (let i = 0; i < 90; i++) { P.update(1 / 60, input(1), game.battlefield, game); if (P.grounded && Math.abs((P.surfaceHeight ?? 0) - g.ledgeH) < 4) { onLedge = true; break; } }
-  assert(onLedge, 'A running jump from the tree crown lands on the ledge (' + Math.round(P.surfaceHeight ?? 0) + ' px)');
-  P.x = portal.x; P.z = portal.z; portal.t = 1; for (let i = 0; i < 3; i++) ENV.update(1 / 60, game, []);
+  assert(seed.stage === 2 && !seed.withered && seed.label === 'RIESENBAUM' && tops.join() === '56,112,168,224' && seed.surfaces.every((s) => s.foothold && game.battlefield.dynamicSurfaces.includes(s)) && portal.open, 'Watered long enough, it grows into a giant tree whose limbs (56 / 112 / 168 / 224 px) are the platforms — the portal opens in its crown');
+  // Real physics, the way a player does it: hold the direction, jump, keep holding until landed — every hop lands.
+  P.x = seed.surfaces[0].xMin - 30; P.z = g.z; P.elevation = 0; P.vElevation = 0; P.vx = 0; P.state = 'idle'; game.battlefield.placeOnSurface(P);
+  const hops = [];
+  for (const s of seed.surfaces) {
+    const goal = (s.xMin + s.xMax) / 2; const d = Math.sign(goal - P.x) || 1; P.jumpsLeft = 1; P.state = 'idle'; P._lastFlickDir = 0; P._prevInputDir = 0; /* the flick windows run on real time — no sprint / backdash between simulated hops */
+    for (let i = 0; i < 4; i++) P.update(1 / 60, input(d), game.battlefield, game);
+    P.performJump(); let landed = false;
+    for (let i = 0; i < 120; i++) { P.update(1 / 60, input(d), game.battlefield, game); if (P.grounded) { landed = true; break; } }
+    for (let i = 0; i < 6; i++) P.update(1 / 60, input(0), game.battlefield, game);
+    hops.push(landed && P.surfaceId === s.id ? 'ok' : Math.round(P.surfaceHeight ?? 0) + '@' + Math.round(P.x - L - g.seedX));
+  }
+  assert(hops.every((h) => h === 'ok'), 'Climb: holding forward through each jump still lands on the next limb, nobody overshoots (' + hops.join(' ') + ')');
+  // Straight up works too (the limbs overlap at the trunk), and a sprint jump off a limb is tamed to a climbing hop.
+  { const b1 = seed.surfaces[1]; const b2 = seed.surfaces[2]; P.x = Math.max(b1.xMin, b2.xMin) + 6; P.z = g.z; P.surfaceId = b1.id; P.surfaceHeight = b1.heightAt(); P.elevation = 0; P.vElevation = 0; P.vx = 0; P.grounded = true; P.state = 'idle'; P.jumpsLeft = 1;
+    P.performJump(); for (let i = 0; i < 120 && !(P.grounded && i > 2); i++) P.update(1 / 60, input(0), game.battlefield, game); const straight = P.surfaceId === b2.id;
+    P.x = (b1.xMin + b1.xMax) / 2; P.surfaceId = b1.id; P.surfaceHeight = b1.heightAt(); P.elevation = 0; P.vElevation = 0; P.grounded = true; P.state = 'idle'; P.jumpsLeft = 1; P.performJump(); P.vx = -400;
+    let maxVx = 0; for (let i = 0; i < 120 && !(P.grounded && i > 2); i++) { P.update(1 / 60, input(-1), game.battlefield, game); maxVx = Math.max(maxVx, Math.abs(P.vx)); }
+    assert(straight && maxVx <= 111 && P.surfaceId === b2.id, 'A straight jump at the trunk reaches the next limb; a sprint jump off a limb is a climbing hop (max ' + Math.round(maxVx) + ' px/s) and lands on the next limb'); }
+  // Standing on a limb: a stick held slightly up / down does not drop the Wizard.
+  { const mid = seed.surfaces[1]; P.x = (mid.xMin + mid.xMax) / 2; P.z = g.z; P.state = 'idle'; game.battlefield.placeOnSurface(P); P.surfaceId = mid.id; P.surfaceHeight = mid.heightAt();
+    for (let i = 0; i < 60; i++) P.update(1 / 60, input(0, -.4), game.battlefield, game); const up = P.surfaceId === mid.id;
+    for (let i = 0; i < 60; i++) P.update(1 / 60, input(0, .4), game.battlefield, game); const down = P.surfaceId === mid.id;
+    for (let i = 0; i < 90; i++) P.update(1 / 60, input(1), game.battlefield, game); const off = P.surfaceId !== mid.id;
+    assert(up && down && off, 'A limb holds the Wizard against a slight up / down on the stick (only its end drops him)'); }
+  const crown = seed.surfaces[seed.surfaces.length - 1]; P.x = portal.x; P.z = portal.z; P.surfaceId = crown.id; P.surfaceHeight = crown.heightAt(); P.elevation = 0; P.grounded = true; portal.t = 1; for (let i = 0; i < 3; i++) ENV.update(1 / 60, game, []);
   const s = game.modeState.secret; const boss = s?.content?.boss;
-  assert(s?.id === 'thorn_grove' && game.battlefield.boundsOverride.left === DS.secretBounds('thorn_grove').left && boss instanceof DS.ThornTreant && game.minions.includes(boss), 'The ledge portal leads into the DORNENHAIN (own room) — the THORN TREANT waits');
+  assert(s?.id === 'thorn_grove' && game.battlefield.boundsOverride.left === DS.secretBounds('thorn_grove').left && boss instanceof DS.ThornTreant && game.minions.includes(boss), 'The crown portal leads into the DORNENHAIN (own room) — the THORN TREANT waits');
   { const hp0 = boss.hp; let prev = setStatusSource({ team: 'blue', statusElements: ['ignis'], castBy: P }); boss.takeDamage(100, 0, 0, 0, false, 'spell'); setStatusSource(prev); const fire = hp0 - boss.hp;
     const hp1 = boss.hp; prev = setStatusSource({ team: 'blue', statusElements: ['aqua'], castBy: P }); boss.takeDamage(100, 0, 0, 0, false, 'spell'); setStatusSource(prev); const water = hp1 - boss.hp;
     assert(fire >= 150 && water <= 45, 'The Treant burns (fire ×1.6) and shrugs off water (×0.4)'); }
@@ -4589,7 +4609,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   assert(s.bossDefeated && (game.modeState.secretDrops?.length ?? 0) >= 0 && ENV.sceneFx.some((f) => f.isSecretPortal && f.exit) && ENV.props.some((o) => o.kind === 'chest' && o.lock === 'natura'), 'Beaten: the late rune drops, a nature-locked chest and the way back appear');
   void unlocked0;
   const exit = ENV.sceneFx.find((f) => f.isSecretPortal && f.exit); P.x = exit.x; P.z = exit.z; P.elevation = 0; P.surfaceHeight = 0; P.grounded = true; exit.t = 1; ENV.update(1 / 60, game, []);
-  assert(!game.modeState.secret && Math.abs(P.x - portal.x) < 30 && game.battlefield.boundsOverride.left === L, 'The exit portal brings the Wizard back to the ledge spot in room 2');
+  assert(!game.modeState.secret && Math.abs(P.x - portal.x) < 30 && game.battlefield.boundsOverride.left === L, 'The exit portal brings the Wizard back to the crown spot in room 2');
   game.matchState = 'Menu'; game.setMatchMode('training'); game.startMatch();
 }
 

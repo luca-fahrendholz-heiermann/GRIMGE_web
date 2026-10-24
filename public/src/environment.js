@@ -295,7 +295,8 @@ export class EnvironmentSystem {
   blocks(entity) { return this.blocksAt(entity, entity.x, entity.z); }
 
   blocksAt(entity, x, z) {
-    if ((entity.elevation ?? 0) > 34) return false;
+    // Ground props block on the ground only — not someone standing on a platform / branch above them.
+    if ((entity.elevation ?? 0) + (entity.surfaceHeight ?? 0) > 34) return false;
     for (const prop of this.props) {
       if (prop.isDead || prop.noBlock) continue;
       if (Math.abs(x - prop.x) <= prop.halfX + (entity.width ?? 24) * .5 && Math.abs(z - prop.z) <= prop.halfZ + .05) return true;

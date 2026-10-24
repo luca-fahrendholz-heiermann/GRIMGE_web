@@ -267,6 +267,7 @@ export class Battlefield {
         surface = this.getSurfaceAt(entity.x, entity.z, entity);
       }
     }
+    if (!entity.isMinion && this.dynamicSurfaces?.length) surface = this.footholdAssist(entity, surface);
     if (surface.isCastleDeck) entity._deckSafe = { x: entity.x, z: entity.z };
     const nextSurfaceHeight = surfaceHeight(surface, entity.x);
     // Ramps are continuous ground. Leaving the side/front of a raised Castle
@@ -284,6 +285,39 @@ export class Battlefield {
     }
     entity.surfaceId = surface.id;
     entity.surfaceHeight = nextSurfaceHeight;
+  }
+
+  // Footholds (tree branches, rock ledges — scene_objects.js) are forgiving climbing platforms
+  // (user, 24 Oct 2026: "mit vorwärts + springen springt man oft zu weit, oder hält den Joystick leicht nach
+  // oben, sodass man runterfällt"): standing on one, a slight up / down does not drop the Wizard — only the
+  // ends do; a fall that reaches the top close to the end (16 px, a little in depth) is pulled onto it, and
+  // the landing sticks (the run-up speed is gone, no sliding over the end).
+  footholdAssist(entity, surface) {
+    const holds = this.dynamicSurfaces.filter((s) => s.foothold && surfaceHeight(s, entity.x) > 4);
+    if (!holds.length) return surface;
+    const prev = holds.find((s) => s.id === entity.surfaceId);
+    if (entity.grounded) entity._lastHoldId = prev?.id ?? null;
+    if (prev && surface !== prev && entity.grounded && entity.x >= prev.xMin && entity.x <= prev.xMax) {
+      entity.z = Math.max(prev.zMin, Math.min(prev.zMax, entity.z)); entity.vz = 0;
+      return prev;
+    }
+    // A jump off a foothold is a climbing hop: a run-up / sprint does not carry the Wizard past the next board.
+    if (!entity.grounded && entity._lastHoldId && Math.abs(entity.vx ?? 0) > 110) entity.vx = Math.sign(entity.vx) * 110;
+    if (entity.grounded || (entity.vElevation ?? 0) > 0) return surface;
+    const curH = (entity.surfaceHeight ?? 0) + (entity.elevation ?? 0);
+    // Coming down above another board after a climbing hop: drop straight onto it instead of sailing past its end.
+    if (entity._lastHoldId && holds.some((s) => s.id !== entity._lastHoldId && entity.x >= s.xMin && entity.x <= s.xMax && entity.z >= s.zMin - .08 && entity.z <= s.zMax + .08 && curH >= surfaceHeight(s, entity.x) - 8)) { entity.vx = 0; if (entity.kbVelX) entity.kbVelX = 0; }
+    for (const s of holds) {
+      const top = surfaceHeight(s, entity.x);
+      // The board one just stood on never pulls back (walking off its end is a deliberate drop).
+      if (s === surface || s.id === entity._lastHoldId || curH < top - 8 || curH > top + 14 || top <= surfaceHeight(surface, entity.x)) continue;
+      if (entity.x < s.xMin - 16 || entity.x > s.xMax + 16 || entity.z < s.zMin - .08 || entity.z > s.zMax + .08) continue;
+      entity.x = Math.max(s.xMin + 3, Math.min(s.xMax - 3, entity.x)); entity.z = Math.max(s.zMin, Math.min(s.zMax, entity.z));
+      entity.vx = 0; entity.vz = 0; if (entity.kbVelX) entity.kbVelX = 0;
+      return s;
+    }
+    if (holds.includes(surface) && curH - surfaceHeight(surface, entity.x) <= 6) { entity.vx = 0; entity.vz = 0; }
+    return surface;
   }
 
   getSurfaceAt(x, z, entity = null) {
