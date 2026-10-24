@@ -71,6 +71,8 @@ export const SIGNATURE_GLYPHS = Object.freeze({
   // S86 WILLE: a crown of will over the fist (a circle). S87 EDLES OPFER: a kite shield pierced by a sword.
   S86: [poly([[-.78, -.15], [-.78, -.82], [-.38, -.45], [0, -.92], [.38, -.45], [.78, -.82], [.78, -.15]], false), ring(0, .45, .36)],
   S87: [poly([[0, -.8], [.6, -.52], [.5, .3], [0, .82], [-.5, .3], [-.6, -.52]]), L(0, -.98, 0, .98), L(-.32, -.6, .32, -.6)],
+  // S90 BLUTSCHIRM: an umbrella — the canopy arc, the shaft and the hook.
+  S90: [arc(0, 0, .8, Math.PI, Math.PI * 2), L(0, 0, 0, .75), arc(-.14, .75, .14, 0, Math.PI)],
   // S89 GRENZENLOS: two rings touching (attraction · repulsion) with a line through their meeting point.
   S89: [ring(-.42, 0, .36), ring(.42, 0, .36), L(-.85, 0, .85, 0)],
   // S88 SCHATTENREIGEN: a kunai (blade + ring) inside a crescent of the back-flip.

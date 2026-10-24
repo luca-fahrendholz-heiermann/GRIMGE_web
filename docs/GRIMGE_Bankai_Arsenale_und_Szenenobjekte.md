@@ -160,3 +160,11 @@ Eine Haltung für 14 s (`public/src/grenzenlos.js`). Bedienung:
 | Wischen ↑ ohne Sog | Stoß rund um den Wizard. | 6 |
 | Tippen ohne Sog | Normale Kombo. | – |
 | passiv | **Unendlichkeit**: Feindliche Schüsse werden vor dem Wizard langsamer und bleiben stehen. | 1/s, solange sie hält |
+
+## 8. S90 Blutschirm (zweite Blut-Rune neben Blutfinsternis, eigene Adaption)
+
+`public/src/blutschirm.js`. Kostet 40 Mana und 8 HP.
+
+1. **Wirken:** Ein Blutschirm öffnet sich über dem Wizard. Fünf Blut-Bogenschützen schweben im Bogen darüber und schießen 3 s lang einen Pfeilregen auf das Ziel; das Zielgebiet folgt dem nächsten Gegner. Treffer machen Blutung, gelandete Pfeile hinterlassen **Blutpfützen** (neuer Bodeneffekt `blood`).
+2. **Blocken, solange der Schirm offen ist:** **Blutkuppel**. Treffer machen nur 20 %, feindliche Geschosse versickern in der Kuppel.
+3. **Erneut tippen:** **Blutzwillinge**. Aus bis zu drei auseinanderliegenden Pfützen schrauben sich je zwei Blutdrachen spiralförmig hoch. Wer in der Pfütze steht, wird in der Mitte nach oben gerissen: 50 Schaden plus Blutung, oben weitere 20.

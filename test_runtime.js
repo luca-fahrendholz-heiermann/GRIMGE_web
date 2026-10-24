@@ -2570,7 +2570,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   const step = (n, dt = 1 / 60) => { for (let i = 0; i < n; i++) { P.update(dt, neutral, game.battlefield, game); game.updateProjectiles(dt); spells.update(dt, game); } };
   const cast = (id, target = null) => spells.cast(P, spells.resolveSpell([{ id: 'sig_' + id }]), game, null, target);
   const ids = Object.keys(core.SIGNATURES);
-  assert(ids.length === 89 && ids.every((id) => core.signatureImpl(id)?.cast) && sigMod.SIGNATURE_RUNE_IDS.every((id) => isSpecialRune(id) && runeManaCost(id) >= 28 && runeManaCost(id) <= 46), 'All 88 signature specials (atlas S01–S36 + S37–S88) are special runes with their own mechanic and bound mana');
+  assert(ids.length === 90 && ids.every((id) => core.signatureImpl(id)?.cast) && sigMod.SIGNATURE_RUNE_IDS.every((id) => isSpecialRune(id) && runeManaCost(id) >= 28 && runeManaCost(id) <= 46), 'All 88 signature specials (atlas S01–S36 + S37–S88) are special runes with their own mechanic and bound mana');
   assert(ids.every((id) => spellHowTo('sig_' + id)?.effect?.length > 40) && !spells.resolveSpell([{ id: 'sig_S03' }, { id: 'ignis' }]), 'Signature specials explain themselves in the grimoire and never fuse');
   // Every special casts, runs and renders (strict canvas) without errors.
   const strict = new Proxy({}, { get: (t, k) => (k === 'ellipse' || k === 'arc') ? (x, y, rx, ry) => { if (rx < 0 || (k === 'ellipse' && ry < 0)) throw new Error('IndexSizeError ' + k); } : (k === 'canvas' ? undefined : () => {}), set: () => true });
@@ -4622,6 +4622,31 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
       for (let i = 0; i < 20; i++) { step(1); for (const s of spells.activeSpells) s.render?.(strict); } (await import('./public/src/signature_runes.js')).renderSignatureStance?.(strict, P, P.y, 'back'); ready(); P.signature.sogAt = P.signature.t; P.executeAttack(N, 'normal'); for (let i = 0; i < 30; i++) { step(1); for (const s of spells.activeSpells) s.render?.(strict); } } catch (e) { bad = e.message; }
     assert(!bad, 'Grenzenlos renders cleanly (Sog, Stoß, Nichts, the shell of slowed space) ' + bad); }
   if (P.signature) core.endStance(P, 'replaced'); spells.clearRuntime(); game.minions = game.minions.filter((m) => m === dummy); P.x = 300; P.z = .58;
+}
+
+// S90 BLUTSCHIRM (user, 24 Oct 2026): blood archers' arrow rain → puddles; guard = blood dome; tap again = twin blood dragons.
+{
+  const core = await import('./public/src/signature_core.js'); const BS = await import('./public/src/blutschirm.js'); const { environment: ENV } = await import('./public/src/environment.js'); const STATUS = await import('./public/src/status_effects.js');
+  const P = game.player; const dummy = game.trainingDummy; const N = { keys: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false };
+  const frame = (sec) => { for (let t = 0; t < sec; t += 1 / 60) { P.update(1 / 60, N, game.battlefield, game); game.updateRecasts(1 / 60); spells.update(1 / 60, game); ENV.update(1 / 60, game, []); } };
+  spells.clearRuntime(); if (P.signature) core.endStance(P, 'replaced'); ENV.effects = []; P.slottedSpells.length = 0; P.preparedRunes = []; P.x = 300; P.z = .5; P.facing = 1; P.state = 'idle'; P.canAttack = true; P.hp = P.maxHp; P.mp = P.maxMp; P.isGuarding = false; game.battlefield.placeOnSurface(P);
+  if (!game.minions.includes(dummy)) game.minions.push(dummy); dummy.homeX = dummy.x = 480; dummy.homeZ = dummy.z = .5; dummy.hp = dummy.maxHp; dummy.statusImmuneUntil = {}; STATUS.clearStatuses(dummy);
+  const slot = game.slotRuneSpell(runeById('sig_S90')); const hp0 = P.hp; game.castSlotAt(slot.position);
+  assert(P.signature?.id === 'S90' && hp0 - P.hp === BS.BLOOD.hpCost && P.slottedSpells.includes(slot) && slot.recast?.label === 'BLUTZWILLINGE', 'BLUTSCHIRM: the umbrella opens (8 HP of blood), the slot waits for BLUTZWILLINGE');
+  frame(3.6);
+  const pools = BS.bloodPuddles(); const rained = dummy.hp < dummy.maxHp;
+  assert(pools.length >= 1 && rained && STATUS.hasStatus(dummy, 'bleed'), 'The blood archers loose an arrow rain on the target: the foe bleeds, blood puddles stay (' + pools.length + ')');
+  P.isGuarding = true; frame(.2); P.isGuarding = true; P.invulnerableTimer = 0; const g0 = P.hp; P.takeDamage(40, 100, 0, .2, false, 'melee'); const guarded = g0 - P.hp; P.isGuarding = false;
+  assert(guarded > 0 && guarded <= 12, 'Guarding folds the umbrella into a blood dome: a 40 hit takes only ' + guarded);
+  const pool = pools[0]; dummy.homeX = dummy.x = pool.x; dummy.homeZ = dummy.z = pool.z; dummy.hp = dummy.maxHp;
+  game.castSlotAt(slot.position); frame(1.2);
+  assert(dummy.maxHp - dummy.hp >= 60 && !P.slottedSpells.includes(slot), 'Tap again: BLUTZWILLINGE — twin blood dragons spiral up from the puddle and hit the foe standing in it hard (' + Math.round(dummy.maxHp - dummy.hp) + ')');
+  { let bad = ''; const strict = new Proxy({}, { get: (tg, k) => (k === 'arc' || k === 'ellipse') ? (x, y, r, ry) => { if (!(r >= 0) || (k === 'ellipse' && !(ry >= 0)) || !Number.isFinite(x)) throw new Error('bad ' + k); } : (k === 'canvas' ? undefined : () => {}), set: () => true });
+    try { P.slottedSpells.length = 0; const s2 = game.slotRuneSpell(runeById('sig_S90')); P.mp = P.maxMp; game.castSlotAt(s2.position); const sigMod = await import('./public/src/signature_runes.js');
+      for (let i = 0; i < 90; i++) { frame(1 / 60); for (const sp of spells.activeSpells) sp.render?.(strict); if (i === 40) P.isGuarding = true; for (const layer of ['back', 'front']) sigMod.renderSignatureStance?.(strict, P, P.y, layer); }
+      P.isGuarding = false; game.castSlotAt(s2.position); for (let i = 0; i < 60; i++) { frame(1 / 60); for (const sp of spells.activeSpells) sp.render?.(strict); } ENV.renderGround?.(strict); } catch (e) { bad = e.message; }
+    assert(!bad, 'Blutschirm renders cleanly (umbrella, archers, arrows, dome, puddles, twin dragons) ' + bad); }
+  if (P.signature) core.endStance(P, 'replaced'); spells.clearRuntime(); ENV.effects = []; P.slottedSpells.length = 0; P.x = 300; P.z = .58; dummy.homeX = dummy.x = 512;
 }
 
 const frameCallback = nextFrame;

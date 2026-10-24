@@ -15,7 +15,8 @@ import './signature_abilities_b.js';
 import './signature_abilities_c.js';
 import './breathing.js'; // S40–S42, S75–S83 breathing styles (+ derived combos)
 import './will_runes.js';
-import './grenzenlos.js'; // S89 GRENZENLOS (Sog · Stoß · Nichts · Unendlichkeit)
+import './grenzenlos.js';
+import './blutschirm.js'; // S90 BLUTSCHIRM (blood archers, blood dome, twin blood dragons) // S89 GRENZENLOS (Sog · Stoß · Nichts · Unendlichkeit)
 import './guided_chains.js'; // S88 SCHATTENREIGEN (guided chain) // S86 WILLE (after Haki), S87 EDLES OPFER (after the Exiled Heavy Knight)
 import './signature_abilities_d.js'; // S37–S44 (design rules: ice spikes, shafts, water drill, breathings, objects)
 import './signature_abilities_e.js'; // S45–S48 (two-stage spells, counter charges)

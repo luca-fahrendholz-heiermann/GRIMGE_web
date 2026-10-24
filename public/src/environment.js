@@ -41,6 +41,7 @@ export const GROUND_EFFECTS = Object.freeze({
   rubble: Object.freeze({ life: 6, slow: .78 }),
   water: Object.freeze({ life: 8 }),
   hole: Object.freeze({ life: 6 }),
+  blood: Object.freeze({ life: 10 }),   // blood puddles (S90 Blutschirm arrows) — the twin dragons rise from them
   smoke: Object.freeze({ life: 2.4 })
 });
 
@@ -572,6 +573,10 @@ export class EnvironmentSystem {
           break;
         case 'hole':
           ellipse(1, 1, '#1b120e', '#6d4c41');
+          break;
+        case 'blood':
+          ellipse(1, 1, 'rgba(120,8,18,.85)', '#e53935');
+          ellipse(.45, .45, 'rgba(229,57,53,.7)');
           break;
         default: break;
       }
