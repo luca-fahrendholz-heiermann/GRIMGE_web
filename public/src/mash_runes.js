@@ -18,6 +18,9 @@ import { combat } from './combat.js';
 import { environment } from './environment.js';
 import { groundYForDepth } from './world.js';
 import { WEAPONS } from './weapons.js';
+import { drawSpellSprite, spellSheetReady, SpriteBurst } from './spell_visuals.js';
+// Hand-drawn sheets (art/authoring/vfx_runes1.cjs); the procedural looks below stay as fallbacks.
+const sheet = (name) => spellSheetReady(name);
 
 export const SPIRAL = Object.freeze({ dur: 10, maxStage: 5, growMana: 6, base: 18, perStage: 14, overcharge: 1.4 });
 export const GUARDIAN = Object.freeze({ dur: 6, maxHits: 30, idle: .8, fistDmg: 4 });
@@ -36,12 +39,15 @@ export const spiralDamage = (stage) => (SPIRAL.base + Math.min(5, stage) * SPIRA
 const spiralRadius = (stage) => 8 + Math.min(stage, 6) * 5;
 function drawSpiral(ctx, x, y, stage, t, a = 1) {
   const r = spiralRadius(stage); const over = stage > 5;
+  const name = over ? 'spiral_core_over' : 'spiral_core';
+  if (sheet(name)) { drawSpellSprite(ctx, name, Math.floor(t * 6) % 8, x, y, { anchor: 'center', scale: r / 24, alpha: a }); return; }
   disc(ctx, x, y, r + 3, SP.dark, a); disc(ctx, x, y, r, over ? '#7b1fa2' : SP.body, a);
   for (let i = 0; i < 3; i++) { const ph = t * (4 + i) + i * 2; ctx.save(); ctx.globalAlpha = a; ctx.strokeStyle = i === 1 ? SP.light : (over ? SP.over : SP.ring); ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(Math.round(x), Math.round(y), r * (.95 - i * .2), r * (.35 + i * .1), ph, 0, TAU); ctx.stroke(); ctx.restore(); }
   disc(ctx, x, y, Math.max(3, r * .32), SP.core, a);
   for (let i = 0; i < 8; i++) { const ang = i / 8 * TAU + t * 3; const ph = (t * 1.8 + i / 8) % 1; const rr = r + 16 * (1 - ph); px(ctx, x + Math.cos(ang) * rr - 1, y + Math.sin(ang) * rr - 1, 2, 2, over ? SP.over : SP.light); }
 }
 class SpiralBall {
+  get fineVfx() { return sheet('spiral_core'); }
   constructor(p, stage, mode, power) {
     const f = p.facing || 1; Object.assign(this, { caster: p, owner: p, team: p.team, stage, mode, power, facing: f, x: p.x + f * 10, z: p.z, h: 110, t: 0, isFinished: false, ticks: new Map(), travelled: 0, exploded: false });
     this.vx = f * (mode === 'lob' ? 260 : 440 - Math.min(stage, 6) * 35); this.vh = mode === 'lob' ? 360 : -320;
@@ -68,12 +74,14 @@ class SpiralBall {
     for (const t of foesOf(gw, this.team)) { const d = Math.hypot(t.x - this.x, ((t.z ?? this.z) - this.z) * DEPTH); if (d < R) hit(t, this.dmg * (this.mode === 'lob' ? .9 : .6) * (1 - d / R * .4), Math.sign(t.x - this.x || this.facing) * 380, 240, .5); }
     if (this.stage >= 5) environment.add('crater', this.x, this.z, { radius: R * .6 });
     combat.shakeCamera(4 + this.stage * 2, .3); combat.spawnShockwave(this.x, this.y - this.h * .3, R, this.stage > 5 ? SP.over : SP.ring);
+    if (sheet('spiral_burst')) emit(Object.assign(new SpriteBurst({ sheet: 'spiral_burst', x: this.x, y: this.y, z: this.z, fps: 18, anchor: 'base', scale: R / 84 }), { fineVfx: true }));
   }
   render(ctx) {
     const y = this.y - this.h;
+    if (this.exploded && sheet('spiral_burst')) return;
     if (this.exploded) { const k = (this.t - this.exploded) / .45; const R = 40 + this.stage * 14; for (let i = 0; i < 3; i++) ring(ctx, this.x, this.y - 10, R * (.4 + k * .8) - i * 8, i % 2 ? SP.light : SP.ring, 4 - i, 1 - k, .5); disc(ctx, this.x, this.y - 20, this.r * (1 - k), SP.core, 1 - k); return; }
     // A trail of rings behind it.
-    for (let i = 1; i <= 3; i++) ring(ctx, this.x - this.facing * i * 10, y, this.r * (1 - i * .15), SP.ring, 2, .5 - i * .12, .9);
+    if (!sheet('spiral_core')) for (let i = 1; i <= 3; i++) ring(ctx, this.x - this.facing * i * 10, y, this.r * (1 - i * .15), SP.ring, 2, .5 - i * .12, .9);
     drawSpiral(ctx, this.x, y, this.stage, this.t * 2);
   }
 }
@@ -166,6 +174,7 @@ defineSignature('S92', {
     },
     render(ctx, p, st, ry, layer) {
       const f = p.facing || 1; const fade = Math.min(1, st.t / .25, st.timer / .4 + .1);
+      if (layer === 'back' && sheet('guardian_spirit')) { drawSpellSprite(ctx, 'guardian_spirit', Math.floor(st.t * 8) % 6, p.x - f * 20, ry - 6, { flip: f < 0, alpha: fade }); return; }
       if (layer === 'back') {
         // The guardian spirit rises behind the Wizard: torso, head, two huge arms.
         const sx = p.x - f * 18; const sy = ry - 60; const bob = Math.sin(st.t * 3) * 2;
@@ -177,6 +186,12 @@ defineSignature('S92', {
         return;
       }
       // Fist afterimages flying forward with every tap; the finishing slam.
+      if (sheet('guardian_fist')) {
+        for (const fi of st.fists) { const k = fi.t / .18; drawSpellSprite(ctx, 'guardian_fist', Math.min(3, Math.floor(k * 4)), p.x + f * (20 + fi.d * Math.min(1, k * 2)), ry - 54 + fi.oy, { anchor: 'center', flip: f < 0, alpha: (1 - k * .6) * fade }); }
+        if (st.final) { const k = Math.min(1, (st.t - st.final) / .3); drawSpellSprite(ctx, 'guardian_slam', Math.min(5, Math.floor(k * 6)), p.x + f * 60, ry - 50, { anchor: 'center', flip: f < 0, alpha: 1 - Math.max(0, k - .7) * 3 }); }
+        if (st.hits > 0 && !st.final) { ctx.save(); ctx.font = 'bold 10px monospace'; ctx.textAlign = 'center'; ctx.fillStyle = GS.light; ctx.fillText(`×${st.hits}`, p.x, ry - 120); ctx.restore(); }
+        return;
+      }
       for (const fi of st.fists) { const k = fi.t / .18; const fx = p.x + f * (14 + fi.d * Math.min(1, k * 2)); const fy = ry - 54 + fi.oy; ctx.save(); ctx.globalAlpha = (1 - k) * fade; disc(ctx, fx, fy, 9, GS.dark); disc(ctx, fx, fy, 7, GS.fist); px(ctx, fx + f * 3, fy - 4, 3, 8, GS.light); ctx.restore(); }
       if (st.final) { const k = Math.min(1, (st.t - st.final) / .3); const fx = p.x + f * (20 + 90 * k); disc(ctx, fx, ry - 50, 22 * (1.2 - k * .2), GS.dark, 1 - k * .5); disc(ctx, fx, ry - 50, 18, GS.body, 1 - k * .5); }
       if (st.hits > 0 && !st.final) { ctx.save(); ctx.font = 'bold 10px monospace'; ctx.textAlign = 'center'; ctx.fillStyle = GS.light; ctx.fillText(`×${st.hits}`, p.x, ry - 120); ctx.restore(); }
@@ -216,6 +231,12 @@ defineSignature('S93', {
     render(ctx, p, st, ry, layer) {
       if (layer !== 'front') return;
       const f = p.facing || 1; const col = WEAPONS[p.weapon ?? p.classWeapon]?.accent ?? '#ffe082';
+      if (sheet('stab_flash')) {
+        for (const l of st.lines) { const k = l.t / .16; ctx.save(); ctx.translate(Math.round(p.x + f * 14), Math.round(ry - 48 + l.oy)); ctx.scale(f * l.reach / 128, 1); drawSpellSprite(ctx, 'stab_flash', Math.min(3, Math.floor(k * 4)), 64, 0, { anchor: 'center' }); ctx.restore(); }
+        if (st.final) { const k = Math.min(1, (st.t - st.final) / .45); ctx.save(); ctx.translate(Math.round(p.x + f * 8), Math.round(ry - 50)); ctx.scale(f, 1); drawSpellSprite(ctx, 'pierce_wave', Math.min(5, Math.floor(k * 6)), 168, 0, { anchor: 'center' }); ctx.restore(); }
+        if (st.stabs > 0 && !st.final) { ctx.save(); ctx.font = 'bold 10px monospace'; ctx.textAlign = 'center'; ctx.fillStyle = col; ctx.fillText(`×${st.stabs}`, p.x, ry - 120); ctx.restore(); }
+        return;
+      }
       for (const l of st.lines) { const k = l.t / .16; const x0 = p.x + f * 14; const x1 = p.x + f * l.reach; const y = ry - 48 + l.oy; ctx.save(); ctx.globalAlpha = 1 - k; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke(); ctx.strokeStyle = col; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke(); ctx.restore(); px(ctx, x1 - 2, y - 2, 4, 4, '#fff8e1'); }
       if (st.final) { const k = Math.min(1, (st.t - st.final) / .3); ctx.save(); ctx.globalAlpha = 1 - k; px(ctx, Math.min(p.x, p.x + f * 320), ry - 52, 320, 8, col); px(ctx, Math.min(p.x, p.x + f * 320), ry - 50, 320, 3, '#ffffff'); ctx.restore(); }
       if (st.stabs > 0 && !st.final) { ctx.save(); ctx.font = 'bold 10px monospace'; ctx.textAlign = 'center'; ctx.fillStyle = col; ctx.fillText(`×${st.stabs}`, p.x, ry - 120); ctx.restore(); }

@@ -238,3 +238,13 @@ Genutzt von Heilblüte, Großer Blüte, Segenskreis, Dornenwuchs, Giftsumpf, Hei
 
 `spezialrunen_ist_1.png` bis `_4.png`: alle 94 Spezialrunen kurz nach dem Wirken, als Grundlage für die Überarbeitung.
 Ein Versuch, die gemeinsamen Formteile (Platte, Band, Faden) in feiner Pixeldichte deckend neu zu zeichnen, wirkte dünner und streifiger als die grobe Ebene. Er wurde verworfen, die Überarbeitung erfolgt je Rune mit eigenen Sheets.
+
+## v22 — Spezialrunen Runde 1 (25.10.2026)
+
+`art/authoring/vfx_runes1.cjs`:
+- **Spiralkern:** wirbelnde Energiekugel mit Spiralarmen, Windringen und weißem Kern, dazu eine violette Überladung und ein Spiral-Einschlag.
+- **Wächtergeist:** Geisterkrieger mit Hornmaske, glühenden Augen, Muskeltorso und Rauchschweif; Fäuste mit Knöcheln und Daumen; Riesenfaust-Schlag.
+- **Tausendstich:** Stich-Blitze und eine Durchstoß-Welle mit Kegel-Schockringen.
+- **Grenzenlos:** Sog als Singularität mit blauem Lichtring und einwärts wirbelnden Streifen; Stoß als rote Druckwellen-Kuppel; Nichts als violetter Strahl mit blau-roter Doppelhelix und Verschmelzungs-Kugel.
+
+- `v22_runde1_spiral_waechter_stich.png`, `v22_runde1_grenzenlos.png`

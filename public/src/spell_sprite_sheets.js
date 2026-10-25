@@ -1010,5 +1010,124 @@ export const SPELL_SPRITE_SHEETS = Object.freeze({
   "res": 2,
   "hd": true,
   "anchor": "center"
+ },
+ "limitless_sog": {
+  "name": "limitless_sog",
+  "w": 56,
+  "h": 48,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "limitless_push": {
+  "name": "limitless_push",
+  "w": 104,
+  "h": 68,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "limit_beam": {
+  "name": "limit_beam",
+  "w": 24,
+  "h": 28,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "limit_beam_root": {
+  "name": "limit_beam_root",
+  "w": 20,
+  "h": 20,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "limit_beam_head": {
+  "name": "limit_beam_head",
+  "w": 28,
+  "h": 28,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "spiral_core": {
+  "name": "spiral_core",
+  "w": 48,
+  "h": 48,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "spiral_core_over": {
+  "name": "spiral_core_over",
+  "w": 48,
+  "h": 48,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "spiral_burst": {
+  "name": "spiral_burst",
+  "w": 88,
+  "h": 56,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 6
+ },
+ "guardian_spirit": {
+  "name": "guardian_spirit",
+  "w": 52,
+  "h": 64,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 4
+ },
+ "guardian_fist": {
+  "name": "guardian_fist",
+  "w": 24,
+  "h": 18,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "guardian_slam": {
+  "name": "guardian_slam",
+  "w": 56,
+  "h": 44,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "stab_flash": {
+  "name": "stab_flash",
+  "w": 64,
+  "h": 10,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "pierce_wave": {
+  "name": "pierce_wave",
+  "w": 168,
+  "h": 24,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
  }
 });

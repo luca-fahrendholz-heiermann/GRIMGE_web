@@ -15,6 +15,7 @@ import { projectilesOf, projVel, projSetVel } from './signature_core.js';
 import { combat } from './combat.js';
 import { environment } from './environment.js';
 import { groundYForDepth } from './world.js';
+import { drawSpellSprite, spellSheetReady, drawSheetBeam } from './spell_visuals.js';
 
 export const LIMITLESS = Object.freeze({ dur: 14, sogMana: 8, pushMana: 6, voidMana: 20, voidWindow: .7, pullR: 130, pushR: 140, infinityR: 90, drain: 1 });
 const COL = { blue: '#2979ff', blueLight: '#82b1ff', red: '#d50000', redLight: '#ff8a80', violet: '#aa00ff', violetLight: '#ea80fc', white: '#ffffff', dark: '#06102a' };
@@ -31,6 +32,7 @@ export class SogPoint {
     this.captured = new Set(); this.lifted = new Set(); this.isSogPoint = true;
   }
   get y() { return yOf(this.z); }
+  get fineVfx() { return spellSheetReady('limitless_sog'); }
   steerForward() { this.vx = this.facing * 260; }
   raise() { this.h = Math.min(170, this.h + 60); }
   update(dt, gw) {
@@ -65,6 +67,8 @@ export class SogPoint {
   release() { for (const pr of this.captured) if (pr._sogHeld === this) pr._sogHeld = null; this.captured.clear(); this.isFinished = true; if (this.st?.sog === this) this.st.sog = null; }
   render(ctx) {
     const x = this.x; const y = this.y - this.h; const t = this.t; const a = Math.min(1, t / .15);
+    // Hand-drawn singularity (art/authoring/vfx_runes1.cjs); a guide line to the ground when raised.
+    if (spellSheetReady('limitless_sog')) { drawSpellSprite(ctx, 'limitless_sog', Math.floor(t * 12) % 8, x, y, { anchor: 'center', scale: .6 + .4 * a }); if (this.h > 60) for (let yy = y + 20; yy < this.y; yy += 6) { ctx.fillStyle = COL.blueLight; ctx.fillRect(Math.round(x), Math.round(yy), 1, 3); } return; }
     // Streaks drawn inward, a dark core, blue rings turning inward.
     ctx.save(); ctx.globalAlpha = a; ctx.strokeStyle = COL.blueLight; ctx.lineWidth = 2;
     for (let i = 0; i < 10; i++) { const ang = i / 10 * TAU + t * 2; const ph = (t * 1.6 + i / 10) % 1; const r0 = 60 * (1 - ph) + 14; ctx.beginPath(); ctx.moveTo(x + Math.cos(ang) * r0, y + Math.sin(ang) * r0 * .7); ctx.lineTo(x + Math.cos(ang) * (r0 - 10), y + Math.sin(ang) * (r0 - 10) * .7); ctx.stroke(); }
@@ -78,10 +82,18 @@ export class SogPoint {
 // A short burst / beam effect (render only).
 class LimitlessFx {
   constructor(kind, x, z, h, o = {}) { Object.assign(this, { kind, x, z, h, t: 0, isFinished: false, ...o }); }
+  get fineVfx() { return spellSheetReady('limitless_push'); }
   get y() { return yOf(this.z); }
   update(dt) { this.t += dt; if (this.t > (this.kind === 'void' ? .7 : .45)) this.isFinished = true; }
   render(ctx) {
     const y = this.y - this.h; const k = this.t / (this.kind === 'void' ? .7 : .45); const a = 1 - k;
+    if (this.kind === 'push' && spellSheetReady('limitless_push')) { drawSpellSprite(ctx, 'limitless_push', Math.min(5, Math.floor(k * 6)), this.x, y, { anchor: 'center', scale: LIMITLESS.pushR / 100 }); return; }
+    if (this.kind !== 'push' && spellSheetReady('limit_beam')) {
+      const f = this.dir; const len = this.len * Math.min(1, k * 4); const kk = 1 - Math.max(0, k - .6) / .4;
+      drawSheetBeam(ctx, 'limitless', this.x0, y, this.x0 + f * Math.max(4, len), y, this.t, Math.max(.2, kk));
+      drawSpellSprite(ctx, 'limit_beam_head', Math.floor(this.t * 12) % 6, this.x, y, { anchor: 'center', scale: 1.2 * kk + .2 });
+      return;
+    }
     if (this.kind === 'push') {
       disc(ctx, this.x, y, 16 * (1 - k), COL.red, a); disc(ctx, this.x, y, 8 * (1 - k), COL.white, a);
       for (let r = 0; r < 3; r++) ring(ctx, this.x, y, 20 + k * (LIMITLESS.pushR + r * 30), r % 2 ? COL.redLight : COL.red, 4 - r, a, .6);

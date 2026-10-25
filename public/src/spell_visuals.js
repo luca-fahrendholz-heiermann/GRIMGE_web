@@ -283,7 +283,7 @@ export function tideHitBurst(target) {
 // ── Hand-drawn beams (art/authoring/vfx_fire.cjs, vfx_water.cjs) ──────────
 // A beam body is built from a tileable strip (<name>) laid along the beam (rotated for clash angles,
 // clipped at the tip), with <name>_root at the hand and <name>_head at the front.
-const BEAM_SHEETS = Object.freeze({ fire: 'fire_jet', ice: 'ice_ray', lightning: 'bolt', light: 'light_ray', void: 'void_ray' });
+const BEAM_SHEETS = Object.freeze({ fire: 'fire_jet', ice: 'ice_ray', lightning: 'bolt', light: 'light_ray', void: 'void_ray', limitless: 'limit_beam' });
 export function drawSheetBeam(ctx, material, x0, y0, x1, y1, t, k = 1) {
   const name = BEAM_SHEETS[material]; if (!name || !spellSheetReady(name)) return false;
   return drawJetSheets(ctx, name, x0, y0, x1, y1, t, k);
