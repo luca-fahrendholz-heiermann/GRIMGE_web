@@ -64,3 +64,13 @@ Nach der Freigabe des Tidenbohrers v3 als Detail-Referenz werden alle Elemente u
   - Zackenblitze von Ziel zu Ziel;
   - Felsspitzen, die aus dem Boden brechen und zerbröckeln;
   - Reif, der über den Boden kriecht, mit zerspringenden Kristallen.
+
+## v5 — Wind als Volumen (25.10.2026)
+
+Rückmeldung: Wind sah aus wie Elektrizität. Neu nach den Vorlagen (Pixel-Tornado, Windböen-Streifen):
+- Böe aus gedrungenen weißen Wischern;
+- Trichter aus dicken, gestuften Bändern (Wind, Feuer, Sand);
+- Feuersturm als Flammentornado.
+
+- `v5_wind_boee_trichter.png` — oben die Böe, unten Trichter in Wind, Feuer und Sand
+- `v5_feuersturm.png` — Feuersturm im Spiel
