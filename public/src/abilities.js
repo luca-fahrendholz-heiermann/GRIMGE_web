@@ -13,7 +13,7 @@ import { groundDistance, groundYForDepth } from './world.js';
 import { environment } from './environment.js';
 import { plate as materialPlate } from './buff_vfx.js';
 import { drawStream, drawGather, materialForVfx } from './element_fx.js';
-import { drawFireJet } from './spell_visuals.js';
+import { drawSheetBeam } from './spell_visuals.js';
 
 function withinHeight(target, sourceHeight, tolerance = 110) {
   return Math.abs((target.worldHeight ?? 0) - sourceHeight) < (target.hitHeightTolerance ?? tolerance);
@@ -286,7 +286,7 @@ export class BeamSpell {
       const fadeIn = Math.min(1, this.timer / .08); const fadeOut = this.clash ? 1 : Math.min(1, (this.sustain - this.timer) / .2);
       const k = Math.max(.2, Math.min(fadeIn, fadeOut));
       const endY = this.clash ? groundYForDepth(this.clash.contactZ) - this.clash.contactHeight - 28 : this.y;
-      if (this.material === 'fire' && drawFireJet(ctx, this.originX, this.y, this.tipX, endY, t, k)) return; // hand-drawn sheets
+      if (drawSheetBeam(ctx, this.material, this.originX, this.y, this.tipX, endY, t, k)) return; // hand-drawn sheets (fire, ice)
       drawStream(ctx, this.material, this.originX, this.y, this.tipX, endY, this.width, t, this.seed, k);
       return;
     }

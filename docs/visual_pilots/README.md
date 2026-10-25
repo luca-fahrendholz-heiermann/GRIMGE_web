@@ -127,3 +127,18 @@ Sheets:
 - `v9_feuer_sheets.png` — alle Sheets
 - `v9_feuer_ingame.png` — Feuerball und Inferno-Strahl im Spiel
 - `v9_feuersturm_ingame.png` — Feuersturm im Spiel
+
+## v10 — Wasser und Eis in Handzeichen-Qualität (25.10.2026)
+
+`art/authoring/vfx_water.cjs` mit eigener Kristallform: ein sechskantiger Splitter mit Licht- und Schattenfacette, hellem Grat und weißem Spitzenglanz.
+
+Sheets:
+- `ice_ray` (kachelbar) mit `ice_ray_root` und `ice_ray_head`: der Gletscherstrahl. Ein facettierter Kristallbalken, Raureif-Nadeln schräg nach hinten, Frostnebel, Glanzlichter, fließende Kältestreifen; an der Hand ein Kristall-Büschel, an der Spitze ein splitternder Kristallhaufen.
+- `ice_nova`: Reif kriecht mit Rissen über den Boden, an der Front brechen Kristall-Büschel hervor, am Ende zersplittern sie in Bruchstücke und Nebel.
+- `ice_blizzard`: eine Schneesturm-Walze mit breitem Kopf, zerfetztem Schweif, rollenden Eis-Sicheln, treibendem Hagel, taumelnden Splittern und einer Nebelschleppe. Ersetzt den Kreis-Platzhalter.
+- `water_splash`: eine offene Wasserkrone; Säulen mit Tropfen an den Spitzen, die abreißen und fallen, dazu eine Ringwelle. Wird für Wasser-Treffer genutzt, auch beim Tidenbohrer.
+
+Der Strahl-Baukasten (`drawSheetBeam`) ist jetzt allgemein: Feuer und Eis nutzen denselben Weg.
+
+- `v10_wasser_eis_sheets.png` — alle Sheets
+- `v10_wasser_eis_ingame.png` — Gletscherstrahl, Frostnova (zwei Momente) und Blizzard im Spiel

@@ -395,5 +395,60 @@ export const SPELL_SPRITE_SHEETS = Object.freeze({
   "hd": true,
   "anchor": "base",
   "baseOffset": 2
+ },
+ "ice_ray": {
+  "name": "ice_ray",
+  "w": 24,
+  "h": 20,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "ice_ray_root": {
+  "name": "ice_ray_root",
+  "w": 16,
+  "h": 20,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "ice_ray_head": {
+  "name": "ice_ray_head",
+  "w": 24,
+  "h": 28,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "ice_nova": {
+  "name": "ice_nova",
+  "w": 150,
+  "h": 42,
+  "frames": 10,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 6
+ },
+ "ice_blizzard": {
+  "name": "ice_blizzard",
+  "w": 64,
+  "h": 48,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "water_splash": {
+  "name": "water_splash",
+  "w": 28,
+  "h": 28,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
  }
 });

@@ -1250,7 +1250,14 @@ class FrostNovaSpell {
   }
 
   render(ctx) {
-    // Frost creeps over the ground; crystals shoot up along the front and shatter at the end (element_fx.js).
+    // Hand-drawn nova (art/authoring/vfx_water.cjs): frames 0-5 follow the spreading front, 6-9 shatter over
+    // the last 0.2 s; scaled to the cast's area. The procedural frost is the fallback.
+    if (spellSheetReady('ice_nova')) {
+      const grow = Math.min(1, this.radius / (this.maxRadius || 140));
+      const frame = this.life > .2 ? Math.min(5, Math.floor(grow * 6)) : 6 + Math.min(3, Math.floor((1 - this.life / .2) * 4));
+      drawSpellSprite(ctx, 'ice_nova', frame, this.x, this.y, { scale: (this.maxRadius || 140) / 140 });
+      return;
+    }
     drawFrostSpread(ctx, this.x, this.y, this.radius, 1 - this.life / .5, this.seed);
   }
 }
@@ -1807,15 +1814,16 @@ class BlizzardSurgeSpell {
     this.life = 2.5;
     this.tickTimer = 0;
     this.isFinished = false;
+    this.age = 0; this.fineVfx = true;
   }
   get y() { return groundYForDepth(this.z) - 30; }
 
   update(dt, gameWorld) {
     this.x += this.vx * dt;
-    this.life -= dt;
+    this.life -= dt; this.age += dt;
     this.tickTimer -= dt;
 
-    combat.spawnElementalParticles(this.x, this.y, 'aqua', 4);
+    combat.spawnElementalParticles(this.x - Math.sign(this.vx) * 30, this.y, 'frost', 2);
 
     const targets = gameWorld.getHostileTargets(this.team);
     for (const t of targets) {
@@ -1830,6 +1838,13 @@ class BlizzardSurgeSpell {
   }
 
   render(ctx) {
+    // Hand-drawn storm roller (art/authoring/vfx_water.cjs): snow-packed streaked mass, rolling icy sweeps,
+    // driving hail; it grows in over 0.25 s and thins out over its last 0.3 s.
+    if (spellSheetReady('ice_blizzard')) {
+      const k = Math.min(1, this.age / .25, this.life / .3 + .2);
+      drawSpellSprite(ctx, 'ice_blizzard', Math.floor(this.age * 12) % 8, this.x - Math.sign(this.vx) * 20, this.y, { anchor: 'center', flip: this.vx < 0, scale: .6 + .4 * k });
+      return;
+    }
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     ctx.strokeStyle = 'rgba(128, 216, 255, 0.7)';
