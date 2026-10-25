@@ -224,3 +224,83 @@ export function drawVoidOrb(ctx, x, y, r, dir, t, seed = 1) {
   box(ctx, x - (dir || 1) * r * .3, y - r * .3, 1, 1, m.mid);
   ring(true);
 }
+
+// ── wind ───────────────────────────────────────────────────────────────────
+// A gust: a sickle of air built from thin flowing streaks (dashes run along each arc), curls at the tips,
+// dust and a leaf dragged along inside. Opaque, pale — wind is shown by what it moves and by its lines.
+export function drawWindGust(ctx, x, y, facing, t, seed = 1, size = 1, k = 1) {
+  const c = { out: '#2f6f6a', edge: '#4db6ac', body: '#80deea', light: '#e0f7fa', core: '#ffffff' };
+  const f = facing || 1;
+  for (let i = 0; i < 7; i++) {
+    const r = (16 + i * 4.2) * size; const span = (.75 + hash01(seed + i) * .45) * (.7 + .3 * k); const back = i * 2.2 * size;
+    const n = Math.max(6, R(r * span * 2));
+    for (let j = 0; j <= n; j++) {
+      const a = -span + (j / n) * span * 2; const px = x - f * back + f * Math.cos(a) * r * .75; const py = y + Math.sin(a) * r;
+      const flow = ((j / n) * 3 - t * 9 + i * .37) % 1; const dash = (flow + 1) % 1 < .62;
+      if (!dash) continue;
+      // Inner arcs are the dense front of the gust (2 px), outer ones thin trailing wisps (1 px).
+      const tip = Math.abs(a) > span * .8; const thick = i < 4 && !tip ? 2 : 1;
+      box(ctx, px - 1, py - 1, thick + 2, thick + 2, c.out);
+      box(ctx, px, py, thick, thick, i < 2 ? c.core : tip ? c.edge : i < 4 ? c.light : c.body);
+    }
+    // Curls at both tips of the outer arcs.
+    if (i >= 4) for (const sgn of [-1, 1]) {
+      const a0 = sgn * span; const cx0 = x - f * back + f * Math.cos(a0) * r * .75; const cy0 = y + Math.sin(a0) * r;
+      for (let q = 0; q < 10; q++) { const u = q / 10; const ang = a0 + sgn * u * 4.2 + t * 6; const rr = 5 * size * (1 - u * .7); box(ctx, cx0 - f * Math.cos(ang) * rr * .6 - f * u * 4, cy0 + Math.sin(ang) * rr * .6, 1, 1, u < .5 ? c.light : c.body); }
+    }
+  }
+  // Debris swept inside the gust: dust motes and a tumbling leaf.
+  for (let q = 0; q < 6; q++) { const u = (t * 2.5 + hash01(seed + q * 7)) % 1; const px = x - f * (u * 30 * size) + f * 6; const py = y + (hash01(seed + q) - .5) * 40 * size + Math.sin(t * 12 + q) * 3; box(ctx, px, py, 2, 1, q % 3 ? '#cbb89a' : '#9ccc65'); }
+}
+
+// ── earth ──────────────────────────────────────────────────────────────────
+// A rock spike: a jagged spire with strata, a lit left face and a dark right face, a crack, a ring of broken
+// ground at its foot. rise 0 … 1 (grows out of the ground), crumble 0 … 1 (sinks and breaks into chunks).
+export function drawRockSpike(ctx, x, y, h, w, seed = 1, rise = 1, crumble = 0) {
+  const c = { out: '#1e1410', dark: '#3e2a20', body: '#6d4c41', light: '#a1887f', top: '#d7c4a8', strata: '#4e342e' };
+  const H = h * rise * (1 - crumble * .7); if (H < 2) return;
+  const lean = (hash01(seed) - .5) * w * .5; const tipX = x + lean;
+  // Broken ground ring at the foot (dirt clods pushed up).
+  for (let i = 0; i < 7; i++) { const a = (i / 6 - .5) * 2.6; const px = x + Math.sin(a) * w * 1.1; const py = y - Math.cos(a) * 2; const s = 2 + R(hash01(seed + i) * 2); box(ctx, px - s / 2 - 1, py - s - 1, s + 2, s + 1, c.out); box(ctx, px - s / 2, py - s, s, s, i % 2 ? c.body : c.dark); }
+  const rows = R(H);
+  for (let r = 0; r <= rows; r++) {
+    const u = r / rows; // 0 foot … 1 tip
+    const jag = (hash01(seed + Math.floor(r / 4) * 3) - .5) * 3 * (1 - u);
+    const half = Math.max(.5, w * (1 - u) ** .9 + jag * .5); const cx = x + lean * u;
+    const yy = y - r; const l = R(cx - half); const rr = R(cx + half);
+    box(ctx, l - 1, yy, rr - l + 2, 1, c.out);
+    box(ctx, l, yy, rr - l, 1, c.body);
+    box(ctx, l, yy, Math.max(1, R((cx - l) * .8)), 1, c.light);                 // lit left face
+    box(ctx, R(cx + half * .35), yy, Math.max(1, rr - R(cx + half * .35)), 1, c.dark); // shaded right face
+    if ((r + R(seed)) % 9 === 0 && u < .85) box(ctx, l, yy, rr - l, 1, c.strata); // strata
+  }
+  box(ctx, tipX - 1, y - rows - 1, 2, 2, c.top);
+  // A crack running down the lit face.
+  let cx = x - w * .2; for (let r = 4; r < rows * .7; r += 2) { cx += (hash01(seed + r) - .5) * 2; box(ctx, cx, y - r, 1, 2, c.out); }
+  // Crumbling: chunks break off and fall beside it.
+  if (crumble > 0) for (let i = 0; i < 6; i++) { const u = clamp01(crumble * 1.3 - i * .08); if (u <= 0) continue; const side = i % 2 ? 1 : -1; const px = x + side * (w * .6 + u * 14 + i * 2); const py = y - h * (.6 - i * .08) + u * u * h * .9; const s = 2 + (i % 3); box(ctx, px - 1, py - 1, s + 2, s + 2, c.out); box(ctx, px, py, s, s, i % 2 ? c.body : c.light); }
+}
+
+// ── frost ──────────────────────────────────────────────────────────────────
+// Frost spreading over the ground from a point: an icy floor patch (pale, with white glints), a front of
+// crystals that shoot up as it passes, and at the end the crystals shatter. r = current front radius
+// (ground ellipse r × r·0.3), k = 0 … 1 life.
+export function drawFrostSpread(ctx, x, y, r, k, seed = 1) {
+  const c = MAT.ice; const ry = r * .32;
+  // Icy floor: rows of the ellipse, frosted in irregular streaks.
+  for (let yy = -R(ry); yy <= R(ry); yy++) {
+    const hw = r * Math.sqrt(Math.max(0, 1 - (yy / (ry + .01)) ** 2)); if (hw < 1) continue;
+    // Rime, not a rink: sparse frost streaks, denser toward the front where it is freshest.
+    const edge = Math.abs(yy) / (ry + .01);
+    for (let xx = -R(hw); xx < R(hw); xx += 3) { const front = Math.max(Math.abs(xx) / (hw + .01), edge); const hv = hash01(seed + xx * 7 + yy * 13); if (hv < .78 - front * .35) continue; box(ctx, x + xx, y + yy, hv > .9 ? 2 : 3, 1, hv > .96 ? c.core : hv > .86 ? c.light : c.mid); }
+  }
+  // The crystal front: shards pop up around the ellipse, irregular heights; shatter at the end.
+  const N = Math.max(8, R(r / 5));
+  for (let i = 0; i < N; i++) {
+    const a = (i / N) * Math.PI * 2 + hash01(seed + i) * .3; const px = x + Math.cos(a) * r; const py = y + Math.sin(a) * ry;
+    const hgt = (6 + hash01(seed + i * 5) * 10) * (k < .7 ? 1 : 1 - (k - .7) / .3);
+    if (k > .7) { const u = (k - .7) / .3; for (let q = 0; q < 3; q++) { const qa = -Math.PI / 2 + (q - 1) * .9; box(ctx, px + Math.cos(qa) * u * 12, py - 6 + Math.sin(qa) * u * 10 + u * u * 12, 2, 2, q === 1 ? c.core : c.light); } }
+    if (hgt < 1) continue;
+    for (let rr = 0; rr < hgt; rr++) { const w = Math.max(1, R(3 * (1 - rr / hgt))); box(ctx, px - w / 2 - 1, py - rr, w + 2, 1, c.out); box(ctx, px - w / 2, py - rr, w, 1, rr > hgt * .6 ? c.core : c.light); box(ctx, px + w / 2 - 1, py - rr, 1, 1, c.body); }
+  }
+}

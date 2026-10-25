@@ -13,7 +13,7 @@ import { castSignature, signatureProjectileSpawned, updateSignatureWorld } from 
 import { castNatureSpell, isNatureOrInfusion } from './nature_spells.js';
 import { renderWallLook } from './wall_looks.js';
 import { renderSpellVisual, meteorShatterBurst, spellVisualActive, spellSheetReady, SpriteBurst } from './spell_visuals.js';
-import { drawFireBall, drawVoidOrb } from './element_fx.js';
+import { drawFireBall, drawVoidOrb, drawWindGust, drawBolt, drawRockSpike, drawFrostSpread } from './element_fx.js';
 import { offerRecast } from './recast.js';
 import { statusElementsOf, setStatusSource, updateStatuses, statusDepthEntries, clearStatuses } from './status_effects.js';
 import { applyWard, setMasterySink } from './mastery.js';
@@ -1048,14 +1048,15 @@ class GaleBlastSpell {
     this.life = 0.8;
     this.isFinished = false;
     this.hitEntities = new Set();
+    this.fineVfx = true; this.age = 0; this.seed = Math.floor(Math.random() * 1000);
   }
   get y() { return groundYForDepth(this.z) - this.heightAboveSurface - 26; }
 
   update(dt, gameWorld) {
     this.x += this.vx * dt;
-    this.life -= dt;
+    this.life -= dt; this.age += dt;
 
-    combat.spawnElementalParticles(this.x, this.y, 'ventus', 3);
+    combat.spawnElementalParticles(this.x - this.facing * 20, this.y, 'ventus', 2);
 
     const targets = gameWorld.getHostileTargets(this.team);
     for (const t of targets) {
@@ -1072,14 +1073,8 @@ class GaleBlastSpell {
   }
 
   render(ctx) {
-    ctx.save();
-    ctx.globalCompositeOperation = 'lighter';
-    ctx.strokeStyle = '#4deeea';
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, 35, (this.facing > 0 ? -1.2 : 2.0), (this.facing > 0 ? 1.2 : 4.4));
-    ctx.stroke();
-    ctx.restore();
+    // A sickle of flowing air with curls and dragged dust (element_fx.js); it frays out over its last 0.25 s.
+    drawWindGust(ctx, this.x, this.y, this.facing, this.age, this.seed, 1.35, Math.min(1, this.life / .25));
   }
 }
 
@@ -1129,6 +1124,7 @@ class ChainLightningSpell {
       // Strike straight forward
       this.segments.push({ x1: x, y1: currY, x2: x + facing * 240, y2: currY });
     }
+    this.fineVfx = true; this.seed = Math.floor(Math.random() * 1000);
   }
 
   update(dt) {
@@ -1137,24 +1133,9 @@ class ChainLightningSpell {
   }
 
   render(ctx) {
-    ctx.save();
-    ctx.globalCompositeOperation = 'lighter';
-    ctx.strokeStyle = '#fff59d';
-    ctx.shadowColor = '#ffd000';
-    ctx.shadowBlur = 15;
-    ctx.lineWidth = 3;
-
-    for (const seg of this.segments) {
-      ctx.beginPath();
-      ctx.moveTo(seg.x1, seg.y1);
-      // Zig-zag jagged bolt
-      const midX = (seg.x1 + seg.x2) * 0.5 + (Math.random() * 24 - 12);
-      const midY = (seg.y1 + seg.y2) * 0.5 + (Math.random() * 24 - 12);
-      ctx.lineTo(midX, midY);
-      ctx.lineTo(seg.x2, seg.y2);
-      ctx.stroke();
-    }
-    ctx.restore();
+    // Re-forming jagged bolts from link to link (element_fx.js), thinning as the charge drains.
+    const t = performance.now() / 1000; const k = Math.max(.2, this.life / .35);
+    this.segments.forEach((seg, i) => drawBolt(ctx, seg.x1, seg.y1, seg.x2, seg.y2, 12, t, this.seed + i * 17, k));
   }
 }
 
@@ -1168,6 +1149,7 @@ class StoneSpikesSpell {
     this.spikes = [];
     this.life = 1.6;
     this.isFinished = false;
+    this.fineVfx = true; this.seed = Math.floor(Math.random() * 1000);
 
     // 4 Sequential spikes advancing forward
     for (let i = 0; i < 4; i++) {
@@ -1217,22 +1199,9 @@ class StoneSpikesSpell {
   }
 
   render(ctx) {
-    ctx.save();
-    for (const sp of this.spikes) {
-      if (sp.height > 2) {
-        ctx.fillStyle = '#5d4037';
-        ctx.strokeStyle = '#8d6e63';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(sp.x - 14, sp.y);
-        ctx.lineTo(sp.x, sp.y - sp.height);
-        ctx.lineTo(sp.x + 14, sp.y);
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
-      }
-    }
-    ctx.restore();
+    // Faceted rock spires that break out of the ground and crumble over the last 0.35 s (element_fx.js).
+    const crumble = this.life < .35 ? 1 - this.life / .35 : 0;
+    this.spikes.forEach((sp, i) => { if (sp.height > 2) drawRockSpike(ctx, sp.x, sp.y, sp.maxHeight, 12 + i, this.seed + i * 31, sp.height / sp.maxHeight, crumble); });
   }
 }
 
@@ -1246,6 +1215,7 @@ class FrostNovaSpell {
     this.life = 0.5;
     this.isFinished = false;
     this.hitEntities = new Set();
+    this.fineVfx = true; this.seed = Math.floor(Math.random() * 1000);
   }
   get y() { return groundYForDepth(this.z); }
 
@@ -1270,14 +1240,8 @@ class FrostNovaSpell {
   }
 
   render(ctx) {
-    ctx.save();
-    ctx.globalCompositeOperation = 'lighter';
-    ctx.strokeStyle = '#00e5ff';
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.restore();
+    // Frost creeps over the ground; crystals shoot up along the front and shatter at the end (element_fx.js).
+    drawFrostSpread(ctx, this.x, this.y, this.radius, 1 - this.life / .5, this.seed);
   }
 }
 
