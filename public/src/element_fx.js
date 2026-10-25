@@ -433,3 +433,64 @@ export function drawFrostSpread(ctx, x, y, r, k, seed = 1) {
     for (let rr = 0; rr < hgt; rr++) { const w = Math.max(1, R(3 * (1 - rr / hgt))); box(ctx, px - w / 2 - 1, py - rr, w + 2, 1, c.out); box(ctx, px - w / 2, py - rr, w, 1, rr > hgt * .6 ? c.core : c.light); box(ctx, px + w / 2 - 1, py - rr, 1, 1, c.body); }
   }
 }
+
+// ── hand-drawn strokes (user, 25 Oct 2026: "das Art Design ist mir zu simpel") ─────────────────────────
+// Geometric bands read as programmer art. Hand-drawn pixel VFX (the LF2 whirlwind / fireball sheets studied
+// in docs/GRIMGE_VFX_Referenzanalyse.md) are built from CALLIGRAPHIC strokes — thick in the middle, tapering
+// to points, with dry-brush breakup at the ends — and STREAK texture: many horizontal dashes of different
+// lengths in 3–4 tones instead of flat fills.
+// A crescent: an elliptical arc stroke (centre cx, cy; radii rx, ry; from angle a0 to a1) whose width swells
+// to maxW in the middle; the outer edge is lit, the inner edge dark; the ends break into dashes.
+export function drawCrescent(ctx, cx, cy, rx, ry, a0, a1, maxW, pal, seed = 1) {
+  const len = Math.abs(a1 - a0) * Math.max(rx, ry); const n = Math.max(6, R(len * 1.6));
+  for (let i = 0; i <= n; i++) {
+    const u = i / n; const a = a0 + (a1 - a0) * u;
+    const w = maxW * Math.pow(Math.sin(Math.PI * u), .75);
+    if ((u < .12 || u > .88) && hash01(seed + i * 3) < .45) continue; // dry-brush ends
+    const px = cx + Math.cos(a) * rx; const py = cy + Math.sin(a) * ry;
+    const nx = Math.cos(a) * ry; const ny = Math.sin(a) * rx; const nl = Math.hypot(nx, ny) || 1; // outward normal
+    const steps = Math.max(1, R(w));
+    for (let s = 0; s <= steps; s++) {
+      const v = s / steps; // 0 inner … 1 outer
+      const qx = px + (nx / nl) * (v - .5) * w; const qy = py + (ny / nl) * (v - .5) * w;
+      box(ctx, qx, qy, 1, 1, v > .78 ? pal.core : v > .45 ? pal.light : v > .18 ? pal.body : pal.deep);
+    }
+  }
+}
+// Streak texture inside a silhouette: rows of horizontal dashes of random length (gaps between), tone by row
+// position and dash; `shape(y)` returns [xLeft, xRight] for row y or null. Moves with t (dir = drift).
+export function drawStreaks(ctx, y0, y1, shape, pal, t, seed = 1, density = 1, dir = 1) {
+  for (let y = R(y0); y <= R(y1); y++) {
+    const span = shape(y); if (!span) continue; const [l, r] = span; const w = r - l; if (w < 2) continue;
+    let x = l + hash01(seed + y * 7) * 6 - (t * 60 * dir) % 9;
+    let j = 0;
+    while (x < r) {
+      const dl = 3 + R(hash01(seed + y * 13 + j * 5 + Math.floor(t * 8)) * w * .35);
+      const gap = 1 + R(hash01(seed + y * 3 + j * 11) * 4 / density);
+      const xa = Math.max(l, x); const xb = Math.min(r, x + dl);
+      if (xb > xa) {
+        const centre = 1 - Math.abs(((xa + xb) / 2 - (l + r) / 2) / (w / 2 + .01)); const tone = hash01(seed + y * 17 + j);
+        box(ctx, xa, y, xb - xa, 1, centre > .6 && tone > .45 ? pal.core : centre > .3 ? (tone > .5 ? pal.light : pal.body) : (tone > .6 ? pal.body : pal.deep));
+      }
+      x += dl + gap; j++;
+    }
+  }
+}
+// The whirlwind, LF2-style: a streaky cone core (dense in the middle, frayed at the edges) wrapped by
+// calligraphic crescents that orbit — back ones dark behind the core, front ones bright before it. Life
+// k: forming (scattered crescents, no core) → full → dissolving (core thins to loose streaks).
+export function drawWhirlwind(ctx, x, yGround, h, wTop, t, pal = WIND, seed = 1, k = 1) {
+  const form = clamp01(k / .35); const H = h * (.55 + .45 * form); const top = yGround - H;
+  const coreW = (y) => { const u = (y - top) / H; return wTop * .5 * Math.pow(1 - u * .82, 1.3) * (.35 + .65 * form); };
+  const sway = (y) => Math.sin((y - top) / H * 3 + t * 4 + seed) * wTop * .08;
+  const cres = [];
+  for (let i = 0; i < 11; i++) {
+    const u = (i + hash01(seed + i) * .6) / 11; const yy = top + u * H * .95; const rx = coreW(yy) * (1.25 + hash01(seed + i * 3) * .6) + 6; const ry = rx * .26;
+    const spin = t * (4 + hash01(seed + i * 5) * 2) + hash01(seed + i * 7) * 6; const span = 1.2 + hash01(seed + i * 9) * 1.4;
+    cres.push({ yy, rx, ry, a0: spin, a1: spin + span, w: Math.max(2, (3 + rx * .1) * (.6 + .4 * form)), cx: x + sway(yy), i });
+  }
+  const back = (c) => Math.sin((c.a0 + c.a1) / 2) < 0;
+  for (const c of cres) if (back(c)) drawCrescent(ctx, c.cx, c.yy, c.rx, c.ry, c.a0, c.a1, c.w, { deep: pal.inner, body: pal.deep, light: pal.body, core: pal.light }, seed + c.i);
+  if (form > .3) drawStreaks(ctx, top + 4, yGround - 2, (y) => { const w = coreW(y) * (k > .8 ? 1 - (k - .8) * 3 : 1); if (w < 1) return null; const c = x + sway(y); return [c - w, c + w]; }, pal, t, seed, form * (k > .8 ? .5 : 1));
+  for (const c of cres) if (!back(c)) drawCrescent(ctx, c.cx, c.yy, c.rx, c.ry, c.a0, c.a1, c.w, pal, seed + c.i * 3);
+}

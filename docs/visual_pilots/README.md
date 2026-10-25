@@ -84,3 +84,12 @@ Rückmeldung: Die Trichter sahen gleich aus, nur in anderer Farbe. Jetzt verhäl
 - Pollen: kein fester Körper, wirbelnde Blätter und Blüten auf den Bahnen, grüner Windschleier.
 
 - `v6_trichter_material.png` — von links: Wind, Feuer, Sand, Pollen
+
+## v7 — Handgezeichnete Strich-Technik (Richtungsvorschlag, 25.10.2026)
+
+Rückmeldung: Das Art Design ist zu simpel. Ursache: Die Effekte sind aus geometrischen Grundformen gerechnet (gleichmäßige Bänder, glatte Kanten). Handgezeichnete Pixel-Effekte (Studie der LF2-Sheets) sind anders gebaut:
+- aus kalligrafischen Pinsel-Strichen, in der Mitte dick, spitz zulaufend, an den Enden ausgefranst;
+- mit Strich-Textur aus vielen unterschiedlich langen Strichen in 3 bis 4 Tönen statt flacher Füllung;
+- mit einem Lebenszyklus über mehrere Phasen.
+
+- `v7_wirbel_alt_neu.png` — links der alte Bänder-Trichter, Mitte und rechts der neue Wirbel (entstehend, voll)
