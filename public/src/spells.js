@@ -12,7 +12,7 @@ import { activateBuffForm } from './buff_forms.js';
 import { castSignature, signatureProjectileSpawned, updateSignatureWorld } from './signature_runes.js';
 import { castNatureSpell, isNatureOrInfusion } from './nature_spells.js';
 import { renderWallLook } from './wall_looks.js';
-import { renderSpellVisual, meteorShatterBurst, spellVisualActive, spellSheetReady, SpriteBurst, drawSpellSprite } from './spell_visuals.js';
+import { renderSpellVisual, meteorShatterBurst, spellVisualActive, spellSheetReady, SpriteBurst, drawSpellSprite, drawSheetBeam } from './spell_visuals.js';
 import { drawFireBall, drawVoidOrb, drawWindGust, drawBolt, drawRockSpike, drawFrostSpread, drawFunnel } from './element_fx.js';
 import { offerRecast } from './recast.js';
 import { statusElementsOf, setStatusSource, updateStatuses, statusDepthEntries, clearStatuses } from './status_effects.js';
@@ -613,7 +613,8 @@ export class SpellSystem {
     const damage = 22 * quality.power;
     audio.playSpell('aura_shock');
     combat.shakeCamera(7, 0.18);
-    combat.spawnShockwave(caster.x, caster.y - 28, radius, '#b388ff');
+    if (spellSheetReady('shock_ring')) this.activeSpells.push(Object.assign(new SpriteBurst({ sheet: 'shock_ring', x: caster.x, y: groundYForDepth(caster.z) - (caster.surfaceHeight ?? 0), z: caster.z, fps: 20, anchor: 'base', scale: radius / 80 }), { fineVfx: true }));
+    else combat.spawnShockwave(caster.x, caster.y - 28, radius, '#b388ff');
     combat.spawnElementalParticles(caster.x, caster.y - 28, 'fulgur', Math.round(24 * quality.particles));
 
     let hitAny = false;
@@ -1143,8 +1144,14 @@ class ChainLightningSpell {
   }
 
   render(ctx) {
-    // Re-forming jagged bolts from link to link (element_fx.js), thinning as the charge drains.
+    // Hand-drawn bolt links (art/authoring/vfx_lightning.cjs) with an impact burst at every link's end; the
+    // procedural bolts are the fallback.
     const t = performance.now() / 1000; const k = Math.max(.2, this.life / .35);
+    if (spellSheetReady('bolt')) {
+      const hitFrame = Math.floor((1 - this.life / .35) * 8);
+      for (const seg of this.segments) { drawSheetBeam(ctx, 'lightning', seg.x1, seg.y1, seg.x2, seg.y2, t, k); drawSpellSprite(ctx, 'bolt_hit', hitFrame, seg.x2, seg.y2, { anchor: 'center' }); }
+      return;
+    }
     this.segments.forEach((seg, i) => drawBolt(ctx, seg.x1, seg.y1, seg.x2, seg.y2, 12, t, this.seed + i * 17, k));
   }
 }
@@ -1680,6 +1687,7 @@ class TempestBlitzSpell {
     this.startX = startX;
     this.endX = endX;
     this.y = caster.y - 20;
+    this.z = caster.z; this.fineVfx = true;
   }
 
   update(dt) {
@@ -1688,6 +1696,14 @@ class TempestBlitzSpell {
   }
 
   render(ctx) {
+    // Hand-drawn lightning along the dash (art/authoring/vfx_lightning.cjs), impacts at both ends.
+    if (spellSheetReady('bolt')) {
+      const k = Math.max(.25, this.life / .3); const frame = Math.floor((1 - this.life / .3) * 8);
+      drawSheetBeam(ctx, 'lightning', this.startX, this.y, this.endX, this.y, performance.now() / 1000, k);
+      drawSpellSprite(ctx, 'bolt_hit', frame, this.startX, this.y, { anchor: 'center' });
+      drawSpellSprite(ctx, 'bolt_hit', frame, this.endX, this.y, { anchor: 'center' });
+      return;
+    }
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     ctx.strokeStyle = '#00e5ff';

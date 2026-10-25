@@ -283,7 +283,7 @@ export function tideHitBurst(target) {
 // ── Hand-drawn beams (art/authoring/vfx_fire.cjs, vfx_water.cjs) ──────────
 // A beam body is built from a tileable strip (<name>) laid along the beam (rotated for clash angles,
 // clipped at the tip), with <name>_root at the hand and <name>_head at the front.
-const BEAM_SHEETS = Object.freeze({ fire: 'fire_jet', ice: 'ice_ray' });
+const BEAM_SHEETS = Object.freeze({ fire: 'fire_jet', ice: 'ice_ray', lightning: 'bolt' });
 export function drawSheetBeam(ctx, material, x0, y0, x1, y1, t, k = 1) {
   const name = BEAM_SHEETS[material]; if (!name || !spellSheetReady(name)) return false;
   return drawJetSheets(ctx, name, x0, y0, x1, y1, t, k);
@@ -293,7 +293,10 @@ function drawJetSheets(ctx, name, x0, y0, x1, y1, t, k) {
   ctx.save(); ctx.translate(Math.round(x0), Math.round(y0)); ctx.rotate(ang);
   ctx.beginPath(); ctx.rect(4, -40, Math.max(0, L - 10), 80); ctx.clip();
   const scale = .7 + .3 * k;
-  for (let d = 4; d < L; d += 48 * scale) drawSpellSprite(ctx, name, frame, d + 24 * scale, 0, { anchor: 'center', scale });
+  // Lightning tiles all enter / leave on the centre line, so each tile may show its own frame (no visible
+  // repetition); flowing jets (fire, ice) keep one frame so their tiles join seamlessly.
+  const vary = name === 'bolt'; let i = 0;
+  for (let d = 4; d < L; d += 48 * scale) drawSpellSprite(ctx, name, vary ? (frame + i++ * 4 + (i * i) % 5) % 6 : frame, d + 24 * scale, 0, { anchor: 'center', scale, flip: vary && (i % 2 === 0) });
   ctx.restore();
   ctx.save(); ctx.translate(Math.round(x1), Math.round(y1)); ctx.rotate(ang); drawSpellSprite(ctx, name + '_head', frame, 4, 0, { anchor: 'center', scale }); ctx.restore();
   ctx.save(); ctx.translate(Math.round(x0), Math.round(y0)); ctx.rotate(ang); drawSpellSprite(ctx, name + '_root', frame, 2, 0, { anchor: 'center' }); ctx.restore();

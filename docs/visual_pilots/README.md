@@ -142,3 +142,16 @@ Der Strahl-Baukasten (`drawSheetBeam`) ist jetzt allgemein: Feuer und Eis nutzen
 
 - `v10_wasser_eis_sheets.png` — alle Sheets
 - `v10_wasser_eis_ingame.png` — Gletscherstrahl, Frostnova (zwei Momente) und Blizzard im Spiel
+
+## v11 — Blitz (25.10.2026)
+
+`art/authoring/vfx_lightning.cjs`:
+- `bolt` (kachelbar, formt sich jeden Frame neu): weißer Kern, gelbe Hülle, violetter Rand, Gabelungen, Zwillingsstrang, Funken. Jede Kachel zeigt einen anderen Frame, damit nichts sichtbar wiederholt wird.
+- `bolt_root`: Ladungskugel an der Hand.
+- `bolt_head`: Knoten aus kurzen Bögen.
+- `bolt_hit`: Blitzstern, ausstrahlende Bögen, Funken, Brandfleck.
+- `shock_ring`: Entladungsring über den Boden.
+
+Genutzt von Kettenblitz (Glieder und Einschläge), Donner-Strahl, Sturmblitz (vorher eine Glow-Linie) und Aura-Entladung.
+
+- `v11_blitz_sheets.png`, `v11_blitz_ingame.png`

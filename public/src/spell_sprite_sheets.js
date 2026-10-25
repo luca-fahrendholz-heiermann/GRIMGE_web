@@ -450,5 +450,51 @@ export const SPELL_SPRITE_SHEETS = Object.freeze({
   "res": 2,
   "hd": true,
   "anchor": "center"
+ },
+ "bolt": {
+  "name": "bolt",
+  "w": 24,
+  "h": 20,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "bolt_root": {
+  "name": "bolt_root",
+  "w": 16,
+  "h": 20,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "bolt_head": {
+  "name": "bolt_head",
+  "w": 22,
+  "h": 26,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "bolt_hit": {
+  "name": "bolt_hit",
+  "w": 28,
+  "h": 28,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "shock_ring": {
+  "name": "shock_ring",
+  "w": 80,
+  "h": 36,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 4
  }
 });
