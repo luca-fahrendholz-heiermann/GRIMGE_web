@@ -820,5 +820,59 @@ export const SPELL_SPRITE_SHEETS = Object.freeze({
   "res": 2,
   "hd": true,
   "anchor": "center"
+ },
+ "sky_sun": {
+  "name": "sky_sun",
+  "w": 64,
+  "h": 64,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "sky_moon": {
+  "name": "sky_moon",
+  "w": 56,
+  "h": 56,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "sky_bloodmoon": {
+  "name": "sky_bloodmoon",
+  "w": 56,
+  "h": 56,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "sky_eclipse": {
+  "name": "sky_eclipse",
+  "w": 64,
+  "h": 64,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "sky_cloud": {
+  "name": "sky_cloud",
+  "w": 80,
+  "h": 56,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "sky_stars": {
+  "name": "sky_stars",
+  "w": 80,
+  "h": 48,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
  }
 });

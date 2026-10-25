@@ -10,6 +10,10 @@ import { combat } from './combat.js';
 import { environment } from './environment.js';
 import { groundYForDepth } from './world.js';
 import { spellRunes } from './spell_catalog.js';
+import { drawSpellSprite, spellSheetReady } from './spell_visuals.js';
+import { SPELL_SPRITE_SHEETS } from './spell_sprite_sheets.js';
+// Hand-drawn sky spheres (art/authoring/vfx_sky.cjs), drawn for a radius of 34; aurora stays procedural.
+const SKY_SHEETS = Object.freeze({ sun: 'sky_sun', moon: 'sky_moon', bloodmoon: 'sky_bloodmoon', eclipse: 'sky_eclipse', cloud: 'sky_cloud', stars: 'sky_stars' });
 
 const DEFAULT_SHADOW = Object.freeze({ scale: 1, alpha: 1, color: '0,0,0', stretch: 1 });
 
@@ -310,6 +314,8 @@ function glow(ctx, cx, cy, r, color, alpha) {
 }
 
 function drawSkyBody(ctx, body, cx, cy, r, t, viewW, px) {
+  const sheet = SKY_SHEETS[body];
+  if (sheet && spellSheetReady(sheet)) { const frames = SPELL_SPRITE_SHEETS[sheet]?.frames ?? 1; drawSpellSprite(ctx, sheet, Math.floor(t * 8) % frames, cx, cy, { anchor: 'center', scale: r / 34 }); return; }
   switch (body) {
     case 'sun': {
       glow(ctx, cx, cy, r * 3.2, '#ffca28', .55);
