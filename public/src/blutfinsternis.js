@@ -14,6 +14,7 @@ import { combat } from './combat.js';
 import { environment } from './environment.js';
 import { groundYForDepth } from './world.js';
 import { WEAPONS } from './weapons.js';
+import { drawSpellSprite, spellSheetReady } from './spell_visuals.js';
 
 export const ECLIPSE = Object.freeze({ dur: 15, shotHp: 2, salvoHp: 6, shotDmg: 10, maxMult: 2.5 });
 const BLOODMAT = { kind: 'crystal', dark: '#2a0006', body: '#b71c1c', facet: '#e53935', vein: '#7f0000', edge: '#ff8a80', spark: '#ff5252', core: '#ffebee', glow: 'rgba(183,28,28,', edgeGlow: 'rgba(255,138,128,' };
@@ -80,6 +81,15 @@ defineSignature('S94', {
       }
       // The blood weapon in hand (form of the held weapon).
       const form = formOf(p); const hx = p.x + f * 16; const hy = ry - 48;
+      // Hand-drawn blood weapons fused to the forearm by blood strands (art/authoring/vfx_bloodarms.cjs; user,
+      // 25 Oct 2026: like the blood rifle reference). Bare hands summon a blood rifle (its burst = the double shot).
+      const sheet = { pistols: 'blood_rifle', bow: 'blood_bow', blade: 'blood_blade' }[form];
+      if (spellSheetReady(sheet)) {
+        const frame = st.flash > 0 ? (st.flash > .05 ? 2 : 3) : Math.floor(st.t * 4) % 2;
+        const gx = { blood_rifle: 30, blood_bow: 16, blood_blade: 22 }[sheet]; const gy = { blood_rifle: 22, blood_bow: 36, blood_blade: 24 }[sheet]; const w = { blood_rifle: 92, blood_bow: 48, blood_blade: 80 }[sheet]; const h = { blood_rifle: 40, blood_bow: 72, blood_blade: 40 }[sheet];
+        ctx.save(); ctx.globalAlpha = fade; drawSpellSprite(ctx, sheet, frame, hx + f * (w / 2 - gx), hy + (h / 2 - gy), { anchor: 'center', flip: f < 0 }); ctx.restore();
+        return;
+      }
       ctx.save(); ctx.globalAlpha = fade;
       if (form === 'pistols') { for (const oy of [0, 8]) { px(ctx, hx, hy + oy, f * 14, 5, '#7f0000'); px(ctx, hx, hy + oy + 4, f * 4, 7, '#7f0000'); px(ctx, hx + f * 2, hy + oy + 1, f * 10, 2, '#e53935'); } }
       else if (form === 'bow') { ctx.strokeStyle = '#e53935'; ctx.lineWidth = 3; ctx.beginPath(); if (f > 0) ctx.arc(hx - 4, hy, 18, -1.2, 1.2); else ctx.arc(hx + 4, hy, 18, Math.PI - 1.2, Math.PI + 1.2); ctx.stroke(); }

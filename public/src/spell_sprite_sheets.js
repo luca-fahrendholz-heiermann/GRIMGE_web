@@ -946,5 +946,38 @@ export const SPELL_SPRITE_SHEETS = Object.freeze({
   "res": 2,
   "hd": true,
   "anchor": "center"
+ },
+ "blood_rifle": {
+  "name": "blood_rifle",
+  "w": 46,
+  "h": 20,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center",
+  "gx": 30,
+  "gy": 22
+ },
+ "blood_bow": {
+  "name": "blood_bow",
+  "w": 24,
+  "h": 36,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center",
+  "gx": 16,
+  "gy": 36
+ },
+ "blood_blade": {
+  "name": "blood_blade",
+  "w": 40,
+  "h": 20,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center",
+  "gx": 22,
+  "gy": 24
  }
 });
