@@ -24,7 +24,9 @@ const fade = (k, inT = .1, outT = .3) => Math.max(0, Math.min(1, k / inT, (1 - k
 const ahead = (len, w = 28) => (s) => (t, dx, dz) => dx * s.facing > -8 && dx * s.facing < len && Math.abs(dz) < w;
 const around = (r) => () => (t, dx, dz) => Math.hypot(dx, dz) < r;
 const outward = (kx) => (t, dx) => Math.sign(dx || 1) * kx;
-const seq = (f, p, o) => new SigSequence({ mat: f.mat, seed: hashStr(f.id) }, p, o);
+// While a technique runs it holds its own weapons: the idle fore-arm rifle hides (a timestamp, so a cleared
+// technique can never leave it hidden).
+const seq = (f, p, o) => new SigSequence({ mat: f.mat, seed: hashStr(f.id) }, p, { ...o, tick: (s, dt, gw) => { s.caster._arsenalBusyUntil = performance.now() + 120; o.tick?.(s, dt, gw); } });
 const bleed = () => (t) => applyStatus(t, 'bleed');
 const px = (ctx, x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(Math.round(x), Math.round(y), w, h); };
 // A weapon sheet held with its grip at (x, y), facing f (sheets face right; grip offsets in sheet px).
@@ -118,7 +120,7 @@ registerFormRenderer('A09', (ctx, s, pose, mat, form, layer) => {
   // Glowing eyes and a grin.
   const [hx, hy] = s.head; px(ctx, hx + f * 2, hy - 2, 2, 1, '#ff2a2a'); px(ctx, hx + f * 5, hy - 2, 2, 1, '#ff2a2a'); px(ctx, hx + f * 1, hy + 3, 6 * f, 1, '#ffe0da');
   // The rifle fused to the forearm (hidden while a technique holds its own weapon).
-  if (!pose.player._arsenalBusy) weapon(ctx, 'blood_rifle', Math.floor(t * 4) % 2, s.handF[0], s.handF[1], f, 0, a);
+  if (!((pose.player._arsenalBusyUntil ?? 0) > performance.now())) weapon(ctx, 'blood_rifle', Math.floor(t * 4) % 2, s.handF[0], s.handF[1], f, 0, a);
 });
 
 // Passive: landed melee hits make foes bleed (50 %).
