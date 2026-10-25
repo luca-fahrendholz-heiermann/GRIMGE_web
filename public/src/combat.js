@@ -208,8 +208,7 @@ export class CombatEngine {
     for (let i = this.particles.length - 1; i >= 0; i--) {
       const p = this.particles[i];
       if (p.type === 'mat') stepMaterialParticle(p, dt);
-      p.x += p.vx * dt;
-      p.y += p.vy * dt;
+      if (p.type !== 'shockwave') { p.x += p.vx * dt; p.y += p.vy * dt; }
       if (p.gravity) p.vy += p.gravity * dt;
       p.life -= dt;
 
@@ -263,14 +262,14 @@ export class CombatEngine {
       ctx.globalAlpha = stepAlpha(p.alpha); // pixel style: hard alpha steps, no soft fades
 
       if (p.type === 'shockwave') {
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-        ctx.strokeStyle = p.color;
-        ctx.lineWidth = 3;
-        ctx.stroke();
+        // Generic rings are not drawn (they never were: their position used to turn NaN). Impacts carry their
+        // own hand-drawn material sheets; the spawn calls stay harmless timers.
       } else if (p.type === 'spark') {
-        ctx.fillStyle = p.color;
-        ctx.fillRect(p.x - p.size * 0.5, p.y - p.size * 0.5, p.size, p.size);
+        // A streak along its flight: white-hot head, coloured tail that shortens as it slows.
+        ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+        const sp = Math.hypot(p.vx, p.vy) || 1; const len = Math.max(2, Math.min(7, Math.round(sp / 45))); const ux = p.vx / sp; const uy = p.vy / sp;
+        ctx.fillStyle = p.color; for (let k = 1; k <= len; k++) ctx.fillRect(Math.round(p.x - ux * k), Math.round(p.y - uy * k), 2, 2);
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(Math.round(p.x), Math.round(p.y), 2, 2);
       } else if (p.type === 'mat') {
         drawMaterialParticle(ctx, p);
       } else if (p.type === 'elemental') {
