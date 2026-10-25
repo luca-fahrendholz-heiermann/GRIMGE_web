@@ -39,3 +39,28 @@ Rückmeldung: Eiszacken passen, der Tidenbohrer soll natürlicher wirken, besond
 - Schaden, Rhythmus und Hitbox sind unverändert (Tests).
 
 - `v3_tidenbohrer_ablauf.png` — sechs Momente: links von oben Ring, Ring, Strahl wächst aus dem Ring; rechts Strahl voll mit aufbrechendem Kopf, Strahl reißt ab und tropft, Ring
+
+## v4 — Elemente in Material-Qualität (25.10.2026)
+
+Nach der Freigabe des Tidenbohrers v3 als Detail-Referenz werden alle Elemente und Angriffe umgestellt.
+
+- **Feine Zeichenebene:**
+  - Material-Effekte und die verfeinerten Sprites (Eiszacken, Meteor) zeichnen jetzt in Charakter-Pixeldichte.
+  - Vorher lief alles über eine grobe 2,5-px-Ebene.
+- **Material-Partikel** (`v4_material_partikel.png`) — alle Element-Partikel verhalten sich wie ihr Material:
+  - Feuer-Zungen steigen auf und werden zu Rauch;
+  - Tropfen fallen und spritzen;
+  - Eis glitzert, Blitzbögen zucken, Wind zieht Schlieren;
+  - Steine springen, Blätter taumeln, Void kreist ein, Licht funkelt, Schatten kräuselt sich.
+- **Feuerball** (`v4_feuerball.png`): eine brodelnde Feuerkugel mit nachwehenden Zungen und Glutspur; beim Einschlag eine echte Explosion.
+- **Strahlen** (`v4_strahlen.png`) sammeln sich an der Hand und wachsen aus ihr heraus:
+  - Inferno: spitze, unregelmäßige Flammenzungen;
+  - Gletscher: facettierte Kristallprismen mit Eisnadeln;
+  - Donner: zuckender Zackenblitz mit Gabelungen;
+  - Null: dunkle, einströmende Röhre;
+  - Licht: gleißender Schaft mit flackernden Goldstrahlen.
+- **Windstoß, Kettenblitz, Steinstacheln, Frostnova** (`v4_wind_blitz_erde_frost.png`):
+  - eine Luftsichel mit Wirbeln;
+  - Zackenblitze von Ziel zu Ziel;
+  - Felsspitzen, die aus dem Boden brechen und zerbröckeln;
+  - Reif, der über den Boden kriecht, mit zerspringenden Kristallen.
