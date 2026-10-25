@@ -321,5 +321,24 @@ export const SPELL_SPRITE_SHEETS = Object.freeze({
   "frames": 6,
   "res": 2,
   "anchor": "center"
+ },
+ "wind_whirl": {
+  "name": "wind_whirl",
+  "w": 56,
+  "h": 75,
+  "frames": 12,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 2
+ },
+ "wind_gust": {
+  "name": "wind_gust",
+  "w": 64,
+  "h": 36,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
  }
 });

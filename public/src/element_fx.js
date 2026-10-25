@@ -7,6 +7,7 @@
 //   death — it burns out / tears off / shatters / blinks out (callers pass k = 0 … 1 strength)
 // Everything is opaque and drawn in 1-world-px steps (the res-2 sprite density), with seeded irregularity —
 // no soft gradients, no additive glow.
+import { drawSpellSprite, spellSheetReady } from './spell_visuals.js';
 const R = Math.round;
 const box = (ctx, x, y, w, h, c) => { if (w <= 0 || h <= 0) return; ctx.fillStyle = c; ctx.fillRect(R(x), R(y), R(w), R(h)); };
 export const hash01 = (n) => { const v = Math.sin(n * 127.1 + 311.7) * 43758.5453; return v - Math.floor(v); };
@@ -281,6 +282,8 @@ export function drawFunnel(ctx, x, yGround, h, wTop, t, look = 'wind', seed = 1,
   //          dust cloud rolls out at the foot
   //   pollen no solid body: leaves and petals ride the band orbits, a thin green veil of wind behind them
   const pal = FUNNEL_LOOKS[look] ?? WIND; const H = h * k; if (H < 2) return;
+  // Wind: the hand-drawn whirlwind sheet (art/authoring/vfx_wind.cjs, 12-frame loop), scaled to the height.
+  if (look === 'wind' && spellSheetReady('wind_whirl')) { drawSpellSprite(ctx, 'wind_whirl', Math.floor(t * 14) % 12, x, yGround, { scale: H / 146 }); return; }
   const N = Math.max(4, Math.min(9, R(H / 14)));
   const bands = [];
   for (let i = 0; i < N; i++) {

@@ -93,3 +93,21 @@ Rückmeldung: Das Art Design ist zu simpel. Ursache: Die Effekte sind aus geomet
 - mit einem Lebenszyklus über mehrere Phasen.
 
 - `v7_wirbel_alt_neu.png` — links der alte Bänder-Trichter, Mitte und rechts der neue Wirbel (entstehend, voll)
+
+## v8 — Wind in Handzeichen-Qualität (25.10.2026)
+
+Neuer Werkzeugkasten `art/authoring/vfx_brush.cjs`:
+- Pinsel-Striche, die anschwellen und spitz zulaufen, quer schattiert, mit trockenen Enden;
+- Sicheln auf Ellipsenbahnen;
+- Strich-Textur;
+- Volumen-Schattierung mit Dithering an den Tonstufen;
+- selektive Konturen;
+- organische Klumpen.
+
+Gezeichnet wird direkt in Charakter-Pixeldichte. `art/authoring/vfx_wind.cjs`:
+- `wind_whirl`: 12-Frame-Schleife. Streifiger, schattierter Kern; hintere Sicheln dunkel, vordere hell; Mund mit Lichtrand; Blätter und Steine auf den Bahnen; abgeschleuderte Fetzen; Staubschürze.
+- `wind_gust`: 8 Frames (entstehen, rollen, zerfallen). Fester Windkörper mit Strichen, rollende Sicheln am Kopf, gerissene Fetzen, mitgerissener Staub.
+
+Vorschau: `node art/authoring/preview_sheet.cjs art/authoring/vfx_wind.cjs windSheets out.png 3`
+
+- `v8_wind_handgezeichnet.png` — links der Windstoß im Spiel, rechts der Wirbel neben dem Helden

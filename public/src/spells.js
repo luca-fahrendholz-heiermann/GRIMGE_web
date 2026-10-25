@@ -12,7 +12,7 @@ import { activateBuffForm } from './buff_forms.js';
 import { castSignature, signatureProjectileSpawned, updateSignatureWorld } from './signature_runes.js';
 import { castNatureSpell, isNatureOrInfusion } from './nature_spells.js';
 import { renderWallLook } from './wall_looks.js';
-import { renderSpellVisual, meteorShatterBurst, spellVisualActive, spellSheetReady, SpriteBurst } from './spell_visuals.js';
+import { renderSpellVisual, meteorShatterBurst, spellVisualActive, spellSheetReady, SpriteBurst, drawSpellSprite } from './spell_visuals.js';
 import { drawFireBall, drawVoidOrb, drawWindGust, drawBolt, drawRockSpike, drawFrostSpread, drawFunnel } from './element_fx.js';
 import { offerRecast } from './recast.js';
 import { statusElementsOf, setStatusSource, updateStatuses, statusDepthEntries, clearStatuses } from './status_effects.js';
@@ -1073,7 +1073,13 @@ class GaleBlastSpell {
   }
 
   render(ctx) {
-    // A sickle of flowing air with curls and dragged dust (element_fx.js); it frays out over its last 0.25 s.
+    // Hand-drawn gust sheet (art/authoring/vfx_wind.cjs): forming (frames 0-1) → rolling (2-5 loop) →
+    // dispersing over the last 0.2 s (6-7); the procedural gust is the fallback.
+    if (spellSheetReady('wind_gust')) {
+      const frame = this.life < .2 ? 6 + Math.min(1, Math.floor((1 - this.life / .2) * 2)) : this.age < .1 ? Math.floor(this.age / .05) : 2 + Math.floor(this.age * 16) % 4;
+      drawSpellSprite(ctx, 'wind_gust', frame, this.x - this.facing * 30, this.y, { anchor: 'center', flip: this.facing < 0 });
+      return;
+    }
     drawWindGust(ctx, this.x, this.y, this.facing, this.age, this.seed, 1, Math.min(1, this.life / .25));
   }
 }
