@@ -166,41 +166,112 @@ export function meteorShatterBurst(m) {
 
 // ── Pilot C: TIDENBOHRER (sig_S39 stance) ─────────────────────────────────
 // Reads the stance state only: st.t (since start), st.timer (left), st.spin,
-// st.jets [{ angle, t }]. Rotor back half behind the Wizard, front half and
-// nozzles / jets in front. Jets are layered opaque bands (dark mantle →
-// saturated body → white axis) with a foam crown and dissolving droplets.
-const TIDE = { mantle: '#0B3D73', body: '#1F7FD1', mid: '#2FB4EA', foam: '#D6F6FF', core: '#FFFFFF' };
+// st.jets [{ angle, t }]. Rotor back half behind the Wizard, front half in front; nozzles and jets
+// on the side of the ring they belong to (a jet from the back half starts behind the Wizard).
+// v2 (user, 25 Oct 2026: natural water, a real transition from the ring into the jets): a jet swells out
+// of the ring at its nozzle and leaves along the ring's flow before it straightens; it runs with wavy edges
+// and flow streaks that travel outward, fans into spray at its head, and when it ends it tears off at
+// the root and breaks into irregular falling drops. Drawn in 1-world-px steps (the res-2 sprite density).
+const TIDE = { out: '#082a4d', mantle: '#0B3D73', body: '#1F7FD1', mid: '#2FB4EA', light: '#7FDCFF', foam: '#D6F6FF', core: '#FFFFFF' };
 const TIDE_RING = { rx: 40, ry: 18 }; // world px (rotor sprite RX 20 / RY 9 at scale 2)
+const TIDE_JET = Object.freeze({ grow: .08, hold: .14, end: .22 }); // seconds (signature_abilities_d.js drops jets at .22)
+const hash01 = (n) => { const v = Math.sin(n * 127.1 + 311.7) * 43758.5453; return v - Math.floor(v); };
 function tideJetGeometry(p, cy, angle, t) {
-  const dx = Math.cos(angle); const dz = Math.sin(angle) * .35; const len = 210 * Math.min(1, t / .08);
+  const dx = Math.cos(angle); const dz = Math.sin(angle) * .35; const len = 210 * Math.min(1, t / TIDE_JET.grow);
   return { x0: p.x + dx * TIDE_RING.rx, y0: cy + Math.sin(angle) * TIDE_RING.ry, x1: p.x + dx * len, y1: cy + dz * len * .32 * 150 / 100, dx, len };
+}
+const tpx = (ctx, x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(Math.round(x), Math.round(y), w, h); };
+// The jet's centre line: it leaves the ring along the spin (the water still moves with the ring), then
+// straightens into the shot direction within ~26 px. Returns points 1 px apart with their arc length.
+function tideJetPath(g, angle) {
+  const ex = g.x1 - g.x0; const ey = g.y1 - g.y0; const L = Math.hypot(ex, ey);
+  if (L < 2) return [];
+  const Dx = ex / L; const Dy = ey / L;
+  let Tx = -Math.sin(angle) * TIDE_RING.rx; let Ty = Math.cos(angle) * TIDE_RING.ry; const tl = Math.hypot(Tx, Ty) || 1; Tx /= tl; Ty /= tl;
+  const pts = []; let x = g.x0; let y = g.y0;
+  for (let s = 0; s <= L; s++) {
+    pts.push({ x, y, s });
+    const k = .85 * Math.max(0, 1 - s / 26) ** 2; let vx = Dx + Tx * k; let vy = Dy + Ty * k; const vl = Math.hypot(vx, vy) || 1; vx /= vl; vy /= vl;
+    x += vx; y += vy;
+  }
+  return pts;
+}
+function drawTideJet(ctx, g, j) {
+  const pts = tideJetPath(g, j.angle); if (!pts.length) return;
+  const seed = Math.round(j.angle * 1000); const L = pts[pts.length - 1].s;
+  const tearing = j.t > TIDE_JET.hold; const tk = tearing ? Math.min(1, (j.t - TIDE_JET.hold) / (TIDE_JET.end - TIDE_JET.hold)) : 0;
+  const s0 = tk * L * .85; // torn off up to here
+  // Width: a swell at the root (the bulge out of the ring), a slim pressure stream, widening into spray.
+  const width = (s) => { const root = 8 - 3 * Math.min(1, s / 12); const head = s > L * .7 ? 1.5 * (s - L * .7) / (L * .3) : 0; const wob = Math.sin(s / 6.5 - j.t * 55) * .9; return Math.max(2, Math.round(root + head + wob - tk * 2)); };
+  // Layered vertical spans per column (the jets run nearly level): dark rim, body, lit top, foam rim.
+  // The last stretch breaks up: toward the head more and more single columns drop out and the rest scatter
+  // up and down — the stream tears into ragged pieces and spray instead of ending in a cut.
+  const brk = L * .82;
+  const cols = [];
+  for (const q of pts) {
+    if (q.s < s0) continue;
+    if (q.s <= brk) { cols.push(q); continue; }
+    const fr = (q.s - brk) / (L - brk); const piece = Math.floor(q.s / 3);
+    if (hash01(piece + seed) < fr * .85) continue;
+    cols.push({ x: q.x, y: q.y + (hash01(piece * 7 + seed) - .5) * 7 * fr, s: q.s });
+  }
+  for (const pass of [0, 1, 2, 3]) for (const q of cols) {
+    const w = width(q.s); const top = Math.round(q.y - w / 2); const x = Math.round(q.x);
+    if (pass === 0) tpx(ctx, x, top - 1, 1, w + 2, TIDE.out);
+    else if (pass === 1) tpx(ctx, x, top, 1, w, TIDE.body);
+    else if (pass === 2) { tpx(ctx, x, top, 1, Math.max(1, Math.round(w * .45)), TIDE.mid); tpx(ctx, x, top + w - 1, 1, 1, TIDE.mantle); }
+    else {
+      tpx(ctx, x, top, 1, 1, TIDE.light);
+      // Flow streaks travelling outward (foam dashes with a white heart), irregular spacing.
+      const f = (q.s - j.t * 620) / 15; const ph = f - Math.floor(f); const len = .3 + hash01(Math.floor(f) + seed) * .25;
+      if (ph < len && w >= 4) tpx(ctx, x, top + 1, 1, 1, ph < len * .5 ? TIDE.core : TIDE.foam);
+    }
+  }
+  // Root: while attached, the ring swells into the jet (a bulge of the ring's own water).
+  if (!tearing) {
+    const r = pts[Math.min(4, pts.length - 1)];
+    for (let yy = -4; yy <= 4; yy++) { const hw = Math.round(Math.sqrt(Math.max(0, 1 - (yy / 4.4) ** 2)) * 5); if (!hw) continue; tpx(ctx, g.x0 - hw, g.y0 + yy, hw * 2, 1, yy < -2 ? TIDE.light : yy < 1 ? TIDE.mid : TIDE.body); }
+    tpx(ctx, g.x0 - 3, g.y0 - 4, 4, 1, TIDE.foam); tpx(ctx, Math.round((g.x0 + r.x) / 2), Math.round((g.y0 + r.y) / 2) - 2, 2, 1, TIDE.core);
+  }
+  // Head: the stream fans into spray (clusters thrown ahead in a cone) — never a solid ball.
+  const end = pts[pts.length - 1]; const Dx = (end.x - pts[Math.max(0, pts.length - 8)].x) / 7 || 1; const Dy = (end.y - pts[Math.max(0, pts.length - 8)].y) / 7;
+  const base = Math.atan2(Dy, Dx); const life = Math.min(1, j.t / TIDE_JET.end);
+  for (let i = 0; i < 11; i++) {
+    const a = base + (hash01(seed + i * 7) - .5) * 1.3; const d = 3 + hash01(seed + i * 13) * 12 + life * 26 * (.5 + hash01(seed + i));
+    const x = end.x + Math.cos(a) * d; const y = end.y + Math.sin(a) * d * .7 + life * life * 30 * hash01(seed + i * 3);
+    const sz = d < 10 ? 3 : d < 20 ? 2 : 1; const c = i % 3 === 0 ? TIDE.foam : i % 3 === 1 ? TIDE.light : TIDE.mid;
+    tpx(ctx, x - 1, y - 1, sz + 1, sz + 1, TIDE.out); tpx(ctx, x, y, sz, sz, c); if (sz === 3) tpx(ctx, x, y, 1, 1, TIDE.core);
+  }
+  // Torn off: the detached part of the stream breaks into drops of irregular size and spacing that fall.
+  if (tearing && secondary() && VISUAL_FLAGS.lod !== 'low') {
+    const fall = (j.t - TIDE_JET.hold); let s = 4 + hash01(seed) * 6; let i = 0;
+    while (s < s0 && i < 18) {
+      const q = pts[Math.min(pts.length - 1, Math.round(s))]; const r1 = hash01(seed + i * 17); const sz = r1 < .3 ? 1 : r1 < .8 ? 2 : 3;
+      const x = q.x + (hash01(seed + i * 5) - .5) * 4; const y = q.y + (r1 - .5) * 4 + fall * fall * (500 + 600 * r1) + fall * 40;
+      tpx(ctx, x - 1, y - 1, sz + 1, sz + 1 + (sz > 1 ? 1 : 0), TIDE.out); tpx(ctx, x, y, sz, sz + (sz > 1 ? 1 : 0), sz > 1 ? TIDE.mid : TIDE.light); if (sz > 1) tpx(ctx, x, y, 1, 1, TIDE.foam);
+      s += 7 + hash01(seed + i * 23) * 14; i++;
+    }
+  }
 }
 registerSpellVisual('tide_drill', (ctx, v) => {
   const { p, st, ry, layer } = v;
   if (!spellSheetReady('tide_rotor_back')) return false;
   const cy = ry - 44; const period = Math.PI * 2 / 3;
   const frame = Math.floor(((((st.spin % period) + period) % period) / period) * 8);
+  const nozzleFrame = Math.floor(st.t * 16) % 4;
   const opening = st.t < .3; const closing = st.timer < .3;
-  if (layer === 'back') {
-    if (opening) drawSpellSprite(ctx, 'tide_gather', st.t / .3 * 6, p.x, cy, { anchor: 'center' });
-    else if (!closing) drawSpellSprite(ctx, 'tide_rotor_back', frame, p.x, cy, { anchor: 'center' });
-    for (let k = 0; k < 4 && !opening && !closing; k++) { const a = st.spin + k * Math.PI / 2; if (Math.sin(a) < 0) drawSpellSprite(ctx, 'tide_nozzle', k, p.x + Math.cos(a) * TIDE_RING.rx, cy + Math.sin(a) * TIDE_RING.ry, { anchor: 'center' }); }
-    return true;
+  const back = layer === 'back'; const onSide = (a) => (Math.sin(a) < 0) === back;
+  if (back) {
+    if (opening) { drawSpellSprite(ctx, 'tide_gather', st.t / .3 * 6, p.x, cy, { anchor: 'center' }); return true; }
+    if (closing) return true;
+    drawSpellSprite(ctx, 'tide_rotor_back', frame, p.x, cy, { anchor: 'center' });
+  } else {
+    if (closing) { drawSpellSprite(ctx, 'tide_burst', (1 - st.timer / .3) * 6, p.x, cy, { anchor: 'center' }); return true; }
+    if (opening) return true;
+    drawSpellSprite(ctx, 'tide_rotor_front', frame, p.x, cy, { anchor: 'center' });
   }
-  if (closing) { drawSpellSprite(ctx, 'tide_burst', (1 - st.timer / .3) * 6, p.x, cy, { anchor: 'center' }); return true; }
-  if (opening) return true;
-  drawSpellSprite(ctx, 'tide_rotor_front', frame, p.x, cy, { anchor: 'center' });
-  for (let k = 0; k < 4; k++) { const a = st.spin + k * Math.PI / 2; if (Math.sin(a) >= 0) drawSpellSprite(ctx, 'tide_nozzle', k, p.x + Math.cos(a) * TIDE_RING.rx, cy + Math.sin(a) * TIDE_RING.ry, { anchor: 'center' }); }
-  // Pressure jets.
-  for (const j of st.jets) {
-    const g = tideJetGeometry(p, cy, j.angle, j.t); const fade = j.t > .14 ? Math.max(0, 1 - (j.t - .14) / .08) : 1;
-    ctx.save(); ctx.lineCap = 'butt'; ctx.globalAlpha = fade;
-    for (const [w, c] of [[10, TIDE.mantle], [7, TIDE.body], [4, TIDE.mid], [2, TIDE.core]]) { ctx.strokeStyle = c; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(Math.round(g.x0), Math.round(g.y0)); ctx.lineTo(Math.round(g.x1), Math.round(g.y1)); ctx.stroke(); }
-    ctx.restore();
-    drawSpellSprite(ctx, 'tide_jet_head', Math.floor(j.t * 30) % 4, g.x1, g.y1, { anchor: 'center', alpha: fade });
-    // Delayed dissolve: droplets fall off the jet.
-    if (secondary() && j.t > .1 && VISUAL_FLAGS.lod !== 'low') for (let i = 1; i <= 4; i++) { const u = i / 5; const fall = (j.t - .1) * 260; drawSpellSprite(ctx, 'tide_droplet', i % 2, g.x0 + (g.x1 - g.x0) * u, g.y0 + (g.y1 - g.y0) * u + fall * (.4 + u * .3), { anchor: 'center' }); }
-  }
+  for (let k = 0; k < 4; k++) { const a = st.spin + k * Math.PI / 2; if (onSide(a)) drawSpellSprite(ctx, 'tide_nozzle', nozzleFrame, p.x + Math.cos(a) * TIDE_RING.rx, cy + Math.sin(a) * TIDE_RING.ry, { anchor: 'center' }); }
+  for (const j of st.jets) if (onSide(j.angle)) drawTideJet(ctx, tideJetGeometry(p, cy, j.angle, j.t), j);
   return true;
 });
 export function tideHitBurst(target) {

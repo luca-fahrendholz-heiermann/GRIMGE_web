@@ -292,16 +292,8 @@ export const SPELL_SPRITE_SHEETS = Object.freeze({
  },
  "tide_nozzle": {
   "name": "tide_nozzle",
-  "w": 8,
-  "h": 8,
-  "frames": 4,
-  "res": 2,
-  "anchor": "center"
- },
- "tide_jet_head": {
-  "name": "tide_jet_head",
-  "w": 14,
-  "h": 14,
+  "w": 7,
+  "h": 6,
   "frames": 4,
   "res": 2,
   "anchor": "center"
@@ -311,14 +303,6 @@ export const SPELL_SPRITE_SHEETS = Object.freeze({
   "w": 18,
   "h": 18,
   "frames": 4,
-  "res": 2,
-  "anchor": "center"
- },
- "tide_droplet": {
-  "name": "tide_droplet",
-  "w": 4,
-  "h": 5,
-  "frames": 2,
   "res": 2,
   "anchor": "center"
  },

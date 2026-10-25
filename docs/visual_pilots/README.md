@@ -20,3 +20,22 @@ Neu (`art/authoring/refine_hires.cjs`): doppelte Pixeldichte (Scale2x, keine Wei
 - `v2_eiszacken_tidenbohrer_ingame.png` — im Spiel neben dem Charakter
 - `v2_meteor_ingame.png` — Meteor-Einschlag
 - `v2_eiszacken_sheet_alt_neu.png` — Eiszacken-Sheet oben alt, unten neu
+
+## v3 — Tidenbohrer natürlicher (25.10.2026)
+
+Rückmeldung: Eiszacken passen, der Tidenbohrer soll natürlicher wirken, besonders im Übergang vom Ring in die Wasserstrahlen.
+
+- **Ring:**
+  - ein fließender Wasserschlauch: helle Schaumkante oben, sattes Blau, dunkle Unterseite;
+  - drei wandernde Wellenkämme, Schaumschlieren in Flussrichtung, feine Gischt hinter den Kämmen;
+  - vorher drei klingenartige Sicheln mit Flecken.
+- **Düsen:** kleine Wasserwirbel im Band, keine Stein-Knubbel.
+- **Strahlen** werden jetzt zur Laufzeit gezeichnet:
+  - Sie quellen aus einer Schwellung des Rings und verlassen ihn zuerst in Drehrichtung, bevor sie gerade werden. Das ist der Übergang.
+  - Welliger Rand und nach außen wandernde Strömungsstreifen.
+  - Das letzte Stück bricht in versetzte Brocken und einen Sprühfächer auf.
+  - Am Ende reißen sie an der Wurzel ab und zerfallen in unregelmäßige, fallende Tropfen.
+  - Ein Strahl von der hinteren Ringhälfte beginnt hinter dem Wizard.
+- Schaden, Rhythmus und Hitbox sind unverändert (Tests).
+
+- `v3_tidenbohrer_ablauf.png` — sechs Momente: links von oben Ring, Ring, Strahl wächst aus dem Ring; rechts Strahl voll mit aufbrechendem Kopf, Strahl reißt ab und tropft, Ring

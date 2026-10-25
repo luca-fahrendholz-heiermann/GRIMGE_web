@@ -195,3 +195,13 @@ Figurenhöhe H ≈ 88 Welt-px. Sprites werden in Welt-Pixeln authored (1 Sprite-
 - **Meteor-Explosion v2:** Das verrauschte Mottling (Wert-Rauschen) widersprach „Form zuerst“. Jetzt klare Formen mit Licht-Hierarchie: 0–1 weiß-gelber Blitz mit scharfen Strahlen; 2–4 klumpiger Feuerball (dunkelroter Rand → Orange → Gelb → weißer Kern) mit aufsteigenden Flammenzungen; 5–7 feste Rauchwolken (helle Oberkante, dunkle Unterseite) mit verglühender Glut; 8–9 Asche-Ringe. Gleiche Sheet-Größe und Framezahl, Timing unverändert.
 - **Vorher/Nachher-Vergleich** aller drei Piloten aufgenommen (`?vfx=legacy` gegen neu, gleiche Kamera und Momente): Eiszacken und Tidenbohrer erfüllen die Prüffragen „Hauptkörper ohne Glow lesbar“ und „Kontrast“; der Meteor-Fall ist sehr kurz (Einschlag nach < 0,3 s), seine Lesbarkeit hängt am Telegraph.
 - Weiterhin **TESTASSETS, finales Artwork fehlt.** Nächster Schritt bleibt die Freigabe der Referenzqualität durch den Projektinhaber.
+
+### Tidenbohrer v3 (25.10.2026)
+- Rückmeldung des Projektinhabers: Eiszacken passen jetzt, der Tidenbohrer soll natürlicher wirken, auch im Übergang vom Ring zu den Strahlen.
+- **Ring:** ein Wasserschlauch mit wandernden Wellenkämmen, Schaumschlieren und Gischt statt Sicheln.
+- **Düsen:** Wirbel statt Knubbel.
+- **Strahlen:** prozedural in 1-Weltpixel-Schritten (Res-2-Dichte), `drawTideJet` in spell_visuals.js:
+  - Wurzel-Schwellung, Austritt in Drehrichtung, welliger Rand, Strömungsstreifen;
+  - aufbrechender Kopf mit Sprühfächer, Abriss an der Wurzel mit fallenden Tropfen;
+  - Ebene nach Ringhälfte.
+- Die Sheets `tide_jet_head` und `tide_droplet` entfallen. Gameplay unverändert.
