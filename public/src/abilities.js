@@ -13,7 +13,7 @@ import { groundDistance, groundYForDepth } from './world.js';
 import { environment } from './environment.js';
 import { plate as materialPlate } from './buff_vfx.js';
 import { drawStream, drawGather, materialForVfx } from './element_fx.js';
-import { drawSheetBeam, SpriteBurst, spellSheetReady, drawSpellSprite } from './spell_visuals.js';
+import { drawSheetBeam, SpriteBurst, spellSheetReady, drawSpellSprite, drawBreathCone } from './spell_visuals.js';
 // A hand-drawn one-shot burst into the spell system (visual only; outlives the spell that spawned it).
 const sheetBurst = (spell, opts) => { if (!spellSheetReady(opts.sheet)) return false; spell.system?.activeSpells.push(Object.assign(new SpriteBurst(opts), { fineVfx: true })); return true; };
 
@@ -1018,7 +1018,10 @@ export class ConeBreathSpell {
     if (this.life <= 0 && !this.blobs.length) this.isFinished = true;
   }
 
+  get fineVfx() { return spellSheetReady('fire_jet'); }
   render(ctx) {
+    // Hand-drawn fire cone (art/authoring/vfx_fire.cjs sheets); it dies down over the last 0.3 s.
+    if (drawBreathCone(ctx, this.originX, this.y, this.facing, this.reach, performance.now() / 1000, Math.max(0, Math.min(1, this.life / .3)))) return;
     ctx.save();
     // Chunky flame blobs with a dark outline: yellow core -> orange -> red -> smoke.
     for (const blob of this.blobs) {

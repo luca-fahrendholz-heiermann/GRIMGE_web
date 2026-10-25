@@ -302,3 +302,20 @@ function drawJetSheets(ctx, name, x0, y0, x1, y1, t, k) {
   ctx.save(); ctx.translate(Math.round(x0), Math.round(y0)); ctx.rotate(ang); drawSpellSprite(ctx, name + '_root', frame, 2, 0, { anchor: 'center' }); ctx.restore();
   return true;
 }
+
+// ── Hand-drawn breath cone (dragon breath) ────────────────────────────────
+// Three fire_jet strips fan out from the mouth (centre + two sides), each tile growing with the distance so
+// the stream widens into a cone; churning heads at the ends. k = strength (0 … 1).
+export function drawBreathCone(ctx, x0, y0, facing, reach, t, k = 1) {
+  if (!spellSheetReady('fire_jet')) return false;
+  const frame = Math.floor(t * 15) % 6; const f = facing || 1;
+  for (const [ang, lenK, base] of [[-.16, .85, .55], [.16, .85, .55], [0, 1, .7]]) {
+    const L = reach * lenK * (.4 + .6 * k);
+    ctx.save(); ctx.translate(Math.round(x0), Math.round(y0)); ctx.scale(f, 1); ctx.rotate(ang);
+    for (let d = 0; d < L; ) { const u = d / Math.max(1, L); const sc = base + u * 1.1; drawSpellSprite(ctx, 'fire_jet', (frame + Math.round(d / 30)) % 6, d + 24 * sc, 0, { anchor: 'center', scale: sc }); d += 40 * sc; }
+    drawSpellSprite(ctx, 'fire_jet_head', frame, L + 6, 0, { anchor: 'center', scale: base + 1.1 });
+    ctx.restore();
+  }
+  ctx.save(); ctx.translate(Math.round(x0), Math.round(y0)); ctx.scale(f, 1); drawSpellSprite(ctx, 'fire_jet_root', frame, 0, 0, { anchor: 'center' }); ctx.restore();
+  return true;
+}
