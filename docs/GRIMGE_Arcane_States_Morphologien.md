@@ -17,10 +17,10 @@
 | **Creature Manifestation** | unabhängige Energiegeschöpfe | T24 Fadenregent, T40 Sonnenwyrm, A02 Mystischer Affe |
 | **Levitation State** | schwebender Spieler mit kontrollierten Projektilen | T05 Bruchflug |
 | **Environmental State** | der Spieler verändert einen größeren Bereich der Arena | T35 Kältestillstand |
-| **Körperkraft** | der eigene Körper verändert sich (dehnen, beben, Raum, Sprengung) | A05 Dehnleib, A06 Beben, A07 Raum, A08 Sprengleib |
+| **Körperkraft** | der eigene Körper verändert sich (dehnen, beben, Raum, Sprengung) | A05 Dehnleib, A06 Beben, A07 Raum, A08 Sprengleib, A09 Blutarsenal |
 | **Divine Projection** | vergrößertes Lichtbild des eigenen Körpers | A01 Göttlicher Riese |
 
-## Die 23 aktiven Arcane States (kuratiert: je eigene Techniken, Lade-Ritual und Palette)
+## Die 24 aktiven Arcane States (kuratiert: je eigene Techniken, Lade-Ritual und Palette)
 
 ### B01 Risswild · *Energy Extension* · V3.2: Tiergeist (Kyubi): neun Fuchsflammen-Schweife
 
@@ -297,6 +297,18 @@
 - **Heavies (V3.2-Abbildung):** Forward — Short: Sprengfinger; Full: Kettensprengung. · Up — Short: Sprengsäule; Full: Feuerwerk. · Down — Short: Sprengring; Full: Großer Knall.
 - **Ausschlüsse:** Keine fremde Figur — nur Rauch, Funken und Marken.
 - Palette: `#2a0e05` `#ff6d00` `#ffd180` `#ffea00` · Material: rauchende Haut mit Glutfunken.
+
+### A09 Blutarsenal — Waffenleib · *Körperkraft* · V3.2: Körperkraft: Blutarsenal
+
+- **Anker:** `sprite_alpha`, `hand_right`, `hand_left`, `root`
+- **Idle-Silhouette:** Ein Blutgewehr ist mit dem Unterarm verschmolzen, ein Raketenwerfer sitzt auf der Schulter, zwei Gewehre wachsen aus dem Rücken; Adern über dem Körper, glühende Augen und ein Grinsen.
+- **Action-Silhouette:** Waffen wachsen aus Arm, Schulter und Rücken, feuern und zerfließen wieder.
+- **Peak Manifestation:** Bei Full feuert das ganze Arsenal.
+- **Transform-In / Out:** Adern laufen über den Körper, Waffen wachsen heraus. / Die Waffen zerfließen.
+- **Defense · Grab · Jump:** Blut gerinnt zum Schild. · Das Ziel wird aus nächster Nähe beschossen. · Ein Schuss nach unten trägt hoch.
+- **Heavies (V3.2-Abbildung):** Forward — Short: Blutsalve; Full: Gatling-Sturm. · Up — Short: Raketenhub; Full: Raketenregen. · Down — Short: Dornenbett; Full: Volles Arsenal.
+- **Ausschlüsse:** Keine fremde Figur — nur der eigene Körper und Waffen aus Blut.
+- Palette: `#1a0004` `#9a0e1c` `#ff4a44` `#ffe0da` · Material: glänzendes, geronnenes Blut; schwarzrote Adern.
 
 
 ## Archiviert (aus dem Spiel genommen, im Atlas erhalten)
