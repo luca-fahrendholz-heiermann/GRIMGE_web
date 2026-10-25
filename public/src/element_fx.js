@@ -226,31 +226,83 @@ export function drawVoidOrb(ctx, x, y, r, dir, t, seed = 1) {
 }
 
 // ── wind ───────────────────────────────────────────────────────────────────
-// A gust: a sickle of air built from thin flowing streaks (dashes run along each arc), curls at the tips,
-// dust and a leaf dragged along inside. Opaque, pale — wind is shown by what it moves and by its lines.
+// User, 25 Oct 2026: thin streaks read as electricity — wind is VOLUME. References: a pixel tornado (stepped
+// bands of pale lavender-blue to white, dark slate where you look inside) and a gust strip (tapered white
+// wisps with a pale-blue rim and small torn fragments behind). Flat, few colours, hard steps.
+export const WIND = Object.freeze({ deep: '#4a5680', body: '#8e9bd0', light: '#c9d0f0', core: '#f5f7ff', inner: '#39436a' });
+export const FUNNEL_LOOKS = Object.freeze({
+  wind: WIND,
+  fire: { deep: '#8d2a0c', body: '#e64a19', light: '#ff9800', core: '#ffd54f', inner: '#4a1206' },
+  sand: { deep: '#7a5a3a', body: '#b8935f', light: '#dcc195', core: '#f3e6c8', inner: '#4e3826' },
+  pollen: { deep: '#6f8f3a', body: '#a8c66c', light: '#e3efb4', core: '#fffbe0', inner: '#3e5420' }
+});
+// One wisp: a tapered, slightly S-curved body (round head, long thin tail) moving in `dir`; the head can curl
+// up / down (curl −1 … 1). Shaded like a solid: pale core streak on top, body, a darker underside.
+export function drawWisp(ctx, x, y, len, thick, dir, t, seed = 1, curl = 0, pal = WIND) {
+  const n = Math.max(4, R(len)); const d = dir || 1;
+  for (let i = 0; i <= n; i++) {
+    const u = i / n; // 0 head … 1 tail
+    const th = Math.max(1, thick * (u < .3 ? Math.sqrt(1 - ((.3 - u) / .3) ** 2) : u < .45 ? 1 : Math.pow(1 - (u - .45) / .55, 1.1)));
+    const wave = Math.sin(u * 3.2 + t * 8 + seed) * thick * .35 * u;
+    const hook = u < .3 ? -curl * Math.pow(1 - u / .3, 2) * thick * .6 : 0;
+    const cx = x - d * i; const cy = y + wave + hook; const top = R(cy - th / 2); const h = Math.max(1, R(th));
+    box(ctx, cx, top, 1, h, pal.body);
+    if (h >= 3) { box(ctx, cx, top, 1, Math.max(1, R(h * .55)), pal.light); box(ctx, cx, top, 1, Math.max(1, R(h * .25)), pal.core); }
+    box(ctx, cx, top + h - 1, 1, 1, pal.deep);
+  }
+  // Torn fragments trailing the tail, irregularly spaced.
+  let fx = x - d * (n + 3 + hash01(seed) * 4);
+  for (let q = 0; q < 3; q++) { const l = 2 + R(hash01(seed + q * 7) * 4); box(ctx, d > 0 ? fx - l : fx, y + (hash01(seed + q * 3) - .5) * thick * 1.4, l, 1, q === 0 ? pal.light : pal.body); fx -= d * (l + 2 + hash01(seed + q) * 6); }
+}
+// A gust: wisps stacked in a forward bow (the middle leads), the outer heads curl inward like the edge of a
+// rolling wave; lengths breathe as it streams. k = 0 … 1 strength (it thins out as it dies).
 export function drawWindGust(ctx, x, y, facing, t, seed = 1, size = 1, k = 1) {
-  const c = { out: '#2f6f6a', edge: '#4db6ac', body: '#80deea', light: '#e0f7fa', core: '#ffffff' };
-  const f = facing || 1;
-  for (let i = 0; i < 7; i++) {
-    const r = (16 + i * 4.2) * size; const span = (.75 + hash01(seed + i) * .45) * (.7 + .3 * k); const back = i * 2.2 * size;
-    const n = Math.max(6, R(r * span * 2));
-    for (let j = 0; j <= n; j++) {
-      const a = -span + (j / n) * span * 2; const px = x - f * back + f * Math.cos(a) * r * .75; const py = y + Math.sin(a) * r;
-      const flow = ((j / n) * 3 - t * 9 + i * .37) % 1; const dash = (flow + 1) % 1 < .62;
-      if (!dash) continue;
-      // Inner arcs are the dense front of the gust (2 px), outer ones thin trailing wisps (1 px).
-      const tip = Math.abs(a) > span * .8; const thick = i < 4 && !tip ? 2 : 1;
-      box(ctx, px - 1, py - 1, thick + 2, thick + 2, c.out);
-      box(ctx, px, py, thick, thick, i < 2 ? c.core : tip ? c.edge : i < 4 ? c.light : c.body);
-    }
-    // Curls at both tips of the outer arcs.
-    if (i >= 4) for (const sgn of [-1, 1]) {
-      const a0 = sgn * span; const cx0 = x - f * back + f * Math.cos(a0) * r * .75; const cy0 = y + Math.sin(a0) * r;
-      for (let q = 0; q < 10; q++) { const u = q / 10; const ang = a0 + sgn * u * 4.2 + t * 6; const rr = 5 * size * (1 - u * .7); box(ctx, cx0 - f * Math.cos(ang) * rr * .6 - f * u * 4, cy0 + Math.sin(ang) * rr * .6, 1, 1, u < .5 ? c.light : c.body); }
+  // Few, chunky puffs (length ≈ 4 × thickness, like the reference strip) in a forward bow.
+  const f = facing || 1; const N = 5;
+  for (let i = 0; i < N; i++) {
+    const v = (i - (N - 1) / 2) / ((N - 1) / 2); // −1 top … 1 bottom
+    const lead = (1 - v * v) * 14 * size + Math.sin(t * 11 + i * 1.9) * 2;
+    const thick = (6 + (1 - Math.abs(v)) * 5 + hash01(seed + i * 3) * 2) * size * (.55 + .45 * k);
+    const len = thick * (3.4 + hash01(seed + i) * 1.4) * (.5 + .5 * k);
+    drawWisp(ctx, x + f * lead, y + v * 18 * size, len, thick, f, t, seed + i * 13, v * .35);
+  }
+}
+// A funnel (tornado / firestorm / sandstorm): stacked elliptical bands, wide on top and narrow at the ground,
+// snaking sideways; each band's back half is darker, its front half lit, with highlight segments racing round
+// (the spin); the top shows the dark inside. (x, yGround) = foot point, h = height, wTop = top width.
+export function drawFunnel(ctx, x, yGround, h, wTop, t, look = 'wind', seed = 1, k = 1) {
+  // Like the reference tornado: FEW thick, lumpy, tilted bands (not a coil of thin rings). Each band is a
+  // skewed ellipse slab: lit upper face with big highlight blocks racing round (the spin), body, dark under
+  // edge; bands overlap and snake sideways; the wide top shows the dark inside; the tail thins to a hook.
+  const pal = FUNNEL_LOOKS[look] ?? WIND; const H = h * k; const N = Math.max(4, Math.min(9, R(H / 14)));
+  const bands = [];
+  for (let i = 0; i < N; i++) {
+    const u = i / (N - 1); // 0 top … 1 foot
+    const step = H / (N - 1); const thick = R(step * (1.75 - u * .45) * (.9 + hash01(seed + i * 5) * .25));
+    const hookDir = hash01(seed * 7) > .5 ? 1 : -1;
+    const cx = x + Math.sin(u * 2.4 + t * 2.2 + seed) * wTop * .16 * (1 - u * .4) + (u > .7 ? ((u - .7) / .3) ** 2 * wTop * .35 * hookDir : 0);
+    const hw = Math.max(3, (wTop * .5) * Math.pow(1 - u * .9, 1.45) * (.9 + .2 * hash01(seed + i)) + Math.sin(t * 7 + i * 1.7) * 1.5);
+    const cy = yGround - H * (1 - u) + thick * .3; const tilt = (hash01(seed + i * 9) - .5) * .25;
+    bands.push({ u, cx, hw, cy, thick, tilt });
+  }
+  const top = bands[0];
+  for (let yy = -R(top.hw * .26); yy <= 0; yy++) { const w = top.hw * Math.sqrt(Math.max(0, 1 - (yy / (top.hw * .26 + .01)) ** 2)) * .85; box(ctx, top.cx - w, top.cy + yy - top.thick * .55, w * 2, 1, pal.inner); }
+  for (let bi = bands.length - 1; bi >= 0; bi--) {
+    const b = bands[bi]; const ry = b.hw * .26;
+    for (let xx = -R(b.hw); xx <= R(b.hw); xx++) {
+      const c = xx / b.hw; const arc = Math.sqrt(Math.max(0, 1 - c * c)); const front = R(b.cy + arc * ry + c * b.tilt * b.hw);
+      const lumpTop = R((hash01(seed + bi * 31 + Math.floor((xx + b.hw) / 5)) - .5) * 3);
+      const th = Math.max(3, R(b.thick * (.55 + .45 * arc))) + lumpTop;
+      const ang = Math.acos(Math.max(-1, Math.min(1, c))); const ph = ((ang / Math.PI) - t * 1.3 + bi * .29) % 1;
+      const lit = (ph + 1) % 1 < .35;
+      const y0 = front - th;
+      box(ctx, b.cx + xx, y0, 1, th, pal.body);
+      box(ctx, b.cx + xx, y0, 1, Math.max(1, R(th * .38)), lit ? pal.core : pal.light);
+      box(ctx, b.cx + xx, front - 2, 1, 2, pal.deep);
+      if (Math.abs(c) > .8) box(ctx, b.cx + xx, y0 + R(th * .38), 1, Math.max(1, th - R(th * .38) - 2), pal.deep);
     }
   }
-  // Debris swept inside the gust: dust motes and a tumbling leaf.
-  for (let q = 0; q < 6; q++) { const u = (t * 2.5 + hash01(seed + q * 7)) % 1; const px = x - f * (u * 30 * size) + f * 6; const py = y + (hash01(seed + q) - .5) * 40 * size + Math.sin(t * 12 + q) * 3; box(ctx, px, py, 2, 1, q % 3 ? '#cbb89a' : '#9ccc65'); }
+  for (let q = 0; q < 6; q++) { const life = (t * 1.4 + hash01(seed + q)) % 1; const b = bands[Math.floor(hash01(seed + q * 5) * bands.length)]; const side = q % 2 ? 1 : -1; const px = b.cx + side * (b.hw + 4 + life * 20); const py = b.cy - b.thick * .5 - life * 10; box(ctx, px, py, 4, 2, pal.body); box(ctx, px, py, 3, 1, pal.light); }
 }
 
 // ── earth ──────────────────────────────────────────────────────────────────

@@ -13,7 +13,7 @@ import { castSignature, signatureProjectileSpawned, updateSignatureWorld } from 
 import { castNatureSpell, isNatureOrInfusion } from './nature_spells.js';
 import { renderWallLook } from './wall_looks.js';
 import { renderSpellVisual, meteorShatterBurst, spellVisualActive, spellSheetReady, SpriteBurst } from './spell_visuals.js';
-import { drawFireBall, drawVoidOrb, drawWindGust, drawBolt, drawRockSpike, drawFrostSpread } from './element_fx.js';
+import { drawFireBall, drawVoidOrb, drawWindGust, drawBolt, drawRockSpike, drawFrostSpread, drawFunnel } from './element_fx.js';
 import { offerRecast } from './recast.js';
 import { statusElementsOf, setStatusSource, updateStatuses, statusDepthEntries, clearStatuses } from './status_effects.js';
 import { applyWard, setMasterySink } from './mastery.js';
@@ -1074,7 +1074,7 @@ class GaleBlastSpell {
 
   render(ctx) {
     // A sickle of flowing air with curls and dragged dust (element_fx.js); it frays out over its last 0.25 s.
-    drawWindGust(ctx, this.x, this.y, this.facing, this.age, this.seed, 1.35, Math.min(1, this.life / .25));
+    drawWindGust(ctx, this.x, this.y, this.facing, this.age, this.seed, 1, Math.min(1, this.life / .25));
   }
 }
 
@@ -1469,17 +1469,17 @@ class FirestormSpell {
     this.life = 4.2;
     this.isFinished = false;
     this.tickTimer = 0;
+    this.fineVfx = true; this.age = 0; this.seed = Math.floor(Math.random() * 1000);
   }
   get y() { return groundYForDepth(this.z); }
 
   update(dt, gameWorld) {
     this.x += this.vx * dt;
-    this.life -= dt;
+    this.life -= dt; this.age += dt;
     this.tickTimer += dt;
 
-    // Atmospheric roar particles
-    combat.spawnElementalParticles(this.x, this.y - 40, 'ignis', 4);
-    combat.spawnElementalParticles(this.x, this.y - 40, 'ventus', 4);
+    // Embers and smoke torn off the funnel
+    combat.spawnElementalParticles(this.x + (Math.random() - .5) * 60, this.y - 30 - Math.random() * 90, 'ignis', 2);
 
     // Gravitational SUCK & BURN
     const targets = gameWorld.getHostileTargets(this.team);
@@ -1513,25 +1513,10 @@ class FirestormSpell {
   }
 
   render(ctx) {
-    ctx.save();
-    ctx.globalCompositeOperation = 'lighter';
-
-    // Swirling multi-layer fire vortex
-    const time = performance.now() * 0.005;
-    const numRings = 7;
-    for (let i = 0; i < numRings; i++) {
-      const ringY = this.y - i * 18;
-      const ringW = 20 + i * 10;
-      const offsetAngle = time + i * 0.6;
-      const shiftX = Math.sin(offsetAngle) * 12;
-
-      ctx.strokeStyle = i % 2 === 0 ? '#ff6d00' : '#ffd000';
-      ctx.lineWidth = 4 + (numRings - i);
-      ctx.beginPath();
-      ctx.ellipse(this.x + shiftX, ringY, ringW, 10, 0, 0, Math.PI * 2);
-      ctx.stroke();
-    }
-    ctx.restore();
+    // A flame tornado: thick lumpy fire bands, wide on top, snaking, spinning highlights (element_fx.js);
+    // it rises out of the ground over 0.4 s and collapses over its last 0.4 s.
+    const k = Math.min(1, this.age / .4, this.life / .4 + .15);
+    drawFunnel(ctx, this.x, this.y, this.height * (this.quality?.area ?? 1), this.width * 1.1, this.age, 'fire', this.seed, Math.max(.15, k));
   }
 }
 

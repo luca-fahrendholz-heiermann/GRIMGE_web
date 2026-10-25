@@ -8,7 +8,7 @@
 //   water     a drop: arcs and falls, stretches with speed, ends in a tiny splash
 //   frost     ice glitter: a small shard that tumbles (diamond ↔ cross) and sparkles
 //   lightning a crackling arc: a jagged 3-4 segment bolt that re-forms every frame, very short-lived
-//   wind      a streak: a thin curved line along its motion that shortens as it fades
+//   wind      a wisp: a small tapered white puff (pale-blue rim, darker underside) that shortens as it fades
 //   earth     pebbles that fall and bounce once, and dust puffs that swell and settle
 //   nature    a leaf (or petal) that tumbles and sways as it drifts down
 //   void      a mote that spirals into its origin and blinks out
@@ -24,7 +24,7 @@ const RAMP = {
   aqua: ['#e6fbff', '#7fdcff', '#2fb4ea', '#1f7fd1', '#0b3d73'],
   frost: ['#ffffff', '#e1f5fe', '#81d4fa', '#4fa3d1'],
   fulgur: ['#ffffff', '#fff59d', '#ffe600', '#f9a825'],
-  ventus: ['#ffffff', '#e0f7fa', '#80deea', '#4db6ac'],
+  ventus: ['#f5f7ff', '#c9d0f0', '#8e9bd0', '#4a5680'],
   terra: ['#d7c4a8', '#a1887f', '#795548', '#4e342e', '#2e1f1a'], dust: ['#d9c9b0', '#b8a68c'],
   natura: ['#dcedc8', '#9ccc65', '#558b2f', '#33691e'], petal: ['#ffffff', '#f8bbd0', '#f06292'],
   void: ['#f3c5ff', '#d500f9', '#6a1b9a', '#1a0026'],
@@ -115,8 +115,9 @@ export function drawMaterialParticle(ctx, p) {
       break;
     }
     case 'ventus': {
-      const ramp = RAMP.ventus; const len = Math.max(2, R(p.size * (1 - k * .7))); const dir = Math.sign(p.vx) || 1;
-      for (let i = 0; i < len; i++) { const u = i / len; const yy = y + Math.sin(u * 3 + p.curl * 2) * 2 * p.curl; box(ctx, x - dir * i, yy, 1, 1, i < 2 ? ramp[0] : u < .5 ? ramp[1] : ramp[2]); }
+      // A filled wisp (not a line — lines read as electricity): round head, tapering tail, lit top, dark underside.
+      const ramp = RAMP.ventus; const len = Math.max(3, R(p.size * (1 - k * .6))); const dir = Math.sign(p.vx) || 1;
+      for (let i = 0; i < len; i++) { const u = i / len; const th = u < .25 ? 3 : u < .6 ? 2 : 1; const yy = R(y + Math.sin(u * 3 + p.curl * 2) * 1.5 * p.curl); box(ctx, x - dir * i, yy, 1, th, ramp[2]); box(ctx, x - dir * i, yy, 1, 1, u < .5 ? ramp[0] : ramp[1]); if (th === 3) box(ctx, x - dir * i, yy + 2, 1, 1, ramp[3]); }
       break;
     }
     case 'terra': { const ramp = RAMP.terra; const s = p.size; box(ctx, x - 1, y - 1, s + 1, s + 1, ramp[4]); box(ctx, x, y, s, s, ramp[2]); box(ctx, x, y, s - 1 || 1, 1, ramp[1]); break; }
