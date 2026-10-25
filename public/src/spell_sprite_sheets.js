@@ -757,5 +757,68 @@ export const SPELL_SPRITE_SHEETS = Object.freeze({
   "hd": true,
   "anchor": "base",
   "baseOffset": 4
+ },
+ "gfx_scorch": {
+  "name": "gfx_scorch",
+  "w": 52,
+  "h": 30,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "gfx_water": {
+  "name": "gfx_water",
+  "w": 48,
+  "h": 18,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "gfx_ice": {
+  "name": "gfx_ice",
+  "w": 48,
+  "h": 20,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "gfx_lava": {
+  "name": "gfx_lava",
+  "w": 50,
+  "h": 20,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "gfx_crater": {
+  "name": "gfx_crater",
+  "w": 52,
+  "h": 22,
+  "frames": 1,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "gfx_blood": {
+  "name": "gfx_blood",
+  "w": 48,
+  "h": 18,
+  "frames": 2,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "gfx_hole": {
+  "name": "gfx_hole",
+  "w": 48,
+  "h": 20,
+  "frames": 1,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
  }
 });

@@ -199,3 +199,14 @@ Genutzt von Licht-Lanze, Null-Strahl, Halo-Puls (vorher Glow-Ellipse), Void-Kuge
 Genutzt von Heilblüte, Großer Blüte, Segenskreis, Dornenwuchs, Giftsumpf, Heilquelle, Pollensturm, Wildfeuer-Samen und Weltenbaum.
 
 - `v14_natur_sheets.png`, `v14_natur_ingame.png`
+
+## v15–v16 — Drachenatem und Bodeneffekte (25.10.2026)
+
+- Drachenatem: drei Flammenströme fächern auf, Segmente wachsen mit der Entfernung (`v15_drachenatem.png`).
+- `art/authoring/vfx_ground.cjs`:
+  - `gfx_scorch`: verkohlt, glühende Glut in den Rissen, Flammen;
+  - `gfx_water`: Pfütze mit Lichtkante, Glanz und Ringwelle;
+  - `gfx_ice`: Eisfläche mit Facettenrissen und Kristallbüscheln;
+  - `gfx_lava`: Krustenrand, treibende Schollen, Blasen;
+  - `gfx_crater`, `gfx_blood`, `gfx_hole`.
+- Kreisförmige Bodeneffekte nutzen sie statt weicher Ellipsen und der alten Kegelflammen (`v16_boden_sheets.png`, `v16_boden_ingame.png`).

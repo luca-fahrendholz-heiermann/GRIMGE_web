@@ -31,6 +31,13 @@ import './scene_pack_elements.js'; // element objects (vine, mushrooms, kegs, py
 import './scene_pack_puzzles.js'; // traversal / puzzle pieces (lianas, geysers, gates, plates …)
 import { renderSceneHint } from './scene_systems.js';
 import { BUFF_ZONES } from './zone_buffs.js';
+import { drawSpellSprite, spellSheetReady } from './spell_visuals.js';
+import { SPELL_SPRITE_SHEETS } from './spell_sprite_sheets.js';
+
+// Hand-drawn ground decals (art/authoring/vfx_ground.cjs): drawn for a radius-40 ellipse and scaled; the
+// offset puts the patch centre on the ground line. Circle-shaped effects only (map zones keep their shapes).
+const GROUND_SHEETS = Object.freeze({ scorch: ['gfx_scorch', 16], water: ['gfx_water', 0], ice: ['gfx_ice', 4], lava: ['gfx_lava', 2], crater: ['gfx_crater', 4], blood: ['gfx_blood', 0], hole: ['gfx_hole', 2] });
+const groundSheet = (effect) => { const g = effect.shape === 'circle' || !effect.shape ? GROUND_SHEETS[effect.type] : null; return g && spellSheetReady(g[0]) ? g : null; };
 
 export const GROUND_EFFECTS = Object.freeze({
   ice: Object.freeze({ life: 7, slow: null, slippery: true }),
@@ -506,7 +513,7 @@ export class EnvironmentSystem {
       }
     }
     for (const effect of this.effects) {
-      if (effect.type === 'smoke') continue;
+      if (effect.type === 'smoke' || groundSheet(effect)) continue;
       const y = groundYForDepth(effect.z);
       const rx = effect.radius; const ry = effect.radius * .32;
       ctx.save();
@@ -628,6 +635,13 @@ export class EnvironmentSystem {
       }
     }
     for (const effect of this.effects) {
+      const gs = groundSheet(effect);
+      if (gs) {
+        const frames = SPELL_SPRITE_SHEETS[gs[0]]?.frames ?? 1; const scale = Math.max(.35, effect.radius / 40);
+        drawSpellSprite(ctx, gs[0], Math.floor(t * 8 + (effect.seed ?? 0)) % frames, effect.x, groundYForDepth(effect.z) - gs[1] * scale, { anchor: 'center', scale, alpha: effect.fade > .4 ? 1 : .5 });
+        if (effect.type === 'water' && effect.electrified > 0) this.renderSparks(ctx, effect, 4, t);
+        continue;
+      }
       if (effect.type === 'scorch') this.renderFlames(ctx, effect, Math.max(2, Math.min(5, Math.round(effect.radius / 14))), t, 1.5, effect.fade);
       else if (effect.type === 'lava') this.renderBubbles(ctx, effect, 3, t);
       else if (effect.type === 'ice' && fxReady('fx_ice')) {
