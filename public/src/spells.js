@@ -991,7 +991,7 @@ class FireballSpell {
     combat.shakeCamera(6, 0.2);
     if (this.element === 'ignis' && spellSheetReady('meteor_explosion')) {
       // A real fire explosion (the meteor's sheet at a smaller size): flash → lumpy fireball → smoke → ash.
-      this.system?.activeSpells.push(Object.assign(new SpriteBurst({ sheet: 'meteor_explosion', x: this.x, y: this.y + 18 * .62, fps: 16, scale: .62, anchor: 'base' }), { fineVfx: true }));
+      this.system?.activeSpells.push(Object.assign(new SpriteBurst({ sheet: 'meteor_explosion', x: this.x, y: this.y + 18 * .62, z: this.z, fps: 16, scale: .62, anchor: 'base' }), { fineVfx: true }));
       combat.spawnElementalParticles(this.x, this.y, 'ignis', 12);
     } else if (this.element === 'void') {
       combat.spawnElementalParticles(this.x, this.y, 'void', 14);
