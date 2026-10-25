@@ -20,6 +20,7 @@
 import { plate, band, fallout, mix, rgba, registerRenderer } from './buff_vfx.js';
 import { sprites } from './sprites.js';
 import { drawNinefoldSpirit } from './forms_fx.js';
+import { drawDragon, drawDragonHead, dragonReady } from './spell_visuals.js';
 
 const TAU = Math.PI * 2;
 const snap = (v) => Math.round(v);
@@ -33,6 +34,8 @@ function scale(ctx, x, y, dx, dy, len, wid, mat, seed, alpha) {
 
 // A wyrm body of overlapping rhombic scales along a spine (tail → head).
 export function drawWyrmBody(ctx, spine, mat, seed, alpha = 1, thickness = 1) {
+  // Hand-drawn dragon kit (obsidian scales with gold rims) — the head is drawn separately by drawWyrmHead.
+  if (dragonReady('sun') && spine.length > 2) { drawDragon(ctx, 'sun', spine.slice(1), { thickness: thickness * .95, alpha }); return; }
   const n = spine.length;
   // A continuous obsidian underbody so the scales read as one creature.
   if (n > 1) band(ctx, spine.slice().reverse(), (i, nn) => (4 + 10 * Math.sin(Math.min(1, (i / nn) * 1.3) * Math.PI * .5)) * thickness, { ...mat, kind: 'crust', body: mix(mat.dark, '#000000', .2), facet: mat.dark }, seed + 500, { alpha, glow: .6 });
@@ -52,6 +55,7 @@ export function drawWyrmBody(ctx, spine, mat, seed, alpha = 1, thickness = 1) {
 // An angular wyrm head looking along (dx, dy): skull, jaw, horn fins,
 // lance-blade crest and a turquoise eye.
 export function drawWyrmHead(ctx, x, y, dx, dy, size, mat, open = .2, alpha = 1, seed = 900) {
+  if (drawDragonHead(ctx, 'sun', x, y, dx, dy, size / 22, open, alpha)) return;
   const l = Math.hypot(dx, dy) || 1; const ux = dx / l; const uy = dy / l; const nx = -uy; const ny = ux;
   const P = (a, b) => [x + ux * a * size + nx * b * size, y + uy * a * size + ny * b * size];
   // Swept-back horn fins.

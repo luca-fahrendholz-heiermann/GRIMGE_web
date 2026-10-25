@@ -319,3 +319,32 @@ export function drawBreathCone(ctx, x0, y0, facing, reach, t, k = 1) {
   ctx.save(); ctx.translate(Math.round(x0), Math.round(y0)); ctx.scale(f, 1); drawSpellSprite(ctx, 'fire_jet_root', frame, 0, 0, { anchor: 'center' }); ctx.restore();
   return true;
 }
+
+// ── Dragons (art/authoring/vfx_dragon.cjs) ────────────────────────────────
+// User, 25 Oct 2026: "eindrucksstarke Drachen, keine Würmer". A dragon is assembled along a spine (head
+// first): armoured scale sections that swell behind the head and taper to the tail, dorsal spines, two pairs
+// of claws, and the head with mane, horns and jaws. opts.behind(i) marks sections on the far side of a coil
+// (drawn dark); opts.only = 'back' | 'front' draws one side so two dragons can wind round a column.
+export const dragonReady = (look) => spellSheetReady(`dragon_${look}_scale`) && spellSheetReady(`dragon_${look}_head`);
+function rotated(ctx, x, y, ang, fn) { ctx.save(); ctx.translate(Math.round(x), Math.round(y)); ctx.rotate(ang); if (Math.cos(ang) < 0) ctx.scale(1, -1); fn(); ctx.restore(); }
+export function drawDragonHead(ctx, look, x, y, dx, dy, scale = 1, open = 0, alpha = 1) {
+  if (!dragonReady(look)) return false;
+  const ang = Math.atan2(dy, dx); const frame = open > .75 ? 2 : open > .3 ? 1 : 0;
+  rotated(ctx, x, y, ang, () => drawSpellSprite(ctx, `dragon_${look}_head`, frame, 14 * scale, 0, { anchor: 'center', scale, alpha }));
+  return true;
+}
+export function drawDragon(ctx, look, spine, { thickness = 1, open = 0, alpha = 1, behind = null, only = null, t = performance.now() / 1000 } = {}) {
+  if (!dragonReady(look) || spine.length < 2) return false;
+  const n = spine.length; const sideOk = (i) => !only || (only === 'back') === !!behind?.(i);
+  const dir = (i) => { const a = spine[Math.max(0, i - 1)]; const b = spine[Math.min(n - 1, i + 1)]; return [a[0] - b[0], a[1] - b[1]]; }; // toward the head
+  for (let i = n - 1; i >= 1; i--) {
+    if (!sideOk(i)) continue;
+    const k = 1 - i / n; const sc = thickness * (.32 + .68 * Math.sin(Math.min(1, k * 1.4) * Math.PI / 2));
+    const [x, y] = spine[i]; const back = !!behind?.(i);
+    drawSpellSprite(ctx, `dragon_${look}_scale`, back ? 1 : 0, x, y, { anchor: 'center', scale: sc, alpha });
+    if (i % 3 === 0 && !back) { const [dx, dy] = dir(i); const l = Math.hypot(dx, dy) || 1; const nx = dy / l; const ny = -dx / l; const up = ny < 0 ? 1 : -1; rotated(ctx, x + nx * up * 10 * sc, y + ny * up * 10 * sc, Math.atan2(dy, dx) + Math.PI / 2 * -up, () => drawSpellSprite(ctx, `dragon_${look}_spine`, 0, 0, 0, { anchor: 'center', scale: sc * 1.1, alpha })); }
+    if ((i === Math.round(n * .22) || i === Math.round(n * .5)) && !back) { const [dx, dy] = dir(i); rotated(ctx, x, y + 8 * sc, Math.atan2(dy, dx) + .6, () => drawSpellSprite(ctx, `dragon_${look}_claw`, Math.floor(t * 4 + i) % 2, 8 * sc, 0, { anchor: 'center', scale: sc, alpha })); }
+  }
+  if (sideOk(0)) { const [dx, dy] = dir(0); drawDragonHead(ctx, look, spine[0][0], spine[0][1], dx, dy, thickness * 1.05, open, alpha); }
+  return true;
+}

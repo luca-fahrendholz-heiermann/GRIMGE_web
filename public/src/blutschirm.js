@@ -7,6 +7,7 @@
 //   2  TAP AGAIN  BLUTZWILLINGE — from every puddle (up to three) two blood dragons screw upward in a spiral;
 //                 whoever stands in the puddle is carried up in the middle and hit hard (bleeding).
 import { defineSignature, startStance, emit, foesOf, hit, TAU, DEPTH } from './signature_core.js';
+import { drawDragon, dragonReady } from './spell_visuals.js';
 import { projectilesOf } from './signature_core.js';
 import { offerRecast } from './recast.js';
 import { applyStatus } from './status_effects.js';
@@ -61,7 +62,14 @@ class BloodTwins {
     // The puddle bursts open, blood splashes up.
     ctx.save(); ctx.globalAlpha = fade * .8; ctx.fillStyle = C.dark; ctx.beginPath(); ctx.ellipse(this.x, base, this.r, this.r * .32, 0, 0, TAU); ctx.fill(); ctx.restore();
     for (let i = 0; i < 10; i++) { const a = i / 10 * TAU; const up = (this.t * 60 + i * 7) % 24; px(ctx, this.x + Math.cos(a) * this.r * .8, base + Math.sin(a) * this.r * .25 - up, 3, 4, i % 2 ? C.bright : C.body); }
-    // Twin serpents screw upward around the middle — one crimson, one dark; slim overlapping scales, a clear head.
+    // Twin DRAGONS (art/authoring/vfx_dragon.cjs) screw upward round the lifted foe — back halves first, then
+    // the front halves; their heads rear up at the top with jaws opening as they reach it.
+    if (dragonReady('blood')) {
+      const spineOf = (off, side) => { const pts = []; const N = 26; for (let i = 0; i <= N; i++) { const u = 1 - i / N; const h = 200 * rise * Math.min(u, .82) + Math.max(0, u - .82) * 60 * rise; const ang = this.t * 8 + Math.min(u, .82) * 8 + off; const rr = 26 * (1 - u * .15); const out = Math.max(0, u - .82) / .18; pts.push([this.x + Math.cos(ang) * rr * (1 - out) + side * out * 46, base - h + Math.sin(ang) * rr * .32 * (1 - out), Math.sin(ang) < 0 && out < .3]); } return pts; };
+      const twins = [spineOf(0, 1), spineOf(Math.PI, -1)]; /* the heads rear out to both sides at the top */
+      for (const only of ['back', 'front']) for (const sp of twins) drawDragon(ctx, 'blood', sp, { thickness: 1.25, open: Math.min(1, rise * 1.4), behind: (i) => sp[i][2], only });
+      ctx.restore(); return;
+    }
     const TWINS = [{ off: 0, body: '#c62828', light: '#ff8a80', dark: '#3b0008' }, { off: Math.PI, body: '#7f0000', light: '#e57373', dark: '#1a0003' }];
     for (const d of TWINS) {
       const N = 30; let head = null; let prev = null;

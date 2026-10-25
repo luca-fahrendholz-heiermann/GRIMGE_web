@@ -210,3 +210,14 @@ Genutzt von Heilblüte, Großer Blüte, Segenskreis, Dornenwuchs, Giftsumpf, Hei
   - `gfx_lava`: Krustenrand, treibende Schollen, Blasen;
   - `gfx_crater`, `gfx_blood`, `gfx_hole`.
 - Kreisförmige Bodeneffekte nutzen sie statt weicher Ellipsen und der alten Kegelflammen (`v16_boden_sheets.png`, `v16_boden_ingame.png`).
+
+## v17–v19 — Himmel, zackige Blitze, Drachen (25.10.2026)
+
+- Sphären: handgezeichnete Sonne, Mond, Blutmond, Eklipse, Sturmwolke, Sternbild (`v17_*`).
+- Blitze v2 nach der Vorlage: dünne, scharfe Zickzack-Segmente, gefüllte Spitzen an jedem Knick, verstreute Funken; kein dicker violetter Schlauch mehr (`v18_blitz_zackig.png`).
+- Drachen statt Würmer (Vorlage: Zwillings-Blutdrachen aus dem Clip, geflügelter Pixel-Drache):
+  - `art/authoring/vfx_dragon.cjs` mit Kopf (Mähne, Hörner, Wangenkämme, Reißzähne, glühendes Schlitzauge, Barteln, öffnender Kiefer), Panzerschuppen-Abschnitt, Rückenstachel und Klaue, jeweils in Blut und Obsidian-Gold;
+  - zur Laufzeit an einer Wirbelsäule zusammengebaut (`drawDragon`);
+  - die Blutschirm-Zwillinge winden sich um das Ziel und brüllen oben seitlich;
+  - der Sonnenwyrm (T40) nutzt denselben Baukasten.
+- `v19_drachen_kit.png`, `v19_blutdrachen_ingame.png`

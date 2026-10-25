@@ -874,5 +874,77 @@ export const SPELL_SPRITE_SHEETS = Object.freeze({
   "res": 2,
   "hd": true,
   "anchor": "center"
+ },
+ "dragon_blood_head": {
+  "name": "dragon_blood_head",
+  "w": 36,
+  "h": 26,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "dragon_blood_scale": {
+  "name": "dragon_blood_scale",
+  "w": 11,
+  "h": 11,
+  "frames": 2,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "dragon_blood_spine": {
+  "name": "dragon_blood_spine",
+  "w": 6,
+  "h": 8,
+  "frames": 1,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "dragon_blood_claw": {
+  "name": "dragon_blood_claw",
+  "w": 12,
+  "h": 9,
+  "frames": 2,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "dragon_sun_head": {
+  "name": "dragon_sun_head",
+  "w": 36,
+  "h": 26,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "dragon_sun_scale": {
+  "name": "dragon_sun_scale",
+  "w": 11,
+  "h": 11,
+  "frames": 2,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "dragon_sun_spine": {
+  "name": "dragon_sun_spine",
+  "w": 6,
+  "h": 8,
+  "frames": 1,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "dragon_sun_claw": {
+  "name": "dragon_sun_claw",
+  "w": 12,
+  "h": 9,
+  "frames": 2,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
  }
 });
