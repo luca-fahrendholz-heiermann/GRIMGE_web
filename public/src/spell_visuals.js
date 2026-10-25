@@ -38,15 +38,15 @@ export function __setSpellSheetImage(name, image) { if (image) images[name] = im
 
 // Draws one frame. anchor 'base': the sheet's base row (ground contact) sits on y
 // (baseOffset = rows below it); 'center': centred on (x, y).
-export function drawSpellSprite(ctx, name, frame, x, y, { anchor = 'base', flip = false, alpha = 1, sink = 0 } = {}) {
+export function drawSpellSprite(ctx, name, frame, x, y, { anchor = 'base', flip = false, alpha = 1, sink = 0, scale = 1 } = {}) {
   const sheet = SPELL_SPRITE_SHEETS[name]; const image = images[name];
   if (!sheet || !image || VISUAL_FLAGS.legacy) return false;
   const f = Math.max(0, Math.min(sheet.frames - 1, Math.floor(frame)));
   // res: the image holds res× the logical frame size (hi-res refinement) — same world size, finer pixels.
   const res = sheet.res ?? 1; const sw = sheet.w * res; const sh = sheet.h * res;
-  const w = sheet.w * SCALE; const h = sheet.h * SCALE;
+  const w = Math.round(sheet.w * SCALE * scale); const h = Math.round(sheet.h * SCALE * scale);
   const dx = Math.round(x - w / 2);
-  const dy = Math.round(anchor === 'center' ? y - h / 2 : y - h + ((sheet.baseOffset ?? 0) + sink) * SCALE);
+  const dy = Math.round(anchor === 'center' ? y - h / 2 : y - h + ((sheet.baseOffset ?? 0) + sink) * SCALE * scale);
   ctx.save();
   ctx.imageSmoothingEnabled = false;
   if (alpha < 1) ctx.globalAlpha *= Math.max(0, alpha);
@@ -71,15 +71,15 @@ export function renderSpellVisual(ctx, spell, key) {
 
 // One-shot sprite animation (impacts, cast puffs). Purely visual: no gameplay.
 export class SpriteBurst {
-  constructor({ sheet, x, y = null, z, fps = 18, flip = false, vx = 0, vy = 0, gravity = 0, owner = null }) {
-    this.sheet = sheet; this.x = x; this.yFixed = y; this.z = z ?? .5; this.fps = fps; this.flip = flip; this.vx = vx; this.vy = vy; this.gravity = gravity;
+  constructor({ sheet, x, y = null, z, fps = 18, flip = false, vx = 0, vy = 0, gravity = 0, owner = null, scale = 1, anchor = 'center' }) {
+    this.sheet = sheet; this.x = x; this.yFixed = y; this.z = z ?? .5; this.fps = fps; this.flip = flip; this.vx = vx; this.vy = vy; this.gravity = gravity; this.scale = scale; this.anchor = anchor;
     this.t = 0; this.isFinished = false; this.isVisualOnly = true; this.owner = owner; this.team = owner?.team;
     this.dur = (SPELL_SPRITE_SHEETS[sheet]?.frames ?? 1) / fps;
     this.dy = 0;
   }
   get y() { return this.yFixed ?? groundYForDepth(this.z); }
   update(dt) { this.t += dt; this.x += this.vx * dt; this.vy += this.gravity * dt; this.dy += this.vy * dt; if (this.t >= this.dur) this.isFinished = true; }
-  render(ctx) { if (VISUAL_FLAGS.legacy || (!secondary() && this.sheet !== 'ice_hit')) return; drawSpellSprite(ctx, this.sheet, this.t * this.fps, this.x, this.y + this.dy, { anchor: 'center', flip: this.flip }); }
+  render(ctx) { if (VISUAL_FLAGS.legacy || (!secondary() && this.sheet !== 'ice_hit')) return; drawSpellSprite(ctx, this.sheet, this.t * this.fps, this.x, this.y + this.dy, { anchor: this.anchor, flip: this.flip, scale: this.scale }); }
 }
 
 // ── Pilot A: EISZACKEN (sig_S37) ─────────────────────────────────────────

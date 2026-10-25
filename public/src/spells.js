@@ -12,7 +12,8 @@ import { activateBuffForm } from './buff_forms.js';
 import { castSignature, signatureProjectileSpawned, updateSignatureWorld } from './signature_runes.js';
 import { castNatureSpell, isNatureOrInfusion } from './nature_spells.js';
 import { renderWallLook } from './wall_looks.js';
-import { renderSpellVisual, meteorShatterBurst, spellVisualActive } from './spell_visuals.js';
+import { renderSpellVisual, meteorShatterBurst, spellVisualActive, spellSheetReady, SpriteBurst } from './spell_visuals.js';
+import { drawFireBall, drawVoidOrb } from './element_fx.js';
 import { offerRecast } from './recast.js';
 import { statusElementsOf, setStatusSource, updateStatuses, statusDepthEntries, clearStatuses } from './status_effects.js';
 import { applyWard, setMasterySink } from './mastery.js';
@@ -837,9 +838,13 @@ export class SpellSystem {
     return Math.max(1, Math.round(this.pixelVfx * (ctx.getTransform?.()?.a || 1)));
   }
 
+  // Spells with fineVfx (material effects from element_fx.js, refined res-2 sprites) draw at the character's
+  // pixel density straight onto the canvas; the rest keeps the coarse hardened pixel layer (2.5 world px).
   renderBatch(ctx, batch) {
     if (!batch.length) return;
-    renderPixelated(ctx, this.pixelSizeFor(ctx), (layer) => { for (const spell of batch) this.renderSafely(layer, spell); }, { hard: true });
+    const coarse = batch.filter((spell) => !spell.fineVfx);
+    if (coarse.length) renderPixelated(ctx, this.pixelSizeFor(ctx), (layer) => { for (const spell of coarse) this.renderSafely(layer, spell); }, { hard: true });
+    for (const spell of batch) if (spell.fineVfx) this.renderSafely(ctx, spell);
   }
 
   // One broken effect must never freeze the game loop: it is logged once
@@ -929,15 +934,18 @@ class FireballSpell {
     this.slowDuration = options.slowDuration ?? 0;
     this.slowFactor = options.slowFactor ?? 1;
     this.isCapturableProjectile = true;
+    this.age = 0; this.seed = Math.floor(Math.random() * 1000);
+    // Material look (element_fx.js) for fire and void; other variants keep the old gradient body.
+    this.fineVfx = this.element === 'ignis' || this.element === 'void';
   }
   get y() { return groundYForDepth(this.z) - this.height - 30; }
 
   update(dt, gameWorld) {
     const previousX = this.x;
     this.x += this.vx * dt;
-    this.life -= dt;
+    this.life -= dt; this.age += dt;
 
-    combat.spawnElementalParticles(this.x, this.y, this.element, 3);
+    combat.spawnElementalParticles(this.x - Math.sign(this.vx) * this.radius * .6, this.y, this.element, this.fineVfx ? 2 : 3);
 
     // Collision check against hostile entities
     const targets = gameWorld.getHostileTargets(this.team);
@@ -981,8 +989,17 @@ class FireballSpell {
     this.isFinished = true;
     audio.playImpact(true);
     combat.shakeCamera(6, 0.2);
-    combat.spawnShockwave(this.x, this.y, 65, this.midColor);
-    combat.spawnHitSparks(this.x, this.y, this.facing, this.midColor, 16);
+    if (this.element === 'ignis' && spellSheetReady('meteor_explosion')) {
+      // A real fire explosion (the meteor's sheet at a smaller size): flash → lumpy fireball → smoke → ash.
+      this.system?.activeSpells.push(Object.assign(new SpriteBurst({ sheet: 'meteor_explosion', x: this.x, y: this.y + 18 * .62, fps: 16, scale: .62, anchor: 'base' }), { fineVfx: true }));
+      combat.spawnElementalParticles(this.x, this.y, 'ignis', 12);
+    } else if (this.element === 'void') {
+      combat.spawnElementalParticles(this.x, this.y, 'void', 14);
+      combat.spawnShockwave(this.x, this.y, 40, this.midColor);
+    } else {
+      combat.spawnShockwave(this.x, this.y, 65, this.midColor);
+      combat.spawnHitSparks(this.x, this.y, this.facing, this.midColor, 16);
+    }
     if (this.element === 'ignis') environment.add('scorch', this.x, this.z, { radius: 44 * (this.quality?.area ?? 1), team: this.team });
 
     // AoE Damage
@@ -1001,6 +1018,8 @@ class FireballSpell {
   }
 
   render(ctx) {
+    if (this.element === 'ignis') { drawFireBall(ctx, this.x, this.y, this.radius * .95, Math.sign(this.vx) || 1, this.age, this.seed); return; }
+    if (this.element === 'void') { drawVoidOrb(ctx, this.x, this.y, this.radius * .9, Math.sign(this.vx) || 1, this.age, this.seed); return; }
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     const grad = ctx.createRadialGradient(this.x, this.y, 2, this.x, this.y, this.radius * 1.6);
@@ -1572,6 +1591,7 @@ class MeteorSpell {
     this.structureHp = 50;
     this.beamSlow = 1;
   }
+  get fineVfx() { return spellSheetReady('meteor_body'); }
 
   get heightAboveGround() { return this.targetY - this.y; }
 

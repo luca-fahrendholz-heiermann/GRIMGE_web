@@ -16,7 +16,7 @@ import { groundYForDepth } from './world.js';
 import { applyStatuses } from './buff_techniques.js';
 import { GeoPlatform } from './geometry.js';
 import { offerRecast } from './recast.js';
-import { renderSpellVisual, drawIceCrack, SpriteBurst, tideHitBurst } from './spell_visuals.js';
+import { renderSpellVisual, drawIceCrack, SpriteBurst, tideHitBurst, spellSheetReady } from './spell_visuals.js';
 
 const gameOf = (c) => c.gw ?? sigWorld();
 
@@ -26,6 +26,7 @@ class IceSpike extends GeoPlatform {
     super(caster, game, { x, z, halfW: 13, halfD: .05, height: 34 + i * 7, life: 3.2, emerge: .12, decay: .3, delay: i * .07, look: 'ice', damage: 22, lift: 280, stun: .6, label: 'Ice spike', onEmerge: (t) => { t.freeze?.(.5); emit(new SpriteBurst({ sheet: 'ice_hit', x: t.x, y: (t.y ?? groundYForDepth(t.z ?? z)) - 34, owner: caster })); } });
     this.i = i;
   }
+  get fineVfx() { return spellSheetReady('ice_spike_v0'); }
   render(ctx) {
     // Visual upgrade (pilot A): sprite-based ice ribs; falls back to the plates below.
     if (renderSpellVisual(ctx, this, 'ice_spike')) return;

@@ -12,6 +12,7 @@ import { combat } from './combat.js';
 import { groundDistance, groundYForDepth } from './world.js';
 import { environment } from './environment.js';
 import { plate as materialPlate } from './buff_vfx.js';
+import { drawStream, drawGather, materialForVfx } from './element_fx.js';
 
 function withinHeight(target, sourceHeight, tolerance = 110) {
   return Math.abs((target.worldHeight ?? 0) - sourceHeight) < (target.hitHeightTolerance ?? tolerance);
@@ -160,6 +161,8 @@ export class BeamSpell {
     this.caster = caster;
     this.team = caster.team;
     this.profile = BEAM_PROFILES[profileKey] ?? BEAM_PROFILES.inferno;
+    // Element beams draw as material streams (element_fx.js) at the character's pixel density.
+    this.material = materialForVfx(this.profile.vfx); this.fineVfx = !!this.material; this.seed = Math.floor(Math.random() * 1000);
     this.facing = caster.facing || 1;
     this.phase = 'charge';
     this.timer = 0;
@@ -274,6 +277,17 @@ export class BeamSpell {
   }
 
   render(ctx) {
+    if (this.material) {
+      // Material stream: it gathers at the hand, then grows out of it and flows to the tip.
+      const t = performance.now() / 1000;
+      if (this.phase === 'charge') { drawGather(ctx, this.material, this.originX, this.y, 6 + Math.min(1, this.timer / this.profile.chargeTime) * 14, t, this.seed); return; }
+      if (this.isFinished) return;
+      const fadeIn = Math.min(1, this.timer / .08); const fadeOut = this.clash ? 1 : Math.min(1, (this.sustain - this.timer) / .2);
+      const k = Math.max(.2, Math.min(fadeIn, fadeOut));
+      const endY = this.clash ? groundYForDepth(this.clash.contactZ) - this.clash.contactHeight - 28 : this.y;
+      drawStream(ctx, this.material, this.originX, this.y, this.tipX, endY, this.width, t, this.seed, k);
+      return;
+    }
     ctx.save();
     if (this.phase === 'charge') {
       const t = Math.min(1, this.timer / this.profile.chargeTime);
