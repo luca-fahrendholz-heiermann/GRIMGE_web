@@ -1216,8 +1216,13 @@ class StoneSpikesSpell {
   }
 
   render(ctx) {
-    // Faceted rock spires that break out of the ground and crumble over the last 0.35 s (element_fx.js).
+    // Hand-drawn rock spires (art/authoring/vfx_earth.cjs): emerge 0-2 with the rise, stand (3), crumble 4-6
+    // over the last 0.35 s; the procedural spires are the fallback.
     const crumble = this.life < .35 ? 1 - this.life / .35 : 0;
+    if (spellSheetReady('rock_spike_v0')) {
+      this.spikes.forEach((sp, i) => { if (sp.height <= 2) return; const rise = sp.height / sp.maxHeight; const frame = crumble > 0 ? 4 + Math.min(2, Math.floor(crumble * 3)) : rise < .98 ? Math.min(2, Math.floor(rise * 3)) : 3; drawSpellSprite(ctx, 'rock_spike_v' + Math.min(3, i), frame, sp.x, sp.y, { flip: this.facing < 0 }); });
+      return;
+    }
     this.spikes.forEach((sp, i) => { if (sp.height > 2) drawRockSpike(ctx, sp.x, sp.y, sp.maxHeight, 12 + i, this.seed + i * 31, sp.height / sp.maxHeight, crumble); });
   }
 }
@@ -1726,6 +1731,7 @@ class MagmaFissureSpell {
     this.life = 3.5;
     this.isFinished = false;
     this.tick = 0;
+    this.fineVfx = true;
   }
   get y() { return groundYForDepth(this.z); }
 
@@ -1751,6 +1757,8 @@ class MagmaFissureSpell {
   }
 
   render(ctx) {
+    // Hand-drawn fissure (art/authoring/vfx_earth.cjs): broken rock lips, bubbling lava, rising flames.
+    if (spellSheetReady('magma_crack')) { drawSpellSprite(ctx, 'magma_crack', Math.floor((3.5 - this.life) * 10) % 8, this.x, this.y + 4, { scale: (this.quality?.area ?? 1) * .85 }); return; }
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     ctx.fillStyle = 'rgba(255, 60, 0, 0.7)';
@@ -1771,7 +1779,11 @@ class SandstormBastionSpell {
     this.life = 2.6;
     this.tickTimer = 0;
     this.isFinished = false;
+    this.fineVfx = true;
   }
+  // Sorted just behind the caster (the ring's back wall); the front half is a companion visual.
+  get z() { return this.caster.z - .004; }
+  set z(v) { /* follows the caster */ }
   get y() { return groundYForDepth(this.z) - 28; }
 
   update(dt, gameWorld) {
@@ -1806,6 +1818,14 @@ class SandstormBastionSpell {
   }
 
   render(ctx) {
+    // Hand-drawn whirling sand ring round the caster (art/authoring/vfx_earth.cjs): this spell draws the back
+    // half (sorted just behind the caster), a companion visual draws the front half just in front.
+    if (spellSheetReady('sand_wall_back')) {
+      const frame = Math.floor((2.6 - this.life) * 12) % 8; const scale = this.radius / 104;
+      drawSpellSprite(ctx, 'sand_wall_back', frame, this.x, this.y + 28, { scale });
+      if (!this.front && this.system) { const host = this; this.front = { fineVfx: true, isVisualOnly: true, isFinished: false, get x() { return host.x; }, get z() { return host.caster.z + .004; }, update() { if (host.isFinished) this.isFinished = true; }, render(c) { drawSpellSprite(c, 'sand_wall_front', Math.floor((2.6 - host.life) * 12) % 8, host.x, host.y + 28, { scale: host.radius / 104 }); } }; this.system.activeSpells.push(this.front); }
+      return;
+    }
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     ctx.strokeStyle = 'rgba(255, 214, 96, 0.82)';

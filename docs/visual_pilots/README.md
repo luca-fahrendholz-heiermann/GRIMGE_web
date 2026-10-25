@@ -155,3 +155,18 @@ Der Strahl-Baukasten (`drawSheetBeam`) ist jetzt allgemein: Feuer und Eis nutzen
 Genutzt von Kettenblitz (Glieder und Einschläge), Donner-Strahl, Sturmblitz (vorher eine Glow-Linie) und Aura-Entladung.
 
 - `v11_blitz_sheets.png`, `v11_blitz_ingame.png`
+
+## v12 — Erde (25.10.2026)
+
+`art/authoring/vfx_earth.cjs` mit gemeißelter Felsform: eckige Silhouette, drei flache Facetten (Licht, Mitte, Schatten), unterbrochene Gesteinsschichten, Lichtkante und abgeplatzte Ecken.
+
+Sheets:
+- `rock_spike_v0..v3`: herausbrechen mit Erdklumpen und Staub, stehen, zerbröckeln.
+- `rock_burst`: Erdausbruch mit Schollen, Brocken und Staubfahne.
+- `quake_ring`: aufgeworfene Schollen im Ring, Risse, rollender Staubring.
+- `magma_crack`: glühende Spalte mit blubbernder Lava, Flammen und Glut.
+- `sand_wall_back` / `sand_wall_front`: Sandring in zwei Ebenen, der Zaubernde steht darin.
+
+Genutzt von Steinstacheln, Seismischem Schlag, Erdgräber, Titanen-Stampfer, Magmaspalte (vorher Glow-Ellipse) und Sandsturm-Bastion (vorher gestrichelter Kreis).
+
+- `v12_erde_sheets.png`, `v12_erde_ingame.png`, `v12_sandwall_ingame.png`

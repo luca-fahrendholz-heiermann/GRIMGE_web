@@ -496,5 +496,95 @@ export const SPELL_SPRITE_SHEETS = Object.freeze({
   "hd": true,
   "anchor": "base",
   "baseOffset": 4
+ },
+ "rock_spike_v0": {
+  "name": "rock_spike_v0",
+  "w": 22,
+  "h": 42,
+  "frames": 7,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 2
+ },
+ "rock_spike_v1": {
+  "name": "rock_spike_v1",
+  "w": 22,
+  "h": 42,
+  "frames": 7,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 2
+ },
+ "rock_spike_v2": {
+  "name": "rock_spike_v2",
+  "w": 22,
+  "h": 42,
+  "frames": 7,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 2
+ },
+ "rock_spike_v3": {
+  "name": "rock_spike_v3",
+  "w": 22,
+  "h": 42,
+  "frames": 7,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 2
+ },
+ "rock_burst": {
+  "name": "rock_burst",
+  "w": 32,
+  "h": 36,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 2
+ },
+ "quake_ring": {
+  "name": "quake_ring",
+  "w": 130,
+  "h": 42,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 4
+ },
+ "magma_crack": {
+  "name": "magma_crack",
+  "w": 84,
+  "h": 22,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 4
+ },
+ "sand_wall_back": {
+  "name": "sand_wall_back",
+  "w": 120,
+  "h": 60,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 6
+ },
+ "sand_wall_front": {
+  "name": "sand_wall_front",
+  "w": 120,
+  "h": 60,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 6
  }
 });

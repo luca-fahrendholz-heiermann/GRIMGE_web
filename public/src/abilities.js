@@ -13,7 +13,9 @@ import { groundDistance, groundYForDepth } from './world.js';
 import { environment } from './environment.js';
 import { plate as materialPlate } from './buff_vfx.js';
 import { drawStream, drawGather, materialForVfx } from './element_fx.js';
-import { drawSheetBeam } from './spell_visuals.js';
+import { drawSheetBeam, SpriteBurst, spellSheetReady } from './spell_visuals.js';
+// A hand-drawn one-shot burst into the spell system (visual only; outlives the spell that spawned it).
+const sheetBurst = (spell, opts) => { if (!spellSheetReady(opts.sheet)) return false; spell.system?.activeSpells.push(Object.assign(new SpriteBurst(opts), { fineVfx: true })); return true; };
 
 function withinHeight(target, sourceHeight, tolerance = 110) {
   return Math.abs((target.worldHeight ?? 0) - sourceHeight) < (target.hitHeightTolerance ?? tolerance);
@@ -834,13 +836,14 @@ export class TitanStompSpell {
     }
     combat.shakeCamera(13, .45);
     environment.add('crater', this.x, this.z, { radius: radius * .6 });
-    combat.spawnShockwave(this.x, this.y, radius, '#8d6e63');
+    this.sheets = sheetBurst(this, { sheet: 'quake_ring', x: this.x, y: this.y, z: this.z, fps: 16, anchor: 'base', scale: radius / 120 });
+    if (!this.sheets) combat.spawnShockwave(this.x, this.y, radius, '#8d6e63');
     combat.spawnElementalParticles(this.x, this.y, 'terra', 22);
     audio.playSpell('stone_spikes');
   }
 
   render(ctx) {
-    if (!this.landed) return;
+    if (!this.landed || this.sheets) return;
     ctx.save();
     ctx.strokeStyle = `rgba(161,136,127,${1 - this.timer / .3})`; ctx.lineWidth = 4;
     ctx.beginPath(); ctx.ellipse(this.x, this.y, this.radius * (this.quality?.area ?? 1) * (.6 + this.timer), 18, 0, 0, Math.PI * 2); ctx.stroke();
@@ -937,6 +940,7 @@ export class SeismicSlamSpell {
     this.burstIndex++;
     this.trail.push({ x, t: performance.now() });
     environment.add('crack', x, this.z, { radius: 38, angle: this.facing > 0 ? 0 : Math.PI });
+    this.sheets = sheetBurst(this, { sheet: 'rock_burst', x, y: this.y, z: this.z, fps: 18, anchor: 'base', flip: this.facing < 0 });
     combat.spawnElementalParticles(x, this.y, 'terra', 6);
     for (const t of gameWorld.getHostileTargets(this.team)) {
       if (this.hit.has(t) || t.isDead || t.lifeState === 'Dead') continue;
@@ -949,6 +953,7 @@ export class SeismicSlamSpell {
   }
 
   render(ctx) {
+    if (this.sheets) return; // the hand-drawn rock bursts carry the look
     ctx.save();
     const now = performance.now();
     for (const crack of this.trail) {
@@ -1060,7 +1065,7 @@ export class BurrowStrikeSpell {
     }
     combat.shakeCamera(11, .4);
     environment.add('crater', this.x, this.z, { radius: radius * .55 });
-    combat.spawnShockwave(this.x, this.y, radius, '#a1887f');
+    if (!sheetBurst(this, { sheet: 'rock_burst', x: this.x, y: this.y, z: this.z, fps: 16, anchor: 'base', scale: 1.6 })) combat.spawnShockwave(this.x, this.y, radius, '#a1887f');
     combat.spawnElementalParticles(this.x, this.y, 'terra', 24);
     audio.playSpell('stone_spikes');
   }
