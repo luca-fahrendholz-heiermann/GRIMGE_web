@@ -15,6 +15,7 @@
 //                      and the enemy Wizard go only for you — while you take
 //                      30 % less damage.
 import { defineSignature, startStance, endStance, emit, foesOf, groundDist, hit, plate, thread, sparks, TAU, DEPTH } from './signature_core.js';
+import { drawSpellSprite, spellSheetReady } from './spell_visuals.js';
 import { offerRecast } from './recast.js';
 import { combat } from './combat.js';
 import { audio } from './audio.js';
@@ -56,9 +57,11 @@ class MirrorShard {
       combat.shakeCamera(6, .2); audio.playImpact?.(true);
     } else if (this.dist >= this.range) { this.missed = true; this.t = 0; combat.spawnHitSparks?.(this.x, this.y - 40, this.f, ICE.edge, 8); }
   }
+  get fineVfx() { return spellSheetReady('ice_shard_bolt'); }
   render(ctx) {
     if (this.prison || this.missed) return;
     const y = this.y - 42; const f = this.f;
+    if (spellSheetReady('ice_shard_bolt')) { drawSpellSprite(ctx, 'ice_shard_bolt', Math.floor(this.t * 20) % 2, this.x - f * 14, y, { anchor: 'center', flip: f < 0 }); return; }
     plate(ctx, [[this.x - f * 18, y - 4], [this.x + f * 10, y - 6], [this.x + f * 22, y], [this.x + f * 10, y + 6], [this.x - f * 18, y + 4]], ICE, 5001, { alpha: 1, glowEdge: 1.2 });
     thread(ctx, [[this.x - f * 70, y], [this.x - f * 18, y]], ICE.vein, 3, .55);
   }
@@ -138,6 +141,13 @@ class MirrorPrison {
       const m = this.mirrorPos(i); if ((m.dz > 0) !== front) continue;
       const k = Math.max(0, Math.min(1, rise * 1.6 - i * .1)); if (k <= 0) continue;
       const by = groundYForDepth(this.cz) + m.dz; const h = (this.trapped ? 112 : 78) * k; const w = 15;
+      // Hand-drawn mirror panes (art/authoring/vfx_runes2.cjs); front panes are see-through so the foe shows.
+      if (spellSheetReady('ice_mirror')) {
+        const sc = (this.trapped ? 1 : .72) * k;
+        if (gone > 0) drawSpellSprite(ctx, 'ice_mirror_break', Math.min(4, Math.floor(gone * 5)), m.x, by, { scale: this.trapped ? 1 : .72, alpha: front ? .5 : 1 });
+        else { drawSpellSprite(ctx, 'ice_mirror', Math.floor(this.t * 6 + i) % 4, m.x, by, { scale: sc, alpha: front ? .5 : 1, flip: m.x < this.cx }); if (k >= 1 && p?.heroKey) ghostOf(ctx, p, m.x, by - 112 * sc * .3, 'idle', p.animTime ?? 0, Math.sign(this.cx - m.x) || 1, .28, '#4fc3f7', .72); }
+        continue;
+      }
       // Shattering: the panel breaks into falling shards.
       if (gone > 0) { for (let s = 0; s < 4; s++) plate(ctx, [[m.x - 6 + s * 3, by - h * (.2 + s * .2) + gone * 50], [m.x + s * 3, by - h * (.3 + s * .2) + gone * 60], [m.x + 4 + s * 3, by - h * (.15 + s * .2) + gone * 55]], ICE, 5100 + i * 10 + s, { alpha: 1 - gone }); continue; }
       const skew = Math.cos(m.a) * 5;
@@ -172,6 +182,7 @@ class MirrorLayer {
   get x() { return this.prison.cx; } get z() { return this.prison.cz + (this.front ? MIRROR_RZ / DEPTH * .8 : -MIRROR_RZ / DEPTH * .8); }
   get y() { return groundYForDepth(this.z); }
   get surfaceHeight() { return depthAround(this.z, this.prison.victim, this.front ? 1 : -1); }
+  get fineVfx() { return spellSheetReady('ice_mirror'); }
   update() { if (this.prison.isFinished) this.isFinished = true; }
   render(ctx) { this.prison.renderMirrors(ctx, this.front); }
 }

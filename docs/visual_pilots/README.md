@@ -248,3 +248,12 @@ Ein Versuch, die gemeinsamen Formteile (Platte, Band, Faden) in feiner Pixeldich
 - **Grenzenlos:** Sog als Singularität mit blauem Lichtring und einwärts wirbelnden Streifen; Stoß als rote Druckwellen-Kuppel; Nichts als violetter Strahl mit blau-roter Doppelhelix und Verschmelzungs-Kugel.
 
 - `v22_runde1_spiral_waechter_stich.png`, `v22_runde1_grenzenlos.png`
+
+## v23 — Spezialrunen Runde 2 (25.10.2026)
+
+`art/authoring/vfx_runes2.cjs`:
+- **Eisspiegel-Reigen:** Spiegel aus Eis (facettiertes Glas, Rahmen aus Eiskristallen, wandernder Glanz), Zerspringen in Splitter, fliegender Spiegelsplitter.
+- **Zeitstopp:** Glaskuppel mit Stunden-Runen, Boden-Zifferblatt, schwebendes Zifferblatt mit eingefrorenen Zeigern, Partikel stehen still.
+- **Schattenreigen:** dunkle Sichelhiebe mit violetter Kante und Tinten-Spritzern.
+
+- `v23_runde2_spiegel_zeitstopp.png`

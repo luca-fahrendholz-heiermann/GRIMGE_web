@@ -11,6 +11,7 @@
 //   S73 ZEITSTOPP    a field where every projectile freezes in mid-air (yours
 //                    too); when the field ends they fly on
 import { applyStatus } from './status_effects.js';
+import { drawSpellSprite, spellSheetReady } from './spell_visuals.js';
 import { defineSignature, emit, foesOf, hit, plate, TAU, DEPTH } from './signature_core.js';
 import { offerRecast } from './recast.js';
 import { combat } from './combat.js';
@@ -231,9 +232,16 @@ export class TimeStopField {
     for (const pr of gw?.projectiles ?? []) if (!this.frozen.has(pr) && Number.isFinite(pr.vx) && this.inside(pr)) { this.frozen.add(pr); pr.timeFrozen = true; }
   }
   release() { for (const s of this.frozen) s.timeFrozen = false; this.frozen.clear(); }
+  get fineVfx() { return spellSheetReady('time_dome'); }
   render(ctx) {
     const x = this.x; const y = this.y; const R = STOP.radius; const ry = R * .34;
     const a = Math.min(1, this.t / .2) * Math.min(1, (this.life - this.t) / .3);
+    if (spellSheetReady('time_dome')) {
+      // Hand-drawn time-stop dome (art/authoring/vfx_runes2.cjs) + frozen projectiles marked with a small dial.
+      drawSpellSprite(ctx, 'time_dome', Math.floor(this.t * 4) % 8, x, y, { scale: R / 120 * (.6 + .4 * Math.min(1, this.t / .2)), alpha: a });
+      for (const s of this.frozen) { if (!Number.isFinite(s.x)) continue; const sy = (s.y ?? groundYForDepth(s.z ?? this.z)) - (s.h ?? s.height ?? 40); ctx.fillStyle = '#eef3fa'; for (let k = 0; k < 12; k++) { const ang = k / 12 * TAU; ctx.fillRect(Math.round(s.x + Math.cos(ang) * 11), Math.round(sy + Math.sin(ang) * 11), 2, 2); } }
+      return;
+    }
     ctx.save(); ctx.globalAlpha = .16 * a; ctx.fillStyle = '#cfd8dc'; ctx.beginPath(); ctx.ellipse(x, y - R * .45, R, R * .55, 0, 0, TAU); ctx.fill();
     ctx.globalAlpha = .7 * a; ctx.strokeStyle = '#eceff1'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(x, y, R, ry, 0, 0, TAU); ctx.stroke();
     ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.ellipse(x, y - R * .45, R, R * .55, 0, 0, TAU); ctx.stroke(); ctx.setLineDash([]);

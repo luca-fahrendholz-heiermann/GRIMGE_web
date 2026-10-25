@@ -1129,5 +1129,53 @@ export const SPELL_SPRITE_SHEETS = Object.freeze({
   "res": 2,
   "hd": true,
   "anchor": "center"
+ },
+ "ice_mirror": {
+  "name": "ice_mirror",
+  "w": 22,
+  "h": 62,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 2
+ },
+ "ice_mirror_break": {
+  "name": "ice_mirror_break",
+  "w": 32,
+  "h": 62,
+  "frames": 5,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 2
+ },
+ "ice_shard_bolt": {
+  "name": "ice_shard_bolt",
+  "w": 28,
+  "h": 10,
+  "frames": 2,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "time_dome": {
+  "name": "time_dome",
+  "w": 124,
+  "h": 84,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 8
+ },
+ "shadow_slash": {
+  "name": "shadow_slash",
+  "w": 40,
+  "h": 40,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
  }
 });

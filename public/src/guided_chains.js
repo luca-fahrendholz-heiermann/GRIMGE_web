@@ -15,6 +15,7 @@
 //   4–6 LUFTSCHNITT          (tap ×3)        three cuts in the air
 //   7 ERDHAMMER              (tap / swipe ↓) both crash down, the ground shocks around
 import { defineSignature, emit, SigSequence, foesOf, TAU, DEPTH } from './signature_core.js';
+import { drawSpellSprite, spellSheetReady } from './spell_visuals.js';
 import { combat } from './combat.js';
 import { groundYForDepth, clampToArena } from './world.js';
 import { setStatusSource } from './status_effects.js';
@@ -105,7 +106,8 @@ export class GuidedChain {
   render(ctx, renderY) {
     const p = this.p;
     for (const g of this.ghosts) ghostOf(ctx, p, g.x, g.y, g.state, p.animTime ?? 0, g.f, .5 * (1 - g.t / .3), '#7e57c2');
-    for (const s of this.slashes) {
+    if (spellSheetReady('shadow_slash')) for (const s of this.slashes) drawSpellSprite(ctx, 'shadow_slash', Math.min(5, Math.floor(s.t / .22 * 6)), s.x, s.y, { anchor: 'center', scale: Math.max(.6, s.r / 30), flip: (p.facing || 1) < 0 });
+    for (const s of spellSheetReady('shadow_slash') ? [] : this.slashes) {
       const a = 1 - s.t / .22; ctx.save(); ctx.globalAlpha = a; ctx.lineCap = 'butt';
       for (const [col, w] of [['#311b92', 6], ['#ede7f6', 2]]) { ctx.strokeStyle = col; ctx.lineWidth = w; ctx.beginPath(); ctx.arc(Math.round(s.x), Math.round(s.y), s.r, s.a0, s.a1); ctx.stroke(); }
       ctx.restore();
