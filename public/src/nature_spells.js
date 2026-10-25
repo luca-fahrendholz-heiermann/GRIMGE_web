@@ -17,6 +17,7 @@
 //   construct + ignis / aqua / fulgur / natura / umbra / bestia
 //   = flame / frost / storm / venom / blood (life steal) / rending (bleed).
 import { startStance, signatureImpl } from './signature_core.js';
+import { drawSpellSprite, spellSheetReady } from './spell_visuals.js';
 import { audio } from './audio.js';
 import { combat } from './combat.js';
 import { groundYForDepth } from './world.js';
@@ -76,8 +77,19 @@ class NatureZone {
     if (this.acc >= .25) { this.tickFn?.(this, this.acc, game); this.acc = 0; }
     if (this.t >= this.life) this.isFinished = true;
   }
+  get fineVfx() { return spellSheetReady('swamp'); }
   render(ctx) {
     const a = Math.min(1, this.t * 4, (this.life - this.t) * 2);
+    // Hand-drawn zones (art/authoring/vfx_nature.cjs): the pools replace the old look, the flower rings grow
+    // round the (kept) healing circle. They grow in over 0.25 s and shrink away over the last 0.5 s.
+    if (spellSheetReady('swamp')) {
+      const frame = Math.floor(this.t * 9) % 8; const k = Math.max(.2, a);
+      if (this.kind === 'swamp') { drawSpellSprite(ctx, 'swamp', frame, this.x, this.y + 6, { scale: this.R / 80 * (.6 + .4 * k) }); return; }
+      if (this.kind === 'spring') { drawSpellSprite(ctx, 'spring', frame, this.x, this.y + 6, { scale: this.R / 80 * (.6 + .4 * k) }); return; }
+      magicCircle(ctx, this.x, this.y, this.R, this.t, a, this.colors);
+      drawSpellSprite(ctx, this.kind === 'bless' ? 'bless_ring' : 'bloom_ring', frame, this.x, this.y + 6, { scale: this.R / 76 * (.7 + .3 * k) });
+      return;
+    }
     if (this.kind === 'swamp') {
       ctx.save(); ctx.globalAlpha = .55 * a; ctx.fillStyle = '#2e3b16'; ctx.beginPath(); ctx.ellipse(this.x, this.y, this.R, this.R * .32, 0, 0, TAU); ctx.fill(); ctx.restore();
       for (let i = 0; i < 6; i++) { const ph = (this.t * .8 + i / 6) % 1; const ang = i * 2.4; ctx.save(); ctx.globalAlpha = a * (1 - ph); ctx.strokeStyle = '#b2ff59'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(this.x + Math.cos(ang) * this.R * .6, this.y + Math.sin(ang) * this.R * .18 - ph * 6, 2 + ph * 4, 0, TAU); ctx.stroke(); ctx.restore(); }
@@ -105,9 +117,11 @@ class Bramble {
     if (this.acc >= .5) this.acc = 0;
     if (this.t >= this.life) this.isFinished = true;
   }
+  get fineVfx() { return spellSheetReady('bramble'); }
   render(ctx) {
     if (this.t <= 0) return;
     const grow = Math.min(1, this.t / .2); const a = Math.min(1, (this.life - this.t) * 2); const y = this.y;
+    if (spellSheetReady('bramble')) { const frame = grow < 1 ? Math.min(2, Math.floor(grow * 3)) : 3 + Math.floor(this.t * 6) % 3; drawSpellSprite(ctx, 'bramble', frame, this.x, y + 2, { flip: Math.round(this.x / 34) % 2 === 0, scale: .7 + .3 * Math.max(.3, a) }); return; }
     for (let i = 0; i < 5; i++) {
       const sx = this.x + (i - 2) * 8; const h = (30 + (i % 2) * 16) * grow;
       band(ctx, [[sx, y + 2], [sx + Math.sin(i * 2) * 5, y - h * .5], [sx + Math.sin(i * 3) * 8, y - h]], (k, n) => 5 - k * 1.5, GEO_LOOKS.root, 7300 + i, { t: this.t, alpha: a });
@@ -130,8 +144,10 @@ class FireSeed {
     }
     if (this.t >= this.delay + .4) this.isFinished = true;
   }
+  get fineVfx() { return spellSheetReady('seed_burst'); }
   render(ctx) {
     const y = this.y;
+    if (spellSheetReady('seed_burst')) { const frame = !this.burst ? Math.floor(this.t * 8) % 2 : 2 + Math.min(4, Math.floor((this.t - this.delay) / .4 * 5)); drawSpellSprite(ctx, 'seed_burst', frame, this.x, y + 2); return; }
     if (!this.burst) { plate(ctx, [[this.x, y - 8], [this.x + 4, y], [this.x, y + 2], [this.x - 4, y]], { ...GEO_LOOKS.root, body: '#8d6e63', vein: '#ff7043' }, 7320, { alpha: 1, pulse: .5 + .5 * Math.sin(this.t * 20) }); return; }
     const k = (this.t - this.delay) / .4;
     for (let i = 0; i < 5; i++) { const ang = -Math.PI / 2 + (i - 2) * .4; plate(ctx, [[this.x - 4, y], [this.x + Math.cos(ang) * 30 * k, y + Math.sin(ang) * 40 * k], [this.x + 4, y]], { kind: 'crystal', dark: '#3a1206', body: '#ff8a3d', facet: '#ffd0a0', vein: '#ff5a1f', edge: '#ffe2b8', spark: '#fff1c2', core: '#fffaf0', glow: 'rgba(255,90,31,', edgeGlow: 'rgba(255,226,184,' }, 7330 + i, { alpha: 1 - k }); }
@@ -147,8 +163,10 @@ class PollenStorm {
     for (const t of foesOf(this.caster, game)) { if (this.hit.has(t)) continue; const dx = (t.x - this.x) * this.f; if (dx > 0 && dx < reach && Math.abs(((t.z ?? this.z) - this.z) * DEPTH) < 20 + dx * .3) { this.hit.add(t); t.takeDamage?.(8, 0, 0, .9, false, 'spell'); t.slow?.(3, .5); } }
     if (this.t >= this.life) this.isFinished = true;
   }
+  get fineVfx() { return spellSheetReady('pollen_cloud'); }
   render(ctx) {
     const y = this.y - 34; const a = Math.min(1, (this.life - this.t) * 2);
+    if (spellSheetReady('pollen_cloud')) { const grow = Math.min(1, this.t / .7); drawSpellSprite(ctx, 'pollen_cloud', Math.floor(this.t * 10) % 8, this.x + this.f * (40 + 100 * grow), y, { anchor: 'center', flip: this.f < 0, scale: .55 + .45 * grow }); return; }
     for (let i = 0; i < 44; i++) { const u = ((this.t * .9 + i / 28) % 1); const dx = 30 + u * 220; const spread = (Math.sin(i * 7.3) * .5) * (14 + dx * .3); ctx.save(); ctx.globalAlpha = a * (1 - u * .6); ctx.fillStyle = i % 3 ? '#f0f4c3' : '#ffd54f'; ctx.fillRect(this.x + this.f * dx, y + spread + Math.sin(this.t * 6 + i) * 3, 4, 4); ctx.restore(); }
   }
 }
@@ -195,8 +213,17 @@ export class WorldTree {
     }
     if (this.t >= this.life) { this.isFinished = true; for (const b of this.branches) unregisterSurface(game, b.surface); }
   }
+  get fineVfx() { return spellSheetReady('world_tree'); }
   render(ctx) {
     const y = this.y; const g = this.grow; const fade = Math.min(1, (this.life - this.t) * 2);
+    if (spellSheetReady('world_tree')) {
+      // Hand-drawn tree (art/authoring/vfx_nature.cjs): growth frames 0-4, then the swaying loop 5-7.
+      const frame = g < 1 ? Math.min(4, Math.floor(g * 5)) : 5 + Math.floor(this.t * 3) % 3;
+      drawSpellSprite(ctx, 'world_tree', frame, this.x, y + 4);
+      for (const b of this.branches) b.render(ctx);
+      if (this.hp < this.maxHp) { ctx.fillStyle = 'rgba(0,0,0,.7)'; ctx.fillRect(this.x - 20, y - 262, 40, 4); ctx.fillStyle = '#9be36a'; ctx.fillRect(this.x - 20, y - 262, 40 * this.hp / this.maxHp, 4); }
+      return;
+    }
     const bark = this.hitFlash > 0 ? { ...GEO_LOOKS.bark, body: '#ffffff' } : GEO_LOOKS.bark;
     const H = 190 * g;
     // Roots spreading at the base.

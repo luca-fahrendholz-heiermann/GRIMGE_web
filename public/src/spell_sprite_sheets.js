@@ -678,5 +678,84 @@ export const SPELL_SPRITE_SHEETS = Object.freeze({
   "res": 2,
   "hd": true,
   "anchor": "center"
+ },
+ "bloom_ring": {
+  "name": "bloom_ring",
+  "w": 88,
+  "h": 32,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 6
+ },
+ "bless_ring": {
+  "name": "bless_ring",
+  "w": 88,
+  "h": 32,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 6
+ },
+ "bramble": {
+  "name": "bramble",
+  "w": 26,
+  "h": 34,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 2
+ },
+ "swamp": {
+  "name": "swamp",
+  "w": 92,
+  "h": 28,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 6
+ },
+ "spring": {
+  "name": "spring",
+  "w": 92,
+  "h": 30,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 6
+ },
+ "seed_burst": {
+  "name": "seed_burst",
+  "w": 24,
+  "h": 30,
+  "frames": 7,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 2
+ },
+ "pollen_cloud": {
+  "name": "pollen_cloud",
+  "w": 120,
+  "h": 42,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "world_tree": {
+  "name": "world_tree",
+  "w": 100,
+  "h": 150,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 4
  }
 });

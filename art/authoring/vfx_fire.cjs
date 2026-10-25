@@ -197,4 +197,4 @@ function whirl() {
   return s;
 }
 
-module.exports = { fireSheets: () => [ball(), explosion(), jetTile(), jetRoot(), jetHead(), whirl()] };
+module.exports = { fireSheets: () => [ball(), explosion(), jetTile(), jetRoot(), jetHead(), whirl()], flame, fireMass, smokePuff, ember };

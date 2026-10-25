@@ -184,3 +184,18 @@ Genutzt von Steinstacheln, Seismischem Schlag, Erdgräber, Titanen-Stampfer, Mag
 Genutzt von Licht-Lanze, Null-Strahl, Halo-Puls (vorher Glow-Ellipse), Void-Kugel, Seelenflammen (vorher Radialverlauf) und Schattenschritt (vorher Ringe).
 
 - `v13_licht_void_schatten_sheets.png`, `v13_licht_void_schatten_ingame.png`
+
+## v14 — Natur (25.10.2026)
+
+`art/authoring/vfx_nature.cjs`:
+- `bloom_ring` / `bless_ring`: Blumen- und Gold-Kranz um den Heilkreis.
+- `bramble`: Dornenranken mit Dornen und Blättern.
+- `swamp`: brodelnder Giftsumpf mit Dampf und Schilf.
+- `spring`: Heilquelle mit Wellen, Fontäne und Seerosen.
+- `seed_burst`: Feuersamen, der aufplatzt.
+- `pollen_cloud`: Pollenwolke.
+- `world_tree`: Weltenbaum, der heranwächst und sich wiegt.
+
+Genutzt von Heilblüte, Großer Blüte, Segenskreis, Dornenwuchs, Giftsumpf, Heilquelle, Pollensturm, Wildfeuer-Samen und Weltenbaum.
+
+- `v14_natur_sheets.png`, `v14_natur_ingame.png`
