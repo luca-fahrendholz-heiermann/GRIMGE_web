@@ -20,7 +20,7 @@ Jeder Strahl ist auf einem 96-px-Raster gezeichnet, kachelbar und läuft 12 bis 
   - oben weiß, Lavendel-Hellblau, dunkle Unterkante;
   - gerissene Fetzen dahinter;
   - in Bogenform angeordnet, die Mitte führt.
-- **Trichter** (`drawFunnel`; Tornado, Feuersturm, Sandsturm, Pollensturm):
+- **Trichter** (`drawFunnel`; Tornado, Feuersturm, Sandsturm, Pollensturm) — gemeinsame Grundform, Material je Element (siehe visual_pilots v6):
   - wenige dicke, klumpige, schräge Bänder, die sich überlappen;
   - oben breit, schlängelnd, unten ein Hakenschweif;
   - helle Oberkante, umlaufende Glanzlicht-Blöcke (die Drehung), dunkle Unterkante;

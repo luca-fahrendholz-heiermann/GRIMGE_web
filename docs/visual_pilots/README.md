@@ -74,3 +74,13 @@ Rückmeldung: Wind sah aus wie Elektrizität. Neu nach den Vorlagen (Pixel-Torna
 
 - `v5_wind_boee_trichter.png` — oben die Böe, unten Trichter in Wind, Feuer und Sand
 - `v5_feuersturm.png` — Feuersturm im Spiel
+
+## v6 — Trichter je Material (25.10.2026)
+
+Rückmeldung: Die Trichter sahen gleich aus, nur in anderer Farbe. Jetzt verhält sich jeder wie sein Material:
+- Wind: glatte Bänder, abreißende Wischer, Staub am Fuß.
+- Feuer: lodernde Bänder mit spitzen Zungen, glühender Kern in den Lücken, Rauchkrone, Flammenring, Glut.
+- Sand: körnig, rau, matt, kreisende Steine vorne und hinten, Staubwolke am Fuß.
+- Pollen: kein fester Körper, wirbelnde Blätter und Blüten auf den Bahnen, grüner Windschleier.
+
+- `v6_trichter_material.png` — von links: Wind, Feuer, Sand, Pollen

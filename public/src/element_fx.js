@@ -271,10 +271,17 @@ export function drawWindGust(ctx, x, y, facing, t, seed = 1, size = 1, k = 1) {
 // snaking sideways; each band's back half is darker, its front half lit, with highlight segments racing round
 // (the spin); the top shows the dark inside. (x, yGround) = foot point, h = height, wTop = top width.
 export function drawFunnel(ctx, x, yGround, h, wTop, t, look = 'wind', seed = 1, k = 1) {
-  // Like the reference tornado: FEW thick, lumpy, tilted bands (not a coil of thin rings). Each band is a
-  // skewed ellipse slab: lit upper face with big highlight blocks racing round (the spin), body, dark under
-  // edge; bands overlap and snake sideways; the wide top shows the dark inside; the tail thins to a hook.
-  const pal = FUNNEL_LOOKS[look] ?? WIND; const H = h * k; const N = Math.max(4, Math.min(9, R(H / 14)));
+  // Like the reference tornado: FEW thick, lumpy, tilted bands that overlap, wide on top, snaking, a hooked
+  // tail — and then every element behaves like its material (user, 25 Oct 2026: "die Trichter sehen alle
+  // gleich aus, egal welches Element"):
+  //   wind   smooth lavender bands, white highlights racing round, wisps peeling off, dust whirled at the foot
+  //   fire   the bands burn: pointed flame tongues lick upward off every band, the white-hot core glows
+  //          through the gaps, a smoke crown billows on top, a ring of flames at the foot, embers fly
+  //   sand   grainy, rough, matt bands (no shine), stones orbit in front of / behind the funnel, a thick
+  //          dust cloud rolls out at the foot
+  //   pollen no solid body: leaves and petals ride the band orbits, a thin green veil of wind behind them
+  const pal = FUNNEL_LOOKS[look] ?? WIND; const H = h * k; if (H < 2) return;
+  const N = Math.max(4, Math.min(9, R(H / 14)));
   const bands = [];
   for (let i = 0; i < N; i++) {
     const u = i / (N - 1); // 0 top … 1 foot
@@ -285,24 +292,94 @@ export function drawFunnel(ctx, x, yGround, h, wTop, t, look = 'wind', seed = 1,
     const cy = yGround - H * (1 - u) + thick * .3; const tilt = (hash01(seed + i * 9) - .5) * .25;
     bands.push({ u, cx, hw, cy, thick, tilt });
   }
+  const ring = (b, ang) => ({ x: b.cx + Math.cos(ang) * b.hw, y: b.cy - b.thick * .5 + Math.sin(ang) * b.hw * .26 + Math.cos(ang) * b.tilt * b.hw });
+  const orbiters = (front, draw) => { // things carried round the funnel: back half first, front half after the body
+    for (let q = 0; q < 14; q++) { const b = bands[Math.floor(hash01(seed + q * 5) * bands.length)]; const ang = hash01(seed + q * 11) * Math.PI * 2 + t * (3 + hash01(seed + q) * 2); if ((Math.sin(ang) > 0) !== front) continue; const pnt = ring({ ...b, hw: b.hw + 4 + hash01(seed + q * 3) * 6 }, ang); draw(pnt.x, pnt.y, q); }
+  };
+  if (look === 'pollen') return drawPollenFunnel(ctx, bands, ring, pal, t, seed, yGround, wTop);
+  // ── behind the body ──
+  if (look === 'sand') orbiters(false, (px, py, q) => { const s = 2 + (q % 3); box(ctx, px - 1, py - 1, s + 2, s + 2, '#2e2016'); box(ctx, px, py, s, s, q % 2 ? '#5d4a36' : pal.deep); });
+  // The mouth: the dark inside (wind / sand); fire shows its white-hot heart instead.
   const top = bands[0];
-  for (let yy = -R(top.hw * .26); yy <= 0; yy++) { const w = top.hw * Math.sqrt(Math.max(0, 1 - (yy / (top.hw * .26 + .01)) ** 2)) * .85; box(ctx, top.cx - w, top.cy + yy - top.thick * .55, w * 2, 1, pal.inner); }
+  for (let yy = -R(top.hw * .26); yy <= 0; yy++) { const w = top.hw * Math.sqrt(Math.max(0, 1 - (yy / (top.hw * .26 + .01)) ** 2)) * .85; box(ctx, top.cx - w, top.cy + yy - top.thick * .55, w * 2, 1, look === 'fire' ? '#fff6d0' : pal.inner); }
+  if (look === 'fire') for (const b of bands) box(ctx, b.cx - b.hw * .35, b.cy - b.thick, b.hw * .7, b.thick, '#ffd54f'); // core glowing through gaps
+  // ── the bands ──
   for (let bi = bands.length - 1; bi >= 0; bi--) {
     const b = bands[bi]; const ry = b.hw * .26;
     for (let xx = -R(b.hw); xx <= R(b.hw); xx++) {
       const c = xx / b.hw; const arc = Math.sqrt(Math.max(0, 1 - c * c)); const front = R(b.cy + arc * ry + c * b.tilt * b.hw);
       const lumpTop = R((hash01(seed + bi * 31 + Math.floor((xx + b.hw) / 5)) - .5) * 3);
-      const th = Math.max(3, R(b.thick * (.55 + .45 * arc))) + lumpTop;
+      let th = Math.max(3, R(b.thick * (.55 + .45 * arc))) + lumpTop;
       const ang = Math.acos(Math.max(-1, Math.min(1, c))); const ph = ((ang / Math.PI) - t * 1.3 + bi * .29) % 1;
-      const lit = (ph + 1) % 1 < .35;
+      const lit = (ph + 1) % 1 < .35; const X = b.cx + xx;
+      if (look === 'fire') {
+        // Burning band: pointed tongues of irregular height lick up off its top edge and flicker.
+        // Broad flickering tongues (10-px cells), leaning with the spin, only on the lit front of the band.
+        const cell = Math.floor((xx + b.hw + t * 40) / 10); const uu = ((xx + b.hw + t * 40) / 10) - cell;
+        const tongue = arc > .3 ? Math.pow(Math.max(0, Math.sin(uu * Math.PI)), 1.5) * b.thick * (.2 + hash01(cell + bi * 17 + seed) * .55) * (.75 + .25 * Math.sin(t * 25 + cell)) : 0;
+        const y0 = front - th - R(tongue); const tTop = front - th;
+        box(ctx, X, y0 - 1, 1, front - y0 + 1, '#4a1206');
+        box(ctx, X, y0, 1, Math.max(1, tTop - y0 + 1), pal.deep);          // red tongue tips
+        box(ctx, X, tTop, 1, th, pal.body);
+        box(ctx, X, tTop + 1, 1, Math.max(1, R(th * .55)), lit ? pal.core : pal.light);
+        box(ctx, X, front - 1, 1, 1, pal.deep);
+        continue;
+      }
+      if (look === 'sand') th += R((hash01(seed + X * 3 + bi) - .5) * 3); // rough, ragged edges
       const y0 = front - th;
-      box(ctx, b.cx + xx, y0, 1, th, pal.body);
-      box(ctx, b.cx + xx, y0, 1, Math.max(1, R(th * .38)), lit ? pal.core : pal.light);
-      box(ctx, b.cx + xx, front - 2, 1, 2, pal.deep);
-      if (Math.abs(c) > .8) box(ctx, b.cx + xx, y0 + R(th * .38), 1, Math.max(1, th - R(th * .38) - 2), pal.deep);
+      box(ctx, X, y0, 1, th, pal.body);
+      if (look === 'sand') {
+        // Matt and grainy: a dithered lighter top, grains everywhere, no racing shine.
+        for (let yy = y0; yy < front - 1; yy++) { const g = hash01(X * 13 + yy * 7 + seed + Math.floor(t * 12)); if (g > .72) box(ctx, X, yy, 1, 1, g > .9 ? pal.core : yy < y0 + th * .4 ? pal.light : pal.deep); }
+        box(ctx, X, front - 2, 1, 2, pal.deep);
+      } else {
+        box(ctx, X, y0, 1, Math.max(1, R(th * .38)), lit ? pal.core : pal.light);
+        box(ctx, X, front - 2, 1, 2, pal.deep);
+      }
+      if (Math.abs(c) > .8) box(ctx, X, y0 + R(th * .38), 1, Math.max(1, th - R(th * .38) - 2), pal.deep);
     }
   }
-  for (let q = 0; q < 6; q++) { const life = (t * 1.4 + hash01(seed + q)) % 1; const b = bands[Math.floor(hash01(seed + q * 5) * bands.length)]; const side = q % 2 ? 1 : -1; const px = b.cx + side * (b.hw + 4 + life * 20); const py = b.cy - b.thick * .5 - life * 10; box(ctx, px, py, 4, 2, pal.body); box(ctx, px, py, 3, 1, pal.light); }
+  // ── in front of / around the body ──
+  if (look === 'wind') {
+    for (let q = 0; q < 4; q++) { const b = bands[1 + q % Math.max(1, bands.length - 2)]; const side = q % 2 ? 1 : -1; const life = (t * 1.2 + hash01(seed + q)) % 1; drawWisp(ctx, b.cx + side * (b.hw + 4 + life * 26), b.cy - b.thick * .5 - life * 6, 14 + life * 10, 4, side, t, seed + q * 7, 0, pal); }
+    for (let q = 0; q < 10; q++) { const a = hash01(seed + q * 3) * Math.PI * 2 + t * 5; const r = wTop * (.25 + hash01(seed + q) * .25); box(ctx, x + Math.cos(a) * r, yGround - 2 - Math.abs(Math.sin(a * 2)) * 8, 2, 2, q % 3 ? '#cbb89a' : '#a1887f'); }
+  } else if (look === 'fire') {
+    // Smoke crown billowing off the top, a ring of flames at the foot, embers flung out.
+    for (let q = 0; q < 7; q++) { const life = (t * .8 + hash01(seed + q * 7)) % 1; const r = 5 + life * 9; const px = top.cx + (hash01(seed + q) - .5) * top.hw * 1.6 + Math.sin(t * 2 + q) * 4; const py = top.cy - top.thick - 4 - life * 26; for (let yy = -R(r); yy <= R(r); yy++) { const w = Math.sqrt(Math.max(0, r * r - yy * yy)); box(ctx, px - w, py + yy * .8, w * 2, 1, yy < -r * .3 ? '#5d4a40' : '#3e3230'); } }
+    for (let q = 0; q < 9; q++) { const a = (q / 9) * Math.PI * 2 + t * .8; const px = x + Math.cos(a) * wTop * .4; const py = yGround + Math.sin(a) * wTop * .1; drawFlameLick(ctx, px, py, 7 + hash01(seed + q) * 8, 4 + hash01(seed + q * 3) * 2, t * 1.3 + q, seed + q); }
+    orbiters(true, (px, py, q) => { box(ctx, px, py, 2, 2, q % 2 ? '#ffd54f' : '#ff9800'); });
+  } else if (look === 'sand') {
+    orbiters(true, (px, py, q) => { const s = 2 + (q % 3); box(ctx, px - 1, py - 1, s + 2, s + 2, '#2e2016'); box(ctx, px, py, s, s, q % 2 ? '#8a6e4e' : pal.body); box(ctx, px, py, 1, 1, pal.light); });
+    // Dust cloud rolling out at the foot.
+    // Dust cloud rolling out at the foot: clusters of small round puffs that swell and settle.
+    for (let q = 0; q < 8; q++) { const side = q % 2 ? 1 : -1; const life = (t * .9 + hash01(seed + q * 3)) % 1; const cx0 = x + side * (6 + life * wTop * .7);
+      for (let m = 0; m < 3; m++) { const r = (3 + life * 6) * (1 - m * .2); const px = cx0 + (m - 1) * r * 1.1; const py = yGround - r - m % 2 * r * .6; for (let yy = -R(r); yy <= R(r); yy++) { const w = Math.sqrt(Math.max(0, r * r - yy * yy)); box(ctx, px - w, py + yy, w * 2, 1, yy < -r * .35 ? pal.light : yy > r * .5 ? pal.deep : pal.body); } } }
+  }
+}
+// A single flame lick standing on the ground (h tall, w wide): tapered, flickering, red tips, yellow heart.
+export function drawFlameLick(ctx, x, y, h, w, t, seed = 1) {
+  const m = MAT.fire; const H = R(h * (.8 + .2 * Math.sin(t * 22 + seed)));
+  for (let r = 0; r < H; r++) { const u = r / H; const hw = Math.max(.5, w * (u < .3 ? 1 : 1 - (u - .3) / .7) * .5 + 1); const sway = Math.sin(u * 3 + t * 14 + seed) * u * 2; box(ctx, x - hw + sway - 1, y - r, hw * 2 + 2, 1, m.out); box(ctx, x - hw + sway, y - r, hw * 2, 1, u > .7 ? m.deep : u > .4 ? m.body : m.mid); if (u < .45 && hw > 1.5) box(ctx, x - hw * .4 + sway, y - r, Math.max(1, hw * .8), 1, u < .2 ? m.core : m.light); }
+}
+// Pollen / nature funnel: leaves and petals ride the band orbits; only a thin green veil of wind behind.
+function drawPollenFunnel(ctx, bands, ring, pal, t, seed, yGround, wTop) {
+  // The veil: each band's orbit as a broken ribbon of green wind (back half dark, front half light).
+  const veil = (front) => { for (const b of bands) for (let i = 0; i < 40; i++) { const ang = (i / 40) * Math.PI * 2; if ((Math.sin(ang) > 0) !== front) continue; if (((i / 40) * 3 - t * 1.5 + b.u) % 1 < .35) continue; const pnt = ring(b, ang); box(ctx, pnt.x, pnt.y, 3, 2, front ? pal.light : pal.deep); } };
+  veil(false);
+  const leaves = [];
+  bands.forEach((b, bi) => { const n = 10 + bi * 2; for (let q = 0; q < n; q++) { const ang = (q / n) * Math.PI * 2 + t * (2.6 + bi * .3) + hash01(seed + bi * 13 + q); const pnt = ring({ ...b, hw: b.hw * (.85 + hash01(seed + q * 7 + bi) * .3) }, ang); leaves.push({ ...pnt, front: Math.sin(ang) > 0, q: q + bi * 17 }); } });
+  leaves.sort((l1, l2) => l1.front - l2.front);
+  for (const l of leaves) {
+    const kind = hash01(seed + l.q * 3); const ph = Math.floor(t * 9 + l.q) % 4; const x = l.x; const y = l.y;
+    if (kind > .8) { box(ctx, x - 2, y - 2, 5, 5, '#ad1457'); box(ctx, x - 1, y - 1, 3, 3, '#f8bbd0'); box(ctx, x, y, 1, 1, '#fff59d'); continue; } // blossom
+    const c1 = l.front ? '#9ccc65' : '#689f38'; const c2 = l.front ? '#dcedc8' : '#9ccc65'; const ink = '#2e4a14';
+    if (ph === 0) { box(ctx, x - 3, y - 1, 7, 4, ink); box(ctx, x - 2, y, 5, 2, c1); box(ctx, x - 2, y, 2, 1, c2); }       // leaf flat
+    else if (ph === 1) { box(ctx, x - 1, y - 3, 4, 7, ink); box(ctx, x, y - 2, 2, 5, c1); box(ctx, x, y - 2, 1, 2, c2); } // leaf edge-on turning
+    else if (ph === 2) { box(ctx, x - 3, y, 7, 2, ink); box(ctx, x - 2, y, 5, 1, c1); }                                    // thin edge
+    else { box(ctx, x - 2, y - 2, 5, 5, ink); box(ctx, x - 1, y - 1, 3, 3, c1); box(ctx, x - 1, y - 1, 1, 1, c2); }         // tumbling
+  }
+  veil(true);
+  for (let q = 0; q < 10; q++) { const life = (t * .7 + hash01(seed + q)) % 1; box(ctx, bands[0].cx + (hash01(seed + q * 5) - .5) * wTop, bands[0].cy - 8 - life * 30, 2, 2, '#fff59d'); } // pollen rising
 }
 
 // ── earth ──────────────────────────────────────────────────────────────────
