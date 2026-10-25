@@ -979,5 +979,36 @@ export const SPELL_SPRITE_SHEETS = Object.freeze({
   "anchor": "center",
   "gx": 22,
   "gy": 24
+ },
+ "blood_gatling": {
+  "name": "blood_gatling",
+  "w": 48,
+  "h": 22,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center",
+  "gx": 26,
+  "gy": 24
+ },
+ "blood_launcher": {
+  "name": "blood_launcher",
+  "w": 44,
+  "h": 20,
+  "frames": 2,
+  "res": 2,
+  "hd": true,
+  "anchor": "center",
+  "gx": 30,
+  "gy": 24
+ },
+ "blood_rocket": {
+  "name": "blood_rocket",
+  "w": 20,
+  "h": 10,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
  }
 });

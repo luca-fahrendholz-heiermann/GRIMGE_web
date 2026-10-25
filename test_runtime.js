@@ -2279,7 +2279,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   const { MageProfile, BUFF_RUNE_IDS } = await import('./public/src/progression.js');
   const neutral = { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false };
   const ids = buff.BUFF_FORM_IDS;
-  assert(ids.length === 23 && ids[0] === 'B01' && ids[1] === 'B02' && ids.includes('T40') && ['A01', 'A02', 'A03', 'A04', 'A05', 'A06', 'A07', 'A08'].every((id) => ids.includes(id)), 'The 23 curated Arcane States are registered (B01, B02, 13 atlas forms, A01 Göttlicher Riese, A02 Mystischer Affe, A03 Tausendhand, A04 Klingenblüte)');
+  assert(ids.length === 24 && ids[0] === 'B01' && ids[1] === 'B02' && ids.includes('T40') && ['A01', 'A02', 'A03', 'A04', 'A05', 'A06', 'A07', 'A08', 'A09'].every((id) => ids.includes(id)), 'The 24 curated Arcane States are registered (B01, B02, 13 atlas forms, A01 Göttlicher Riese, A02 Mystischer Affe, A03 Tausendhand, A04 Klingenblüte, A05–A09 body powers)');
   const tForms = ids.filter((id) => /^[TA]/.test(id));
   assert(tForms.every((id) => ['forward', 'up', 'down'].every((d) => FORM_MOVESETS[id]?.[d]?.short?.make && FORM_MOVESETS[id][d].full?.make) && FORM_SPRINT_ATTACKS[id]?.name), 'Every T / A form has six charged techniques and its own sprint attack');
   assert(FORM_MOVESETS.T13.forward.short.name === 'THREAD NEEDLE' && FORM_MOVESETS.T13.forward.full.name === 'HUNDRED FILAMENTS' && FORM_SPRINT_ATTACKS.T13.name === 'SILK STRIKE', 'Technique names come straight from the atlas (T13 Fadenschlag)');
@@ -2292,7 +2292,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   const second = profile.addRuneToDeck('buff_B01');
   assert(!second.ok && /ONE ARCANE STATE/.test(second.reason), 'A second buff rune is refused (one per deck)');
   assert(profile.sanitizeDeck(['ignis', 'buff_T13', 'buff_T08', 'aqua']).filter((id) => id.startsWith('buff_')).length === 1, 'Loading a deck keeps only one buff rune');
-  assert(BUFF_RUNE_IDS.length === 23, 'All 23 Arcane State runes are offered in the deck builder');
+  assert(BUFF_RUNE_IDS.length === 24, 'All 24 Arcane State runes are offered in the deck builder');
   {
     // A04 Klingenblüte: the weapon becomes the petal swarm (no normal held weapon), its cuts bleed.
     const BF = await import('./public/src/buff_forms.js');
@@ -2761,7 +2761,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   const strict = new Proxy({}, { get: (t, k) => (k === 'ellipse' || k === 'arc') ? (x, y, rx, ry) => { if (rx < 0 || (k === 'ellipse' && ry < 0)) throw new Error('IndexSizeError ' + k); } : (k === 'canvas' ? undefined : (k === 'measureText' ? () => ({ width: 10 }) : (k === 'createLinearGradient' ? () => ({ addColorStop() {} }) : () => {}))), set: () => true });
   const ids = Object.keys(buff.BUFF_FORMS);
   const impacts = ids.filter((id) => FS.FORM_SPRINTS[id]).map((id) => FS.FORM_SPRINTS[id].impact);
-  assert(new Set(impacts).size === impacts.length && impacts.length === 21, 'Every Arcane State (besides the B01 / B02 engines) has its own sprint impact');
+  assert(new Set(impacts).size === impacts.length && impacts.length === 22, 'Every Arcane State (besides the B01 / B02 engines) has its own sprint impact');
   assert(ids.every((id) => FS.FORM_DIVES[id]) && new Set(ids.map((id) => FS.FORM_DIVES[id].style)).size === ids.length && ['ninefold', 'eidolon', 'ascendant'].every((k) => FS.FORM_DIVES[k]), 'Every Arcane State and Focus transformation has its own air dive');
   const broken = [];
   for (const id of ids) {
@@ -2826,6 +2826,18 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
         for (const dir of ['forward', 'up', 'down']) DV.dome && (await import('./public/src/arcane_moves.js')).ARCANE_CHARGE[id](strict, { x: 300, y: 300, f: 1 }, buff.BUFF_FORMS[id].mat, dir, .7, 1.2);
       } catch (e) { bad.push(id + ': ' + e.message); } }
       assert(!bad.length, 'Body powers A05 DEHNLEIB, A06 BEBEN, A07 RAUM, A08 SPRENGLEIB: six own techniques each hit and render ' + bad.slice(0, 4).join(' | '));
+      // A09 BLUTARSENAL (user, 25 Oct 2026: fused with blood weapons): six techniques hit, render, make foes bleed; boss drop.
+      { const STS = await import('./public/src/status_effects.js'); const bad9 = []; let bled = false;
+        try { start('A09'); if (buff.currentBuffForm(P)?.id !== 'A09') bad9.push('cast');
+          for (const [dir, v] of [['forward', 'short'], ['forward', 'full'], ['up', 'short'], ['up', 'full'], ['down', 'short'], ['down', 'full']]) {
+            P.x = 300; P.z = .5; P.facing = 1; P.grounded = true; P.elevation = 0; dummy.homeX = dummy.x = dir === 'up' && v === 'full' ? 420 : 370; dummy.homeZ = dummy.z = .5; dummy.hp = dummy.maxHp; dummy.statusImmuneUntil = {}; /* the test clock stands still: an earlier bleed immunity would never expire */
+            spells.addSpell(FMS.A09[dir][v].make(P), 'B'); for (let i = 0; i < 150; i++) { spells.update(1 / 60, game); if (i % 6 === 0) for (const sp of spells.activeSpells) sp.render?.(strict); }
+            if (dummy.hp >= dummy.maxHp) bad9.push(FMS.A09[dir][v].name); if (STS.hasStatus(dummy, 'bleed')) bled = true;
+          }
+          for (const layer of ['back', 'front']) buff.renderBuffManifestation(strict, P, P.y, layer);
+          for (const dir of ['forward', 'up', 'down']) (await import('./public/src/arcane_moves.js')).ARCANE_CHARGE.A09(strict, { x: 300, y: 300, f: 1 }, buff.BUFF_FORMS.A09.mat, dir, .7, 1.2);
+        } catch (e) { bad9.push(e.message); }
+        assert(!bad9.length && bled && PR.lateRuneRoute('buff_A09')?.kind === 'boss', 'A09 BLUTARSENAL: salvo, gatling, rocket hub, rocket rain, spear bed and full arsenal hit and render, foes bleed; boss drop only ' + bad9.slice(0, 4).join(' | ')); buff.endBuffForm(P); }
       // Dehnleib: reach ×1.6, lightning does nothing, blunt melee hits bounce.
       start('A05'); dummy.homeX = dummy.x = P.x + 110; ready(); P.executeAttack(neutral, 'normal'); const farHit = dummy.hp < dummy.maxHp;
       const hp0 = P.hp; let prv = SSS({ team: 'red', statusElements: ['fulgur'] }); P.takeDamage(30, 100, 0, .2, false, 'spell'); SSS(prv); const shock = hp0 - P.hp;

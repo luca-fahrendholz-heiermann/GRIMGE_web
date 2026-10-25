@@ -78,4 +78,49 @@ function blade() {
   }
   return s;
 }
-module.exports = { bloodArmSheets: () => [rifle(), bow(), blade()] };
+// ── Blutarsenal (A09) — weapons growing out of the fused body ──
+//   blood_gatling   4 frames, 96×44: a rotary cannon of blood, barrels turning; 2-3 fire.
+//   blood_launcher  2 frames, 88×40: a shoulder rocket launcher with a blood warhead; 1 = fired.
+//   blood_rocket    4 frames, 40×20: the blood rocket in flight, a smoke-and-blood trail.
+function gatling() {
+  const s = new Sheet('blood_gatling', 96, 44, 4, { anchor: 'center', gx: 26, gy: 24 });
+  for (let f = 0; f < 4; f++) {
+    strands(s, f, 26, 24, 400);
+    part(s, f, [[20, 14], [44, 12], [46, 34], [20, 34]], { lit: .72 });            // housing
+    part(s, f, [[44, 15], [52, 15], [52, 31], [44, 31]], { lit: .6 });             // front plate
+    for (let b = 0; b < 4; b++) { const ph = (b + f * .5) / 4 * TAU; const y = 23 + Math.sin(ph) * 6; const lit = Math.cos(ph) > 0; part(s, f, [[52, y - 1.5], [88, y - 1.5], [88, y + 1.5], [52, y + 1.5]], { lit: lit ? .9 : .5, dark: lit ? .5 : .2 }); }
+    part(s, f, [[84, 15], [88, 15], [88, 31], [84, 31]], { lit: .7 });             // muzzle ring
+    part(s, f, [[28, 34], [40, 34], [38, 42], [30, 42]], { lit: .5 });             // ammo drum
+    for (const [x, len] of [[24, 6], [34, 8], [60, 5], [74, 4]]) drip(s, f, x, x < 50 ? 34 : 26, len + (f % 2));
+    if (f >= 2) for (let i = 0; i < 7; i++) { const ang = (i / 7 - .5) * 1.6; const l = f === 2 ? 14 : 8; for (let k = 0; k < l; k++) s.set(f, 90 + Math.cos(ang) * k, 23 + Math.sin(ang) * k, C.flash[k < 2 ? 3 : k < 6 ? 2 : 1]); }
+    B.selOutline(s, f, C.out);
+  }
+  return s;
+}
+function launcher() {
+  const s = new Sheet('blood_launcher', 88, 40, 2, { anchor: 'center', gx: 30, gy: 24 });
+  for (let f = 0; f < 2; f++) {
+    strands(s, f, 30, 24, 500);
+    part(s, f, [[6, 14], [70, 12], [72, 26], [6, 28]], { lit: .75 });              // tube
+    part(s, f, [[2, 12], [8, 12], [8, 30], [2, 30]], { lit: .55 });                // rear flare
+    part(s, f, [[30, 26], [36, 26], [35, 34], [30, 33]], { lit: .5 });             // grip
+    part(s, f, [[38, 8], [50, 8], [50, 12], [38, 12]], { lit: .8 });               // sight
+    if (f === 0) part(s, f, [[70, 14], [80, 16], [84, 19], [80, 22], [70, 24]], { lit: .95, dark: .55 }); // warhead
+    else for (let i = 0; i < 6; i++) { const ang = Math.PI + (i / 6 - .5) * 1.4; for (let k = 0; k < 10; k++) s.set(f, 2 + Math.cos(ang) * k, 21 + Math.sin(ang) * k, C.flash[k < 3 ? 2 : 1]); }
+    for (const [x, len] of [[16, 5], [44, 7], [62, 4]]) drip(s, f, x, 27, len + f);
+    B.selOutline(s, f, C.out);
+  }
+  return s;
+}
+function rocket() {
+  const s = new Sheet('blood_rocket', 40, 20, 4, { anchor: 'center' });
+  for (let f = 0; f < 4; f++) {
+    for (let k = 0; k < 4; k++) { const x = 12 - k * 4 - (f % 2) * 2; const r = 2 + k * .7; for (let yy = -r; yy <= r; yy++) for (let xx = -r; xx <= r; xx++) if (xx * xx + yy * yy <= r * r && !B.dither(x + xx, 10 + yy, k * .2)) s.set(f, x + xx, 10 + yy, k < 1 ? C.flash[1] : [hexC('#4a3e38'), hexC('#66574f')][k % 2]); }
+    part(s, f, [[14, 7], [30, 7], [36, 10], [30, 13], [14, 13]], { lit: .9, dark: .45 });
+    part(s, f, [[14, 4], [19, 7], [14, 7]], { lit: .6 }); part(s, f, [[14, 13], [19, 13], [14, 16]], { lit: .4 });
+    B.selOutline(s, f, C.out);
+  }
+  return s;
+}
+const hexC = (c) => B.pal({ x: c }).x;
+module.exports = { bloodArmSheets: () => [rifle(), bow(), blade(), gatling(), launcher(), rocket()] };

@@ -30,7 +30,8 @@ import './buff_v32_extra.js'; // A01 / A02 from user reference art
 import './buff_v32_hands.js'; // A03 Tausendhand
 import './buff_v32_bloom.js'; // A04 Klingenblüte
 import { installBankaiArsenal } from './bankai_arsenal.js';
-import { devilTick } from './arcane_devil.js'; // A05–A08 body powers (techniques, looks, water weakness, passives) // A04: the held weapon's arsenal (look + techniques)
+import { devilTick } from './arcane_devil.js';
+import { arsenalTick } from './arcane_bloodarsenal.js'; // A09 Blutarsenal (weapon fusion: techniques, look, bleed passive) // A05–A08 body powers (techniques, looks, water weakness, passives) // A04: the held weapon's arsenal (look + techniques)
 import { combat } from './combat.js';
 import { TransformationFx, transitionStyleOf, TRANSFORM_TIMING } from './transform_fx.js';
 import { groundYForDepth } from './world.js';
@@ -234,6 +235,7 @@ export function updateBuffForm(player, dt) {
   else b.timer = Math.max(0, b.timer - dt);
   updateMorphology(player, formFor(player, b.id), dt);
   devilTick(player, dt, formFor(player, b.id)); // body powers: water weakness, tremors, blast marks
+  arsenalTick(player, formFor(player, b.id));
   if (b.timer <= 0 || !player.isAlive) endBuffForm(player);
 }
 

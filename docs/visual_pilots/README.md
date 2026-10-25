@@ -221,3 +221,15 @@ Genutzt von Heilblüte, Großer Blüte, Segenskreis, Dornenwuchs, Giftsumpf, Hei
   - die Blutschirm-Zwillinge winden sich um das Ziel und brüllen oben seitlich;
   - der Sonnenwyrm (T40) nutzt denselben Baukasten.
 - `v19_drachen_kit.png`, `v19_blutdrachen_ingame.png`
+
+## v20–v21 — Blutwaffen und Arcane State A09 Blutarsenal (25.10.2026)
+
+- Blutfinsternis: Waffen aus Blut, mit Strängen am Unterarm verschmolzen (Gewehr, Bogen, Klinge; `v20_*`).
+- Neuer Arcane State **A09 Blutarsenal** (Körperkraft, nur als Boss-Drop), nach der Vorlage „mit Waffen verschmolzen“:
+  - Look: Gewehre wachsen aus dem Rücken, Raketenwerfer auf der Schulter, Blutgewehr am Unterarm, Adern über dem Körper, glühende Augen und ein Grinsen;
+  - vorwärts: Blutsalve / Gatling-Sturm;
+  - hoch: Raketenhub / Raketenregen;
+  - runter: Dornenbett / Volles Arsenal;
+  - passiv: Nahkampftreffer lassen mit 50 % Wahrscheinlichkeit bluten;
+  - Sprint: Bajonettsturm; Sturzangriff: Speerring; Heranziehen: Blutstrang.
+- `v21_blutarsenal_ingame.png` — links Ruhezustand, rechts Gatling-Sturm und Volles Arsenal
