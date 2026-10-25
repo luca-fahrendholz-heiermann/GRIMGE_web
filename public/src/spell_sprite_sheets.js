@@ -1177,5 +1177,62 @@ export const SPELL_SPRITE_SHEETS = Object.freeze({
   "res": 2,
   "hd": true,
   "anchor": "center"
+ },
+ "garnet_lens": {
+  "name": "garnet_lens",
+  "w": 10,
+  "h": 12,
+  "frames": 2,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "star_anchor": {
+  "name": "star_anchor",
+  "w": 44,
+  "h": 42,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "star_impact": {
+  "name": "star_impact",
+  "w": 88,
+  "h": 40,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 6
+ },
+ "comet_mantle": {
+  "name": "comet_mantle",
+  "w": 52,
+  "h": 52,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "comet_crash": {
+  "name": "comet_crash",
+  "w": 100,
+  "h": 48,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 6
+ },
+ "blossom": {
+  "name": "blossom",
+  "w": 24,
+  "h": 36,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 2
  }
 });

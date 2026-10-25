@@ -2,6 +2,7 @@
 // hover combat & kinetic power (S01–S06), time, echoes & prepared actions
 // (S07–S12). Every effect is textured material (plates, bands, shards) on
 // sockets or as its own world instance; the Wizard's sprite never changes.
+import { drawSpellSprite, spellSheetReady, SpriteBurst } from './spell_visuals.js';
 import {
   defineSignature, SIGNATURES, SigBolt, SigProp, SigSequence, startStance, endStance, emit, debris,
   foesOf, aliveFoe, groundDist, yOf, massOf, hit, projectilesOf, projKill, projSetVel, projVel, projSlow, projRelease, projHeight,
@@ -134,6 +135,7 @@ defineSignature('S02', {
         if ((layer === 'back') !== back) continue;
         const r = (ring ? 30 : 22) * emerge * collapse; const x = p.x + Math.cos(a) * r; const y = ry - 66 + ring * 8 + Math.sin(a) * r * .3;
         const lit = i < st.charged;
+        if (spellSheetReady('garnet_lens')) { drawSpellSprite(ctx, 'garnet_lens', lit ? 1 : 0, x, y, { anchor: 'center', alpha: (back ? .5 : 1) * Math.min(1, emerge * 2) }); continue; }
         plate(ctx, [[x, y - 5], [x + 3.5, y], [x, y + 5], [x - 3.5, y]], mat, 220 + i, { alpha: (back ? .7 : 1) * Math.min(1, emerge * 2), core: lit ? 1 : .15, glowEdge: lit ? 1.2 : .4 });
       }
     }
@@ -151,6 +153,7 @@ class StarAnchor extends SigProp {
     if (!this.fell && this.t >= .8) {
       this.fell = true;
       combat.shakeCamera(10, .3); combat.spawnShockwave(this.x, this.y, 150, this.mat.vein);
+      if (spellSheetReady('star_impact')) emit(Object.assign(new SpriteBurst({ sheet: 'star_impact', x: this.x, y: this.y, z: this.z, fps: 14, anchor: 'base', scale: 1.4 }), { fineVfx: true }));
       // The pull scales with distance; heavy fighters barely move, structures never.
       for (const t of foesOf(gw, this.team)) { const d = groundDist(t, this); if (d > 150 || d < 6) continue; const k = (1 - d / 150) * 60 * massOf(t); t.x += (this.x - t.x) / d * k; t.z += (this.z - t.z) / d * k; }
       for (const prop of environment.livingProps?.() ?? []) if (groundDist(prop, this) < 120) prop.takeDamage(25, Math.sign(prop.x - this.x) * 100, 0, 0, false, 'spell');
@@ -175,6 +178,7 @@ class StarAnchor extends SigProp {
       // The six-rayed anchor: falls from low height, split central vein.
       const drop = this.t < .65 ? 1 : this.t < .8 ? 1 - (this.t - .65) / .15 : 0;
       const ay = y - 26 - drop * 120;
+      if (spellSheetReady('star_anchor')) { drawSpellSprite(ctx, 'star_anchor', Math.floor(t * 8) % 4, this.x, ay, { anchor: 'center', alpha: Math.min(1, t * 3) }); return; }
       for (let i = 0; i < 6; i++) { const a = i / 6 * TAU + .2; plate(ctx, [[this.x, ay], [this.x + Math.cos(a - .18) * 26, ay + Math.sin(a - .18) * 18], [this.x + Math.cos(a) * 32, ay + Math.sin(a) * 22], [this.x + Math.cos(a + .18) * 26, ay + Math.sin(a + .18) * 18]], mat, this.seed + i, { alpha: Math.min(1, t * 3), glowEdge: .8, lit: .9 }); }
       thread(ctx, [[this.x, ay - 20], [this.x - 2, ay], [this.x + 1, ay + 18]], mat.core, 2, .9);
     } else segRing(ctx, this.x, this.z, 30, mat, t, Math.max(0, (2.2 - t) / .9) * .6, { segs: 8, thick: 4, seed: this.seed });
@@ -256,6 +260,7 @@ class CometFlight {
     if (!this.landed) {
       this.landed = true; c.x = this.landX; c.elevation = 0; c.grounded = true; c.vElevation = 0;
       combat.shakeCamera(9, .3);
+      if (spellSheetReady('comet_crash')) emit(Object.assign(new SpriteBurst({ sheet: 'comet_crash', x: this.landX, y: this.y, z: this.z, fps: 14, anchor: 'base' }), { fineVfx: true }));
       [0, .15, .3].forEach((at, i) => emit(new SigSequence(this.sig, c, { dur: at + .4, x: this.landX, steps: [{ at, fn: (s, w) => { s.strike(w, (t, dx, dz) => { const r = Math.hypot(dx, dz); return r >= i * 34 - 10 && r < 44 + i * 34; }, [30, 16, 10][i] * this.power, (t, dx) => Math.sign(dx || 1) * 220, 180 - i * 40, .35); combat.spawnShockwave(this.landX, this.y, 44 + i * 34, this.mat.spark); } }],
         draw: (ctx, s) => { if (s.t >= at) segRing(ctx, this.landX, this.z, 40 + i * 34, this.mat, s.t * 2, Math.max(0, 1 - (s.t - at) / .4), { segs: 10 + i * 2, thick: 4, gap: .45, seed: 400 + i * 20 }); } })));
       environment.add('crack', this.landX, this.z, { radius: 80 });
@@ -271,6 +276,7 @@ class CometFlight {
     const c = this.caster; const mat = this.mat;
     if (!this.landed) segRing(ctx, this.landX, this.z, 38, mat, this.t * 2, .8, { segs: 10, thick: 3, seed: 440 });
     if (this.t < .18) { for (const sg of [-1, 1]) ribbon(ctx, [[c.x + sg * 6, c.y], [c.x + sg * 10, c.y - 6], [c.x + sg * 5, c.y - 12]], 2, mat, 450, this.t, 1); }
+    else if (!this.landed && spellSheetReady('comet_mantle')) drawSpellSprite(ctx, 'comet_mantle', Math.floor(this.t * 14) % 6, c.x - this.f * 8, c.y - 40, { anchor: 'center', flip: this.f < 0 });
     else if (!this.landed) {
       // Ellipsoid sky fragment as comet mantle around the Wizard, core behind the back.
       const cy = c.y - 40; // y already includes the elevation

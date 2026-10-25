@@ -2,6 +2,7 @@
 // terrain, objects & spatial building (S13–S18), projectiles, beams &
 // counter-magic (S19–S24). World objects are breakable SigProps; the
 // metamagic runes act on the shared projectile pipeline.
+import { drawSpellSprite, spellSheetReady } from './spell_visuals.js';
 import {
   defineSignature, SigBolt, SigProp, SigSequence, startStance, emit, debris, sigSink,
   foesOf, aliveFoe, groundDist, yOf, massOf, hit, projectilesOf, projKill, projSetVel, projVel, projHeight, projDamage, reflectVel,
@@ -33,6 +34,7 @@ class Blossom extends SigProp {
   retire() { this.shatter(); }
   render(ctx) {
     const mat = this.mat; const y = this.y; const g = this.grow * this.fade; const h = this.h * this.grow;
+    if (spellSheetReady('blossom')) { const frame = this.grow < 1 ? Math.min(3, Math.floor(this.grow * 4)) : 4 + Math.floor(this.t * 4) % 2; drawSpellSprite(ctx, 'blossom', frame, this.x, y + 2, { scale: this.h / 62, alpha: this.fade * (this.hitFlash ? .5 : 1) }); return; }
     // Dark ribbed crystal leaves, nested transparent plates, jade core.
     for (const sg of [-1, 1]) plate(ctx, [[this.x, y], [this.x + sg * 16, y - h * .25], [this.x + sg * 10, y - h * .5]], mat, this.seed + sg, { alpha: g, lit: .6 });
     for (let i = 0; i < 3; i++) crystal(ctx, this.x + (i - 1) * 6, y, 8 - Math.abs(i - 1) * 2, h * (1 - Math.abs(i - 1) * .25), mat, this.seed + 5 + i, g * (this.hitFlash ? .6 : .9), (i - 1) * 4);

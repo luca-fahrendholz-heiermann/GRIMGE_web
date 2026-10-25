@@ -257,3 +257,13 @@ Ein Versuch, die gemeinsamen Formteile (Platte, Band, Faden) in feiner Pixeldich
 - **Schattenreigen:** dunkle Sichelhiebe mit violetter Kante und Tinten-Spritzern.
 
 - `v23_runde2_spiegel_zeitstopp.png`
+
+## v24 — Spezialrunen Runde 3 (26.10.2026)
+
+`art/authoring/vfx_runes3.cjs`, Farben aus den Runen-Daten:
+- **Aureolenschwarm:** facettierte Granatlinsen, gedimmt oder geladen.
+- **Sternenanker:** sechsstrahliger Kristallstern mit gespaltener Kernader und kupfern glühenden Nähten; Einschlag mit Sechseck-Krater, Rissen und aufblitzenden Strahlen.
+- **Kometenträger:** Kometenmantel aus kreisenden Himmelssplittern mit Flammenschweif; Landung mit drei Splitter-Schockringen, Feuerball und Rauch.
+- **Splittergarten:** wachsende Kristallblüten mit gerippten Blättern, verschachtelten Blütenblättern und Jade-Kern.
+
+- `v24_runde3.png`, `v24_runde3_sheets.png`
