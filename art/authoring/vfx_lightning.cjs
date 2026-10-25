@@ -8,14 +8,18 @@
 //   shock_ring   8 frames, 160×72 (base): an electric discharge ring racing out over the ground (aura shock).
 const B = require('./vfx_brush.cjs');
 const { Sheet, rng, TAU, clamp01 } = B;
-const C = B.pal({ bolt: ['#3b2470', '#7d5cf0', '#ffc81e', '#fff06a', '#fffbe0', '#ffffff'], spark: ['#ffc81e', '#fff06a', '#ffffff'], scorch: ['#2a2018', '#40332a'], out: '#22143f' });
+// v2 (user, 25 Oct 2026: "Blitze sollten eher so zackig sein als gerade so wurstig"): thin, sharp zigzag
+// segments — a 1-px white core with a yellow edge — filled triangular barbs at every kink, scattered spark
+// dots and dashes, and only a thin dark outline (no thick violet sausage).
+const C = B.pal({ bolt: ['#3b2470', '#c79a12', '#ffd21e', '#fff06a', '#fffbe0', '#ffffff'], spark: ['#ffc81e', '#fff06a', '#ffffff'], scorch: ['#2a2018', '#40332a'], out: '#141026' });
 
 // Jagged path between two points: recursive midpoint displacement (seeded), returns points.
 function jag(x0, y0, x1, y1, rough, depth, r) {
-  if (depth === 0) return [[x0, y0], [x1, y1]];
-  const mx = (x0 + x1) / 2 + (r() - .5) * rough * .3; const my = (y0 + y1) / 2 + (r() - .5) * rough;
-  const a = jag(x0, y0, mx, my, rough / 1.8, depth - 1, r); const b = jag(mx, my, x1, y1, rough / 1.8, depth - 1, r);
-  return [...a.slice(0, -1), ...b];
+  // A sharp zigzag: steps along the line, each joint thrown alternately to one side (big angle changes).
+  const L = Math.hypot(x1 - x0, y1 - y0) || 1; const dx = (x1 - x0) / L; const dy = (y1 - y0) / L; const nx = -dy; const ny = dx;
+  const pts = [[x0, y0]]; let d = 0; let side = r() < .5 ? 1 : -1; const amp = Math.max(3, rough * .45);
+  while (d < L - 6) { d = Math.min(L - 3, d + 5 + r() * 8); const off = side * amp * (.45 + r() * .7); side = -side; pts.push([x0 + dx * d + nx * off, y0 + dy * d + ny * off]); }
+  pts.push([x1, y1]); void depth; return pts;
 }
 // Stamp a polyline with a given square size in a colour.
 function stamp(s, f, pts, size, c) {
@@ -24,11 +28,19 @@ function stamp(s, f, pts, size, c) {
     for (let k = 0; k <= n; k++) { const x = ax + (bx - ax) * k / n; const y = ay + (by - ay) * k / n; for (let dy = 0; dy < size; dy++) for (let dx = 0; dx < size; dx++) s.set(f, x - (size >> 1) + dx, y - (size >> 1) + dy, c); }
   }
 }
-// A bolt with its layers: violet rim → yellow sheath → pale inner → white core.
+// A bolt: thin yellow edge + white core along each segment, a filled barb (triangle) in every kink.
 function boltPath(s, f, pts, w = 5) {
-  stamp(s, f, pts, w + 2, C.bolt[1]); stamp(s, f, pts, w, C.bolt[2]); stamp(s, f, pts, Math.max(1, w - 2), C.bolt[3]); stamp(s, f, pts, Math.max(1, w - 4), C.bolt[5]);
+  const edge = w >= 3 ? 2 : 1;
+  stamp(s, f, pts, edge, C.bolt[2]);
+  for (let i = 1; i < pts.length - 1; i++) {
+    const [ax, ay] = pts[i - 1]; const [bx, by] = pts[i]; const [cx, cy] = pts[i + 1];
+    const l1 = Math.hypot(bx - ax, by - ay) || 1; const l2 = Math.hypot(cx - bx, cy - by) || 1; const k = Math.min(4, w * .8 + 1);
+    s.poly(f, [[bx, by], [bx - (bx - ax) / l1 * k, by - (by - ay) / l1 * k], [bx + (cx - bx) / l2 * k, by + (cy - by) / l2 * k]], C.bolt[3]);
+    s.set(f, bx, by, C.bolt[5]);
+  }
+  stamp(s, f, pts, 1, C.bolt[5]);
 }
-const spark = (s, f, x, y, big) => { s.set(f, x, y, C.spark[2]); if (big) { s.set(f, x + 1, y, C.spark[1]); s.set(f, x - 1, y, C.spark[1]); s.set(f, x, y + 1, C.spark[0]); s.set(f, x, y - 1, C.spark[0]); } };
+const spark = (s, f, x, y, big) => { s.set(f, x, y, C.spark[big ? 2 : 1]); if (big) { s.set(f, x + 1, y, C.spark[1]); s.set(f, x + 2, y, C.spark[0]); } };
 // A small zig arc (crackle) of n segments from (x, y) in roughly direction a.
 function arc(s, f, x, y, a, len, r, w = 2) { const pts = [[x, y]]; let px = x; let py = y; for (let k = 0; k < 3; k++) { const aa = a + (r() - .5) * 1.6; const l = len / 3; px += Math.cos(aa) * l; py += Math.sin(aa) * l; pts.push([px, py]); } boltPath(s, f, pts, w); return pts[pts.length - 1]; }
 
