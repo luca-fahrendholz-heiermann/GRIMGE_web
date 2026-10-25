@@ -111,3 +111,19 @@ Gezeichnet wird direkt in Charakter-Pixeldichte. `art/authoring/vfx_wind.cjs`:
 Vorschau: `node art/authoring/preview_sheet.cjs art/authoring/vfx_wind.cjs windSheets out.png 3`
 
 - `v8_wind_handgezeichnet.png` — links der Windstoß im Spiel, rechts der Wirbel neben dem Helden
+
+## v9 — Feuer in Handzeichen-Qualität (25.10.2026)
+
+`art/authoring/vfx_fire.cjs` mit eigenen Formbausteinen:
+- `flame()`: Tropfenform mit breitem Fuß, S-Schwung, heißem Kern und roter Spitze.
+- `fireMass()`: Blumenkohl aus mehreren glühenden Klumpen.
+
+Sheets:
+- `fire_ball`: Komet aus Flammenzungen, weißglühender Kopf, Rauch am Schweif.
+- `fire_explosion`: Blitzstern, klumpiger Feuerball mit Flammenbeulen; oben quillt Rauch, dann zerfasert alles mit Glut.
+- `fire_jet` (kachelbar) mit `fire_jet_root` und `fire_jet_head`: der Inferno-Strahl in beliebiger Länge.
+- `fire_whirl`: wirbelnde Säule aus spiralförmig gestapelten Flammen über glühendem Kern, Rauch, Flammenring.
+
+- `v9_feuer_sheets.png` — alle Sheets
+- `v9_feuer_ingame.png` — Feuerball und Inferno-Strahl im Spiel
+- `v9_feuersturm_ingame.png` — Feuersturm im Spiel

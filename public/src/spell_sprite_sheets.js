@@ -340,5 +340,60 @@ export const SPELL_SPRITE_SHEETS = Object.freeze({
   "res": 2,
   "hd": true,
   "anchor": "center"
+ },
+ "fire_ball": {
+  "name": "fire_ball",
+  "w": 36,
+  "h": 22,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "fire_explosion": {
+  "name": "fire_explosion",
+  "w": 52,
+  "h": 52,
+  "frames": 10,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "fire_jet": {
+  "name": "fire_jet",
+  "w": 24,
+  "h": 20,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "fire_jet_root": {
+  "name": "fire_jet_root",
+  "w": 16,
+  "h": 20,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "fire_jet_head": {
+  "name": "fire_jet_head",
+  "w": 22,
+  "h": 26,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "fire_whirl": {
+  "name": "fire_whirl",
+  "w": 56,
+  "h": 75,
+  "frames": 12,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 2
  }
 });

@@ -989,9 +989,9 @@ class FireballSpell {
     this.isFinished = true;
     audio.playImpact(true);
     combat.shakeCamera(6, 0.2);
-    if (this.element === 'ignis' && spellSheetReady('meteor_explosion')) {
-      // A real fire explosion (the meteor's sheet at a smaller size): flash → lumpy fireball → smoke → ash.
-      this.system?.activeSpells.push(Object.assign(new SpriteBurst({ sheet: 'meteor_explosion', x: this.x, y: this.y + 18 * .62, z: this.z, fps: 16, scale: .62, anchor: 'base' }), { fineVfx: true }));
+    if (this.element === 'ignis' && spellSheetReady('fire_explosion')) {
+      // Hand-drawn explosion: flash star → lumpy fireball → the top turns to smoke → embers and wisps.
+      this.system?.activeSpells.push(Object.assign(new SpriteBurst({ sheet: 'fire_explosion', x: this.x, y: this.y - 6, z: this.z, fps: 15 }), { fineVfx: true }));
       combat.spawnElementalParticles(this.x, this.y, 'ignis', 12);
     } else if (this.element === 'void') {
       combat.spawnElementalParticles(this.x, this.y, 'void', 14);
@@ -1018,7 +1018,11 @@ class FireballSpell {
   }
 
   render(ctx) {
-    if (this.element === 'ignis') { drawFireBall(ctx, this.x, this.y, this.radius * .95, Math.sign(this.vx) || 1, this.age, this.seed); return; }
+    if (this.element === 'ignis') {
+      // Hand-drawn fireball loop (art/authoring/vfx_fire.cjs); the procedural ball is the fallback.
+      if (spellSheetReady('fire_ball')) { drawSpellSprite(ctx, 'fire_ball', Math.floor(this.age * 16) % 8, this.x - Math.sign(this.vx || 1) * 18, this.y, { anchor: 'center', flip: this.vx < 0 }); return; }
+      drawFireBall(ctx, this.x, this.y, this.radius * .95, Math.sign(this.vx) || 1, this.age, this.seed); return;
+    }
     if (this.element === 'void') { drawVoidOrb(ctx, this.x, this.y, this.radius * .9, Math.sign(this.vx) || 1, this.age, this.seed); return; }
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';

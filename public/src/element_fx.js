@@ -284,6 +284,7 @@ export function drawFunnel(ctx, x, yGround, h, wTop, t, look = 'wind', seed = 1,
   const pal = FUNNEL_LOOKS[look] ?? WIND; const H = h * k; if (H < 2) return;
   // Wind: the hand-drawn whirlwind sheet (art/authoring/vfx_wind.cjs, 12-frame loop), scaled to the height.
   if (look === 'wind' && spellSheetReady('wind_whirl')) { drawSpellSprite(ctx, 'wind_whirl', Math.floor(t * 14) % 12, x, yGround, { scale: H / 146 }); return; }
+  if (look === 'fire' && spellSheetReady('fire_whirl')) { drawSpellSprite(ctx, 'fire_whirl', Math.floor(t * 14) % 12, x, yGround, { scale: H / 140 }); return; }
   const N = Math.max(4, Math.min(9, R(H / 14)));
   const bands = [];
   for (let i = 0; i < N; i++) {

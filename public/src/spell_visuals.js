@@ -277,3 +277,19 @@ registerSpellVisual('tide_drill', (ctx, v) => {
 export function tideHitBurst(target) {
   return new SpriteBurst({ sheet: 'tide_hit', x: target.x, y: (target.y ?? groundYForDepth(target.z ?? .5)) - 30, fps: 20 });
 }
+
+// ── Hand-drawn fire jet (art/authoring/vfx_fire.cjs) ──────────────────────
+// The inferno beam body is built from the tileable fire_jet strip laid along the beam (rotated for clash
+// angles, clipped at the tip), with fire_jet_root at the hand and fire_jet_head at the front.
+export function drawFireJet(ctx, x0, y0, x1, y1, t, k = 1) {
+  if (!spellSheetReady('fire_jet')) return false;
+  const L = Math.hypot(x1 - x0, y1 - y0); const ang = Math.atan2(y1 - y0, x1 - x0); const frame = Math.floor(t * 15) % 6;
+  ctx.save(); ctx.translate(Math.round(x0), Math.round(y0)); ctx.rotate(ang);
+  ctx.beginPath(); ctx.rect(4, -40, Math.max(0, L - 10), 80); ctx.clip();
+  const scale = .7 + .3 * k;
+  for (let d = 4; d < L; d += 48 * scale) drawSpellSprite(ctx, 'fire_jet', frame, d + 24 * scale, 0, { anchor: 'center', scale });
+  ctx.restore();
+  ctx.save(); ctx.translate(Math.round(x1), Math.round(y1)); ctx.rotate(ang); drawSpellSprite(ctx, 'fire_jet_head', frame, 4, 0, { anchor: 'center', scale }); ctx.restore();
+  ctx.save(); ctx.translate(Math.round(x0), Math.round(y0)); ctx.rotate(ang); drawSpellSprite(ctx, 'fire_jet_root', frame, 2, 0, { anchor: 'center' }); ctx.restore();
+  return true;
+}
