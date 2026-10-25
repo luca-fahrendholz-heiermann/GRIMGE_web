@@ -233,3 +233,8 @@ Genutzt von Heilblüte, Großer Blüte, Segenskreis, Dornenwuchs, Giftsumpf, Hei
   - passiv: Nahkampftreffer lassen mit 50 % Wahrscheinlichkeit bluten;
   - Sprint: Bajonettsturm; Sturzangriff: Speerring; Heranziehen: Blutstrang.
 - `v21_blutarsenal_ingame.png` — links Ruhezustand, rechts Gatling-Sturm und Volles Arsenal
+
+## Spezialrunen — Ist-Stand (25.10.2026)
+
+`spezialrunen_ist_1.png` bis `_4.png`: alle 94 Spezialrunen kurz nach dem Wirken, als Grundlage für die Überarbeitung.
+Ein Versuch, die gemeinsamen Formteile (Platte, Band, Faden) in feiner Pixeldichte deckend neu zu zeichnen, wirkte dünner und streifiger als die grobe Ebene. Er wurde verworfen, die Überarbeitung erfolgt je Rune mit eigenen Sheets.
