@@ -1,6 +1,7 @@
 // GRIMGE Prototype — Combat Feedback, Hitstop, Camera & Particle VFX Engine
 import { audio } from './audio.js';
 import { stepAlpha } from './pixel_steps.js';
+import { makeMaterialParticles, stepMaterialParticle, drawMaterialParticle } from './element_particles.js';
 const MAX_PARTICLES = 500;
 
 export class CombatEngine {
@@ -140,55 +141,10 @@ export class CombatEngine {
     }
   }
 
+  // Element particles behave like their material (element_particles.js): flame licks rise and turn to smoke,
+  // drops fall and splash, arcs crackle, leaves tumble, pebbles bounce …
   spawnElementalParticles(x, y, element, count = 8) {
-    let color = '#ff4400';
-    let size = 4;
-    let grav = 0;
-    if (element === 'ignis' || element === 'fire') {
-      color = '#ff6600';
-      grav = -150;
-    } else if (element === 'ventus' || element === 'wind') {
-      color = '#4deeea';
-      grav = -40;
-    } else if (element === 'fulgur' || element === 'lightning') {
-      color = '#ffe600';
-      grav = 0;
-    } else if (element === 'ward') {
-      color = '#b388ff'; // Schutz: violet shield shards
-      grav = -30;
-    } else if (element === 'terra' || element === 'earth') {
-      color = '#8d6e63';
-      grav = 400;
-    } else if (element === 'aqua' || element === 'frost') {
-      color = '#80d8ff';
-      grav = -30;
-    } else if (element === 'void') {
-      color = '#d500f9';
-      grav = -20;
-    } else if (element === 'bestia') {
-      color = '#b388ff';
-      grav = 30;
-    } else if (element === 'construct') {
-      color = '#b0bec5';
-      grav = 320;
-    }
-
-    for (let i = 0; i < count; i++) {
-      const angle = Math.random() * Math.PI * 2;
-      const speed = 40 + Math.random() * 160;
-      this.particles.push({
-        type: 'elemental',
-        x: x + (Math.random() * 12 - 6),
-        y: y + (Math.random() * 12 - 6),
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed,
-        color,
-        size: 3 + Math.random() * size,
-        alpha: 1.0,
-        life: 0.3 + Math.random() * 0.4,
-        gravity: grav
-      });
-    }
+    for (const p of makeMaterialParticles(element, x, y, count)) this.particles.push(p);
   }
 
   // Update Camera, Hitstop & Particles
@@ -251,6 +207,7 @@ export class CombatEngine {
     if (this.particles.length > MAX_PARTICLES) this.particles.splice(0, this.particles.length - MAX_PARTICLES);
     for (let i = this.particles.length - 1; i >= 0; i--) {
       const p = this.particles[i];
+      if (p.type === 'mat') stepMaterialParticle(p, dt);
       p.x += p.vx * dt;
       p.y += p.vy * dt;
       if (p.gravity) p.vy += p.gravity * dt;
@@ -260,6 +217,8 @@ export class CombatEngine {
         const progress = 1 - (p.life / p.maxLife);
         p.radius += (p.maxRadius - p.radius) * Math.min(1, dt * 14);
         p.alpha = 1 - progress;
+      } else if (p.type === 'mat') {
+        p.alpha = p.life < .06 ? .5 : 1; // material particles die by their own shape (smoke, splash), not a fade
       } else {
         p.alpha = Math.max(0, p.life / 0.5);
       }
@@ -312,6 +271,8 @@ export class CombatEngine {
       } else if (p.type === 'spark') {
         ctx.fillStyle = p.color;
         ctx.fillRect(p.x - p.size * 0.5, p.y - p.size * 0.5, p.size, p.size);
+      } else if (p.type === 'mat') {
+        drawMaterialParticle(ctx, p);
       } else if (p.type === 'elemental') {
         // Pixel style (user, 21 Oct 2026): a hard square in the element colour with a small white
         // core — no soft halo, no additive wash.
