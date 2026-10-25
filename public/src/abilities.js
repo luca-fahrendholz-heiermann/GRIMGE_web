@@ -13,7 +13,7 @@ import { groundDistance, groundYForDepth } from './world.js';
 import { environment } from './environment.js';
 import { plate as materialPlate } from './buff_vfx.js';
 import { drawStream, drawGather, materialForVfx } from './element_fx.js';
-import { drawSheetBeam, SpriteBurst, spellSheetReady } from './spell_visuals.js';
+import { drawSheetBeam, SpriteBurst, spellSheetReady, drawSpellSprite } from './spell_visuals.js';
 // A hand-drawn one-shot burst into the spell system (visual only; outlives the spell that spawned it).
 const sheetBurst = (spell, opts) => { if (!spellSheetReady(opts.sheet)) return false; spell.system?.activeSpells.push(Object.assign(new SpriteBurst(opts), { fineVfx: true })); return true; };
 
@@ -895,8 +895,16 @@ export class SoulSeekerBolt {
     }
   }
 
+  get fineVfx() { return spellSheetReady('soul_flame'); }
   render(ctx) {
     if (this.delay > 0) return;
+    // Hand-drawn spirit flame (art/authoring/vfx_arcane.cjs), turned along its homing path.
+    if (spellSheetReady('soul_flame')) {
+      const ang = Math.atan2(Math.sin(this.angle) * .45, Math.cos(this.angle));
+      ctx.save(); ctx.translate(Math.round(this.x), Math.round(this.y)); ctx.rotate(ang);
+      drawSpellSprite(ctx, 'soul_flame', Math.floor(performance.now() / 70) % 8, -6, 0, { anchor: 'center' });
+      ctx.restore(); return;
+    }
     ctx.save(); ctx.globalCompositeOperation = 'lighter';
     const g = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.radius * 1.8);
     g.addColorStop(0, '#fff'); g.addColorStop(.4, this.color); g.addColorStop(1, 'rgba(0,0,0,0)');

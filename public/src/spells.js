@@ -405,7 +405,10 @@ export class SpellSystem {
       }
 
       case 'shadow_step': {
+        // Sinking into the own shadow and rising out of the target's (hand-drawn shadow bursts at both ends).
+        const from = { x: caster.x, z: caster.z, y: groundYForDepth(caster.z) - (caster.surfaceHeight ?? 0) };
         castShadowStep(caster, gameWorld, castQuality);
+        if (spellSheetReady('shadow_burst')) for (const at of [from, { x: caster.x, z: caster.z, y: groundYForDepth(caster.z) - (caster.surfaceHeight ?? 0) }]) this.activeSpells.push(Object.assign(new SpriteBurst({ sheet: 'shadow_burst', x: at.x, y: at.y, z: at.z, fps: 18, anchor: 'base' }), { fineVfx: true }));
         break;
       }
 
@@ -1024,7 +1027,11 @@ class FireballSpell {
       if (spellSheetReady('fire_ball')) { drawSpellSprite(ctx, 'fire_ball', Math.floor(this.age * 16) % 8, this.x - Math.sign(this.vx || 1) * 18, this.y, { anchor: 'center', flip: this.vx < 0 }); return; }
       drawFireBall(ctx, this.x, this.y, this.radius * .95, Math.sign(this.vx) || 1, this.age, this.seed); return;
     }
-    if (this.element === 'void') { drawVoidOrb(ctx, this.x, this.y, this.radius * .9, Math.sign(this.vx) || 1, this.age, this.seed); return; }
+    if (this.element === 'void') {
+      // Hand-drawn black hole (art/authoring/vfx_arcane.cjs); the procedural orb is the fallback.
+      if (spellSheetReady('void_orb')) { drawSpellSprite(ctx, 'void_orb', Math.floor(this.age * 14) % 8, this.x - Math.sign(this.vx || 1) * 8, this.y, { anchor: 'center', flip: this.vx < 0 }); return; }
+      drawVoidOrb(ctx, this.x, this.y, this.radius * .9, Math.sign(this.vx) || 1, this.age, this.seed); return;
+    }
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     const grad = ctx.createRadialGradient(this.x, this.y, 2, this.x, this.y, this.radius * 1.6);

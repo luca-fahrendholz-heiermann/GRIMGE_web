@@ -586,5 +586,97 @@ export const SPELL_SPRITE_SHEETS = Object.freeze({
   "hd": true,
   "anchor": "base",
   "baseOffset": 6
+ },
+ "light_ray": {
+  "name": "light_ray",
+  "w": 24,
+  "h": 20,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "light_ray_root": {
+  "name": "light_ray_root",
+  "w": 16,
+  "h": 20,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "light_ray_head": {
+  "name": "light_ray_head",
+  "w": 24,
+  "h": 28,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "halo_burst": {
+  "name": "halo_burst",
+  "w": 140,
+  "h": 48,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 6
+ },
+ "void_ray": {
+  "name": "void_ray",
+  "w": 24,
+  "h": 20,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "void_ray_root": {
+  "name": "void_ray_root",
+  "w": 16,
+  "h": 20,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "void_ray_head": {
+  "name": "void_ray_head",
+  "w": 24,
+  "h": 28,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "void_orb": {
+  "name": "void_orb",
+  "w": 26,
+  "h": 20,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "shadow_burst": {
+  "name": "shadow_burst",
+  "w": 32,
+  "h": 40,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 4
+ },
+ "soul_flame": {
+  "name": "soul_flame",
+  "w": 20,
+  "h": 14,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
  }
 });

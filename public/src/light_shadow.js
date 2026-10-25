@@ -8,6 +8,7 @@
 import { combat } from './combat.js';
 import { groundYForDepth } from './world.js';
 import { SHADOW_STOMP } from './spell_catalog.js';
+import { drawSpellSprite, spellSheetReady } from './spell_visuals.js';
 
 const DEPTH_PX = 150;
 const isGone = (actor) => !actor || actor.isDead || (actor.lifeState && actor.lifeState !== 'Alive');
@@ -226,7 +227,7 @@ export class HaloPulseSpell {
     this.caster = caster; this.team = caster.team; this.x = caster.x; this.z = caster.z;
     this.surfaceHeight = caster.surfaceHeight ?? 0;
     this.radius = 135; this.damage = 16; this.heal = 30; this.life = .65; this.maxLife = .65;
-    this.isFinished = false; this.applied = false;
+    this.isFinished = false; this.applied = false; this.fineVfx = true;
     this.healMultiplier = healMultiplier; this.allies = allies; this.gameWorld = gameWorld;
   }
   update(dt, gameWorld) {
@@ -249,6 +250,8 @@ export class HaloPulseSpell {
   render(ctx) {
     const k = Math.max(0, Math.min(1, 1 - this.life / Math.max(this.maxLife, this.life)));
     const y = groundYForDepth(this.z) - this.surfaceHeight;
+    // Hand-drawn ring of light with rising pillars (art/authoring/vfx_arcane.cjs); the glow ring is the fallback.
+    if (spellSheetReady('halo_burst')) { drawSpellSprite(ctx, 'halo_burst', Math.min(7, Math.floor(k * 8)), this.x, y + 2, { scale: this.radius / 134 }); return; }
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     ctx.strokeStyle = `rgba(255,236,179,${(1 - k) * .9})`; ctx.lineWidth = 6 * (1 - k) + 2;

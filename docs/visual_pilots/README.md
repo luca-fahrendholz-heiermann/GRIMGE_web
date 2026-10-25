@@ -170,3 +170,17 @@ Sheets:
 Genutzt von Steinstacheln, Seismischem Schlag, Erdgräber, Titanen-Stampfer, Magmaspalte (vorher Glow-Ellipse) und Sandsturm-Bastion (vorher gestrichelter Kreis).
 
 - `v12_erde_sheets.png`, `v12_erde_ingame.png`, `v12_sandwall_ingame.png`
+
+## v13 — Licht, Void, Schatten (25.10.2026)
+
+`art/authoring/vfx_arcane.cjs`:
+- `light_ray` / `_root` / `_head`: gleißender Schaft in Goldhülle mit flackernden Lichtspeichen und Sternfunkeln; Sonnenstern an der Hand, blendender Sternausbruch vorn.
+- `halo_burst`: Lichtring mit aufsteigenden Lichtsäulen.
+- `void_ray` / `_root` / `_head`: schwarze Röhre mit violetten Rändern, Partikel strömen zum Zaubernden, Raumverzerrungs-Bögen.
+- `void_orb`: schwarzes Loch mit Materiering und mitgezogenen Rissen.
+- `shadow_burst`: Schattenpool mit Rauchranken.
+- `soul_flame`: geisterhafte Flamme mit Schleier.
+
+Genutzt von Licht-Lanze, Null-Strahl, Halo-Puls (vorher Glow-Ellipse), Void-Kugel, Seelenflammen (vorher Radialverlauf) und Schattenschritt (vorher Ringe).
+
+- `v13_licht_void_schatten_sheets.png`, `v13_licht_void_schatten_ingame.png`

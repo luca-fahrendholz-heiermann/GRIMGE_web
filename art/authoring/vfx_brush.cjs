@@ -18,7 +18,7 @@ const path = require('path');
 const TAU = Math.PI * 2;
 const clamp01 = (v) => Math.max(0, Math.min(1, v));
 const BAYER = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]];
-const dither = (x, y, t) => (BAYER[((y % 4) + 4) % 4][((x % 4) + 4) % 4] + .5) / 16 < t;
+const dither = (x, y, t) => { const xi = Math.round(x); const yi = Math.round(y); return (BAYER[((yi % 4) + 4) % 4][((xi % 4) + 4) % 4] + .5) / 16 < t; };
 const pal = (obj) => Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, Array.isArray(v) ? v.map((c) => hex(c)) : hex(v)]));
 
 // Catmull-Rom smoothing of a control polyline → dense points (≈1 px apart).
