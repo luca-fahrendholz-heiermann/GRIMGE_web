@@ -2845,16 +2845,21 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
           for (const [dir, v] of [['forward', 'short'], ['forward', 'full'], ['up', 'short'], ['up', 'full'], ['down', 'short'], ['down', 'full']]) {
             P.x = 300; P.z = .5; P.facing = 1; P.grounded = true; P.elevation = 0; P.vElevation = 0; dummy.homeX = dummy.x = (dir === 'up' && v === 'short') || (dir === 'down' && v === 'short') ? 335 : 380; dummy.homeZ = dummy.z = .5; dummy.hp = dummy.maxHp;
             spells.addSpell(FMS.A10[dir][v].make(P), 'B'); let hidden = false;
-            for (let i = 0; i < 130; i++) { P.animTime = (P.animTime ?? 0) + 1 / 60; spells.update(1 / 60, game); if (KP.isShellRolled(P)) hidden = true; if (i % 6 === 0) { for (const sp of spells.activeSpells) sp.render?.(strict); buff.renderBuffManifestation(strict, P, P.y, 'back'); } }
+            for (let i = 0; i < (dir === 'down' && v === 'full' ? 210 : 130); i++) { P.animTime = (P.animTime ?? 0) + 1 / 60; spells.update(1 / 60, game); if (KP.isShellRolled(P)) hidden = true; if (i % 6 === 0) { for (const sp of spells.activeSpells) sp.render?.(strict); buff.renderBuffManifestation(strict, P, P.y, 'back'); } }
             if (dummy.hp >= dummy.maxHp) badK.push(FMS.A10[dir][v].name + ': no hit');
             if (dir === 'down' && v === 'full' && !hidden) badK.push('roll never hid the body');
           }
           if (KP.isShellRolled(P)) badK.push('still rolled after the roll');
+          // The roll is steered by the move input: rolling right, then held left, the ball turns back.
+          { P.x = 300; P.z = .5; P.facing = 1; dummy.homeX = dummy.x = 900; spells.addSpell(FMS.A10.down.full.make(P), 'B'); P._moveIntent = { x: 1, z: 0 };
+            for (let i = 0; i < 40; i++) { P.animTime += 1 / 60; spells.update(1 / 60, game); } const xR = P.x; P._moveIntent = { x: -1, z: 0 };
+            for (let i = 0; i < 70; i++) { P.animTime += 1 / 60; spells.update(1 / 60, game); } if (!(xR > 330 && P.x < xR - 40)) badK.push('roll not steerable ' + Math.round(xR) + ' → ' + Math.round(P.x));
+            P._moveIntent = null; for (let i = 0; i < 120; i++) { P.animTime += 1 / 60; spells.update(1 / 60, game); } }
           P.arcaneShield = 0; P._kpShieldT = .01; buff.updateBuffForm(P, 1 / 30); if (!(P.arcaneShield >= 30)) badK.push('shield passive ' + P.arcaneShield);
           for (const layer of ['back', 'front']) buff.renderBuffManifestation(strict, P, P.y, layer);
           for (const dir of ['forward', 'up', 'down']) (await import('./public/src/arcane_moves.js')).ARCANE_CHARGE.A10(strict, { x: 300, y: 300, f: 1 }, buff.BUFF_FORMS.A10.mat, dir, .9, 1.2);
         } catch (e) { badK.push(e.message); }
-        assert(!badK.length && PR.lateRuneRoute('buff_A10')?.element === 'construct', 'A10 KONSTRUKTPANZER: arm cannon, core beam, thrust, rocket fan, shell shield and shell roll hit and render; the roll hides the body; the shield recharges; Konstrukt route ' + badK.slice(0, 4).join(' | ')); buff.endBuffForm(P); P.arcaneShield = 0; P.jumpsLeft = 1; P.vElevation = 0; P.elevation = 0; P.grounded = true; }
+        assert(!badK.length && PR.lateRuneRoute('buff_A10')?.element === 'construct', 'A10 KONSTRUKTPANZER: arm cannon, core beam, thrust, rocket fan, shell shield and shell roll hit and render; the roll hides the body; the shield recharges; Konstrukt route ' + badK.slice(0, 4).join(' | ')); buff.endBuffForm(P); P.arcaneShield = 0; P.rootTimer = 0; P.jumpsLeft = 1; P.vElevation = 0; P.elevation = 0; P.grounded = true; }
       // T13 FADENSCHLAG (user, 26 Oct 2026: "mehr spiderman mäßig … rumschwingen"): jumping again in the air swings the
       // hero on a silk wire (forward, never into the ground, flung out at the end); the thread techniques hit and render.
       { const IO = await import('./public/src/arcane_fadenschlag.js'); const badI = []; const space = { ...neutral, justPressed: (k) => k === 'Space' };

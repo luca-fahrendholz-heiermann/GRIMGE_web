@@ -381,3 +381,10 @@ Hinweis des Users: Die erste Umfärbung passte nur zu einem Sprite. Bei anderen 
 - Getestet mit Thesen, Xame, Paladin, Nyx und John.
 
 - `v35_armor_all_heroes.png`
+
+## v36 — Thesen behält die angepasste Rüstung, Schalenrolle lenkbar (26.10.2026)
+
+- **Pro-Held-Profil** (`form_recolors.js`, `TAILORED_HEROES = ['thesen']`): Für den Helden, auf den die Rüstung abgestimmt war, bleibt die angepasste Umfärbung mit Goldkanten bzw. Cyan-Kanten, Plattenfugen, zuklappendem Visier und roten Augenschlitzen, ohne Zusatzteile. Alle anderen Helden bekommen den robusten Materialton und die Anbauteile. Spätere Helden mit derselben Sprite-Basis kommen einfach in die Liste.
+- **Schalenrolle steuerbar:** Die Kugel rollt etwa 2,8 s und wird mit der Bewegungseingabe gelenkt (Tastatur, Stick, Touch). Ohne Eingabe rollt sie weiter. Gegner auf dem Weg werden überrollt: Je schneller die Kugel, desto mehr Schaden und desto weiter fliegen sie. Wände lassen sie abprallen, ab hoher Geschwindigkeit zieht sie Tempostreifen.
+
+- `v36_tailored_and_roll.png` (Thesen: Ionspindel, Konstruktpanzer · Nyx: Ionspindel, Konstruktpanzer)

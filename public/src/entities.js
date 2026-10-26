@@ -573,6 +573,7 @@ export class Player extends GroundEntity {
     this.backdashSuppressTimer = Math.max(0, this.backdashSuppressTimer - dt);
 
     const controlsBlocked = input.gameplayBlocked || this.freezeTimer > 0 || this.state === 'hurt' || !this.isAlive;
+    this._moveIntent = controlsBlocked ? null : normalizeMove(moveVector(input)); // steered techniques read it (A10 Schalenrolle)
     const whiffFree = this._whiffRecovery > 0 && /^attack[12]$/.test(this.state) && this.stateTimer <= this._whiffRecovery;
     const isAction = ACTION_STATES.has(this.state) && this.state !== 'hurt' && !whiffFree;
     const guardRequested = !!(input.keys?.KeyF || input.guardHeld);
