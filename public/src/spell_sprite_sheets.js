@@ -1538,5 +1538,68 @@ export const SPELL_SPRITE_SHEETS = Object.freeze({
   "hd": true,
   "anchor": "base",
   "baseOffset": 6
+ },
+ "w_glaive": {
+  "name": "w_glaive",
+  "w": 54,
+  "h": 20,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "w_katana": {
+  "name": "w_katana",
+  "w": 34,
+  "h": 10,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "w_katana_sheath": {
+  "name": "w_katana_sheath",
+  "w": 32,
+  "h": 8,
+  "frames": 1,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "w_spear": {
+  "name": "w_spear",
+  "w": 54,
+  "h": 16,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "w_sword": {
+  "name": "w_sword",
+  "w": 32,
+  "h": 12,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "w_shield": {
+  "name": "w_shield",
+  "w": 22,
+  "h": 24,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "w_spirit_sword": {
+  "name": "w_spirit_sword",
+  "w": 34,
+  "h": 14,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
  }
 });

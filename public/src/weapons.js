@@ -11,6 +11,7 @@
 import { audio } from './audio.js';
 import { combat } from './combat.js';
 import { groundYForDepth } from './world.js';
+import { drawWeaponSheet, hasWeaponSheet, drawKatanaSheath } from './weapon_sheets.js'; // hand-drawn weapons (some ids)
 import { EXT_WEAPONS, EXT_HUES, EXT_MOTIONS, EXT_MOTION_FNS, EXT_SHAPES, EXT_PIECES, WeaponShot } from './weapons_ext.js';
 
 const hit = (state, time, vx, damage, knockback, lift, reach, extra = {}) => Object.freeze({ state, time, vx, damage, knockback, lift, radius: Math.round(reach * .6), reach, hitstopTicks: extra.finisher ? 6 : 3, hitReaction: extra.finisher ? 'finisher' : 'light', ...extra });
@@ -394,6 +395,7 @@ export function drawHeldWeapon(ctx, player, renderY, layer = 'front') {
   const time = player.animTime ?? 0;
   const { swinging, progress, pose } = weaponSwing(player, weaponId);
   const hover = swinging ? 0 : Math.sin(time * 2.4) * 2;
+  if (weaponId === 'katana' && layer === 'back') drawKatanaSheath(ctx, player, renderY);
   const guarding = !!player.isGuarding;
   // HOLD charge: the weapon itself pulses in its colour (null = not charging the HOLD slot).
   const holdK = player.holdChargeLevel?.() ?? null;
@@ -434,24 +436,25 @@ export function drawHeldWeapon(ctx, player, renderY, layer = 'front') {
         for (let k = 3; k >= 1; k--) {
           const back = pose.angle - Math.sign(pose.angle - (pose.from ?? pose.angle)) * k * .22;
           ctx.save(); ctx.globalAlpha = .15 / k * (1 - progress * .7); ctx.rotate(back);
-          drawAstralPiece(ctx, item.piece, hue, { intensity: .4, time });
+          if (!drawWeaponSheet(ctx, weaponId, item.piece, time)) drawAstralPiece(ctx, item.piece, hue, { intensity: .4, time });
           ctx.restore();
         }
       }
     }
     if (item.static && pose?.impact) drawImpact(ctx, 18 + (item.reach ?? 0), pose.impact, hue);
-    // Grip anchor: a small orb of light binding the piece to the hand.
-    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = .5; ctx.fillStyle = hue;
-    ctx.beginPath(); ctx.arc(0, 0, item.active ? 4.5 : 3, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+    // Grip anchor: a small orb of light binding the piece to the hand (astral pieces only — drawn weapons are held).
+    const drawn = hasWeaponSheet(weaponId, item.piece);
+    if (!drawn) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = .5; ctx.fillStyle = hue;
+      ctx.beginPath(); ctx.arc(0, 0, item.active ? 4.5 : 3, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
     ctx.translate(item.reach ?? 0, 0);
     ctx.rotate(item.angle);
-    drawAstralPiece(ctx, item.piece, hue, { intensity: item.active ? 1.1 : .7, time });
+    if (!drawn || !drawWeaponSheet(ctx, weaponId, item.piece, time)) drawAstralPiece(ctx, item.piece, hue, { intensity: item.active ? 1.1 : .7, time });
     if (holdK != null) {
       const pulse = .5 + .5 * Math.sin(time * 16);
       ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = (.18 + .32 * holdK) * (.4 + .6 * pulse);
       ctx.shadowColor = hue; ctx.shadowBlur = 8 + 12 * holdK;
       const s = 1 + .06 * pulse * (.5 + holdK); ctx.scale(s, s);
-      drawAstralPiece(ctx, item.piece, hue, { intensity: .9, time });
+      if (!drawWeaponSheet(ctx, weaponId, item.piece, time)) drawAstralPiece(ctx, item.piece, hue, { intensity: .9, time });
       ctx.restore();
     }
     ctx.restore();

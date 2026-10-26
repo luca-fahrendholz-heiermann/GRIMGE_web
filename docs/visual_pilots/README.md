@@ -388,3 +388,15 @@ Hinweis des Users: Die erste Umfärbung passte nur zu einem Sprite. Bei anderen 
 - **Schalenrolle steuerbar:** Die Kugel rollt etwa 2,8 s und wird mit der Bewegungseingabe gelenkt (Tastatur, Stick, Touch). Ohne Eingabe rollt sie weiter. Gegner auf dem Weg werden überrollt: Je schneller die Kugel, desto mehr Schaden und desto weiter fliegen sie. Wände lassen sie abprallen, ab hoher Geschwindigkeit zieht sie Tempostreifen.
 
 - `v36_tailored_and_roll.png` (Thesen: Ionspindel, Konstruktpanzer · Nyx: Ionspindel, Konstruktpanzer)
+
+## v37 — Erste gezeichnete Waffen statt Astral-Form (26.10.2026)
+
+Nach den Beispiel-Sprites des Users (eigene Entwürfe). `art/authoring/vfx_weapons.cjs` zeichnet die Sheets, `public/src/weapon_sheets.js` legt die Griffpunkte fest. `drawHeldWeapon` zeichnet für diese Waffen das Sheet statt der Astral-Form. Schwungbahnen, Treffer-Effekte, Nachbilder und das Pulsieren beim Halten bleiben.
+- **Glefe → Mondsichel-Hellebarde:** dunkler Holzschaft mit Messingringen und Griffwicklung, große Halbmondklinge mit wanderndem Glanzpunkt, Rückendorn, rote Quaste.
+- **Katana:** schwarz-goldene Rautenwicklung, goldenes Stichblatt, gebogene Klinge mit Härtelinie; die **rote Scheide** hängt an der Hüfte.
+- **Speer → Frostspeer:** heller Schaft mit Eiswicklungen, Kristallspitze mit gezackten Eisdornen, Frostpartikel.
+- **Schwert & Schild → Runenritter:** Klinge mit blauen Flammenzungen und Runenpunkten, goldene Parierstange; runder Runenschild mit Goldrand, leuchtendem Runenkreis und Schildbuckel.
+- **Geisterschwert → Geisterklinge:** gezackte, blau leuchtende Klinge mit weißem Kern.
+- Noch als Astral-Form: Block-Haltung (`weapon_guard.js`), geworfene Waffen und Waffen am Boden.
+
+- `v37_weapons_r1.png` (oben im Stand, unten im Schlag), `v37_weapon_sheets.png`
