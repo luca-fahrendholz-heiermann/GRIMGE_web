@@ -409,3 +409,9 @@ Hinweis des Users: Schwert & Schild sah unrealistisch aus (der Arm, der den Schi
 - Fehler behoben: Die Griffpunkte wurden bei halber Sheet-Auflösung doppelt versetzt.
 
 - `v38_weapons_v2.png` (oben im Stand, unten im Schlag), `v38_weapon_sheets_v2.png`
+
+## v39 — Waffen v3: wieder kleiner (26.10.2026)
+
+Hinweis des Users: „viel zu groß die Waffen“. Alle fünf Waffen neu in kleinerer Größe gezeichnet (etwa 1,15 × die erste Version, gut ein Drittel kleiner als v2), mit denselben Details: Facetten, Grat, Gravur, Edelsteine, Wicklungen und Effekte. Die Griffpunkte sind angepasst.
+
+- `v39_weapons_v3.png` (oben im Stand, unten im Schlag)

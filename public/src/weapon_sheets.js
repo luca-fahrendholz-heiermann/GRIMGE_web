@@ -7,11 +7,11 @@ import { SPELL_SPRITE_SHEETS } from './spell_sprite_sheets.js';
 
 // weapon id → piece → [sheet, gripX, gripY, width, height]
 export const WEAPON_SHEETS = Object.freeze({
-  glaive: { glaive: ['w_glaive', 32, 34, 184, 68] },
-  katana: { katana: ['w_katana', 16, 15, 124, 30] },
-  spear: { spear: ['w_spear', 50, 30, 210, 60] },
-  sword_shield: { sword: ['w_sword', 13, 24, 112, 44], shield: ['w_shield', 24, 38, 66, 76] },
-  spirit_sword: { spirit_sword: ['w_spirit_sword', 10, 26, 124, 50] }
+  glaive: { glaive: ['w_glaive', 22, 22, 128, 44] },
+  katana: { katana: ['w_katana', 11, 10, 84, 20] },
+  spear: { spear: ['w_spear', 34, 20, 138, 40] },
+  sword_shield: { sword: ['w_sword', 9, 18, 78, 32], shield: ['w_shield', 18, 27, 48, 54] },
+  spirit_sword: { spirit_sword: ['w_spirit_sword', 7, 18, 84, 34] }
 });
 const entryOf = (weaponId, piece) => WEAPON_SHEETS[weaponId]?.[piece] ?? null;
 export const hasWeaponSheet = (weaponId, piece) => { const e = entryOf(weaponId, piece); return !!e && spellSheetReady(e[0]); };
@@ -31,7 +31,7 @@ export function drawKatanaSheath(ctx, player, renderY) {
   if (!spellSheetReady('w_katana_sheath')) return;
   const f = player.facing || 1;
   ctx.save(); ctx.translate(Math.round(player.x + f * 2), Math.round(renderY - 38)); ctx.scale(-f, 1); ctx.rotate(.38);
-  const k = (SPELL_SPRITE_SHEETS.w_katana_sheath?.w ?? 112) / 112;
-  drawSpellSprite(ctx, 'w_katana_sheath', 0, (56 - 6) * k, 0, { anchor: 'center' });
+  const k = (SPELL_SPRITE_SHEETS.w_katana_sheath?.w ?? 76) / 76;
+  drawSpellSprite(ctx, 'w_katana_sheath', 0, (38 - 4) * k, 0, { anchor: 'center' });
   ctx.restore();
 }
