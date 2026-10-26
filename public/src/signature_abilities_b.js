@@ -164,6 +164,7 @@ class EmberPump extends SigProp {
   }
   render(ctx) {
     const mat = this.mat; const y = this.y; const t = this.t; const g = this.fade * (this.hitFlash ? .7 : 1);
+    if (spellSheetReady('ember_pump')) { drawSpellSprite(ctx, 'ember_pump', Math.min(this.triggers, 2) + (this.hot ? 3 : 0) + (this.hot ? 0 : Math.floor(t * 4) % 1), this.x, y + 2, { alpha: g }); return; }
     for (const v of this.valves) { const [vx, vy] = groundPt(this.x, this.z, v.r, v.a); slab(ctx, vx, vy, 5, 14, mat, this.seed + v.r, g, 2); }
     // Narrow ribbed pressure body of porous black glass stone.
     for (let i = 0; i < 4; i++) plate(ctx, [[this.x - 11 + i, y - i * 12], [this.x + 11 - i, y - i * 12 - 1], [this.x + 10 - i, y - (i + 1) * 12], [this.x - 10 + i, y - (i + 1) * 12 + 1]], mat, this.seed + 20 + i, { alpha: g, lit: .8, pulse: this.hot ? .5 + .5 * Math.sin(t * 8 + i) : .2, glowEdge: this.hot ? 1.2 : .3 });
@@ -208,6 +209,11 @@ class SpaceFold {
   render(ctx) {
     const mat = this.mat; const k = this.collapsed ? 1 - (this.t - this.collapsed) / .4 : Math.min(1, this.t * 3);
     const base = linePts(this.a, this.b, 12, 0, 0); const top = linePts(this.a, this.b, 12, 70, 14);
+    if (spellSheetReady('space_fold')) {
+      // Panes of folded space hung along the curve (each pane tilted with the fold), then the gold seam on top.
+      for (let i = 0; i < 12; i += 2) { const mx = (base[i][0] + top[i][0] + base[i + 2 > 12 ? 12 : i + 2][0] + top[i + 2 > 12 ? 12 : i + 2][0]) / 4; const my = (base[i][1] + top[i][1]) / 2; drawSpellSprite(ctx, 'space_fold', Math.floor(this.t * 6 + i) % 4, mx, my, { anchor: 'center', scale: .55, alpha: .5 * Math.max(.4, k) }); }
+      thread(ctx, top, mat.edge, 2, k); return;
+    }
     for (let i = 0; i < 12; i++) plate(ctx, [base[i], base[i + 1], top[i + 1], top[i]], { ...mat, kind: 'crystal' }, 1710 + i, { alpha: .22 * k, glowEdge: .6 });
     thread(ctx, top, mat.vein, 2, .8 * k); thread(ctx, base, mat.vein, 1, .5 * k);
     // Flat sails of broken mirror scraps along the fold.

@@ -221,13 +221,13 @@ defineSignature('S04', {
       const rivets = (x, y, h) => { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = fade * .9; ctx.fillStyle = mat.vein; for (let i = 0; i < 4; i++) ctx.fillRect(snap(x) - 1, snap(y - h + 6 + i * (h - 10) / 3), 2, 2); ctx.restore(); };
       if (layer === 'front' && st.front > 0) {
         const x = p.x + f * (30 + open * 8); const y = ry - 16 + Math.sin(t * 2) * 2; const tilt = open ? .5 : p.isGuarding ? -.15 : 0;
-        plate(ctx, [[x - f * 4, y - 56 + tilt * 20], [x + f * 6, y - 52], [x + f * 7, y], [x - f * 5, y + 3]], mat, 310, { alpha: fade, glowEdge: .7, lit: .9 });
-        rivets(x + f, y, 52);
+        if (spellSheetReady('bastion_floe')) { ctx.save(); ctx.translate(Math.round(x), Math.round(y - 28)); ctx.rotate(-tilt * f * .4); drawSpellSprite(ctx, 'bastion_floe', st.front < 3 ? 2 + Math.floor(t * 4) % 2 : Math.floor(t * 4) % 2, 0, 0, { anchor: 'center', flip: f < 0, alpha: fade }); ctx.restore(); }
+        else { plate(ctx, [[x - f * 4, y - 56 + tilt * 20], [x + f * 6, y - 52], [x + f * 7, y], [x - f * 5, y + 3]], mat, 310, { alpha: fade, glowEdge: .7, lit: .9 }); rivets(x + f, y, 52); }
       }
       if (layer === 'back' && st.side > 0) {
         const x = p.x - f * 6; const y = ry - 10 + Math.sin(t * 2 + 1) * 2;
-        plate(ctx, [[x - 10, y - 52], [x + 8, y - 54], [x + 9, y], [x - 9, y - 2]], mat, 320, { alpha: fade * .9, glowEdge: .6, lit: .8 });
-        rivets(x, y, 50);
+        if (spellSheetReady('bastion_floe')) drawSpellSprite(ctx, 'bastion_floe', st.side < 3 ? 2 : 0, x, y - 27, { anchor: 'center', flip: f > 0, alpha: fade * .9 });
+        else { plate(ctx, [[x - 10, y - 52], [x + 8, y - 54], [x + 9, y], [x - 9, y - 2]], mat, 320, { alpha: fade * .9, glowEdge: .6, lit: .8 }); rivets(x, y, 50); }
       }
       // The fine protective weave between the plates (the right flank stays open).
       if (layer === 'front' && st.front > 0 && st.side > 0) for (let i = 0; i < 3; i++) thread(ctx, [[p.x - f * 4, ry - 20 - i * 14], [p.x + f * 14, ry - 24 - i * 14 + Math.sin(t * 3 + i) * 2], [p.x + f * 28, ry - 20 - i * 14]], mat.edge, 1, .35 * fade);
@@ -369,7 +369,7 @@ defineSignature('S07', {
       const mat = st.sig.mat; const f = p.facing || 1;
       // Two narrow splintered clock arcs open behind the shoulders.
       for (const sg of [-1, 1]) { const pts = []; for (let i = 0; i <= 6; i++) { const a = -Math.PI / 2 + sg * (.3 + i * .22) + Math.sin(st.t * 2) * .05; pts.push([p.x - f * 6 + Math.cos(a) * 26 * f, ry - 64 + Math.sin(a) * 26]); } ribbon(ctx, pts, 2, mat, 610 + sg, st.t, .85); for (let i = 1; i < 6; i += 2) shard(ctx, pts[i][0], pts[i][1], 2.5, i, mat, 620 + i, .8); }
-      for (let k = 0; k < 2 - st.recorded; k++) plate(ctx, [[p.x - f * 6 - 4 + k * 8, ry - 96], [p.x - f * 6 + k * 8, ry - 100], [p.x - f * 6 + 4 + k * 8, ry - 96], [p.x - f * 6 + k * 8, ry - 92]], mat, 630 + k, { alpha: .9, core: 1 });
+      for (let k = 0; k < 2 - st.recorded; k++) { if (spellSheetReady('echo_scroll')) drawSpellSprite(ctx, 'echo_scroll', Math.floor(st.t * 6 + k) % 4, p.x - f * 6 - 7 + k * 14, ry - 98 + Math.sin(st.t * 3 + k) * 2, { anchor: 'center' }); else plate(ctx, [[p.x - f * 6 - 4 + k * 8, ry - 96], [p.x - f * 6 + k * 8, ry - 100], [p.x - f * 6 + 4 + k * 8, ry - 96], [p.x - f * 6 + k * 8, ry - 92]], mat, 630 + k, { alpha: .9, core: 1 }); }
     }
   }
 });

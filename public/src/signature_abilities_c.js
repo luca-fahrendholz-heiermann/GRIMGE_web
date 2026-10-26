@@ -2,6 +2,7 @@
 // constructs, helpers & combat objects (S25–S30), arena rules, resonance &
 // metamagic (S31–S36). No summon AI, no clone figures: constructs are
 // external pieces (arm, fist, plate), helpers are projections on sockets.
+import { drawSpellSprite, spellSheetReady } from './spell_visuals.js';
 import {
   defineSignature, SigBolt, SigProp, SigSequence, startStance, emit, debris, sigSink,
   foesOf, aliveFoe, groundDist, yOf, massOf, hit, projectilesOf, projKill, projSetVel, projVel, projHeight, projDamage,
@@ -48,6 +49,7 @@ defineSignature('S25', {
       st.blades.forEach((b, i) => {
         if (b.gone) return; const bp = bladePos(p, st, i, ry); if ((layer === 'back') !== bp.back) return;
         // Ornate splinter blade with a narrow core slit and its own weight shadow.
+        if (spellSheetReady('chorus_blade')) { ctx.save(); ctx.translate(Math.round(bp.x), Math.round(bp.y)); ctx.scale(f, 1); ctx.rotate(.3); drawSpellSprite(ctx, 'chorus_blade', b.charged ? 1 : 0, 14, 0, { anchor: 'center', alpha: bp.back ? .6 : 1 }); ctx.restore(); return; }
         const L = 22; const c = Math.cos(.3 * f); const s = Math.sin(.3 * f);
         const P = (u, v) => [bp.x + (u * c - v * s) * f, bp.y + u * s + v * c];
         plate(ctx, [P(-8, 0), P(-2, -3.5), P(L, -1), P(L + 6, 0), P(L, 1.5), P(-2, 3.5)], mat, 2510 + i, { alpha: bp.back ? .75 : 1, glowEdge: b.charged ? 1.4 : .5, core: b.charged ? 1 : .2, lit: .8 });

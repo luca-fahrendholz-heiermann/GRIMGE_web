@@ -279,3 +279,14 @@ Ein Versuch, die gemeinsamen Formteile (Platte, Band, Faden) in feiner Pixeldich
 Hinweis: In den Ist-Übersichtsbildern fehlten Haltungs-Runen wie Himmelsregent. Grund war ein Fehler im Aufnahme-Skript (falsches Argument für die Qualität), kein Spielfehler.
 
 - `v25_runde4.png`
+
+## v26 — Spezialrunen Runde 5 (26.10.2026)
+
+`art/authoring/vfx_runes5.cjs`:
+- **Schwebende Bastion:** genietete Schildschollen aus Petrol-Stahl mit Goldrand, die bei Abnutzung einen Riss bekommen.
+- **Nachhallarchiv:** goldversiegelte Archiv-Rollen.
+- **Glutpumpe:** gerippte Pumpe mit glühenden Nähten, Hitzeanzeige, Dampf und Glut.
+- **Raumfalter:** halbdurchsichtige Raumfalten mit violettem Sternenlicht und goldener Naht.
+- **Klingenchor:** knochenweiße Zierklingen mit rotem Kernschlitz, geladen golden umrandet.
+
+- `v26_runde5.png`

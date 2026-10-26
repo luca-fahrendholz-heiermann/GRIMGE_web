@@ -1271,5 +1271,51 @@ export const SPELL_SPRITE_SHEETS = Object.freeze({
   "res": 2,
   "hd": true,
   "anchor": "center"
+ },
+ "bastion_floe": {
+  "name": "bastion_floe",
+  "w": 14,
+  "h": 32,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "echo_scroll": {
+  "name": "echo_scroll",
+  "w": 12,
+  "h": 12,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "ember_pump": {
+  "name": "ember_pump",
+  "w": 24,
+  "h": 40,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 2
+ },
+ "space_fold": {
+  "name": "space_fold",
+  "w": 24,
+  "h": 40,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "chorus_blade": {
+  "name": "chorus_blade",
+  "w": 26,
+  "h": 10,
+  "frames": 2,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
  }
 });
