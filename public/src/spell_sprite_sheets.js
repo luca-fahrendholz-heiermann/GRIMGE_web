@@ -1447,5 +1447,23 @@ export const SPELL_SPRITE_SHEETS = Object.freeze({
   "res": 2,
   "hd": true,
   "anchor": "center"
+ },
+ "silk_anchor": {
+  "name": "silk_anchor",
+  "w": 16,
+  "h": 24,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "silk_web": {
+  "name": "silk_web",
+  "w": 144,
+  "h": 48,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
  }
 });

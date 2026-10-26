@@ -2282,7 +2282,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   assert(ids.length === 24 && ids[0] === 'B01' && ids[1] === 'B02' && ids.includes('T40') && ['A01', 'A02', 'A03', 'A04', 'A05', 'A06', 'A07', 'A08', 'A09'].every((id) => ids.includes(id)), 'The 24 curated Arcane States are registered (B01, B02, 13 atlas forms, A01 Göttlicher Riese, A02 Mystischer Affe, A03 Tausendhand, A04 Klingenblüte, A05–A09 body powers)');
   const tForms = ids.filter((id) => /^[TA]/.test(id));
   assert(tForms.every((id) => ['forward', 'up', 'down'].every((d) => FORM_MOVESETS[id]?.[d]?.short?.make && FORM_MOVESETS[id][d].full?.make) && FORM_SPRINT_ATTACKS[id]?.name), 'Every T / A form has six charged techniques and its own sprint attack');
-  assert(FORM_MOVESETS.T13.forward.short.name === 'THREAD NEEDLE' && FORM_MOVESETS.T13.forward.full.name === 'HUNDRED FILAMENTS' && FORM_SPRINT_ATTACKS.T13.name === 'SILK STRIKE', 'Technique names come straight from the atlas (T13 Fadenschlag)');
+  assert(FORM_MOVESETS.T13.forward.short.name === 'FADENHAKEN' && FORM_MOVESETS.T13.forward.full.name === 'HUNDRED FILAMENTS' && FORM_SPRINT_ATTACKS.T13.name === 'SILK STRIKE', 'Technique names come straight from the atlas, reworked slots from TECH_OVERRIDES (T13 Fadenschlag)');
   assert(FORM_MOVESETS.ninefold.forward.short.name === 'VERDICHTETER RISSKERN' && FORM_MOVESETS.ninefold.forward.full.name === 'RISSSTRAHL' && FORM_MOVESETS.eidolon.up.full.name === 'LICHTSPALTER', 'B01 Risswild / B02 Arkengestell carry the atlas technique names');
   assert(ids.every((id) => { const r = recognizer.runes.find((x) => x.id === 'buff_' + id); const d = SPELL_DEFINITIONS['buff_' + id]; return r?.isBuffForm && r.tags.includes('max-1-per-deck') && d?.isBuffForm && d.tags.includes('arcane-state') && isSpecialRune('buff_' + id); }), 'Each form is an Arcane State special rune tagged "arcane-state · max-1-per-deck", never fusable');
   // Deck rule: at most one buff rune.
@@ -2838,6 +2838,29 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
           for (const dir of ['forward', 'up', 'down']) (await import('./public/src/arcane_moves.js')).ARCANE_CHARGE.A09(strict, { x: 300, y: 300, f: 1 }, buff.BUFF_FORMS.A09.mat, dir, .7, 1.2);
         } catch (e) { bad9.push(e.message); }
         assert(!bad9.length && bled && PR.lateRuneRoute('buff_A09')?.kind === 'boss', 'A09 BLUTARSENAL: salvo, gatling, rocket hub, rocket rain, spear bed and full arsenal hit and render, foes bleed; boss drop only ' + bad9.slice(0, 4).join(' | ')); buff.endBuffForm(P); }
+      // T13 FADENSCHLAG (user, 26 Oct 2026: "mehr spiderman mäßig … rumschwingen"): jumping again in the air swings the
+      // hero on a silk wire (forward, never into the ground, flung out at the end); the thread techniques hit and render.
+      { const IO = await import('./public/src/arcane_fadenschlag.js'); const badI = []; const space = { ...neutral, justPressed: (k) => k === 'Space' };
+        try { start('T13'); dummy.homeX = dummy.x = 900; P.x = 300; P.z = .5; P.facing = 1; P.performJump();
+          for (let i = 0; i < 10; i++) P.update(1 / 60, neutral, game.battlefield, game);
+          const x0 = P.x; P.update(1 / 60, space, game.battlefield, game); const sw = P._silkSwing; if (!sw || sw.released) badI.push('no swing');
+          let minEl = 1e9; let released = false; let i = 0;
+          for (; i < 120 && !P.grounded; i++) { P.update(1 / 60, neutral, game.battlefield, game); spells.update(1 / 60, game); if (P._silkSwing === sw && !sw.released) minEl = Math.min(minEl, P.elevation); if (sw?.released) released = true; if (i % 5 === 0) for (const sp of spells.activeSpells) sp.render?.(strict); }
+          if (!released) badI.push('never released'); if (!(minEl > 4)) badI.push('swing touched the ground ' + minEl); if (!(P.x > x0 + 100)) badI.push('not carried forward ' + Math.round(P.x - x0));
+          if (P._silkSwing && !P._silkSwing.released) badI.push('swing left over');
+          // A swing that starts beside a foe kicks it.
+          P.x = 300; P.grounded = true; P.elevation = 0; P._silkSwing = null; P.performJump(); for (let k = 0; k < 10; k++) P.update(1 / 60, neutral, game.battlefield, game);
+          dummy.homeX = dummy.x = P.x + 55; dummy.homeZ = dummy.z = P.z; dummy.hp = dummy.maxHp; P.update(1 / 60, space, game.battlefield, game);
+          for (let k = 0; k < 60 && !P.grounded; k++) P.update(1 / 60, neutral, game.battlefield, game);
+          if (dummy.hp >= dummy.maxHp) badI.push('no swing kick');
+          for (const [dir, v] of [['forward', 'short'], ['up', 'short'], ['down', 'full']]) {
+            P.x = 300; P.z = .5; P.facing = 1; P.grounded = true; P.elevation = 0; P.vElevation = 0; P._silkSwing = null; dummy.homeX = dummy.x = dir === 'up' ? 335 : 400; dummy.homeZ = dummy.z = .5; dummy.hp = dummy.maxHp; dummy.statusImmuneUntil = {};
+            spells.addSpell(FMS.T13[dir][v].make(P), 'B'); for (let k = 0; k < 90; k++) { spells.update(1 / 60, game); if (k % 6 === 0) for (const sp of spells.activeSpells) sp.render?.(strict); }
+            if (dummy.hp >= dummy.maxHp) badI.push(FMS.T13[dir][v].name + ': no hit');
+          }
+          if (FMS.T13.forward.short.name.toLowerCase() !== 'fadenhaken') badI.push('name ' + FMS.T13.forward.short.name);
+        } catch (e) { badI.push(e.message); }
+        assert(!badI.length && IO.SILK_SWING.reach > 0, 'T13 FADENSCHLAG: jump again in the air swings on a silk wire (forward, above the ground, flung out, kicks foes); Fadenhaken, Fadenzug and Seidennetz hit and render ' + badI.slice(0, 4).join(' | ')); buff.endBuffForm(P); P._silkSwing = null; P.grounded = true; P.elevation = 0; }
       // Dehnleib: reach ×1.6, lightning does nothing, blunt melee hits bounce.
       start('A05'); dummy.homeX = dummy.x = P.x + 110; ready(); P.executeAttack(neutral, 'normal'); const farHit = dummy.hp < dummy.maxHp;
       const hp0 = P.hp; let prv = SSS({ team: 'red', statusElements: ['fulgur'] }); P.takeDamage(30, 100, 0, .2, false, 'spell'); SSS(prv); const shock = hp0 - P.hp;

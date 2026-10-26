@@ -1055,17 +1055,20 @@ export const BUFF_FORM_DATA = Object.freeze([
     ]
    },
    "jump": {
-    "name": "Loom Jump",
-    "text": "Die Spule trägt beim Sprung die Trägheit, Fäden hängen am Scheitel etwas durch.",
+    "name": "Fadenschwung",
+    "text": "erneut springen in der Luft: eine Garnspule wird vorn oben festgenadelt, der Wizard schwingt am Seidenfaden durch und wird nach vorn geschleudert; Gegner auf der Bahn bekommen einen Schwungtritt.",
     "landing": "dust"
    },
    "forward": {
     "short": {
-     "name": "Thread Needle",
-     "text": "präziser Distanz-Poke.",
+     "name": "Fadenhaken",
+     "text": "die Spule hakt den ersten Gegner vorn an, der Faden reißt ihn heran, dann ein Aufwärtshaken.",
      "action": "ein schmales, auf die Facing-Achse ausgerichtetes Projektil aus mehrlagigen Materialfragmenten; vorne harte Leuchtkante, hinten feiner Splitter-Sog",
-     "kind": "projectile",
-     "status": []
+     "kind": "sequence",
+     "status": [
+      "slow",
+      "launch"
+     ]
     },
     "full": {
      "name": "Hundred Filaments",
@@ -1078,8 +1081,8 @@ export const BUFF_FORM_DATA = Object.freeze([
    },
    "up": {
     "short": {
-     "name": "Sky Pin",
-     "text": "einzelner Anti-Air.",
+     "name": "Fadenzug",
+     "text": "die Spule wird hoch oben festgenadelt, der Faden zieht den Wizard hinauf (dort weiterschwingen).",
      "action": "eine schnell ansteigende, scharf fragmentierte Stoßbahn über Kopf und Schulter",
      "kind": "burst",
      "status": []
@@ -1103,12 +1106,13 @@ export const BUFF_FORM_DATA = Object.freeze([
      ]
     },
     "full": {
-     "name": "Thunder Weave",
-     "text": "AoE mit kurzer Unterbrechung.",
+     "name": "Seidennetz",
+     "text": "ein Seidennetz, von sechs Nadeln gehalten, zieht Gegner heran und schnappt dann zu.",
      "action": "eine verzahnte Abfolge von Boden- oder Luftfeldern mit ungleichzeitigen Impakten und klar begrenztem AoE",
      "kind": "sequence",
      "status": [
-      "stun"
+      "pull",
+      "root"
      ]
     }
    }

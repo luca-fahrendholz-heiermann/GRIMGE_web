@@ -31,6 +31,7 @@ import './buff_v32_hands.js'; // A03 Tausendhand
 import './buff_v32_bloom.js'; // A04 Klingenblüte
 import { installBankaiArsenal } from './bankai_arsenal.js';
 import { devilTick } from './arcane_devil.js';
+import './arcane_fadenschlag.js'; // T13 Fadenschlag: swing + thread techniques (must patch ARCANE_MOVES before the movesets are built)
 import { arsenalTick } from './arcane_bloodarsenal.js'; // A09 Blutarsenal (weapon fusion: techniques, look, bleed passive) // A05–A08 body powers (techniques, looks, water weakness, passives) // A04: the held weapon's arsenal (look + techniques)
 import { combat } from './combat.js';
 import { TransformationFx, transitionStyleOf, TRANSFORM_TIMING } from './transform_fx.js';

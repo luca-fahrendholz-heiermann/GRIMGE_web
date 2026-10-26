@@ -26,6 +26,7 @@ import { hasWeaponDown, castWeaponDown, weaponUp, weaponHasUpSkill, weaponDive, 
 import { updatePrimalBond, bondMoveMultiplier, bondGainMultiplier, bondDisplacement, bondOnBlock, primalSprintVariant, renderPrimalBond, endPrimalBond, bondMelee, primalQuake } from './primals.js';
 import { createSegments, damageSegments, updateSegments, renderSegments } from './castle_segments.js';
 import { updateBuffForm, endBuffForm, isGenericBuff, currentBuffForm, renderBuffManifestation, buffVeinPainter, buffCloakColor, renderBuffGuard, levitationOffset, renderBuffCharge } from './buff_forms.js';
+import { silkAirJump, silkSwingStep } from './arcane_fadenschlag.js'; // T13 Fadenschlag: air-jump swing on a silk wire
 import { masteryOnShieldHit, masteryTickShield, masteryChargedRelease, masteryPerfectBlock, masteryTier, currentAttacker, masteryTick, masteryMoveMult, masteryIncoming } from './mastery.js';
 import { updateSignatureStance, renderSignatureStance, signatureHover, signatureMoveMult, signatureEvent, signatureDamageTaken, setHitContext, signatureSprintVariant, signatureCharge, signatureSprintMove, signatureDive, signatureMeleeMult } from './signature_runes.js';
 
@@ -608,15 +609,18 @@ export class Player extends GroundEntity {
           this.handleMovementInput(dt, input);
         } else if (this.isSprintJump) {
           this.updateAirSteering(dt, input);
-          if (input.justPressed('Space')) this.jumpBufferTimer = JUMP_BUFFER_TIME;
+          if (input.justPressed('Space') && !silkAirJump(this)) this.jumpBufferTimer = JUMP_BUFFER_TIME;
         } else {
-          if (input.justPressed('Space')) this.jumpBufferTimer = JUMP_BUFFER_TIME;
+          if (input.justPressed('Space') && !silkAirJump(this)) this.jumpBufferTimer = JUMP_BUFFER_TIME;
         }
       }
-      this.integrateElevation(dt, this.getEffectiveGravity());
       const previousX = this.x; const previousZ = this.z;
-      this.x += (this.vx + this.kbVelX) * dt;
-      this.z += (this.vz + this.kbVelZ) * dt;
+      // Fadenschlag swing: the pendulum sets position and elevation itself (no gravity, no velocity step).
+      if (!silkSwingStep(this, dt, gameWorld)) {
+        this.integrateElevation(dt, this.getEffectiveGravity());
+        this.x += (this.vx + this.kbVelX) * dt;
+        this.z += (this.vz + this.kbVelZ) * dt;
+      }
       battlefield.resolveEntityCollision(this);
       gameWorld?.resolveSpellObstacles(this, previousX, previousZ);
       if (this.sprintActive && this.grounded && Math.abs(this.vx) > this.moveSpeed && Math.abs(this.x - previousX) < Math.abs(this.vx) * dt * .2) this.cancelSprint();

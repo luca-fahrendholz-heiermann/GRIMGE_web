@@ -9,6 +9,8 @@
 //   as_T06_back / _front  Ionspindel — a tall spindle axis behind the back with pulsing ion nodes, three spindle-shaped
 //                         copper coils on wide tilted orbits (always behind the body), zigzag arcs to the axis and
 //                         between the coils.
+//   silk_anchor           T13 Fadenschlag swing anchor: a thread spool pinned in the air by a needle (4 frames, 32×48).
+//   silk_web              T13 Seidennetz: a ground web of silk threads pinned by six needles (6 frames, 288×96).
 const B = require('./vfx_brush.cjs');
 const F = require('./vfx_fire.cjs');
 const { Sheet, rng, TAU, clamp01 } = B;
@@ -151,4 +153,47 @@ function t06() {
   }
   return [bk, fr];
 }
-module.exports = { arcane1Sheets: () => [...t02(), ...t04(), ...t05(), ...t06()] };
+// A 2-px pixel line (the brush outline later gives it the dark contour).
+function pline(sh, f, x0, y0, x1, y1, paint) { const n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0))); for (let i = 0; i <= n; i++) { const u = i / n; paint(sh, f, x0 + (x1 - x0) * u, y0 + (y1 - y0) * u, u, i); } }
+// T13 Fadenschlag palette: plum spool wood, peach silk, rose glints, needle steel.
+const S = {
+  wood: ramp('#1c1420', '#3a2430', '#6a3a3a', '#9a5a48'), silk: ramp('#5a2a3a', '#ff7a3d', '#ffd0a8', '#fff4ea'),
+  rose: ramp('#7a1030', '#ff3d6e', '#ffc0d0'), steel: ramp('#2a2c34', '#6a6e7a', '#b8bcc8', '#f2f4f8')
+};
+// T13 swing anchor: a thread spool pinned in the air by a needle, the wound silk turning.
+function silkAnchor() {
+  const s = new Sheet('silk_anchor', 32, 48, 4, { anchor: 'center' }); const cx = 16; const cy = 24;
+  for (let f = 0; f < 4; f++) {
+    // The needle behind: a steel shaft through the spool, eye and rose head on top, point below.
+    for (let y = -20; y <= 20; y++) tone(s, f, S.steel, cx, cy + y, y > 14 ? .9 - (y - 14) / 10 : .7);
+    for (let y = -21; y <= -17; y++) for (let x = -2; x <= 2; x++) if (Math.abs(x) + Math.abs(y + 19) <= 2) tone(s, f, S.rose, cx + x, cy + y, Math.abs(x) + Math.abs(y + 19) ? .55 : .95);
+    // Wound silk body: diagonal windings that travel with the frame (the spool turns).
+    for (let y = -8; y <= 8; y++) for (let x = -6; x <= 6; x++) { const band = ((x + y * 2 + f * 3) % 6 + 6) % 6; tone(s, f, S.silk, cx + x, cy + y, (band < 2 ? .9 : band < 4 ? .62 : .4) + (x < -3 ? .08 : x > 3 ? -.12 : 0)); }
+    // Flanges top and bottom (plum wood, lit rim).
+    for (const fy of [-10, 10]) for (let y = -2; y <= 2; y++) for (let x = -9; x <= 9; x++) { if ((x / 9.5) ** 2 + (y / 2.5) ** 2 > 1) continue; tone(s, f, S.wood, cx + x, cy + fy + y, (y < 0 ? .85 : .45) - Math.abs(x) / 40); }
+    // A loose end of silk fluttering off the spool.
+    for (let k = 0; k < 9; k++) tone(s, f, S.silk, cx + 7 + k, cy + 2 + Math.round(Math.sin(k * .8 + f * 1.6) * 2), .75);
+    B.selOutline(s, f, C.out);
+  }
+  return s;
+}
+// T13 Seidennetz: a web of silk threads pinned by six needles, rose knots at the crossings, a pulse running out.
+function silkWeb() {
+  const W = 288; const H = 96; const s = new Sheet('silk_web', W, H, 6, { anchor: 'center' }); const cx = W / 2; const cy = H / 2; const R = 136; const k = .32;
+  const at = (a, r) => [cx + Math.cos(a) * r, cy + Math.sin(a) * r * k];
+  const A = Array.from({ length: 6 }, (_, i) => i / 6 * TAU + .26); const rings = [46, 92, R];
+  const silk = (sh, f, x, y) => tone(sh, f, S.silk, x, y, .62);
+  for (let f = 0; f < 6; f++) {
+    for (const a of A) pline(s, f, cx, cy, ...at(a, R), silk);
+    for (const r of rings) for (let i = 0; i < 6; i++) { const p0 = at(A[i], r); const p1 = at(A[(i + 1) % 6], r); const m = at((A[i] + A[(i + 1) % 6] + (i === 5 ? TAU : 0)) / 2, r * .9); pline(s, f, ...p0, ...m, silk); pline(s, f, ...m, ...p1, silk); }
+    // Rose knots where the rings cross the radials.
+    for (const a of A) for (const r of rings.slice(0, 2)) { const [x, y] = at(a, r); for (let d = -1; d <= 1; d++) { tone(s, f, S.rose, x + d, y, .6); tone(s, f, S.rose, x, y + d, .6); } }
+    // A bright pulse running out along each radial, and the six pinning needles at the rim.
+    A.forEach((a, i) => { const u = (f / 6 + i * .37) % 1; const [x, y] = at(a, R * u); for (let d = -1; d <= 1; d++) { tone(s, f, S.silk, x + d, y, 1); tone(s, f, S.silk, x, y + d, 1); }
+      const [px, py] = at(a, R); for (let yy = -14; yy <= 2; yy++) tone(s, f, S.steel, px, py + yy, yy > -2 ? .95 : .65); for (let yy = -17; yy <= -14; yy++) for (let xx = -1; xx <= 1; xx++) tone(s, f, S.rose, px + xx, py + yy, xx ? .5 : .9); });
+    for (let y = -3; y <= 3; y++) for (let x = -(3 - Math.abs(y)); x <= 3 - Math.abs(y); x++) tone(s, f, S.rose, cx + x, cy + y, f % 2 ? .95 : .7);
+    B.selOutline(s, f, C.out);
+  }
+  return s;
+}
+module.exports = { arcane1Sheets: () => [...t02(), ...t04(), ...t05(), ...t06(), silkAnchor(), silkWeb()] };

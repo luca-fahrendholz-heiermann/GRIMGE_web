@@ -312,3 +312,15 @@ Hinweis: In den Ist-Übersichtsbildern fehlten Haltungs-Runen wie Himmelsregent.
 - **Ionspindel:** Spindelachse hinter dem Rücken mit pulsierenden Ionenknoten, drei Kupferspulen auf weiten Bahnen, Zickzack-Bögen.
 
 - `v28_arcane_states_r1.png`
+
+## v29 — Fadenschlag schwingt (26.10.2026)
+
+Wunsch: „mehr spiderman mäßig … dass man sich auch rumschwingen kann“ (gemeint war Fadenschlag). Eigene Umsetzung ohne Netze aus dem Handgelenk:
+eine Garnspule fliegt hoch, eine Nadel heftet sie in die Luft, und der Held schwingt am Seidenfaden (`public/src/arcane_fadenschlag.js`).
+- **Fadenschwung (Sprung in der Luft):** Die Spule haftet vorne oben, der Held pendelt durch den Tiefpunkt und wird am Ende nach vorne oben geschleudert. Erneut springen lässt früher los. Danach kann sofort der nächste Faden kommen. Gegner auf der Bahn bekommen einen Schwungtritt (verlangsamt mit 35 % Chance).
+- **Fadenhaken (vorwärts kurz):** Die Spule hakt den ersten Gegner an, der Faden reißt ihn heran, dann folgt ein Aufwärtshaken.
+- **Fadenzug (hoch kurz):** Die Spule haftet hoch oben und zieht den Held hinauf, von dort kann er weiterschwingen.
+- **Seidennetz (runter voll):** Ein Netz aus Seidenfäden, gehalten von sechs Nadeln (`silk_web`), zieht Gegner heran und schnappt dann zu (Wurzeln).
+- Neue Sheets in `vfx_arcane1.cjs`: `silk_anchor` (Garnspule an einer Nadel) und `silk_web`.
+
+- `v29_fadenschlag_swing.png` (Haken, Netz, Schwung)
