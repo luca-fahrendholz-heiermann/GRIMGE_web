@@ -29,6 +29,7 @@ const nearestFoe = (gw, team, x, z, range = 9999, filter = () => true) => {
 const HOVER = 62; // ≈ 0.7 hero heights
 const hoverOf = (p, st) => { const rise = st.t < .2 ? 0 : Math.min(1, (st.t - .2) / .5); const fall = Math.max(0, Math.min(1, st.timer / .45)); return (HOVER + Math.sin(st.t * 2.4) * 2) * rise * fall; };
 // Six asymmetric gravity floes: four as tread plates under the feet, two at the shoulders.
+const floeShape = (...args) => floe(...args);
 function floe(ctx, x, y, w, h, rot, mat, seed, alpha) {
   const c = Math.cos(rot); const s = Math.sin(rot); const P = (u, v) => [x + u * c - v * s, y + u * s + v * c];
   plate(ctx, [P(-w, -h * .4), P(-w * .2, -h), P(w, -h * .5), P(w * .8, h * .6), P(-w * .6, h)], mat, seed, { alpha, glowEdge: .9, lit: .8, core: .3 });
@@ -42,6 +43,8 @@ defineSignature('S01', {
     render(ctx, p, st, ry, layer) {
       const mat = st.sig.mat; const f = p.facing || 1; const t = st.t; const h = hoverOf(p, st); const fade = Math.min(1, st.t / .4, st.timer / .5 + .2);
       const feetY = ry; const groundY = ry + h;
+      // Hand-drawn sky-stone floes (art/authoring/vfx_runes4.cjs) where available.
+      const floe = (c, x, y, w, hh, rot, m, seed, al) => { if (!spellSheetReady('gravity_floe')) return floeShape(c, x, y, w, hh, rot, m, seed, al); c.save(); c.translate(Math.round(x), Math.round(y)); c.rotate(rot); drawSpellSprite(c, 'gravity_floe', Math.floor(t * 6 + seed) % 4, 0, 0, { anchor: 'center', scale: Math.max(.35, w / 14), alpha: al }); c.restore(); };
       if (layer === 'back') {
         // Ground anchor: a translucent shadow and the telegraphed landing point.
         ctx.save(); ctx.globalAlpha = .35 * fade; ctx.fillStyle = '#05030a'; ctx.beginPath(); ctx.ellipse(snap(p.x), snap(groundY), 16, 5, 0, 0, TAU); ctx.fill(); ctx.restore();
@@ -331,6 +334,13 @@ class AirSeam {
     const mat = this.mat; const pa = [this.a.x, groundYForDepth(this.a.z) - 34]; const pb = [this.b.x, groundYForDepth(this.b.z) - 34];
     const pts = []; for (let i = 0; i <= 12; i++) { const u = i / 12; pts.push([pa[0] + (pb[0] - pa[0]) * u, pa[1] + (pb[1] - pa[1]) * u - Math.sin(u * Math.PI) * 18 + Math.sin(this.t * 6 + u * 9) * (this.torn ? 6 : 1)]); }
     if (this.torn) { const k = 1 - (this.t - this.tornAt) / .35; thread(ctx, pts.map(([x, y], i) => [x, y + (i % 2 ? -6 : 6)]), mat.core, 2, k); return; }
+    if (spellSheetReady('seam_knot')) {
+      // A taut seam of wind: a stitched pale line (blue stitches running along it), wind knots at the anchors.
+      for (let i = 1; i < pts.length; i++) { const [ax, ay] = pts[i - 1]; const [bx, by] = pts[i]; const n = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay))); for (let k = 0; k <= n; k++) { const x = Math.round(ax + (bx - ax) * k / n); const y = Math.round(ay + (by - ay) * k / n); ctx.fillStyle = '#4e5a66'; ctx.fillRect(x, y - 1, 1, 3); ctx.fillStyle = (k + i * 7 + Math.floor(this.t * 30)) % 9 < 3 ? mat.vein : mat.body; ctx.fillRect(x, y, 1, 1); if ((k + i * 7) % 6 === 0) { ctx.fillStyle = mat.vein; ctx.fillRect(x, y - 2, 1, 5); } } }
+      for (const q of [pts[0], pts[pts.length - 1]]) drawSpellSprite(ctx, 'seam_knot', Math.floor(this.t * 8) % 4, q[0], q[1], { anchor: 'center' });
+      for (let k = 0; k < 2 - this.crossings; k++) drawSpellSprite(ctx, 'seam_knot', 0, pts[6][0] - 6 + k * 12, pts[6][1] - 16, { anchor: 'center', scale: .6 });
+      return;
+    }
     thread(ctx, pts, mat.body, 3, .45); ribbon(ctx, pts, 1.6, mat, 500, this.t, .9);
     for (let i = 2; i < 12; i += 3) plate(ctx, [[pts[i][0] - 3, pts[i][1]], [pts[i][0], pts[i][1] - 3], [pts[i][0] + 3, pts[i][1]], [pts[i][0], pts[i][1] + 3]], mat, 510 + i, { alpha: 1, core: 1 });
     for (let k = 0; k < 2 - this.crossings; k++) plate(ctx, [[pts[6][0] - 8 + k * 10, pts[6][1] - 14], [pts[6][0] - 4 + k * 10, pts[6][1] - 18], [pts[6][0] + k * 10, pts[6][1] - 14]], mat, 520 + k, { alpha: .9 });
@@ -494,6 +504,7 @@ class MirrorOffset {
   render(ctx) {
     const o = this.owner; const f = o.facing || 1; const mat = this.mat;
     // A washed-out image of the current weapon stance, bound to the live sprite.
+    if (spellSheetReady('mirror_frame')) { drawSpellSprite(ctx, 'mirror_frame', Math.floor(this.t * 6) % 4, this.x, this.y + 2); ghostOf(ctx, o, this.x, this.y, this.t - this.swing < .25 ? 'attack1' : o.state, o.animTime, f, .45, mat.edge); for (let k = 0; k < this.left; k++) drawSpellSprite(ctx, 'garnet_lens', 1, this.x - 6 + k * 12, this.y - 112, { anchor: 'center', scale: .7 }); return; }
     ghostOf(ctx, o, this.x, this.y, this.t - this.swing < .25 ? 'attack1' : o.state, o.animTime, f, .45, mat.edge);
     for (const sg of [-1, 1]) plate(ctx, [[this.x + sg * 22, this.y - 82], [this.x + sg * 24, this.y - 82], [this.x + sg * 18, this.y - 4], [this.x + sg * 16, this.y - 4]], mat, 960 + sg, { alpha: .85, glowEdge: 1 });
     for (let k = 0; k < this.left; k++) plate(ctx, [[this.x - 4 + k * 8, this.y - 96], [this.x + k * 8, this.y - 100], [this.x + 4 + k * 8, this.y - 96]], mat, 970 + k, { alpha: .9, core: 1 });
@@ -536,11 +547,13 @@ class FateNeedle {
     if (!this.pinned) {
       thread(ctx, [[o.x + o.facing * 14, o.y - 46], [tg.x, tg.y - 44]], mat.edge, 1, .5);
       // Three asymmetric needles spinning over the target.
+      if (spellSheetReady('fate_needle')) { for (let i = 0; i < 3; i++) { const ang = this.t * 4 + i * TAU / 3; ctx.save(); ctx.translate(Math.round(tg.x + Math.cos(ang) * 10), Math.round(top + Math.sin(ang) * 4 - 6)); ctx.rotate(Math.cos(ang) * .5); drawSpellSprite(ctx, 'fate_needle', Math.floor(this.t * 8 + i) % 4, 0, 0, { anchor: 'center' }); ctx.restore(); } return; }
       for (let i = 0; i < 3; i++) { const a = this.t * 4 + i * TAU / 3; plate(ctx, [[tg.x + Math.cos(a) * 8, top + Math.sin(a) * 3], [tg.x + Math.cos(a) * 2, top - 12 - i * 2], [tg.x - Math.cos(a) * 3, top + Math.sin(a) * 2]], mat, 1000 + i, { alpha: .95, glowEdge: .9 }); }
       return;
     }
     if (this.done) return;
-    plate(ctx, [[tg.x - 8, tg.y - 50], [tg.x + 6, tg.y - 40], [tg.x + 4, tg.y - 38]], mat, 1010, { alpha: 1, core: 1, glowEdge: 1 });
+    if (spellSheetReady('fate_needle')) { ctx.save(); ctx.translate(Math.round(tg.x - 2), Math.round(tg.y - 46)); ctx.rotate(-.9); drawSpellSprite(ctx, 'fate_needle', Math.floor(this.t * 8) % 4, 0, 0, { anchor: 'center' }); ctx.restore(); }
+    else plate(ctx, [[tg.x - 8, tg.y - 50], [tg.x + 6, tg.y - 40], [tg.x + 4, tg.y - 38]], mat, 1010, { alpha: 1, core: 1, glowEdge: 1 });
     // Thin blue heartbeat lines show the charge.
     for (let k = 0; k < this.charges + 1; k++) thread(ctx, [[tg.x - 10, top + k * 5], [tg.x - 4, top + k * 5], [tg.x - 2, top - 4 + k * 5], [tg.x + 1, top + 4 + k * 5], [tg.x + 4, top + k * 5], [tg.x + 10, top + k * 5]], mat.vein, 1, .8);
   }

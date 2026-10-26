@@ -1234,5 +1234,42 @@ export const SPELL_SPRITE_SHEETS = Object.freeze({
   "hd": true,
   "anchor": "base",
   "baseOffset": 2
+ },
+ "gravity_floe": {
+  "name": "gravity_floe",
+  "w": 18,
+  "h": 14,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "seam_knot": {
+  "name": "seam_knot",
+  "w": 10,
+  "h": 10,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "mirror_frame": {
+  "name": "mirror_frame",
+  "w": 32,
+  "h": 54,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 2
+ },
+ "fate_needle": {
+  "name": "fate_needle",
+  "w": 7,
+  "h": 16,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
  }
 });

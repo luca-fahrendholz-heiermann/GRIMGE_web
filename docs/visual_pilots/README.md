@@ -267,3 +267,15 @@ Ein Versuch, die gemeinsamen Formteile (Platte, Band, Faden) in feiner Pixeldich
 - **Splittergarten:** wachsende Kristallblüten mit gerippten Blättern, verschachtelten Blütenblättern und Jade-Kern.
 
 - `v24_runde3.png`, `v24_runde3_sheets.png`
+
+## v25 — Spezialrunen Runde 4 (26.10.2026)
+
+`art/authoring/vfx_runes4.cjs`:
+- **Himmelsregent:** schwebende Schollen aus violettem Himmelsstein mit leuchtenden Schwerkraft-Runen an der Unterseite.
+- **Luftnähte:** gestickte Windnaht mit wandernden blauen Stichen, Windknoten an den Ankern.
+- **Spiegelversatz:** Tor aus violettem Glas mit umlaufendem Glanz, das Nachbild steht darin.
+- **Schicksalsnadel:** schlanke roségoldene Nadeln mit blauem Glanz und rotem Faden.
+
+Hinweis: In den Ist-Übersichtsbildern fehlten Haltungs-Runen wie Himmelsregent. Grund war ein Fehler im Aufnahme-Skript (falsches Argument für die Qualität), kein Spielfehler.
+
+- `v25_runde4.png`
