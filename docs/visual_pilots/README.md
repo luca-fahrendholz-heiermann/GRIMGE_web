@@ -333,3 +333,10 @@ Wunsch: „bitte optik nachziehen, obwohl ich spulen auch ein wenig lahm finde�
 - **Seidennetz:** Das Netz wird von sechs Kunai gehalten, die im Boden stecken.
 
 - `v30_fadenschlag_look.png`
+
+## v31 — Nichts mehr übers Gesicht, Schlackenkern-Rückenofen (26.10.2026)
+
+- Bruchflug und Fadenschlag: Die kleine vordere Flosse bzw. das vordere Sichelbein liegen jetzt hinter dem Sprite. Der Charakter ist über ihnen zu sehen.
+- Schlackenkern: Der Ofen schwebt nicht mehr neben der Hüfte. Er ist an den Rücken geschnallt (die Rippenbänder sind die Gurte), ein Kamin ragt über die Schulter und raucht, und die Ofenöffnung brennt nach hinten.
+
+- `v31_layer_fix.png`

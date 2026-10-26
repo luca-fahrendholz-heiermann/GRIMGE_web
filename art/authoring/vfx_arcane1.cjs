@@ -1,8 +1,8 @@
 // GRIMGE — Arcane States, round 1 (hand-drawn quality; vfx_brush.cjs; final density). Manifestations drawn
 // around the hero: every sheet is 128×128 with the hero's CHEST at (64, 64), facing right; each has a back
 // layer (behind the sprite) and a front layer (before it). Own designs from the forms' silhouettes.
-//   as_T02_back / _front  Schlackenkern — a floating ceramic kiln: asymmetric rib band round waist and shoulder,
-//                         glowing cracks, a burning kiln mouth at the left hip, embers and smoke rising.
+//   as_T02_back / _front  Schlackenkern — a ceramic kiln strapped to the back (rib bands round waist and shoulder as
+//                         straps), glowing cracks, a chimney over the shoulder smoking, the kiln mouth burning backward.
 //   as_T04_back / _front  Korallenschild — two fan-shaped protective sails of coral lamellae at the sides.
 //   as_T05_back / _front  Bruchflug — three faceted crystal fins fanning from the shoulder blades, each cracked into
 //                         drifting shards held together by glowing pink seams; gravity motes rising.
@@ -40,23 +40,27 @@ function t02() {
   const [bk, fr] = pair('T02', 6);
   for (let f = 0; f < 6; f++) {
     const ph = f / 6;
-    // Smoke and embers rising behind (back layer).
-    for (let q = 0; q < 3; q++) { const life = (ph + q / 3) % 1; F.smokePuff(bk, f, CX - 22 + q * 6, CY + 10 - life * 40, 4 + life * 4, 100 + q + f, life > .7 ? (life - .7) * 2 : 0); }
-    // Waist band (ribs of ceramic with glowing cracks) and a slanted shoulder band.
+    // Waist band (ribs of ceramic with glowing cracks) and a slanted shoulder band — the straps of the back oven.
     const rib = (s, ff, x, y, u, a) => { const crack = ((Math.round(a * 30) + f) % 11) === 0; tone(s, ff, crack ? C.glow : C.kiln, x, y, crack ? .7 : (u < .35 ? .85 : .45) + (s === fr ? .1 : -.1)); };
     bandRing(bk, fr, f, CX, CY + 22, 34, 10, -4, 12, rib);
     bandRing(bk, fr, f, CX - 4, CY - 6, 26, 8, 10, 9, rib, Math.PI * .6, Math.PI * 2.1);
-    // The kiln body: a squat ceramic oven hanging at the back hip (domed top, ribs, glowing cracks).
-    { const kx = CX - 36; const ky = CY + 18; for (let y = -16; y <= 14; y++) for (let x = -14; x <= 14; x++) { const top = y < -6 ? Math.hypot(x / 14, (y + 6) / 10) : Math.abs(x) / 14; if (top > 1) continue; tone(fr, f, C.kiln, kx + x, ky + y, .78 - (x + 14) / 50 - (y + 16) / 80); }
-      for (let y = -12; y <= 12; y += 5) for (let x = -12; x <= 12; x++) if (Math.abs(x) <= 13 - Math.max(0, -y - 6)) tone(fr, f, C.kiln, kx + x, ky + y, .25);
-      for (let k = 0; k < 8; k++) tone(fr, f, C.glow, kx - 6 + k * 1.5, ky - 10 + k * 2.5, (k + f) % 3 ? .8 : 1); }
-    // Ribs crossing the waist band (vertical slats).
     for (let k = 0; k < 9; k++) { const a = k / 9 * TAU + .3; const s = Math.sin(a) < 0 ? bk : fr; const x = CX + Math.cos(a) * 30; const y0 = CY + 22 + Math.sin(a) * 9 - Math.cos(a) * 4; for (let y = -6; y <= 6; y++) tone(s, f, C.kiln, x, y0 + y, .3); }
-    // The kiln mouth at the left (back) hip: a glowing oval opening with flames licking out.
-    const mx = CX - 36; const my = CY + 22;
-    for (let y = -8; y <= 8; y++) for (let x = -7; x <= 7; x++) { const d = (x / 7) ** 2 + (y / 8) ** 2; if (d <= 1) tone(fr, f, d > .7 ? C.kiln : C.glow, mx + x, my + y, d > .7 ? .2 : .95 - d * .5); }
-    F.flame(fr, f, mx - 2, my - 2, 14 + (f % 3) * 3, 7, { dir: -Math.PI / 2 - .6, lean: -2, ph: ph * TAU * 2 });
-    for (let q = 0; q < 5; q++) { const rr = rng(140 + q); const life = (ph + rr()) % 1; tone(fr, f, C.glow, mx - 6 + rr() * 12, my - 12 - life * 30, .9); }
+    // The back oven: a domed ceramic kiln strapped to the back (behind the sprite), ribbed, with glowing cracks.
+    const kx = CX - 27; const ky = CY + 2;
+    for (let y = -22; y <= 22; y++) for (let x = -18; x <= 18; x++) { const dome = y < -8 ? Math.hypot(x / 18, (y + 8) / 14) : Math.abs(x) / (18 - Math.max(0, y - 16) * .9); if (dome > 1) continue; tone(bk, f, C.kiln, kx + x, ky + y, .82 - (x + 18) / 60 - (y + 22) / 95); }
+    for (let y = -16; y <= 20; y += 6) for (let x = -17; x <= 17; x++) if (Math.abs(x) <= 17 - Math.max(0, -y - 8)) tone(bk, f, C.kiln, kx + x, ky + y, .22);
+    for (let k = 0; k < 10; k++) tone(bk, f, C.glow, kx - 8 + k * 1.4 + (k % 2), ky - 12 + k * 2.6, (k + f) % 3 ? .8 : 1);
+    // Chimney rising behind the shoulder: a tapering ceramic stack with an iron cap, smoke and embers from its top.
+    const cx0 = kx + 2;
+    for (let y = 0; y < 30; y++) { const w = 4 - Math.floor(y / 12); for (let x = -w; x <= w; x++) tone(bk, f, (y % 7 === 0) ? C.kiln : C.kiln, cx0 + x, ky - 20 - y, (x < 0 ? .75 : .4) + (y % 7 === 0 ? -.2 : 0)); }
+    for (let x = -5; x <= 5; x++) for (let y = 0; y < 2; y++) tone(bk, f, C.kiln, cx0 + x, ky - 50 - y, x < 0 ? .6 : .3);
+    for (let x = -2; x <= 2; x++) tone(bk, f, C.glow, cx0 + x, ky - 52, .85);
+    for (let q = 0; q < 3; q++) { const life = (ph + q / 3) % 1; F.smokePuff(bk, f, cx0 - life * 10, ky - 56 - life * 22, 3 + life * 5, 100 + q + f, life > .7 ? (life - .7) * 2 : 0); }
+    for (let q = 0; q < 5; q++) { const rr = rng(140 + q); const life = (ph + rr()) % 1; tone(bk, f, C.glow, cx0 - 4 + rr() * 8 - life * 6, ky - 54 - life * 24, .9); }
+    // The kiln mouth on the back side, glowing, flames licking backward out of it.
+    const mx = kx - 15; const my = ky + 8;
+    for (let y = -7; y <= 7; y++) for (let x = -5; x <= 5; x++) { const d = (x / 5) ** 2 + (y / 7) ** 2; if (d <= 1) tone(bk, f, d > .65 ? C.kiln : C.glow, mx + x, my + y, d > .65 ? .15 : .95 - d * .5); }
+    F.flame(bk, f, mx - 3, my + 2, 12 + (f % 3) * 3, 6, { dir: -Math.PI / 2 - .9, lean: -3, ph: ph * TAU * 2 });
     B.selOutline(bk, f, C.out); B.selOutline(fr, f, C.out);
   }
   return [bk, fr];
@@ -98,7 +102,7 @@ function t05() {
     // Three crystal fins rooted at the shoulder blades, fanning up and back like a broken wing. Each fin is a
     // faceted blade (lit leading facet, dark trailing facet) cracked into three shards that drift apart slightly,
     // held together by glowing pink seams across the breaks. The third, smallest fin sits at the front shoulder.
-    const fins = [[-10, 4, -2.6, 60, 24, bk], [-6, 0, -2.1, 68, 26, bk], [6, 2, -1.5, 44, 17, fr]];
+    const fins = [[-10, 4, -2.6, 60, 24, bk], [-6, 0, -2.1, 68, 26, bk], [6, 2, -1.5, 44, 17, bk]];
     fins.forEach(([ox, oy, a, L, W, sh], i) => {
       const bob = Math.sin(ph * TAU + i * 2.1); const rx = CX + ox; const ry = CY + oy;
       const dx = Math.cos(a); const dy = Math.sin(a); const nx = -dy; const ny = dx;
@@ -183,7 +187,7 @@ function t13() {
     const A = bladeLeg(bk, f, [CX - 8, CY - 8], [CX - 46, CY - 32], [CX - 34 + sw(0), CY - 62], 4);
     const Bl = bladeLeg(bk, f, [CX - 10, CY - 2], [CX - 56, CY - 2], [CX - 60, CY - 34 + sw(1)], 3.6);
     const Cl = bladeLeg(bk, f, [CX - 10, CY + 6], [CX - 46, CY + 28], [CX - 62 + sw(2), CY + 4], 3.2);
-    const D = bladeLeg(fr, f, [CX + 6, CY - 12], [CX + 30, CY - 34], [CX + 16, CY - 56 + sw(3)], 2.4);
+    const D = bladeLeg(bk, f, [CX + 6, CY - 12], [CX + 30, CY - 34], [CX + 16, CY - 56 + sw(3)], 2.4);
     // Silk strung like a harp: from a knot at the back to every tip, between the tips, and over the head to the front leg.
     const K = [CX - 7, CY - 5];
     [[K, A.tip], [K, Bl.tip], [K, Cl.tip], [K, A.mid], [K, Bl.mid], [A.tip, Bl.tip], [Bl.tip, Cl.tip], [A.tip, D.tip]].forEach(([p0, p1], i) => silkString(bk, f, p0, p1, ph + i * .29));
