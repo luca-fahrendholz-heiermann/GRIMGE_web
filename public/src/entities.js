@@ -26,7 +26,8 @@ import { hasWeaponDown, castWeaponDown, weaponUp, weaponHasUpSkill, weaponDive, 
 import { updatePrimalBond, bondMoveMultiplier, bondGainMultiplier, bondDisplacement, bondOnBlock, primalSprintVariant, renderPrimalBond, endPrimalBond, bondMelee, primalQuake } from './primals.js';
 import { createSegments, damageSegments, updateSegments, renderSegments } from './castle_segments.js';
 import { updateBuffForm, endBuffForm, isGenericBuff, currentBuffForm, renderBuffManifestation, buffVeinPainter, buffCloakColor, renderBuffGuard, levitationOffset, renderBuffCharge } from './buff_forms.js';
-import { silkAirJump, silkSwingStep } from './arcane_fadenschlag.js'; // T13 Fadenschlag: air-jump swing on a silk wire
+import { silkAirJump, silkSwingStep } from './arcane_fadenschlag.js';
+import { isShellRolled } from './arcane_konstrukt.js'; // A10 Schalenrolle: the body is hidden inside the ball // T13 Fadenschlag: air-jump swing on a silk wire
 import { masteryOnShieldHit, masteryTickShield, masteryChargedRelease, masteryPerfectBlock, masteryTier, currentAttacker, masteryTick, masteryMoveMult, masteryIncoming } from './mastery.js';
 import { updateSignatureStance, renderSignatureStance, signatureHover, signatureMoveMult, signatureEvent, signatureDamageTaken, setHitContext, signatureSprintVariant, signatureCharge, signatureSprintMove, signatureDive, signatureMeleeMult } from './signature_runes.js';
 
@@ -2073,7 +2074,8 @@ export class Player extends GroundEntity {
     if (this.isAlive) renderSignatureStance(ctx, this, renderY, 'back');
     if (this.isAlive && this.chargeTimer > 0 && !buffActive) this.renderChargeAura(ctx, renderY);
     // Body forms glow along the Wizard's own silhouette (chakra cloak).
-    const formCloak = this.isAlive ? this.formCloakColor() : null;
+    const rolled = isShellRolled(this);
+    const formCloak = this.isAlive && !rolled ? this.formCloakColor() : null;
     for (const g of this.ghosts) sprites.renderEntity(ctx, this.renderKey, g.x, g.y, { facing: g.facing, state: g.state, animTime: g.animTime, alpha: g.alpha, hitFlash: 1 });
 
     let useProc = false;
@@ -2171,7 +2173,7 @@ export class Player extends GroundEntity {
     const renderOpts = {
       facing: this.facing, state: this.state, animTime: this.animTime,
       hitFlash: this.hitFlash > 0 ? 1 : 0,
-      alpha: this.lifeState === 'Dead' ? 0 : 1,
+      alpha: this.lifeState === 'Dead' || rolled ? 0 : 1,
       cadence, reverse, procOffsetX: pOX, procOffsetY: pOY,
     };
     if (useProc) { renderOpts.procRot = pRot; renderOpts.procScaleX = pSX; renderOpts.procScaleY = pSY; }
@@ -2181,7 +2183,7 @@ export class Player extends GroundEntity {
     // Astral weapon: the rear-hand piece behind the body, the front one in front.
     // Klingenblüte (A04): the weapon has become the petal swarm — only the swarm renderer draws it.
     // While guarding, the guard pose shows the weapon (weapon_guard.js) — no second copy in the hand.
-    const armed = this.isAlive && (this.weapon || this.classWeapon) && currentBuffForm(this)?.id !== 'A04' && !(this.isGuarding && !activeMoveset(this)) && !this.signature?.impl?.stance?.hidesWeapon?.(this, this.signature);
+    const armed = this.isAlive && !rolled && (this.weapon || this.classWeapon) && currentBuffForm(this)?.id !== 'A04' && !(this.isGuarding && !activeMoveset(this)) && !this.signature?.impl?.stance?.hidesWeapon?.(this, this.signature);
     // The weapon stays in the hands when the body shifts with it (weapon_body.js).
     const held = (layer) => {
       if (!armed) return; ctx.save();

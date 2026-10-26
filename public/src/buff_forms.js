@@ -33,6 +33,7 @@ import { installBankaiArsenal } from './bankai_arsenal.js';
 import { devilTick } from './arcane_devil.js';
 import { recolorFor, cloakFor } from './form_recolors.js'; // armour transformations recolour the hero's own pixels
 import './arcane_fadenschlag.js'; // T13 Fadenschlag: swing + thread techniques (must patch ARCANE_MOVES before the movesets are built)
+import { konstruktTick, isShellRolled } from './arcane_konstrukt.js'; // A10 Konstruktpanzer (armour, shell roll, shield passive)
 import { arsenalTick } from './arcane_bloodarsenal.js'; // A09 Blutarsenal (weapon fusion: techniques, look, bleed passive) // A05–A08 body powers (techniques, looks, water weakness, passives) // A04: the held weapon's arsenal (look + techniques)
 import { combat } from './combat.js';
 import { TransformationFx, transitionStyleOf, TRANSFORM_TIMING } from './transform_fx.js';
@@ -238,6 +239,7 @@ export function updateBuffForm(player, dt) {
   updateMorphology(player, formFor(player, b.id), dt);
   devilTick(player, dt, formFor(player, b.id)); // body powers: water weakness, tremors, blast marks
   arsenalTick(player, formFor(player, b.id));
+  konstruktTick(player, dt, formFor(player, b.id));
   if (b.timer <= 0 || !player.isAlive) endBuffForm(player);
 }
 
@@ -258,6 +260,7 @@ export const isGenericBuff = (player) => !!(player.buffForm?.timer > 0 && player
 export function renderBuffManifestation(ctx, player, renderY, layer) {
   const form = currentBuffForm(player);
   if (!form) return false;
+  if (isShellRolled(player)) return true; // A10 rolled up: only the ball is drawn (by the technique)
   // Temporal projections (other than Vorausschnitt's planes) trail echoes of the last moments.
   if (layer === 'back' && form.morphology === 'temporal_projection' && form.id !== 'T39' && !hasFormRenderer(form.id)) {
     for (const d of [10, 20]) { const past = player._timeTrail?.[d]; if (past) ghostOf(ctx, player, past.x, past.y, past.state, past.animTime, past.facing, .3 * buffFade(player), form.mat.edge); }

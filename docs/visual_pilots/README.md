@@ -349,3 +349,15 @@ Nach den Referenzbildern des Users (dunkle Rüstung mit Goldkanten, grüne Blitz
 - Rückenteile (`as_T06`): eine goldene Spindel-Sichel mit drei Smaragden in Goldfassungen und gezackte grüne Blitze, die neben dem Körper hochsteigen. Die Kupferspulen sind weg.
 
 - `v32_ionspindel_armor.png`
+
+## v33 — A10 Konstruktpanzer (26.10.2026)
+
+Wunsch: „als iron man verwandlung passt auch die schildkröten variante die sich zur kugel machen kann um gegner anzugreifen“. Eigene Umsetzung nach den Referenzbildern, verbunden mit dem Konzept „Konstruktpanzer“ aus dem Fähigkeiten-Atlas II.
+- **Rüstung:** Der Held selbst wird zu grünen Panzerplatten mit cyanfarbenen Kanten, Plattenfugen, geschlossenem Helm und roten Augenschlitzen (`form_recolors.js`). Die Aura ist cyan.
+- **Rückenschale** (`as_A10`): gewölbte Hex-Schale mit glühendem Kernstück, Metallrand mit Leuchtstreifen und zwei Schubdüsen.
+- **Techniken** (`public/src/arcane_konstrukt.js`): Handkanone (drei Energieringe) / Kernstrahl · Schubstoß / Raketenfächer (auf bis zu drei Gegner) · Schalenschild (Hex-Kuppel, fängt Schaden ab) / **Schalenrolle**: Der Held rollt sich zur Panzerkugel ein, Energieringe kreisen um sie, und sie prallt von Gegner zu Gegner (bis zu 8 Treffer). Der Körper ist während der Rolle ausgeblendet.
+- **Passiv:** Alle 6 s lädt sich der Schild um 30 auf (höchstens 60).
+- Freischalten: Boss-Drop oder Konstrukt-Rune Lv. 8. Sprint: Panzerramme, Sturz: Schalensturz mit Krater.
+- Neue Sheets in `vfx_konstrukt.cjs`: `as_A10`, `kp_cannon`, `kp_shell`, `kp_ring`, `kp_shield`.
+
+- `v33_konstruktpanzer.png`

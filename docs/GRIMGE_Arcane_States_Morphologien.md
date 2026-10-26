@@ -18,9 +18,10 @@
 | **Levitation State** | schwebender Spieler mit kontrollierten Projektilen | T05 Bruchflug |
 | **Environmental State** | der Spieler verändert einen größeren Bereich der Arena | T35 Kältestillstand |
 | **Körperkraft** | der eigene Körper verändert sich (dehnen, beben, Raum, Sprengung) | A05 Dehnleib, A06 Beben, A07 Raum, A08 Sprengleib, A09 Blutarsenal |
+| **Rüstung** | die eigenen Sprite-Pixel werden zur Rüstung, Anbauteile sitzen am Körper | A10 Konstruktpanzer |
 | **Divine Projection** | vergrößertes Lichtbild des eigenen Körpers | A01 Göttlicher Riese |
 
-## Die 24 aktiven Arcane States (kuratiert: je eigene Techniken, Lade-Ritual und Palette)
+## Die 25 aktiven Arcane States (kuratiert: je eigene Techniken, Lade-Ritual und Palette)
 
 ### B01 Risswild · *Energy Extension* · V3.2: Tiergeist (Kyubi): neun Fuchsflammen-Schweife
 
@@ -309,6 +310,18 @@
 - **Heavies (V3.2-Abbildung):** Forward — Short: Blutsalve; Full: Gatling-Sturm. · Up — Short: Raketenhub; Full: Raketenregen. · Down — Short: Dornenbett; Full: Volles Arsenal.
 - **Ausschlüsse:** Keine fremde Figur — nur der eigene Körper und Waffen aus Blut.
 - Palette: `#1a0004` `#9a0e1c` `#ff4a44` `#ffe0da` · Material: glänzendes, geronnenes Blut; schwarzrote Adern.
+
+### A10 Konstruktpanzer — Schalenrüstung · *Rüstung* · V3.2: Rüstung: Konstruktpanzer
+
+- **Anker:** `sprite_alpha`, `back`, `hand_right`, `root`
+- **Idle-Silhouette:** Der Held selbst ist in grüne Panzerplatten mit cyanfarbenen Kanten und geschlossenem Helm gehüllt; auf dem Rücken sitzt eine gewölbte Hex-Schale mit leuchtendem Kern und zwei Schubdüsen.
+- **Action-Silhouette:** Die Rüstung schließt sich über den ganzen Körper, die Schale auf dem Rücken pulsiert, die Düsen flackern.
+- **Peak Manifestation:** Bei Full rollt sich der Panzer zur Kugel ein oder feuert den Kernstrahl.
+- **Transform-In / Out:** Platten schließen sich über den Körper, der Helm klappt zu. / Die Platten klappen zurück.
+- **Defense · Grab · Jump:** Die Schale fängt den Treffer ab. · Die Panzerhand packt zu. · Die Düsen tragen hoch.
+- **Heavies (V3.2-Abbildung):** Forward — Short: Handkanone; Full: Kernstrahl. · Up — Short: Schubstoß; Full: Raketenfächer. · Down — Short: Schalenschild; Full: Schalenrolle.
+- **Ausschlüsse:** Keine fremde Figur — nur die eigene Rüstung, die eigene Schale und eigene Waffen.
+- Palette: `#0c1a10` `#3a7a40` `#3ad0e0` `#a8f6ff` · Material: grüne Panzerplatten mit cyanfarbenen Kanten, Hex-Schale aus Platten.
 
 
 ## Archiviert (aus dem Spiel genommen, im Atlas erhalten)

@@ -161,7 +161,7 @@ const DOMAIN_ELEMENT = Object.freeze({ sig_S57: 'ignis', sig_S58: 'natura', sig_
 const ARCANE_ELEMENT = Object.freeze({
   buff_B01: 'ignis', buff_B02: 'void', buff_T02: 'ignis', buff_T04: 'aqua', buff_T05: 'terra', buff_T06: 'fulgur', buff_T08: 'construct', buff_T13: 'construct',
   buff_T23: 'void', buff_T24: 'umbra', buff_T35: 'aqua', buff_T37: 'natura', buff_T38: 'terra', buff_T39: 'lux', buff_T40: 'lux',
-  buff_A01: 'lux', buff_A02: 'bestia', buff_A03: 'construct', buff_A04: 'weapon'
+  buff_A01: 'lux', buff_A02: 'bestia', buff_A03: 'construct', buff_A04: 'weapon', buff_A10: 'construct'
 });
 export const isLateRuneId = (id) => isDomainRuneId(id) || isBuffRuneId(id);
 // Bankai: ONE rune whose effect follows the chosen class, unlocked per class.
