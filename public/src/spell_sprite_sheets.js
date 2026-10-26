@@ -1317,5 +1317,63 @@ export const SPELL_SPRITE_SHEETS = Object.freeze({
   "res": 2,
   "hd": true,
   "anchor": "center"
+ },
+ "pledge_seal": {
+  "name": "pledge_seal",
+  "w": 80,
+  "h": 28,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "pledge_pillar": {
+  "name": "pledge_pillar",
+  "w": 14,
+  "h": 66,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 2
+ },
+ "fugue_dome": {
+  "name": "fugue_dome",
+  "w": 112,
+  "h": 72,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 6
+ },
+ "recall_needle": {
+  "name": "recall_needle",
+  "w": 12,
+  "h": 36,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 2
+ },
+ "basalt_plate": {
+  "name": "basalt_plate",
+  "w": 22,
+  "h": 10,
+  "frames": 1,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 2
+ },
+ "flood_rail": {
+  "name": "flood_rail",
+  "w": 24,
+  "h": 12,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
  }
 });

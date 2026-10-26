@@ -290,3 +290,14 @@ Hinweis: In den Ist-Übersichtsbildern fehlten Haltungs-Runen wie Himmelsregent.
 - **Klingenchor:** knochenweiße Zierklingen mit rotem Kernschlitz, geladen golden umrandet.
 
 - `v26_runde5.png`
+
+## v27 — Spezialrunen Runde 6 (26.10.2026)
+
+`art/authoring/vfx_runes6.cjs`:
+- **Sekundenpfand:** offenes Siegel mit Sekunden-Strichen und wanderndem Lichtpunkt, Lichtsäulen auf den Marken.
+- **Stillfuge:** sechseckige Glaskuppel mit beinweißen Rippen über einem Holzring, langsame Glassplitter.
+- **Rücksprungnadel:** schlanker Jade-Dolch mit grünem Kern und Klingenring.
+- **Seismischer Steg:** Basaltplatten mit goldener Naht.
+- **Flutschiene:** kachelbarer Wasserkanal mit Platin-Wellenkämmen.
+
+- `v27_runde6.png`

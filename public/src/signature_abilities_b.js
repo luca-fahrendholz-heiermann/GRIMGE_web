@@ -69,6 +69,7 @@ class StegPlate extends SigProp {
   render(ctx) {
     const sink = Math.max(0, (this.t - (this.duration - .5 + this.i * .08)) / .4); const r = this.rise * (1 - sink); if (r <= 0) return;
     const y = this.y; const mat = this.mat;
+    if (spellSheetReady('basalt_plate')) { drawSpellSprite(ctx, 'basalt_plate', 0, this.x, y + 4 - 7 * r, { alpha: this.hitFlash ? .7 : 1 }); return; }
     plate(ctx, [[this.x - 18, y - 2 - 7 * r], [this.x + 17, y - 3 - 7 * r], [this.x + 19, y + 3], [this.x - 18, y + 4]], mat, this.seed, { alpha: this.hitFlash ? .7 : 1, lit: .9, glowEdge: .5 });
     thread(ctx, [[this.x - 10, y - 4 * r], [this.x - 2, y - 7 * r], [this.x + 6, y - 3 * r]], mat.vein, 1.5, .9);
     plate(ctx, [[this.x + 12, y - 9 * r], [this.x + 17, y - 9 * r], [this.x + 18, y - 4 * r], [this.x + 13, y - 4 * r]], mat, this.seed + 1, { alpha: 1, glowEdge: .3, lit: 1 });
@@ -114,6 +115,13 @@ class FloodRail {
     const mat = this.mat; const roll = Math.min(1, this.t / .5); const dry = Math.max(0, (this.t - (this.life - .8)) / .8);
     const b = { x: this.a.x + (this.b.x - this.a.x) * roll, z: this.a.z + (this.b.z - this.a.z) * roll };
     const pts = linePts(this.a, b, 14);
+    if (spellSheetReady('flood_rail')) {
+      // The channel: tiles laid along the line (rotated to it), drying from the start toward the end.
+      const L = Math.hypot(pts[14][0] - pts[0][0], pts[14][1] - pts[0][1]); const ang = Math.atan2(pts[14][1] - pts[0][1], pts[14][0] - pts[0][0]);
+      ctx.save(); ctx.translate(Math.round(pts[0][0]), Math.round(pts[0][1])); ctx.rotate(ang); ctx.beginPath(); ctx.rect(L * dry, -14, L * (1 - dry), 28); ctx.clip();
+      for (let d = 0; d < L; d += 48) drawSpellSprite(ctx, 'flood_rail', Math.floor(this.t * 12) % 6, d + 24, 0, { anchor: 'center' });
+      ctx.restore(); return;
+    }
     ribbon(ctx, pts, (i, n) => (i / n < dry ? 0 : 9), { ...mat, kind: 'crystal' }, 1500, this.t, .45);
     // Platinum wave ridges travelling downstream and crystal fish markers.
     for (let k = 0; k < 4; k++) { const u = ((this.t * .6 + k / 4) % 1) * roll; if (u < dry) continue; const i = Math.floor(u * 14); const [x, y] = pts[Math.min(14, i)]; thread(ctx, [[x - 4, y - 5], [x, y - 2], [x - 4, y + 3]], mat.edge, 1.5, .9); }

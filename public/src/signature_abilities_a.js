@@ -402,6 +402,7 @@ class SecondPledge {
   render(ctx) {
     const mat = this.mat; const t = this.t; const fold = this.t > 1.5 + this.marks.length * .14 ? Math.max(0, 1 - (this.t - 1.5 - this.marks.length * .14) / .8) : 1;
     // Open asymmetric seal with six jagged digit marks and a wandering light point.
+    if (spellSheetReady('pledge_seal')) { drawSpellSprite(ctx, 'pledge_seal', Math.floor(t * 4) % 6, this.x, this.y, { anchor: 'center', scale: this.R / 70 * (fold * .5 + .5), alpha: fold }); for (const m of this.marks) { const y = groundYForDepth(m.z); if (!m.struck) { thread(ctx, [[m.x - 7, y - 2], [m.x - 6, y - 40], [m.x, y - 48], [m.x + 6, y - 40], [m.x + 7, y - 2]], mat.edge, 1, .7); continue; } const k = (this.t - m.at) / .45; if (k <= 1) drawSpellSprite(ctx, 'pledge_pillar', Math.min(5, Math.floor(k * 6)), m.x, y + 2); } return; }
     segRing(ctx, this.x, this.z, this.R * (fold * .5 + .5), mat, 0, .75 * fold, { segs: 6, thick: 6, gap: .5, spin: 0, seed: 700 });
     const lp = groundPt(this.x, this.z, this.R + 3, t * 4.2); plate(ctx, [[lp[0], lp[1] - 4], [lp[0] + 3, lp[1]], [lp[0], lp[1] + 4], [lp[0] - 3, lp[1]]], mat, 710, { alpha: fold, core: 1, glowEdge: 1.2 });
     for (const m of this.marks) {
@@ -440,6 +441,7 @@ class StillFugue {
     const mat = this.mat; const t = this.t; const close = Math.min(1, t / .8); const R = this.R;
     if (t < .8) { hexMark(ctx, this.x, this.z, 26 + close * 20, mat, t, .9, 810); for (let i = 0; i < 6; i++) { const a = i * 1.7; shard(ctx, this.x + Math.cos(a) * 14, this.y - 10 - ((t * .15 + i * .17) % 1) * 30, 2.5, t * .4 + i, mat, 820 + i, .9); } return; }
     // Contoured dome: segmented warning rim + glass flakes floating too slowly inside.
+    if (spellSheetReady('fugue_dome')) { drawSpellSprite(ctx, 'fugue_dome', Math.floor(t * 2) % 8, this.x, this.y, { scale: R / 104 }); return; }
     segRing(ctx, this.x, this.z, R, mat, t, .8, { segs: 18, thick: 4, gap: .7, spin: .05, seed: 830 });
     for (let m = 0; m < 4; m++) { const a = m / 4 * Math.PI; const pts = []; for (let i = 0; i <= 10; i++) { const u = i / 10 * Math.PI; pts.push([this.x + Math.cos(u) * R * Math.cos(a), this.y + Math.cos(u) * R * .32 * Math.sin(a) - Math.sin(u) * R * .8]); } thread(ctx, pts, mat.edge, 1, .3); }
     for (let i = 0; i < 9; i++) { const a = i * 2.39; const r = R * (.2 + (i % 4) * .18); shard(ctx, this.x + Math.cos(a) * r, this.y - 20 - (i % 3) * 22 - Math.sin(t * .4 + i) * 4, 3, t * .3 + i, mat, 840 + i, .85); }
@@ -455,6 +457,7 @@ class RecallNeedle extends SigProp {
   update(dt) { this.tick(dt); }
   render(ctx) {
     const mat = this.mat; const y = this.y; const t = this.t;
+    if (spellSheetReady('recall_needle')) { drawSpellSprite(ctx, 'recall_needle', Math.floor(t * 8) % 4, this.x, y + 2, { alpha: this.hitFlash ? .6 : 1 }); return; }
     segRing(ctx, this.x, this.z, 16, mat, t, .8, { segs: 3, thick: 4, gap: .7, spin: 1.4, seed: this.seed });
     // Vertical dagger of four light-refracting segments.
     for (let i = 0; i < 4; i++) slab(ctx, this.x, y - 6 - i * 12, 6 - i, 11, mat, this.seed + 10 + i, this.hitFlash ? .6 : 1);
