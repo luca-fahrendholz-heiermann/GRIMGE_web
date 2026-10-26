@@ -361,3 +361,14 @@ Wunsch: „als iron man verwandlung passt auch die schildkröten variante die si
 - Neue Sheets in `vfx_konstrukt.cjs`: `as_A10`, `kp_cannon`, `kp_shell`, `kp_ring`, `kp_shield`.
 
 - `v33_konstruktpanzer.png`
+
+## v34 — Rüstung legt sich Stück für Stück an (26.10.2026)
+
+Wunsch: Varianten für die Verwandlungsanimation, ohne Helm zu zeichnen (muss für jede Frisur und Animation passen).
+- Nach der Lichtsäule schließen sich die Platten in 8 Bändern von den Füßen bis zum Kopf (gut 1 s). Die Kante des neuesten Bandes blitzt hell auf.
+- Konstruktpanzer: Danach klappt das Visier in zwei Stufen zu, zuerst über die Augen (rote Schlitze), dann über das ganze Gesicht. Ionspindel bleibt offen.
+- Beim Ablegen laufen die Stufen rückwärts: Das Visier öffnet sich, dann lösen sich die Platten von oben nach unten.
+- Alles wird aus den Pixeln der jeweiligen Frame berechnet (Umriss oben und unten, Kopfbereich), ohne gezeichnete Teile. Jede Stufe wird pro Frame gecacht.
+- Zurück zum vorigen Stand: Commit vor v34 (`2cf7af4`).
+
+- `v34_armor_on.png` (oben Ionspindel, unten Konstruktpanzer)

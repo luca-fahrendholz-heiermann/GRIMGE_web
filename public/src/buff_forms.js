@@ -31,7 +31,7 @@ import './buff_v32_hands.js'; // A03 Tausendhand
 import './buff_v32_bloom.js'; // A04 Klingenblüte
 import { installBankaiArsenal } from './bankai_arsenal.js';
 import { devilTick } from './arcane_devil.js';
-import { recolorFor, cloakFor } from './form_recolors.js'; // armour transformations recolour the hero's own pixels
+import { recolorFor, recolorStages, cloakFor } from './form_recolors.js'; // armour transformations recolour the hero's own pixels
 import './arcane_fadenschlag.js'; // T13 Fadenschlag: swing + thread techniques (must patch ARCANE_MOVES before the movesets are built)
 import { konstruktTick, isShellRolled } from './arcane_konstrukt.js'; // A10 Konstruktpanzer (armour, shell roll, shield passive)
 import { arsenalTick } from './arcane_bloodarsenal.js'; // A09 Blutarsenal (weapon fusion: techniques, look, bleed passive) // A05–A08 body powers (techniques, looks, water weakness, passives) // A04: the held weapon's arsenal (look + techniques)
@@ -270,17 +270,29 @@ export function renderBuffManifestation(ctx, player, renderY, layer) {
   return true;
 }
 
+// Armour on / off durations (s) of the staged recolour.
+const ARMOR_ON = 1.1; const ARMOR_OFF = .6;
 export function buffVeinPainter(player) {
   const form = currentBuffForm(player);
   if (!form) return null;
   const b = player.buffForm;
+  // Armour forms put the armour on stage by stage (plates close from the feet up, then the visor) and take it off
+  // backward; they skip the generic light sweep.
+  const stages = recolorStages(form.id);
+  if (stages) {
+    let stage = stages;
+    // After a full transformation the plates start closing once the light pillar has opened (visible to the player).
+    const start = b?.intro ? TRANSFORM_TIMING.pillarEnd : 0;
+    if (b && b.age < start + ARMOR_ON) stage = Math.floor(Math.max(0, b.age - start) / ARMOR_ON * (stages + 1));
+    else if (b && b.timer < ARMOR_OFF) stage = Math.floor(b.timer / ARMOR_OFF * (stages + 1));
+    const paint = contourVeinPainter(form, player.animTime ?? 0, null);
+    const rc = recolorFor(form.id, stage); if (rc) paint.recolor = rc;
+    return paint;
+  }
   let sweep = null;
   if (b && b.age < .6) sweep = { pos: b.age / .6, alpha: 1 };
   else if (b && b.timer < .5) sweep = { pos: b.timer / .5, alpha: 1 };
-  const paint = contourVeinPainter(form, player.animTime ?? 0, sweep);
-  // Armour forms: once the transform sweep has passed, the hero's pixels become the armour.
-  const rc = recolorFor(form.id); if (rc && !(b && b.age < .45)) paint.recolor = rc;
-  return paint;
+  return contourVeinPainter(form, player.animTime ?? 0, sweep);
 }
 
 export function buffCloakColor(player) {
