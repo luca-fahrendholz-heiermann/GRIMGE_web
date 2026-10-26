@@ -172,7 +172,7 @@ class EmberPump extends SigProp {
   }
   render(ctx) {
     const mat = this.mat; const y = this.y; const t = this.t; const g = this.fade * (this.hitFlash ? .7 : 1);
-    if (spellSheetReady('ember_pump')) { drawSpellSprite(ctx, 'ember_pump', Math.min(this.triggers, 2) + (this.hot ? 3 : 0) + (this.hot ? 0 : Math.floor(t * 4) % 1), this.x, y + 2, { alpha: g }); return; }
+    if (spellSheetReady('ember_pump')) { drawSpellSprite(ctx, 'ember_pump', Math.min(this.triggers ?? 0, 2) + (this.hot ? 3 : 0), this.x, y + 2, { alpha: g }); return; }
     for (const v of this.valves) { const [vx, vy] = groundPt(this.x, this.z, v.r, v.a); slab(ctx, vx, vy, 5, 14, mat, this.seed + v.r, g, 2); }
     // Narrow ribbed pressure body of porous black glass stone.
     for (let i = 0; i < 4; i++) plate(ctx, [[this.x - 11 + i, y - i * 12], [this.x + 11 - i, y - i * 12 - 1], [this.x + 10 - i, y - (i + 1) * 12], [this.x - 10 + i, y - (i + 1) * 12 + 1]], mat, this.seed + 20 + i, { alpha: g, lit: .8, pulse: this.hot ? .5 + .5 * Math.sin(t * 8 + i) : .2, glowEdge: this.hot ? 1.2 : .3 });
