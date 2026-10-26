@@ -405,7 +405,9 @@ export function drawHeldWeapon(ctx, player, renderY, layer = 'front') {
   if (cfg.hands === 'shield') {
     // Shield in the front hand, sword in the rear hand.
     const bashing = pose?.shieldReach;
-    items.push({ hand: 'front', piece: 'shield', angle: guarding ? -.15 : -.35, reach: bashing ?? (guarding ? 6 : 0), dy: 6, active: !!bashing || guarding, static: true });
+    // The shield hangs BEHIND the body so the arm holding it is drawn in front of it (user, 26 Oct 2026: realism);
+    // only a shield bash brings it in front.
+    items.push({ hand: 'front', piece: 'shield', angle: guarding ? -.15 : -.35, reach: bashing ?? (guarding ? 6 : 0), dy: 6, active: !!bashing || guarding, static: true, layerOverride: bashing ? 'front' : 'back' });
     items.push({ hand: 'rear', piece: pieces.main, angle: pose && !pose.shieldReach ? pose.angle : cfg.idle, reach: 0, active: !!pose && !pose.shieldReach, layerOverride: pose && !pose.shieldReach ? 'front' : null });
   } else if (cfg.hands === 'pair') {
     const both = !!pose?.both;

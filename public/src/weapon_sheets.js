@@ -7,11 +7,11 @@ import { SPELL_SPRITE_SHEETS } from './spell_sprite_sheets.js';
 
 // weapon id → piece → [sheet, gripX, gripY, width, height]
 export const WEAPON_SHEETS = Object.freeze({
-  glaive: { glaive: ['w_glaive', 18, 20, 108, 40] },
-  katana: { katana: ['w_katana', 8, 10, 68, 20] },
-  spear: { spear: ['w_spear', 18, 16, 108, 32] },
-  sword_shield: { sword: ['w_sword', 6, 12, 64, 24], shield: ['w_shield', 16, 24, 44, 48] },
-  spirit_sword: { spirit_sword: ['w_spirit_sword', 6, 14, 68, 28] }
+  glaive: { glaive: ['w_glaive', 32, 34, 184, 68] },
+  katana: { katana: ['w_katana', 16, 15, 124, 30] },
+  spear: { spear: ['w_spear', 50, 30, 210, 60] },
+  sword_shield: { sword: ['w_sword', 13, 24, 112, 44], shield: ['w_shield', 24, 38, 66, 76] },
+  spirit_sword: { spirit_sword: ['w_spirit_sword', 10, 26, 124, 50] }
 });
 const entryOf = (weaponId, piece) => WEAPON_SHEETS[weaponId]?.[piece] ?? null;
 export const hasWeaponSheet = (weaponId, piece) => { const e = entryOf(weaponId, piece); return !!e && spellSheetReady(e[0]); };
@@ -19,8 +19,10 @@ export const hasWeaponSheet = (weaponId, piece) => { const e = entryOf(weaponId,
 // Draws the piece's sheet at the (already placed) grip; false when the weapon has no ready sheet.
 export function drawWeaponSheet(ctx, weaponId, piece, time = 0) {
   const e = entryOf(weaponId, piece); if (!e || !spellSheetReady(e[0])) return false;
-  const [name, gx, gy, w, h] = e; const n = SPELL_SPRITE_SHEETS[name]?.frames ?? 1;
-  drawSpellSprite(ctx, name, Math.floor(time * 8) % n, w / 2 - gx, h / 2 - gy, { anchor: 'center' });
+  const [name, gx, gy, w, h] = e; const meta = SPELL_SPRITE_SHEETS[name]; const n = meta?.frames ?? 1;
+  // Grips are given in sheet pixels; the sheet is drawn at its logical size (hd sheets: half the pixels).
+  const k = (meta?.w ?? w) / w;
+  drawSpellSprite(ctx, name, Math.floor(time * 8) % n, (w / 2 - gx) * k, (h / 2 - gy) * k, { anchor: 'center' });
   return true;
 }
 
@@ -29,6 +31,7 @@ export function drawKatanaSheath(ctx, player, renderY) {
   if (!spellSheetReady('w_katana_sheath')) return;
   const f = player.facing || 1;
   ctx.save(); ctx.translate(Math.round(player.x + f * 2), Math.round(renderY - 38)); ctx.scale(-f, 1); ctx.rotate(.38);
-  drawSpellSprite(ctx, 'w_katana_sheath', 0, 32 - 4, 0, { anchor: 'center' });
+  const k = (SPELL_SPRITE_SHEETS.w_katana_sheath?.w ?? 112) / 112;
+  drawSpellSprite(ctx, 'w_katana_sheath', 0, (56 - 6) * k, 0, { anchor: 'center' });
   ctx.restore();
 }

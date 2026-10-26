@@ -400,3 +400,12 @@ Nach den Beispiel-Sprites des Users (eigene Entwürfe). `art/authoring/vfx_weapo
 - Noch als Astral-Form: Block-Haltung (`weapon_guard.js`), geworfene Waffen und Waffen am Boden.
 
 - `v37_weapons_r1.png` (oben im Stand, unten im Schlag), `v37_weapon_sheets.png`
+
+## v38 — Waffen v2: größer, detaillierter, Schild hinter dem Arm (26.10.2026)
+
+Hinweis des Users: Schwert & Schild sah unrealistisch aus (der Arm, der den Schild hält, muss davor zu sehen sein), und die Waffen hatten nicht die Qualität der Beispiel-Sprites.
+- Der Schild hängt jetzt hinter dem Körper, der Arm des Sprites liegt darüber. Nur beim Schildstoß kommt er nach vorn. Das gilt für alle Schild-Waffen.
+- Alle fünf Waffen neu gezeichnet: etwa doppelt so groß im Verhältnis zum Helden. Saubere, flache Facetten ohne Dithering, Klingen mit Mittelgrat, hellen Kanten und Gravur, verzierte Fassungen mit Edelsteinen, Wicklungen am Griff, stärkere Effekte (Flammenzungen, Kristalldornen, Splitter, wandernde Glanzpunkte).
+- Fehler behoben: Die Griffpunkte wurden bei halber Sheet-Auflösung doppelt versetzt.
+
+- `v38_weapons_v2.png` (oben im Stand, unten im Schlag), `v38_weapon_sheets_v2.png`
