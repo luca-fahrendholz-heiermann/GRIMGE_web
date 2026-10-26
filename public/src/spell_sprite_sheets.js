@@ -1375,5 +1375,77 @@ export const SPELL_SPRITE_SHEETS = Object.freeze({
   "res": 2,
   "hd": true,
   "anchor": "center"
+ },
+ "as_T02_back": {
+  "name": "as_T02_back",
+  "w": 64,
+  "h": 64,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "as_T02_front": {
+  "name": "as_T02_front",
+  "w": 64,
+  "h": 64,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "as_T04_back": {
+  "name": "as_T04_back",
+  "w": 64,
+  "h": 64,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "as_T04_front": {
+  "name": "as_T04_front",
+  "w": 64,
+  "h": 64,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "as_T05_back": {
+  "name": "as_T05_back",
+  "w": 64,
+  "h": 64,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "as_T05_front": {
+  "name": "as_T05_front",
+  "w": 64,
+  "h": 64,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "as_T06_back": {
+  "name": "as_T06_back",
+  "w": 64,
+  "h": 64,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "as_T06_front": {
+  "name": "as_T06_front",
+  "w": 64,
+  "h": 64,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
  }
 });

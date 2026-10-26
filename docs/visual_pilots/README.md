@@ -301,3 +301,14 @@ Hinweis: In den Ist-Übersichtsbildern fehlten Haltungs-Runen wie Himmelsregent.
 - **Flutschiene:** kachelbarer Wasserkanal mit Platin-Wellenkämmen.
 
 - `v27_runde6.png`
+
+## v28 — Arcane States Runde 1 (26.10.2026)
+
+`art/authoring/vfx_arcane1.cjs` — handgezeichnete Manifestations-Sheets `as_<id>_back/_front` (128×128, Brust in der Mitte).
+`buff_vfx.renderManifestation` zeichnet sie vor dem prozeduralen bzw. V3.2-Look, beim Blocken bleibt der Form-Renderer aktiv.
+- **Schlackenkern:** Keramik-Ofen an der Hüfte mit brennender Ofenöffnung, Rippenbänder um Taille und Schulter, Glutrisse, Rauch.
+- **Korallenschild:** zwei Fächersegel aus Korallen-Lamellen mit Membranen und türkisem Saum.
+- **Bruchflug:** drei facettierte Kristallflügel aus den Schulterblättern, in Scherben gebrochen und von pinken Nähten gehalten.
+- **Ionspindel:** Spindelachse hinter dem Rücken mit pulsierenden Ionenknoten, drei Kupferspulen auf weiten Bahnen, Zickzack-Bögen.
+
+- `v28_arcane_states_r1.png`

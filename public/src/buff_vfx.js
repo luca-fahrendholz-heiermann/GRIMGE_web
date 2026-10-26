@@ -20,6 +20,9 @@
 // hands, hip, feet) and follow the pose with damped inertia; layer 'back'
 // draws behind the sprite, 'front' in front of it.
 
+import { drawSpellSprite, spellSheetReady } from './spell_visuals.js';
+import { SPELL_SPRITE_SHEETS } from './spell_sprite_sheets.js';
+
 const TAU = Math.PI * 2;
 
 // ── Colour helpers ──────────────────────────────────────────────────────
@@ -803,6 +806,16 @@ function groundSigil(ctx, s, pose, mat, seed) {
 // Draws a form's manifestation on one layer.
 export function renderManifestation(ctx, player, form, layer, renderY, fade = 1, peak = 0) {
   const morph = FORM_RENDERERS[form.id] ?? null;
+  // Hand-drawn manifestation sheets (art/authoring/vfx_arcane*.cjs): as_<id>_back / _front, 128×128 with the
+  // chest at the centre, facing right. They replace the procedural / V3.2 look — except while guarding, when the
+  // form's own renderer folds its parts into the defence.
+  const sheetName = `as_${form.id}_${layer === 'back' ? 'back' : 'front'}`;
+  if (spellSheetReady(sheetName) && !(morph && player.isGuarding)) {
+    const s0 = sockets(player, renderY); const p0 = poseOf(player); const fr = Math.floor((player.animTime ?? 0) * 10);
+    const n = SPELL_SPRITE_SHEETS[sheetName]?.frames ?? 1;
+    drawSpellSprite(ctx, sheetName, fr % n, s0.chest[0], s0.chest[1], { anchor: 'center', flip: (player.facing || 1) < 0, alpha: fade, scale: 1 + .15 * Math.max(peak, p0.full ? .6 : 0) });
+    return;
+  }
   const draw = morph?.fn ?? RENDERERS[form.archetype] ?? fins;
   const mat = form.mat ?? (form.mat = materialFor(form));
   const s = sockets(player, renderY);
