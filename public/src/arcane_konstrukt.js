@@ -78,7 +78,7 @@ ARCANE_MOVES.A10 = [
     steps: [{ at: 1.6, fn: (s, gw) => { const c = s.caster; s.x = c.x; s.z = c.z; s.strike(gw, around(54)(s), 20, (t, dx) => Math.sign(dx || 1) * 260, 200, .4, { again: true }); combat.spawnHitSparks(c.x, c.y - 24, 1, '#a8f6ff', 12); } }],
     tick: (s, dt, gw) => {
       const c = s.caster; if (s.t < .12 || s.t > 1.58) return;
-      c._shellSpinUntil = (c.animTime ?? 0) + .12; c.invulnerableTimer = Math.max(c.invulnerableTimer ?? 0, .12); c.vx = 0; c.vz = 0;
+      c._shellSpinUntil = (c.animTime ?? 0) + .12; c.invulnerableTimer = Math.max(c.invulnerableTimer ?? 0, .12); c.vx = 0; c.vz = 0; c.elevation = 0; c.vElevation = 0; c.grounded = true; c.canAttack = false; /* inside the ball: no jumps, no swings */
       if (Math.abs(c.x - s.bx) > 3) { s.dir = -s.dir; s.bx = c.x; s.tgt = null; } // a wall turned the ball
       for (const [t, cd] of s.recent) { if (cd - dt <= 0) s.recent.delete(t); else s.recent.set(t, cd - dt); }
       if (s.tgt && (s.tgt.isDead || (s.tgt.hp ?? 1) <= 0)) s.tgt = null;
