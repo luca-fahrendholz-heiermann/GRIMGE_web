@@ -31,6 +31,7 @@ import './buff_v32_hands.js'; // A03 Tausendhand
 import './buff_v32_bloom.js'; // A04 Klingenblüte
 import { installBankaiArsenal } from './bankai_arsenal.js';
 import { devilTick } from './arcane_devil.js';
+import { recolorFor, cloakFor } from './form_recolors.js'; // armour transformations recolour the hero's own pixels
 import './arcane_fadenschlag.js'; // T13 Fadenschlag: swing + thread techniques (must patch ARCANE_MOVES before the movesets are built)
 import { arsenalTick } from './arcane_bloodarsenal.js'; // A09 Blutarsenal (weapon fusion: techniques, look, bleed passive) // A05–A08 body powers (techniques, looks, water weakness, passives) // A04: the held weapon's arsenal (look + techniques)
 import { combat } from './combat.js';
@@ -273,12 +274,16 @@ export function buffVeinPainter(player) {
   let sweep = null;
   if (b && b.age < .6) sweep = { pos: b.age / .6, alpha: 1 };
   else if (b && b.timer < .5) sweep = { pos: b.timer / .5, alpha: 1 };
-  return contourVeinPainter(form, player.animTime ?? 0, sweep);
+  const paint = contourVeinPainter(form, player.animTime ?? 0, sweep);
+  // Armour forms: once the transform sweep has passed, the hero's pixels become the armour.
+  const rc = recolorFor(form.id); if (rc && !(b && b.age < .45)) paint.recolor = rc;
+  return paint;
 }
 
 export function buffCloakColor(player) {
   const form = currentBuffForm(player);
   if (!form) return null;
+  const own = cloakFor(form.id); if (own) return { edge: own.edge, inner: own.inner, fade: buffFade(player) };
   return { edge: rgba(form.mat.kind === 'crystal' ? form.mat.edge : form.mat.vein, 1), inner: rgba(form.mat.edge, 1), fade: buffFade(player) };
 }
 

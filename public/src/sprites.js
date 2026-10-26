@@ -628,6 +628,8 @@ export class SpriteManager {
 
     const frame = this.resolveFrame(spr, state, animTime, hitFlash, { cadence, reverse });
     if (tint && !hitFlash) frame.canvas = this.tintedCanvas(frame.canvas, tint);
+    // Armour transformations recolour the frame's own pixels (cached per frame), then contour detail on top.
+    if (maskPaint?.recolor && !hitFlash && !tint) frame.canvas = this.recoloredCanvas(frame.canvas, maskPaint.recolor);
     // Contour-bound detail: paint only where the current frame has pixels.
     if (maskPaint && !hitFlash && !tint) frame.canvas = this.maskedCanvas(frame.canvas, maskPaint);
     let renderScale = targetScale ?? (visualHeight / frame.height);
@@ -736,6 +738,26 @@ export class SpriteManager {
     c.drawImage(source, 0, 0);
     paint(c, canvas.width, canvas.height);
     c.restore();
+    return canvas;
+  }
+
+  // A frame with its pixels rewritten by recolor.fn (form_recolors.js), cached per source frame and recolour key.
+  recoloredCanvas(source, recolor) {
+    const doc = globalThis.document;
+    if (!source || typeof doc?.createElement !== 'function') return source;
+    this._recolorCache ??= new WeakMap();
+    let byKey = this._recolorCache.get(source);
+    if (!byKey) { byKey = new Map(); this._recolorCache.set(source, byKey); }
+    if (byKey.has(recolor.key)) return byKey.get(recolor.key);
+    const canvas = doc.createElement('canvas');
+    canvas.width = source.width; canvas.height = source.height;
+    const c = canvas.getContext?.('2d', { willReadFrequently: true });
+    if (!c?.getImageData) { byKey.set(recolor.key, source); return source; }
+    c.drawImage(source, 0, 0);
+    const img = c.getImageData(0, 0, canvas.width, canvas.height);
+    recolor.fn(img.data, canvas.width, canvas.height);
+    c.putImageData(img, 0, 0);
+    byKey.set(recolor.key, canvas);
     return canvas;
   }
 

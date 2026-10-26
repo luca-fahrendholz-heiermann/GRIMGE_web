@@ -340,3 +340,12 @@ Wunsch: „bitte optik nachziehen, obwohl ich spulen auch ein wenig lahm finde�
 - Schlackenkern: Der Ofen schwebt nicht mehr neben der Hüfte. Er ist an den Rücken geschnallt (die Rippenbänder sind die Gurte), ein Kamin ragt über die Schulter und raucht, und die Ofenöffnung brennt nach hinten.
 
 - `v31_layer_fix.png`
+
+## v32 — Ionspindel als Rüstungsverwandlung (26.10.2026)
+
+Nach den Referenzbildern des Users (dunkle Rüstung mit Goldkanten, grüne Blitze, goldene Sichel mit Smaragden), eigene Umsetzung.
+- **Neu: Umfärben der eigenen Sprite-Pixel** (`form_recolors.js`, `sprites.recoloredCanvas`). Jede Frame des Helden wird zu Panzer: Die Helligkeit wird auf eine Navy-Stahl-Rampe abgebildet, die Pixel direkt an der dunklen Kontur auf eine Goldrampe. Die Gesichtshaut im obersten Fünftel bleibt (offener Helm). Die Animation bleibt die des Helden, das Ergebnis wird pro Frame gecacht.
+- Die Kontur-Aura der Form ist grün (`registerFormCloak`).
+- Rückenteile (`as_T06`): eine goldene Spindel-Sichel mit drei Smaragden in Goldfassungen und gezackte grüne Blitze, die neben dem Körper hochsteigen. Die Kupferspulen sind weg.
+
+- `v32_ionspindel_armor.png`

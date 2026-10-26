@@ -6,9 +6,9 @@
 //   as_T04_back / _front  Korallenschild — two fan-shaped protective sails of coral lamellae at the sides.
 //   as_T05_back / _front  Bruchflug — three faceted crystal fins fanning from the shoulder blades, each cracked into
 //                         drifting shards held together by glowing pink seams; gravity motes rising.
-//   as_T06_back / _front  Ionspindel — a tall spindle axis behind the back with pulsing ion nodes, three spindle-shaped
-//                         copper coils on wide tilted orbits (always behind the body), zigzag arcs to the axis and
-//                         between the coils.
+//   as_T06_back / _front  Ionspindel — armour form: the sprite itself becomes navy plate with gold trims
+//                         (form_recolors.js); behind it a gold spindle crescent with three emerald orbs and crisp green
+//                         zigzag lightning climbing beside the body.
 //   as_T13_back / _front  Fadenschlag — Fadenharfe: curved steel blade-legs fan from the shoulder blades (one small at the
 //                         front shoulder), silk strung between them like a harp with rose glints running along.
 //   silk_anchor           T13 swing anchor: a hook kunai biting into the air, silk tied to its ring (4 frames, 32×48).
@@ -131,31 +131,29 @@ function t05() {
   }
   return [bk, fr];
 }
+// Ionspindel armour attachments (the plate itself is the recoloured sprite, form_recolors.js).
+const IO = { gold: ramp('#4a3010', '#8a6020', '#c89a3e', '#ecc96a', '#fff2c0'), em: ramp('#0a2a18', '#127a40', '#2fd070', '#a8ffc8', '#ffffff'), bolt: ramp('#0e3a20', '#2fae5a', '#7af0a0', '#e0ffe8') };
 function t06() {
   const [bk, fr] = pair('T06', 8);
   for (let f = 0; f < 8; f++) {
-    const ph = f / 8 * TAU;
-    // The spindle: a tall dark axis behind the back with copper collars and lime ion nodes pulsing up it.
-    const sx = CX - 18;
-    for (let y = CY - 52; y <= CY + 38; y++) for (let x = -3; x <= 3; x++) tone(bk, f, C.coil, sx + x, y, x < -1 ? .85 : x < 1 ? .55 : .3);
-    for (const cy of [CY - 40, CY - 8, CY + 24]) for (let y = -3; y <= 3; y++) for (let x = -7; x <= 7; x++) tone(bk, f, (y + 3) % 3 === 0 ? C.coil : C.copper, sx + x, cy + y, (x < -2 ? .85 : x < 2 ? .6 : .35) + (y === -3 ? .1 : 0));
-    for (let k = 0; k < 3; k++) { const y = CY + 36 - ((f * 11 + k * 30) % 90); for (let d = -2; d <= 2; d++) tone(bk, f, C.ion, sx + d, y, Math.abs(d) < 2 ? 1 : .8); for (let d = -1; d <= 1; d++) { tone(bk, f, C.ion, sx + d, y - 1, .85); tone(bk, f, C.ion, sx + d, y + 1, .85); } }
-    for (let y = -8; y <= 0; y++) for (let x = -Math.max(0, 4 + y * .5); x <= Math.max(0, 4 + y * .5); x++) tone(bk, f, C.ion, sx + x, CY - 53 + y, .7 + (x < 0 ? .2 : 0));
-    // Three coils on wide tilted orbits round the spindle level (hip, chest, crown) so they frame the body.
-    const orbits = [[CY + 22, 44, .5], [CY - 2, 46, -.5], [CY - 30, 36, .35]];
-    const coils = orbits.map(([oy, r, tilt], i) => { const a = ph * (i % 2 ? -1 : 1) + i * 2.1; return { x: CX - 6 + Math.cos(a) * r, y: oy + Math.sin(a) * r * .28 + Math.cos(a) * tilt * 10, back: Math.sin(a) < 0, a }; });
-    // Coils: a spindle-shaped winding (thick middle, tapered ends), copper bands over a dark core, lime caps.
-    // They always pass BEHIND the body (never cover the chest); the near half of the orbit is just brighter.
-    for (const c of coils) {
-      const s = bk;
-      for (let y = -12; y <= 12; y++) { const w = Math.round(7 - Math.abs(y) * .3); for (let x = -w; x <= w; x++) tone(s, f, (y + 12) % 3 === 0 ? C.coil : C.copper, c.x + x, c.y + y, (x < -2 ? .9 : x < 2 ? .62 : .38) + (c.back ? -.15 : 0)); }
-      for (const e of [-14, 14]) for (let y = -1; y <= 1; y++) for (let x = -2 + Math.abs(y); x <= 2 - Math.abs(y); x++) tone(s, f, C.ion, c.x + x, c.y + e + y, 1);
+    const ph = f / 8;
+    // The spindle crescent: a gold blade-arc behind the back, from above the shoulder down to the hip, spiked on its
+    // outer edge, with three emerald orbs in gold bezels (top, middle, bottom).
+    const ccx = CX + 2; const ccy = CY + 2; const R = 36; const a0 = Math.PI * .62; const a1 = Math.PI * 1.42;
+    for (let a = a0; a <= a1; a += .004) {
+      const u = (a - a0) / (a1 - a0); const w = 2 + 5 * Math.sin(Math.PI * u);
+      for (let d = -w; d <= w; d += .5) tone(bk, f, IO.gold, ccx + Math.cos(a) * (R + d), ccy - Math.sin(a) * (R + d) * .95, d > w * .4 ? .95 : d > -w * .3 ? .62 : .32);
     }
-    // Arcs from each coil to the spindle and to the next coil: thin zigzags with a white core pixel at the kinks.
-    const arc = (a, b, seed, sh) => { const r = rng(seed); let px = a[0]; let py = a[1]; const n = 7; for (let j = 1; j <= n; j++) { const off = (j % 2 ? 1 : -1) * (2 + r() * 4); const L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1; const nx = a[0] + (b[0] - a[0]) * j / n + (j < n ? -(b[1] - a[1]) / L * off : 0); const ny = a[1] + (b[1] - a[1]) * j / n + (j < n ? (b[0] - a[0]) / L * off : 0); const st = Math.ceil(Math.hypot(nx - px, ny - py)); for (let t = 0; t <= st; t++) tone(sh, f, C.ion, px + (nx - px) * t / st, py + (ny - py) * t / st, .85); if (j < n) tone(sh, f, C.ion, nx, ny, 1); px = nx; py = ny; } };
-    coils.forEach((c, i) => { if (c.back && (f + i) % 2 === 0) arc([c.x, c.y], [sx, orbits[i][0]], 500 + i * 7 + f, bk); });
-    for (let k = 0; k < 2; k++) { const a = coils[k]; const b = coils[k + 1]; if ((f + k) % 3 === 2) continue; arc([a.x, a.y - 14 * Math.sign(a.y - b.y || 1)], [b.x, b.y], 400 + k + f * 3, bk); }
-    B.selOutline(bk, f, C.out); B.selOutline(fr, f, C.out);
+    for (const u of [.28, .5, .72]) { const a = a0 + (a1 - a0) * u; for (let k = 0; k < 7; k++) for (let e = -(3 - k * .4); e <= 3 - k * .4; e += .5) { const aa = a + e * .012; tone(bk, f, IO.gold, ccx + Math.cos(aa) * (R + 7 + k), ccy - Math.sin(aa) * (R + 7 + k) * .95, .78); } }
+    const orb = (u, r) => { const a = a0 + (a1 - a0) * u; const ox = ccx + Math.cos(a) * R; const oy = ccy - Math.sin(a) * R * .95; for (let y = -r - 2; y <= r + 2; y++) for (let x = -r - 2; x <= r + 2; x++) { const dd = Math.hypot(x, y); if (dd > r + 2) continue; if (dd > r) tone(bk, f, IO.gold, ox + x, oy + y, y < 0 ? .9 : .5); else tone(bk, f, IO.em, ox + x, oy + y, (x < 0 && y < 0 ? .75 : .45) + ((f + Math.round(u * 8)) % 4 === 0 ? .15 : 0)); } tone(bk, f, IO.em, ox - Math.round(r / 2), oy - Math.round(r / 2), 1); };
+    orb(0, 5); orb(.5, 4); orb(1, 5);
+    // Green lightning: crisp zigzag bolts climbing beside the body (behind it), re-jagged every frame, with barbs.
+    const bolt = (x0, seed, H) => { const r = rng(seed + f * 31); let x = x0; let y = CY + 52; const st = 9; let side = r() < .5 ? -1 : 1;
+      while (y > CY + 52 - H) { const nx = x + side * (2 + r() * 5); const ny = y - (6 + r() * 7); const n = Math.ceil(Math.hypot(nx - x, ny - y)); for (let i = 0; i <= n; i++) { const xx = x + (nx - x) * i / n; const yy = y + (ny - y) * i / n; tone(bk, f, IO.bolt, xx, yy, .6); tone(bk, f, IO.bolt, xx + 1, yy, .95); } tone(bk, f, IO.bolt, nx - side * 2, ny + 1, .6); tone(bk, f, IO.bolt, nx - side * 3, ny + 2, .5); x = nx; y = ny; side = -side; } };
+    bolt(CX - 36, 700, 96); bolt(CX + 32, 720, 88); if (f % 2 === 0) bolt(CX - 22, 740, 60); if (f % 3 !== 1) bolt(CX + 20, 760, 54);
+    B.selOutline(bk, f, C.out);
+    // A few loose sparks on the front layer only at the sides (never over the body).
+    for (const sx of [CX - 40, CX + 38]) { const rr = rng(780 + f + sx); for (let q = 0; q < 2; q++) { const x = sx + (rr() - .5) * 10; const y = CY - 30 + rr() * 70; tone(fr, f, IO.bolt, x, y, 1); tone(fr, f, IO.bolt, x + 1, y + 1, .7); } }
   }
   return [bk, fr];
 }
