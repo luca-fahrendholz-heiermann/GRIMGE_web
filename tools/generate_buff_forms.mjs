@@ -444,10 +444,10 @@ forms.sort((a, b) => ACTIVE.indexOf(a.id) - ACTIVE.indexOf(b.id));
 // implemented in public/src/arcane_fadenschlag.js.
 const TECH_OVERRIDES = {
   T13: {
-    jump: { name: 'Fadenschwung', text: 'erneut springen in der Luft: eine Garnspule wird vorn oben festgenadelt, der Wizard schwingt am Seidenfaden durch und wird nach vorn geschleudert; Gegner auf der Bahn bekommen einen Schwungtritt.' },
-    'forward.short': { name: 'Fadenhaken', text: 'die Spule hakt den ersten Gegner vorn an, der Faden reißt ihn heran, dann ein Aufwärtshaken.', kind: 'sequence', status: ['slow', 'launch'] },
-    'up.short': { name: 'Fadenzug', text: 'die Spule wird hoch oben festgenadelt, der Faden zieht den Wizard hinauf (dort weiterschwingen).', kind: 'burst', status: [] },
-    'down.full': { name: 'Seidennetz', text: 'ein Seidennetz, von sechs Nadeln gehalten, zieht Gegner heran und schnappt dann zu.', kind: 'sequence', status: ['pull', 'root'] }
+    jump: { name: 'Fadenschwung', text: 'erneut springen in der Luft: eine Haken-Kunai beißt sich vorn oben in die Luft, der Wizard schwingt am Seidenfaden durch und wird nach vorn geschleudert; Gegner auf der Bahn bekommen einen Schwungtritt.' },
+    'forward.short': { name: 'Fadenhaken', text: 'die Kunai hakt den ersten Gegner vorn an, der Faden reißt ihn heran, dann ein Aufwärtshaken.', kind: 'sequence', status: ['slow', 'launch'] },
+    'up.short': { name: 'Fadenzug', text: 'die Kunai beißt sich hoch oben fest, der Faden zieht den Wizard hinauf (dort weiterschwingen).', kind: 'burst', status: [] },
+    'down.full': { name: 'Seidennetz', text: 'ein Seidennetz, von sechs Kunai im Boden gehalten, zieht Gegner heran und schnappt dann zu.', kind: 'sequence', status: ['pull', 'root'] }
   }
 };
 for (const f of forms) for (const [key, o] of Object.entries(TECH_OVERRIDES[f.id] ?? {})) {

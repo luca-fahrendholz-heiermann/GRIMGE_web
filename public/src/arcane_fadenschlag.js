@@ -1,12 +1,12 @@
 // GRIMGE Prototype — T13 FADENSCHLAG as a swinging form (user, 26 Oct 2026: "könnte mehr spiderman mäßig sein. das
-// man sich auch rumschwingen kann" — meant Fadenschlag; own adaptation, no webs from the wrist: a thread spool is
-// flung up, a needle pins it in the air and the hero swings on the silk wire).
-//   air jump       FADENSCHWUNG  jump again in the air: a spool pins itself ahead and above, the hero swings through
+// man sich auch rumschwingen kann" — meant Fadenschlag; own adaptation, no webs from the wrist: a hook kunai is
+// flung up, bites into the air and the hero swings on the silk wire tied to its ring).
+//   air jump       FADENSCHWUNG  jump again in the air: a kunai bites in ahead and above, the hero swings through
 //                                the low point and is flung forward and up at the end (or on the next jump). Foes in
 //                                the swing path take a swing kick (slowed by chance). Chainable.
-//   forward short  FADENHAKEN    the spool hooks the first foe ahead, the wire yanks it in, an uppercut follows.
-//   up short       FADENZUG      the spool pins itself high above and the wire pulls the hero up (swing from there).
-//   down full      SEIDENNETZ    a silk web pinned by six needles: foes are drawn in, then the web snaps shut (root).
+//   forward short  FADENHAKEN    the kunai hooks the first foe ahead, the wire yanks it in, an uppercut follows.
+//   up short       FADENZUG      the kunai bites in high above and the wire pulls the hero up (swing from there).
+//   down full      SEIDENNETZ    a silk web pinned by six kunai: foes are drawn in, then the web snaps shut (root).
 import { ARCANE_MOVES } from './arcane_moves.js';
 import { SigSequence, foesOf, hit, massOf, groundDist, DEPTH } from './signature_core.js';
 import { spells } from './spells.js';
@@ -88,7 +88,7 @@ export function silkSwingStep(p, dt, gw) {
   if ((sw.f * sw.a > SILK_SWING.releaseAng && sw.f * sw.w > 0) || sw.t > SILK_SWING.maxT) releaseSwing(p, sw);
   return true;
 }
-// The visible wire and anchor spool of one swing; after the release the wire snaps back into the spool.
+// The visible wire and anchor kunai of one swing; after the release the wire snaps back to the kunai.
 class SilkTether {
   constructor(p, sw) { Object.assign(this, { p, sw, t: 0, isFinished: false, fineVfx: true, isVisualOnly: true }); }
   get x() { return this.p.x; }
@@ -110,7 +110,7 @@ class SilkTether {
 
 // ── Thread techniques (replace three of the six T13 techniques) ─────────
 const sigOf = (f) => ({ mat: f.mat, seed: hashStr(f.id) });
-// Wires, spools and the web are hand-drawn sheets / 2-px lines: render them at fine density.
+// Wires, kunai and the web are hand-drawn sheets / 2-px lines: render them at fine density.
 const fine = (s) => { s.fineVfx = true; return s; };
 const tie = (s, list) => (t) => applyStatuses(t, list, s.caster, s.facing);
 const moves = ARCANE_MOVES.T13;
@@ -129,7 +129,7 @@ moves[0] = (f, p) => fine(new SigSequence(sigOf(f), p, { dur: .72, data: { tgt: 
     const tx = hx + (ex - hx) * out * (1 - back); const ty = hy + (ey - hy) * out * (1 - back);
     thread(ctx, hx, hy, tx, ty, s.t, fade(k, .02, .4)); anchorSprite(ctx, tx, ty, s.t, 1, .8);
   } }));
-// up short — FADENZUG: the spool pins itself high above, the wire yanks the hero up; a cut ring at the take-off.
+// up short — FADENZUG: the kunai bites in high above, the wire yanks the hero up; a cut ring at the take-off.
 moves[2] = (f, p) => fine(new SigSequence(sigOf(f), p, { dur: .7, data: { ax: p.x + (p.facing || 1) * 50, ah: (p.elevation ?? 0) + 200 },
   steps: [{ at: .1, fn: (s, gw) => { const c = s.caster; s.strike(gw, (t, dx, dz) => Math.hypot(dx, dz) < 54, 14, (t, dx) => Math.sign(dx || 1) * 160, 120, .3); c.grounded = false; c.vElevation = Math.max(c.vElevation ?? 0, 560); c.vx = s.facing * 200; c.jumpsLeft = 0; } }],
   draw: (ctx, s, k) => {

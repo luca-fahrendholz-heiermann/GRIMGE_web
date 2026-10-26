@@ -1056,13 +1056,13 @@ export const BUFF_FORM_DATA = Object.freeze([
    },
    "jump": {
     "name": "Fadenschwung",
-    "text": "erneut springen in der Luft: eine Garnspule wird vorn oben festgenadelt, der Wizard schwingt am Seidenfaden durch und wird nach vorn geschleudert; Gegner auf der Bahn bekommen einen Schwungtritt.",
+    "text": "erneut springen in der Luft: eine Haken-Kunai beißt sich vorn oben in die Luft, der Wizard schwingt am Seidenfaden durch und wird nach vorn geschleudert; Gegner auf der Bahn bekommen einen Schwungtritt.",
     "landing": "dust"
    },
    "forward": {
     "short": {
      "name": "Fadenhaken",
-     "text": "die Spule hakt den ersten Gegner vorn an, der Faden reißt ihn heran, dann ein Aufwärtshaken.",
+     "text": "die Kunai hakt den ersten Gegner vorn an, der Faden reißt ihn heran, dann ein Aufwärtshaken.",
      "action": "ein schmales, auf die Facing-Achse ausgerichtetes Projektil aus mehrlagigen Materialfragmenten; vorne harte Leuchtkante, hinten feiner Splitter-Sog",
      "kind": "sequence",
      "status": [
@@ -1082,7 +1082,7 @@ export const BUFF_FORM_DATA = Object.freeze([
    "up": {
     "short": {
      "name": "Fadenzug",
-     "text": "die Spule wird hoch oben festgenadelt, der Faden zieht den Wizard hinauf (dort weiterschwingen).",
+     "text": "die Kunai beißt sich hoch oben fest, der Faden zieht den Wizard hinauf (dort weiterschwingen).",
      "action": "eine schnell ansteigende, scharf fragmentierte Stoßbahn über Kopf und Schulter",
      "kind": "burst",
      "status": []
@@ -1107,7 +1107,7 @@ export const BUFF_FORM_DATA = Object.freeze([
     },
     "full": {
      "name": "Seidennetz",
-     "text": "ein Seidennetz, von sechs Nadeln gehalten, zieht Gegner heran und schnappt dann zu.",
+     "text": "ein Seidennetz, von sechs Kunai im Boden gehalten, zieht Gegner heran und schnappt dann zu.",
      "action": "eine verzahnte Abfolge von Boden- oder Luftfeldern mit ungleichzeitigen Impakten und klar begrenztem AoE",
      "kind": "sequence",
      "status": [

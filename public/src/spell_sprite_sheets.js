@@ -1448,6 +1448,24 @@ export const SPELL_SPRITE_SHEETS = Object.freeze({
   "hd": true,
   "anchor": "center"
  },
+ "as_T13_back": {
+  "name": "as_T13_back",
+  "w": 64,
+  "h": 64,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "as_T13_front": {
+  "name": "as_T13_front",
+  "w": 64,
+  "h": 64,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
  "silk_anchor": {
   "name": "silk_anchor",
   "w": 16,

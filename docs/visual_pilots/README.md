@@ -324,3 +324,12 @@ eine Garnspule fliegt hoch, eine Nadel heftet sie in die Luft, und der Held schw
 - Neue Sheets in `vfx_arcane1.cjs`: `silk_anchor` (Garnspule an einer Nadel) und `silk_web`.
 
 - `v29_fadenschlag_swing.png` (Haken, Netz, Schwung)
+
+## v30 — Fadenschlag: Optik nachgezogen, keine Spulen mehr (26.10.2026)
+
+Wunsch: „bitte optik nachziehen, obwohl ich spulen auch ein wenig lahm finde“.
+- **Fadenharfe (`as_T13_back/_front`):** Drei gebogene, gezahnte Sichel-Beine aus Stahl fächern aus den Schulterblättern, ein kleineres vorn an der Schulter. Dazwischen sind Seidenfäden wie Harfensaiten gespannt, auf denen pinke Glanzpunkte laufen. Lose Seidenenden wehen von den Spitzen.
+- **Anker:** Statt der Garnspule beißt sich eine Haken-Kunai (Klinge mit Blutrinne, Widerhaken, umwickelter Griff, Ring für den Faden, pinke Quaste) in die Luft (`silk_anchor`).
+- **Seidennetz:** Das Netz wird von sechs Kunai gehalten, die im Boden stecken.
+
+- `v30_fadenschlag_look.png`

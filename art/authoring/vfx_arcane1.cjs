@@ -9,8 +9,10 @@
 //   as_T06_back / _front  Ionspindel — a tall spindle axis behind the back with pulsing ion nodes, three spindle-shaped
 //                         copper coils on wide tilted orbits (always behind the body), zigzag arcs to the axis and
 //                         between the coils.
-//   silk_anchor           T13 Fadenschlag swing anchor: a thread spool pinned in the air by a needle (4 frames, 32×48).
-//   silk_web              T13 Seidennetz: a ground web of silk threads pinned by six needles (6 frames, 288×96).
+//   as_T13_back / _front  Fadenschlag — Fadenharfe: curved steel blade-legs fan from the shoulder blades (one small at the
+//                         front shoulder), silk strung between them like a harp with rose glints running along.
+//   silk_anchor           T13 swing anchor: a hook kunai biting into the air, silk tied to its ring (4 frames, 32×48).
+//   silk_web              T13 Seidennetz: a ground web of silk threads pinned by six kunai (6 frames, 288×96).
 const B = require('./vfx_brush.cjs');
 const F = require('./vfx_fire.cjs');
 const { Sheet, rng, TAU, clamp01 } = B;
@@ -153,6 +155,45 @@ function t06() {
   }
   return [bk, fr];
 }
+// A curved steel blade-leg along a quadratic curve (root → ctrl → tip): tapering, lit edge, plum wraps, rose tip.
+function bladeLeg(sh, f, P0, P1, P2, w0) {
+  const at = (u) => [(1 - u) ** 2 * P0[0] + 2 * (1 - u) * u * P1[0] + u * u * P2[0], (1 - u) ** 2 * P0[1] + 2 * (1 - u) * u * P1[1] + u * u * P2[1]];
+  const n = 140;
+  for (let i = 0; i <= n; i++) {
+    const u = i / n; const [x, y] = at(u); const [x2, y2] = at(Math.min(1, u + .01)); const L = Math.hypot(x2 - x, y2 - y) || 1; const nx = -(y2 - y) / L; const ny = (x2 - x) / L;
+    const w = w0 * (1 - u) ** .8 + .3; const wrap = Math.abs(u - .22) < .03 || Math.abs(u - .5) < .025;
+    for (let d = -w; d <= w; d += .5) tone(sh, f, wrap ? S.wood : S.steel, x + nx * d, y + ny * d, wrap ? (d < 0 ? .8 : .45) : d < -w * .3 ? .95 : d < w * .3 ? .62 : .36);
+    // Saw teeth along the inner edge (every few px between the wraps and the tip).
+    if (u > .28 && u < .9 && i % 9 === 0) for (let k = 0; k < 3; k++) for (let e = -(2 - k) * .5; e <= (2 - k) * .5; e += .5) tone(sh, f, S.steel, x + nx * (w + k + .5) + (x2 - x) / L * e, y + ny * (w + k + .5) + (y2 - y) / L * e, .55);
+  }
+  const [tx, ty] = at(1); for (let y = -2; y <= 2; y++) for (let x = -2; x <= 2; x++) if (Math.abs(x) + Math.abs(y) <= 2) tone(sh, f, S.rose, tx + x, ty + y, Math.abs(x) + Math.abs(y) ? .55 : .95);
+  return { tip: at(1), mid: at(.55) };
+}
+// A taut silk string with a glint travelling along it.
+function silkString(sh, f, A, Bp, ph) {
+  const n = Math.max(1, Math.ceil(Math.hypot(Bp[0] - A[0], Bp[1] - A[1])));
+  for (let i = 0; i <= n; i++) { const u = i / n; tone(sh, f, S.silk, A[0] + (Bp[0] - A[0]) * u, A[1] + (Bp[1] - A[1]) * u, .62); }
+  const g = ph % 1; for (let k = -2; k <= 2; k++) { const u = clamp01(g + k / n); tone(sh, f, k ? S.rose : S.silk, A[0] + (Bp[0] - A[0]) * u, A[1] + (Bp[1] - A[1]) * u, k ? .7 : 1); }
+}
+function t13() {
+  const [bk, fr] = pair('T13', 6);
+  for (let f = 0; f < 6; f++) {
+    const ph = f / 6; const sw = (i) => Math.round(Math.sin(ph * TAU + i * 1.7) * 2);
+    // Three blade-legs fanning back from the shoulder blades (like a harp frame), one smaller at the front shoulder.
+    const A = bladeLeg(bk, f, [CX - 8, CY - 8], [CX - 46, CY - 32], [CX - 34 + sw(0), CY - 62], 4);
+    const Bl = bladeLeg(bk, f, [CX - 10, CY - 2], [CX - 56, CY - 2], [CX - 60, CY - 34 + sw(1)], 3.6);
+    const Cl = bladeLeg(bk, f, [CX - 10, CY + 6], [CX - 46, CY + 28], [CX - 62 + sw(2), CY + 4], 3.2);
+    const D = bladeLeg(fr, f, [CX + 6, CY - 12], [CX + 30, CY - 34], [CX + 16, CY - 56 + sw(3)], 2.4);
+    // Silk strung like a harp: from a knot at the back to every tip, between the tips, and over the head to the front leg.
+    const K = [CX - 7, CY - 5];
+    [[K, A.tip], [K, Bl.tip], [K, Cl.tip], [K, A.mid], [K, Bl.mid], [A.tip, Bl.tip], [Bl.tip, Cl.tip], [A.tip, D.tip]].forEach(([p0, p1], i) => silkString(bk, f, p0, p1, ph + i * .29));
+    for (let y = -2; y <= 2; y++) for (let x = -2; x <= 2; x++) if (x * x + y * y <= 4) tone(bk, f, S.rose, K[0] + x, K[1] + y, .8);
+    // Loose silk ends drifting off the tips.
+    for (const [tx, ty] of [A.tip, Bl.tip, Cl.tip]) for (let j = 0; j < 10; j++) tone(bk, f, S.silk, tx - j, ty + 2 + Math.round(Math.sin(j * .6 + ph * TAU * 2) * 2), .7 - j * .03);
+    B.selOutline(bk, f, C.out); B.selOutline(fr, f, C.out);
+  }
+  return [bk, fr];
+}
 // A 2-px pixel line (the brush outline later gives it the dark contour).
 function pline(sh, f, x0, y0, x1, y1, paint) { const n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0))); for (let i = 0; i <= n; i++) { const u = i / n; paint(sh, f, x0 + (x1 - x0) * u, y0 + (y1 - y0) * u, u, i); } }
 // T13 Fadenschlag palette: plum spool wood, peach silk, rose glints, needle steel.
@@ -160,24 +201,28 @@ const S = {
   wood: ramp('#1c1420', '#3a2430', '#6a3a3a', '#9a5a48'), silk: ramp('#5a2a3a', '#ff7a3d', '#ffd0a8', '#fff4ea'),
   rose: ramp('#7a1030', '#ff3d6e', '#ffc0d0'), steel: ramp('#2a2c34', '#6a6e7a', '#b8bcc8', '#f2f4f8')
 };
-// T13 swing anchor: a thread spool pinned in the air by a needle, the wound silk turning.
+// A hook kunai: leaf blade pointing at angle ang from its ring at (x, y), length L, a barb on one side.
+function kunai(sh, f, x, y, ang, L) {
+  const dx = Math.cos(ang); const dy = Math.sin(ang); const nx = -dy; const ny = dx;
+  for (let u = 4; u <= L; u += .5) { const t = (u - 4) / (L - 4); const w = Math.max(.5, 4.4 * Math.sin(Math.PI * Math.min(1, t * 1.25 + .1)) * (1 - t * .3)); for (let d = -w; d <= w; d += .5) tone(sh, f, S.steel, x + dx * u + nx * d, y + dy * u + ny * d, (d < -.5 ? .95 : d < .5 ? .7 : .4) - t * .1); }
+  for (let u = 4; u <= L - 2; u += .5) tone(sh, f, S.steel, x + dx * u, y + dy * u, .25); // the fuller (blood groove)
+  for (let k = 0; k < 6; k++) for (let e = -.5; e <= .5; e += .5) tone(sh, f, S.steel, x + dx * (L * .4 - k * .9 + e) + nx * (4 + k), y + dy * (L * .4 - k * .9 + e) + ny * (4 + k), .75 - k * .05); // barb
+  for (let u = 1; u < 4; u += .5) for (let d = -1.5; d <= 1.5; d += .5) tone(sh, f, S.wood, x + dx * u + nx * d, y + dy * u + ny * d, .7); // wrapped grip
+  for (let a = 0; a < TAU; a += .2) tone(sh, f, S.rose, x + Math.cos(a) * 2, y + Math.sin(a) * 2, .75); // the ring the silk ties to
+}
+// T13 swing anchor: a hook kunai biting into the air, blade up, the silk tied to its ring at the centre,
+// a rose tassel fluttering below and a bite spark round the tip on the first frames.
 function silkAnchor() {
   const s = new Sheet('silk_anchor', 32, 48, 4, { anchor: 'center' }); const cx = 16; const cy = 24;
   for (let f = 0; f < 4; f++) {
-    // The needle behind: a steel shaft through the spool, eye and rose head on top, point below.
-    for (let y = -20; y <= 20; y++) tone(s, f, S.steel, cx, cy + y, y > 14 ? .9 - (y - 14) / 10 : .7);
-    for (let y = -21; y <= -17; y++) for (let x = -2; x <= 2; x++) if (Math.abs(x) + Math.abs(y + 19) <= 2) tone(s, f, S.rose, cx + x, cy + y, Math.abs(x) + Math.abs(y + 19) ? .55 : .95);
-    // Wound silk body: diagonal windings that travel with the frame (the spool turns).
-    for (let y = -8; y <= 8; y++) for (let x = -6; x <= 6; x++) { const band = ((x + y * 2 + f * 3) % 6 + 6) % 6; tone(s, f, S.silk, cx + x, cy + y, (band < 2 ? .9 : band < 4 ? .62 : .4) + (x < -3 ? .08 : x > 3 ? -.12 : 0)); }
-    // Flanges top and bottom (plum wood, lit rim).
-    for (const fy of [-10, 10]) for (let y = -2; y <= 2; y++) for (let x = -9; x <= 9; x++) { if ((x / 9.5) ** 2 + (y / 2.5) ** 2 > 1) continue; tone(s, f, S.wood, cx + x, cy + fy + y, (y < 0 ? .85 : .45) - Math.abs(x) / 40); }
-    // A loose end of silk fluttering off the spool.
-    for (let k = 0; k < 9; k++) tone(s, f, S.silk, cx + 7 + k, cy + 2 + Math.round(Math.sin(k * .8 + f * 1.6) * 2), .75);
+    kunai(s, f, cx, cy, -Math.PI / 2 + .12, 19);
+    for (let k = 0; k < 2; k++) for (let j = 0; j < 9; j++) tone(s, f, S.rose, cx - 1 + k * 2 + Math.round(Math.sin(j * .5 + f * 1.4 + k * 2) * (j / 5)), cy + 3 + j, .6);
+    if (f < 2) { const tx = cx + Math.cos(-Math.PI / 2 + .12) * 19; const ty = cy + Math.sin(-Math.PI / 2 + .12) * 19; for (let k = 0; k < 4; k++) { const a = k / 4 * TAU + .4; for (let r = 2; r < 4 + f; r++) tone(s, f, S.silk, tx + Math.cos(a) * r, ty + Math.sin(a) * r, .95); } }
     B.selOutline(s, f, C.out);
   }
   return s;
 }
-// T13 Seidennetz: a web of silk threads pinned by six needles, rose knots at the crossings, a pulse running out.
+// T13 Seidennetz: a web of silk threads pinned by six kunai stuck in the ground, rose knots at the crossings, a pulse running out.
 function silkWeb() {
   const W = 288; const H = 96; const s = new Sheet('silk_web', W, H, 6, { anchor: 'center' }); const cx = W / 2; const cy = H / 2; const R = 136; const k = .32;
   const at = (a, r) => [cx + Math.cos(a) * r, cy + Math.sin(a) * r * k];
@@ -190,10 +235,10 @@ function silkWeb() {
     for (const a of A) for (const r of rings.slice(0, 2)) { const [x, y] = at(a, r); for (let d = -1; d <= 1; d++) { tone(s, f, S.rose, x + d, y, .6); tone(s, f, S.rose, x, y + d, .6); } }
     // A bright pulse running out along each radial, and the six pinning needles at the rim.
     A.forEach((a, i) => { const u = (f / 6 + i * .37) % 1; const [x, y] = at(a, R * u); for (let d = -1; d <= 1; d++) { tone(s, f, S.silk, x + d, y, 1); tone(s, f, S.silk, x, y + d, 1); }
-      const [px, py] = at(a, R); for (let yy = -14; yy <= 2; yy++) tone(s, f, S.steel, px, py + yy, yy > -2 ? .95 : .65); for (let yy = -17; yy <= -14; yy++) for (let xx = -1; xx <= 1; xx++) tone(s, f, S.rose, px + xx, py + yy, xx ? .5 : .9); });
+      const [px, py] = at(a, R); kunai(s, f, px, py - 14, Math.PI / 2, 15); });
     for (let y = -3; y <= 3; y++) for (let x = -(3 - Math.abs(y)); x <= 3 - Math.abs(y); x++) tone(s, f, S.rose, cx + x, cy + y, f % 2 ? .95 : .7);
     B.selOutline(s, f, C.out);
   }
   return s;
 }
-module.exports = { arcane1Sheets: () => [...t02(), ...t04(), ...t05(), ...t06(), silkAnchor(), silkWeb()] };
+module.exports = { arcane1Sheets: () => [...t02(), ...t04(), ...t05(), ...t06(), ...t13(), silkAnchor(), silkWeb()] };
