@@ -17,9 +17,10 @@ export const cloakFor = (id) => CLOAKS[id] ?? null;
 function armour(plate, trim, { visor = false } = {}) {
   const outline = plate[0].map((v) => Math.round(v * .5));
   return (d, w, h) => {
-    const n = w * h; const L = new Float32Array(n); const solid = new Uint8Array(n);
+    const n = w * h; if (!(d?.length >= n * 4)) return; // no pixel data (headless canvas)
+    const L = new Float32Array(n); const solid = new Uint8Array(n);
     let top = h; let bot = 0;
-    for (let i = 0; i < n; i++) { if (d[i * 4 + 3] < 128) continue; solid[i] = 1; L[i] = (.3 * d[i * 4] + .59 * d[i * 4 + 1] + .11 * d[i * 4 + 2]) / 255; const y = (i / w) | 0; if (y < top) top = y; if (y > bot) bot = y; }
+    for (let i = 0; i < n; i++) { if (!(d[i * 4 + 3] >= 128)) continue; solid[i] = 1; L[i] = (.3 * d[i * 4] + .59 * d[i * 4 + 1] + .11 * d[i * 4 + 2]) / 255; const y = (i / w) | 0; if (y < top) top = y; if (y > bot) bot = y; }
     const head = top + (bot - top) * .2;
     const dark = (i) => solid[i] && L[i] < .16;
     const out = new Uint8ClampedArray(d);
