@@ -786,6 +786,9 @@ export function registerRenderer(name, fn, scale = 1) { RENDERERS[name] = fn; AR
 // ahead of any family or archetype renderer.
 const FORM_RENDERERS = {};
 export function registerFormRenderer(id, fn, scale = 1) { FORM_RENDERERS[id] = { fn, scale }; }
+// Extra attachments drawn on top of a form's manifestation sheet: fn(ctx, sockets, pose, form, layer, fade).
+const FORM_EXTRAS = {};
+export function registerFormExtra(id, fn) { FORM_EXTRAS[id] = fn; }
 export const hasFormRenderer = (id) => !!FORM_RENDERERS[id];
 // Presence of the generic archetypes (the atlas asks for 2.2–4.5 × H large
 // manifestations; anchored pieces stay closer to the body).
@@ -814,6 +817,7 @@ export function renderManifestation(ctx, player, form, layer, renderY, fade = 1,
     const s0 = sockets(player, renderY); const p0 = poseOf(player); const fr = Math.floor((player.animTime ?? 0) * 10);
     const n = SPELL_SPRITE_SHEETS[sheetName]?.frames ?? 1;
     drawSpellSprite(ctx, sheetName, fr % n, s0.chest[0], s0.chest[1], { anchor: 'center', flip: (player.facing || 1) < 0, alpha: fade, scale: 1 + .15 * Math.max(peak, p0.full ? .6 : 0) });
+    FORM_EXTRAS[form.id]?.(ctx, s0, { ...p0, t: player.animTime ?? 0, player }, form, layer, fade);
     return;
   }
   const draw = morph?.fn ?? RENDERERS[form.archetype] ?? fins;

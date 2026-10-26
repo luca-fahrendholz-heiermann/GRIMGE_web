@@ -20,7 +20,8 @@ export const KONSTRUKT = Object.freeze({ shieldEvery: 6, shieldGain: 30, shieldC
 const fade = (k, inT = .1, outT = .3) => Math.max(0, Math.min(1, k / inT, (1 - k) / outT));
 const ahead = (len, w = 26) => (s) => (t, dx, dz) => dx * s.facing > -8 && dx * s.facing < len && Math.abs(dz) < w;
 const around = (r) => () => (t, dx, dz) => Math.hypot(dx, dz) < r;
-const seq = (f, p, o) => { const s = new SigSequence({ mat: f.mat, seed: hashStr(f.id) }, p, o); s.fineVfx = true; return s; };
+// While a technique runs it holds the cannon itself: the idle fore-arm cannon (armor_extras.js) hides (timestamp).
+const seq = (f, p, o) => { const s = new SigSequence({ mat: f.mat, seed: hashStr(f.id) }, p, { ...o, tick: (sq, dt, gw) => { sq.caster._kpBusyUntil = performance.now() + 120; o.tick?.(sq, dt, gw); } }); s.fineVfx = true; return s; };
 const px = (ctx, x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(Math.round(x), Math.round(y), w, h); };
 const sprite = (ctx, name, frame, x, y, o = {}) => { if (spellSheetReady(name)) drawSpellSprite(ctx, name, frame, x, y, { anchor: 'center', ...o }); };
 // The arm cannon held at the fore hand (sheet faces right, grip at its left end).

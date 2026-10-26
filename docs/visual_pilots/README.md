@@ -372,3 +372,12 @@ Wunsch: Varianten für die Verwandlungsanimation, ohne Helm zu zeichnen (muss f�
 - Zurück zum vorigen Stand: Commit vor v34 (`2cf7af4`).
 
 - `v34_armor_on.png` (oben Ionspindel, unten Konstruktpanzer)
+
+## v35 — Rüstungsformen passen auf jeden Helden (26.10.2026)
+
+Hinweis des Users: Die erste Umfärbung passte nur zu einem Sprite. Bei anderen Klassen blieb nur der Leuchteffekt robust. Vorbild ist Blutarsenal: eine Aura, die sich dem Sprite anpasst, und Waffen an festen Körperpunkten.
+- `form_recolors.js`: nur noch ein gleichmäßiger Materialton ohne Schwellen (keine Haut-, Augen- oder Kontur-Erkennung). Die Details jedes Sprites bleiben, und das Anlegen in Bändern funktioniert weiter.
+- `armor_extras.js` (neu): Rüstungsteile an den Körperpunkten, wie die Waffen von Blutarsenal. Ionspindel: Hörner und Schulterstacheln hinter dem Sprite, Klauenhand. Konstruktpanzer: Armkanone am Unterarm (verschwindet, solange eine Technik sie benutzt), rote Visier-Augen.
+- Getestet mit Thesen, Xame, Paladin, Nyx und John.
+
+- `v35_armor_all_heroes.png`

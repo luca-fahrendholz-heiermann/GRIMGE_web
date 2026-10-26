@@ -31,7 +31,8 @@ import './buff_v32_hands.js'; // A03 Tausendhand
 import './buff_v32_bloom.js'; // A04 Klingenblüte
 import { installBankaiArsenal } from './bankai_arsenal.js';
 import { devilTick } from './arcane_devil.js';
-import { recolorFor, recolorStages, cloakFor } from './form_recolors.js'; // armour transformations recolour the hero's own pixels
+import { recolorFor, recolorStages, cloakFor } from './form_recolors.js';
+import './armor_extras.js'; // socket-anchored armour pieces (horns, claws, cannon, visor eyes) // armour transformations recolour the hero's own pixels
 import './arcane_fadenschlag.js'; // T13 Fadenschlag: swing + thread techniques (must patch ARCANE_MOVES before the movesets are built)
 import { konstruktTick, isShellRolled } from './arcane_konstrukt.js'; // A10 Konstruktpanzer (armour, shell roll, shield passive)
 import { arsenalTick } from './arcane_bloodarsenal.js'; // A09 Blutarsenal (weapon fusion: techniques, look, bleed passive) // A05–A08 body powers (techniques, looks, water weakness, passives) // A04: the held weapon's arsenal (look + techniques)
