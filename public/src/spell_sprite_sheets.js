@@ -1682,5 +1682,59 @@ export const SPELL_SPRITE_SHEETS = Object.freeze({
   "res": 2,
   "hd": true,
   "anchor": "center"
+ },
+ "asc_1_back": {
+  "name": "asc_1_back",
+  "w": 64,
+  "h": 64,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "asc_1_front": {
+  "name": "asc_1_front",
+  "w": 64,
+  "h": 64,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "asc_2_back": {
+  "name": "asc_2_back",
+  "w": 64,
+  "h": 64,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "asc_2_front": {
+  "name": "asc_2_front",
+  "w": 64,
+  "h": 64,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "asc_3_back": {
+  "name": "asc_3_back",
+  "w": 64,
+  "h": 64,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "asc_3_front": {
+  "name": "asc_3_front",
+  "w": 64,
+  "h": 64,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
  }
 });

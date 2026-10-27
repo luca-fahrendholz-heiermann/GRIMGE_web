@@ -112,3 +112,22 @@ registerFormRecolor('A10', armour(ramp('#16301c', '#24502c', '#3a7a40', '#62a860
 registerFormCloak('A10', '#3ad0e0', '#a8f6ff');
 // A11 Drachengeist: no recolour (the dragon and the blaze are attachments), an ember-orange aura.
 registerFormCloak('A11', '#ff5a1f', '#ffd27a');
+
+// Aufstiegsstufen (Focus transformation, user 27 Oct 2026): stage 2 turns the hair white, stage 3 blue. Only for the
+// tailored base hero(es) — the dark, non-skin pixels in the top quarter are the hair there (light horns stay).
+const HAIR = { 2: ramp('#8a92a8', '#c4ccdc', '#eef2fa', '#ffffff'), 3: ramp('#14308a', '#2a62d8', '#5a9cff', '#b0d4ff') };
+const hairMemo = {};
+export function hairRecolor(stage, heroKey) {
+  if (!HAIR[stage] || !TAILORED_HEROES.includes(heroKey)) return null;
+  return hairMemo[stage] ??= { key: `hair_${stage}`, fn: (d, w, h) => {
+    const n = w * h; if (!(d?.length >= n * 4)) return; const rp = HAIR[stage];
+    let top = h; let bot = 0; for (let i = 0; i < n; i++) { if (!(d[i * 4 + 3] >= 128)) continue; const y = (i / w) | 0; if (y < top) top = y; if (y > bot) bot = y; }
+    const head = top + (bot - top) * .24;
+    for (let i = 0; i < n; i++) {
+      if (!(d[i * 4 + 3] >= 128)) continue; const y = (i / w) | 0; if (y >= head) continue;
+      const R = d[i * 4]; const G = d[i * 4 + 1]; const Bc = d[i * 4 + 2]; const L = (.3 * R + .59 * G + .11 * Bc) / 255;
+      if (L < .08 || L > .5 || (R > G && G > Bc && R - Bc > 38 && R > 80)) continue; // outline, light horns, skin stay
+      const c = rp[Math.min(rp.length - 1, Math.floor((L - .08) / .42 * rp.length))]; d[i * 4] = c[0]; d[i * 4 + 1] = c[1]; d[i * 4 + 2] = c[2];
+    }
+  } };
+}

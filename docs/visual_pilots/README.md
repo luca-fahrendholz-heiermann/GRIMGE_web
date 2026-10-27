@@ -441,3 +441,14 @@ Nach dem Beispiel-Sprite 20, eigene Umsetzung. Neuer Arcane State (Feuer, Boss-D
 - **Passiv:** Nahkampftreffer setzen Gegner zu 30 % in Brand. Sprint: Drachensprung, Sturz: Drachensturz mit Glutring.
 
 - `v42_drachengeist.png` (Thesen und Nyx im Stand, Drachenatem · Himmelssturz, Drachenwacht)
+
+## v43 — Aufstiegsstufen der Fokus-Verwandlung (27.10.2026)
+
+Nach den Beispiel-Sprites 29–32, eigene Umsetzung. Die Fokus-Verwandlung (Ascendant) steigt jetzt in drei Stufen auf:
+- **Stufe 1** sofort: goldene Energieaura mit Blitzfunken, goldene Kontur.
+- **Stufe 2** nach 10 s: weiß-goldene, höhere Aura, weiße Kontur, **weiße Haare**. Kraft ×1,15.
+- **Stufe 3** nach 20 s: blaue Flammenaura, blaue Kontur, **blaue Haare**. Kraft ×1,3.
+- Jeder Aufstieg gibt eine Druckwelle, ein Kamerawackeln und die Ansage „AUFSTIEG II“ bzw. „AUFSTIEG III“.
+- Die Haarfarbe gibt es nur für Thesen (`TAILORED_HEROES`), weil die Haare dort sicher erkannt werden. Alle anderen Helden bekommen Aura und Kontur.
+
+- `v43_aufstiegsstufen.png` (Thesen Stufe 1, 2, 3 · Nyx Stufe 3)

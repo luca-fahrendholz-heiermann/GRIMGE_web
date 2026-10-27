@@ -26,9 +26,10 @@ import { hasWeaponDown, castWeaponDown, weaponUp, weaponHasUpSkill, weaponDive, 
 import { updatePrimalBond, bondMoveMultiplier, bondGainMultiplier, bondDisplacement, bondOnBlock, primalSprintVariant, renderPrimalBond, endPrimalBond, bondMelee, primalQuake } from './primals.js';
 import { createSegments, damageSegments, updateSegments, renderSegments } from './castle_segments.js';
 import { updateBuffForm, endBuffForm, isGenericBuff, currentBuffForm, renderBuffManifestation, buffVeinPainter, buffCloakColor, renderBuffGuard, levitationOffset, renderBuffCharge } from './buff_forms.js';
-import { silkAirJump, silkSwingStep } from './arcane_fadenschlag.js';
-import { isShellRolled } from './arcane_konstrukt.js';
-import { cloakFor } from './form_recolors.js'; // armour forms tint the shield shell in their aura colour // A10 Schalenrolle: the body is hidden inside the ball // T13 Fadenschlag: air-jump swing on a silk wire
+import { silkAirJump, silkSwingStep } from './arcane_fadenschlag.js'; // T13 Fadenschlag: air-jump swing on a silk wire
+import { isShellRolled } from './arcane_konstrukt.js'; // A10 Schalenrolle: the body is hidden inside the ball
+import { cloakFor, hairRecolor } from './form_recolors.js'; // armour aura colours; Aufstiegsstufen hair
+import { drawSpellSprite, spellSheetReady } from './spell_visuals.js'; // Aufstiegsstufen aura sheets
 import { masteryOnShieldHit, masteryTickShield, masteryChargedRelease, masteryPerfectBlock, masteryTier, currentAttacker, masteryTick, masteryMoveMult, masteryIncoming } from './mastery.js';
 import { updateSignatureStance, renderSignatureStance, signatureHover, signatureMoveMult, signatureEvent, signatureDamageTaken, setHitContext, signatureSprintVariant, signatureCharge, signatureSprintMove, signatureDive, signatureMeleeMult } from './signature_runes.js';
 
@@ -243,6 +244,7 @@ const MANA_REGEN = MANA_BALANCE.regen;
 const FOCUS_DECAY_RATE = 1.0;    // per second (_focusDecayPerTick 1/60), after the grace period
 // A real transformation has no timer of its own: it burns the Focus meter
 // (full meter ≈ 67 s) and lasts as long as combos keep refilling it.
+const ASCEND_STAGE_TIME = 10; const ASCEND_POWER = Object.freeze([1, 1.15, 1.3]); // Aufstiegsstufen
 const FOCUS_TRANSFORM_DRAIN = 1.5; // Focus per second while transformed (_transformationFocusDrainPerSecond)
 const FOCUS_TRANSFORM_GAIN_MULT = 0.5; // gains are halved while transformed (_transformationFocusGainMultiplier)
 const FOCUS_DECAY_DELAY = 5;     // _focusDecayGraceTicks 300 @ 60 Hz
@@ -484,7 +486,15 @@ export class Player extends GroundEntity {
       // Remaining time at the current meter (kept for every "is transformed" check).
       this.focusTransformTimer = this.focus > 0 ? this.focus / FOCUS_TRANSFORM_DRAIN : 0;
     }
-    if (this.focusTransformTimer <= 0) this.focusTransformPower = 1;
+    if (this.focusTransformTimer <= 0) { this.focusTransformPower = 1; this._focusT = 0; this.focusStage = 0; }
+    else {
+      // Aufstiegsstufen (user, 27 Oct 2026, after example sprites 29–32): stage 2 after 10 s, stage 3 after 20 s.
+      this._focusT = (this._focusT ?? 0) + dt; const stage = 1 + (this._focusT >= ASCEND_STAGE_TIME ? 1 : 0) + (this._focusT >= ASCEND_STAGE_TIME * 2 ? 1 : 0);
+      if (stage !== this.focusStage) {
+        if (this.focusStage) { combat.spawnShockwave(this.x, this.y - 40, 70 + stage * 14, stage === 3 ? '#5a9cff' : '#fff2b0'); combat.shakeCamera(4 + stage, .15); window.gameWorld?.showAnnouncement?.(stage === 3 ? 'AUFSTIEG III' : 'AUFSTIEG II', 1.2); }
+        this.focusStage = stage; this.focusTransformPower = ASCEND_POWER[stage - 1];
+      }
+    }
     // Primal Bond: wind-up, merge, Focus drain (1.5/s × form), Fortified.
     updatePrimalBond(this, dt, FOCUS_TRANSFORM_DRAIN);
     updateWeaponKit(this, dt, window.gameWorld);
@@ -2181,6 +2191,8 @@ export class Player extends GroundEntity {
     if (useProc) { renderOpts.procRot = pRot; renderOpts.procScaleX = pSX; renderOpts.procScaleY = pSY; }
     const veins = this.isAlive ? buffVeinPainter(this) : null;
     if (veins) renderOpts.maskPaint = veins;
+    // Aufstiegsstufen: white / blue hair on the tailored base hero (a recolour-only paint).
+    else if (this.isAlive && this.focusTransformTimer > 0 && this.focusStage >= 2) { const hair = hairRecolor(this.focusStage, this.heroKey); if (hair) { const paint = () => {}; paint.recolor = hair; renderOpts.maskPaint = paint; } }
     if (formCloak) this.renderFormCloak(ctx, renderY, renderOpts, formCloak, 'back');
     // Astral weapon: the rear-hand piece behind the body, the front one in front.
     // Klingenblüte (A04): the weapon has become the petal swarm — only the swarm renderer draws it.
@@ -2197,6 +2209,7 @@ export class Player extends GroundEntity {
     held('back');
     sprites.renderEntity(ctx, this.renderKey, this.x, renderY, renderOpts);
     held('front');
+    if (this.isAlive && this.focusTransformTimer > 0) this.renderFocusAscendant(ctx, renderY, 'front');
     // HOLD charge without a weapon: the bare hands glow (with a weapon, the weapon pulses).
     const holdK = this.isAlive && !armed ? this.holdChargeLevel() : null;
     if (holdK != null) this.renderHoldHands(ctx, renderY, holdK, activeMoveset(this) ? (currentBuffForm(this)?.mat?.vein ?? FORM_PALETTES[activeMoveset(this)]?.main ?? '#c9a8ff') : '#7fd8ff');
@@ -2263,8 +2276,11 @@ export class Player extends GroundEntity {
   }
 
   // Transformed: the full blazing aura streams upward.
-  renderFocusAscendant(ctx, renderY) {
-    drawFocusAura(ctx, this.x, renderY, this.animTime, 1.3, { height: ENTITY_VISUALS.heroHeight });
+  renderFocusAscendant(ctx, renderY, layer = 'back') {
+    // The stage aura (gold → white → blue flames), the old aura only without the sheets.
+    const name = `asc_${Math.max(1, this.focusStage || 1)}_${layer}`;
+    if (spellSheetReady(name)) { drawSpellSprite(ctx, name, Math.floor((this.animTime ?? 0) * 12) % 8, this.x, renderY - 58, { anchor: 'center', flip: (this.facing || 1) < 0, scale: 1 + (this.focusStage === 3 ? .08 : 0) }); return; }
+    if (layer === 'back') drawFocusAura(ctx, this.x, renderY, this.animTime, 1.3, { height: ENTITY_VISUALS.heroHeight });
   }
 
   // Charging: from 25 % Focus a rising aura grows with the meter; at 100 %
@@ -2318,7 +2334,7 @@ export class Player extends GroundEntity {
     if (sc) return sc;
     if (this.ninefoldTimer > 0) return { edge: 'rgba(255,110,20,1)', inner: 'rgba(255,170,60,1)', fade: Math.min(1, this.ninefoldTimer * 2) };
     if (this.eidolonTimer > 0) return { edge: 'rgba(150,80,255,1)', inner: 'rgba(200,150,255,1)', fade: Math.min(1, this.eidolonTimer * 2) };
-    if (this.focusTransformTimer > 0) return { edge: 'rgba(255,214,80,1)', inner: 'rgba(255,240,170,1)', fade: Math.min(1, this.focusTransformTimer * 2) };
+    if (this.focusTransformTimer > 0) { const st = this.focusStage || 1; return st === 3 ? { edge: 'rgba(58,138,255,1)', inner: 'rgba(168,208,255,1)', fade: Math.min(1, this.focusTransformTimer * 2) } : st === 2 ? { edge: 'rgba(255,248,216,1)', inner: 'rgba(255,255,255,1)', fade: Math.min(1, this.focusTransformTimer * 2) } : { edge: 'rgba(255,214,80,1)', inner: 'rgba(255,240,170,1)', fade: Math.min(1, this.focusTransformTimer * 2) }; }
     return null;
   }
 
