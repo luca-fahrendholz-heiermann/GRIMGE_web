@@ -393,3 +393,5 @@ defineSignature('S49', {
     offerRecast(p, { window: 5, label: 'EINFRIEREN', valid: () => !jet.isFinished && jet.frozenAt == null, stage2: (gw) => jet.freeze(gw) });
   }
 });
+// Hand-drawn rune objects (rounds 7–10) render at fine density, not through the coarse pixel layer.
+for (const C of [MarkedKunai, SealTrap, FloodJet]) Object.defineProperty(C.prototype, 'fineVfx', { value: true, writable: true, configurable: true });

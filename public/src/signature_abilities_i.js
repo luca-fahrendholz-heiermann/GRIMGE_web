@@ -7,6 +7,7 @@
 // burning very likely). A trail of blue fire stays on the path. Tap again within
 // the window: the return strike runs back through the flames — extra damage on
 // foes that are still burning.
+import { drawSpellSprite, spellSheetReady } from './spell_visuals.js';
 import { defineSignature, emit, foesOf, hit, TAU, DEPTH } from './signature_core.js';
 import { offerRecast } from './recast.js';
 import { combat } from './combat.js';
@@ -104,10 +105,10 @@ export class ThousandBirds {
       // The hand bursts into blue flame; embers swirl inward.
       const k = this.chargeK; const t = this.t;
       // Ground glow under the Wizard, growing with the charge.
-      ctx.globalAlpha = .25 + .35 * k; ctx.fillStyle = AZURE.mid; ctx.beginPath(); ctx.ellipse(p.x, y, 26 + 30 * k, 7 + 8 * k, 0, 0, TAU); ctx.fill();
+      if (spellSheetReady('azure_flame')) { ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; ctx.fillStyle = AZURE.mid; const R = 26 + 30 * k; for (let q = 0; q < 48; q++) { if ((q + Math.floor(t * 10)) % 4 === 3) continue; const u = q / 48 * TAU; ctx.fillRect(Math.round(p.x + Math.cos(u) * R), Math.round(y + Math.sin(u) * R * .3), 2, 2); } drawSpellSprite(ctx, 'azure_flame', Math.floor(t * 14) % 6, hand.x, hand.y + 12, { scale: .55 + .65 * k }); ctx.globalCompositeOperation = 'lighter'; } else { ctx.globalAlpha = .25 + .35 * k; ctx.fillStyle = AZURE.mid; ctx.beginPath(); ctx.ellipse(p.x, y, 26 + 30 * k, 7 + 8 * k, 0, 0, TAU); ctx.fill(); }
       // The hand roars into blue fire.
-      flame(ctx, hand.x, hand.y + 8, 18 + 34 * k, 7 + 9 * k, t, 1);
-      flame(ctx, hand.x - this.f * 6, hand.y + 10, 12 + 20 * k, 5 + 5 * k, t * 1.3, 4);
+      if (!spellSheetReady('azure_flame')) flame(ctx, hand.x, hand.y + 8, 18 + 34 * k, 7 + 9 * k, t, 1);
+      if (!spellSheetReady('azure_flame')) flame(ctx, hand.x - this.f * 6, hand.y + 10, 12 + 20 * k, 5 + 5 * k, t * 1.3, 4);
       // Sparks spray out in every direction — more, faster and farther the fuller the charge.
       const n = 10 + Math.round(40 * k);
       for (let s = 0; s < n; s++) {
@@ -157,3 +158,5 @@ defineSignature('S55', {
     });
   }
 });
+// Hand-drawn rune objects (rounds 7–10) render at fine density, not through the coarse pixel layer.
+for (const C of [ThousandBirds]) Object.defineProperty(C.prototype, 'fineVfx', { value: true, writable: true, configurable: true });

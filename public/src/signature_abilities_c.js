@@ -498,3 +498,5 @@ class WorldSeam {
 defineSignature('S36', { cast(c) { emit(new WorldSeam(c.sig, c.caster, lineOf(c.target, c.caster, 240, 120), c.quality.power)); } });
 
 export const SIGNATURES_C = ['S25', 'S26', 'S27', 'S28', 'S29', 'S30', 'S31', 'S32', 'S33', 'S34', 'S35', 'S36'];
+// Hand-drawn rune objects (rounds 7–10) render at fine density, not through the coarse pixel layer.
+for (const C of [PuppetThread, BreakColossus, HunterBell, RuleTablet, ExileCorridor, HarvestCircle, ResonancePlate, WorldSeam]) Object.defineProperty(C.prototype, 'fineVfx', { value: true, writable: true, configurable: true });

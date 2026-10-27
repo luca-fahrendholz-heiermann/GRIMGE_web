@@ -2565,5 +2565,81 @@ export const SPELL_SPRITE_SHEETS = Object.freeze({
   "res": 2,
   "hd": true,
   "anchor": "center"
+ },
+ "blood_circle": {
+  "name": "blood_circle",
+  "w": 50,
+  "h": 20,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "blood_cross": {
+  "name": "blood_cross",
+  "w": 40,
+  "h": 55,
+  "frames": 1,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 2
+ },
+ "cry_sigil": {
+  "name": "cry_sigil",
+  "w": 11,
+  "h": 13,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "shadow_hands": {
+  "name": "shadow_hands",
+  "w": 20,
+  "h": 42,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 2
+ },
+ "azure_flame": {
+  "name": "azure_flame",
+  "w": 14,
+  "h": 25,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 2
+ },
+ "seal_cube": {
+  "name": "seal_cube",
+  "w": 32,
+  "h": 37,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 2
+ },
+ "rage_core": {
+  "name": "rage_core",
+  "w": 22,
+  "h": 22,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "mist_puff": {
+  "name": "mist_puff",
+  "w": 15,
+  "h": 15,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
  }
 });

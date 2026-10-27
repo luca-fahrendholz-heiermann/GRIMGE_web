@@ -7,6 +7,7 @@
 //            Lead it into a trap, a domain or off the battlements.
 //   stage 2  tap again: SCHATTENWÜRGEN — shadow hands climb up the foe, deal
 //            damage and end the binding.
+import { drawSpellSprite, spellSheetReady } from './spell_visuals.js';
 import { defineSignature, emit, foesOf, hit, plate, TAU, DEPTH } from './signature_core.js';
 import { offerRecast } from './recast.js';
 import { combat } from './combat.js';
@@ -110,6 +111,7 @@ class ShadowHands {
     ctx.globalAlpha = .45 * fade; ctx.fillStyle = INK.dark; ctx.fillRect(Math.round(v.x - 9), Math.round(base - 22 * k), 18, Math.round(22 * k));
     ctx.globalAlpha = fade;
     if (b.strangleT != null) {
+      if (spellSheetReady('shadow_hands')) { const sh = Math.min(1, (b.t - b.strangleT) / .35); drawSpellSprite(ctx, 'shadow_hands', Math.min(3, Math.floor(sh * 4)), v.x, base + 2); ctx.restore(); return; }
       // Hands climb up the body and close around the neck.
       const s = Math.min(1, (b.t - b.strangleT) / .35);
       for (const side of [-1, 1]) {
@@ -140,3 +142,5 @@ defineSignature('S54', {
     });
   }
 });
+// Hand-drawn rune objects (rounds 7–10) render at fine density, not through the coarse pixel layer.
+for (const C of [ShadowHands]) Object.defineProperty(C.prototype, 'fineVfx', { value: true, writable: true, configurable: true });

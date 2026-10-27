@@ -109,3 +109,5 @@ export function spawnPlatform(spells, caster, game, opts) {
   combat.spawnDust?.(opts.x, groundYForDepth(opts.z), 6);
   return p;
 }
+// Drawn pillars render at fine density.
+for (const C of [GeoPlatform]) Object.defineProperty(C.prototype, 'fineVfx', { value: true, writable: true, configurable: true });

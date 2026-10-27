@@ -183,3 +183,5 @@ class WarBanner extends SigProp {
 }
 defineSignature('S43', { cast(c) { emit(new Sanctuary(c.sig, c.caster, c.target?.x ?? c.caster.x + (c.caster.facing || 1) * 90, c.target?.z ?? c.caster.z), c.quality); } });
 defineSignature('S44', { cast(c) { emit(new WarBanner(c.sig, c.caster, c.target?.x ?? c.caster.x + (c.caster.facing || 1) * 60, c.target?.z ?? c.caster.z), c.quality); } });
+// Hand-drawn rune objects (rounds 7–10) render at fine density, not through the coarse pixel layer.
+for (const C of [Sanctuary, WarBanner]) Object.defineProperty(C.prototype, 'fineVfx', { value: true, writable: true, configurable: true });

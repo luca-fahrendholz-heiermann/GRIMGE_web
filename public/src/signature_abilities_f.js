@@ -250,6 +250,7 @@ class BloodCircle {
     if (this.bindT != null) combat.shakeCamera(10, .35);
   }
   render(ctx) {
+    if (spellSheetReady('blood_circle')) { const fd = this.burstT != null ? 1 - (this.t - this.burstT) / .6 : Math.min(1, this.t / .3); drawSpellSprite(ctx, 'blood_circle', Math.floor(this.t * 6) % 6, this.x, this.y, { anchor: 'center', alpha: Math.max(0, fd) }); return; }
     // Ground circle with an inverted triangle and runes; it pulses while armed.
     const fade = this.burstT != null ? 1 - (this.t - this.burstT) / .6 : Math.min(1, this.t / .3);
     const pulse = this.bindT == null ? .6 + .4 * Math.sin(this.t * 5) : 1;
@@ -304,8 +305,11 @@ class BloodCrossBeam {
     const fade = c.burstT != null ? Math.max(0, 1 - (c.t - c.burstT) / .6) : 1;
     const grow = Math.min(1, (c.t - c.bindT) / .3); const base = groundYForDepth(c.z);
     const top = base - 104 * grow; const barY = base - (22 + 62) * grow;
+    if (spellSheetReady('blood_cross')) { ctx.save(); ctx.beginPath(); ctx.rect(c.x - 44, top - 8, 88, base - top + 10); ctx.clip(); drawSpellSprite(ctx, 'blood_cross', 0, c.x, base + 2 + (1 - grow) * 104, { alpha: fade }); ctx.restore(); }
+    else {
     plate(ctx, [[c.x - 5, base], [c.x - 5, top], [c.x + 5, top - 2], [c.x + 5, base]], BLOOD, 5301, { alpha: fade, glowEdge: .9 });
     plate(ctx, [[c.x - 38, barY - 4], [c.x + 38, barY - 6], [c.x + 38, barY + 4], [c.x - 38, barY + 6]], BLOOD, 5302, { alpha: fade, glowEdge: .9 });
+    }
   }
 }
 defineSignature('S51', {
@@ -349,7 +353,7 @@ defineSignature('S52', {
       // War banner sigil over the head and a gold pulse ring.
       const k = (st.ring * 1.5) % 1;
       ctx.save(); ctx.globalAlpha = 1 - k; ctx.strokeStyle = CRY.vein; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(p.x, ry - 2, 24 + 40 * k, (24 + 40 * k) * .32, 0, 0, TAU); ctx.stroke(); ctx.restore();
-      plate(ctx, [[p.x - 9, ry - 108], [p.x + 9, ry - 110], [p.x + 9, ry - 94], [p.x, ry - 88], [p.x - 9, ry - 94]], CRY, 5401, { alpha: .95, glowEdge: 1.1 });
+      if (spellSheetReady('cry_sigil')) drawSpellSprite(ctx, 'cry_sigil', Math.floor(st.t * 6) % 4, p.x, ry - 98, { anchor: 'center' }); else plate(ctx, [[p.x - 9, ry - 108], [p.x + 9, ry - 110], [p.x + 9, ry - 94], [p.x, ry - 88], [p.x - 9, ry - 94]], CRY, 5401, { alpha: .95, glowEdge: 1.1 });
       // A red line from every taunted foe to the challenger, "!" above them.
       for (const t of st.taunted) {
         if (t.tauntedBy !== p || !alive(t)) continue;
@@ -360,3 +364,5 @@ defineSignature('S52', {
     }
   }
 });
+// Hand-drawn rune objects (rounds 7–10) render at fine density, not through the coarse pixel layer.
+for (const C of [BloodCircle, BloodCrossBeam]) Object.defineProperty(C.prototype, 'fineVfx', { value: true, writable: true, configurable: true });

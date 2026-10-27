@@ -611,3 +611,17 @@ Die Geschosse der Waffen (`drawShotPixel` in `weapons_ext.js`) sind jetzt knacki
 - **Fehler behoben:** Die Objekte der Runden 7 und 8 waren doppelt so groß wie geplant (falsche Annahme zur Sheet-Auflösung); jetzt mit halber Größe.
 
 - `v58_runde9_und_groessen.png` (alle Runen der Runden 7–9)
+
+## v59 — Spezialrunen Runde 10, scharfe Darstellung (27.10.2026)
+
+`art/authoring/vfx_runes10.cjs`:
+- **Blutkreuz:** Blutkreis mit umgekehrtem Dreieck und Runen, ein Blutkreuz mit Ketten, das aus dem Boden wächst.
+- **Herausforderung:** gold-rotes Kriegsruf-Siegel über dem Kopf.
+- **Schattenbindung:** zwei Schattenhände mit Klauen, die am Gefangenen hochklettern.
+- **Azurflamme:** lodernde blaue Handflamme beim Aufladen, gestrichelter Bodenring statt weichem Glühen.
+- **Bannwürfel:** gläserner Würfel mit hellen Kanten und Runenecken.
+- **Zornstrahl:** rot-schwarzer Kern mit knisterndem Rand beim Aufladen.
+- **Trugbild:** platzende Doppelgänger lösen sich in lila Nebel auf.
+- **Scharfe Darstellung:** Alle gezeichneten Runen-Objekte der Runden 7–10 und die Säulen laufen jetzt in feiner Auflösung statt durch die grobe Pixel-Ebene (vorher wirkten sie verschwommen und blockig).
+
+- `v59_runde10.png`

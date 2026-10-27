@@ -6,6 +6,7 @@
 //   is hit bursts into mist and the attacker is confused for a moment (then picks
 //   the next one). Tap again: TAUSCH — swap places with the double farthest from
 //   the foes (escape) — the double takes your old spot.
+import { drawSpellSprite, spellSheetReady } from './spell_visuals.js';
 import { defineSignature, emit, foesOf, TAU, DEPTH } from './signature_core.js';
 import { offerRecast } from './recast.js';
 import { combat } from './combat.js';
@@ -122,6 +123,7 @@ export class Mirage {
     for (const d of this.doubles) {
       if (d.burstT == null) continue;
       const k = Math.min(1, d.burstT / .5); if (k >= 1) continue;
+      if (spellSheetReady('mist_puff')) { drawSpellSprite(ctx, 'mist_puff', Math.min(5, Math.floor(k * 6)), d.x, (d.y ?? groundYForDepth(d.z)) - 40, { anchor: 'center', scale: 1.4 }); continue; }
       ctx.save(); for (let i = 0; i < 7; i++) { const a = i / 7 * TAU; ctx.globalAlpha = .55 * (1 - k); ctx.fillStyle = '#e1bee7'; ctx.beginPath(); ctx.arc(d.x + Math.cos(a) * 26 * k, d.y - 40 + Math.sin(a) * 20 * k, 12, 0, TAU); ctx.fill(); } ctx.restore();
     }
   }
@@ -134,3 +136,5 @@ defineSignature('S74', {
     offerRecast(p, { window: mirage.life, label: 'TAUSCH', valid: () => !mirage.isFinished && mirage.living().length > 0, stage2: (game) => mirage.swap(game) });
   }
 });
+// Hand-drawn rune objects (rounds 7–10) render at fine density, not through the coarse pixel layer.
+for (const C of [Mirage]) Object.defineProperty(C.prototype, 'fineVfx', { value: true, writable: true, configurable: true });

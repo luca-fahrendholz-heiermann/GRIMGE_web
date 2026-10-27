@@ -499,3 +499,5 @@ class WeightlessBand {
 defineSignature('S24', { cast(c) { emit(new WeightlessBand(c.sig, c.caster, lineOf(c.target, c.caster, 220, 100)), c.quality); } });
 
 export const SIGNATURES_B = ['S13', 'S14', 'S15', 'S16', 'S17', 'S18', 'S19', 'S20', 'S21', 'S22', 'S23', 'S24'];
+// Hand-drawn rune objects (rounds 7–10) render at fine density, not through the coarse pixel layer.
+for (const C of [GlassField, BeamPrism, RiftEdge, PolarRotor, WeightlessBand]) Object.defineProperty(C.prototype, 'fineVfx', { value: true, writable: true, configurable: true });

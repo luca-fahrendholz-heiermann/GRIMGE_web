@@ -59,6 +59,7 @@ export class SealCube {
     const fade = this.endT != null ? Math.max(0, 1 - (this.t - this.endT) / .5) : 1;
     const s = grow * shrink; const hw = CUBE.half * s; const h = CUBE.height * s; const dx = 12 * s; const dy = 10 * s;
     const x = this.x; const y = this.y + 6;
+    if (spellSheetReady('seal_cube')) { drawSpellSprite(ctx, 'seal_cube', Math.floor(this.t * 8) % 4, x + 6 * s, y + 2, { scale: Math.max(.05, s), alpha: fade }); return; }
     // Back face, sides and front face of a 2.5D cube.
     const front = [[x - hw, y], [x + hw, y], [x + hw, y - h], [x - hw, y - h]];
     const back = front.map(([px, py]) => [px + dx, py - dy]);
@@ -130,9 +131,11 @@ export class WrathBeam {
     if (this.phase === 'charge') {
       // A red-black core grows in the hand; streaks get sucked in.
       const r = 5 + 13 * this.k; const pulse = .7 + .3 * Math.sin(this.t * 22);
+      if (spellSheetReady('rage_core')) { ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; drawSpellSprite(ctx, 'rage_core', Math.floor(this.t * 16) % 4, hx, hy, { anchor: 'center', scale: .45 + .75 * this.k }); ctx.globalCompositeOperation = 'lighter'; } else {
       ctx.globalAlpha = .9; ctx.fillStyle = '#b71c1c'; ctx.beginPath(); ctx.arc(hx, hy, r + 4, 0, TAU); ctx.fill();
       ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = '#120000'; ctx.beginPath(); ctx.arc(hx, hy, r * .7, 0, TAU); ctx.fill();
       ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = pulse; ctx.strokeStyle = '#ff5252'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(hx, hy, r + 7, 0, TAU); ctx.stroke();
+      }
       for (let i = 0; i < 8; i++) { const a = i / 8 * TAU + this.t * 4; const rr = (36 + 14 * this.k) * (1 - ((this.t * 2.5 + i / 8) % 1)) + r; ctx.globalAlpha = .8; ctx.strokeStyle = i % 2 ? '#ff8a80' : '#ffffff'; ctx.beginPath(); ctx.moveTo(hx + Math.cos(a) * rr, hy + Math.sin(a) * rr * .7); ctx.lineTo(hx + Math.cos(a) * (rr - 6), hy + Math.sin(a) * (rr - 6) * .7); ctx.stroke(); }
       // Charge meter under the caster.
       ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = .85; ctx.fillStyle = '#1a0000'; ctx.fillRect(Math.round(p.x - 20), Math.round((p.y ?? this.y) + 4), 40, 4); ctx.fillStyle = this.k >= 1 ? '#ffffff' : '#ff5252'; ctx.fillRect(Math.round(p.x - 20), Math.round((p.y ?? this.y) + 4), Math.round(40 * this.k), 4);
@@ -260,3 +263,5 @@ defineSignature('S73', {
     combat.spawnShockwave(x, groundYForDepth(z), STOP.radius, '#eceff1');
   }
 });
+// Hand-drawn rune objects (rounds 7–10) render at fine density, not through the coarse pixel layer.
+for (const C of [SealCube, WrathBeam]) Object.defineProperty(C.prototype, 'fineVfx', { value: true, writable: true, configurable: true });
