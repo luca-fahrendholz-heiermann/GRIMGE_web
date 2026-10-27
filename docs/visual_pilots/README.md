@@ -540,3 +540,12 @@ Panzerhandschuhe, Eisschwert, Streitkolben (& Schild), Doppelklinge, Odachi, Wur
 Hinweis des Users: „viele Waffen sind viel zu überdimensioniert“. Die Länge kam von den alten Astral-Formen, die teils länger als der Held waren. Jetzt werden alle Waffen mit 0,75 ihres Sheets gezeichnet und sind höchstens 50 Weltpixel lang (etwa die halbe Heldengröße). Das gilt in der Hand, beim Blocken, geworfen, am Boden und für die Katana-Scheide (`weapon_sheets.js`: `SIZE`, `MAX_LEN`).
 
 - `v52_weapon_sizes.png` (alle 37 im Stand)
+
+## v53 — Waffen-Geschosse in Pixelqualität (27.10.2026)
+
+Die Geschosse der Waffen (`drawShotPixel` in `weapons_ext.js`) sind jetzt knackige Pixelformen in der Farbe der jeweiligen Waffe (dunkle Kontur, Körper, heller Kern) statt weicher Astral-Leuchtformen:
+- Pfeil (Holzschaft, Stahlspitze, Federn in Waffenfarbe), Armbrustbolzen, magische Kugel mit Schweif, Rune, Hexagramm, Lichtspeer, Windsichel bzw. Luftschnitt.
+- Wurfmesser, Chakram, Zauberkarte und Talisman fliegen als ihre gezeichneten Waffen-Sheets.
+- Noten waren schon knackig und bleiben.
+
+- `v53_weapon_shots.png`

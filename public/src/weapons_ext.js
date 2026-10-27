@@ -12,6 +12,7 @@
 import { audio } from './audio.js';
 import { combat } from './combat.js';
 import { groundYForDepth } from './world.js';
+import { drawSpellSprite, spellSheetReady } from './spell_visuals.js';
 
 const hit = (state, time, vx, damage, knockback, lift, reach, extra = {}) => Object.freeze({ state, time, vx, damage, knockback, lift, radius: Math.round(reach * .6), reach, hitstopTicks: extra.finisher ? 6 : 3, hitReaction: extra.finisher ? 'finisher' : 'light', ...extra });
 // A ranged combo step: fires its shot, no melee hitbox.
@@ -232,6 +233,26 @@ export function drawMusicNote(ctx, x, y, size, hue, { dir = 1, double = false, a
 // ── Projectiles of the ranged / magic weapons ───────────────────────────
 // Spread is lateral (depth) spread; every shot is a real projectile with its
 // own collision (capturable / reflectable like spell projectiles).
+// Weapon shots drawn crisp (user, 27 Oct 2026: "alles in Optik verbessern"): pixel shapes in the weapon's own colour
+// (dark contour, body, light core) pointing along +x; thrown weapons use their drawn sheet. Returns false when the
+// kind has no crisp look (the astral piece is drawn then).
+const SHOT_SHEETS = { knife: ['w_knife', 48, 14, 0], chakram: ['w_chakram', 40, 40, 0], card: ['w_card', 28, 32, 0], talisman: ['w_talisman', 24, 44, 0] };
+export function drawShotPixel(ctx, kind, hue, t = 0) {
+  const sh = SHOT_SHEETS[kind];
+  if (sh) { if (!spellSheetReady(sh[0])) return false; drawSpellSprite(ctx, sh[0], Math.floor(t * 10) % 4, 0, 0, { anchor: 'center', scale: .8 }); return true; }
+  const dark = shade(hue, -.7); const mid = hue; const light = shade(hue, .55); const R = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(Math.round(x), Math.round(y), Math.max(1, Math.round(w)), Math.max(1, Math.round(h))); };
+  const lens = (L, H, tail = 0) => { for (let x = -L / 2 - tail; x <= L / 2; x++) { const u = (x + L / 2) / L; const h = Math.max(0, Math.round(H * Math.sin(Math.PI * Math.min(1, Math.max(0, u))))); if (x < -L / 2) { R(x, -1, 1, 2, dark); continue; } R(x, -h - 1, 1, h * 2 + 2, dark); if (h > 0) R(x, -h, 1, h * 2, mid); if (h > 1) R(x, -1, 1, 2, light); } };
+  switch (kind) {
+    case 'arrow': R(-14, -1, 26, 2, '#3a2214'); R(-14, -1, 26, 1, '#7a5432'); for (let k = 0; k < 6; k++) R(12 + k, -3 + k * .5, 1, 6 - k, k ? '#a8b6c2' : '#06070a'); R(12, -3, 1, 6, '#06070a'); for (const sg of [-1, 1]) for (let k = 0; k < 5; k++) R(-14 + k, sg * (2 + k * .4) - (sg < 0 ? 1 : 0), 1, 1 + (k >> 1), mid); return true;
+    case 'bolt': R(-10, -2, 18, 4, '#06070a'); R(-9, -1, 16, 2, '#5a4a3a'); for (let k = 0; k < 7; k++) R(8 + k, -3 + k * .45, 1, 6 - k * .9, k ? '#dbe4ec' : '#06070a'); R(-10, -3, 3, 6, mid); return true;
+    case 'orb': { const r = 6; for (let y = -r - 1; y <= r + 1; y++) for (let x = -r - 1; x <= r + 1; x++) { const d = Math.hypot(x, y); if (d > r + 1) continue; R(x, y, 1, 1, d > r ? dark : d > r - 2 ? mid : (x + y < -3 ? '#ffffff' : light)); } for (let k = 1; k <= 3; k++) R(-r - 3 * k - 1, -1 + (k % 2), 3 - (k >> 1), 2, k === 1 ? mid : dark); return true; }
+    case 'rune': lens(20, 5); R(-2, -3, 1, 6, '#ffffff'); R(-2, -3, 4, 1, '#ffffff'); R(1, -3, 1, 3, '#ffffff'); return true;
+    case 'hex': for (let y = -7; y <= 7; y++) for (let x = -7; x <= 7; x++) { const hx = Math.max(Math.abs(y) * 1.15, Math.abs(x) * .58 + Math.abs(y) * .58); if (hx > 7) continue; R(x, y, 1, 1, hx > 6 ? dark : hx > 4.4 ? mid : hx > 2 ? light : '#ffffff'); } return true;
+    case 'light': lens(28, 3, 6); R(4, -1, 6, 2, '#ffffff'); return true;
+    case 'gust': case 'wave': for (let a = -1.15; a <= 1.15; a += .03) { const w = Math.max(1, Math.round(4 * Math.cos(a * 1.2))); for (let d = 0; d <= w; d++) R(Math.cos(a) * (12 - d) - 4, Math.sin(a) * (14 - d), 1, 1, d === 0 ? '#ffffff' : d === w ? dark : light); } return true;
+    default: return false;
+  }
+}
 const PIECE_OF_SHOT = { arrow: 'arrow', bolt: 'bolt', knife: 'knife', chakram: 'chakram', card: 'card', orb: 'orb', rune: 'rune', hex: 'hex', light: 'light', note: 'note', talisman: 'talisman', gust: 'gust', wave: 'gust' };
 export class WeaponShot {
   constructor(owner, shot, hue, drawPiece, { power = 1, index = 0, count = 1, vzExtra = 0, height = null, delay = 0 } = {}) {
@@ -299,7 +320,7 @@ export class WeaponShot {
     const sc = this.shot.size ?? 1; ctx.scale(sc, sc);
     if (this.kind === 'note' || this.kind === 'gust') ctx.globalAlpha = Math.min(1, this.life * 3);
     else if (this.kind === 'wave') ctx.globalAlpha = Math.min(1, this.life * 8); // air slash: crisp until the very end
-    this.drawPiece(ctx, PIECE_OF_SHOT[this.kind] ?? 'rune', this.joker ? '#ffffff' : this.hue, { intensity: 1.1 });
+    if (!drawShotPixel(ctx, this.kind, this.joker ? '#ffffff' : this.hue, this.t ?? 0)) this.drawPiece(ctx, PIECE_OF_SHOT[this.kind] ?? 'rune', this.joker ? '#ffffff' : this.hue, { intensity: 1.1 });
     ctx.restore();
     if (this.sealed != null) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = this.hue; ctx.globalAlpha = .7; ctx.beginPath(); ctx.ellipse(this.x, groundYForDepth(this.z), (this.shot.explode ?? 50) * (1 - this.sealed / (this.shot.seal || 1) * .5), (this.shot.explode ?? 50) * .3, 0, 0, Math.PI * 2); ctx.stroke(); ctx.restore(); }
   }
