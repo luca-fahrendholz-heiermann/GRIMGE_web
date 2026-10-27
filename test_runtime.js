@@ -2838,6 +2838,22 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
           for (const dir of ['forward', 'up', 'down']) (await import('./public/src/arcane_moves.js')).ARCANE_CHARGE.A09(strict, { x: 300, y: 300, f: 1 }, buff.BUFF_FORMS.A09.mat, dir, .7, 1.2);
         } catch (e) { bad9.push(e.message); }
         assert(!bad9.length && bled && PR.lateRuneRoute('buff_A09')?.kind === 'boss', 'A09 BLUTARSENAL: salvo, gatling, rocket hub, rocket rain, spear bed and full arsenal hit and render, foes bleed; boss drop only ' + bad9.slice(0, 4).join(' | ')); buff.endBuffForm(P); }
+      // Round-2 signature passives (user, 27 Oct 2026): voids swallow shots, marionettes strike, bells paralyse, frost freezes.
+      { const AP = await import('./public/src/arcane_passives.js'); const STS = await import('./public/src/status_effects.js'); const badP = [];
+        try {
+          // T23: a hostile bolt flying into a void is swallowed.
+          start('T23'); const [vx, vy] = [P.x + P.facing * -24, P.y - 58 - 30]; const shot = { x: vx, y: vy, z: P.z, team: 'red', life: 1, vx: -300 }; game.projectiles = game.projectiles ?? []; game.projectiles.push(shot);
+          AP.arcanePassivesTick(P, 1 / 60, buff.currentBuffForm(P)); if (shot.life > 0) badP.push('T23 shot not swallowed'); game.projectiles.splice(game.projectiles.indexOf(shot), 1); buff.endBuffForm(P);
+          // T24: a foe beside the hero is struck by a marionette.
+          start('T24'); dummy.homeX = dummy.x = P.x + 50; dummy.hp = dummy.maxHp; P._puppetT = 0; AP.arcanePassivesTick(P, 1 / 60, buff.currentBuffForm(P)); if (dummy.hp >= dummy.maxHp) badP.push('T24 no puppet strike'); buff.endBuffForm(P);
+          // T35: a foe close by freezes.
+          start('T35'); dummy.homeX = dummy.x = P.x + 30; dummy.statusImmuneUntil = {}; dummy.statuses = {}; P._frostCd = null; AP.arcanePassivesTick(P, 1 / 60, buff.currentBuffForm(P)); if (!STS.hasStatus(dummy, 'frozen')) badP.push('T35 no freeze'); buff.endBuffForm(P);
+          // T08: three landed melee hits ring the bells (paralysis).
+          start('T08'); dummy.homeX = dummy.x = P.x + 40; dummy.statusImmuneUntil = {}; dummy.statuses = {}; AP.arcanePassivesTick(P, 1 / 60, buff.currentBuffForm(P));
+          const SR = await import('./public/src/signature_runes.js'); for (let i = 0; i < 3; i++) SR.signatureEvent(P, 'hit', { hits: [{ target: dummy, blocked: false }] });
+          if (!STS.hasStatus(dummy, 'paralysis')) badP.push('T08 no bell paralysis'); buff.endBuffForm(P);
+        } catch (e) { badP.push(e.message); }
+        assert(!badP.length, 'Round-2 passives: Nullfeldträger swallows shots, Fadenregent marionettes strike, Kältestillstand freezes, Ossuarium bells paralyse ' + badP.join(' | ')); }
       // A11 DRACHENGEIST (user, 27 Oct 2026: a horned dragon spirit with a fire aura): six techniques hit and render, foes burn;
       // Ignis route.
       { const STS = await import('./public/src/status_effects.js'); const badD = []; let burnt = false;

@@ -481,3 +481,12 @@ Sechs weitere gezeichnete Waffen statt Astral-Form (`vfx_weapons.cjs`):
 - `drawWeaponSheet` kann ein Sheet vorab drehen (`preRotation`).
 
 - `v45_weapons_r2.png`
+
+## v46 — Eigene Mechaniken für Runde 2 (27.10.2026)
+
+`public/src/arcane_passives.js`: Passive Fähigkeiten, die zu den neuen Rückenteilen passen. Die sechs Techniken bleiben.
+- **Nullfeldträger:** Die drei Negativräume verschlucken gegnerische Geschosse, die nah herankommen („VERSCHLUCKT“). Jeder Raum lädt danach 2 s nach.
+- **Fadenregent:** Die Marionetten schlagen alle 2,5 s selbst den nächsten Gegner auf ihrer Seite.
+- **Ossuarium:** Jeder dritte Nahkampftreffer läutet die Glocken. Ein Klangstoß lähmt Gegner im Umkreis 1 s lang („GLOCKENSCHLAG“).
+- **Kältestillstand:** Gegner, die nah herankommen, frieren 1,6 s ein (jeder Gegner höchstens alle 6 s).
+- Neuer Test für alle vier.
