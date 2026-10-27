@@ -54,13 +54,26 @@ function cracks(ctx, x, y, r, seed, a, color = '#ffffff', n = 7) {
   }
   ctx.save(); ctx.globalAlpha = a; ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x, y, r * .45, 0, TAU); ctx.stroke(); ctx.restore();
 }
+// The room dome, drawn crisp (user, 27 Oct 2026, Arcane States round 3): a flat tinted shell, a pixel grid of
+// meridians and rings with bright nodes at the crossings, a solid rim, and small cubes drifting inside.
 function dome(ctx, x, y, R, m, a, t = 0) {
   if (a <= .01) return;
-  ctx.save(); ctx.globalAlpha = a * .16; ctx.fillStyle = m.body; ctx.beginPath(); ctx.ellipse(x, y - R * .25, R, R * .62, 0, Math.PI, TAU); ctx.lineTo(x + R, y); ctx.ellipse(x, y, R, R * .3, 0, 0, Math.PI); ctx.fill();
-  ctx.globalAlpha = a * .85; ctx.strokeStyle = m.edge; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(x, y - R * .25, R, R * .62, 0, Math.PI, TAU); ctx.stroke(); ctx.beginPath(); ctx.ellipse(x, y, R, R * .3, 0, 0, TAU); ctx.stroke();
-  ctx.globalAlpha = a * .45; ctx.lineWidth = 1;
-  for (let i = -3; i <= 3; i++) { const u = i / 4; ctx.beginPath(); ctx.ellipse(x + Math.sin(t * .5) * 2, y - R * .25, Math.abs(u) * R + 1, R * .62, 0, Math.PI + (u < 0 ? 0 : 0), TAU); ctx.stroke(); }
-  for (let j = 1; j <= 3; j++) { const h = j / 4; ctx.beginPath(); ctx.ellipse(x, y - R * .25 - h * R * .55, R * Math.sqrt(1 - h * h), R * .3 * (1 - h * .5), 0, 0, TAU); ctx.stroke(); }
+  const px = (qx, qy, sz, c) => { ctx.fillStyle = c; ctx.fillRect(Math.round(qx - sz / 2), Math.round(qy - sz / 2), sz, sz); };
+  const cy = y - R * .25; const ry = R * .62;
+  ctx.save(); ctx.globalAlpha = a * .14; ctx.fillStyle = m.body; ctx.beginPath(); ctx.ellipse(x, cy, R, ry, 0, Math.PI, TAU); ctx.lineTo(x + R, y); ctx.ellipse(x, y, R, R * .3, 0, 0, Math.PI); ctx.fill();
+  ctx.globalAlpha = a;
+  // Rim: the floor ellipse and the dome outline, 2-px dots.
+  for (let i = 0; i < 360; i++) { const u = i / 360 * TAU; px(x + Math.cos(u) * R, y + Math.sin(u) * R * .3, 3, '#0e1a24'); px(x + Math.cos(u) * R, y + Math.sin(u) * R * .3, 2, m.edge); if (u >= Math.PI) { px(x + Math.cos(u) * R, cy + Math.sin(u) * ry, 3, '#0e1a24'); px(x + Math.cos(u) * R, cy + Math.sin(u) * ry, 2, m.edge); } }
+  // Grid: meridians (x = u·R) and rings (heights), dotted; nodes where they cross.
+  ctx.globalAlpha = a * .85;
+  // Meridians: at x = u·R the dome surface rises to ry·sqrt(1 − u²) above the centre line.
+  for (let i = -3; i <= 3; i++) { const u = i / 4; const top = ry * Math.sqrt(1 - u * u); for (let k = 0; k <= 40; k++) px(x + u * R, cy - top * k / 40, 2, m.edge); }
+  for (let j = 1; j <= 3; j++) { const h = j / 4; const rr = R * Math.sqrt(1 - h * h); const yy = cy - h * ry * .9; for (let k = 0; k < 120; k++) { const u = k / 120 * TAU; px(x + Math.cos(u) * rr, yy + Math.sin(u) * R * .3 * (1 - h * .5), 2, m.edge); } }
+  ctx.globalAlpha = a;
+  // Nodes where the rings cross the meridians (a few pulse bright).
+  for (let j = 1; j <= 3; j++) { const h = j / 4; const rr = R * Math.sqrt(1 - h * h); const yy = cy - h * ry * .9; for (let i = -3; i <= 3; i++) { const u = i / 4; if (Math.abs(u * R) > rr) continue; const pulse = (Math.floor(t * 4) + i + j) % 5 === 0; px(x + u * R, yy - Math.sqrt(Math.max(0, 1 - (u * R / rr) ** 2)) * R * .3 * (1 - h * .5), pulse ? 3 : 2, pulse ? (m.core ?? '#ffffff') : m.edge); } }
+  // Small cubes drifting inside the room.
+  for (let q = 0; q < 6; q++) { const u = (q * .37 + t * .05) % 1; const qx = x + (u - .5) * R * 1.4; const qy = y - 20 - ((q * 23 + t * 8) % (R * .45)); px(qx, qy, 4, m.edge); px(qx - 1, qy - 1, 2, m.core ?? '#ffffff'); }
   ctx.restore();
 }
 function boom(ctx, x, y, r, k, seed = 1) {

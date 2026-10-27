@@ -195,26 +195,25 @@ export function ghostOf(ctx, player, x, y, state, animTime, facing, alpha, tint 
   ctx.restore();
 }
 
+// A standing time plane in perspective, drawn crisp (user, 27 Oct 2026, Arcane States round 3): flat tinted glass,
+// a dark faceted frame with bright bevel edges, clock ticks along the frame and a second hand sweeping the glass.
 function timePlane(ctx, x, y, w, h, depthSkew, mat, alpha, t, seed) {
-  // A standing plane in perspective: its top edge leans away from the camera.
   const quad = [[x, y - h], [x + w, y - h - depthSkew], [x + w, y - depthSkew * .2], [x, y]];
-  ctx.save();
-  const g = ctx.createLinearGradient?.(x, y - h, x, y);
-  if (g) { g.addColorStop(0, rgba(mat.edge, .08)); g.addColorStop(1, rgba(mat.vein, .2)); ctx.fillStyle = g; } else ctx.fillStyle = rgba(mat.vein, .14);
+  const lerp = (a, b, u) => [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u];
+  const px = (p, sz, c) => { ctx.fillStyle = c; ctx.fillRect(Math.round(p[0] - sz / 2), Math.round(p[1] - sz / 2), sz, sz); };
+  ctx.save(); ctx.globalAlpha = alpha;
+  // Flat glass (one tone, no gradient) and a horizontal glint band.
+  ctx.globalAlpha = alpha * .22; ctx.fillStyle = mat.vein; ctx.beginPath(); quad.forEach(([qx, qy], i) => (i ? ctx.lineTo(qx, qy) : ctx.moveTo(qx, qy))); ctx.closePath(); ctx.fill();
+  ctx.globalAlpha = alpha * .35; const gv = ((t * .25 + seed) % 1); const g0 = lerp(quad[0], quad[3], gv); const g1 = lerp(quad[1], quad[2], gv); ctx.fillStyle = mat.edge; for (let u = 0; u <= 1; u += .02) { const q = lerp(g0, g1, u); ctx.fillRect(Math.round(q[0]), Math.round(q[1]), 2, 2); }
+  // Frame: a 3-px dark band per edge, a bright bevel on the outer side (pixels, opaque).
   ctx.globalAlpha = alpha;
-  ctx.beginPath(); quad.forEach(([px, py], i) => (i ? ctx.lineTo(px, py) : ctx.moveTo(px, py))); ctx.closePath(); ctx.fill();
-  ctx.globalCompositeOperation = 'lighter';
-  // Time ticks running along the plane edges.
-  ctx.strokeStyle = mat.core; ctx.lineWidth = 1.4; ctx.globalAlpha = alpha * .8; ctx.stroke();
-  for (let i = 0; i < 6; i++) {
-    const u = ((t * .5 + i / 6 + seed) % 1);
-    const [ax, ay] = quad[0]; const [bx, by] = quad[1];
-    ctx.globalAlpha = alpha * Math.sin(u * Math.PI); ctx.fillStyle = mat.core;
-    ctx.fillRect(ax + (bx - ax) * u, ay + (by - ay) * u - 2, 3, 4);
-  }
-  // Ripples across the plane (time passing).
-  ctx.globalAlpha = alpha * .25; ctx.strokeStyle = mat.edge; ctx.lineWidth = 1;
-  for (let k = 0; k < 3; k++) { const v = ((t * .3 + k / 3 + seed) % 1); ctx.beginPath(); ctx.moveTo(x, y - h * v); ctx.lineTo(x + w, y - h * v - depthSkew * (1 - v * .8)); ctx.stroke(); }
+  for (let e = 0; e < 4; e++) { const a = quad[e]; const b = quad[(e + 1) % 4]; const n = Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 2); for (let i = 0; i <= n; i++) { const q = lerp(a, b, i / n); px(q, 4, '#0e1214'); px(q, 2, e < 2 ? mat.core : mat.edge); } }
+  for (const c of quad) { px(c, 6, '#0e1214'); px(c, 3, mat.core); }
+  // Clock ticks along the top edge and a second hand sweeping from the plane's centre.
+  for (let i = 1; i < 12; i++) { const q = lerp(quad[0], quad[1], i / 12); px([q[0], q[1] + 3], i % 3 ? 1 : 2, mat.core); }
+  const cx = (quad[0][0] + quad[2][0]) / 2; const cy = (quad[0][1] + quad[2][1]) / 2; const a = t * 2 + seed * 6; const hl = Math.min(w, h) * .35;
+  for (let r = 0; r < hl; r += 2) px([cx + Math.cos(a) * r, cy + Math.sin(a) * r], 2, r > hl - 4 ? mat.core : mat.edge);
+  px([cx, cy], 4, mat.core);
   ctx.restore();
 }
 

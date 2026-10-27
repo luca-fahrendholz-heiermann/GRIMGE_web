@@ -508,3 +508,11 @@ Eigene Umsetzungen (`vfx_arcane3.cjs`, `arcane_newforms.js`), jeweils mit sechs 
 - Seelenschädel (Bild 19) ist Teil der Totenmaske (v47).
 
 - `v48_runenritter_schattenlanzer.png`
+
+## v49 — Arcane States Runde 3 (27.10.2026)
+
+Vorher verglichen; was schon stark ist, bleibt: **A01 Göttlicher Riese, A03 Tausendhand und A04 Bankai** sind unverändert.
+- **T39 Vorausschnitt:** Die Zeitebenen hatten weiche Verläufe und additives Licht. Jetzt sind es flache Glasflächen mit dunklem Pixelrahmen und hellen Facettenkanten, Uhrenmarken an der Oberkante, einem wandernden Glanzband und einem Sekundenzeiger. Die Echos und ihre Angriffe bleiben.
+- **A07 Raum:** Die Kuppel aus dünnen Linien ist jetzt ein festes Pixel-Raumgitter mit dunklem Rand, durchgehenden Meridianen und Ringen, leuchtenden Knoten an den Kreuzungen und schwebenden Würfeln. Die Raum-Mechaniken bleiben.
+
+- `v49_arcane_states_r3.png` (Vorausschnitt, Raum)
