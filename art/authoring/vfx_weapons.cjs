@@ -333,7 +333,7 @@ function crossbow() { const s = sheetOf('w_crossbow', 84, 80); const cy = 40; fo
 function chainScythe() { const s = sheetOf('w_chain_scythe', 76, 48); const cy = 36; for (let f = 0; f < 4; f++) {
   shaft(s, f, P.black, 2, 20, cy, 2); wrap(s, f, Q.violet, 4, 16, cy, 2);
   for (let i = 0; i <= 90; i++) { const u = i / 90; const x = 20 + u * 52; const y = cy - 2 - Math.sin(u * Math.PI * .7) * 26 - u * 4; const w = Math.max(1, Math.round(4 * (1 - u))); for (let d = 0; d <= w; d++) tone(s, f, d === w ? Q.violet : P.steel, x + d * .4, y + d, d === w ? .9 : d === 0 ? .95 : .5); }
-  for (let k = 0; k < 4; k++) disc(s, f, P.steel, 2, cy + 4 + k * 3, 1, 1, () => .7); // chain links below the grip done(s, f); } return s; }
+  for (let k = 0; k < 4; k++) disc(s, f, P.steel, 2, cy + 4 + k * 3, 1, 1, () => .7); /* chain links below the grip */ done(s, f); } return s; }
 function spellblade() { const s = sheetOf('w_spellblade', 96, 26); const cy = 13; for (let f = 0; f < 4; f++) {
   wrap(s, f, P.leather, 3, 11, cy, 1); for (let y = -6; y <= 6; y++) for (let x = 12; x <= 14; x++) tone(s, f, P.steel, x, cy + y, y < 0 ? .85 : .45);
   blade(s, f, 15, 90, (x) => cy - (x > 84 ? 3 - (x - 84) * .5 : 3), (x) => cy + (x > 84 ? 3 - (x - 84) * .5 : 3), facet(P.steel));
