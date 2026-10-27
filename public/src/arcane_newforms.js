@@ -139,10 +139,10 @@ export function newFormsTick(p, dt, form) {
       } };
       listeners.set(p, listen(l));
     }
-    if (form.id === 'A13') for (let i = skulls.length - 1; i >= 0; i--) { const s = skulls[i]; s.life -= dt; if (s.owner !== p) continue; if (Math.hypot(s.x - p.x, (s.z - p.z) * DEPTH) < 26) { p.hp = Math.min(p.maxHp, p.hp + NEWFORMS.skullHeal); combat.spawnDamageText?.(p.x, p.y - 100, '+' + NEWFORMS.skullHeal + ' SEELE', { color: '#4fffb0' }); s.life = 0; } if (s.life <= 0) skulls.splice(i, 1); }
+    if (form.id === 'A13') for (let i = skulls.length - 1; i >= 0; i--) { const s = skulls[i]; if (s.life <= 0) { skulls.splice(i, 1); continue; } if (s.owner !== p) continue; if (Math.hypot(s.x - p.x, (s.z - p.z) * DEPTH) < 26) { p.hp = Math.min(p.maxHp, p.hp + NEWFORMS.skullHeal); combat.spawnDamageText?.(p.x, p.y - 100, '+' + NEWFORMS.skullHeal + ' SEELE', { color: '#4fffb0' }); s.life = 0; } if (s.life <= 0) skulls.splice(i, 1); }
   }
 }
 function zap(x0, y0, x1, y1) { const seed = Math.floor(Math.random() * 1000); spells.activeSpells?.push({ fineVfx: true, isVisualOnly: true, x: x1, y: 0, z: 0, t: 0, isFinished: false, update(d) { this.t += d; if (this.t > .2) this.isFinished = true; }, render(ctx) { bolt(ctx, x0, y0, x1, y1, seed + Math.floor(this.t * 40), 1 - this.t * 4); } }); }
-function dropSkull(p, t) { const s = { owner: p, x: t.x, z: t.z ?? p.z, life: NEWFORMS.skullLife }; skulls.push(s); spells.activeSpells?.push({ fineVfx: true, isVisualOnly: true, get x() { return s.x; }, get z() { return s.z; }, y: 0, isFinished: false, update() { if (s.life <= 0) this.isFinished = true; }, render(ctx) { soulFire(ctx, s.x, groundYForDepth(s.z) - 16 + Math.sin(performance.now() / 300) * 2, Math.min(1, s.life), .8); } }); }
+function dropSkull(p, t) { const s = { owner: p, x: t.x, z: t.z ?? p.z, life: NEWFORMS.skullLife }; skulls.push(s); spells.activeSpells?.push({ fineVfx: true, isVisualOnly: true, get x() { return s.x; }, get z() { return s.z; }, y: 0, isFinished: false, update(d) { s.life -= d; if (s.life <= 0) this.isFinished = true; } /* the skull fades in game time even after the form ends */, render(ctx) { soulFire(ctx, s.x, groundYForDepth(s.z) - 16 + Math.sin(performance.now() / 300) * 2, Math.min(1, s.life), .8); } }); }
 // Seal marks above branded foes (drawn by the spell system as a tiny overlay per frame).
 export function drawSealMarks(ctx, gw, team) { for (const t of foesOf(gw, team)) { const n = t._sealMarks ?? 0; for (let i = 0; i < n; i++) sealAt(ctx, t.x + (i - (n - 1) / 2) * 14, (t.y ?? 0) - 96, 1, .6); } }
