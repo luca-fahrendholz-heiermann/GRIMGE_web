@@ -36,6 +36,7 @@ import { groundYForDepth } from './world.js';
 import { applyStatus, hasStatus } from './status_effects.js';
 import { ghostOf } from './buff_signatures.js';
 import { applyWard } from './mastery.js';
+import { drawSpellSprite, spellSheetReady, drawSheetBeam } from './spell_visuals.js';
 
 // potency: every domain rule hits this much harder (user, 20 Oct 2026: foes inside barely
 // suffered); suppress: the trapped cannot cast, attack slower; drain: mana lost by a
@@ -428,6 +429,15 @@ const active = new Set();
 // Only domains still running in the spell system (a cleared runtime drops them).
 export const activeDomains = () => { for (const d of [...active]) if (d.isFinished || (d.system && !d.system.activeSpells.includes(d))) active.delete(d); return [...active]; };
 
+// ── pixel drawing helpers: squares stepped along a path, so rings and seams stay crisp ──
+// An elliptic arc of sz-px squares; dash = [on, off] in squares, phase shifts the pattern (marching rings).
+function pxArc(ctx, x, y, rx, ry, a0, a1, sz = 2, dash = null, phase = 0) {
+  if (rx < 1 || ry < 0) return; const len = (a1 - a0) * Math.sqrt((rx * rx + ry * ry) / 2); const n = Math.max(6, Math.ceil(len / (sz * .9))); const per = dash ? dash[0] + dash[1] : 0;
+  for (let i = 0; i <= n; i++) { if (dash && (((i + Math.floor(phase)) % per) + per) % per >= dash[0]) continue; const a = a0 + (a1 - a0) * i / n; ctx.fillRect(Math.round(x + Math.cos(a) * rx - sz / 2), Math.round(y + Math.sin(a) * ry - sz / 2), sz, sz); }
+}
+function pxLine(ctx, x0, y0, x1, y1, sz = 2) { const n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0) / (sz * .8))); for (let i = 0; i <= n; i++) ctx.fillRect(Math.round(x0 + (x1 - x0) * i / n - sz / 2), Math.round(y0 + (y1 - y0) * i / n - sz / 2), sz, sz); }
+function pxDisc(ctx, x, y, r) { for (let yy = -r; yy <= r; yy += 2) { const w = Math.round(Math.sqrt(Math.max(0, r * r - yy * yy))); ctx.fillRect(Math.round(x - w), Math.round(y + yy), w * 2, 2); } }
+
 export class Domain {
   constructor(sig, owner, quality, ruleId = 'S53') {
     this.sig = sig; this.owner = owner; this.team = owner.team; this.quality = quality; this.ruleId = DOMAIN_RULES[ruleId] ? ruleId : 'S53'; this.rule = DOMAIN_RULES[this.ruleId];
@@ -519,14 +529,13 @@ export class Domain {
     pal.bands.forEach((c, i) => { ctx.fillStyle = c; ctx.fillRect(x - rx, y - h + i * h / pal.bands.length, rx * 2, h / pal.bands.length + 1); });
     ctx.fillStyle = pal.floor; ctx.beginPath(); ctx.ellipse(x, y, rx, ry, 0, 0, TAU); ctx.fill();
     this.rule.interior(ctx, this, x, y, rx, ry, h, k, fade);
-    ctx.strokeStyle = pal.crack; ctx.lineWidth = 1.5; ctx.globalAlpha = fade * (.45 + .25 * Math.sin(this.t * 4));
-    for (let i = 0; i < 10; i++) { const a = i / 10 * TAU + .2; ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * rx * .12, y + Math.sin(a) * ry * .12); ctx.lineTo(x + Math.cos(a + .1) * rx * .55, y + Math.sin(a + .1) * ry * .55); ctx.lineTo(x + Math.cos(a - .05) * rx * .92, y + Math.sin(a - .05) * ry * .92); ctx.stroke(); }
+    ctx.fillStyle = pal.crack; ctx.globalAlpha = fade * (.45 + .25 * Math.sin(this.t * 4));
+    for (let i = 0; i < 10; i++) { const a = i / 10 * TAU + .2; const mx = x + Math.cos(a + .1) * rx * .55; const my = y + Math.sin(a + .1) * ry * .55; pxLine(ctx, x + Math.cos(a) * rx * .12, y + Math.sin(a) * ry * .12, mx, my, 2); pxLine(ctx, mx, my, x + Math.cos(a - .05) * rx * .92, y + Math.sin(a - .05) * ry * .92, 2); }
     ctx.restore();
     // The trapped are marked: a pulsing ring of the domain's colour at their feet.
-    ctx.strokeStyle = pal.rim; ctx.lineWidth = 2;
-    for (const t of this.trapped) { if (!alive(t)) continue; const ty = t.y ?? groundYForDepth(t.z ?? this.cz); ctx.globalAlpha = fade * (.55 + .35 * Math.sin(this.t * 8)); ctx.beginPath(); ctx.ellipse(t.x, ty, 18, 5, 0, 0, TAU); ctx.stroke(); }
-    ctx.strokeStyle = pal.wall; ctx.lineWidth = 2; ctx.globalAlpha = fade * .9;
-    ctx.beginPath(); ctx.ellipse(x, y, rx, h, 0, Math.PI, TAU); ctx.stroke();
+    ctx.fillStyle = pal.rim;
+    for (const t of this.trapped) { if (!alive(t)) continue; const ty = t.y ?? groundYForDepth(t.z ?? this.cz); ctx.globalAlpha = fade; pxArc(ctx, t.x, ty, 18, 5, 0, TAU, 2, [3, 2], this.t * 14); }
+    ctx.fillStyle = pal.wall; ctx.globalAlpha = fade * .9; pxArc(ctx, x, y, rx, h, Math.PI, TAU, 2);
     ctx.restore();
   }
   // Before the dome: the hand sign — a dark ring gathering at the caster's feet.
@@ -539,11 +548,11 @@ export class Domain {
 
 // Front layer (over the actors): near shell, rim, strikes / geysers, duel seam, blackout.
 class DomainShell {
-  constructor(domain) { this.domain = domain; this.isFinished = false; this.x = domain.cx; }
+  constructor(domain) { this.domain = domain; this.isFinished = false; this.x = domain.cx; this.fineVfx = true; }
   update() { if (this.domain.isFinished) this.isFinished = true; }
   render(ctx) {
     const d = this.domain; const k = d.unfoldK; const x = d.cx; const y = d.y; const pal = d.rule.pal;
-    if (d.t < DOMAIN.sign) { const p = d.owner; const hy = (p.y ?? y) - 50; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = .9; ctx.fillStyle = pal.rim; ctx.beginPath(); ctx.arc(p.x + (p.facing || 1) * 6, hy, 4 + 8 * (d.t / DOMAIN.sign), 0, TAU); ctx.fill(); ctx.restore(); return; }
+    if (d.t < DOMAIN.sign) { const p = d.owner; const hy = (p.y ?? y) - 50; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = .9; ctx.fillStyle = pal.rim; pxDisc(ctx, p.x + (p.facing || 1) * 6, hy, Math.round(4 + 8 * (d.t / DOMAIN.sign))); ctx.restore(); return; }
     const ft = d.t - DOMAIN.sign;
     if (ft < .18) { ctx.save(); ctx.globalAlpha = .85 * (1 - ft / .18); ctx.fillStyle = '#000000'; ctx.fillRect(x - 3000, y - 3000, 6000, 6000); ctx.restore(); }
     const gone = d.collapseT != null ? Math.min(1, (d.t - d.collapseT) / .6) : 0;
@@ -552,9 +561,12 @@ class DomainShell {
     // Geysers (Glutkessel) and strikes stay visible during the collapse too.
     for (const g of d.geysers) {
       const gk = Math.min(1, g.t / .12); const ga = 1 - Math.max(0, g.t - .2) / .4; const gy = groundYForDepth(g.z); const gh = (g.big ? 150 : 100) * gk;
-      ctx.globalAlpha = Math.max(0, ga); ctx.fillStyle = '#ff6d00'; ctx.fillRect(Math.round(g.x - 9), Math.round(gy - gh), 18, Math.round(gh));
+      ctx.globalAlpha = Math.max(0, ga);
+      // A fire jet shoots up out of the magma floor (hand-drawn fire_jet strip, root on the ground).
+      if (spellSheetReady('fire_jet')) { if (gh > 8) drawSheetBeam(ctx, 'fire', g.x, gy + 2, g.x, gy - gh, g.t, g.big ? 1 : .5); continue; }
+      ctx.fillStyle = '#ff6d00'; ctx.fillRect(Math.round(g.x - 9), Math.round(gy - gh), 18, Math.round(gh));
       ctx.fillStyle = '#ffd180'; ctx.fillRect(Math.round(g.x - 4), Math.round(gy - gh), 8, Math.round(gh));
-      ctx.fillStyle = '#fff3e0'; ctx.beginPath(); ctx.arc(g.x, gy - gh, 10 * gk, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#fff3e0'; pxDisc(ctx, g.x, gy - gh, Math.round(10 * gk));
     }
     for (const f of d.fx) {
       const fk = Math.min(1, f.t / .12); const fa = Math.max(0, 1 - Math.max(0, f.t - .25) / .45); const fy = groundYForDepth(f.z);
@@ -562,74 +574,78 @@ class DomainShell {
       if (f.type === 'mirror' && d.owner?.heroKey) {
         // A mirror image of the caster dashes in from the side and strikes.
         const sx = f.x + f.side * (60 - 50 * fk); ghostOf(ctx, d.owner, sx, fy, 'attack1', d.owner.animTime ?? 0, -f.side, .7 * fa, '#e0f7fa', f.big ? 1.1 : 1);
-        if (fk >= 1) { ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(f.x - 18, fy - 56); ctx.lineTo(f.x + 18, fy - 30); ctx.stroke(); }
+        if (fk >= 1) { ctx.fillStyle = '#ffffff'; pxLine(ctx, f.x - 18, fy - 56, f.x + 18, fy - 30, 2); }
       } else if (f.type === 'pulse') {
-        ctx.strokeStyle = pal.rim; ctx.lineWidth = f.big ? 5 : 3; const pr = (f.big ? 1 : .8) * d.R * (1 - fk * .8);
-        ctx.beginPath(); ctx.ellipse(f.x, fy, pr, pr * .32, 0, 0, TAU); ctx.stroke();
+        // A marching pixel ring contracts onto the centre.
+        ctx.fillStyle = pal.rim; const pr = (f.big ? 1 : .8) * d.R * (1 - fk * .8); pxArc(ctx, f.x, fy, pr, pr * .32, 0, TAU, f.big ? 4 : 3, [4, 2], f.t * 20);
+        ctx.fillStyle = pal.rimLight; pxArc(ctx, f.x, fy, pr * .9, pr * .29, 0, TAU, 2, [2, 4], -f.t * 20);
       } else if (f.type === 'bolt') {
-        ctx.strokeStyle = '#e1f5fe'; ctx.lineWidth = f.big ? 5 : 3; ctx.beginPath(); let bx = f.x; ctx.moveTo(bx, fy - DOMAIN.height);
-        for (let i = 1; i <= 7; i++) { bx = f.x + (i % 2 ? 8 : -8) * (1 - i / 8); ctx.lineTo(bx, fy - DOMAIN.height + i * DOMAIN.height / 7); } ctx.stroke();
-        ctx.fillStyle = '#4fc3f7'; ctx.beginPath(); ctx.ellipse(f.x, fy, 20 * fk, 6 * fk, 0, 0, TAU); ctx.fill();
+        // A zigzag bolt from the dome down to the foe (hand-drawn lightning strip) with a ring at the impact.
+        if (!drawSheetBeam(ctx, 'lightning', f.x, fy - DOMAIN.height, f.x, fy, f.t, f.big ? 1 : .5)) { ctx.fillStyle = '#e1f5fe'; let bx = f.x; for (let i = 1; i <= 7; i++) { const nx = f.x + (i % 2 ? 8 : -8) * (1 - i / 8); pxLine(ctx, bx, fy - DOMAIN.height + (i - 1) * DOMAIN.height / 7, nx, fy - DOMAIN.height + i * DOMAIN.height / 7, f.big ? 5 : 3); bx = nx; } }
+        ctx.fillStyle = '#4fc3f7'; pxArc(ctx, f.x, fy, 22 * fk, 6 * fk, 0, TAU, 3); ctx.fillStyle = '#e1f5fe'; pxArc(ctx, f.x, fy, 12 * fk, 3 * fk, 0, TAU, 2);
       } else if (f.type === 'wind') {
-        ctx.strokeStyle = '#a7ffeb'; ctx.lineWidth = 2;
-        for (let i = 0; i < 3; i++) { const r = (14 + i * 8) * (f.big ? 1.5 : 1); ctx.beginPath(); ctx.ellipse(f.x, fy - 20 - i * 14 - fk * 30, r, r * .35, 0, f.t * 12 + i, f.t * 12 + i + Math.PI * 1.4); ctx.stroke(); }
+        if (spellSheetReady('wind_whirl')) drawSpellSprite(ctx, 'wind_whirl', Math.floor(f.t * 20) % 12, f.x, fy - fk * 8, { scale: f.big ? .8 : .55 });
+        else { ctx.fillStyle = '#a7ffeb'; for (let i = 0; i < 3; i++) { const r = (14 + i * 8) * (f.big ? 1.5 : 1); pxArc(ctx, f.x, fy - 20 - i * 14 - fk * 30, r, r * .35, f.t * 12 + i, f.t * 12 + i + Math.PI * 1.4, 2); } }
       } else if (f.type === 'spike') {
-        const sh = (f.big ? 90 : 60) * fk; plate(ctx, [[f.x - 12, fy], [f.x - 2, fy - sh], [f.x + 3, fy - sh * .9], [f.x + 12, fy]], pal.mat, 5460, { alpha: fa, glowEdge: .8 });
-        plate(ctx, [[f.x + 6, fy], [f.x + 14, fy - sh * .6], [f.x + 20, fy]], pal.mat, 5461, { alpha: fa, glowEdge: .8 });
+        // Rock spikes burst up (rise frames 0-2, plateau 3, crumble 4-6), a smaller one beside.
+        if (spellSheetReady('rock_spike_v0')) { const fr = fk < 1 ? Math.min(2, Math.floor(fk * 3)) : f.t < .3 ? 3 : 4 + Math.min(2, Math.floor((f.t - .3) / .4 * 3)); const v = Math.floor(f.x) & 3; const sc = f.big ? 1.4 : 1;
+          drawSpellSprite(ctx, 'rock_spike_v' + ((v + 1) & 3), fr, f.x + 13, fy, { scale: sc * .6, flip: true }); drawSpellSprite(ctx, 'rock_spike_v' + v, fr, f.x, fy + 1, { scale: sc }); }
+        else { const sh = (f.big ? 90 : 60) * fk; plate(ctx, [[f.x - 12, fy], [f.x - 2, fy - sh], [f.x + 3, fy - sh * .9], [f.x + 12, fy]], pal.mat, 5460, { alpha: fa, glowEdge: .8 }); plate(ctx, [[f.x + 6, fy], [f.x + 14, fy - sh * .6], [f.x + 20, fy]], pal.mat, 5461, { alpha: fa, glowEdge: .8 }); }
       } else if (f.type === 'wolf') {
-        // A spirit wolf leaping in from the side.
+        // A spirit wolf leaping in from the side (galloping sheet, faces its run direction).
         const wx = f.x + f.side * (70 - 60 * fk); const wy = fy - 20 - Math.sin(fk * Math.PI) * 26; const dir = -f.side; const sc = f.big ? 1.3 : 1;
-        ctx.fillStyle = '#ffcc80'; ctx.beginPath(); ctx.ellipse(wx, wy, 16 * sc, 7 * sc, 0, 0, TAU); ctx.fill();
-        ctx.beginPath(); ctx.moveTo(wx + dir * 12 * sc, wy - 4); ctx.lineTo(wx + dir * 24 * sc, wy - 2); ctx.lineTo(wx + dir * 14 * sc, wy + 4); ctx.closePath(); ctx.fill();
-        ctx.beginPath(); ctx.moveTo(wx + dir * 12 * sc, wy - 5); ctx.lineTo(wx + dir * 15 * sc, wy - 13 * sc); ctx.lineTo(wx + dir * 17 * sc, wy - 5); ctx.fill();
-        ctx.fillStyle = '#ffffff'; ctx.fillRect(Math.round(wx + dir * 17 * sc), Math.round(wy - 4), 2, 2);
+        if (spellSheetReady('spirit_wolf')) drawSpellSprite(ctx, 'spirit_wolf', Math.floor(f.t * 18) % 6, wx, wy, { anchor: 'center', flip: dir < 0, scale: 1.15 * sc });
+        else { ctx.fillStyle = '#ffcc80'; ctx.fillRect(Math.round(wx - 16 * sc), Math.round(wy - 6 * sc), Math.round(32 * sc), Math.round(12 * sc)); }
       } else if (f.type === 'blade') {
+        // A sword drops from the dome, tip first, and rings on the floor.
         const k2 = Math.max(0, Math.min(1, f.t / .14)); const by = fy - 120 + 110 * k2;
-        ctx.save(); ctx.translate(f.x, by); ctx.fillStyle = '#eceff1'; ctx.beginPath(); ctx.moveTo(-4, -30); ctx.lineTo(4, -30); ctx.lineTo(0, 6); ctx.closePath(); ctx.fill();
-        ctx.fillStyle = '#ffca28'; ctx.fillRect(-8, -32, 16, 4); ctx.restore();
-        if (k2 >= 1) { ctx.fillStyle = '#ffe082'; ctx.beginPath(); ctx.ellipse(f.x, fy, 14, 4, 0, 0, TAU); ctx.fill(); }
+        if (spellSheetReady('chorus_blade')) { ctx.save(); ctx.translate(Math.round(f.x), Math.round(by - 12)); ctx.rotate(Math.PI / 2); drawSpellSprite(ctx, 'chorus_blade', Math.floor(f.t * 20) % 2, 0, 0, { anchor: 'center', scale: .8 }); ctx.restore(); }
+        else { ctx.fillStyle = '#eceff1'; ctx.fillRect(Math.round(f.x - 3), Math.round(by - 30), 6, 36); ctx.fillStyle = '#ffca28'; ctx.fillRect(Math.round(f.x - 8), Math.round(by - 32), 16, 4); }
+        if (k2 >= 1) { ctx.fillStyle = '#ffe082'; pxArc(ctx, f.x, fy, 16, 4, 0, TAU, 2, [3, 1], f.t * 30); }
       } else if (f.type === 'rift') {
-        ctx.strokeStyle = '#e040fb'; ctx.lineWidth = f.big ? 4 : 3; ctx.beginPath(); ctx.moveTo(f.x - 2, fy - 70 * fk); ctx.lineTo(f.x + 6, fy - 46 * fk); ctx.lineTo(f.x - 5, fy - 26 * fk); ctx.lineTo(f.x + 3, fy); ctx.stroke();
-        ctx.fillStyle = '#000000'; ctx.beginPath(); ctx.ellipse(f.x, fy - 36 * fk, 5 * fk, 24 * fk, 0, 0, TAU); ctx.fill();
+        // A void tear opens upright beside the foe.
+        if (spellSheetReady('rift_tear')) drawSpellSprite(ctx, 'rift_tear', Math.floor(f.t * 16) % 4, f.x, fy + 1, { scale: (f.big ? 1.6 : 1.3) * (.35 + .65 * fk) });
+        else { ctx.fillStyle = '#e040fb'; pxLine(ctx, f.x - 2, fy - 70 * fk, f.x + 6, fy - 46 * fk, 3); pxLine(ctx, f.x + 6, fy - 46 * fk, f.x - 5, fy - 26 * fk, 3); pxLine(ctx, f.x - 5, fy - 26 * fk, f.x + 3, fy, 3); }
       } else if (f.type === 'beam') {
-        const bw = (f.big ? 22 : 14) * (1 - Math.max(0, f.t - .2) * 1.5);
-        if (bw > 0) { ctx.fillStyle = '#fff59d'; ctx.fillRect(Math.round(f.x - bw), Math.round(fy - DOMAIN.height), Math.round(bw * 2), Math.round(DOMAIN.height)); ctx.fillStyle = '#ffffff'; ctx.fillRect(Math.round(f.x - bw * .4), Math.round(fy - DOMAIN.height), Math.round(bw * .8), Math.round(DOMAIN.height)); }
+        // A pillar of light from the dome (hand-drawn light strip).
+        if (!drawSheetBeam(ctx, 'light', f.x, fy - DOMAIN.height, f.x, fy, f.t, f.big ? 1 : .45)) { const bw = (f.big ? 22 : 14) * (1 - Math.max(0, f.t - .2) * 1.5); if (bw > 0) { ctx.fillStyle = '#fff59d'; ctx.fillRect(Math.round(f.x - bw), Math.round(fy - DOMAIN.height), Math.round(bw * 2), Math.round(DOMAIN.height)); } }
+        ctx.fillStyle = '#fff59d'; pxArc(ctx, f.x, fy, 18 * fk, 5 * fk, 0, TAU, 2, [2, 1], f.t * 24);
       } else if (f.type === 'ward') {
-        // A hexagonal shield shell closes around an ally.
-        const wr = (f.big ? 46 : 32) * fk; ctx.strokeStyle = '#b388ff'; ctx.lineWidth = f.big ? 4 : 3; ctx.beginPath();
-        for (let i = 0; i < 6; i++) { const a = i / 6 * TAU + Math.PI / 6; const px = f.x + Math.cos(a) * wr * .8; const py = fy - 40 + Math.sin(a) * wr; i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); }
-        ctx.closePath(); ctx.stroke(); ctx.fillStyle = '#ede7f6'; ctx.fillRect(Math.round(f.x - 2), Math.round(fy - 40 - wr * .5), 4, Math.round(wr));
+        // A hexagonal shield shell closes around an ally: pixel rim, dithered glass, a lit seam.
+        const wr = (f.big ? 46 : 32) * fk; const V = []; for (let i = 0; i < 6; i++) { const a = i / 6 * TAU + Math.PI / 6; V.push([f.x + Math.cos(a) * wr * .8, fy - 40 + Math.sin(a) * wr]); }
+        ctx.fillStyle = '#5e35b1'; for (let yy = -wr * .8; yy <= wr * .8; yy += 4) for (let xx = -wr * .6; xx <= wr * .6; xx += 4) if ((Math.round(xx / 4) + Math.round(yy / 4)) % 2 === 0) ctx.fillRect(Math.round(f.x + xx), Math.round(fy - 40 + yy), 2, 2);
+        ctx.fillStyle = '#b388ff'; for (let i = 0; i < 6; i++) pxLine(ctx, V[i][0], V[i][1], V[(i + 1) % 6][0], V[(i + 1) % 6][1], f.big ? 4 : 3);
+        ctx.fillStyle = '#ede7f6'; ctx.fillRect(Math.round(f.x - 1), Math.round(fy - 40 - wr * .5), 2, Math.round(wr));
       } else if (f.type === 'hexwall') {
-        // A wall of shield hexes slams up and shoves the foe.
-        const wh = (f.big ? 110 : 76) * fk; const wx = f.x;
-        ctx.fillStyle = '#5e35b1'; ctx.fillRect(Math.round(wx - 5), Math.round(fy - wh), 10, Math.round(wh));
-        ctx.strokeStyle = '#b388ff'; ctx.lineWidth = 2; for (let i = 0; i < 4; i++) { const cy = fy - wh * (i + .5) / 4; ctx.beginPath(); ctx.moveTo(wx, cy - 9); ctx.lineTo(wx + 7, cy - 4); ctx.lineTo(wx + 7, cy + 4); ctx.lineTo(wx, cy + 9); ctx.lineTo(wx - 7, cy + 4); ctx.lineTo(wx - 7, cy - 4); ctx.closePath(); ctx.stroke(); }
-        ctx.fillStyle = '#ede7f6'; ctx.fillRect(Math.round(wx - 1), Math.round(fy - wh), 2, Math.round(wh));
+        // A honeycomb wall of shield hexes slams up out of the floor and shoves the foe.
+        const sc = f.big ? 1.1 : .85; const wh = 112 * sc * fk; const wx = f.x;
+        if (spellSheetReady('hex_wall')) { ctx.save(); ctx.beginPath(); ctx.rect(wx - 40, fy - 140, 80, 142); ctx.clip(); drawSpellSprite(ctx, 'hex_wall', Math.floor(f.t * 12) % 4, wx, fy + 112 * sc - wh, { scale: sc }); ctx.restore(); }
+        else { ctx.fillStyle = '#5e35b1'; ctx.fillRect(Math.round(wx - 5), Math.round(fy - wh), 10, Math.round(wh)); }
       } else if (f.type === 'hands') {
-        for (const side of [-1, 1]) { const hh = (f.big ? 70 : 50) * fk; plate(ctx, [[f.x + side * 6 - 4, fy], [f.x + side * 10, fy - hh], [f.x + side * 16, fy - hh - 6], [f.x + side * 6 + 4, fy]], pal.mat, 5450 + (side > 0 ? 1 : 0), { alpha: fa, glowEdge: 1.1 }); }
+        // Clawed shadow hands climb out of the floor and close around the foe.
+        if (spellSheetReady('shadow_hands')) drawSpellSprite(ctx, 'shadow_hands', Math.min(3, Math.floor(fk * 4)), f.x, fy + 2, { scale: f.big ? .9 : .7 });
+        else for (const side of [-1, 1]) { const hh = (f.big ? 70 : 50) * fk; plate(ctx, [[f.x + side * 6 - 4, fy], [f.x + side * 10, fy - hh], [f.x + side * 16, fy - hh - 6], [f.x + side * 6 + 4, fy]], pal.mat, 5450 + (side > 0 ? 1 : 0), { alpha: fa, glowEdge: 1.1 }); }
       }
     }
     for (const s of d.slashes) {
       const kk = Math.min(1, s.t / .06); const a = 1 - Math.max(0, s.t - .08) / .14; const L = 34 * kk;
-      ctx.globalAlpha = Math.max(0, a); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(s.x - Math.cos(s.a) * L, s.y - Math.sin(s.a) * L); ctx.lineTo(s.x + Math.cos(s.a) * L, s.y + Math.sin(s.a) * L); ctx.stroke();
-      ctx.strokeStyle = pal.rim; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(s.x - Math.cos(s.a) * L * .7, s.y - Math.sin(s.a) * L * .7 + 2); ctx.lineTo(s.x + Math.cos(s.a) * L * .7, s.y + Math.sin(s.a) * L * .7 + 2); ctx.stroke();
+      ctx.globalAlpha = Math.max(0, a); ctx.fillStyle = '#ffffff'; pxLine(ctx, s.x - Math.cos(s.a) * L, s.y - Math.sin(s.a) * L, s.x + Math.cos(s.a) * L, s.y + Math.sin(s.a) * L, 2);
+      ctx.fillStyle = pal.rim; pxLine(ctx, s.x - Math.cos(s.a) * L * .7, s.y - Math.sin(s.a) * L * .7 + 2, s.x + Math.cos(s.a) * L * .7, s.y + Math.sin(s.a) * L * .7 + 2, 2);
     }
     if (gone > 0) {
       for (let i = 0; i < 16; i++) { const a = Math.PI + i / 15 * Math.PI; const sx = x + Math.cos(a) * rx; const sy = y + Math.sin(a) * h + gone * gone * 120; plate(ctx, [[sx - 6, sy], [sx, sy - 9], [sx + 6, sy + 2]], pal.mat, 5300 + i, { alpha: 1 - gone }); }
       ctx.restore(); return;
     }
-    ctx.globalAlpha = .1; ctx.fillStyle = pal.shell; ctx.beginPath(); ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI); ctx.ellipse(x, y, rx, h * .25, 0, Math.PI, 0, true); ctx.fill();
-    ctx.globalAlpha = .9; ctx.strokeStyle = pal.rim; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(x, y, rx, h, 0, Math.PI, TAU); ctx.stroke();
-    ctx.strokeStyle = pal.rimLight; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(x, y, Math.max(0, rx - 3), Math.max(0, h - 3), 0, Math.PI, TAU); ctx.stroke();
-    ctx.lineWidth = 2; ctx.strokeStyle = pal.rim; ctx.beginPath(); ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI); ctx.stroke();
+    ctx.globalAlpha = 1; ctx.fillStyle = pal.rim; pxArc(ctx, x, y, rx, h, Math.PI, TAU, 3);
+    ctx.fillStyle = pal.rimLight; pxArc(ctx, x, y, Math.max(0, rx - 4), Math.max(0, h - 4), Math.PI, TAU, 2, [6, 3], d.t * 10);
+    ctx.fillStyle = pal.rim; pxArc(ctx, x, y, rx, ry, 0, Math.PI, 2, [5, 2], -d.t * 12);
     for (let i = 0; i < 6; i++) { const a = Math.PI + ((d.t * .35 + i / 6) % 1) * Math.PI; ctx.fillStyle = pal.rimLight; ctx.fillRect(Math.round(x + Math.cos(a) * rx) - 1, Math.round(y + Math.sin(a) * h) - 1, 3, 3); }
     // Domain name over the dome while it is fresh.
     if (ft < 1.6 && d.owner?.isPlayerControlled) { ctx.globalAlpha = Math.min(1, (1.6 - ft) / .4); ctx.font = '900 15px Cinzel, serif'; ctx.textAlign = 'center'; ctx.fillStyle = pal.rimLight; ctx.strokeStyle = pal.bands[0]; ctx.lineWidth = 3; ctx.strokeText(d.rule.name, x, y - h - 8); ctx.fillText(d.rule.name, x, y - h - 8); }
     if (d.clash && d.clash.a === d) {
       const c = d.clash; const sx = c.seamX(); const top = y - DOMAIN.height;
-      ctx.globalAlpha = .95; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3; ctx.beginPath();
-      for (let i = 0; i <= 12; i++) { const yy = y - i / 12 * DOMAIN.height; const xx = sx + Math.sin(d.t * 30 + i * 1.7) * 4; i ? ctx.lineTo(xx, yy) : ctx.moveTo(xx, yy); } ctx.stroke();
+      ctx.globalAlpha = .95; ctx.fillStyle = '#ffffff'; let px0 = sx + Math.sin(d.t * 30) * 4;
+      for (let i = 1; i <= 12; i++) { const xx = sx + Math.sin(d.t * 30 + i * 1.7) * 4; pxLine(ctx, px0, y - (i - 1) / 12 * DOMAIN.height, xx, y - i / 12 * DOMAIN.height, 3); px0 = xx; }
       sparks(ctx, [[sx, (y + top) / 2]], pal.mat, d.t, 5390, 10, 1);
       ctx.font = '900 16px Rajdhani, sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#05020a'; ctx.lineWidth = 3;
       const label = `SPHÄREN-DUELL  ${c.powerA} : ${Math.round(c.powerB)}`; ctx.strokeText(label, sx, top - 26); ctx.fillText(label, sx, top - 26);

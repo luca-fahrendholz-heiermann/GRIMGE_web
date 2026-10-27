@@ -2641,5 +2641,34 @@ export const SPELL_SPRITE_SHEETS = Object.freeze({
   "res": 2,
   "hd": true,
   "anchor": "center"
+ },
+ "spirit_wolf": {
+  "name": "spirit_wolf",
+  "w": 32,
+  "h": 18,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "rift_tear": {
+  "name": "rift_tear",
+  "w": 12,
+  "h": 38,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 2
+ },
+ "hex_wall": {
+  "name": "hex_wall",
+  "w": 17,
+  "h": 56,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 2
  }
 });

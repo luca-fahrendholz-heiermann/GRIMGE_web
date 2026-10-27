@@ -625,3 +625,18 @@ Die Geschosse der Waffen (`drawShotPixel` in `weapons_ext.js`) sind jetzt knacki
 - **Scharfe Darstellung:** Alle gezeichneten Runen-Objekte der Runden 7–10 und die Säulen laufen jetzt in feiner Auflösung statt durch die grobe Pixel-Ebene (vorher wirkten sie verschwommen und blockig).
 
 - `v59_runde10.png`
+
+## v60 — Sphären: gezeichnete Effekte, Pixel-Kuppel (27.10.2026)
+
+- **Glutkessel:** Die Geysire sind gezeichnete Feuerstrahlen aus dem Magmaboden (statt Rechtecken).
+- **Sturm / Sonnenheiligtum:** Zickzack-Blitz bzw. gezeichnete Lichtsäule aus der Kuppel, Pixelring am Einschlag.
+- **Auge des Orkans:** gezeichneter Wirbelsturm.
+- **Steingrab:** gezeichnete Felsspitzen (wachsen, stehen, zerbröckeln), eine kleine daneben.
+- **Jagdgrund:** neuer galoppierender Geisterwolf (tiefe Brust, Spitzschnauze, buschiger Schwanz, Geisterflammen am Rücken).
+- **Klingenschmiede:** Schwerter fallen mit der Spitze voran, klingender Pixelring.
+- **Leere:** neuer aufrechter Leere-Riss mit violetten Blitzkanten.
+- **Bollwerk:** neue Wabenwand (zwei versetzte Hex-Reihen, Glasraster, wandernder Lichtpuls), Schutzhülle als Pixel-Hexagon mit Glasraster.
+- **Schattenmeer:** gezeichnete Krallenhände greifen zu.
+- **Kuppel:** Rand, Bodenring, gefangen-Ringe, Risse, Schnitte und Duell-Naht als scharfe Pixel (laufende Strichringe) statt weicher Linien; die vordere Hülle läuft in feiner Auflösung.
+
+- `v60_sphaeren.png`
