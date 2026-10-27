@@ -10,6 +10,7 @@
 //   w_sword          78×32  Runenritter sword (blue flame tongues, glowing fuller runes, gold guard, gem)
 //   w_shield         48×54  Runenschild (round, gold rim with studs, radial plates, glowing rune circuit, gem boss)
 //   w_scythe        150×84  Blutsense (black steel, red edge, blood-flame tongues, red-wrapped shaft)
+//   w_axe / w_hammer / w_sabre / w_dagger / w_bow / w_staff  batch 2 (see below)
 //   w_spirit_sword   84×34  Geisterklinge (jagged spirit-glass blade, white core, floating shards, feathered hilt)
 const B = require('./vfx_brush.cjs');
 const { Sheet, TAU, clamp01, rng } = B;
@@ -182,4 +183,89 @@ function scythe() {
   }
   return s;
 }
-module.exports = { weaponSheets: () => [glaive(), katana(), sheath(), spear(), sword(), shield(), spiritSword(), scythe()] };
+// ── Batch 2 (27 Oct 2026): great axe, great hammer, dual sabres, shadow daggers, recurve bow, rune staff ──
+// Great axe: a bearded dark-iron head with a gold rim and a bright edge, a back spike, a leather-wrapped haft.
+function greatAxe() {
+  const s = new Sheet('w_axe', 112, 56, 4, { anchor: 'center' }); const cy = 28;
+  for (let f = 0; f < 4; f++) {
+    shaft(s, f, P.wood, 2, 84, cy, 2); wrap(s, f, P.leather, 8, 26, cy, 2);
+    for (const x of [4, 28, 56, 82]) ring(s, f, P.steel, x, cy, 2, 3);
+    // Head: a crescent bit (bearded downward) between x 76 and 108, iron body, gold rim band, bright edge.
+    for (let y = -22; y <= 24; y++) for (let x = 0; x <= 32; x++) {
+      const outer = Math.hypot((x - 2) / 31, y / 23) <= 1; const inner = Math.hypot((x + 14) / 30, (y - 2) / 15) <= 1; const neck = x < 10 && Math.abs(y) <= 6;
+      if (!(outer && !inner) && !neck) continue;
+      const edge = Math.hypot((x - 2) / 31, y / 23) > .9; const rim = !edge && Math.hypot((x - 2) / 31, y / 23) > .8;
+      tone(s, f, edge ? P.steel : rim ? P.gold : P.black, 78 + x, cy + y, edge ? (y < 0 ? .98 : .82) : rim ? (y < 0 ? .85 : .5) : (y < 0 ? .75 : .45) - x / 120);
+    }
+    for (let k = 0; k < 10; k++) for (let e = 0; e < 3 - (k >> 2); e++) tone(s, f, P.black, 76 - k, cy - 3 - k * .4 - e, .6); // back spike
+    const gy = -18 + ((f * 9) % 38); tone(s, f, P.steel, 78 + 2 + Math.sqrt(Math.max(0, 1 - (gy / 23) ** 2)) * 30, cy + gy, 1);
+    B.selOutline(s, f, P.out);
+  }
+  return s;
+}
+// Great hammer: a squared head with a rune face, steel bands, a spiked top, a banded haft.
+function greatHammer() {
+  const s = new Sheet('w_hammer', 104, 52, 4, { anchor: 'center' }); const cy = 26;
+  for (let f = 0; f < 4; f++) {
+    shaft(s, f, P.wood, 2, 74, cy, 2); wrap(s, f, P.leather, 8, 24, cy, 2);
+    for (const x of [4, 26, 50, 70]) ring(s, f, P.steel, x, cy, 2, 3);
+    for (let y = -20; y <= 20; y++) for (let x = 72; x <= 100; x++) { const band = x === 76 || x === 96 || Math.abs(y) === 20; tone(s, f, band ? P.steel : P.black, x, cy + y, band ? (y < 0 ? .8 : .5) : (y < 0 ? .72 : .45) + (x > 98 ? -.1 : 0) + (x === 73 ? .1 : 0)); }
+    // Rune face (glowing amber glyph) and a short top spike.
+    for (let k = -6; k <= 6; k++) { tone(s, f, P.brass, 86, cy + k, (k + f * 3) % 6 === 0 ? 1 : .75); tone(s, f, P.brass, 86 + Math.round(k * .5), cy - Math.abs(k), .7); }
+    for (let k = 0; k < 6; k++) for (let e = -(2 - (k >> 1)); e <= 2 - (k >> 1); e++) tone(s, f, P.steel, 101 + k, cy + e, .8 - k / 12);
+    B.selOutline(s, f, P.out);
+  }
+  return s;
+}
+// Dual sabre: a curved single-edged blade with a gold knuckle-guard, a blue-steel edge line.
+function sabre() {
+  const s = new Sheet('w_sabre', 72, 22, 4, { anchor: 'center' }); const cy = 11;
+  for (let f = 0; f < 4; f++) {
+    wrap(s, f, P.leather, 2, 10, cy, 1); gem(s, f, P.gold, 1, cy, 1);
+    for (let k = 0; k < 7; k++) tone(s, f, P.gold, 11 + Math.round(Math.sin(k / 6 * Math.PI) * 3), cy + 1 + k * .6, .8); // knuckle guard
+    for (let y = -3; y <= 3; y++) tone(s, f, P.gold, 12, cy + y, y < 0 ? .9 : .5);
+    const spine = (x) => cy - 1 - ((x - 13) / 56) ** 2 * 5;
+    blade(s, f, 13, 70, (x) => spine(x) - 1, (x) => spine(x) + (x > 64 ? Math.max(0, 2 - (x - 64) * .4) : 2), (x, y, t, b) => (y === t ? [P.steel, .35] : y === b ? [P.blue, .7] : [P.steel, y - t === 1 ? .88 : .62]));
+    const gx = 16 + ((f * 13) % 50); tone(s, f, P.steel, gx, Math.round(spine(gx)), 1);
+    B.selOutline(s, f, P.out);
+  }
+  return s;
+}
+// Shadow dagger: a wavy (kris) blade in dark steel with a violet glint, a black wrapped grip.
+function dagger() {
+  const s = new Sheet('w_dagger', 48, 18, 4, { anchor: 'center' }); const cy = 9;
+  for (let f = 0; f < 4; f++) {
+    wrap(s, f, P.black, 1, 8, cy, 1); for (let y = -3; y <= 3; y++) tone(s, f, P.purple, 9, cy + y, y < 0 ? .9 : .5);
+    blade(s, f, 10, 46, (x) => cy - 2 + Math.round(Math.sin(x * .45) * 1) + (x > 40 ? (x - 40) * .3 : 0), (x) => cy + 2 + Math.round(Math.sin(x * .45) * 1) - (x > 40 ? (x - 40) * .3 : 0), (x, y, t, b) => (y === t ? [P.steel, .85] : y === b ? [P.steel, .3] : [P.steel, .5]));
+    tone(s, f, P.purple, 14 + ((f * 9) % 28), cy, 1); tone(s, f, P.purple, 15 + ((f * 9) % 28), cy, .8);
+    B.selOutline(s, f, P.out);
+  }
+  return s;
+}
+// Recurve bow: limbs curving away from the grip (bulging forward), horn tips, a taut string, a wrapped grip.
+function bow() {
+  const s = new Sheet('w_bow', 40, 100, 4, { anchor: 'center' }); const gx = 8; const cy = 50;
+  for (let f = 0; f < 4; f++) {
+    for (let y = -46; y <= 46; y++) {
+      const u = Math.abs(y) / 46; const x = gx + 2 + Math.cos(u * Math.PI / 2) * 18 + (u > .84 ? (u - .84) * 26 : 0); const w = u < .12 ? 3 : u > .9 ? 1 : 2; // belly forward at the grip, recurved tips
+      for (let d = 0; d < w; d++) tone(s, f, u < .12 ? P.leather : P.wood, x + d, cy + y, u < .12 ? .6 : d === 0 ? .8 : .45);
+    }
+    for (const sg of [-1, 1]) { for (let k = 0; k < 4; k++) tone(s, f, P.ivory, gx + 6 + k * .6, cy + sg * (45 + k * .4), .9); }
+    for (let y = -45; y <= 45; y++) tone(s, f, P.ivory, gx, cy + y, (y + f * 8) % 30 === 0 ? 1 : .55); // string
+    for (const sg of [-1, 1]) ring(s, f, P.gold, gx + 17, cy + sg * 6, 4, 0);
+    B.selOutline(s, f, P.out);
+  }
+  return s;
+}
+// Rune staff: hardwood with steel caps, two rune bands that glow in turn, a cloth wrap in the middle.
+function staff() {
+  const s = new Sheet('w_staff', 152, 18, 4, { anchor: 'center' }); const cy = 9;
+  for (let f = 0; f < 4; f++) {
+    shaft(s, f, P.wood, 6, 146, cy, 2); wrap(s, f, P.red, 62, 82, cy, 2);
+    for (const [x0, x1] of [[0, 7], [145, 151]]) for (let x = x0; x <= x1; x++) for (let d = -3; d <= 3; d++) tone(s, f, P.steel, x, cy + d, (d < 0 ? .85 : .45) + (x === x0 ? .1 : 0));
+    for (const [x0, k] of [[24, 0], [112, 1]]) for (let x = x0; x < x0 + 14; x++) for (let d = -2; d <= 2; d++) { const glyph = (x - x0) % 4 === 1 && Math.abs(d) < 2; tone(s, f, glyph ? P.blue : P.brass, x, cy + d, glyph ? ((f + k * 2) % 4 < 2 ? 1 : .6) : d < 0 ? .8 : .45); }
+    B.selOutline(s, f, P.out);
+  }
+  return s;
+}
+module.exports = { weaponSheets: () => [glaive(), katana(), sheath(), spear(), sword(), shield(), spiritSword(), scythe(), greatAxe(), greatHammer(), sabre(), dagger(), bow(), staff()] };

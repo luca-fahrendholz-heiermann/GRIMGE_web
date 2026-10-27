@@ -468,3 +468,16 @@ Nach den Beispiel-Sprites 29–32, eigene Umsetzung. Die Fokus-Verwandlung (Asce
 
 - `v44_arcane_states_r2.png`
 - Nachtrag: Die Sheets der Formen holen beim Angriff nach vorn aus (bis 12 px, bei voller Ladung mehr). Der Silhouetten-Test misst jetzt auch gezeichnete Sheets.
+
+## v45 — Waffen Runde 2 (27.10.2026)
+
+Sechs weitere gezeichnete Waffen statt Astral-Form (`vfx_weapons.cjs`):
+- **Großaxt:** bärtiges Eisenblatt mit Goldrand und heller Schneide, Rückendorn, umwickelter Schaft.
+- **Großhammer:** kantiger Kopf mit Stahlbändern und glühender Rune, kurzer Dorn oben.
+- **Doppelschwerter → Säbel:** gebogene Klinge mit goldenem Handschutz und blauer Schneidenlinie.
+- **Dolche → Schattendolche:** gewellte Kris-Klinge mit violettem Glanz.
+- **Bogen:** Recurve-Bogen mit Hornspitzen, Griffwicklung und Goldringen. Beim Schuss senkrecht, im Stand quer getragen. Die Block-Haltung bleibt prozedural.
+- **Kampfstab → Runenstab:** Hartholz mit Stahlkappen, zwei abwechselnd glühende Runenbänder, rote Mittelwicklung.
+- `drawWeaponSheet` kann ein Sheet vorab drehen (`preRotation`).
+
+- `v45_weapons_r2.png`

@@ -1647,6 +1647,60 @@ export const SPELL_SPRITE_SHEETS = Object.freeze({
   "hd": true,
   "anchor": "center"
  },
+ "w_axe": {
+  "name": "w_axe",
+  "w": 56,
+  "h": 28,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "w_hammer": {
+  "name": "w_hammer",
+  "w": 52,
+  "h": 26,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "w_sabre": {
+  "name": "w_sabre",
+  "w": 36,
+  "h": 11,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "w_dagger": {
+  "name": "w_dagger",
+  "w": 24,
+  "h": 9,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "w_bow": {
+  "name": "w_bow",
+  "w": 20,
+  "h": 50,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "w_staff": {
+  "name": "w_staff",
+  "w": 76,
+  "h": 9,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
  "oni_seal": {
   "name": "oni_seal",
   "w": 84,
