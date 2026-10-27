@@ -16,7 +16,7 @@ import { groundYForDepth } from './world.js';
 import { applyStatuses } from './buff_techniques.js';
 import { GeoPlatform } from './geometry.js';
 import { offerRecast } from './recast.js';
-import { renderSpellVisual, drawIceCrack, SpriteBurst, tideHitBurst, spellSheetReady } from './spell_visuals.js';
+import { renderSpellVisual, drawIceCrack, SpriteBurst, tideHitBurst, spellSheetReady, drawSpellSprite } from './spell_visuals.js';
 
 const gameOf = (c) => c.gw ?? sigWorld();
 
@@ -141,6 +141,13 @@ class Sanctuary extends SigProp {
   }
   render(ctx) {
     const y = this.y; const f = this.fade; const t = this.t; const R = this.radius;
+    if (spellSheetReady('sanct_obelisk') && spellSheetReady('sanct_circle')) {
+      const rise = Math.min(1, this.t / .4);
+      drawSpellSprite(ctx, 'sanct_circle', Math.floor(t * 6) % 6, this.x, y, { anchor: 'center', scale: R / 100, alpha: f });
+      ctx.save(); ctx.beginPath(); ctx.rect(this.x - 30, y - 120, 60, 122); ctx.clip(); drawSpellSprite(ctx, 'sanct_obelisk', 0, this.x, y + 2 + (1 - rise) * 80, { alpha: this.hitFlash ? .6 : f, scale: .5 }); ctx.restore();
+      for (let i = 0; i < 6; i++) { const ph = (t * .8 + i / 6) % 1; ctx.save(); ctx.globalAlpha = f * (1 - ph); ctx.fillStyle = '#e6ffd0'; ctx.fillRect(Math.round(this.x + Math.cos(i * 2.1) * R * .6), Math.round(y - ph * 50 + Math.sin(i * 2.1) * R * .18), 2, 2); ctx.restore(); }
+      return;
+    }
     ctx.save(); ctx.globalAlpha = f; ctx.lineWidth = 2.5; ctx.strokeStyle = '#9be36a'; ctx.beginPath(); ctx.ellipse(this.x, y, R, R * .32, 0, 0, TAU); ctx.stroke();
     ctx.lineWidth = 1.2; ctx.strokeStyle = '#fff8d6'; ctx.beginPath(); ctx.ellipse(this.x, y, R * .82, R * .26, 0, 0, TAU); ctx.stroke();
     for (const off of [0, Math.PI / 3]) { ctx.beginPath(); for (let i = 0; i <= 3; i++) { const a = off + t * .6 + i * TAU / 3; const qx = this.x + Math.cos(a) * R * .78; const qy = y + Math.sin(a) * R * .25; i ? ctx.lineTo(qx, qy) : ctx.moveTo(qx, qy); } ctx.stroke(); }
@@ -157,6 +164,11 @@ class WarBanner extends SigProp {
   update(dt, gw) { this.tick(dt); if (this.isFinished || this.isDead) BUFF_ZONES.delete(this); }
   render(ctx) {
     const y = this.y; const f = this.fade; const t = this.t; const rise = Math.min(1, this.t / .3);
+    if (spellSheetReady('war_banner')) {
+      ctx.save(); ctx.globalAlpha = f * .8; ctx.fillStyle = '#ffd27a'; for (let i = 0; i < 80; i++) { if ((i + Math.floor(t * 8)) % 4 === 3) continue; const u = i / 80 * TAU; ctx.fillRect(Math.round(this.x + Math.cos(u) * this.radius), Math.round(y + Math.sin(u) * this.radius * .32), 2, 2); } ctx.restore();
+      ctx.save(); ctx.beginPath(); ctx.rect(this.x - 40, y - 110, 80, 112); ctx.clip(); drawSpellSprite(ctx, 'war_banner', Math.floor(t * 10) % 6, this.x + 11, y + 2 + (1 - rise) * 100, { alpha: this.hitFlash ? .6 : f, scale: .5 }); ctx.restore();
+      return;
+    }
     ctx.save(); ctx.globalAlpha = f * .7; ctx.strokeStyle = '#ffd27a'; ctx.lineWidth = 2; ctx.setLineDash?.([6, 4]); ctx.beginPath(); ctx.ellipse(this.x, y, this.radius, this.radius * .32, 0, 0, TAU); ctx.stroke(); ctx.setLineDash?.([]); ctx.restore();
     const top = y - 96 * rise;
     ctx.save(); ctx.globalAlpha = f; ctx.strokeStyle = '#5d4037'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(this.x, y); ctx.lineTo(this.x, top); ctx.stroke();

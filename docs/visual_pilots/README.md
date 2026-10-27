@@ -597,3 +597,17 @@ Die Geschosse der Waffen (`drawShotPixel` in `weapons_ext.js`) sind jetzt knacki
 - **Weltnaht:** dunkle Rissbrocken mit grünen Glutadern entlang der Naht.
 
 - `v57_runde8.png`
+
+## v58 — Spezialrunen Runde 9, Größenkorrektur Runde 7 und 8 (27.10.2026)
+
+`art/authoring/vfx_runes9.cjs`:
+- **Säulen** (`GeoPlatform`, z. B. Schachtwuchs, Eiszacken): gezeichnete Steinblöcke, Eisfacetten, Wurzel- und Rindenmaserung, gekachelt bis zur Kappe mit heller Oberseite.
+- **Sanktuarium:** Elfenbein-Obelisk mit grünem Kristall, der aus dem Boden steigt, im grünen Zauberkreis.
+- **Kriegsbanner:** Holzstange mit Goldspitze, wehendes rotes Tuch mit Goldwappen, Zone als gestrichelter Pixelring.
+- **Blitzmarke:** Kunai mit rotem Siegelzettel, Bodenring an der Markierung.
+- **Bannfalle:** Siegelzettel im Doppelring (scharf / heiß), die Explosion ist der gezeichnete Feuerausbruch.
+- **Schattenkonter:** violette Schattenladungen, Konter mit gezeichnetem Schattenausbruch.
+- **Flutstrahl:** gekachelter Wasserstrahl mit Schaumkämmen und Spritzer am Ende.
+- **Fehler behoben:** Die Objekte der Runden 7 und 8 waren doppelt so groß wie geplant (falsche Annahme zur Sheet-Auflösung); jetzt mit halber Größe.
+
+- `v58_runde9_und_groessen.png` (alle Runen der Runden 7–9)

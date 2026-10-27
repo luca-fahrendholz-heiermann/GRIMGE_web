@@ -86,7 +86,7 @@ class PuppetThread {
     const o = this.owner; const obj = this.obj; const mat = this.mat; const k = this.snapped != null ? 1 - (this.t - this.snapped) / .35 : Math.min(1, this.t * 4);
     const oy = groundYForDepth(obj.z ?? o.z) - (obj.heroKey ? 50 : 20);
     for (let i = 0; i < 3; i++) { const sx = o.x + (o.facing || 1) * (12 + i * 3); const sy = o.y - 46 - i * 3; const mx = (sx + obj.x) / 2; const my = Math.min(sy, oy) - 18 + Math.sin(this.t * 5 + i) * 3; const cut = this.snapped != null && i * .1 < this.t - this.snapped; thread(ctx, cut ? [[sx, sy], [mx, my]] : [[sx, sy], [mx, my], [obj.x + (i - 1) * 5, oy]], i === 1 ? mat.vein : mat.edge, 1, k * .9); }
-    if (spellSheetReady('puppet_knot')) drawSpellSprite(ctx, 'puppet_knot', Math.floor(this.t * 8) % 4, obj.x, oy, { anchor: 'center', alpha: k });
+    if (spellSheetReady('puppet_knot')) drawSpellSprite(ctx, 'puppet_knot', Math.floor(this.t * 8) % 4, obj.x, oy, { anchor: 'center', alpha: k, scale: .5 });
     else plate(ctx, [[obj.x - 4, oy - 4], [obj.x + 4, oy - 4], [obj.x + 4, oy + 4], [obj.x - 4, oy + 4]], mat, 2600, { alpha: k, glowEdge: 1 });
   }
 }
@@ -151,7 +151,7 @@ defineSignature('S27', {
       const mat = st.sig.mat; const f = p.facing || 1; const hx = p.x + f * 20; const hy = ry - 46;
       if (!st.tool) {
         // The floating forge grip: three rings and irregular metal pieces.
-        if (spellSheetReady('forge_grip')) drawSpellSprite(ctx, 'forge_grip', Math.floor(st.t * 8) % 4, hx, hy, { anchor: 'center' });
+        if (spellSheetReady('forge_grip')) drawSpellSprite(ctx, 'forge_grip', Math.floor(st.t * 8) % 4, hx, hy, { anchor: 'center', scale: .5 });
         else for (let i = 0; i < 3; i++) { const r = 5 + i * 3; for (let k = 0; k < 6; k++) { const a = st.t * (i % 2 ? -3 : 3) + k * TAU / 6; plate(ctx, [[hx + Math.cos(a) * r, hy + Math.sin(a) * r * .5], [hx + Math.cos(a + .5) * r, hy + Math.sin(a + .5) * r * .5], [hx + Math.cos(a + .25) * (r + 2), hy + Math.sin(a + .25) * (r + 2) * .5]], mat, 2730 + i * 6 + k, { alpha: .9, glowEdge: .8 }); } }
         if (st.cand) thread(ctx, [[hx, hy], [st.cand.obj.x, groundYForDepth(st.cand.obj.z) - 30]], mat.vein, 1, .6);
         return;
@@ -188,7 +188,7 @@ defineSignature('S28', {
       if (layer !== 'front') return;
       const mat = st.sig.mat; const pos = platePos(p, st, ry); const burn = st.fired ? 1 - st.timer / .5 : 0;
       // A flat glowing outline plate with a cracked eye mark — not a clone.
-      if (spellSheetReady('echo_plate')) { drawSpellSprite(ctx, 'echo_plate', Math.floor(st.t * 6) % 4, pos.x, pos.y, { anchor: 'center', alpha: 1 - burn }); return; }
+      if (spellSheetReady('echo_plate')) { drawSpellSprite(ctx, 'echo_plate', Math.floor(st.t * 6) % 4, pos.x, pos.y, { anchor: 'center', alpha: 1 - burn, scale: .5 }); return; }
       plate(ctx, [[pos.x - 9, pos.y - 6], [pos.x + 9, pos.y - 8], [pos.x + 10, pos.y + 6], [pos.x - 8, pos.y + 7]], mat, 2810, { alpha: (1 - burn) * .85, glowEdge: 1.2 });
       thread(ctx, [[pos.x - 6, pos.y], [pos.x, pos.y - 3], [pos.x + 6, pos.y], [pos.x, pos.y + 3], [pos.x - 6, pos.y]], mat.core, 1, 1 - burn);
       thread(ctx, [[pos.x, pos.y - 3], [pos.x + 1, pos.y + 1], [pos.x - 1, pos.y + 3]], mat.dark, 1, 1 - burn);
@@ -217,13 +217,13 @@ class BreakColossus extends SigProp {
     const build = Math.min(1, t / .5); const wind = t < .5 ? 0 : t < 1.2 ? (t - .5) / .7 : 0; const strike = t < 1.2 ? 0 : Math.min(1, (t - 1.2) / .12); const brk = Math.max(0, (t - 1.65) / .6);
     if (brk >= 1) return;
     const sh = [this.x, y - 70 * build + brk * 40];
-    const drawnC = spellSheetReady('colossus_shoulder') && spellSheetReady('colossus_fist'); if (drawnC) drawSpellSprite(ctx, 'colossus_shoulder', 0, sh[0], sh[1] + 2, { anchor: 'center', flip: f < 0, alpha: build * (1 - brk) * g });
+    const drawnC = spellSheetReady('colossus_shoulder') && spellSheetReady('colossus_fist'); if (drawnC) drawSpellSprite(ctx, 'colossus_shoulder', 0, sh[0], sh[1] + 2, { anchor: 'center', flip: f < 0, alpha: build * (1 - brk) * g, scale: .5 });
     if (!drawnC) plate(ctx, [[sh[0] - 22, sh[1] + 10], [sh[0] - 12, sh[1] - 16], [sh[0] + 16, sh[1] - 14], [sh[0] + 22, sh[1] + 12], [sh[0], sh[1] + 22]], mat, this.seed, { alpha: build * (1 - brk) * g, lit: .9, glowEdge: .5 });
     // Three external arm segments with polished violet energy joints, then the fist.
     const reach = -30 * wind + 150 * strike; const pts = [sh, [sh[0] + f * (20 + reach * .3), sh[1] + 8], [sh[0] + f * (36 + reach * .65), sh[1] + 16], [sh[0] + f * (50 + reach), sh[1] + 20]];
     for (let i = 0; i < 3; i++) { const [ax, ay] = pts[i]; const [bx, by] = pts[i + 1]; plate(ctx, [[ax, ay - 7], [bx, by - 6], [bx, by + 6], [ax, ay + 7]], mat, this.seed + 1 + i, { alpha: build * (1 - brk) * g, lit: .9 }); plate(ctx, [[bx - 4, by], [bx, by - 4], [bx + 4, by], [bx, by + 4]], { ...mat, vein: '#b07aff', edge: '#e0c8ff' }, this.seed + 5 + i, { alpha: build * (1 - brk), core: 1, glowEdge: 1 }); }
     const [fx, fy] = pts[3];
-    if (drawnC) drawSpellSprite(ctx, 'colossus_fist', strike > 0 && strike < 1 ? 1 : 0, fx + f * 14, fy, { anchor: 'center', flip: f < 0, alpha: build * (1 - brk) * g });
+    if (drawnC) drawSpellSprite(ctx, 'colossus_fist', strike > 0 && strike < 1 ? 1 : 0, fx + f * 14, fy, { anchor: 'center', flip: f < 0, alpha: build * (1 - brk) * g, scale: .5 });
     else plate(ctx, [[fx, fy - 18], [fx + f * 26, fy - 16], [fx + f * 30, fy + 14], [fx, fy + 18], [fx - f * 6, fy]], mat, this.seed + 9, { alpha: build * (1 - brk) * g, lit: 1, glowEdge: wind > .5 ? 1.2 : .6 });
     for (let i = 0; i < 3; i++) thread(ctx, [[fx + f * 26, fy - 10 + i * 9], [fx + f * 31, fy - 9 + i * 9]], mat.vein, 1.5, build * (1 - brk));
     if (wind > 0) segRing(ctx, this.x + f * 90, this.z, 20, mat, t * 3, .6 * wind, { segs: 6, thick: 3, seed: this.seed + 20 });
@@ -251,7 +251,7 @@ class HunterBell extends SigProp {
   onShatter() { this.onExpire(); }
   render(ctx) {
     const mat = this.mat; const y = this.y; const t = this.t; const sinkK = this.duration - this.t < .4 ? (this.duration - this.t) / .4 : 1;
-    if (spellSheetReady('hunter_bell')) { for (let w = 0; w < 3; w++) { const kk = t - w * .3; if (kk >= 0 && kk <= .9) dashRing(ctx, this.x, this.z, 20 + kk * 260, '#6ae0d0', t, 1 - kk / .9); } drawSpellSprite(ctx, 'hunter_bell', Math.floor(t * 8) % 4, this.x, y + 2 + (1 - sinkK) * 18, { alpha: this.fade }); return; }
+    if (spellSheetReady('hunter_bell')) { for (let w = 0; w < 3; w++) { const kk = t - w * .3; if (kk >= 0 && kk <= .9) dashRing(ctx, this.x, this.z, 20 + kk * 260, '#6ae0d0', t, 1 - kk / .9); } drawSpellSprite(ctx, 'hunter_bell', Math.floor(t * 8) % 4, this.x, y + 2 + (1 - sinkK) * 18, { alpha: this.fade, scale: .5 }); return; }
     for (let w = 0; w < 3; w++) { const k = (t - w * .3); if (k < 0 || k > .9) continue; segRing(ctx, this.x, this.z, 20 + k * 260, mat, t, (1 - k / .9) * .7, { segs: 14, thick: 3, gap: .4, seed: 3000 + w }); }
     // Bell core with three bronze sound tongues and a fine cracked sound film.
     plate(ctx, [[this.x - 7, y - 4 - 18 * sinkK], [this.x + 7, y - 4 - 18 * sinkK], [this.x + 10, y], [this.x - 10, y]], mat, this.seed, { alpha: this.fade, lit: .9, glowEdge: .7 });
@@ -265,7 +265,7 @@ defineSignature('S30', { cast(c) { emit(new HunterBell(c.sig, c.caster, c.target
 // S31 RUNENGERICHT — four tablets frame a team-neutral projectile rule.
 // ═════════════════════════════════════════════════════════════════════════
 class RuleTablet extends SigProp { constructor(sig, owner, x, z, i) { super(sig, owner, x, z, { hp: 30, size: 10, duration: 8.2 + i * .15 }); this.i = i; } update(dt) { this.tick(dt); }
-  render(ctx) { const y = this.y; const rise = Math.min(1, this.t / .3); const lean = Math.max(0, 1 - this.t / .4) * 6; if (spellSheetReady('rule_tablet')) { drawSpellSprite(ctx, 'rule_tablet', this.hp < (this.maxHp ?? 30) * .5 ? 1 : 0, this.x + lean, y + 2 + (1 - rise) * 26, { alpha: this.fade * (this.hitFlash ? .6 : 1) }); return; } slab(ctx, this.x + lean, y, 14, 22 * rise, this.mat, this.seed, this.fade * (this.hitFlash ? .6 : 1), lean); for (let k = 0; k < 3; k++) thread(ctx, [[this.x - 4 + (k % 2) * 3, y - 18 * rise + k * 5], [this.x + 3 - k, y - 16 * rise + k * 5]], this.mat.dark, 1, .8 * this.fade); } }
+  render(ctx) { const y = this.y; const rise = Math.min(1, this.t / .3); const lean = Math.max(0, 1 - this.t / .4) * 6; if (spellSheetReady('rule_tablet')) { drawSpellSprite(ctx, 'rule_tablet', this.hp < (this.maxHp ?? 30) * .5 ? 1 : 0, this.x + lean, y + 2 + (1 - rise) * 26, { alpha: this.fade * (this.hitFlash ? .6 : 1, { scale: .5 }) }); return; } slab(ctx, this.x + lean, y, 14, 22 * rise, this.mat, this.seed, this.fade * (this.hitFlash ? .6 : 1), lean); for (let k = 0; k < 3; k++) thread(ctx, [[this.x - 4 + (k % 2) * 3, y - 18 * rise + k * 5], [this.x + 3 - k, y - 16 * rise + k * 5]], this.mat.dark, 1, .8 * this.fade); } }
 class RuneCourt {
   constructor(sig, owner, x, z) { this.sig = sig; this.mat = sig.mat; this.owner = owner; this.team = owner.team; this.x = x; this.z = z; this.t = 0; this.isFinished = false; this.R = 110; this.uses = {}; this.seen = new WeakSet();
     this.tablets = [0, 1, 2, 3].map((i) => { const a = Math.PI / 4 + i * Math.PI / 2; return emit(new RuleTablet(sig, owner, x + Math.cos(a) * this.R, z + Math.sin(a) * this.R / DEPTH, i)); }); }
@@ -310,7 +310,7 @@ class ExileCorridor {
     const mat = this.mat; const k = Math.min(1, this.t * 3) * Math.max(0, Math.min(1, (6.3 - this.t) / .3)); const open = this.t > 6 ? (this.t - 6) / .3 : 0;
     const base = linePts(this.a, this.b, 10); const top = linePts(this.a, this.b, 10, 46);
     // Two vertical, translucent effect planes like a spatial tear.
-    if (spellSheetReady('exile_plane')) { ctx.save(); ctx.globalAlpha = k; for (let i = Math.floor(open * 5); i <= 10 - Math.floor(open * 5); i += 2) drawSpellSprite(ctx, 'exile_plane', Math.floor(this.t * 6 + i) % 4, base[i][0], base[i][1] + 2); ctx.restore(); return; }
+    if (spellSheetReady('exile_plane')) { ctx.save(); ctx.globalAlpha = k; for (let i = Math.floor(open * 5); i <= 10 - Math.floor(open * 5); i += 2) drawSpellSprite(ctx, 'exile_plane', Math.floor(this.t * 6 + i) % 4, base[i][0], base[i][1] + 2, { scale: .5 }); ctx.restore(); return; }
     for (let i = Math.floor(open * 5); i < 10 - Math.floor(open * 5); i++) plate(ctx, [base[i], base[i + 1], top[i + 1], top[i]], { ...mat, kind: 'crystal' }, 3200 + i, { alpha: .18 * k, glowEdge: .5 });
     thread(ctx, top, mat.edge, 1, .6 * k);
     for (let i = 0; i < 6; i++) { const u = ((this.t * (i % 2 ? .5 : -.5) + i / 6) % 1 + 1) % 1; const j = Math.floor(u * 10); const [x, y] = base[j]; plate(ctx, [[x - 4, y - 2], [x + 4, y - 2], [x + 4, y], [x - 4, y]], { ...mat, vein: '#ff4a4a', edge: '#ff9a9a' }, 3220 + i, { alpha: k, core: .6 }); }
@@ -344,7 +344,7 @@ class HarvestCircle {
   render(ctx) {
     const mat = this.mat; const t = this.t; const k = this.released != null ? 1 - (t - this.released) / .7 : Math.min(1, t * 3);
     const drawnH = spellSheetReady('harvest_seal') && spellSheetReady('harvest_seed');
-    if (drawnH) { drawSpellSprite(ctx, 'harvest_seal', Math.floor(t * 6) % 6, this.x, groundYForDepth(this.z), { anchor: 'center', scale: this.R / 80, alpha: k }); for (let i = 0; i < 3; i++) { const [x, y] = groundPt(this.x, this.z, this.R * .45, i * TAU / 3 + .5); drawSpellSprite(ctx, 'harvest_seed', i < this.seeds ? 1 : 0, x, y - 4, { anchor: 'center', alpha: k }); } }
+    if (drawnH) { drawSpellSprite(ctx, 'harvest_seal', Math.floor(t * 6) % 6, this.x, groundYForDepth(this.z), { anchor: 'center', scale: this.R / 80, alpha: k }); for (let i = 0; i < 3; i++) { const [x, y] = groundPt(this.x, this.z, this.R * .45, i * TAU / 3 + .5); drawSpellSprite(ctx, 'harvest_seed', i < this.seeds ? 1 : 0, x, y - 4, { anchor: 'center', alpha: k, scale: .5 }); } }
     if (!drawnH) segRing(ctx, this.x, this.z, this.R, mat, t, .6 * k, { segs: 9, thick: 4, gap: .55, spin: .2, seed: 3300 });
     // Moss-gold screw lines toward the centre.
     if (!drawnH) for (let i = 0; i < 3; i++) { const pts = []; for (let s = 0; s <= 8; s++) { const u = s / 8; pts.push(groundPt(this.x, this.z, this.R * (1 - u * .8), i * TAU / 3 + u * 2 + t * .3)); } thread(ctx, pts, mat.vein, 1.5, .7 * k); }
@@ -383,7 +383,7 @@ defineSignature('S34', {
     render(ctx, p, st, ry, layer) {
       if (layer !== 'front') return;
       const mat = st.sig.mat; const f = p.facing || 1; const x = p.x + f * 16; const y = ry - 76; const tilt = st.decided ? (st.shieldUntil > st.t ? -.5 : .5) : Math.sin(st.t * 2) * .12;
-      if ((!st.decided || st.t < .2) && spellSheetReady('trade_scales')) drawSpellSprite(ctx, 'trade_scales', !st.decided ? 0 : st.shieldUntil > st.t ? 1 : 2, x, y, { anchor: 'center' });
+      if ((!st.decided || st.t < .2) && spellSheetReady('trade_scales')) drawSpellSprite(ctx, 'trade_scales', !st.decided ? 0 : st.shieldUntil > st.t ? 1 : 2, x, y, { anchor: 'center', scale: .5 });
       else if (!st.decided || st.t < .2) {
         // Matte gold scale pans on a slowly turning brass beam, blue core fire.
         const c = Math.cos(tilt); const s = Math.sin(tilt);
@@ -407,7 +407,7 @@ class ResonancePlate extends SigProp {
   render(ctx) {
     const mat = this.mat; const y = this.y; const g = this.fade * (this.hitFlash ? .6 : 1); const torn = this.chain.relays >= 3;
     // Ivory-silver membrane, red resonance veins, a broken half-open sound shell.
-    if (spellSheetReady('res_plate')) { drawSpellSprite(ctx, 'res_plate', torn ? 2 : this.ring > .2 ? 1 : 0, this.x, y + 2, { alpha: g }); return; }
+    if (spellSheetReady('res_plate')) { drawSpellSprite(ctx, 'res_plate', torn ? 2 : this.ring > .2 ? 1 : 0, this.x, y + 2, { alpha: g, scale: .5 }); return; }
     plate(ctx, [[this.x - 5, y], [this.x - 6, y - 48], [this.x + 1, y - 54], [this.x + 6, y - 46], [this.x + 5, y]], { ...mat, kind: 'crystal' }, this.seed, { alpha: g * (torn ? .4 : .85), glowEdge: .6 + this.ring });
     for (let k = 0; k < 3; k++) thread(ctx, [[this.x - 3 + k * 3, y - 6], [this.x - 2 + k * 2, y - 26], [this.x - 3 + k * 3, y - 44]], mat.vein, 1, g * (.5 + this.ring));
     plate(ctx, [[this.x + 6, y - 40], [this.x + 14, y - 34], [this.x + 12, y - 22], [this.x + 6, y - 26]], mat, this.seed + 1, { alpha: g, lit: .9 });
@@ -484,7 +484,7 @@ class WorldSeam {
       const u = i / n; if (u > wave) break; const fromEnd = Math.min(u, 1 - u); if (fromEnd < heal * .5) continue;
       const [x0, y0] = sp[i]; const [x1, y1] = sp[i + 1];
       // Black volcanic glass with an emerald core light and a doubled jagged outer seam.
-      if (spellSheetReady('seam_crack')) { drawSpellSprite(ctx, 'seam_crack', Math.floor(this.t * 8 + i) % 4, (x0 + x1) / 2, (y0 + y1) / 2, { anchor: 'center' }); continue; }
+      if (spellSheetReady('seam_crack')) { drawSpellSprite(ctx, 'seam_crack', Math.floor(this.t * 8 + i) % 4, (x0 + x1) / 2, (y0 + y1) / 2, { anchor: 'center', scale: .5 }); continue; }
       plate(ctx, [[x0, y0 - 3], [x1, y1 - 3], [x1, y1 + 3], [x0, y0 + 3]], mat, 3600 + i, { alpha: .95, glowEdge: .9, core: .3 });
       thread(ctx, [[x0, y0 - 5 - (i % 2) * 2], [x1, y1 - 5 - ((i + 1) % 2) * 2]], mat.vein, 1, .7);
       thread(ctx, [[x0, y0 + 5 + (i % 2) * 2], [x1, y1 + 5 + ((i + 1) % 2) * 2]], mat.vein, 1, .7);

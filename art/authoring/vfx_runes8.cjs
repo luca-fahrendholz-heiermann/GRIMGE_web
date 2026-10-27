@@ -1,4 +1,4 @@
-// GRIMGE — special runes, round 8 (hand-drawn quality; final density, sheet px = ½ world px). Rune palettes, own designs.
+// GRIMGE — special runes, round 8 (hand-drawn quality; final density, drawn at scale .5 in game — at scale 1 a sheet px is a world px). Rune palettes, own designs.
 //   puppet_knot     4×20×20   S26 Marionettenfaden — a light-thread knot binding the dragged object
 //   forge_grip      4×44×32   S27 Runenschmiede — three counter-turning forge rings with metal shards, a green core
 //   echo_plate      4×44×34   S28 Echofamulus — a flat glowing plate with a cracked eye mark

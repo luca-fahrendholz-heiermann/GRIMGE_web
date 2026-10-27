@@ -264,7 +264,7 @@ class GlassField {
   }
   render(ctx) {
     const mat = this.mat; const k = Math.min(1, this.t * 3) * Math.min(1, (8 - this.t) / .5);
-    if (spellSheetReady('glass_tile')) { for (const tile of this.tiles) drawSpellSprite(ctx, 'glass_tile', tile.state === 'spent' ? 5 : tile.state === 'charged' ? 4 : Math.floor(this.t * 4 + tile.seed) % 4, tile.x, groundYForDepth(tile.z), { anchor: 'center', alpha: k }); return; }
+    if (spellSheetReady('glass_tile')) { for (const tile of this.tiles) drawSpellSprite(ctx, 'glass_tile', tile.state === 'spent' ? 5 : tile.state === 'charged' ? 4 : Math.floor(this.t * 4 + tile.seed) % 4, tile.x, groundYForDepth(tile.z), { anchor: 'center', alpha: k, scale: .5 }); return; }
     for (const tile of this.tiles) {
       const y = groundYForDepth(tile.z); const r = 15;
       const pts = Array.from({ length: 6 }, (_, i) => [tile.x + Math.cos(i * TAU / 6 + .3) * r, y + Math.sin(i * TAU / 6 + .3) * r * .32]);
@@ -298,7 +298,7 @@ class BeamPrism extends SigProp {
   render(ctx) {
     const mat = this.mat; const y = this.y - 24; const t = this.t; const active = this.beam && this.t - this.lastBeam < .15;
     // Three copper prism arms around a bright central light seam (drawn sheet; the procedural arms are the fallback).
-    const drawn = spellSheetReady('beam_prism'); if (drawn) drawSpellSprite(ctx, 'beam_prism', Math.floor(t * 6) % 4, this.x, this.y + 2, { alpha: this.fade });
+    const drawn = spellSheetReady('beam_prism'); if (drawn) drawSpellSprite(ctx, 'beam_prism', Math.floor(t * 6) % 4, this.x, this.y + 2, { alpha: this.fade, scale: .5 });
     if (!drawn) for (let i = 0; i < 3; i++) { const a = i * TAU / 3 + this.rot - Math.PI / 2; plate(ctx, [[this.x, y], [this.x + Math.cos(a - .25) * 18, y + Math.sin(a - .25) * 14], [this.x + Math.cos(a) * 22, y + Math.sin(a) * 18], [this.x + Math.cos(a + .25) * 18, y + Math.sin(a + .25) * 14]], mat, this.seed + i, { alpha: this.fade * (this.hitFlash ? .6 : 1), glowEdge: .8, lit: .9 }); }
     if (!drawn) { thread(ctx, [[this.x, y - 12], [this.x, y + 12]], mat.core, 2, .9); slab(ctx, this.x, this.y, 8, 14, mat, this.seed + 9, this.fade); }
     if (active) for (const br of this.branches()) { const pts = [[br.a.x, y], [(br.a.x + br.b.x) / 2, (y + groundYForDepth(br.b.z) - 24) / 2], [br.b.x, groundYForDepth(br.b.z) - 24]]; ribbon(ctx, pts, 3 + Math.sin(t * 30) * .6, mat, this.seed + 20, t, .85); sparks(ctx, [pts[2]], mat, t, this.seed + 30, 4, 1); }
@@ -339,7 +339,7 @@ defineSignature('S20', {
     render(ctx, p, st, ry, layer) {
       if (layer !== 'front') return;
       const mat = st.sig.mat; const f = p.facing || 1; const x = p.x + f * 22; const y = ry - 46; const open = Math.min(1, st.t / .3);
-      if (spellSheetReady('prism_clamp')) { drawSpellSprite(ctx, 'prism_clamp', st.stored ? 4 : Math.min(3, Math.floor(open * 3)), x + f * 7, y, { anchor: 'center', flip: f < 0 }); return; }
+      if (spellSheetReady('prism_clamp')) { drawSpellSprite(ctx, 'prism_clamp', st.stored ? 4 : Math.min(3, Math.floor(open * 3, { scale: .5 })), x + f * 7, y, { anchor: 'center', flip: f < 0 }); return; }
       for (const sg of [-1, 1]) plate(ctx, [[x, y + sg * 2], [x + f * 12 * open, y + sg * (4 + 10 * open)], [x + f * 9 * open, y + sg * (2 + 12 * open)]], mat, 2010 + sg, { alpha: 1, glowEdge: 1, lit: .8 });
       if (st.stored) { const sp = st.t * 3; plate(ctx, [[x + f * 8 + Math.cos(sp) * 5, y + Math.sin(sp) * 3], [x + f * 8, y - 5], [x + f * 8 - Math.cos(sp) * 5, y - Math.sin(sp) * 3], [x + f * 8, y + 5]], mat, 2015, { alpha: 1, core: 1, glowEdge: 1.4 }); }
       for (let i = 0; i < 3; i++) { const a = st.t * 2 + i * 2.1; shard(ctx, x + Math.cos(a) * 16, y + Math.sin(a) * 8, 2.5, a, mat, 2020 + i, .7); }
@@ -377,7 +377,7 @@ defineSignature('S21', {
     },
     render(ctx, p, st, ry, layer) {
       const mat = st.sig.mat;
-      if (layer === 'front' && spellSheetReady('swarm_window')) { WINDOWS(p, ry).forEach(([x, y], i) => drawSpellSprite(ctx, 'swarm_window', i < st.shots ? 2 : Math.floor(st.t * 4 + i) % 2, x, y, { anchor: 'center' })); if (st.mark && spellSheetReady('swarm_mark')) { const m = st.mark; drawSpellSprite(ctx, 'swarm_mark', Math.floor(st.t * 8) % 4, m.x, m.y - (m.renderHeight ?? 70) - 10, { anchor: 'center' }); } return; }
+      if (layer === 'front' && spellSheetReady('swarm_window')) { WINDOWS(p, ry).forEach(([x, y], i) => drawSpellSprite(ctx, 'swarm_window', i < st.shots ? 2 : Math.floor(st.t * 4 + i) % 2, x, y, { anchor: 'center', scale: .5 })); if (st.mark && spellSheetReady('swarm_mark')) { const m = st.mark; drawSpellSprite(ctx, 'swarm_mark', Math.floor(st.t * 8) % 4, m.x, m.y - (m.renderHeight ?? 70) - 10, { anchor: 'center', scale: .5 }); } return; }
       if (layer === 'front') WINDOWS(p, ry).forEach(([x, y], i) => {
         const closed = i < st.shots; const s = closed ? 2 : 4;
         plate(ctx, [[x - s, y - s], [x + s, y - s], [x + s, y + s], [x - s, y + s]], mat, 2110 + i, { alpha: closed ? .5 : 1, glowEdge: closed ? .2 : 1, core: closed ? 0 : .8 });
@@ -396,7 +396,7 @@ class RiftEdge extends SigProp {
   update(dt) { this.tick(dt); }
   render(ctx) {
     const mat = this.mat; const y = this.y; const g = this.fade * (this.hitFlash ? .6 : 1);
-    if (spellSheetReady('rift_gate')) { drawSpellSprite(ctx, 'rift_gate', Math.floor(this.t * 6) % 4, this.x, y + 2, { alpha: g }); return; }
+    if (spellSheetReady('rift_gate')) { drawSpellSprite(ctx, 'rift_gate', Math.floor(this.t * 6) % 4, this.x, y + 2, { alpha: g, scale: .5 }); return; }
     // A half-height broken gate frame of frayed lapis splinters with a gold inner rim.
     for (const sg of [-1, 1]) for (let i = 0; i < 4; i++) plate(ctx, [[this.x + sg * (10 + (i % 2) * 2), y - i * 11], [this.x + sg * (14 + (i % 2)), y - i * 11 - 2], [this.x + sg * 13, y - (i + 1) * 11], [this.x + sg * 9, y - (i + 1) * 11 + 1]], mat, this.seed + sg * 10 + i, { alpha: g, glowEdge: .6, lit: .8 });
     thread(ctx, [[this.x - 8, y - 2], [this.x - 8, y - 42], [this.x + 8, y - 42], [this.x + 8, y - 2]], mat.vein, 1.5, g * (.6 + .3 * Math.sin(this.t * 6)));
@@ -455,7 +455,7 @@ class PolarRotor extends SigProp {
     const mat = this.mat; const y = this.y; const t = this.t; const g = this.fade * (this.hitFlash ? .6 : 1);
     if (spellSheetReady('polar_tower')) {
       dashRing(ctx, this.x, this.z, this.R, '#3fe0c8', t, .8 * g); dashRing(ctx, this.x, this.z, this.R - 10, '#b0482a', -t, .7 * g);
-      drawSpellSprite(ctx, 'polar_tower', Math.floor(t * 10) % 4, this.x, y + 2, { alpha: g });
+      drawSpellSprite(ctx, 'polar_tower', Math.floor(t * 10) % 4, this.x, y + 2, { alpha: g, scale: .5 });
       for (let k = 0; k < 6 - this.load; k++) rpx(ctx, this.x - 10 + k * 4, y - 80, '#3fe0c8', 3);
       return;
     }
@@ -490,7 +490,7 @@ class WeightlessBand {
   render(ctx) {
     const mat = this.mat; const k = Math.min(1, this.t * 3) * Math.max(0, Math.min(1, (6.4 - this.t) / .4));
     const base = linePts(this.a, this.b, 10);
-    if (spellSheetReady('lift_column')) { ctx.save(); ctx.globalAlpha = k; for (let i = 0; i <= 10; i += 2) drawSpellSprite(ctx, 'lift_column', Math.floor(this.t * 8 + i) % 6, base[i][0], base[i][1] + 2); ctx.restore(); return; }
+    if (spellSheetReady('lift_column')) { ctx.save(); ctx.globalAlpha = k; for (let i = 0; i <= 10; i += 2) drawSpellSprite(ctx, 'lift_column', Math.floor(this.t * 8 + i) % 6, base[i][0], base[i][1] + 2, { scale: .5 }); ctx.restore(); return; }
     thread(ctx, base, mat.dark, 3, .7 * k); thread(ctx, base, mat.vein, 1, .5 * k);
     // Curved, textured field lines rising over the narrow ground crack.
     for (let i = 0; i <= 10; i += 2) { const [x, y] = base[i]; const ph = (this.t * .8 + i * .13) % 1; const pts = [[x, y], [x + Math.sin(this.t * 2 + i) * 4, y - 20], [x - Math.sin(this.t * 2 + i) * 3, y - 44]]; thread(ctx, pts, '#d8b45a', 1, .5 * k * (i < 10 - this.t * 1.6 || this.t < 5 ? 1 : 0)); plate(ctx, [[x - 2, y - ph * 50], [x, y - ph * 50 - 3], [x + 2, y - ph * 50]], mat, 2400 + i, { alpha: k * (1 - ph), core: .8 }); }

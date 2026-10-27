@@ -2464,5 +2464,106 @@ export const SPELL_SPRITE_SHEETS = Object.freeze({
   "res": 2,
   "hd": true,
   "anchor": "center"
+ },
+ "geo_stone": {
+  "name": "geo_stone",
+  "w": 24,
+  "h": 16,
+  "frames": 2,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "geo_ice": {
+  "name": "geo_ice",
+  "w": 24,
+  "h": 16,
+  "frames": 2,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "geo_root": {
+  "name": "geo_root",
+  "w": 24,
+  "h": 16,
+  "frames": 2,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "geo_bark": {
+  "name": "geo_bark",
+  "w": 24,
+  "h": 16,
+  "frames": 2,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "sanct_obelisk": {
+  "name": "sanct_obelisk",
+  "w": 20,
+  "h": 80,
+  "frames": 1,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 2
+ },
+ "sanct_circle": {
+  "name": "sanct_circle",
+  "w": 105,
+  "h": 34,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "war_banner": {
+  "name": "war_banner",
+  "w": 32,
+  "h": 100,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 2
+ },
+ "mark_kunai": {
+  "name": "mark_kunai",
+  "w": 20,
+  "h": 7,
+  "frames": 2,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "seal_trap": {
+  "name": "seal_trap",
+  "w": 26,
+  "h": 11,
+  "frames": 2,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "shadow_charge": {
+  "name": "shadow_charge",
+  "w": 9,
+  "h": 9,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "water_jet": {
+  "name": "water_jet",
+  "w": 24,
+  "h": 15,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
  }
 });

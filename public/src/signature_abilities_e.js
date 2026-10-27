@@ -11,6 +11,7 @@
 //                     can no longer be detonated by hand.
 //   S48 SCHATTENKONTER three charges: a hit is negated, you vanish and reappear
 //                     behind the attacker with a counter strike
+import { drawSpellSprite, spellSheetReady } from './spell_visuals.js';
 import { defineSignature, startStance, endStance, emit, foesOf, groundDist, hit, plate, thread, sparks, TAU, DEPTH, currentAttacker } from './signature_core.js';
 import { offerRecast } from './recast.js';
 import { combat } from './combat.js';
@@ -57,6 +58,7 @@ class MarkedKunai {
     const { x } = this.pos; const y = (this.stuckIn ? (this.stuckIn.y ?? this.y) - 30 : this.y - this.h);
     ctx.save(); ctx.translate(Math.round(x), Math.round(y)); ctx.scale(this.f, 1);
     if (this.landed && !this.stuckIn) ctx.rotate(.9); // stuck slanted in the ground
+    if (spellSheetReady('mark_kunai')) { drawSpellSprite(ctx, 'mark_kunai', Math.floor(this.t * 12) % 2, -4, 0, { anchor: 'center', scale: .5 }); ctx.restore(); if (this.landed || this.stuckIn) { ctx.save(); ctx.globalAlpha = .5 + .3 * Math.sin(this.t * 8); ctx.fillStyle = '#ffd54f'; const gy = groundYForDepth(this.stuckIn?.z ?? this.z); for (let i = 0; i < 24; i++) { const u = i / 24 * TAU; if (i % 3 === 2) continue; ctx.fillRect(Math.round(x + Math.cos(u) * 14), Math.round(gy + Math.sin(u) * 4), 2, 2); } ctx.restore(); } return; }
     ctx.fillStyle = KUNAI.dark; ctx.fillRect(-12, -1, 7, 3);                                   // grip
     ctx.strokeStyle = KUNAI.dark; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(-14, 0, 2.5, 0, TAU); ctx.stroke(); // ring
     ctx.fillStyle = KUNAI.steel; ctx.beginPath(); ctx.moveTo(-5, -3); ctx.lineTo(8, 0); ctx.lineTo(-5, 3); ctx.closePath(); ctx.fill();
@@ -271,6 +273,10 @@ class SealTrap {
   }
   render(ctx) {
     const y = this.y; const R = 20;
+    if (spellSheetReady('seal_trap')) {
+      if (this.fired) { const k = (this.t - this.firedT) / .55; if (spellSheetReady('fire_explosion') && k < 1) drawSpellSprite(ctx, 'fire_explosion', Math.min(9, Math.floor(k * 10)), this.x, y - 20, { anchor: 'center', scale: this.big ? 2.2 : 1.5 }); return; }
+      const pulse = .5 + .5 * Math.sin(this.t * (this.manual ? 6 : 3)); drawSpellSprite(ctx, 'seal_trap', this.manual ? 1 : 0, this.x, y, { anchor: 'center', alpha: .75 + .25 * pulse, scale: .5 }); return;
+    }
     if (this.fired) {
       const k = (this.t - this.firedT) / .55; const RR = (this.big ? 95 : 60) * Math.min(1, k * 2.2);
       ctx.save(); ctx.globalAlpha = 1 - k;
@@ -324,6 +330,7 @@ defineSignature('S48', {
     },
     render(ctx, p, st, ry, layer) {
       if (layer !== 'front') return;
+      if (spellSheetReady('shadow_charge')) { for (let i = 0; i < st.charges; i++) { const a = st.t * 2 + i * TAU / 3; drawSpellSprite(ctx, 'shadow_charge', Math.floor(st.t * 8 + i) % 4, p.x + Math.cos(a) * 22, ry - 50 + Math.sin(a) * 26, { anchor: 'center', scale: .5 }); } if (st.flash > 0 && spellSheetReady('shadow_burst')) drawSpellSprite(ctx, 'shadow_burst', Math.min(7, Math.floor((1 - st.flash * 2) * 8)), p.x, ry + 2, { scale: 1.4 }); return; }
       for (let i = 0; i < st.charges; i++) { const a = st.t * 2 + i * TAU / 3; const x = p.x + Math.cos(a) * 22; const y = ry - 50 + Math.sin(a) * 26; ctx.save(); ctx.fillStyle = '#311b92'; ctx.beginPath(); ctx.arc(x, y, 4, 0, TAU); ctx.fill(); ctx.strokeStyle = '#b39ddb'; ctx.lineWidth = 1.5; ctx.stroke(); ctx.restore(); }
       if (st.flash > 0) plate(ctx, [[p.x - 14, ry - 80], [p.x + 14, ry - 80], [p.x + 14, ry], [p.x - 14, ry]], { kind: 'smoke', dark: '#1a0f33', body: '#4527a0', facet: '#b39ddb', vein: '#b39ddb', edge: '#ede7f6', spark: '#ede7f6', core: '#ffffff', glow: 'rgba(179,157,219,', edgeGlow: 'rgba(237,231,246,' }, 4801, { alpha: st.flash * 2 });
     }
@@ -360,10 +367,17 @@ class FloodJet {
     if (this.t < this.dur) {
       const reach = 30 + 250 * Math.min(1, this.t / .3); const fade = this.t > this.dur - .15 ? (this.dur - this.t) / .15 : 1;
       const x0 = this.owner.x + f * 16; const x1 = this.x + f * reach;
+      if (spellSheetReady('water_jet')) {
+        const L = Math.abs(x1 - x0); ctx.save(); ctx.globalAlpha = fade; ctx.translate(Math.round(x0), Math.round(y)); ctx.scale(f, 1); ctx.beginPath(); ctx.rect(0, -16, L, 32); ctx.clip();
+        for (let dd = 0; dd < L; dd += 48) drawSpellSprite(ctx, 'water_jet', Math.floor(this.t * 14) % 6, dd + 24, 0, { anchor: 'center' });
+        ctx.restore();
+        if (spellSheetReady('water_splash')) drawSpellSprite(ctx, 'water_splash', Math.floor(this.t * 14) % 6, x1, y + 6, { anchor: 'center', flip: f < 0 });
+      } else {
       ctx.save(); ctx.globalAlpha = fade; ctx.lineCap = 'round';
       for (const [w, c] of [[14, WATER.dark], [10, WATER.body], [6, WATER.mid], [2, WATER.foam]]) { ctx.strokeStyle = c; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(x0, y); for (let i = 1; i <= 10; i++) { const u = i / 10; ctx.lineTo(x0 + (x1 - x0) * u, y + Math.sin(this.t * 30 + i) * 2 * u + u * 6); } ctx.stroke(); }
       ctx.fillStyle = WATER.foam; for (let i = 0; i < 5; i++) ctx.fillRect(Math.round(x1 + f * (i * 3 - 6)), Math.round(y + 4 + Math.sin(this.t * 40 + i) * 6), 3, 3);
       ctx.restore();
+      }
     }
     // Soaked foes drip; after the freeze an ice block encloses them.
     for (const t of this.soaked) {

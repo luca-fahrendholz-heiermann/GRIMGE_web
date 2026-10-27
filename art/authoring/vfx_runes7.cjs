@@ -1,4 +1,4 @@
-// GRIMGE — special runes, round 7 (hand-drawn quality; vfx_brush.cjs; final density, sheet px = ½ world px).
+// GRIMGE — special runes, round 7 (hand-drawn quality; vfx_brush.cjs; final density, drawn at scale .5 in game — at scale 1 a sheet px is a world px).
 // Rune palettes from signature_runes_data.js; own designs.
 //   glass_tile     6 frames, 64×24: S18 Glasfeld — a hexagonal mirror tile (0–3 idle glint, 4 charged, 5 spent)
 //   beam_prism     4 frames, 100×120 (base): S19 Strahlenweber — a three-armed copper prism on a stone foot, light seam

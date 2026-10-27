@@ -9,6 +9,7 @@
 //     past it freely, land on its top while falling, stand on it.
 //  3. DECAY  — it sinks / breaks; whoever stands on it comes down with it.
 // Surfaces are registered on the battlefield's dynamicSurfaces while alive.
+import { drawSpellSprite, spellSheetReady } from './spell_visuals.js';
 import { combat } from './combat.js';
 import { groundYForDepth } from './world.js';
 import { plate } from './buff_vfx.js';
@@ -76,6 +77,16 @@ export class GeoPlatform {
   render(ctx) {
     const h = this.currentHeight; if (h <= .5) return;
     const m = this.mat; const yb = this.y; const top = yb - h; const w = this.halfW; const d = this.halfD * 150 * .32;
+    // Drawn pillar (art/authoring/vfx_runes9.cjs): body blocks tiled up from the base, the cap with its lit top face.
+    const sheet = `geo_${this.look}`;
+    if (spellSheetReady(sheet)) {
+      const k = (2 * w) / 48; const th = 32 * k; const capY = top - d + th / 2; // a tile is 48×32 world px at scale 1
+      ctx.save(); ctx.beginPath(); ctx.rect(this.x - w - 2, top - d - 2, 2 * w + 4, yb + d - (top - d) + 4); ctx.clip();
+      for (let yy = capY + th; yy - th / 2 < yb + d; yy += th) drawSpellSprite(ctx, sheet, 0, this.x, yy, { anchor: 'center', scale: k });
+      drawSpellSprite(ctx, sheet, 1, this.x, capY, { anchor: 'center', scale: k });
+      ctx.restore();
+      return;
+    }
     // Front face (towards the camera), then the top face on it.
     // The front face keeps its cracks subtle (seams, not a bright scar across the pillar).
     plate(ctx, [[this.x - w, yb + d], [this.x + w, yb + d], [this.x + w, top + d], [this.x - w, top + d]], { ...m, vein: m.kind === 'crystal' ? m.vein : m.dark }, this.seed, { alpha: 1, lit: .5, glowEdge: .4 });
