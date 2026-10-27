@@ -2267,5 +2267,81 @@ export const SPELL_SPRITE_SHEETS = Object.freeze({
   "res": 2,
   "hd": true,
   "anchor": "center"
+ },
+ "glass_tile": {
+  "name": "glass_tile",
+  "w": 32,
+  "h": 12,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "beam_prism": {
+  "name": "beam_prism",
+  "w": 50,
+  "h": 60,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 2
+ },
+ "prism_clamp": {
+  "name": "prism_clamp",
+  "w": 24,
+  "h": 28,
+  "frames": 5,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "swarm_window": {
+  "name": "swarm_window",
+  "w": 9,
+  "h": 9,
+  "frames": 3,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "swarm_mark": {
+  "name": "swarm_mark",
+  "w": 30,
+  "h": 12,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "rift_gate": {
+  "name": "rift_gate",
+  "w": 32,
+  "h": 46,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 2
+ },
+ "polar_tower": {
+  "name": "polar_tower",
+  "w": 26,
+  "h": 75,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 2
+ },
+ "lift_column": {
+  "name": "lift_column",
+  "w": 10,
+  "h": 48,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 2
  }
 });

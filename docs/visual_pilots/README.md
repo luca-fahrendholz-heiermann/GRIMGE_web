@@ -567,3 +567,16 @@ Die Geschosse der Waffen (`drawShotPixel` in `weapons_ext.js`) sind jetzt knacki
 - **Polarlicht:** Pixelvorhänge mit heller Kante, festem Körper und zwei harten Abstufungen statt dünnem Schleier. **Himmelsglühen:** drei harte Stufen statt Verlauf.
 
 - `v55_old_effects.png` (Leerenimplosion, Inferno-Ansturm mit gekachelten Brandflächen)
+
+## v56 — Spezialrunen Runde 7 (27.10.2026)
+
+`art/authoring/vfx_runes7.cjs`:
+- **Glasfeld:** sechseckige Spiegelkacheln mit wanderndem Glanz; geladen mit Jadekern, verbraucht dunkel und gesprungen.
+- **Strahlenweber:** dreiarmiges Kupferprisma mit Lichtnaht auf einem Steinfuß.
+- **Prismenhalter:** zwei Messing-V-Klammern öffnen sich vor der Hand, ein gefangener Splitter leuchtet cyan.
+- **Schwarmprotokoll:** Startfenster (offen pulsierend, geschlossen) und vier violette Zielflossen über dem markierten Gegner.
+- **Rissweiche:** zerbrochene Lapis-Torrahmen mit goldenem Innenrand und dunklem Schimmer.
+- **Polarisationswerk:** Kupferturm mit zwei gezahnten Rotoren, die Zone als gestrichelte Pixelringe.
+- **Schwerelosband:** aufsteigende mintfarbene Feldlinien über dem Bodenriss.
+
+- `v56_runde7.png`
