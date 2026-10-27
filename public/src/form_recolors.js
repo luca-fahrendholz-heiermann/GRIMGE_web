@@ -110,3 +110,5 @@ registerFormCloak('T06', '#2fd070', '#a8ffc8');
 registerFormRecolor('A10', armour(ramp('#16301c', '#24502c', '#3a7a40', '#62a860', '#a0d890'), '#a8f6ff', { strength: .55 }),
   armourTailored(ramp('#0c1a10', '#16301c', '#24502c', '#3a7a40', '#62a860'), ramp('#1a8aa0', '#3ad0e0', '#a8f6ff', '#ffffff'), { visor: true, eyes: '#ff2a2a', seams: 9 }));
 registerFormCloak('A10', '#3ad0e0', '#a8f6ff');
+// A11 Drachengeist: no recolour (the dragon and the blaze are attachments), an ember-orange aura.
+registerFormCloak('A11', '#ff5a1f', '#ffd27a');

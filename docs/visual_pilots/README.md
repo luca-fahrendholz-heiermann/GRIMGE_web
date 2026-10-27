@@ -432,3 +432,12 @@ Nach den Beispiel-Sprites 7–9, eigene Umsetzung. Der schwache dunkle Halo hint
 - **Blutdampf** steigt vom Rücken auf, die **Augen** glühen gelb, und es gibt eine **blutrote Kontur-Aura**. Haltungen können jetzt allgemein eine Aura setzen (`stance.cloak`).
 
 - `v41_oni_blut.png` (Thesen bei voller HP, Thesen bei 20 % HP, Nyx bei 20 % HP)
+
+## v42 — A11 Drachengeist (27.10.2026)
+
+Nach dem Beispiel-Sprite 20, eigene Umsetzung. Neuer Arcane State (Feuer, Boss-Drop oder Ignis-Rune Lv. 8).
+- **Optik:** Der Hals eines gehörnten Feuerdrachen steigt hinter dem Rücken auf, sein Kopf thront nach vorn gerichtet über dem Helden. Dafür gibt es ein neues Drachen-Kit **ember** mit rot-orangen Feuerschuppen, Flammenmähne und Hörnern in Elfenbein-Gold. Hinter dem Körper lodert eine zusammenhängende Feueraura (`as_A11`), die Kontur glüht orange. Alles hängt an Körperpunkten oder liegt hinter dem Sprite und passt so auf jeden Helden.
+- **Techniken** (`arcane_drachengeist.js`): Drachenbiss / Drachenatem (Feuerkegel aus dem Maul) · Aufstieg (der Drache schießt vor dem Helden aus dem Boden) / Himmelssturz (der ganze Drache stürzt herab, ein brennender Krater bleibt) · Schweifring / Drachenwacht (er windet sich 1,5 s um den Helden).
+- **Passiv:** Nahkampftreffer setzen Gegner zu 30 % in Brand. Sprint: Drachensprung, Sturz: Drachensturz mit Glutring.
+
+- `v42_drachengeist.png` (Thesen und Nyx im Stand, Drachenatem · Himmelssturz, Drachenwacht)

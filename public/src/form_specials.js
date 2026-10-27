@@ -75,7 +75,8 @@ export const FORM_SPRINTS = {
   A07: { ...PIERCE, windup: .02, lungeSpeed: 1.9, impact: 'room' }, // Raum: a cut through everything on the line
   A08: { ...LEAP, leap: 180, impact: 'blast' },     // Sprengleib: a blast-driven leap, the impact explodes
   A09: { ...LEAP, leap: 200, impact: 'bayonet' },   // Blutarsenal: a bayonet charge, the struck foe bleeds
-  A10: { ...RAM, impact: 'shellRam' }                // Konstruktpanzer: a shell-first ram, the struck foe is thrown far
+  A10: { ...RAM, impact: 'shellRam' },               // Konstruktpanzer: a shell-first ram, the struck foe is thrown far
+  A11: { ...LUNGE, impact: 'dragonBite' }            // Drachengeist: a lunge, the dragon bites with — the foe burns
 };
 for (const [id, mech] of Object.entries(FORM_SPRINTS)) {
   const form = BUFF_FORMS[id]; if (!form) continue;
@@ -104,6 +105,7 @@ const IMPACTS = {
   quake: (p, struck, game) => { for (const t of foes(p, game)) if (t !== struck && Math.hypot(t.x - struck.x, ((t.z ?? p.z) - (struck.z ?? p.z)) * DEPTH) < 120) applyStatuses(t, ['stun'], p, p.facing); for (const o of environment.props) if (o.isSceneObject && !o.isDead && Math.hypot(o.x - struck.x, (o.z - (struck.z ?? p.z)) * DEPTH) < 110) o.takeDamage(20, (p.facing || 1) * 340, 0, 0, false, 'melee'); },
   room: (p, struck) => { struck.slow?.(1, .3); },
   bayonet: (p, struck) => applyStatus(struck, 'bleed'),
+  dragonBite: (p, struck) => applyStatus(struck, 'burn'),
   shellRam: (p, struck) => { struck.kbVelX = (struck.kbVelX ?? 0) + (p.facing || 1) * 160; },
   blast: (p, struck, game) => explode(game, { team: p.team, caster: p, facing: p.facing || 1, power: 1 }, struck.x, struck.z ?? p.z, 70, 20),
   ape: (p, struck, game) => { for (const t of foes(p, game)) if (Math.hypot(t.x - struck.x, ((t.z ?? p.z) - (struck.z ?? p.z)) * DEPTH) < 90) t.takeDamage?.(10, Math.sign(t.x - struck.x || 1) * 220, 120, .3, false, 'spell'); combat.shakeCamera(7, .2); }
@@ -122,6 +124,7 @@ const SPRINT_LOOKS = {
   A07: (ctx, q) => { line(ctx, [[q.x - q.f * 60, q.y + 10], [q.x + q.f * 40, q.y - 10]], '#ffffff', 3, q.fade); line(ctx, [[q.x - q.f * 60, q.y + 10], [q.x + q.f * 40, q.y - 10]], q.mat.body, 1.5, q.fade); },
   A08: (ctx, q) => boom(ctx, q.x - q.f * 24, q.y + 20, 20, q.k, 3),
   A09: (ctx, q) => bloodWeapon(ctx, 'blood_rifle', q.k > .6 ? 2 : 0, q.x + q.f * 6, q.y + 12, q.f, 0, q.fade),
+  A11: (ctx, q) => { for (let i = 0; i < 4; i++) { ctx.save(); ctx.globalAlpha = q.fade * (1 - i * .22); ctx.fillStyle = i ? '#ff5a1f' : '#ffd27a'; ctx.fillRect(Math.round(q.x - q.f * (24 + i * 12)), Math.round(q.y + 16 - i * 3 - Math.sin(q.k * 9 + i) * 3), 6 - i, 4 - (i >> 1)); ctx.restore(); } },
   A10: (ctx, q) => { for (let i = 0; i < 3; i++) { ctx.save(); ctx.globalAlpha = q.fade * (1 - i * .3); ctx.fillStyle = i ? '#3ad0e0' : '#a8f6ff'; ctx.fillRect(Math.round(q.x - q.f * (30 + i * 14)), Math.round(q.y + 20 - i), 10 - i * 2, 2); ctx.restore(); } },
   T02: (ctx, q) => { const m = { ...q.mat, kind: 'crust' }; plate(ctx, [[q.x + q.f * 8, q.y - 22], [q.x + q.f * 34, q.y - 14], [q.x + q.f * 38, q.y + 14], [q.x + q.f * 8, q.y + 22]], m, 9401, { alpha: q.fade, lit: 1, glowEdge: 1.2 }); fallout(ctx, [[q.x - q.f * 10, q.y + 30]], q.mat, q.t, 9402, { count: 8, alpha: q.fade }); },
   T04: (ctx, q) => { const c = crystal(q.mat); for (let i = -2; i <= 2; i++) plate(ctx, [[q.x + q.f * 18, q.y + i * 9 - 4], [q.x + q.f * (34 + (i % 2 ? 8 : 0)), q.y + i * 9], [q.x + q.f * 18, q.y + i * 9 + 4]], c, 9410 + i, { alpha: q.fade, glowEdge: 1 }); band(ctx, [[q.x + q.f * 16, q.y - 24], [q.x + q.f * 22, q.y], [q.x + q.f * 16, q.y + 24]], () => 4, c, 9415, { t: q.t, alpha: q.fade }); },
@@ -182,7 +185,8 @@ export const FORM_DIVES = {
   A07: DIVE('roomDrop', 120, 42),
   A08: DIVE('blastDrop', 120, 52, { st: ['burn'], ground: 'scorch' }),
   A09: DIVE('spearDrop', 110, 48, { st: ['bleed'], ground: 'blood' }),
-  A10: DIVE('shellDrop', 110, 50, { ground: 'crater' })
+  A10: DIVE('shellDrop', 110, 50, { ground: 'crater' }),
+  A11: DIVE('dragonDrop', 110, 50, { st: ['burn'], ground: 'scorch' })
 };
 
 export class FormDiveFx {
@@ -238,6 +242,7 @@ const DIVE_FALL = {
   roomDrop: (ctx, q) => dome(ctx, q.x, q.y + 20, 40, q.m, .8, q.t),
   blastDrop: (ctx, q) => boom(ctx, q.x, q.y + 10, 16, (q.t * 3) % 1, 2),
   spearDrop: (ctx, q) => bloodWeapon(ctx, 'blood_rifle', 2, q.x, q.y - 10, q.f || 1, 1.4, 1),
+  dragonDrop: (ctx, q) => { ctx.save(); for (let i = 0; i < 5; i++) { ctx.fillStyle = i % 2 ? '#ff5a1f' : '#ffd27a'; ctx.fillRect(Math.round(q.x - 8 + i * 4), Math.round(q.y - 34 - ((q.t * 140 + i * 9) % 28)), 3, 7); } ctx.restore(); },
   shellDrop: (ctx, q) => { ctx.save(); ctx.fillStyle = '#3ad0e0'; for (let i = 0; i < 4; i++) ctx.fillRect(Math.round(q.x - 6 + i * 4), Math.round(q.y - 30 - ((q.t * 120 + i * 7) % 24)), 2, 6); ctx.restore(); },
   default: (ctx, q) => plate(ctx, [[q.x - 8, q.y - 20], [q.x + 8, q.y - 20], [q.x, q.y + 18]], q.m, 9600, { alpha: 1, glowEdge: 1.2 }),
   tails: (ctx, q) => { for (let i = 0; i < 5; i++) { const ang = Math.PI / 2 + (i - 2) * .35; band(ctx, [[q.x, q.y - 50], [q.x + Math.cos(ang) * 20, q.y - 20], [q.x + Math.cos(ang) * 30, q.y + 10]], (j, n) => 6 - j * 2, formMat('ninefold'), 9610 + i, { t: q.t, alpha: .9 }); } },
@@ -256,6 +261,7 @@ const DIVE_LAND = {
   quakeDrop: (ctx, q) => { cracks(ctx, q.x, q.y, q.R * q.k, 6, q.a, '#ffffff', 10); groundRing(ctx, q.x, q.y, q.R * q.k, q.m, 0, q.a, 14, 9890, 3); },
   roomDrop: (ctx, q) => dome(ctx, q.x, q.y, q.R * (1.2 - q.k * .4), q.m, q.a, q.t),
   blastDrop: (ctx, q) => boom(ctx, q.x, q.y - 20, q.R * .7, q.k, 5),
+  dragonDrop: (ctx, q) => { ctx.save(); ctx.globalAlpha = q.a; const n = 44; for (let i = 0; i < n; i++) { const a = i / n * TAU; ctx.fillStyle = i % 3 ? '#ff5a1f' : '#ffd27a'; ctx.fillRect(Math.round(q.x + Math.cos(a) * q.R * q.k), Math.round(q.y + Math.sin(a) * q.R * .3 * q.k - (i % 4) * 2 * (1 - q.k)), 3, 3); } ctx.restore(); },
   shellDrop: (ctx, q) => { ctx.save(); ctx.globalAlpha = q.a; ctx.fillStyle = '#a8f6ff'; const n = 40; for (let i = 0; i < n; i++) { const a = i / n * TAU; ctx.fillRect(Math.round(q.x + Math.cos(a) * q.R * q.k), Math.round(q.y + Math.sin(a) * q.R * .3 * q.k), 2, 2); } ctx.restore(); },
   spearDrop: (ctx, q) => { for (let i = 0; i < 10; i++) { const a = i / 10 * TAU; bloodSpear(ctx, q.x + Math.cos(a) * q.R * .6 * q.k, q.y + Math.sin(a) * q.R * .2 * q.k, 26 * q.a, q.a); } },
   default: (ctx, q) => groundRing(ctx, q.x, q.y, 20 + q.R * q.k, q.m, 0, q.a, 12, 9700, 4),

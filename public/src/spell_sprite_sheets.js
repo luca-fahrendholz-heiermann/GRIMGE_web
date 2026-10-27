@@ -947,6 +947,42 @@ export const SPELL_SPRITE_SHEETS = Object.freeze({
   "hd": true,
   "anchor": "center"
  },
+ "dragon_ember_head": {
+  "name": "dragon_ember_head",
+  "w": 36,
+  "h": 26,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "dragon_ember_scale": {
+  "name": "dragon_ember_scale",
+  "w": 11,
+  "h": 11,
+  "frames": 2,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "dragon_ember_spine": {
+  "name": "dragon_ember_spine",
+  "w": 6,
+  "h": 8,
+  "frames": 1,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "dragon_ember_claw": {
+  "name": "dragon_ember_claw",
+  "w": 12,
+  "h": 9,
+  "frames": 2,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
  "blood_rifle": {
   "name": "blood_rifle",
   "w": 46,
@@ -1625,6 +1661,24 @@ export const SPELL_SPRITE_SHEETS = Object.freeze({
   "w": 13,
   "h": 13,
   "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "as_A11_back": {
+  "name": "as_A11_back",
+  "w": 64,
+  "h": 64,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "as_A11_front": {
+  "name": "as_A11_front",
+  "w": 64,
+  "h": 64,
+  "frames": 8,
   "res": 2,
   "hd": true,
   "anchor": "center"

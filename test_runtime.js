@@ -2279,7 +2279,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   const { MageProfile, BUFF_RUNE_IDS } = await import('./public/src/progression.js');
   const neutral = { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false };
   const ids = buff.BUFF_FORM_IDS;
-  assert(ids.length === 25 && ids[0] === 'B01' && ids[1] === 'B02' && ids.includes('T40') && ['A01', 'A02', 'A03', 'A04', 'A05', 'A06', 'A07', 'A08', 'A09', 'A10'].every((id) => ids.includes(id)), 'The 25 curated Arcane States are registered (B01, B02, 13 atlas forms, A01 Göttlicher Riese, A02 Mystischer Affe, A03 Tausendhand, A04 Klingenblüte, A05–A09 body powers)');
+  assert(ids.length === 26 && ids[0] === 'B01' && ids[1] === 'B02' && ids.includes('T40') && ['A01', 'A02', 'A03', 'A04', 'A05', 'A06', 'A07', 'A08', 'A09', 'A10', 'A11'].every((id) => ids.includes(id)), 'The 26 curated Arcane States are registered (B01, B02, 13 atlas forms, A01 Göttlicher Riese, A02 Mystischer Affe, A03 Tausendhand, A04 Klingenblüte, A05–A09 body powers)');
   const tForms = ids.filter((id) => /^[TA]/.test(id));
   assert(tForms.every((id) => ['forward', 'up', 'down'].every((d) => FORM_MOVESETS[id]?.[d]?.short?.make && FORM_MOVESETS[id][d].full?.make) && FORM_SPRINT_ATTACKS[id]?.name), 'Every T / A form has six charged techniques and its own sprint attack');
   assert(FORM_MOVESETS.T13.forward.short.name === 'FADENHAKEN' && FORM_MOVESETS.T13.forward.full.name === 'HUNDRED FILAMENTS' && FORM_SPRINT_ATTACKS.T13.name === 'SILK STRIKE', 'Technique names come straight from the atlas, reworked slots from TECH_OVERRIDES (T13 Fadenschlag)');
@@ -2292,7 +2292,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   const second = profile.addRuneToDeck('buff_B01');
   assert(!second.ok && /ONE ARCANE STATE/.test(second.reason), 'A second buff rune is refused (one per deck)');
   assert(profile.sanitizeDeck(['ignis', 'buff_T13', 'buff_T08', 'aqua']).filter((id) => id.startsWith('buff_')).length === 1, 'Loading a deck keeps only one buff rune');
-  assert(BUFF_RUNE_IDS.length === 25, 'All 25 Arcane State runes are offered in the deck builder');
+  assert(BUFF_RUNE_IDS.length === 26, 'All 26 Arcane State runes are offered in the deck builder');
   {
     // A04 Klingenblüte: the weapon becomes the petal swarm (no normal held weapon), its cuts bleed.
     const BF = await import('./public/src/buff_forms.js');
@@ -2761,7 +2761,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   const strict = new Proxy({}, { get: (t, k) => (k === 'ellipse' || k === 'arc') ? (x, y, rx, ry) => { if (rx < 0 || (k === 'ellipse' && ry < 0)) throw new Error('IndexSizeError ' + k); } : (k === 'canvas' ? undefined : (k === 'measureText' ? () => ({ width: 10 }) : (k === 'createLinearGradient' ? () => ({ addColorStop() {} }) : () => {}))), set: () => true });
   const ids = Object.keys(buff.BUFF_FORMS);
   const impacts = ids.filter((id) => FS.FORM_SPRINTS[id]).map((id) => FS.FORM_SPRINTS[id].impact);
-  assert(new Set(impacts).size === impacts.length && impacts.length === 23, 'Every Arcane State (besides the B01 / B02 engines) has its own sprint impact');
+  assert(new Set(impacts).size === impacts.length && impacts.length === 24, 'Every Arcane State (besides the B01 / B02 engines) has its own sprint impact');
   assert(ids.every((id) => FS.FORM_DIVES[id]) && new Set(ids.map((id) => FS.FORM_DIVES[id].style)).size === ids.length && ['ninefold', 'eidolon', 'ascendant'].every((k) => FS.FORM_DIVES[k]), 'Every Arcane State and Focus transformation has its own air dive');
   const broken = [];
   for (const id of ids) {
@@ -2838,6 +2838,19 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
           for (const dir of ['forward', 'up', 'down']) (await import('./public/src/arcane_moves.js')).ARCANE_CHARGE.A09(strict, { x: 300, y: 300, f: 1 }, buff.BUFF_FORMS.A09.mat, dir, .7, 1.2);
         } catch (e) { bad9.push(e.message); }
         assert(!bad9.length && bled && PR.lateRuneRoute('buff_A09')?.kind === 'boss', 'A09 BLUTARSENAL: salvo, gatling, rocket hub, rocket rain, spear bed and full arsenal hit and render, foes bleed; boss drop only ' + bad9.slice(0, 4).join(' | ')); buff.endBuffForm(P); }
+      // A11 DRACHENGEIST (user, 27 Oct 2026: a horned dragon spirit with a fire aura): six techniques hit and render, foes burn;
+      // Ignis route.
+      { const STS = await import('./public/src/status_effects.js'); const badD = []; let burnt = false;
+        try { start('A11'); if (buff.currentBuffForm(P)?.id !== 'A11') badD.push('cast');
+          for (const [dir, v] of [['forward', 'short'], ['forward', 'full'], ['up', 'short'], ['up', 'full'], ['down', 'short'], ['down', 'full']]) {
+            P.x = 300; P.z = .5; P.facing = 1; P.grounded = true; P.elevation = 0; dummy.homeX = dummy.x = dir === 'up' && v === 'short' ? 390 : dir === 'up' ? 430 : dir === 'down' ? 350 : 380; dummy.homeZ = dummy.z = .5; dummy.hp = dummy.maxHp; dummy.statusImmuneUntil = {};
+            spells.addSpell(FMS.A11[dir][v].make(P), 'B'); for (let i = 0; i < 120; i++) { spells.update(1 / 60, game); if (i % 6 === 0) for (const sp of spells.activeSpells) sp.render?.(strict); }
+            if (dummy.hp >= dummy.maxHp) badD.push(FMS.A11[dir][v].name + ': no hit'); if (STS.hasStatus(dummy, 'burn')) burnt = true;
+          }
+          for (const layer of ['back', 'front']) buff.renderBuffManifestation(strict, P, P.y, layer);
+          for (const dir of ['forward', 'up', 'down']) (await import('./public/src/arcane_moves.js')).ARCANE_CHARGE.A11(strict, { x: 300, y: 300, f: 1 }, buff.BUFF_FORMS.A11.mat, dir, .9, 1.2);
+        } catch (e) { badD.push(e.message); }
+        assert(!badD.length && burnt && PR.lateRuneRoute('buff_A11')?.element === 'ignis', 'A11 DRACHENGEIST: bite, breath, rise, sky dive, tail ring and dragon guard hit and render, foes burn; Ignis route ' + badD.slice(0, 4).join(' | ')); buff.endBuffForm(P); }
       // A10 KONSTRUKTPANZER (user, 26 Oct 2026: Iron-Man-like turtle armour that rolls into a ball): six techniques hit and
       // render, the roll hides the body and bounces between two foes, the shield passive recharges; Konstrukt route.
       { const KP = await import('./public/src/arcane_konstrukt.js'); const badK = [];

@@ -35,6 +35,7 @@ import { recolorFor, recolorStages, cloakFor } from './form_recolors.js';
 import './armor_extras.js'; // socket-anchored armour pieces (horns, claws, cannon, visor eyes) // armour transformations recolour the hero's own pixels
 import './arcane_fadenschlag.js'; // T13 Fadenschlag: swing + thread techniques (must patch ARCANE_MOVES before the movesets are built)
 import { konstruktTick, isShellRolled } from './arcane_konstrukt.js'; // A10 Konstruktpanzer (armour, shell roll, shield passive)
+import { drachengeistTick } from './arcane_drachengeist.js'; // A11 Drachengeist (dragon spirit, burn passive)
 import { arsenalTick } from './arcane_bloodarsenal.js'; // A09 Blutarsenal (weapon fusion: techniques, look, bleed passive) // A05–A08 body powers (techniques, looks, water weakness, passives) // A04: the held weapon's arsenal (look + techniques)
 import { combat } from './combat.js';
 import { TransformationFx, transitionStyleOf, TRANSFORM_TIMING } from './transform_fx.js';
@@ -241,6 +242,7 @@ export function updateBuffForm(player, dt) {
   devilTick(player, dt, formFor(player, b.id)); // body powers: water weakness, tremors, blast marks
   arsenalTick(player, formFor(player, b.id));
   konstruktTick(player, dt, formFor(player, b.id));
+  drachengeistTick(player, formFor(player, b.id));
   if (b.timer <= 0 || !player.isAlive) endBuffForm(player);
 }
 

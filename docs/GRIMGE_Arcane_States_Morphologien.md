@@ -18,10 +18,10 @@
 | **Levitation State** | schwebender Spieler mit kontrollierten Projektilen | T05 Bruchflug |
 | **Environmental State** | der Spieler verändert einen größeren Bereich der Arena | T35 Kältestillstand |
 | **Körperkraft** | der eigene Körper verändert sich (dehnen, beben, Raum, Sprengung) | A05 Dehnleib, A06 Beben, A07 Raum, A08 Sprengleib, A09 Blutarsenal |
-| **Rüstung** | die eigenen Sprite-Pixel werden zur Rüstung, Anbauteile sitzen am Körper | A10 Konstruktpanzer |
+| **Rüstung** | die eigenen Sprite-Pixel werden zur Rüstung, Anbauteile sitzen am Körper | A10 Konstruktpanzer, A11 Drachengeist |
 | **Divine Projection** | vergrößertes Lichtbild des eigenen Körpers | A01 Göttlicher Riese |
 
-## Die 25 aktiven Arcane States (kuratiert: je eigene Techniken, Lade-Ritual und Palette)
+## Die 26 aktiven Arcane States (kuratiert: je eigene Techniken, Lade-Ritual und Palette)
 
 ### B01 Risswild · *Energy Extension* · V3.2: Tiergeist (Kyubi): neun Fuchsflammen-Schweife
 
@@ -322,6 +322,18 @@
 - **Heavies (V3.2-Abbildung):** Forward — Short: Handkanone; Full: Kernstrahl. · Up — Short: Schubstoß; Full: Raketenfächer. · Down — Short: Schalenschild; Full: Schalenrolle.
 - **Ausschlüsse:** Keine fremde Figur — nur die eigene Rüstung, die eigene Schale und eigene Waffen.
 - Palette: `#0c1a10` `#3a7a40` `#3ad0e0` `#a8f6ff` · Material: grüne Panzerplatten mit cyanfarbenen Kanten, Hex-Schale aus Platten.
+
+### A11 Drachengeist — Glutdrache · *Begleitgeist* · V3.2: Begleitgeist: Drachengeist
+
+- **Anker:** `sprite_alpha`, `back`, `crown`, `root`
+- **Idle-Silhouette:** Der Hals eines gehörnten Feuerdrachen steigt hinter dem Rücken auf, sein Kopf thront über dem Helden; hinter dem Körper lodert eine Feueraura.
+- **Action-Silhouette:** Der Drache windet sich hinter dem Rücken, sein Kopf thront über dem Helden, die Flammen lodern.
+- **Peak Manifestation:** Bei Full stürzt der ganze Drache herab oder windet sich um den Helden.
+- **Transform-In / Out:** Flammen schlagen hoch, der Drache steigt hinter dem Rücken auf. / Der Drache zerfällt in Glut.
+- **Defense · Grab · Jump:** Der Drache legt sich schützend um den Helden. · Die Klauen packen zu. · Flammen tragen hoch.
+- **Heavies (V3.2-Abbildung):** Forward — Short: Drachenbiss; Full: Drachenatem. · Up — Short: Aufstieg; Full: Himmelssturz. · Down — Short: Schweifring; Full: Drachenwacht.
+- **Ausschlüsse:** Kein Wurm, keine fremde Figur — ein eindrucksvoller eigener Drache.
+- Palette: `#3a0a00` `#ff5a1f` `#ffd27a` `#fff3c4` · Material: goldrote Drachenschuppen, Glut und Flammen.
 
 
 ## Archiviert (aus dem Spiel genommen, im Atlas erhalten)

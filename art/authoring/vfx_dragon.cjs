@@ -3,7 +3,8 @@
 // design, inspiration only). Eastern dragons are assembled at runtime along a spine (spell_visuals.js
 // drawDragon) from these parts, so they can coil round a target and still read as DRAGONS: a big head with
 // jaws, horns and mane; armoured scale plates; dorsal spines; claws.
-// Looks: blood (dark crimson scales, glowing red veins) and sun (obsidian scales with gold rims, T40).
+// Looks: blood (dark crimson scales, glowing red veins), sun (obsidian scales with gold rims, T40) and ember
+// (red-orange fire scales with a flame mane, A11 Drachengeist).
 //   dragon_<look>_head   4 frames, 72×52 (faces right): jaw closed → opening → roar → snap.
 //   dragon_<look>_scale  2 frames, 22×22: an armour plate seen from the front (lit) and from behind (dark).
 //   dragon_<look>_spine  1 frame, 12×16: a dorsal spine, curved back.
@@ -12,6 +13,8 @@ const B = require('./vfx_brush.cjs');
 const { Sheet, rng, TAU, clamp01 } = B;
 const LOOKS = {
   blood: B.pal({ body: ['#12000a', '#2a0410', '#4a0a18', '#701424', '#9a1e2e'], vein: ['#b3121f', '#ff2a2a', '#ff8a7a', '#ffd6cc'], horn: ['#2a1a1a', '#5a3a36', '#9a7a70', '#d8c4b8'], mane: ['#3a0008', '#7a0a14', '#c21a24', '#ff5a4a'], eye: ['#ffe680', '#ffffff'], tooth: ['#c8b8a8', '#fffaf0'], out: '#080004' }),
+  // ember: a fire dragon (A11 Drachengeist) — glowing red-orange scales, a flame mane, ivory-gold horns.
+  ember: B.pal({ body: ['#2a0800', '#5a1404', '#9a2e0a', '#d8541a', '#ff8a3a'], vein: ['#ffb000', '#ffd76a', '#fff3c4', '#ffffff'], horn: ['#3a2410', '#7a5a30', '#d0a860', '#fff0c0'], mane: ['#8a1a00', '#ff5a1f', '#ffb84a', '#fff3c4'], eye: ['#fff6cf', '#ffffff'], tooth: ['#d8ccb8', '#fffaf0'], out: '#1a0400' }),
   sun: B.pal({ body: ['#0c0a10', '#1c1822', '#2e2836', '#463e52', '#625870'], vein: ['#8a5a00', '#e0a020', '#ffd76a', '#fff6cf'], horn: ['#3a2a10', '#7a5a20', '#c99a3a', '#ffe6a0'], mane: ['#5a3200', '#b8780a', '#f2b32a', '#ffe680'], eye: ['#ff8a1f', '#fff6cf'], tooth: ['#d8ccb8', '#fffaf0'], out: '#06040a' })
 };
 const tone = (s, f, ramp, x, y, v) => { const fv = clamp01(v) * (ramp.length - 1); const lo = Math.floor(fv); s.set(f, x, y, ramp[Math.min(ramp.length - 1, lo + (B.dither(x, y, fv - lo) ? 1 : 0))]); };
@@ -94,4 +97,4 @@ function claw(look) {
   }
   return s;
 }
-module.exports = { dragonSheets: () => ['blood', 'sun'].flatMap((l) => [head(l), scale(l), spine(l), claw(l)]) };
+module.exports = { dragonSheets: () => ['blood', 'sun', 'ember'].flatMap((l) => [head(l), scale(l), spine(l), claw(l)]) };
