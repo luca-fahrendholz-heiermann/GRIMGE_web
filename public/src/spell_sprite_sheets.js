@@ -1575,6 +1575,33 @@ export const SPELL_SPRITE_SHEETS = Object.freeze({
   "anchor": "base",
   "baseOffset": 6
  },
+ "w_shield_mace": {
+  "name": "w_shield_mace",
+  "w": 24,
+  "h": 27,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "w_shield_ward": {
+  "name": "w_shield_ward",
+  "w": 24,
+  "h": 27,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "w_shield_sun": {
+  "name": "w_shield_sun",
+  "w": 24,
+  "h": 27,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
  "w_fist": {
   "name": "w_fist",
   "w": 22,

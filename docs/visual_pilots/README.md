@@ -549,3 +549,12 @@ Die Geschosse der Waffen (`drawShotPixel` in `weapons_ext.js`) sind jetzt knacki
 - Noten waren schon knackig und bleiben.
 
 - `v53_weapon_shots.png`
+
+## v54 — Block-Haltungen und eigene Schilde (27.10.2026)
+
+- Blocken mit dem **Bogen**: Der gezeichnete Bogen steht senkrecht als Abwehr, davor drei Windbögen.
+- **Zauberwaffen**: eine drehende sechseckige Runenbarriere in der Waffenfarbe, aus festen Pixeln statt weicher Füllung.
+- **Panzerhandschuhe und Klauen**: die gezeichneten Waffen gekreuzt vor dem Körper, ein Ring in der Waffenfarbe.
+- Eigene Schilde: **Streitkolben** mit Eisen-Drachenschild und Goldbuckel, **Hexerstab** mit dunklem Wächterschild und grünem Auge (blockt jetzt mit dem Schild), **Zepter** mit weiß-goldenem Sonnenschild.
+
+- `v54_guards_shields.png`

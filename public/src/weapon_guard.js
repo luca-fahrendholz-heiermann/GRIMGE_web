@@ -14,7 +14,7 @@ import { drawGuardSheet } from './weapon_sheets.js'; // drawn weapons keep their
 
 const TAU = Math.PI * 2;
 const KIND = Object.freeze({
-  sword_shield: 'shield', mace_shield: 'shield', scepter_shield: 'shield',
+  sword_shield: 'shield', mace_shield: 'shield', scepter_shield: 'shield', warlock_rod: 'shield',
   katana: 'sheath', odachi: 'sheath'
 });
 const FAMILY = Object.freeze({
@@ -38,7 +38,7 @@ export function drawWeaponGuard(ctx, p, x, baseY, f, perfect, t) {
   const cx = x + f * 24; const cy = baseY - 42;
   ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
   ctx.translate(cx, cy); ctx.scale(f, 1);
-  const drawn = drawGuardSheet(ctx, p?.weapon ?? p?.classWeapon, kind, t);
+  const drawn = drawGuardSheet(ctx, p?.weapon ?? p?.classWeapon, kind, t, accent);
   if (!drawn) switch (kind) {
     case 'shield': {
       // A big kite shield with rim and boss.

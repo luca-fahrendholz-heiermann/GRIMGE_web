@@ -408,5 +408,18 @@ function talisman() { const s = sheetOf('w_talisman', 24, 44); for (let f = 0; f
 function fan() { const s = sheetOf('w_fan', 58, 94); const gx = 4; const gy = 47; const R = 52; for (let f = 0; f < 4; f++) {
   for (let r = 10; r <= R; r++) for (let a = -1; a <= 1; a += .01) { const rib = Math.abs(((a + 1) / 2 * 10) % 1 - .5) > .44; const pat = r > R - 6 ? .9 : ((Math.round(a * 30) + Math.round(r / 6) + f) % 7 === 0 ? .85 : .55); tone(s, f, rib ? P.wood : r > R - 6 ? Q.teal : Q.paper, gx + Math.cos(a) * r, gy + Math.sin(a) * r, rib ? .6 : pat); }
   for (let r = 0; r < 12; r++) for (let k = -1; k <= 1; k++) tone(s, f, P.wood, gx + r, gy + k, .6); gem(s, f, Q.teal, gx + 2, gy, 1, .2); done(s, f); } return s; }
-const BATCH3 = () => [gauntlet(), iceSword(), mace(), twinblade(), odachi(), knife(), crossbow(), chainScythe(), spellblade(), focus(), greatsword(), arcaneStaff(), orb(), rod('w_rod_warlock', Q.green), rod('w_rod_grimoire', Q.violet), grimoire(), scepter(), sacredStaff(), harp(), zither(), spiritGlaive(), claw(), beastStaff(), chakram(), card(), talisman(), fan()];
+// Own shields (27 Oct 2026): mace — an iron kite shield with a gold boss; warlock — a dark ward shield with a green eye;
+// scepter — a white-gold sun shield with rays. 48×54, centred.
+function kiteShield(name, body, rim, accent, kind) {
+  const s = sheetOf(name, 48, 54); const cx = 24; const cy = 26;
+  for (let f = 0; f < 4; f++) {
+    for (let y = -24; y <= 26; y++) { const w = y < 6 ? 20 : Math.round(20 * (1 - (y - 6) / 21)); for (let x = -w; x <= w; x++) { const edge = Math.abs(x) >= w - 2 || y <= -22; const light = .55 - (x / 20 + y / 26) * .18; tone(s, f, edge ? rim : body, cx + x, cy + y, edge ? light + .15 : light * .8); } }
+    if (kind === 'mace') { disc(s, f, P.gold, cx, cy - 2, 5, 5, (x, y) => (x + y < 0 ? .95 : .5)); for (let y = -18; y <= 20; y++) tone(s, f, P.gold, cx, cy + y, .6); for (let x = -14; x <= 14; x++) tone(s, f, P.gold, cx + x, cy - 8, .6); }
+    if (kind === 'ward') { disc(s, f, accent, cx, cy - 2, 7, 4, (x, y, e) => (e > .6 ? .45 : .9)); disc(s, f, P.black, cx + (f % 2), cy - 2, 2, 3, () => .1); for (let k = 0; k < 6; k++) tone(s, f, accent, cx - 12 + k * 5, cy + 14, (k + f) % 3 ? .6 : 1); }
+    if (kind === 'sun') { for (let i = 0; i < 12; i++) { const a = i / 12 * TAU + f * .05; for (let r = 5; r < 13; r++) tone(s, f, accent, cx + Math.cos(a) * r, cy - 3 + Math.sin(a) * r, i % 2 ? .6 : .95); } disc(s, f, P.gold, cx, cy - 3, 5, 5, (x, y) => (x + y < 0 ? 1 : .6)); }
+    B.selOutline(s, f, P.out);
+  }
+  return s;
+}
+const BATCH3 = () => [kiteShield('w_shield_mace', P.steel, P.gold, P.gold, 'mace'), kiteShield('w_shield_ward', Q.violet, P.black, Q.green, 'ward'), kiteShield('w_shield_sun', Q.white, P.gold, P.gold, 'sun'), gauntlet(), iceSword(), mace(), twinblade(), odachi(), knife(), crossbow(), chainScythe(), spellblade(), focus(), greatsword(), arcaneStaff(), orb(), rod('w_rod_warlock', Q.green), rod('w_rod_grimoire', Q.violet), grimoire(), scepter(), sacredStaff(), harp(), zither(), spiritGlaive(), claw(), beastStaff(), chakram(), card(), talisman(), fan()];
 module.exports = { weaponSheets: () => [...BATCH3(), shadowSpear(), glaive(), katana(), sheath(), spear(), sword(), shield(), spiritSword(), scythe(), greatAxe(), greatHammer(), sabre(), dagger(), bow(), staff()] };

@@ -22,7 +22,7 @@ export const WEAPON_SHEETS = Object.freeze({
   quarterstaff: { staff: ['w_staff', 72, 9, 152, 18] },
   gauntlets: { fist: ['w_fist', 12, 15, 44, 30] },
   ice_sword: { sword: ['w_ice_sword', 14, 13, 96, 26] },
-  mace_shield: { mace: ['w_mace', 12, 18, 96, 36], shield: ['w_shield', 18, 27, 48, 54] },
+  mace_shield: { mace: ['w_mace', 12, 18, 96, 36], shield: ['w_shield_mace', 18, 27, 48, 54] },
   twinblade: { twinblade: ['w_twinblade', 88, 14, 176, 28] },
   odachi: { odachi: ['w_odachi', 28, 14, 164, 28] },
   throwing_blades: { knife: ['w_knife', 8, 7, 48, 14] },
@@ -32,9 +32,9 @@ export const WEAPON_SHEETS = Object.freeze({
   rune_greatsword: { greatsword: ['w_greatsword', 24, 22, 156, 44] },
   arcane_staff: { arcane_staff: ['w_arcane_staff', 52, 20, 172, 40] },
   orb_focus: { orb: ['w_orb', 4, 20, 36, 40], focus: ['w_focus', 14, 20, 28, 40] },
-  warlock_rod: { rod: ['w_rod_warlock', 12, 14, 88, 28], shield: ['w_shield', 18, 27, 48, 54] },
+  warlock_rod: { rod: ['w_rod_warlock', 12, 14, 88, 28], shield: ['w_shield_ward', 18, 27, 48, 54] },
   rod_grimoire: { rod: ['w_rod_grimoire', 12, 14, 88, 28], grimoire: ['w_grimoire', 4, 22, 36, 44] },
-  scepter_shield: { scepter: ['w_scepter', 12, 18, 80, 36], shield: ['w_shield', 18, 27, 48, 54] },
+  scepter_shield: { scepter: ['w_scepter', 12, 18, 80, 36], shield: ['w_shield_sun', 18, 27, 48, 54] },
   sacred_staff: { sacred_staff: ['w_sacred_staff', 52, 18, 176, 36] },
   harp: { harp: ['w_harp', 16, 44, 72, 84, 0, .7] },
   battle_zither: { zither: ['w_zither', 8, 18, 80, 36, 0, .8] },
@@ -83,9 +83,23 @@ export function drawKatanaSheath(ctx, player, renderY) {
 // The guard pose with the drawn weapon (weapon_guard.js has translated to the guard centre and mirrored to the
 // facing): shield held big in front, katana scabbard upright, blades crossed, polearms spun as a disc.
 // Returns false when the weapon has no drawn sheet (the procedural guard is used then).
-export function drawGuardSheet(ctx, weaponId, kind, t = 0) {
-  const sheets = WEAPON_SHEETS[weaponId]; if (!sheets || kind === 'bow' || kind === 'barrier' || kind === 'fist') return false; // bow brace, caster barrier, crossed fists stay procedural
+// Crisp pixel helpers for the guards below.
+const gpx = (ctx, x, y, sz, c) => { ctx.fillStyle = c; ctx.fillRect(Math.round(x - sz / 2), Math.round(y - sz / 2), sz, sz); };
+export function drawGuardSheet(ctx, weaponId, kind, t = 0, accent = '#7fd8ff') {
+  const sheets = WEAPON_SHEETS[weaponId]; if (!sheets) return false;
   const main = Object.keys(sheets).find((k) => k !== 'shield'); const e = sheets[main];
+  // Bow: the bow raised upright as a brace, three crisp wind arcs in front.
+  if (kind === 'bow' && e && spellSheetReady(e[0])) { const sc = sizeOf(e[3], e[6] ?? 1); drawSpellSprite(ctx, e[0], 0, -4, 0, { anchor: 'center', scale: sc }); for (let i = 0; i < 3; i++) { const r = 22 + i * 6; for (let a = -.7; a <= .7; a += .06) gpx(ctx, 4 + Math.cos(a) * r, Math.sin(a) * r * 1.2, 2, i ? accent : '#ffffff'); } return true; }
+  // Casters: a turning hexagonal rune barrier — dark frame, accent rim, glyph nodes (opaque pixels, no soft fill).
+  if (kind === 'barrier') { const pts = Array.from({ length: 6 }, (_, i) => { const a = t * .8 + i * Math.PI / 3; return [Math.cos(a) * 12 + 6, Math.sin(a) * 32]; });
+    for (let i = 0; i < 6; i++) { const [ax, ay] = pts[i]; const [bx, by] = pts[(i + 1) % 6]; const n = Math.ceil(Math.hypot(bx - ax, by - ay) / 2); for (let k = 0; k <= n; k++) { const x = ax + (bx - ax) * k / n; const y = ay + (by - ay) * k / n; gpx(ctx, x, y, 4, '#0e1220'); gpx(ctx, x, y, 2, accent); } }
+    for (let i = 0; i < 6; i++) gpx(ctx, pts[i][0], pts[i][1], 4, '#ffffff');
+    for (let y = -16; y <= 16; y += 2) gpx(ctx, 6, y, 1, accent); for (let x = 0; x <= 12; x += 2) gpx(ctx, x, 0, 1, accent); return true; }
+  // Fists / claws: the two drawn gauntlets crossed in front, an accent ring.
+  if (kind === 'fist' && e && spellSheetReady(e[0])) { const sc = sizeOf(e[3], e[6] ?? 1); const meta = SPELL_SPRITE_SHEETS[e[0]]; const k = (meta?.w ?? e[3]) / e[3] * sc;
+    for (const sg of [1, -1]) { ctx.save(); ctx.rotate(sg * .6 - Math.PI / 2); drawSpellSprite(ctx, e[0], 0, (e[3] / 2 - e[1]) * k - 10, (e[4] / 2 - e[2]) * k, { anchor: 'center', scale: sc }); ctx.restore(); }
+    for (let a = 0; a < Math.PI * 2; a += .08) gpx(ctx, Math.cos(a) * 20, -4 + Math.sin(a) * 28, 2, accent); return true; }
+  if (kind === 'bow' || kind === 'fist') return false;
   if (kind === 'shield' && sheets.shield && spellSheetReady(sheets.shield[0])) { const meta = SPELL_SPRITE_SHEETS[sheets.shield[0]]; drawSpellSprite(ctx, sheets.shield[0], Math.floor(t * 8) % (meta?.frames ?? 1), 0, 0, { anchor: 'center', scale: 1.15 * SIZE }); return true; }
   if (kind === 'sheath' && spellSheetReady('w_katana_sheath')) { ctx.save(); ctx.rotate(-Math.PI / 2 + .08); drawSpellSprite(ctx, 'w_katana_sheath', 0, 0, 0, { anchor: 'center' }); ctx.restore(); return true; }
   if (!e || !spellSheetReady(e[0])) return false;
