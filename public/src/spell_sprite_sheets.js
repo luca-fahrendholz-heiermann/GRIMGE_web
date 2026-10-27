@@ -1736,5 +1736,149 @@ export const SPELL_SPRITE_SHEETS = Object.freeze({
   "res": 2,
   "hd": true,
   "anchor": "center"
+ },
+ "as_T08_back": {
+  "name": "as_T08_back",
+  "w": 64,
+  "h": 64,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "as_T08_front": {
+  "name": "as_T08_front",
+  "w": 64,
+  "h": 64,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "as_T23_back": {
+  "name": "as_T23_back",
+  "w": 64,
+  "h": 64,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "as_T23_front": {
+  "name": "as_T23_front",
+  "w": 64,
+  "h": 64,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "as_T24_back": {
+  "name": "as_T24_back",
+  "w": 64,
+  "h": 64,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "as_T24_front": {
+  "name": "as_T24_front",
+  "w": 64,
+  "h": 64,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "as_T35_back": {
+  "name": "as_T35_back",
+  "w": 64,
+  "h": 64,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "as_T35_front": {
+  "name": "as_T35_front",
+  "w": 64,
+  "h": 64,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "as_T37_back": {
+  "name": "as_T37_back",
+  "w": 64,
+  "h": 64,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "as_T37_front": {
+  "name": "as_T37_front",
+  "w": 64,
+  "h": 64,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "as_A05_back": {
+  "name": "as_A05_back",
+  "w": 64,
+  "h": 64,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "as_A05_front": {
+  "name": "as_A05_front",
+  "w": 64,
+  "h": 64,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "as_A06_back": {
+  "name": "as_A06_back",
+  "w": 64,
+  "h": 64,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "as_A06_front": {
+  "name": "as_A06_front",
+  "w": 64,
+  "h": 64,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "as_A08_back": {
+  "name": "as_A08_back",
+  "w": 64,
+  "h": 64,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "as_A08_front": {
+  "name": "as_A08_front",
+  "w": 64,
+  "h": 64,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
  }
 });
