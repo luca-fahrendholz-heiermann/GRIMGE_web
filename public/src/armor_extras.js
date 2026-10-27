@@ -27,7 +27,7 @@ registerFormExtra('T06', (ctx, s, pose, form, layer, a) => {
   if (tailored(pose, form)) return;
   const f = s.f; const [hx, hy] = s.head; const sway = Math.sin(pose.t * 2) * .6;
   if (layer === 'back') {
-    for (const side of [-1, 1]) spike(ctx, [hx + side * 6, hy - 4], [hx + side * 24, hy - 4], [hx + side * 26 + sway, hy - 24], 6, '#4a6488', '#ffe08a', a);
+    for (const side of [-1, 1]) spike(ctx, [hx + side * 6, hy - 2], [hx + side * 22, hy], [hx + side * 28 + sway, hy - 14], 6, '#4a6488', '#ffe08a', a); /* sideways: stays below the HP bar */
     for (const [sx, sy, d] of [[s.shoulderB[0], s.shoulderB[1], -f], [s.shoulderF[0], s.shoulderF[1], f]]) { spike(ctx, [sx, sy], [sx + d * 12, sy - 4], [sx + d * 18, sy - 14], 5, '#4a6488', '#ffe08a', a); spike(ctx, [sx, sy + 4], [sx + d * 10, sy + 2], [sx + d * 16, sy - 5], 4, '#2f4262', '#e6c062', a); }
     return;
   }

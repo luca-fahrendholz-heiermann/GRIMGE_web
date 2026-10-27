@@ -27,7 +27,8 @@ import { updatePrimalBond, bondMoveMultiplier, bondGainMultiplier, bondDisplacem
 import { createSegments, damageSegments, updateSegments, renderSegments } from './castle_segments.js';
 import { updateBuffForm, endBuffForm, isGenericBuff, currentBuffForm, renderBuffManifestation, buffVeinPainter, buffCloakColor, renderBuffGuard, levitationOffset, renderBuffCharge } from './buff_forms.js';
 import { silkAirJump, silkSwingStep } from './arcane_fadenschlag.js';
-import { isShellRolled } from './arcane_konstrukt.js'; // A10 Schalenrolle: the body is hidden inside the ball // T13 Fadenschlag: air-jump swing on a silk wire
+import { isShellRolled } from './arcane_konstrukt.js';
+import { cloakFor } from './form_recolors.js'; // armour forms tint the shield shell in their aura colour // A10 Schalenrolle: the body is hidden inside the ball // T13 Fadenschlag: air-jump swing on a silk wire
 import { masteryOnShieldHit, masteryTickShield, masteryChargedRelease, masteryPerfectBlock, masteryTier, currentAttacker, masteryTick, masteryMoveMult, masteryIncoming } from './mastery.js';
 import { updateSignatureStance, renderSignatureStance, signatureHover, signatureMoveMult, signatureEvent, signatureDamageTaken, setHitContext, signatureSprintVariant, signatureCharge, signatureSprintMove, signatureDive, signatureMeleeMult } from './signature_runes.js';
 
@@ -2231,7 +2232,7 @@ export class Player extends GroundEntity {
     if (this.finisherChance && this.isAlive) this.renderFinisherGlint(ctx, renderY);
     if (this.guidedChain && this.isAlive) this.guidedChain.render(ctx, renderY);
     // The shield: a crisp hexagonal shell that cracks as it runs low (ward_shell.js).
-    if (this.arcaneShield > 0 && this.isAlive) drawWardShell(ctx, this.x, renderY, { frac: Math.min(1, this.arcaneShield / Math.max(1, this.shieldCapacity ?? this.arcaneShield)), t: this.animTime ?? 0 });
+    if (this.arcaneShield > 0 && this.isAlive && !rolled) { const own = cloakFor(currentBuffForm(this)?.id); drawWardShell(ctx, this.x, renderY, { frac: Math.min(1, this.arcaneShield / Math.max(1, this.shieldCapacity ?? this.arcaneShield)), t: this.animTime ?? 0, ...(own ? { color: own.edge, light: own.inner, dark: '#061a20' } : {}) }); }
     // Frozen: the Little-Fighter ice block (a FROZEN status draws its own block).
     if (this.freezeTimer > 0 && this.isAlive && !hasStatus(this, 'frozen') && !hasStatus(this, 'paralysis')) drawIceBlock(ctx, this.x, renderY, 50, 90, this.animTime ?? 0);
   }
