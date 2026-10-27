@@ -2343,5 +2343,126 @@ export const SPELL_SPRITE_SHEETS = Object.freeze({
   "hd": true,
   "anchor": "base",
   "baseOffset": 2
+ },
+ "puppet_knot": {
+  "name": "puppet_knot",
+  "w": 10,
+  "h": 10,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "forge_grip": {
+  "name": "forge_grip",
+  "w": 22,
+  "h": 16,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "echo_plate": {
+  "name": "echo_plate",
+  "w": 22,
+  "h": 17,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "colossus_shoulder": {
+  "name": "colossus_shoulder",
+  "w": 50,
+  "h": 35,
+  "frames": 1,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "colossus_fist": {
+  "name": "colossus_fist",
+  "w": 40,
+  "h": 40,
+  "frames": 2,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "hunter_bell": {
+  "name": "hunter_bell",
+  "w": 18,
+  "h": 22,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 2
+ },
+ "rule_tablet": {
+  "name": "rule_tablet",
+  "w": 16,
+  "h": 26,
+  "frames": 2,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 2
+ },
+ "exile_plane": {
+  "name": "exile_plane",
+  "w": 13,
+  "h": 50,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 2
+ },
+ "harvest_seal": {
+  "name": "harvest_seal",
+  "w": 85,
+  "h": 29,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "harvest_seed": {
+  "name": "harvest_seed",
+  "w": 7,
+  "h": 9,
+  "frames": 2,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "trade_scales": {
+  "name": "trade_scales",
+  "w": 28,
+  "h": 22,
+  "frames": 3,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "res_plate": {
+  "name": "res_plate",
+  "w": 13,
+  "h": 56,
+  "frames": 3,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 2
+ },
+ "seam_crack": {
+  "name": "seam_crack",
+  "w": 14,
+  "h": 8,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
  }
 });

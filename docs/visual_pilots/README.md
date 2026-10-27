@@ -580,3 +580,20 @@ Die Geschosse der Waffen (`drawShotPixel` in `weapons_ext.js`) sind jetzt knacki
 - **Schwerelosband:** aufsteigende mintfarbene Feldlinien über dem Bodenriss.
 
 - `v56_runde7.png`
+
+## v57 — Spezialrunen Runde 8 (27.10.2026)
+
+`art/authoring/vfx_runes8.cjs`:
+- **Marionettenfaden:** ein Lichtfaden-Knoten am gezogenen Objekt.
+- **Runenschmiede:** drei gegenläufige Schmiederinge mit Metallsplittern um einen grünen Kern.
+- **Echofamulus:** flache leuchtende Platte mit gesprungenem Augenzeichen.
+- **Bruchkoloss:** Plattenschulter und eine große gepanzerte Faust mit violetten Energiebändern (eigenes Schlagbild).
+- **Jägerglocke:** Bronzeglocke mit schwingenden Klangzungen, Klangwellen als gestrichelte Pixelringe.
+- **Runengericht:** Elfenbeintafeln mit blauen Runen (beschädigt gesprungen).
+- **Exilkorridor:** senkrechte, gerasterte Rissebenen mit wandernden Lichtkerben.
+- **Erntezirkel:** moosgoldenes Saatsiegel am Boden, Saatkerne (stumpf / geladen).
+- **Scherbenhandel:** goldene Waage über der Hand, kippt nach der Entscheidung.
+- **Resonanzkorridor:** Elfenbein-Membranplatten mit roten Adern (ruhig, klingend, gerissen).
+- **Weltnaht:** dunkle Rissbrocken mit grünen Glutadern entlang der Naht.
+
+- `v57_runde8.png`
