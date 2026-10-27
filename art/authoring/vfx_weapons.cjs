@@ -292,7 +292,7 @@ const Q = {
 const disc = (s, f, r, cx, cy, rx, ry, shade) => { for (let y = -ry; y <= ry; y++) for (let x = -rx; x <= rx; x++) { const e = (x / rx) ** 2 + (y / ry) ** 2; if (e <= 1) tone(s, f, r, cx + x, cy + y, shade(x, y, e)); } };
 const lineP = (s, f, r, x0, y0, x1, y1, v, w = 1) => { const n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0))); for (let i = 0; i <= n; i++) for (let k = 0; k < w; k++) tone(s, f, r, x0 + (x1 - x0) * i / n, y0 + (y1 - y0) * i / n + k, typeof v === 'function' ? v(i / n, k) : v); };
 const quadP = (s, f, r, a, c, b, v, w = 1) => { for (let i = 0; i <= 80; i++) { const u = i / 80; const x = (1 - u) ** 2 * a[0] + 2 * (1 - u) * u * c[0] + u * u * b[0]; const y = (1 - u) ** 2 * a[1] + 2 * (1 - u) * u * c[1] + u * u * b[1]; for (let k = 0; k < w; k++) tone(s, f, r, x, y + k, typeof v === 'function' ? v(u, k) : v); } };
-const facet = (rr, edge) => (x, y, t, b) => (y === t ? [rr, .98] : y === b ? [rr, .45] : [rr, y - t <= (b - t) / 2 ? .78 : .55]).map((v, i) => (i === 0 && edge && y === t ? edge : v));
+const facet = (rr) => (x, y, t, b) => (y === t ? [rr, .98] : y === b ? [rr, .45] : [rr, y - t <= (b - t) / 2 ? .78 : .55]);
 const sheetOf = (name, w, h, n = 4) => new Sheet(name, w, h, n, { anchor: 'center' });
 const done = (s, f) => B.selOutline(s, f, P.out);
 
@@ -313,7 +313,7 @@ function mace() { const s = sheetOf('w_mace', 96, 36); const cy = 18; for (let f
   gem(s, f, P.gold, 76, cy, 2, (f % 2) * .2); done(s, f); } return s; }
 function twinblade() { const s = sheetOf('w_twinblade', 176, 28); const cy = 14; for (let f = 0; f < 4; f++) {
   shaft(s, f, P.black, 40, 136, cy, 1); wrap(s, f, Q.teal, 78, 98, cy, 1); ring(s, f, P.steel, 40, cy, 3, 4); ring(s, f, P.steel, 134, cy, 3, 4);
-  for (const side of [1, -1]) { const x0 = side > 0 ? 137 : 39; blade(s, f, side > 0 ? 137 : 2, side > 0 ? 174 : 39, (x) => { const u = side > 0 ? (x - 137) / 37 : (39 - x) / 37; return cy - 4 * (1 - u * .85); }, (x) => { const u = side > 0 ? (x - 137) / 37 : (39 - x) / 37; return cy + 4 * (1 - u * .85); }, (x, y, t, b) => (y === t ? [Q.teal, .9] : y === b ? [P.steel, .4] : [P.steel, y <= cy ? .8 : .55])); void x0; }
+  for (const side of [1, -1]) { blade(s, f, side > 0 ? 137 : 2, side > 0 ? 174 : 39, (x) => { const u = side > 0 ? (x - 137) / 37 : (39 - x) / 37; return cy - 4 * (1 - u * .85); }, (x) => { const u = side > 0 ? (x - 137) / 37 : (39 - x) / 37; return cy + 4 * (1 - u * .85); }, (x, y, t, b) => (y === t ? [Q.teal, .9] : y === b ? [P.steel, .4] : [P.steel, y <= cy ? .8 : .55])); }
   done(s, f); } return s; }
 function odachi() { const s = sheetOf('w_odachi', 164, 28); const cy = 14; for (let f = 0; f < 4; f++) {
   for (let x = 2; x <= 26; x++) for (let d = -1; d <= 1; d++) { const m = ((x + Math.abs(d) * 2) % 4 + 4) % 4; tone(s, f, m < 2 ? P.black : P.red, x, cy + d, .6 - d * .1); }
@@ -333,7 +333,7 @@ function crossbow() { const s = sheetOf('w_crossbow', 84, 80); const cy = 40; fo
 function chainScythe() { const s = sheetOf('w_chain_scythe', 76, 48); const cy = 36; for (let f = 0; f < 4; f++) {
   shaft(s, f, P.black, 2, 20, cy, 2); wrap(s, f, Q.violet, 4, 16, cy, 2);
   for (let i = 0; i <= 90; i++) { const u = i / 90; const x = 20 + u * 52; const y = cy - 2 - Math.sin(u * Math.PI * .7) * 26 - u * 4; const w = Math.max(1, Math.round(4 * (1 - u))); for (let d = 0; d <= w; d++) tone(s, f, d === w ? Q.violet : P.steel, x + d * .4, y + d, d === w ? .9 : d === 0 ? .95 : .5); }
-  for (let k = 0; k < 4; k++) disc(s, f, P.steel, 2 - k * 0, cy + 4 + k * 3, 1, 1, () => .7); done(s, f); } return s; }
+  for (let k = 0; k < 4; k++) disc(s, f, P.steel, 2, cy + 4 + k * 3, 1, 1, () => .7); // chain links below the grip done(s, f); } return s; }
 function spellblade() { const s = sheetOf('w_spellblade', 96, 26); const cy = 13; for (let f = 0; f < 4; f++) {
   wrap(s, f, P.leather, 3, 11, cy, 1); for (let y = -6; y <= 6; y++) for (let x = 12; x <= 14; x++) tone(s, f, P.steel, x, cy + y, y < 0 ? .85 : .45);
   blade(s, f, 15, 90, (x) => cy - (x > 84 ? 3 - (x - 84) * .5 : 3), (x) => cy + (x > 84 ? 3 - (x - 84) * .5 : 3), facet(P.steel));
