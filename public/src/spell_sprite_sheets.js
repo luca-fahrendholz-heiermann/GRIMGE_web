@@ -1610,5 +1610,23 @@ export const SPELL_SPRITE_SHEETS = Object.freeze({
   "res": 2,
   "hd": true,
   "anchor": "center"
+ },
+ "oni_seal": {
+  "name": "oni_seal",
+  "w": 84,
+  "h": 28,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "oni_orb": {
+  "name": "oni_orb",
+  "w": 13,
+  "h": 13,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
  }
 });

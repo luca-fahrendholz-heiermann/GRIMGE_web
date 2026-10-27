@@ -2313,6 +2313,9 @@ export class Player extends GroundEntity {
   formCloakColor() {
     const buff = buffCloakColor(this);
     if (buff) return buff;
+    // A stance may give the hero a contour aura too (e.g. S94 Blutfinsternis / Oni-Blut).
+    const sig = this.signature; const sc = sig?.impl?.stance?.cloak?.(this, sig);
+    if (sc) return sc;
     if (this.ninefoldTimer > 0) return { edge: 'rgba(255,110,20,1)', inner: 'rgba(255,170,60,1)', fade: Math.min(1, this.ninefoldTimer * 2) };
     if (this.eidolonTimer > 0) return { edge: 'rgba(150,80,255,1)', inner: 'rgba(200,150,255,1)', fade: Math.min(1, this.eidolonTimer * 2) };
     if (this.focusTransformTimer > 0) return { edge: 'rgba(255,214,80,1)', inner: 'rgba(255,240,170,1)', fade: Math.min(1, this.focusTransformTimer * 2) };

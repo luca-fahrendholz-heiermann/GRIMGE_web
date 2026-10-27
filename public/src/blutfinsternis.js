@@ -8,6 +8,9 @@
 //   CHARGE ↓     BLUTSTILLUNG — heals for every bleeding foe nearby and drinks the blood puddles around you
 //                (S90 Blutschirm leaves them).
 // Charges cost mana like every stance skill (entities.js CHARGE_SKILL_MANA).
+// Look — ONI-BLUT (user, 27 Oct 2026, after example sprites 7–9; own designs): a turning blood seal on the ground,
+// blood orbs circling before the hand (more of them the lower the HP), blood steam rising off the back, glowing
+// eyes and a blood-red contour aura (stance.cloak).
 import { defineSignature, startStance, emit, foesOf, hit, SigBolt, TAU, DEPTH } from './signature_core.js';
 import { applyStatus, hasStatus } from './status_effects.js';
 import { combat } from './combat.js';
@@ -37,6 +40,13 @@ function tapShot(p, st, gw) {
   if (formOf(p) === 'pistols') { shoot(p, st, gw, { h: 48 }); shoot(p, st, gw, { h: 40, delay: .06 }); } else shoot(p, st, gw);
   st.flash = .1; p.state = 'attack1'; p.stateTimer = .14; p._weaponSwingTime = .14; p.canAttack = false;
   return true;
+}
+// Blood orbs circling the body at chest height (one at full HP, up to three when low): the far half of the orbit
+// is drawn behind the sprite, the near half in front.
+function orbs(ctx, p, st, ry, layer, fade, low) {
+  if (!spellSheetReady('oni_orb')) return;
+  const n = 1 + Math.min(2, Math.floor(low * 3));
+  for (let i = 0; i < n; i++) { const a = st.t * 2.4 + i * TAU / n; const near = Math.sin(a) > 0; if (near !== (layer === 'front')) continue; drawSpellSprite(ctx, 'oni_orb', Math.floor(st.t * 10 + i) % 4, p.x + Math.cos(a) * 30, ry - 62 + Math.sin(a) * 7, { anchor: 'center', alpha: fade }); }
 }
 class BloodFireWave {
   constructor(p, power) { Object.assign(this, { caster: p, owner: p, team: p.team, x: p.x, z: p.z, f: p.facing || 1, t: 0, power, isFinished: false, hit: new Set() }); }
@@ -72,13 +82,23 @@ defineSignature('S94', {
       return false;
     },
     update(p, st, dt) { st.cd = Math.max(0, st.cd - dt); st.flash = Math.max(0, st.flash - dt); },
+    // The contour aura of the stance (entities.formCloakColor): blood red, deeper as the HP drop.
+    cloak: (p, st) => ({ edge: '#e53935', inner: p.hp / (p.maxHp || 1) < .4 ? '#ff5252' : '#ff8a80', fade: Math.min(1, st.t / .3, st.timer / .4 + .2) }),
     render(ctx, p, st, ry, layer) {
       const f = p.facing || 1; const fade = Math.min(1, st.t / .3, st.timer / .4 + .2); const low = 1 - Math.max(0, Math.min(1, p.hp / (p.maxHp || 1)));
       if (layer === 'back') {
-        // A dark red eclipse halo behind the head — it darkens and grows as the HP drop.
-        const r = 16 + low * 10; ctx.save(); ctx.globalAlpha = fade; ctx.fillStyle = '#2a0006'; ctx.beginPath(); ctx.arc(p.x - f * 4, ry - 92, r, 0, TAU); ctx.fill(); ctx.strokeStyle = '#e53935'; ctx.lineWidth = 2 + low * 2; ctx.beginPath(); ctx.arc(p.x - f * 4, ry - 92, r, 0, TAU); ctx.stroke(); ctx.restore();
+        // The blood seal turning on the ground (brighter and bigger the lower the HP) and blood steam off the back.
+        const gyy = gy(p.z) - (p.surfaceHeight ?? 0);
+        if (spellSheetReady('oni_seal')) drawSpellSprite(ctx, 'oni_seal', Math.floor(st.t * 8) % 8, p.x, gyy, { anchor: 'center', alpha: fade * (.75 + low * .25), scale: .55 + low * .15 });
+        ctx.save(); ctx.globalAlpha = fade;
+        for (let q = 0; q < 6; q++) { const life = (st.t * .9 + q / 6) % 1; const x = p.x - f * (6 + (q % 3) * 6) + Math.sin(life * 9 + q) * 3; const y = ry - 40 - life * 52; const c = life < .4 ? '#e53935' : life < .75 ? '#9a1018' : '#4a0610'; px(ctx, x, y, life < .5 ? 3 : 2, life < .5 ? 3 : 2, c); }
+        ctx.restore();
+        orbs(ctx, p, st, ry, 'back', fade, low);
         return;
       }
+      // Glowing eyes (front, at the head socket like Blutarsenal's).
+      { const hx = p.x; const hy = ry - 82; ctx.save(); ctx.globalAlpha = fade; px(ctx, hx + f * 2 - (f < 0 ? 2 : 0), hy - 2, 2, 1, '#ffd740'); px(ctx, hx + f * 5 - (f < 0 ? 2 : 0), hy - 2, 2, 1, '#ffd740'); ctx.restore(); }
+      orbs(ctx, p, st, ry, 'front', fade, low);
       // The blood weapon in hand (form of the held weapon).
       const form = formOf(p); const hx = p.x + f * 16; const hy = ry - 48;
       // Hand-drawn blood weapons fused to the forearm by blood strands (art/authoring/vfx_bloodarms.cjs; user,

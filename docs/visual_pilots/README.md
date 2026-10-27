@@ -423,3 +423,12 @@ Hinweis des Users: „viel zu groß die Waffen“. Alle fünf Waffen neu in klei
 - Neue Waffe **Sense → Blutsense** (nach den Oni-Bildern): schwarzer Stahl mit roter Schneide und Glanzlinie am Rücken, eine Mähne aus Blutflammen, Tropfen, Schaft mit roter Wicklung.
 
 - `v40_weapon_guards.png` (Blocken: Schild, Katana, Glefe, Geisterklinge, Sense · Sense im Stand)
+
+## v41 — Oni-Blut: Blutfinsternis neu (27.10.2026)
+
+Nach den Beispiel-Sprites 7–9, eigene Umsetzung. Der schwache dunkle Halo hinter dem Kopf ist weg.
+- **Blutsiegel** (`oni_seal`): ein rot-goldener Runenkreis am Boden mit wandernden Runenzeichen, drei Speichen und einem gegenläufigen Innenring. Er wird größer und heller, je weniger HP der Held hat.
+- **Blutkugeln** (`oni_orb`): dunkler Kern, rote Spirale, zwei Ringe. Sie kreisen auf Brusthöhe um den Körper (hinten hinter dem Sprite, vorne davor): eine bei voller HP, bis zu drei bei wenig HP.
+- **Blutdampf** steigt vom Rücken auf, die **Augen** glühen gelb, und es gibt eine **blutrote Kontur-Aura**. Haltungen können jetzt allgemein eine Aura setzen (`stance.cloak`).
+
+- `v41_oni_blut.png` (Thesen bei voller HP, Thesen bei 20 % HP, Nyx bei 20 % HP)
