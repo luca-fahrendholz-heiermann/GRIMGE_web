@@ -516,3 +516,12 @@ Vorher verglichen; was schon stark ist, bleibt: **A01 Göttlicher Riese, A03 Tau
 - **A07 Raum:** Die Kuppel aus dünnen Linien ist jetzt ein festes Pixel-Raumgitter mit dunklem Rand, durchgehenden Meridianen und Ringen, leuchtenden Knoten an den Kreuzungen und schwebenden Würfeln. Die Raum-Mechaniken bleiben.
 
 - `v49_arcane_states_r3.png` (Vorausschnitt, Raum)
+
+## v50 — Alle Waffen gezeichnet (27.10.2026)
+
+Die restlichen 25 Waffen sind gezeichnet, damit gibt es keine Astral-Waffe mehr. Größe und Griff folgen jeweils der alten Astral-Form, damit Haltung und Schwünge passen:
+Panzerhandschuhe, Eisschwert, Streitkolben (& Schild), Doppelklinge, Odachi, Wurfmesser, Armbrust, Kettensichel, Zauberklinge mit Fokuskristall, Runen-Großschwert, Arkanstab, Kugel mit Fokus, Hexerstab (& Schild), Stab mit Grimoire, Zepter (& Schild), Heiliger Stab, Harfe, Kampfzither, Geisterglefe, Klauen, Tierstab, Chakrams, Zauberkarten, Talisman, Ritualfächer.
+- Schild-Waffen nutzen den Runenschild. Harfe, Zither und Fächer sind etwas verkleinert (neuer Skalierungswert pro Waffe).
+- Beim Blocken bleiben Bogen, Zauber-Barriere und gekreuzte Fäuste prozedural.
+
+- `v50_weapons_all.png` (alle 25 im Spiel), `v50_weapon_sheets_r3.png`

@@ -1575,6 +1575,249 @@ export const SPELL_SPRITE_SHEETS = Object.freeze({
   "anchor": "base",
   "baseOffset": 6
  },
+ "w_fist": {
+  "name": "w_fist",
+  "w": 22,
+  "h": 15,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "w_ice_sword": {
+  "name": "w_ice_sword",
+  "w": 48,
+  "h": 13,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "w_mace": {
+  "name": "w_mace",
+  "w": 48,
+  "h": 18,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "w_twinblade": {
+  "name": "w_twinblade",
+  "w": 88,
+  "h": 14,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "w_odachi": {
+  "name": "w_odachi",
+  "w": 82,
+  "h": 14,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "w_knife": {
+  "name": "w_knife",
+  "w": 24,
+  "h": 7,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "w_crossbow": {
+  "name": "w_crossbow",
+  "w": 42,
+  "h": 40,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "w_chain_scythe": {
+  "name": "w_chain_scythe",
+  "w": 38,
+  "h": 24,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "w_spellblade": {
+  "name": "w_spellblade",
+  "w": 48,
+  "h": 13,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "w_focus": {
+  "name": "w_focus",
+  "w": 14,
+  "h": 20,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "w_greatsword": {
+  "name": "w_greatsword",
+  "w": 78,
+  "h": 22,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "w_arcane_staff": {
+  "name": "w_arcane_staff",
+  "w": 86,
+  "h": 20,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "w_orb": {
+  "name": "w_orb",
+  "w": 18,
+  "h": 20,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "w_rod_warlock": {
+  "name": "w_rod_warlock",
+  "w": 44,
+  "h": 14,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "w_rod_grimoire": {
+  "name": "w_rod_grimoire",
+  "w": 44,
+  "h": 14,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "w_grimoire": {
+  "name": "w_grimoire",
+  "w": 18,
+  "h": 22,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "w_scepter": {
+  "name": "w_scepter",
+  "w": 40,
+  "h": 18,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "w_sacred_staff": {
+  "name": "w_sacred_staff",
+  "w": 88,
+  "h": 18,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "w_harp": {
+  "name": "w_harp",
+  "w": 36,
+  "h": 42,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "w_zither": {
+  "name": "w_zither",
+  "w": 40,
+  "h": 18,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "w_spirit_glaive": {
+  "name": "w_spirit_glaive",
+  "w": 106,
+  "h": 20,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "w_claw": {
+  "name": "w_claw",
+  "w": 27,
+  "h": 15,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "w_beast_staff": {
+  "name": "w_beast_staff",
+  "w": 82,
+  "h": 20,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "w_chakram": {
+  "name": "w_chakram",
+  "w": 20,
+  "h": 20,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "w_card": {
+  "name": "w_card",
+  "w": 14,
+  "h": 16,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "w_talisman": {
+  "name": "w_talisman",
+  "w": 12,
+  "h": 22,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "w_fan": {
+  "name": "w_fan",
+  "w": 29,
+  "h": 47,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
  "w_shadow_spear": {
   "name": "w_shadow_spear",
   "w": 69,

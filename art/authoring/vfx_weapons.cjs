@@ -282,4 +282,131 @@ function shadowSpear() {
   }
   return s;
 }
-module.exports = { weaponSheets: () => [shadowSpear(), glaive(), katana(), sheath(), spear(), sword(), shield(), spiritSword(), scythe(), greatAxe(), greatHammer(), sabre(), dagger(), bow(), staff()] };
+// ── Batch 3 (27 Oct 2026): the remaining 25 weapons. Sizes / grips follow each astral piece (sheet px = ½ world). ──
+const Q = {
+  green: ramp('#0a2a0a', '#1e6a1a', '#4cc02a', '#a8ff6a', '#eaffd0'), violet: ramp('#160a2a', '#3a1a6a', '#6a3ac0', '#b388ff', '#ece0ff'),
+  paper: ramp('#6a5a3a', '#c8b48a', '#efe2c0', '#fffaf0'), pink: ramp('#4a0a2a', '#a81a5a', '#ff4081', '#ffb0d0', '#fff0f6'),
+  teal: ramp('#042a2a', '#0a6a62', '#26c6b0', '#9affea', '#ffffff'), orange: ramp('#4a1a00', '#a84a00', '#ff7a1a', '#ffc080'),
+  cyan: ramp('#04283a', '#0a6a8a', '#1ac0e0', '#9af0ff', '#ffffff'), white: ramp('#8a8a8e', '#c8c8cc', '#eeeef2', '#ffffff')
+};
+const disc = (s, f, r, cx, cy, rx, ry, shade) => { for (let y = -ry; y <= ry; y++) for (let x = -rx; x <= rx; x++) { const e = (x / rx) ** 2 + (y / ry) ** 2; if (e <= 1) tone(s, f, r, cx + x, cy + y, shade(x, y, e)); } };
+const lineP = (s, f, r, x0, y0, x1, y1, v, w = 1) => { const n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0))); for (let i = 0; i <= n; i++) for (let k = 0; k < w; k++) tone(s, f, r, x0 + (x1 - x0) * i / n, y0 + (y1 - y0) * i / n + k, typeof v === 'function' ? v(i / n, k) : v); };
+const quadP = (s, f, r, a, c, b, v, w = 1) => { for (let i = 0; i <= 80; i++) { const u = i / 80; const x = (1 - u) ** 2 * a[0] + 2 * (1 - u) * u * c[0] + u * u * b[0]; const y = (1 - u) ** 2 * a[1] + 2 * (1 - u) * u * c[1] + u * u * b[1]; for (let k = 0; k < w; k++) tone(s, f, r, x, y + k, typeof v === 'function' ? v(u, k) : v); } };
+const facet = (rr, edge) => (x, y, t, b) => (y === t ? [rr, .98] : y === b ? [rr, .45] : [rr, y - t <= (b - t) / 2 ? .78 : .55]).map((v, i) => (i === 0 && edge && y === t ? edge : v));
+const sheetOf = (name, w, h, n = 4) => new Sheet(name, w, h, n, { anchor: 'center' });
+const done = (s, f) => B.selOutline(s, f, P.out);
+
+function gauntlet() { const s = sheetOf('w_fist', 44, 30); const cy = 15; for (let f = 0; f < 4; f++) {
+  for (let x = 0; x <= 12; x++) for (let d = -5; d <= 5; d++) tone(s, f, P.steel, x, cy + d, (d < -2 ? .8 : d < 2 ? .55 : .35) + (x % 4 === 0 ? -.15 : 0)); // forearm plates
+  for (let x = 12; x <= 26; x++) for (let d = -7; d <= 7; d++) tone(s, f, (x - 12) % 4 === 3 ? P.black : P.steel, x, cy + d, d < -3 ? .85 : d < 3 ? .6 : .4); // knuckle block
+  for (let k = 0; k < 4; k++) for (let j = 0; j < 5; j++) tone(s, f, P.steel, 27 + j, cy - 6 + k * 4, .95 - j * .1); // knuckle spikes
+  for (let x = 2; x <= 10; x += 4) for (let d = -5; d <= 5; d++) tone(s, f, Q.orange, x, cy + d, (f + x) % 8 < 4 ? .9 : .6); done(s, f); } return s; }
+function iceSword() { const s = sheetOf('w_ice_sword', 96, 26); const cy = 13; for (let f = 0; f < 4; f++) {
+  wrap(s, f, P.frostwood, 3, 11, cy, 1); for (let y = -6; y <= 6; y++) tone(s, f, P.ice, 13 + (Math.abs(y) > 3 ? 1 : 0), cy + y, .85);
+  blade(s, f, 15, 92, (x) => cy - (x > 86 ? 3 - (x - 86) * .5 : 3), (x) => cy + (x > 86 ? 3 - (x - 86) * .5 : 3), facet(P.ice));
+  for (let k = 0; k < 6; k++) { const bx = 22 + k * 11; for (let j = 0; j < 4; j++) tone(s, f, P.ice, bx - j * .6, cy - 4 - j, .95 - j * .1); } // crystal spurs
+  tone(s, f, P.ice, 20 + ((f * 17) % 66), cy - 1, 1); done(s, f); } return s; }
+function mace() { const s = sheetOf('w_mace', 96, 36); const cy = 18; for (let f = 0; f < 4; f++) {
+  shaft(s, f, P.wood, 2, 64, cy, 2); wrap(s, f, P.leather, 6, 20, cy, 2); ring(s, f, P.gold, 62, cy, 3, 4);
+  disc(s, f, P.steel, 76, cy, 9, 9, (x, y) => (x + y < -4 ? .85 : .5));
+  for (let i = 0; i < 8; i++) { const a = i / 8 * TAU; for (let r = 8; r < 14; r++) for (let w = 0; w < 2; w++) tone(s, f, P.steel, 76 + Math.cos(a) * r - Math.sin(a) * w, cy + Math.sin(a) * r + Math.cos(a) * w, w ? .45 : .85); }
+  gem(s, f, P.gold, 76, cy, 2, (f % 2) * .2); done(s, f); } return s; }
+function twinblade() { const s = sheetOf('w_twinblade', 176, 28); const cy = 14; for (let f = 0; f < 4; f++) {
+  shaft(s, f, P.black, 40, 136, cy, 1); wrap(s, f, Q.teal, 78, 98, cy, 1); ring(s, f, P.steel, 40, cy, 3, 4); ring(s, f, P.steel, 134, cy, 3, 4);
+  for (const side of [1, -1]) { const x0 = side > 0 ? 137 : 39; blade(s, f, side > 0 ? 137 : 2, side > 0 ? 174 : 39, (x) => { const u = side > 0 ? (x - 137) / 37 : (39 - x) / 37; return cy - 4 * (1 - u * .85); }, (x) => { const u = side > 0 ? (x - 137) / 37 : (39 - x) / 37; return cy + 4 * (1 - u * .85); }, (x, y, t, b) => (y === t ? [Q.teal, .9] : y === b ? [P.steel, .4] : [P.steel, y <= cy ? .8 : .55])); void x0; }
+  done(s, f); } return s; }
+function odachi() { const s = sheetOf('w_odachi', 164, 28); const cy = 14; for (let f = 0; f < 4; f++) {
+  for (let x = 2; x <= 26; x++) for (let d = -1; d <= 1; d++) { const m = ((x + Math.abs(d) * 2) % 4 + 4) % 4; tone(s, f, m < 2 ? P.black : P.red, x, cy + d, .6 - d * .1); }
+  for (let y = -6; y <= 6; y++) for (let x = 27; x <= 29; x++) tone(s, f, P.gold, x, cy + y, y < 0 ? .85 : .45);
+  const spine = (x) => cy - 1 - ((x - 30) / 130) ** 2 * 7;
+  blade(s, f, 30, 160, (x) => spine(x) - 1, (x) => spine(x) + (x > 152 ? Math.max(0, 2 - (x - 152) * .3) : 2), (x, y, t, b) => (y === t ? [P.steel, .3] : y === b ? [P.steel, .55] : y === t + 2 ? [P.steel, .98] : [P.steel, .7]));
+  const gx = 34 + ((f * 29) % 120); tone(s, f, P.steel, gx, Math.round(spine(gx)), 1); done(s, f); } return s; }
+function knife() { const s = sheetOf('w_knife', 48, 14); const cy = 7; for (let f = 0; f < 4; f++) {
+  wrap(s, f, P.black, 1, 7, cy, 1); for (let y = -2; y <= 2; y++) tone(s, f, Q.violet, 8, cy + y, .8);
+  blade(s, f, 9, 44, (x) => cy - 2 + (x > 34 ? (x - 34) * .2 : 0), (x) => cy + 1 - (x > 34 ? (x - 34) * .1 : 0), facet(P.steel)); tone(s, f, Q.violet, 12 + ((f * 7) % 28), cy - 1, 1); done(s, f); } return s; }
+function crossbow() { const s = sheetOf('w_crossbow', 84, 80); const cy = 40; for (let f = 0; f < 4; f++) {
+  shaft(s, f, P.wood, 2, 72, cy, 2); for (let x = 2; x <= 14; x++) for (let d = 3; d <= 7; d++) tone(s, f, P.wood, x, cy + d, .45); // stock
+  for (const sg of [-1, 1]) quadP(s, f, P.steel, [58, cy], [64, cy + sg * 16], [56, cy + sg * 34], (u) => .85 - u * .3, 2);
+  for (const sg of [-1, 1]) lineP(s, f, P.ivory, 56, cy + sg * 34, 40, cy + sg * 1, .7);
+  lineP(s, f, P.steel, 40, cy - 3, 76, cy - 3, (u) => (u > .9 ? 1 : .7)); for (let k = 0; k < 3; k++) tone(s, f, Q.orange, 74 - k, cy - 3 - k, .9); // the bolt
+  ring(s, f, P.brass, 56, cy, 3, 3); done(s, f); } return s; }
+function chainScythe() { const s = sheetOf('w_chain_scythe', 76, 48); const cy = 36; for (let f = 0; f < 4; f++) {
+  shaft(s, f, P.black, 2, 20, cy, 2); wrap(s, f, Q.violet, 4, 16, cy, 2);
+  for (let i = 0; i <= 90; i++) { const u = i / 90; const x = 20 + u * 52; const y = cy - 2 - Math.sin(u * Math.PI * .7) * 26 - u * 4; const w = Math.max(1, Math.round(4 * (1 - u))); for (let d = 0; d <= w; d++) tone(s, f, d === w ? Q.violet : P.steel, x + d * .4, y + d, d === w ? .9 : d === 0 ? .95 : .5); }
+  for (let k = 0; k < 4; k++) disc(s, f, P.steel, 2 - k * 0, cy + 4 + k * 3, 1, 1, () => .7); done(s, f); } return s; }
+function spellblade() { const s = sheetOf('w_spellblade', 96, 26); const cy = 13; for (let f = 0; f < 4; f++) {
+  wrap(s, f, P.leather, 3, 11, cy, 1); for (let y = -6; y <= 6; y++) for (let x = 12; x <= 14; x++) tone(s, f, P.steel, x, cy + y, y < 0 ? .85 : .45);
+  blade(s, f, 15, 90, (x) => cy - (x > 84 ? 3 - (x - 84) * .5 : 3), (x) => cy + (x > 84 ? 3 - (x - 84) * .5 : 3), facet(P.steel));
+  for (let x = 20; x <= 80; x += 6) tone(s, f, Q.cyan, x, cy, ((x / 6 + f) % 4) < 1 ? 1 : .7); done(s, f); } return s; }
+function focus() { const s = sheetOf('w_focus', 28, 40); for (let f = 0; f < 4; f++) {
+  const b = Math.round(Math.sin(f / 4 * TAU)); for (let y = -14; y <= 14; y++) { const w = Math.round(9 * (1 - Math.abs(y) / 14)); for (let x = -w; x <= w; x++) tone(s, f, Q.cyan, 14 + x, 20 + y + b, x < 0 ? (y < 0 ? .95 : .7) : (y < 0 ? .6 : .4)); }
+  for (const sg of [-1, 1]) for (let k = 0; k < 5; k++) tone(s, f, P.gold, 14 + sg * (10 - k), 20 + b + (k - 2), .8); done(s, f); } return s; }
+function greatsword() { const s = sheetOf('w_greatsword', 156, 44); const cy = 22; for (let f = 0; f < 4; f++) {
+  gem(s, f, Q.cyan, 2, cy, 2); wrap(s, f, P.leather, 5, 20, cy, 2);
+  for (let y = -16; y <= 16; y++) for (let x = 21; x <= 26; x++) tone(s, f, P.steel, x, cy + y, (y < 0 ? .85 : .45) + (Math.abs(y) > 13 ? .1 : 0));
+  blade(s, f, 27, 152, (x) => cy - (x > 142 ? 7 - (x - 142) * .7 : 7), (x) => cy + (x > 142 ? 7 - (x - 142) * .7 : 7), facet(P.steel));
+  for (let x = 34; x <= 132; x += 7) { const on = ((x / 7 + f) % 4) < 1; tone(s, f, Q.cyan, x, cy, on ? 1 : .7); tone(s, f, Q.cyan, x + 1, cy, on ? .9 : .5); } done(s, f); } return s; }
+function arcaneStaff() { const s = sheetOf('w_arcane_staff', 172, 40); const cy = 20; for (let f = 0; f < 4; f++) {
+  shaft(s, f, P.wood, 2, 142, cy, 2); wrap(s, f, Q.violet, 44, 60, cy, 2); ring(s, f, P.gold, 140, cy, 3, 3);
+  quadP(s, f, P.gold, [142, cy], [168, cy - 22], [150, cy - 4], (u) => .85 - u * .3, 2); // curled head
+  disc(s, f, Q.violet, 156, cy - 6, 6, 6, (x, y) => (x + y < -3 ? 1 : .6 + (f % 2) * .1)); done(s, f); } return s; }
+function orb() { const s = sheetOf('w_orb', 36, 40); for (let f = 0; f < 4; f++) {
+  disc(s, f, Q.violet, 18, 20, 12, 12, (x, y, e) => { const a = Math.atan2(y, x) + Math.hypot(x, y) * .3 - f * 1.4; return e > .85 ? .45 : (Math.sin(a * 2) > .5 ? .85 : .55) + (x + y < -8 ? .2 : 0); });
+  tone(s, f, Q.violet, 13, 15, 1); for (const sg of [-1, 1]) quadP(s, f, P.gold, [2, 20], [6, 20 + sg * 14], [14, 20 + sg * 12], .8); done(s, f); } return s; }
+function rod(name, rr) { const s = sheetOf(name, 88, 28); const cy = 14; for (let f = 0; f < 4; f++) {
+  shaft(s, f, P.black, 2, 64, cy, 1); wrap(s, f, rr, 6, 18, cy, 1); ring(s, f, P.gold, 62, cy, 3, 3);
+  for (let y = -10; y <= 10; y++) { const w = Math.round(6 * (1 - Math.abs(y) / 10)); for (let x = -w; x <= w; x++) tone(s, f, rr, 76 + x, cy + y, x < 0 ? .9 : .55); }
+  for (const sg of [-1, 1]) lineP(s, f, P.gold, 66, cy, 74, cy + sg * 9, .8); tone(s, f, rr, 74, cy - 4, f % 2 ? 1 : .8); done(s, f); } return s; }
+function grimoire() { const s = sheetOf('w_grimoire', 36, 44); for (let f = 0; f < 4; f++) {
+  for (let y = 4; y <= 40; y++) for (let x = 4; x <= 32; x++) tone(s, f, x > 29 ? Q.paper : Q.violet, x, y, x > 29 ? .8 : (x < 8 ? .7 : .45) + (y < 8 ? .15 : 0));
+  for (const [cx, cyy] of [[5, 5], [28, 5], [5, 39], [28, 39]]) for (let k = 0; k < 3; k++) { tone(s, f, P.gold, cx + (cx < 10 ? k : -k), cyy, .9); tone(s, f, P.gold, cx, cyy + (cyy < 10 ? k : -k), .9); }
+  for (let a = 0; a < TAU; a += .1) tone(s, f, Q.pink, 18 + Math.cos(a) * 7, 22 + Math.sin(a) * 7, (Math.floor(a * 3) + f) % 4 ? .7 : 1); lineP(s, f, Q.pink, 18, 15, 18, 29, .9); done(s, f); } return s; }
+function scepter() { const s = sheetOf('w_scepter', 80, 36); const cy = 18; for (let f = 0; f < 4; f++) {
+  shaft(s, f, P.gold, 2, 52, cy, 1); ring(s, f, P.gold, 20, cy, 2, 3);
+  for (let i = 0; i < 10; i++) { const a = i / 10 * TAU + f * .08; for (let r = 6; r < 15; r++) tone(s, f, P.gold, 64 + Math.cos(a) * r, cy + Math.sin(a) * r, i % 2 ? .6 : .95); }
+  disc(s, f, P.ivory, 64, cy, 6, 6, (x, y) => (x + y < 0 ? .95 : .6)); gem(s, f, P.gold, 64, cy, 2, .2); done(s, f); } return s; }
+function sacredStaff() { const s = sheetOf('w_sacred_staff', 176, 36); const cy = 18; for (let f = 0; f < 4; f++) {
+  shaft(s, f, Q.white, 2, 148, cy, 2); wrap(s, f, P.gold, 46, 58, cy, 2);
+  for (let a = 0; a < TAU; a += .02) for (let d = 0; d < 3; d++) tone(s, f, P.gold, 160 + Math.cos(a) * (12 - d), cy + Math.sin(a) * (12 - d), d === 0 ? .95 : .55);
+  gem(s, f, Q.cyan, 160, cy, 3, (f % 2) * .2); for (const sg of [-1, 1]) for (let k = 0; k < 3; k++) tone(s, f, P.gold, 152 + k, cy + sg * (13 + k), .8); done(s, f); } return s; }
+function harp() { const s = sheetOf('w_harp', 72, 84); for (let f = 0; f < 4; f++) {
+  quadP(s, f, P.wood, [16, 78], [4, 40], [26, 8], (u) => .7 + (u > .9 ? .2 : 0), 3); // pillar
+  quadP(s, f, P.gold, [26, 8], [50, 2], [64, 22], .85, 2); // neck
+  quadP(s, f, P.wood, [64, 22], [58, 52], [24, 76], .55, 4); // soundbox
+  for (let k = 0; k < 7; k++) { const x0 = 24 + k * 5.5; const top = 8 + Math.abs(k - 3) * 1.2; const bot = 72 - k * 5; lineP(s, f, Q.pink, x0, top, x0, bot, (u) => ((Math.round(u * 20) + k + f * 3) % 9 === 0 ? 1 : .6)); }
+  gem(s, f, Q.pink, 26, 8, 2, .2); done(s, f); } return s; }
+function zither() { const s = sheetOf('w_zither', 80, 36); for (let f = 0; f < 4; f++) {
+  for (let x = 6; x <= 76; x++) { const h = 10 + (x - 6) * .03; for (let y = -h; y <= h; y++) tone(s, f, P.wood, x, 18 + y, (y < -h + 2 ? .9 : .5) + ((x - 6) % 14 === 0 ? -.2 : 0)); }
+  for (let k = 0; k < 7; k++) lineP(s, f, P.ivory, 10, 10 + k * 2.6, 74, 9 + k * 2.8, (u) => ((Math.round(u * 30) + k + f * 4) % 11 === 0 ? 1 : .7));
+  for (let k = 0; k < 5; k++) for (let y = 0; y < 3; y++) tone(s, f, Q.orange, 20 + k * 11, 26 + y - k * .4, .85); done(s, f); } return s; }
+function spiritGlaive() { const s = sheetOf('w_spirit_glaive', 212, 40); const cy = 20; for (let f = 0; f < 4; f++) {
+  for (let x = 2; x <= 148; x++) { tone(s, f, Q.teal, x, cy, (x + f * 6) % 18 < 3 ? 1 : .7); tone(s, f, Q.teal, x, cy + 1, .4); }
+  for (let i = 0; i <= 120; i++) { const u = i / 120; const x = 148 + u * 62; const y = cy - Math.sin(u * Math.PI * .8) * 14; const w = Math.max(1, Math.round(5 * (1 - u * .8))); for (let d = -1; d <= w; d++) tone(s, f, Q.teal, x, y + d, d === -1 ? .95 : d === 0 ? 1 : .55); }
+  for (let q = 0; q < 4; q++) tone(s, f, Q.teal, 150 + ((q * 17 + f * 9) % 56), cy - 12 + q * 3, 1); done(s, f); } return s; }
+function claw() { const s = sheetOf('w_claw', 54, 30); const cy = 15; for (let f = 0; f < 4; f++) {
+  for (let x = 2; x <= 18; x++) for (let d = -6; d <= 6; d++) tone(s, f, x % 5 === 0 ? P.steel : P.leather, x, cy + d, d < -2 ? .75 : .45);
+  for (let k = 0; k < 3; k++) for (let i = 0; i <= 40; i++) { const u = i / 40; const x = 18 + u * 34; const y = cy - 5 + k * 5 + u * u * 6; tone(s, f, P.steel, x, y, .95 - u * .2); tone(s, f, Q.orange, x, y + 1, u > .7 ? .8 : .3); }
+  done(s, f); } return s; }
+function beastStaff() { const s = sheetOf('w_beast_staff', 164, 40); const cy = 20; for (let f = 0; f < 4; f++) {
+  for (let x = 2; x <= 136; x++) for (let d = -2; d <= 2; d++) tone(s, f, P.wood, x, cy + d + Math.round(Math.sin(x * .15) * .6), d < 0 ? .7 : .4); // gnarled shaft
+  wrap(s, f, Q.green, 46, 60, cy, 2);
+  for (const sg of [-1, 1]) quadP(s, f, P.ivory, [136, cy], [150, cy + sg * 4], [160, cy + sg * 16], (u) => .9 - u * .2, 2); // antler prongs
+  quadP(s, f, P.ivory, [140, cy], [152, cy], [162, cy - 2], .85, 2);
+  disc(s, f, Q.green, 138, cy, 3, 3, () => (f % 2 ? 1 : .75)); done(s, f); } return s; }
+function chakram() { const s = sheetOf('w_chakram', 40, 40); for (let f = 0; f < 4; f++) {
+  const rot = f / 4 * TAU / 8;
+  for (let a = 0; a < TAU; a += .02) for (let d = 0; d < 3; d++) tone(s, f, P.gold, 20 + Math.cos(a) * (13 - d), 20 + Math.sin(a) * (13 - d), d === 0 ? .95 : .55);
+  for (let i = 0; i < 8; i++) { const a = i / 8 * TAU + rot; for (let r = 14; r < 19; r++) tone(s, f, P.steel, 20 + Math.cos(a) * r, 20 + Math.sin(a) * r, 1 - (r - 14) * .1); }
+  lineP(s, f, P.leather, 9, 20, 31, 20, .6, 2); done(s, f); } return s; }
+function card() { const s = sheetOf('w_card', 28, 32); for (let f = 0; f < 4; f++) {
+  for (let y = 2; y <= 30; y++) for (let x = 2; x <= 24; x++) { const border = x < 4 || x > 22 || y < 4 || y > 28; tone(s, f, border ? Q.pink : Q.white, x, y, border ? .7 : .95 - (x + y) / 200); }
+  for (let y = -6; y <= 6; y++) { const w = 4 - Math.round(Math.abs(y) * .6); for (let x = -w; x <= w; x++) tone(s, f, Q.pink, 13 + x, 16 + y, .85); } tone(s, f, Q.pink, 6, 7, 1); tone(s, f, Q.pink, 20, 25, 1); done(s, f); } return s; }
+function talisman() { const s = sheetOf('w_talisman', 24, 44); for (let f = 0; f < 4; f++) {
+  const sw = Math.round(Math.sin(f / 4 * TAU)); for (let y = 2; y <= 38; y++) for (let x = 4; x <= 20; x++) tone(s, f, Q.paper, x + (y > 30 ? sw : 0), y, .75 - (x - 4) / 60);
+  for (let y = 6; y <= 34; y += 4) lineP(s, f, P.red, 8, y, 16, y + (y % 8 ? 1 : -1), .8); lineP(s, f, P.red, 12, 6, 12, 34, .9);
+  for (let j = 0; j < 5; j++) tone(s, f, P.red, 12 + sw, 39 + j, .85); done(s, f); } return s; }
+function fan() { const s = sheetOf('w_fan', 58, 94); const gx = 4; const gy = 47; const R = 52; for (let f = 0; f < 4; f++) {
+  for (let r = 10; r <= R; r++) for (let a = -1; a <= 1; a += .01) { const rib = Math.abs(((a + 1) / 2 * 10) % 1 - .5) > .44; const pat = r > R - 6 ? .9 : ((Math.round(a * 30) + Math.round(r / 6) + f) % 7 === 0 ? .85 : .55); tone(s, f, rib ? P.wood : r > R - 6 ? Q.teal : Q.paper, gx + Math.cos(a) * r, gy + Math.sin(a) * r, rib ? .6 : pat); }
+  for (let r = 0; r < 12; r++) for (let k = -1; k <= 1; k++) tone(s, f, P.wood, gx + r, gy + k, .6); gem(s, f, Q.teal, gx + 2, gy, 1, .2); done(s, f); } return s; }
+const BATCH3 = () => [gauntlet(), iceSword(), mace(), twinblade(), odachi(), knife(), crossbow(), chainScythe(), spellblade(), focus(), greatsword(), arcaneStaff(), orb(), rod('w_rod_warlock', Q.green), rod('w_rod_grimoire', Q.violet), grimoire(), scepter(), sacredStaff(), harp(), zither(), spiritGlaive(), claw(), beastStaff(), chakram(), card(), talisman(), fan()];
+module.exports = { weaponSheets: () => [...BATCH3(), shadowSpear(), glaive(), katana(), sheath(), spear(), sword(), shield(), spiritSword(), scythe(), greatAxe(), greatHammer(), sabre(), dagger(), bow(), staff()] };
