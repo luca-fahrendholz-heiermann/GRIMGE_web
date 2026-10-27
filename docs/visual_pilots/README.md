@@ -534,3 +534,9 @@ Panzerhandschuhe, Eisschwert, Streitkolben (& Schild), Doppelklinge, Odachi, Wur
 - **Bruchflug, Schwerelos:** In der Luft gleitet der Held langsam herab statt zu fallen.
 - **Ionspindel, Ladung:** Beim fünften Treffer springt ein Kettenblitz auf bis zu drei weitere Gegner und lähmt sie kurz („KETTENBLITZ“).
 - Tests für alle vier.
+
+## v52 — Waffen kleiner (27.10.2026)
+
+Hinweis des Users: „viele Waffen sind viel zu überdimensioniert“. Die Länge kam von den alten Astral-Formen, die teils länger als der Held waren. Jetzt werden alle Waffen mit 0,75 ihres Sheets gezeichnet und sind höchstens 50 Weltpixel lang (etwa die halbe Heldengröße). Das gilt in der Hand, beim Blocken, geworfen, am Boden und für die Katana-Scheide (`weapon_sheets.js`: `SIZE`, `MAX_LEN`).
+
+- `v52_weapon_sizes.png` (alle 37 im Stand)

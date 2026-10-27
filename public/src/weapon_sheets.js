@@ -51,13 +51,17 @@ export const WEAPON_SHEETS = Object.freeze({
 const FORM_SKINS = Object.freeze({ A13: { spear: { spear: ['w_shadow_spear', 34, 20, 138, 40] }, glaive: { glaive: ['w_shadow_spear', 34, 20, 138, 40] } } });
 let skinForm = null;
 export const setWeaponSkinForm = (id) => { skinForm = id ?? null; };
+// Drawn size (user, 27 Oct 2026: "viele Waffen sind viel zu überdimensioniert"): every weapon at 0.75 of its sheet,
+// and no weapon longer than MAX_LEN world px (about half the hero) — the astral lengths were too long.
+const SIZE = .75; const MAX_LEN = 50;
+const sizeOf = (w, sc = 1) => { let k = sc * SIZE; const len = w / 2 * k; if (len > MAX_LEN) k *= MAX_LEN / len; return k; };
 const entryOf = (weaponId, piece) => (skinForm && FORM_SKINS[skinForm]?.[weaponId]?.[piece]) ?? WEAPON_SHEETS[weaponId]?.[piece] ?? null;
 export const hasWeaponSheet = (weaponId, piece) => { const e = entryOf(weaponId, piece); return !!e && spellSheetReady(e[0]); };
 
 // Draws the piece's sheet at the (already placed) grip; false when the weapon has no ready sheet.
 export function drawWeaponSheet(ctx, weaponId, piece, time = 0) {
   const e = entryOf(weaponId, piece); if (!e || !spellSheetReady(e[0])) return false;
-  const [name, gx, gy, w, h, pre = 0, sc = 1] = e; const meta = SPELL_SPRITE_SHEETS[name]; const n = meta?.frames ?? 1;
+  const [name, gx, gy, w, h, pre = 0, sc0 = 1] = e; const meta = SPELL_SPRITE_SHEETS[name]; const n = meta?.frames ?? 1; const sc = sizeOf(w, sc0);
   // Grips are given in sheet pixels; the sheet is drawn at its logical size (hd sheets: half the pixels), × scale.
   const k = (meta?.w ?? w) / w * sc;
   if (pre) { ctx.save(); ctx.rotate(pre); }
@@ -71,8 +75,8 @@ export function drawKatanaSheath(ctx, player, renderY) {
   if (!spellSheetReady('w_katana_sheath')) return;
   const f = player.facing || 1;
   ctx.save(); ctx.translate(Math.round(player.x + f * 2), Math.round(renderY - 38)); ctx.scale(-f, 1); ctx.rotate(.38);
-  const k = (SPELL_SPRITE_SHEETS.w_katana_sheath?.w ?? 76) / 76;
-  drawSpellSprite(ctx, 'w_katana_sheath', 0, (38 - 4) * k, 0, { anchor: 'center' });
+  const sc = sizeOf(76); const k = (SPELL_SPRITE_SHEETS.w_katana_sheath?.w ?? 76) / 76 * sc;
+  drawSpellSprite(ctx, 'w_katana_sheath', 0, (38 - 4) * k, 0, { anchor: 'center', scale: sc });
   ctx.restore();
 }
 
@@ -82,16 +86,16 @@ export function drawKatanaSheath(ctx, player, renderY) {
 export function drawGuardSheet(ctx, weaponId, kind, t = 0) {
   const sheets = WEAPON_SHEETS[weaponId]; if (!sheets || kind === 'bow' || kind === 'barrier' || kind === 'fist') return false; // bow brace, caster barrier, crossed fists stay procedural
   const main = Object.keys(sheets).find((k) => k !== 'shield'); const e = sheets[main];
-  if (kind === 'shield' && sheets.shield && spellSheetReady(sheets.shield[0])) { const meta = SPELL_SPRITE_SHEETS[sheets.shield[0]]; drawSpellSprite(ctx, sheets.shield[0], Math.floor(t * 8) % (meta?.frames ?? 1), 0, 0, { anchor: 'center', scale: 1.15 }); return true; }
+  if (kind === 'shield' && sheets.shield && spellSheetReady(sheets.shield[0])) { const meta = SPELL_SPRITE_SHEETS[sheets.shield[0]]; drawSpellSprite(ctx, sheets.shield[0], Math.floor(t * 8) % (meta?.frames ?? 1), 0, 0, { anchor: 'center', scale: 1.15 * SIZE }); return true; }
   if (kind === 'sheath' && spellSheetReady('w_katana_sheath')) { ctx.save(); ctx.rotate(-Math.PI / 2 + .08); drawSpellSprite(ctx, 'w_katana_sheath', 0, 0, 0, { anchor: 'center' }); ctx.restore(); return true; }
   if (!e || !spellSheetReady(e[0])) return false;
-  const [name, gx, gy, w, h] = e; const meta = SPELL_SPRITE_SHEETS[name]; const k = (meta?.w ?? w) / w; const fr = Math.floor(t * 8) % (meta?.frames ?? 1);
+  const [name, gx, gy, w, h, , sc0 = 1] = e; const meta = SPELL_SPRITE_SHEETS[name]; const sc = sizeOf(w, sc0); const k = (meta?.w ?? w) / w * sc; const fr = Math.floor(t * 8) % (meta?.frames ?? 1);
   if (kind === 'pole') {
     // Spun around the middle of the shaft: the weapon and two fading copies a step behind.
-    for (let i = 2; i >= 0; i--) { ctx.save(); ctx.globalAlpha *= i ? .25 / i : 1; ctx.rotate(t * 22 - i * .35); drawSpellSprite(ctx, name, fr, 0, 0, { anchor: 'center' }); ctx.restore(); }
+    for (let i = 2; i >= 0; i--) { ctx.save(); ctx.globalAlpha *= i ? .25 / i : 1; ctx.rotate(t * 22 - i * .35); drawSpellSprite(ctx, name, fr, 0, 0, { anchor: 'center', scale: sc }); ctx.restore(); }
     return true;
   }
   // Blades: crossed diagonally in front, edge out (parry), grip low.
-  ctx.save(); ctx.translate(-8, 14); ctx.rotate(-1.05); drawSpellSprite(ctx, name, fr, (w / 2 - gx) * k, (h / 2 - gy) * k, { anchor: 'center' }); ctx.restore();
+  ctx.save(); ctx.translate(-8, 14); ctx.rotate(-1.05); drawSpellSprite(ctx, name, fr, (w / 2 - gx) * k, (h / 2 - gy) * k, { anchor: 'center', scale: sc }); ctx.restore();
   return true;
 }
