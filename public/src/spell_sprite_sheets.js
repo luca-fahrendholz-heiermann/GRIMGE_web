@@ -1575,6 +1575,15 @@ export const SPELL_SPRITE_SHEETS = Object.freeze({
   "anchor": "base",
   "baseOffset": 6
  },
+ "w_shadow_spear": {
+  "name": "w_shadow_spear",
+  "w": 69,
+  "h": 20,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
  "w_glaive": {
   "name": "w_glaive",
   "w": 64,

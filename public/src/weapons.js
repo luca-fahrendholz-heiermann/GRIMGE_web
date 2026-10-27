@@ -11,7 +11,7 @@
 import { audio } from './audio.js';
 import { combat } from './combat.js';
 import { groundYForDepth } from './world.js';
-import { drawWeaponSheet, hasWeaponSheet, drawKatanaSheath, WEAPON_SHEETS } from './weapon_sheets.js'; // hand-drawn weapons (some ids)
+import { drawWeaponSheet, hasWeaponSheet, drawKatanaSheath, WEAPON_SHEETS, setWeaponSkinForm } from './weapon_sheets.js'; // hand-drawn weapons (some ids)
 import { EXT_WEAPONS, EXT_HUES, EXT_MOTIONS, EXT_MOTION_FNS, EXT_SHAPES, EXT_PIECES, WeaponShot } from './weapons_ext.js';
 
 const hit = (state, time, vx, damage, knockback, lift, reach, extra = {}) => Object.freeze({ state, time, vx, damage, knockback, lift, radius: Math.round(reach * .6), reach, hitstopTicks: extra.finisher ? 6 : 3, hitReaction: extra.finisher ? 'finisher' : 'light', ...extra });
@@ -390,6 +390,7 @@ const HANDS = Object.freeze({ front: Object.freeze({ x: 15, y: -44 }), rear: Obj
 export function drawHeldWeapon(ctx, player, renderY, layer = 'front') {
   const weaponId = player.weapon ?? player.classWeapon;
   if (!weaponId) return;
+  setWeaponSkinForm(player.buffForm?.timer > 0 ? player.buffForm.id : null); // form skins (weapon_sheets.js)
   const cfg = WEAPON_MOTIONS[weaponId] ?? WEAPON_MOTIONS.sword_shield;
   const pieces = PIECES[weaponId] ?? PIECES.sword_shield;
   const hue = astralHue(weaponId);

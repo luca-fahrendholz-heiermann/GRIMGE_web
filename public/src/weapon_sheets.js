@@ -21,7 +21,12 @@ export const WEAPON_SHEETS = Object.freeze({
   bow: { bow: ['w_bow', 26, 50, 40, 100] },
   quarterstaff: { staff: ['w_staff', 72, 9, 152, 18] }
 });
-const entryOf = (weaponId, piece) => WEAPON_SHEETS[weaponId]?.[piece] ?? null;
+// Form skins: while an Arcane State is active, some weapons take a form-specific sheet (Schattenlanzer: the spear
+// becomes a jagged shadow spear during A13 Totenmaske). setWeaponSkinForm is set per draw by drawHeldWeapon.
+const FORM_SKINS = Object.freeze({ A13: { spear: { spear: ['w_shadow_spear', 34, 20, 138, 40] }, glaive: { glaive: ['w_shadow_spear', 34, 20, 138, 40] } } });
+let skinForm = null;
+export const setWeaponSkinForm = (id) => { skinForm = id ?? null; };
+const entryOf = (weaponId, piece) => (skinForm && FORM_SKINS[skinForm]?.[weaponId]?.[piece]) ?? WEAPON_SHEETS[weaponId]?.[piece] ?? null;
 export const hasWeaponSheet = (weaponId, piece) => { const e = entryOf(weaponId, piece); return !!e && spellSheetReady(e[0]); };
 
 // Draws the piece's sheet at the (already placed) grip; false when the weapon has no ready sheet.

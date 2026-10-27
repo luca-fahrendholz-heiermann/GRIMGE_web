@@ -500,3 +500,11 @@ Eigene Umsetzungen (`vfx_arcane3.cjs`, `arcane_newforms.js`), jeweils mit sechs 
 - Freischalten über Boss-Drop oder Fulgur-, Umbra- bzw. Ignis-Rune Lv. 8.
 
 - `v47_new_forms.png` (oben im Stand: Donnerkranz, Totenmaske, Feuersiegel, Totenmaske bei Nyx · unten: Gewitterkranz, Heerbann, Feuerwalze)
+
+## v48 — Runenritter und Schattenlanzer (27.10.2026)
+
+- **Runenritter** (Bilder 24/25): Bankai mit einer Schild-Waffe färbt den Helden zum gold-stählernen Ritter (Umfärbung `A04_Guardian`, robust für alle Helden). Dazu kommen die vier Turmschilde der Schildlegion.
+- **Schattenlanzer** (Bild 21): Bei aktiver Totenmaske wird der Speer bzw. die Glefe zum schwarzen, gezackten Schattenspeer mit roten Runen und zerrissenem Tuch (`FORM_SKINS` in `weapon_sheets.js`).
+- Seelenschädel (Bild 19) ist Teil der Totenmaske (v47).
+
+- `v48_runenritter_schattenlanzer.png`

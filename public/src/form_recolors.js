@@ -136,3 +136,5 @@ registerFormCloak('A12', '#fff07a', '#ffffff');
 registerFormRecolor('A13', armour(ramp('#0a0a0e', '#1e1018', '#3a1420', '#6a1a28', '#a8283a'), '#4fffb0', { strength: .5 }));
 registerFormCloak('A13', '#4fffb0', '#d0ffe8');
 registerFormCloak('A14', '#ff5a1f', '#ffd27a');
+// Runenritter (user's example sprites 24/25): Bankai with a shield weapon turns the hero into a gold-and-steel knight.
+registerFormRecolor('A04_Guardian', armour(ramp('#2a2410', '#5a4a1e', '#a8862e', '#e6c062', '#fff2b0'), '#9ad2ff', { strength: .55 }));

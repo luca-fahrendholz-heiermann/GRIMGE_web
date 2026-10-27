@@ -32,6 +32,7 @@ import './buff_v32_bloom.js'; // A04 Klingenblüte
 import { installBankaiArsenal } from './bankai_arsenal.js';
 import { devilTick } from './arcane_devil.js';
 import { recolorFor, recolorStages, cloakFor } from './form_recolors.js';
+import { WEAPONS } from './weapons.js';
 import './armor_extras.js'; // socket-anchored armour pieces (horns, claws, cannon, visor eyes) // armour transformations recolour the hero's own pixels
 import './arcane_fadenschlag.js'; // T13 Fadenschlag: swing + thread techniques (must patch ARCANE_MOVES before the movesets are built)
 import { konstruktTick, isShellRolled } from './arcane_konstrukt.js'; // A10 Konstruktpanzer (armour, shell roll, shield passive)
@@ -285,7 +286,9 @@ export function buffVeinPainter(player) {
   const b = player.buffForm;
   // Armour forms put the armour on stage by stage (plates close from the feet up, then the visor) and take it off
   // backward; they skip the generic light sweep.
-  const stages = recolorStages(form.id, player.heroKey);
+  // The recolour key: the form id, or for Bankai (A04) the form + weapon family (Runenritter for shield weapons).
+  const rk = form.id === 'A04' && WEAPONS[player.weapon ?? player.classWeapon]?.family === 'Guardian' ? 'A04_Guardian' : form.id;
+  const stages = recolorStages(rk, player.heroKey);
   if (stages) {
     let stage = stages;
     // After a full transformation the plates start closing once the light pillar has opened (visible to the player).
@@ -293,7 +296,7 @@ export function buffVeinPainter(player) {
     if (b && b.age < start + ARMOR_ON) stage = Math.floor(Math.max(0, b.age - start) / ARMOR_ON * (stages + 1));
     else if (b && b.timer < ARMOR_OFF) stage = Math.floor(b.timer / ARMOR_OFF * (stages + 1));
     const paint = contourVeinPainter(form, player.animTime ?? 0, null);
-    const rc = recolorFor(form.id, stage, player.heroKey); if (rc) paint.recolor = rc;
+    const rc = recolorFor(rk, stage, player.heroKey); if (rc) paint.recolor = rc;
     return paint;
   }
   let sweep = null;

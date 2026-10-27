@@ -268,4 +268,18 @@ function staff() {
   }
   return s;
 }
-module.exports = { weaponSheets: () => [glaive(), katana(), sheath(), spear(), sword(), shield(), spiritSword(), scythe(), greatAxe(), greatHammer(), sabre(), dagger(), bow(), staff()] };
+// Schattenlanzer (user's example sprite 21; A13 Totenmaske skin): a black jagged spear, red runes, torn cloth.
+function shadowSpear() {
+  const s = new Sheet('w_shadow_spear', 138, 40, 4, { anchor: 'center' }); const cy = 20;
+  for (let f = 0; f < 4; f++) {
+    shaft(s, f, P.black, 4, 100, cy, 1); wrap(s, f, P.red, 28, 40, cy, 1);
+    for (let x = 4; x < 100; x += 9) tone(s, f, P.red, x + (f % 3), cy, (x + f * 9) % 27 < 9 ? 1 : .6); // rune glints along the shaft
+    // Jagged head: a long black leaf with barbs on both sides and a red edge line.
+    for (let x = 0; x <= 34; x++) { const u = x / 34; const w = Math.round(6 * Math.sin(Math.PI * Math.min(1, u * 1.5 + .1)) * (1 - u * .4)) + ((x % 6) < 2 && u < .7 ? 2 : 0); for (let d = -w; d <= w; d++) tone(s, f, Math.abs(d) === w ? P.red : P.black, 100 + x, cy + d, Math.abs(d) === w ? .7 : d < 0 ? .55 : .3); tone(s, f, P.red, 100 + x, cy, .9); }
+    // Torn black cloth hanging from the socket.
+    for (let j = 0; j < 12; j++) for (let k = 0; k < 4 - (j >> 2); k++) tone(s, f, P.black, 98 - k + Math.round(Math.sin(j * .5 + f * 1.5) * (j / 6)), cy + 3 + j, .45 + (k === 0 ? .2 : 0));
+    B.selOutline(s, f, P.out);
+  }
+  return s;
+}
+module.exports = { weaponSheets: () => [shadowSpear(), glaive(), katana(), sheath(), spear(), sword(), shield(), spiritSword(), scythe(), greatAxe(), greatHammer(), sabre(), dagger(), bow(), staff()] };
