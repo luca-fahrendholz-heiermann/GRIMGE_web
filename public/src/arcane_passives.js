@@ -5,6 +5,11 @@
 //   T24 Fadenregent     the two marionettes strike the nearest foe on their side by themselves every 2.5 s.
 //   T08 Ossuarium       every third landed melee hit rings the bells: a sound burst paralyses foes around (1 s).
 //   Kältestillstand T35 foes that come within reach freeze for 1.6 s (once per foe every 6 s).
+// Round 1 forms (user, 27 Oct 2026: "Mechaniken für die älteren Formen"; A05 / A06 / A08 already have theirs):
+//   T02 Schlackenkern   OFENHITZE  every landed hit heats the kiln; the 5th makes it erupt — burning slag around.
+//   T04 Korallenschild  KORALLENWEHR  a coral shield (25, up to 40) regrows every 5 s.
+//   T05 Bruchflug       SCHWERELOS  falling turns into a slow glide (the broken gravity fins hold the hero).
+//   T06 Ionspindel      LADUNG  every landed hit charges the spindle; the 5th chains lightning to up to 3 foes.
 import { foesOf, hit, projectilesOf, projKill, sigWorld, DEPTH } from './signature_core.js';
 // The game world: the signature world when set, else the global one (also set in tests).
 const worldOf = () => sigWorld() ?? globalThis.window?.gameWorld ?? null;
@@ -13,7 +18,7 @@ import { applyStatus } from './status_effects.js';
 import { combat } from './combat.js';
 import { spells } from './spells.js';
 
-export const PASSIVES = Object.freeze({ voidR: 34, voidCd: 2, puppetEvery: 2.5, puppetReach: 110, puppetDmg: 12, bellEvery: 3, bellR: 96, frostR: 56, frostCd: 6 });
+export const PASSIVES = Object.freeze({ heatHits: 5, eruptR: 90, eruptDmg: 24, coralEvery: 5, coralGain: 25, coralCap: 40, glideFall: -150, chargeHits: 5, chainDmg: 18, chainJumps: 3, chainReach: 170, voidR: 34, voidCd: 2, puppetEvery: 2.5, puppetReach: 110, puppetDmg: 12, bellEvery: 3, bellR: 96, frostR: 56, frostCd: 6 });
 const isForm = (p, id) => p?.buffForm?.id === id && p.buffForm.timer > 0;
 const px = (ctx, x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(Math.round(x), Math.round(y), w, h); };
 // Positions of the three negative spaces (the back sheet: chest-centred offsets, mirrored with the facing).
@@ -69,6 +74,28 @@ function bellListen(p) {
   listeners.set(p, listen(l));
 }
 
+// T02 / T06: hit counters on one listener per hero (form id read at event time).
+const counters = new WeakMap();
+function countListen(p) {
+  let l = counters.get(p);
+  if (l && !l.isFinished) return;
+  l = { owner: p, isFinished: false, n: 0, onSigEvent(type, info) {
+    const id = p.buffForm?.timer > 0 ? p.buffForm.id : null;
+    if (id !== 'T02' && id !== 'T06') { this.isFinished = true; return; }
+    if (type !== 'hit') return; const hits = (info.hits ?? []).filter((h) => !h.blocked && !h.target?.isProp); if (!hits.length) return;
+    this.n++; const gw = worldOf();
+    if (id === 'T02' && this.n % PASSIVES.heatHits === 0) {
+      for (const t of foesOf(gw, p.team)) if (Math.hypot(t.x - p.x, ((t.z ?? p.z) - p.z) * DEPTH) < PASSIVES.eruptR) { hit(t, PASSIVES.eruptDmg, Math.sign(t.x - p.x || 1) * 220, 180, .4); applyStatus(t, 'burn'); }
+      flash(p.x, p.y - 40, '#ff5a1f', { r0: 8, r1: PASSIVES.eruptR, dur: .35 }); combat.spawnDamageText?.(p.x, p.y - 112, 'OFEN BRICHT AUS', { color: '#ff8a3a' }); combat.shakeCamera(5, .14);
+    } else if (id === 'T02') combat.spawnDamageText?.(p.x - (p.facing || 1) * 20, p.y - 96, 'HITZE ' + (this.n % PASSIVES.heatHits) + '/' + PASSIVES.heatHits, { color: '#ffb84a' });
+    if (id === 'T06' && this.n % PASSIVES.chargeHits === 0) {
+      let from = hits[0].target; const done = new Set([from]);
+      for (let j = 0; j < PASSIVES.chainJumps; j++) { const next = foesOf(gw, p.team).filter((o) => !done.has(o) && Math.abs(o.x - from.x) < PASSIVES.chainReach).sort((a, b) => Math.abs(a.x - from.x) - Math.abs(b.x - from.x))[0]; if (!next) break; done.add(next); hit(next, PASSIVES.chainDmg, Math.sign(next.x - from.x || 1) * 120, 40, .3); applyStatus(next, 'paralysis', { duration: .6 }); flash(next.x, (next.y ?? 0) - 40, '#2fd070', { r1: 14, dur: .2 }); from = next; }
+      combat.spawnDamageText?.(p.x, p.y - 112, 'KETTENBLITZ', { color: '#a8ffc8' });
+    }
+  } };
+  counters.set(p, listen(l));
+}
 // Called every form update (buff_forms.updateBuffForm).
 export function arcanePassivesTick(p, dt, form) {
   if (!form || !p.buffForm) return;
@@ -77,4 +104,7 @@ export function arcanePassivesTick(p, dt, form) {
   else if (form.id === 'T24') puppetTick(p, dt, gw);
   else if (form.id === 'T35') frostTick(p, gw);
   else if (form.id === 'T08') bellListen(p);
+  else if (form.id === 'T02' || form.id === 'T06') countListen(p);
+  else if (form.id === 'T04') { p._coralT = (p._coralT ?? PASSIVES.coralEvery) - dt; if (p._coralT <= 0) { p._coralT = PASSIVES.coralEvery; p.arcaneShield = Math.min(PASSIVES.coralCap, Math.max(0, p.arcaneShield ?? 0) + PASSIVES.coralGain); p.arcaneShieldTimer = Math.max(p.arcaneShieldTimer ?? 0, PASSIVES.coralEvery); } }
+  else if (form.id === 'T05' && !p.grounded && (p.vElevation ?? 0) < PASSIVES.glideFall) p.vElevation = PASSIVES.glideFall; // glide
 }

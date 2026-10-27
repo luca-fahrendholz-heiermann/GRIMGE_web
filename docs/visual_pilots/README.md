@@ -525,3 +525,12 @@ Panzerhandschuhe, Eisschwert, Streitkolben (& Schild), Doppelklinge, Odachi, Wur
 - Beim Blocken bleiben Bogen, Zauber-Barriere und gekreuzte Fäuste prozedural.
 
 - `v50_weapons_all.png` (alle 25 im Spiel), `v50_weapon_sheets_r3.png`
+
+## v51 — Mechaniken für die Formen aus Runde 1 (27.10.2026)
+
+`arcane_passives.js` erweitert. Dehnleib, Beben und Sprengleib haben schon eigene Passive (Gummikörper, Bebenwelle, Sprengmarken), deshalb bekommen die vier Formen ohne eigene Mechanik eine:
+- **Schlackenkern, Ofenhitze:** Jeder Treffer heizt den Ofen („HITZE 3/5“). Beim fünften bricht er aus: glühende Schlacke trifft und verbrennt alle Gegner im Umkreis („OFEN BRICHT AUS“).
+- **Korallenschild, Korallenwehr:** Alle 5 s wächst ein Korallenschild nach (+25, höchstens 40).
+- **Bruchflug, Schwerelos:** In der Luft gleitet der Held langsam herab statt zu fallen.
+- **Ionspindel, Ladung:** Beim fünften Treffer springt ein Kettenblitz auf bis zu drei weitere Gegner und lähmt sie kurz („KETTENBLITZ“).
+- Tests für alle vier.

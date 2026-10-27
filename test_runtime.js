@@ -2866,7 +2866,22 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
           const SR = await import('./public/src/signature_runes.js'); for (let i = 0; i < 3; i++) SR.signatureEvent(P, 'hit', { hits: [{ target: dummy, blocked: false }] });
           if (!STS.hasStatus(dummy, 'paralysis')) badP.push('T08 no bell paralysis'); buff.endBuffForm(P);
         } catch (e) { badP.push(e.message); }
-        assert(!badP.length, 'Round-2 passives: Nullfeldträger swallows shots, Fadenregent marionettes strike, Kältestillstand freezes, Ossuarium bells paralyse ' + badP.join(' | ')); }
+        try {
+          const SR2 = await import('./public/src/signature_runes.js'); const hitN = (n) => { for (let i = 0; i < n; i++) SR2.signatureEvent(P, 'hit', { hits: [{ target: dummy, blocked: false }] }); };
+          // T02: the 5th landed hit makes the kiln erupt (damage around).
+          start('T02'); AP.arcanePassivesTick(P, 1 / 60, buff.currentBuffForm(P)); dummy.homeX = dummy.x = P.x + 40; dummy.hp = dummy.maxHp; dummy.statusImmuneUntil = {}; hitN(5); if (dummy.hp >= dummy.maxHp) badP.push('T02 no eruption'); buff.endBuffForm(P);
+          // T06: the 5th landed hit chains lightning to a second foe close by (a stub foe in the hostile list).
+          start('T06'); AP.arcanePassivesTick(P, 1 / 60, buff.currentBuffForm(P)); dummy.homeX = dummy.x = P.x + 40;
+          const second = { x: dummy.x + 60, z: P.z, y: dummy.y, team: 'red', hp: 100, maxHp: 100, lifeState: 'Alive', took: 0, takeDamage(d) { this.took += d; this.hp -= d; return true; } };
+          const realHostiles = game.getHostileTargets; game.getHostileTargets = (team) => [...realHostiles.call(game, team), second];
+          try { hitN(5); } finally { game.getHostileTargets = realHostiles; }
+          if (!(second.took > 0)) badP.push('T06 no chain lightning'); buff.endBuffForm(P);
+          // T04: the coral shield regrows.
+          start('T04'); P.arcaneShield = 0; P._coralT = .001; AP.arcanePassivesTick(P, 1 / 60, buff.currentBuffForm(P)); if (!(P.arcaneShield >= 25)) badP.push('T04 no coral shield'); buff.endBuffForm(P); P.arcaneShield = 0;
+          // T05: falling turns into a glide.
+          start('T05'); P.grounded = false; P.elevation = 80; P.vElevation = -600; AP.arcanePassivesTick(P, 1 / 60, buff.currentBuffForm(P)); if (P.vElevation < -150) badP.push('T05 no glide'); buff.endBuffForm(P); P.grounded = true; P.elevation = 0; P.vElevation = 0;
+        } catch (e) { badP.push(e.message); }
+        assert(!badP.length, 'Form passives: Nullfeldträger swallows shots, Fadenregent marionettes strike, Kältestillstand freezes, Ossuarium bells paralyse, Schlackenkern erupts, Korallenschild regrows, Bruchflug glides, Ionspindel chains ' + badP.join(' | ')); }
       // A11 DRACHENGEIST (user, 27 Oct 2026: a horned dragon spirit with a fire aura): six techniques hit and render, foes burn;
       // Ignis route.
       { const STS = await import('./public/src/status_effects.js'); const badD = []; let burnt = false;
