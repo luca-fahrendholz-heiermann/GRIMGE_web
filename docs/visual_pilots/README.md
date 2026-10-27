@@ -490,3 +490,13 @@ Sechs weitere gezeichnete Waffen statt Astral-Form (`vfx_weapons.cjs`):
 - **Ossuarium:** Jeder dritte Nahkampftreffer läutet die Glocken. Ein Klangstoß lähmt Gegner im Umkreis 1 s lang („GLOCKENSCHLAG“).
 - **Kältestillstand:** Gegner, die nah herankommen, frieren 1,6 s ein (jeder Gegner höchstens alle 6 s).
 - Neuer Test für alle vier.
+
+## v47 — Drei neue Arcane States aus den Beispielen (27.10.2026)
+
+Eigene Umsetzungen (`vfx_arcane3.cjs`, `arcane_newforms.js`), jeweils mit sechs Techniken, eigenem Sprint und eigenem Sturzangriff:
+- **A12 Donnerkranz** (Bild 17, Blitz): Ein goldener Ring mit sechs Trommeln hinter den Schultern, Blitze springen von Trommel zu Trommel. Techniken: Trommelschlag / Donnerwalze · Himmelstrommel / Gewitterkranz · Donnerstoß / Trommelwirbel. **Passiv:** Alle 4 s trifft ein Blitz aus einer Trommel den nächsten Gegner und lähmt ihn kurz.
+- **A13 Totenmaske** (Bilder 13/14 und 19, Schatten): schwarz-rote Rüstung als Umfärbung (robust), ein roter Federbusch, zwei zerrissene Kriegsbanner, grünes Seelenfeuer. Techniken: Seelenschnitt / Totenzug · Bannerhieb / Seelensäule · Totenkreis / Heerbann (Geisterheer aus Seelenschädeln). **Passiv:** Besiegte Gegner hinterlassen einen Seelenschädel, der beim Darüberlaufen 12 HP heilt.
+- **A14 Feuersiegel** (Bild 23, Feuer): Ein brennendes Siegelrad dreht sich im Rücken. Techniken: Siegelwurf / Feuerwalze · Siegelsäule / Siegelregen · Siegelbrand / Sonnensiegel. **Passiv:** Treffer brennen Siegelmarken ein, die über dem Gegner angezeigt werden; die dritte Marke explodiert („SIEGEL BRICHT“). Sonnensiegel zündet alle Marken auf einmal.
+- Freischalten über Boss-Drop oder Fulgur-, Umbra- bzw. Ignis-Rune Lv. 8.
+
+- `v47_new_forms.png` (oben im Stand: Donnerkranz, Totenmaske, Feuersiegel, Totenmaske bei Nyx · unten: Gewitterkranz, Heerbann, Feuerwalze)

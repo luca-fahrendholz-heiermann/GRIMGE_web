@@ -131,3 +131,8 @@ export function hairRecolor(stage, heroKey) {
     }
   } };
 }
+// A12 Donnerkranz: a yellow aura. A13 Totenmaske: black-red armour tint, a green soul aura. A14 Feuersiegel: an orange aura.
+registerFormCloak('A12', '#fff07a', '#ffffff');
+registerFormRecolor('A13', armour(ramp('#0a0a0e', '#1e1018', '#3a1420', '#6a1a28', '#a8283a'), '#4fffb0', { strength: .5 }));
+registerFormCloak('A13', '#4fffb0', '#d0ffe8');
+registerFormCloak('A14', '#ff5a1f', '#ffd27a');

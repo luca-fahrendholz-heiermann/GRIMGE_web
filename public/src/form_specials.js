@@ -76,7 +76,10 @@ export const FORM_SPRINTS = {
   A08: { ...LEAP, leap: 180, impact: 'blast' },     // Sprengleib: a blast-driven leap, the impact explodes
   A09: { ...LEAP, leap: 200, impact: 'bayonet' },   // Blutarsenal: a bayonet charge, the struck foe bleeds
   A10: { ...RAM, impact: 'shellRam' },               // Konstruktpanzer: a shell-first ram, the struck foe is thrown far
-  A11: { ...LUNGE, impact: 'dragonBite' }            // Drachengeist: a lunge, the dragon bites with — the foe burns
+  A11: { ...LUNGE, impact: 'dragonBite' },           // Drachengeist: a lunge, the dragon bites with — the foe burns
+  A12: { ...PIERCE, impact: 'drumStrike' },          // Donnerkranz: a lightning dash through everyone, the struck foe is paralysed
+  A13: { ...RAM, impact: 'bannerRam' },              // Totenmaske: a charge with the banner lowered
+  A14: { ...LEAP, leap: 180, impact: 'sealBrand' }   // Feuersiegel: a leap that brands the struck foe
 };
 for (const [id, mech] of Object.entries(FORM_SPRINTS)) {
   const form = BUFF_FORMS[id]; if (!form) continue;
@@ -106,6 +109,9 @@ const IMPACTS = {
   room: (p, struck) => { struck.slow?.(1, .3); },
   bayonet: (p, struck) => applyStatus(struck, 'bleed'),
   dragonBite: (p, struck) => applyStatus(struck, 'burn'),
+  bannerRam: (p, struck) => { struck.kbVelX = (struck.kbVelX ?? 0) + (p.facing || 1) * 140; },
+  sealBrand: (p, struck) => applyStatus(struck, 'burn'),
+  drumStrike: (p, struck) => applyStatus(struck, 'paralysis', { duration: .8 }),
   shellRam: (p, struck) => { struck.kbVelX = (struck.kbVelX ?? 0) + (p.facing || 1) * 160; },
   blast: (p, struck, game) => explode(game, { team: p.team, caster: p, facing: p.facing || 1, power: 1 }, struck.x, struck.z ?? p.z, 70, 20),
   ape: (p, struck, game) => { for (const t of foes(p, game)) if (Math.hypot(t.x - struck.x, ((t.z ?? p.z) - (struck.z ?? p.z)) * DEPTH) < 90) t.takeDamage?.(10, Math.sign(t.x - struck.x || 1) * 220, 120, .3, false, 'spell'); combat.shakeCamera(7, .2); }
@@ -124,6 +130,9 @@ const SPRINT_LOOKS = {
   A07: (ctx, q) => { line(ctx, [[q.x - q.f * 60, q.y + 10], [q.x + q.f * 40, q.y - 10]], '#ffffff', 3, q.fade); line(ctx, [[q.x - q.f * 60, q.y + 10], [q.x + q.f * 40, q.y - 10]], q.mat.body, 1.5, q.fade); },
   A08: (ctx, q) => boom(ctx, q.x - q.f * 24, q.y + 20, 20, q.k, 3),
   A09: (ctx, q) => bloodWeapon(ctx, 'blood_rifle', q.k > .6 ? 2 : 0, q.x + q.f * 6, q.y + 12, q.f, 0, q.fade),
+  A12: (ctx, q) => { ctx.save(); ctx.globalAlpha = q.fade; for (let i = 0; i < 5; i++) { ctx.fillStyle = i % 2 ? '#fff07a' : '#ffffff'; ctx.fillRect(Math.round(q.x - q.f * (16 + i * 12)), Math.round(q.y + 12 + ((i % 2) ? -4 : 4)), 8, 2); } ctx.restore(); },
+  A13: (ctx, q) => { ctx.save(); ctx.globalAlpha = q.fade; ctx.fillStyle = '#4fffb0'; for (let i = 0; i < 4; i++) ctx.fillRect(Math.round(q.x - q.f * (20 + i * 12)), Math.round(q.y + 14 - i * 2), 5, 5); ctx.restore(); },
+  A14: (ctx, q) => { ctx.save(); ctx.globalAlpha = q.fade; for (let i = 0; i < 4; i++) { ctx.fillStyle = i % 2 ? '#ff5a1f' : '#ffd27a'; ctx.fillRect(Math.round(q.x - q.f * (18 + i * 12)), Math.round(q.y + 16 - i * 3), 5, 4); } ctx.restore(); },
   A11: (ctx, q) => { for (let i = 0; i < 4; i++) { ctx.save(); ctx.globalAlpha = q.fade * (1 - i * .22); ctx.fillStyle = i ? '#ff5a1f' : '#ffd27a'; ctx.fillRect(Math.round(q.x - q.f * (24 + i * 12)), Math.round(q.y + 16 - i * 3 - Math.sin(q.k * 9 + i) * 3), 6 - i, 4 - (i >> 1)); ctx.restore(); } },
   A10: (ctx, q) => { for (let i = 0; i < 3; i++) { ctx.save(); ctx.globalAlpha = q.fade * (1 - i * .3); ctx.fillStyle = i ? '#3ad0e0' : '#a8f6ff'; ctx.fillRect(Math.round(q.x - q.f * (30 + i * 14)), Math.round(q.y + 20 - i), 10 - i * 2, 2); ctx.restore(); } },
   T02: (ctx, q) => { const m = { ...q.mat, kind: 'crust' }; plate(ctx, [[q.x + q.f * 8, q.y - 22], [q.x + q.f * 34, q.y - 14], [q.x + q.f * 38, q.y + 14], [q.x + q.f * 8, q.y + 22]], m, 9401, { alpha: q.fade, lit: 1, glowEdge: 1.2 }); fallout(ctx, [[q.x - q.f * 10, q.y + 30]], q.mat, q.t, 9402, { count: 8, alpha: q.fade }); },
@@ -186,7 +195,10 @@ export const FORM_DIVES = {
   A08: DIVE('blastDrop', 120, 52, { st: ['burn'], ground: 'scorch' }),
   A09: DIVE('spearDrop', 110, 48, { st: ['bleed'], ground: 'blood' }),
   A10: DIVE('shellDrop', 110, 50, { ground: 'crater' }),
-  A11: DIVE('dragonDrop', 110, 50, { st: ['burn'], ground: 'scorch' })
+  A11: DIVE('dragonDrop', 110, 50, { st: ['burn'], ground: 'scorch' }),
+  A12: DIVE('drumDrop', 100, 48, { st: ['shock'] }),
+  A13: DIVE('soulDrop', 100, 48, { ground: 'crater' }),
+  A14: DIVE('sealDrop', 105, 50, { st: ['burn'], ground: 'scorch' })
 };
 
 export class FormDiveFx {
@@ -237,6 +249,9 @@ export class FormDiveFx {
   }
 }
 const DIVE_FALL = {
+  drumDrop: (ctx, q) => { ctx.save(); ctx.fillStyle = '#fff07a'; for (let i = 0; i < 4; i++) ctx.fillRect(Math.round(q.x - 6 + i * 4 + ((i % 2) ? 2 : -2)), Math.round(q.y - 30 - ((q.t * 160 + i * 8) % 26)), 2, 6); ctx.restore(); },
+  soulDrop: (ctx, q) => { ctx.save(); ctx.fillStyle = '#4fffb0'; for (let i = 0; i < 4; i++) ctx.fillRect(Math.round(q.x - 6 + i * 4), Math.round(q.y - 30 - ((q.t * 120 + i * 9) % 26)), 3, 5); ctx.restore(); },
+  sealDrop: (ctx, q) => { ctx.save(); for (let i = 0; i < 4; i++) { ctx.fillStyle = i % 2 ? '#ff5a1f' : '#ffd27a'; ctx.fillRect(Math.round(q.x - 6 + i * 4), Math.round(q.y - 30 - ((q.t * 140 + i * 9) % 26)), 3, 6); } ctx.restore(); },
   rubberDrop: (ctx, q) => { for (const sg of [-1, 1]) rubberArm(ctx, q.x, q.y - 40, q.x + sg * 16, q.y + 10, q.m, 1, 8); },
   quakeDrop: (ctx, q) => cracks(ctx, q.x, q.y + 6, 18, q.t * 10, 1, '#ffffff', 6),
   roomDrop: (ctx, q) => dome(ctx, q.x, q.y + 20, 40, q.m, .8, q.t),
@@ -257,6 +272,9 @@ const DIVE_FALL = {
   thunder: (ctx, q) => line(ctx, [[q.x, q.y - 120], [q.x + 8, q.y - 70], [q.x - 6, q.y - 30], [q.x, q.y]], q.m.spark, 3, 1)
 };
 const DIVE_LAND = {
+  drumDrop: (ctx, q) => { ctx.save(); ctx.globalAlpha = q.a; ctx.fillStyle = '#fff07a'; for (let i = 0; i < 8; i++) { const a = i / 8 * TAU; for (let r = 0; r < q.R * q.k; r += 4) ctx.fillRect(Math.round(q.x + Math.cos(a) * r + ((r / 4) % 2 ? 2 : -2)), Math.round(q.y + Math.sin(a) * r * .3), 2, 2); } ctx.restore(); },
+  soulDrop: (ctx, q) => { ctx.save(); ctx.globalAlpha = q.a; ctx.fillStyle = '#4fffb0'; const n = 40; for (let i = 0; i < n; i++) { const a = i / n * TAU; ctx.fillRect(Math.round(q.x + Math.cos(a) * q.R * q.k), Math.round(q.y + Math.sin(a) * q.R * .3 * q.k), 3, 3); } ctx.restore(); },
+  sealDrop: (ctx, q) => { ctx.save(); ctx.globalAlpha = q.a; const n = 36; for (let i = 0; i < n; i++) { const a = i / n * TAU; ctx.fillStyle = i % 3 ? '#ff5a1f' : '#ffd27a'; ctx.fillRect(Math.round(q.x + Math.cos(a) * q.R * q.k), Math.round(q.y + Math.sin(a) * q.R * .3 * q.k), 3, 3); } for (let k = -6; k <= 6; k++) { ctx.fillStyle = '#ffd27a'; ctx.fillRect(Math.round(q.x + k * q.k * 4), Math.round(q.y), 2, 2); ctx.fillRect(Math.round(q.x), Math.round(q.y + k * q.k * 1.2), 2, 2); } ctx.restore(); },
   rubberDrop: (ctx, q) => { for (let i = 0; i < 6; i++) { const a = i / 6 * TAU; rubberArm(ctx, q.x, q.y - 20, q.x + Math.cos(a) * q.R * .7 * q.k, q.y - 20 + Math.sin(a) * q.R * .22 * q.k, q.m, q.a, 7); } },
   quakeDrop: (ctx, q) => { cracks(ctx, q.x, q.y, q.R * q.k, 6, q.a, '#ffffff', 10); groundRing(ctx, q.x, q.y, q.R * q.k, q.m, 0, q.a, 14, 9890, 3); },
   roomDrop: (ctx, q) => dome(ctx, q.x, q.y, q.R * (1.2 - q.k * .4), q.m, q.a, q.t),

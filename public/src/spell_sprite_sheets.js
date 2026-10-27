@@ -1916,5 +1916,77 @@ export const SPELL_SPRITE_SHEETS = Object.freeze({
   "res": 2,
   "hd": true,
   "anchor": "center"
+ },
+ "as_A12_back": {
+  "name": "as_A12_back",
+  "w": 64,
+  "h": 64,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "as_A12_front": {
+  "name": "as_A12_front",
+  "w": 64,
+  "h": 64,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "as_A13_back": {
+  "name": "as_A13_back",
+  "w": 64,
+  "h": 64,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "as_A13_front": {
+  "name": "as_A13_front",
+  "w": 64,
+  "h": 64,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "as_A14_back": {
+  "name": "as_A14_back",
+  "w": 64,
+  "h": 64,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "as_A14_front": {
+  "name": "as_A14_front",
+  "w": 64,
+  "h": 64,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "soul_skull": {
+  "name": "soul_skull",
+  "w": 20,
+  "h": 20,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "seal_mark": {
+  "name": "seal_mark",
+  "w": 14,
+  "h": 14,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
  }
 });

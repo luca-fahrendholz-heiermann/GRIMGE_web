@@ -18,10 +18,10 @@
 | **Levitation State** | schwebender Spieler mit kontrollierten Projektilen | T05 Bruchflug |
 | **Environmental State** | der Spieler verändert einen größeren Bereich der Arena | T35 Kältestillstand |
 | **Körperkraft** | der eigene Körper verändert sich (dehnen, beben, Raum, Sprengung) | A05 Dehnleib, A06 Beben, A07 Raum, A08 Sprengleib, A09 Blutarsenal |
-| **Rüstung** | die eigenen Sprite-Pixel werden zur Rüstung, Anbauteile sitzen am Körper | A10 Konstruktpanzer, A11 Drachengeist |
+| **Rüstung** | die eigenen Sprite-Pixel werden zur Rüstung, Anbauteile sitzen am Körper | A10 Konstruktpanzer, A11 Drachengeist, A12 Donnerkranz, A13 Totenmaske, A14 Feuersiegel |
 | **Divine Projection** | vergrößertes Lichtbild des eigenen Körpers | A01 Göttlicher Riese |
 
-## Die 26 aktiven Arcane States (kuratiert: je eigene Techniken, Lade-Ritual und Palette)
+## Die 29 aktiven Arcane States (kuratiert: je eigene Techniken, Lade-Ritual und Palette)
 
 ### B01 Risswild · *Energy Extension* · V3.2: Tiergeist (Kyubi): neun Fuchsflammen-Schweife
 
@@ -334,6 +334,42 @@
 - **Heavies (V3.2-Abbildung):** Forward — Short: Drachenbiss; Full: Drachenatem. · Up — Short: Aufstieg; Full: Himmelssturz. · Down — Short: Schweifring; Full: Drachenwacht.
 - **Ausschlüsse:** Kein Wurm, keine fremde Figur — ein eindrucksvoller eigener Drache.
 - Palette: `#3a0a00` `#ff5a1f` `#ffd27a` `#fff3c4` · Material: goldrote Drachenschuppen, Glut und Flammen.
+
+### A12 Donnerkranz — Trommelkranz · *Verwandlung* · V3.2: Verwandlung: Donnerkranz
+
+- **Anker:** `sprite_alpha`, `back`, `crown`, `root`
+- **Idle-Silhouette:** Ein großer goldener Ring mit sechs Trommeln schwebt hinter den Schultern; Blitze springen zwischen den Trommeln.
+- **Action-Silhouette:** Der Trommelkranz kreist leicht, Blitze springen von Trommel zu Trommel.
+- **Peak Manifestation:** Bei Full entfaltet sich die Form ganz.
+- **Transform-In / Out:** Die Form erscheint. / Die Form vergeht.
+- **Defense · Grab · Jump:** Die Form fängt den Treffer ab. · Die Form packt zu. · Die Form trägt hoch.
+- **Heavies (V3.2-Abbildung):** Forward — Trommelschlag / Donnerwalze · Up — Himmelstrommel / Gewitterkranz · Down — Donnerstoß / Trommelwirbel
+- **Ausschlüsse:** Keine fremde Figur — eigene Umsetzung.
+- Palette: `#2a1a08` `#e6c062` `#fff07a` `#ffffff` · Material: Goldring, Trommeln aus Holz und Fell, gelbe Blitze.
+
+### A13 Totenmaske — Heerführer · *Verwandlung* · V3.2: Verwandlung: Totenmaske
+
+- **Anker:** `sprite_alpha`, `back`, `crown`, `root`
+- **Idle-Silhouette:** Ein roter Federbusch schwingt vom Helm nach hinten, zwei zerrissene Kriegsbanner stehen hinter dem Rücken, grünes Seelenfeuer lodert an den Schultern.
+- **Action-Silhouette:** Die Banner wehen, Seelenfeuer leckt über die Schultern.
+- **Peak Manifestation:** Bei Full entfaltet sich die Form ganz.
+- **Transform-In / Out:** Die Form erscheint. / Die Form vergeht.
+- **Defense · Grab · Jump:** Die Form fängt den Treffer ab. · Die Form packt zu. · Die Form trägt hoch.
+- **Heavies (V3.2-Abbildung):** Forward — Seelenschnitt / Totenzug · Up — Bannerhieb / Seelensäule · Down — Totenkreis / Heerbann
+- **Ausschlüsse:** Keine fremde Figur — eigene Umsetzung.
+- Palette: `#0a0a0e` `#8a1420` `#4fffb0` `#d0ffe8` · Material: schwarz-roter Panzer, zerrissene Banner, grünes Seelenfeuer.
+
+### A14 Feuersiegel — Siegelträger · *Verwandlung* · V3.2: Verwandlung: Feuersiegel
+
+- **Anker:** `sprite_alpha`, `back`, `crown`, `root`
+- **Idle-Silhouette:** Ein brennendes Siegelrad mit sechs Speichen dreht sich hinter dem Rücken; Flammen schlagen von den Speichen.
+- **Action-Silhouette:** Das Siegelrad dreht sich, Flammen schlagen von den Speichen.
+- **Peak Manifestation:** Bei Full entfaltet sich die Form ganz.
+- **Transform-In / Out:** Die Form erscheint. / Die Form vergeht.
+- **Defense · Grab · Jump:** Die Form fängt den Treffer ab. · Die Form packt zu. · Die Form trägt hoch.
+- **Heavies (V3.2-Abbildung):** Forward — Siegelwurf / Feuerwalze · Up — Siegelsäule / Siegelregen · Down — Siegelbrand / Sonnensiegel
+- **Ausschlüsse:** Keine fremde Figur — eigene Umsetzung.
+- Palette: `#1a0a06` `#a85020` `#ff5a1f` `#ffd27a` · Material: glühendes Eisenrad, Flammen, Siegelglyphen.
 
 
 ## Archiviert (aus dem Spiel genommen, im Atlas erhalten)

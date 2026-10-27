@@ -36,6 +36,7 @@ import './armor_extras.js'; // socket-anchored armour pieces (horns, claws, cann
 import './arcane_fadenschlag.js'; // T13 Fadenschlag: swing + thread techniques (must patch ARCANE_MOVES before the movesets are built)
 import { konstruktTick, isShellRolled } from './arcane_konstrukt.js'; // A10 Konstruktpanzer (armour, shell roll, shield passive)
 import { drachengeistTick } from './arcane_drachengeist.js'; // A11 Drachengeist (dragon spirit, burn passive)
+import { newFormsTick } from './arcane_newforms.js'; // A12 Donnerkranz, A13 Totenmaske, A14 Feuersiegel
 import { arcanePassivesTick } from './arcane_passives.js'; // T08 / T23 / T24 / T35 signature passives
 import { arsenalTick } from './arcane_bloodarsenal.js'; // A09 Blutarsenal (weapon fusion: techniques, look, bleed passive) // A05–A08 body powers (techniques, looks, water weakness, passives) // A04: the held weapon's arsenal (look + techniques)
 import { combat } from './combat.js';
@@ -245,6 +246,7 @@ export function updateBuffForm(player, dt) {
   konstruktTick(player, dt, formFor(player, b.id));
   drachengeistTick(player, formFor(player, b.id));
   arcanePassivesTick(player, dt, formFor(player, b.id));
+  newFormsTick(player, dt, formFor(player, b.id));
   if (b.timer <= 0 || !player.isAlive) endBuffForm(player);
 }
 
