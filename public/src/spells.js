@@ -1287,6 +1287,7 @@ class FrostNovaSpell {
 
 class VoidImplosionSpell {
   constructor(x, z, team) {
+    this.fineVfx = true; // crisp hand-drawn look (render)
     this.x = x;
     this.z = z;
     this.team = team;
@@ -1353,6 +1354,18 @@ class VoidImplosionSpell {
   }
 
   render(ctx) {
+    // Crisp look (user, 27 Oct 2026: "alles in Optik verbessern"): the hand-drawn black hole scaled to the pull radius,
+    // dashed pixel rings turning, orbiting motes; the collapse is the drawn shadow burst.
+    if (spellSheetReady('void_orb') && spellSheetReady('shadow_burst')) {
+      const by = this.y - 20; const tt = performance.now() * .004; const P2 = (x, y, sz, c) => { ctx.fillStyle = c; ctx.fillRect(Math.round(x - sz / 2), Math.round(y - sz / 2), sz, sz); };
+      if (this.phase === 'expand' || this.phase === 'hold') {
+        const R = this.radius * (1 + Math.sin(tt * 3) * .08);
+        drawSpellSprite(ctx, 'void_orb', Math.floor(tt * 4) % 8, this.x, by, { anchor: 'center', scale: Math.max(.6, R / 26) });
+        for (let i = 0; i < 3; i++) { const rr = R * (.55 + i * .22); const a0 = tt * (i % 2 ? -1 : 1) + i * 2; for (let k = 0; k < 40; k++) { const a = a0 + k / 40 * Math.PI * 1.6; if (k % 4 === 3) continue; P2(this.x + Math.cos(a) * rr, by + Math.sin(a) * rr * .5, 2, i === 1 ? '#e0b0ff' : '#8e24aa'); } }
+        for (let i = 0; i < 8; i++) { const a = tt * 2 + i * Math.PI / 4; P2(this.x + Math.cos(a) * R * .95, by + Math.sin(a) * R * .47, 3, '#e0b0ff'); }
+      } else { const k = Math.min(.999, this.collapseTime / this.collapseDuration); drawSpellSprite(ctx, 'shadow_burst', Math.floor(k * 8), this.x, by + 20, { scale: Math.max(1, this.radius / 18) }); }
+      return;
+    }
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     const baseY = this.y - 20;
@@ -1404,6 +1417,7 @@ class VoidImplosionSpell {
 
 class InfernoRampageSpell {
   constructor(startX, z, facing, team) {
+    this.fineVfx = true; // crisp hand-drawn look (render)
     this.x = startX;
     this.z = z;
     this.facing = facing;
@@ -1449,6 +1463,14 @@ class InfernoRampageSpell {
   }
 
   render(ctx) {
+    // Crisp look: the hand-drawn fireball as a big rampaging head, a trail of shrinking fire knots, ember pixels.
+    if (spellSheetReady('fire_ball')) {
+      const by = this.y - 25; const tt = performance.now() * .008; const fd = Math.min(1, this.life * 2); const fl = this.facing < 0;
+      for (let i = 4; i >= 1; i--) drawSpellSprite(ctx, 'fire_ball', (Math.floor(tt * 2) + i) % 8, this.x - this.facing * (14 + i * 18), by + Math.sin(tt * 6 + i) * 6, { anchor: 'center', flip: fl, scale: 1.8 - i * .3, alpha: fd * (1 - i * .15) });
+      drawSpellSprite(ctx, 'fire_ball', Math.floor(tt * 2) % 8, this.x, by, { anchor: 'center', flip: fl, scale: 2.2, alpha: fd });
+      ctx.save(); ctx.globalAlpha = fd; for (let i = 0; i < 9; i++) { const a = tt * 3 + i * .7; const d = 30 + Math.sin(a * 2) * 12; ctx.fillStyle = i % 2 ? '#ffd27a' : '#fff3c4'; ctx.fillRect(Math.round(this.x + Math.cos(a) * d * .8), Math.round(by + Math.sin(a) * d * .4), 2, 2); } ctx.restore();
+      return;
+    }
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     const baseY = this.y - 25;

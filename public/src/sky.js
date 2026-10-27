@@ -304,13 +304,9 @@ function pixelDisc(ctx, cx, cy, r, px, fill) {
   }
 }
 
+// A halo in three hard steps (pixel style, no soft gradient — user, 27 Oct 2026: "alles in Optik verbessern").
 function glow(ctx, cx, cy, r, color, alpha) {
-  const g = ctx.createRadialGradient?.(cx, cy, r * .2, cx, cy, r);
-  if (!g) return;
-  g.addColorStop(0, hexToRgba(color, alpha));
-  g.addColorStop(1, hexToRgba(color, 0));
-  ctx.fillStyle = g;
-  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+  for (const [k, a] of [[1, .25], [.72, .5], [.45, .8]]) { ctx.fillStyle = hexToRgba(color, alpha * a); ctx.beginPath(); ctx.arc(Math.round(cx), Math.round(cy), Math.round(r * k), 0, Math.PI * 2); ctx.fill(); }
 }
 
 function drawSkyBody(ctx, body, cx, cy, r, t, viewW, px) {
@@ -381,15 +377,19 @@ function drawSkyBody(ctx, body, cx, cy, r, t, viewW, px) {
       break;
     }
     case 'aurora': {
-      const bands = [['105,240,174', 0], ['64,196,255', 1.7], ['179,136,255', 3.1]];
-      for (const [color, phase] of bands) {
+      // Pixel curtains: each column has a bright crest, a solid body and two hard fade steps below (no thin wash).
+      const bands = [['105,240,174', '#e8fff2', 0], ['64,196,255', '#e0f6ff', 1.7], ['179,136,255', '#f2e8ff', 3.1]];
+      for (const [color, crest, phase] of bands) {
         for (let x = 0; x < viewW; x += px * 2) {
-          const y = cy - 30 + Math.sin(x * .008 + t * .8 + phase) * 18 + phase * 6;
-          const h = 26 + Math.sin(x * .02 + t * 1.6 + phase) * 10;
-          ctx.fillStyle = `rgba(${color},.22)`;
-          ctx.fillRect(x, Math.round(y), px * 2, Math.round(h));
+          const y = Math.round(cy - 30 + Math.sin(x * .008 + t * .8 + phase) * 18 + phase * 6);
+          const h = Math.round(26 + Math.sin(x * .02 + t * 1.6 + phase) * 10); const fold = Math.sin(x * .05 + t * 2 + phase) > .6;
+          ctx.fillStyle = crest; ctx.globalAlpha = .75; ctx.fillRect(x, y, px * 2, px);
+          ctx.fillStyle = `rgb(${color})`; ctx.globalAlpha = fold ? .55 : .4; ctx.fillRect(x, y + px, px * 2, Math.round(h * .45));
+          ctx.globalAlpha = .25; ctx.fillRect(x, y + px + Math.round(h * .45), px * 2, Math.round(h * .3));
+          ctx.globalAlpha = .12; ctx.fillRect(x, y + px + Math.round(h * .75), px * 2, Math.round(h * .25));
         }
       }
+      ctx.globalAlpha = 1;
       break;
     }
     default: break;

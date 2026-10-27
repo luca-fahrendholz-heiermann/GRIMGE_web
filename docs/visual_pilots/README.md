@@ -558,3 +558,12 @@ Die Geschosse der Waffen (`drawShotPixel` in `weapons_ext.js`) sind jetzt knacki
 - Eigene Schilde: **Streitkolben** mit Eisen-Drachenschild und Goldbuckel, **Hexerstab** mit dunklem Wächterschild und grünem Auge (blockt jetzt mit dem Schild), **Zepter** mit weiß-goldenem Sonnenschild.
 
 - `v54_guards_shields.png`
+
+## v55 — Alte weiche Effekte ersetzt (27.10.2026)
+
+- **Leerenimplosion:** das gezeichnete schwarze Loch, auf den Sogradius skaliert, mit gestrichelten Pixelringen und kreisenden Partikeln. Der Kollaps ist der gezeichnete Schattenausbruch. Vorher waren es weiche Verläufe.
+- **Inferno-Ansturm:** ein großer gezeichneter Feuerball als Kopf, eine Spur aus kleiner werdenden Feuerknoten, Glutpixel.
+- **Brandflächen** (und alle Boden-Sheets): Verschmolzene, große Flächen werden mit mehreren Sheets in normaler Größe gekachelt statt bis aufs Fünffache hochgezogen (riesige Pixel).
+- **Polarlicht:** Pixelvorhänge mit heller Kante, festem Körper und zwei harten Abstufungen statt dünnem Schleier. **Himmelsglühen:** drei harte Stufen statt Verlauf.
+
+- `v55_old_effects.png` (Leerenimplosion, Inferno-Ansturm mit gekachelten Brandflächen)

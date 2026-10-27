@@ -637,8 +637,10 @@ export class EnvironmentSystem {
     for (const effect of this.effects) {
       const gs = groundSheet(effect);
       if (gs) {
-        const frames = SPELL_SPRITE_SHEETS[gs[0]]?.frames ?? 1; const scale = Math.max(.35, effect.radius / 40);
-        drawSpellSprite(ctx, gs[0], Math.floor(t * 8 + (effect.seed ?? 0)) % frames, effect.x, groundYForDepth(effect.z) - gs[1] * scale, { anchor: 'center', scale, alpha: effect.fade > .4 ? 1 : .5 });
+        // Up to 1.6× one sheet; bigger (merged) areas are tiled with several sheets instead of blowing the pixels up.
+        const frames = SPELL_SPRITE_SHEETS[gs[0]]?.frames ?? 1; const want = Math.max(.35, effect.radius / 40);
+        if (want <= 1.6) drawSpellSprite(ctx, gs[0], Math.floor(t * 8 + (effect.seed ?? 0)) % frames, effect.x, groundYForDepth(effect.z) - gs[1] * want, { anchor: 'center', scale: want, alpha: effect.fade > .4 ? 1 : .5 });
+        else for (const [i, q] of this.pointsIn(effect, Math.min(9, Math.ceil((want / 1.2) ** 2)), effect.seed ?? 1).entries()) drawSpellSprite(ctx, gs[0], Math.floor(t * 8 + i) % frames, q.x, groundYForDepth(q.z) - gs[1] * 1.2, { anchor: 'center', scale: 1.2, alpha: effect.fade > .4 ? 1 : .5 });
         if (effect.type === 'water' && effect.electrified > 0) this.renderSparks(ctx, effect, 4, t);
         continue;
       }
