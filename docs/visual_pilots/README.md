@@ -415,3 +415,11 @@ Hinweis des Users: Schwert & Schild sah unrealistisch aus (der Arm, der den Schi
 Hinweis des Users: „viel zu groß die Waffen“. Alle fünf Waffen neu in kleinerer Größe gezeichnet (etwa 1,15 × die erste Version, gut ein Drittel kleiner als v2), mit denselben Details: Facetten, Grat, Gravur, Edelsteine, Wicklungen und Effekte. Die Griffpunkte sind angepasst.
 
 - `v39_weapons_v3.png` (oben im Stand, unten im Schlag)
+
+## v40 — Gezeichnete Waffen überall, Blutsense (27.10.2026)
+
+- Block-Haltung mit den gezeichneten Waffen (`drawGuardSheet`): Der Runenschild ist groß vorn, die Katana-Scheide steht senkrecht, die Geisterklinge ist schräg gekreuzt, Glefe, Speer und Sense wirbeln als Scheibe.
+- Geworfene Waffen und Waffen am Boden nutzen ebenfalls die Sheets (`drawWeaponShape`).
+- Neue Waffe **Sense → Blutsense** (nach den Oni-Bildern): schwarzer Stahl mit roter Schneide und Glanzlinie am Rücken, eine Mähne aus Blutflammen, Tropfen, Schaft mit roter Wicklung.
+
+- `v40_weapon_guards.png` (Blocken: Schild, Katana, Glefe, Geisterklinge, Sense · Sense im Stand)

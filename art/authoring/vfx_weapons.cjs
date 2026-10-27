@@ -9,6 +9,7 @@
 //   w_spear         138×40  Frostspeer (crystal head with side crystals, ice wraps, frost motes)
 //   w_sword          78×32  Runenritter sword (blue flame tongues, glowing fuller runes, gold guard, gem)
 //   w_shield         48×54  Runenschild (round, gold rim with studs, radial plates, glowing rune circuit, gem boss)
+//   w_scythe        150×84  Blutsense (black steel, red edge, blood-flame tongues, red-wrapped shaft)
 //   w_spirit_sword   84×34  Geisterklinge (jagged spirit-glass blade, white core, floating shards, feathered hilt)
 const B = require('./vfx_brush.cjs');
 const { Sheet, TAU, clamp01, rng } = B;
@@ -156,4 +157,29 @@ function spiritSword() {
   }
   return s;
 }
-module.exports = { weaponSheets: () => [glaive(), katana(), sheath(), spear(), sword(), shield(), spiritSword()] };
+// Blutsense: black-steel scythe with a red edge and crimson blood-flame tongues on its back, red-wrapped shaft.
+function scythe() {
+  const s = new Sheet('w_scythe', 150, 84, 4, { anchor: 'center' }); const cy = 70;
+  for (let f = 0; f < 4; f++) {
+    shaft(s, f, P.black, 4, 126, cy, 1); wrap(s, f, P.red, 16, 32, cy, 1);
+    for (const x of [6, 34, 70, 104]) ring(s, f, P.steel, x, cy, 2, 2);
+    for (let x = 120; x <= 130; x++) for (let d = -4; d <= 4; d++) tone(s, f, P.steel, x, cy + d, (d < 0 ? .55 : .25) + (x === 120 ? .1 : 0));
+    gem(s, f, P.red, 125, cy, 1, .2);
+    // The blade along a curve from the socket up and back; the inner (concave) side is the edge.
+    const C = (u) => [(1 - u) ** 2 * 126 + 2 * (1 - u) * u * 122 + u * u * 44, (1 - u) ** 2 * (cy - 4) + 2 * (1 - u) * u * 6 + u * u * 12];
+    const flames = [];
+    for (let i = 0; i <= 220; i++) {
+      const u = i / 220; const [x, y] = C(u); const [x2, y2] = C(Math.min(1, u + .004)); const L = Math.hypot(x2 - x, y2 - y) || 1; const nx = (y2 - y) / L; const ny = -(x2 - x) / L; // normal toward the concave side
+      const w = 9 * (1 - u) ** .8 + .6;
+      for (let d = -w * .45; d <= w; d += .5) { const e = d / w; tone(s, f, e > .78 ? P.red : P.black, x + nx * d, y + ny * d, e > .9 ? .95 : e > .78 ? .7 : e < -.3 ? .15 : Math.abs(e + .12) < .08 ? .95 : .5); }
+      if (i % 11 === 5 && u < .88) flames.push([x - nx * w * .45, y - ny * w * .45, -nx, -ny, u]);
+    }
+    // Blood-flame tongues licking off the blade's back (re-shaped each frame).
+    const r = rng(500 + f * 13);
+    for (const [fx, fy, dx, dy] of flames) { const H = 5 + Math.round(r() * 6); for (let j = 0; j < H; j++) { const ww = Math.max(0, Math.round(2 * Math.sin(Math.PI * (1 - j / H) * .9))); for (let e = -ww; e <= ww; e++) tone(s, f, P.red, fx + dx * j - dy * e - j * .3, fy + dy * j + dx * e - j * .5, Math.abs(e) === ww ? .35 : j > H * .7 ? .55 : j < H * .35 ? .95 : .75); } }
+    for (let q = 0; q < 3; q++) { const rr = rng(520 + q); const life = (f / 4 + rr()) % 1; const [x, y] = C(.2 + rr() * .5); tone(s, f, P.red, x + 3, y + 6 + life * 10, .8); } // drips
+    B.selOutline(s, f, P.out);
+  }
+  return s;
+}
+module.exports = { weaponSheets: () => [glaive(), katana(), sheath(), spear(), sword(), shield(), spiritSword(), scythe()] };

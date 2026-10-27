@@ -11,7 +11,7 @@
 import { audio } from './audio.js';
 import { combat } from './combat.js';
 import { groundYForDepth } from './world.js';
-import { drawWeaponSheet, hasWeaponSheet, drawKatanaSheath } from './weapon_sheets.js'; // hand-drawn weapons (some ids)
+import { drawWeaponSheet, hasWeaponSheet, drawKatanaSheath, WEAPON_SHEETS } from './weapon_sheets.js'; // hand-drawn weapons (some ids)
 import { EXT_WEAPONS, EXT_HUES, EXT_MOTIONS, EXT_MOTION_FNS, EXT_SHAPES, EXT_PIECES, WeaponShot } from './weapons_ext.js';
 
 const hit = (state, time, vx, damage, knockback, lift, reach, extra = {}) => Object.freeze({ state, time, vx, damage, knockback, lift, radius: Math.round(reach * .6), reach, hitstopTicks: extra.finisher ? 6 : 3, hitReaction: extra.finisher ? 'finisher' : 'light', ...extra });
@@ -300,8 +300,10 @@ export function drawWeaponShape(ctx, weapon, scale = 1, options = {}) {
   const hue = astralHue(weapon);
   ctx.save();
   ctx.scale(scale, scale);
-  drawAstralPiece(ctx, pieces.main, hue, options);
-  if (pieces.off) { ctx.translate(pieces.off === 'shield' ? -2 : 0, pieces.off === 'shield' ? 14 : 9); drawAstralPiece(ctx, pieces.off, hue, options); }
+  // Drawn weapons (weapon_sheets.js) lie / fly as their sheet; the rest stay astral.
+  const t = options.time ?? performance.now() / 1000;
+  if (!drawWeaponSheet(ctx, weapon, pieces.main, t)) drawAstralPiece(ctx, pieces.main, hue, options);
+  if (pieces.off) { ctx.translate(pieces.off === 'shield' ? -2 : 0, pieces.off === 'shield' ? 14 : 9); if (!WEAPON_SHEETS[weapon]?.[pieces.off] || !drawWeaponSheet(ctx, weapon, pieces.off, t)) drawAstralPiece(ctx, pieces.off, hue, options); }
   ctx.restore();
 }
 

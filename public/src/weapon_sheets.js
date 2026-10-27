@@ -11,7 +11,8 @@ export const WEAPON_SHEETS = Object.freeze({
   katana: { katana: ['w_katana', 11, 10, 84, 20] },
   spear: { spear: ['w_spear', 34, 20, 138, 40] },
   sword_shield: { sword: ['w_sword', 9, 18, 78, 32], shield: ['w_shield', 18, 27, 48, 54] },
-  spirit_sword: { spirit_sword: ['w_spirit_sword', 7, 18, 84, 34] }
+  spirit_sword: { spirit_sword: ['w_spirit_sword', 7, 18, 84, 34] },
+  scythe: { scythe: ['w_scythe', 24, 70, 150, 84] }
 });
 const entryOf = (weaponId, piece) => WEAPON_SHEETS[weaponId]?.[piece] ?? null;
 export const hasWeaponSheet = (weaponId, piece) => { const e = entryOf(weaponId, piece); return !!e && spellSheetReady(e[0]); };
@@ -34,4 +35,24 @@ export function drawKatanaSheath(ctx, player, renderY) {
   const k = (SPELL_SPRITE_SHEETS.w_katana_sheath?.w ?? 76) / 76;
   drawSpellSprite(ctx, 'w_katana_sheath', 0, (38 - 4) * k, 0, { anchor: 'center' });
   ctx.restore();
+}
+
+// The guard pose with the drawn weapon (weapon_guard.js has translated to the guard centre and mirrored to the
+// facing): shield held big in front, katana scabbard upright, blades crossed, polearms spun as a disc.
+// Returns false when the weapon has no drawn sheet (the procedural guard is used then).
+export function drawGuardSheet(ctx, weaponId, kind, t = 0) {
+  const sheets = WEAPON_SHEETS[weaponId]; if (!sheets) return false;
+  const main = Object.keys(sheets).find((k) => k !== 'shield'); const e = sheets[main];
+  if (kind === 'shield' && sheets.shield && spellSheetReady(sheets.shield[0])) { const meta = SPELL_SPRITE_SHEETS[sheets.shield[0]]; drawSpellSprite(ctx, sheets.shield[0], Math.floor(t * 8) % (meta?.frames ?? 1), 0, 0, { anchor: 'center', scale: 1.15 }); return true; }
+  if (kind === 'sheath' && spellSheetReady('w_katana_sheath')) { ctx.save(); ctx.rotate(-Math.PI / 2 + .08); drawSpellSprite(ctx, 'w_katana_sheath', 0, 0, 0, { anchor: 'center' }); ctx.restore(); return true; }
+  if (!e || !spellSheetReady(e[0])) return false;
+  const [name, gx, gy, w, h] = e; const meta = SPELL_SPRITE_SHEETS[name]; const k = (meta?.w ?? w) / w; const fr = Math.floor(t * 8) % (meta?.frames ?? 1);
+  if (kind === 'pole') {
+    // Spun around the middle of the shaft: the weapon and two fading copies a step behind.
+    for (let i = 2; i >= 0; i--) { ctx.save(); ctx.globalAlpha *= i ? .25 / i : 1; ctx.rotate(t * 22 - i * .35); drawSpellSprite(ctx, name, fr, 0, 0, { anchor: 'center' }); ctx.restore(); }
+    return true;
+  }
+  // Blades: crossed diagonally in front, edge out (parry), grip low.
+  ctx.save(); ctx.translate(-8, 14); ctx.rotate(-1.05); drawSpellSprite(ctx, name, fr, (w / 2 - gx) * k, (h / 2 - gy) * k, { anchor: 'center' }); ctx.restore();
+  return true;
 }

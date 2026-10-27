@@ -1601,5 +1601,14 @@ export const SPELL_SPRITE_SHEETS = Object.freeze({
   "res": 2,
   "hd": true,
   "anchor": "center"
+ },
+ "w_scythe": {
+  "name": "w_scythe",
+  "w": 75,
+  "h": 42,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
  }
 });

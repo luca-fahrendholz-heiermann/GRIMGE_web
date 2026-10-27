@@ -10,6 +10,7 @@
 //   bare hands       the classic arcane shield
 // A perfect block (first moment of the guard) flashes the pose white-gold with sparks.
 import { WEAPONS } from './weapons.js';
+import { drawGuardSheet } from './weapon_sheets.js'; // drawn weapons keep their own look in the guard
 
 const TAU = Math.PI * 2;
 const KIND = Object.freeze({
@@ -37,7 +38,8 @@ export function drawWeaponGuard(ctx, p, x, baseY, f, perfect, t) {
   const cx = x + f * 24; const cy = baseY - 42;
   ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
   ctx.translate(cx, cy); ctx.scale(f, 1);
-  switch (kind) {
+  const drawn = drawGuardSheet(ctx, p?.weapon ?? p?.classWeapon, kind, t);
+  if (!drawn) switch (kind) {
     case 'shield': {
       // A big kite shield with rim and boss.
       poly(ctx, [[0, -30], [17, -21], [17, 14], [0, 32], [-17, 14], [-17, -21]], accent, dark, 2.5);
