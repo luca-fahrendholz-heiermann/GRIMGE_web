@@ -640,3 +640,13 @@ Die Geschosse der Waffen (`drawShotPixel` in `weapons_ext.js`) sind jetzt knacki
 - **Kuppel:** Rand, Bodenring, gefangen-Ringe, Risse, Schnitte und Duell-Naht als scharfe Pixel (laufende Strichringe) statt weicher Linien; die vordere Hülle läuft in feiner Auflösung.
 
 - `v60_sphaeren.png`
+
+## v61 — Atemstile: gezeichnete Element-Stücke (27.10.2026)
+
+- **18 gezeichnete Element-Stücke** (`bp_*`): Wellenkamm, Schlangenleib, Flammenzunge, Sonne, Flammenherz, Dampfwolke, Zickzack-Funke, Windsichel, Nebelwolke, Felsbrocken, Blütenblätter, Mondsichel, Krallenrisse, Funkenstern, Hex-Schild, Schmetterling mit Stachel, Note mit Klangringen, Eiskristalle — jeweils 4 Frames.
+- **Eine Zeichnung, jede Stilfarbe:** Die Stücke sind in Graustufen gezeichnet und werden zur Laufzeit in die Farben des Stils umgefärbt (Sonne goldgelb, Liebe pink, Schlange grün …).
+- **Überall wirksam:** Flutwelle, Flammenschlange, Purpurgewand, Sonnendrache, Eisdrache, Sturmsicheln, Wolkenmeer, Spuren der Schläge, Aufstiegs- und Sturz-Moves zeigen jetzt diese Stücke statt runder Blobs.
+- **Scharf trotz Pixel-Ebene:** Effekte aus der groben Pixel-Ebene können jetzt Sprites in voller Auflösung zeichnen lassen (sie werden direkt nach der Ebene scharf darübergelegt).
+- **Sprint-Schnitt:** Der graue Strich ist ein spitz zulaufender Schnitt in der Stilfarbe.
+
+- `v61_atemstile.png`

@@ -41,6 +41,9 @@ export function __setSpellSheetImage(name, image) { if (image) images[name] = im
 export function drawSpellSprite(ctx, name, frame, x, y, { anchor = 'base', flip = false, alpha = 1, sink = 0, scale = 1 } = {}) {
   const sheet = SPELL_SPRITE_SHEETS[name]; const image = images[name];
   if (!sheet || !image || VISUAL_FLAGS.legacy) return false;
+  return blitSheet(ctx, sheet, image, frame, x, y, { anchor, flip, alpha, sink, scale });
+}
+function blitSheet(ctx, sheet, image, frame, x, y, { anchor = 'base', flip = false, alpha = 1, sink = 0, scale = 1 } = {}) {
   const f = Math.max(0, Math.min(sheet.frames - 1, Math.floor(frame)));
   // res: the image holds res× the logical frame size (hi-res refinement) — same world size, finer pixels.
   const res = sheet.res ?? 1; const sw = sheet.w * res; const sh = sheet.h * res;
@@ -54,6 +57,43 @@ export function drawSpellSprite(ctx, name, frame, x, y, { anchor = 'base', flip 
   else ctx.drawImage(image, f * sw, 0, sw, sh, dx, dy, w, h);
   ctx.restore();
   return true;
+}
+
+// ── Tinted sheets ────────────────────────────────────────────────────────
+// Grey-ramp sheets (outline #141414, tones #3c3c3c / #787878 / #b4b4b4 / #f0f0f0) recoloured per palette
+// [outline, dark, mid, light, core]; one canvas per sheet + palette, built once.
+const tinted = new Map();
+const rgbOf = (h) => { const n = parseInt(String(h).slice(1, 7), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
+function tintedImage(name, pal) {
+  const key = name + '|' + pal.join(','); if (tinted.has(key)) return tinted.get(key);
+  const img = images[name]; const doc = globalThis.document; if (!img || typeof doc?.createElement !== 'function') return null;
+  let c = doc.createElement('canvas'); c.width = img.width; c.height = img.height;
+  try {
+    const g = c.getContext('2d'); g.drawImage(img, 0, 0); const d = g.getImageData(0, 0, c.width, c.height); const px = d.data; const P = pal.map(rgbOf);
+    for (let i = 0; i < px.length; i += 4) { if (!px[i + 3]) continue; const v = px[i]; const k = v < 40 ? 0 : v < 90 ? 1 : v < 150 ? 2 : v < 210 ? 3 : 4; px[i] = P[k][0]; px[i + 1] = P[k][1]; px[i + 2] = P[k][2]; }
+    g.putImageData(d, 0, 0);
+  } catch { c = null; }
+  tinted.set(key, c); return c;
+}
+export function drawSpellSpriteTinted(ctx, name, pal, frame, x, y, opts = {}) {
+  const sheet = SPELL_SPRITE_SHEETS[name]; if (!sheet || VISUAL_FLAGS.legacy) return false;
+  const image = tintedImage(name, pal); if (!image) return false;
+  return blitSheet(ctx, sheet, image, frame, x, y, opts);
+}
+
+// ── Crisp sprites from inside the coarse pixel layer ─────────────────────
+// Effects in the coarse layer (abilities.renderPixelated) may hand sprite draws to drawFineFromLayer: they
+// are queued with the layer's transform and drawn at full density right after the layer is composited.
+const pixelLayerCtxs = new Set(); const fineQueue = [];
+export const markPixelLayer = (ctx) => { pixelLayerCtxs.add(ctx); };
+export const fineQueueMark = () => fineQueue.length;
+export function drawFineFromLayer(ctx, fn) {
+  if (!pixelLayerCtxs.has(ctx) || typeof ctx.getTransform !== 'function') return fn(ctx);
+  fineQueue.push({ t: ctx.getTransform(), a: ctx.globalAlpha, fn }); return true;
+}
+export function flushFineFromLayer(ctx, pixelSize, from = 0) {
+  const items = fineQueue.splice(from);
+  for (const it of items) { const T = it.t; ctx.save(); ctx.setTransform(T.a * pixelSize, T.b * pixelSize, T.c * pixelSize, T.d * pixelSize, T.e * pixelSize, T.f * pixelSize); ctx.globalAlpha = it.a; ctx.imageSmoothingEnabled = false; try { it.fn(ctx); } catch { /* one broken sprite must not stop the frame */ } ctx.restore(); }
 }
 
 // ── Registry ─────────────────────────────────────────────────────────────

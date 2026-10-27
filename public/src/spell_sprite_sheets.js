@@ -2670,5 +2670,167 @@ export const SPELL_SPRITE_SHEETS = Object.freeze({
   "hd": true,
   "anchor": "base",
   "baseOffset": 2
+ },
+ "bp_water": {
+  "name": "bp_water",
+  "w": 13,
+  "h": 13,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "bp_serpent": {
+  "name": "bp_serpent",
+  "w": 13,
+  "h": 13,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "bp_flame": {
+  "name": "bp_flame",
+  "w": 13,
+  "h": 13,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "bp_sun": {
+  "name": "bp_sun",
+  "w": 13,
+  "h": 13,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "bp_love": {
+  "name": "bp_love",
+  "w": 13,
+  "h": 13,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "bp_steam": {
+  "name": "bp_steam",
+  "w": 13,
+  "h": 13,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "bp_bolt": {
+  "name": "bp_bolt",
+  "w": 13,
+  "h": 13,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "bp_wind": {
+  "name": "bp_wind",
+  "w": 13,
+  "h": 13,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "bp_mist": {
+  "name": "bp_mist",
+  "w": 13,
+  "h": 13,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "bp_rock": {
+  "name": "bp_rock",
+  "w": 13,
+  "h": 13,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "bp_petal": {
+  "name": "bp_petal",
+  "w": 13,
+  "h": 13,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "bp_moon": {
+  "name": "bp_moon",
+  "w": 13,
+  "h": 13,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "bp_claw": {
+  "name": "bp_claw",
+  "w": 13,
+  "h": 13,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "bp_blast": {
+  "name": "bp_blast",
+  "w": 13,
+  "h": 13,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "bp_shield": {
+  "name": "bp_shield",
+  "w": 13,
+  "h": 13,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "bp_sting": {
+  "name": "bp_sting",
+  "w": 13,
+  "h": 13,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "bp_sound": {
+  "name": "bp_sound",
+  "w": 13,
+  "h": 13,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "bp_ice": {
+  "name": "bp_ice",
+  "w": 13,
+  "h": 13,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
  }
 });

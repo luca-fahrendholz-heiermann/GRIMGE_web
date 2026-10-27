@@ -19,6 +19,7 @@ import { groundYForDepth, clampToArena } from './world.js';
 import { applyStatus, hasStatus } from './status_effects.js';
 import { deliveryOf, drawHead, drawFlourish } from './breathing_weapons.js';
 import { RayCrownFx } from './cast_circle.js';
+import { spellSheetReady, drawSpellSpriteTinted, drawFineFromLayer } from './spell_visuals.js';
 
 // ── palettes (dark, mid, light, core: pixel-art ramps) ───────────────────
 const hexRgb = (h) => { const n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
@@ -189,7 +190,15 @@ const quake = (amp, dur = .25, stop = 0) => { combat.shakeCamera?.(amp, dur); if
 function swing(p, dur = .3) { p.state = 'heavyStrike'; p.stateTimer = Math.max(p.stateTimer ?? 0, dur); p.canAttack = false; p.vx = 0; p.vz = 0; }
 
 // ── the look of one element piece (drawn along paths, in the pixel layer) ─
+// Hand-drawn piece sheets (art/authoring/vfx_breath.cjs, grey ramp recoloured to the style's ramp).
+const PIECE_SHEET = { wave: 'water', water: 'water', wheel: 'water', serpent: 'serpent', flame: 'flame', sun: 'sun', love: 'love', steam: 'steam', bolt: 'bolt', wind: 'wind', mist: 'mist', rock: 'rock', petal: 'petal', moon: 'moon', claw: 'claw', blast: 'blast', shield: 'shield', sting: 'sting', sound: 'sound', ice: 'ice' };
+const piecePals = new Map();
+const shade = (h, k) => { const [r, g, b] = hexRgb(h); return '#' + [r, g, b].map((v) => Math.round(v * k).toString(16).padStart(2, '0')).join(''); };
+// [outline, dark, mid, light, core]; steam keeps white highlights (its core colour is the scald accent).
+function piecePal(R, look) { const key = R.mid + look; let p = piecePals.get(key); if (!p) piecePals.set(key, (p = [shade(R.dark, .4), R.dark, R.mid, R.light, look === 'steam' ? '#ffffff' : R.core])); return p; }
 function piece(ctx, look, x, y, s, t, R, f = 1, seed = 0) {
+  const sheet = 'bp_' + (PIECE_SHEET[look] ?? 'blast');
+  if (spellSheetReady(sheet)) { const fr = ((Math.floor(t * 12 + seed) % 4) + 4) % 4; const pal = piecePal(R, look); drawFineFromLayer(ctx, (c) => drawSpellSpriteTinted(c, sheet, pal, fr, x, y - 10 * s, { anchor: 'center', scale: Math.max(.2, s * .8), flip: f < 0 })); return; }
   const a = Math.sin(t * 9 + seed) * .5 + .5;
   switch (look) {
     case 'flame': case 'sun': case 'love': {
@@ -316,7 +325,7 @@ function flash(p, st, k, m) {
     const pts = Array.from({ length: n }, (_, i) => [x0 + (s.x1 - x0) * i / (n - 1), y + (m.look === 'bolt' && i && i < n - 1 ? Math.sin(i * 2.7 + roll) * 13 : m.look === 'mist' ? Math.sin(i * 1.3) * 10 : 0)]);
     if (s.shot) { /* drawn above */ }
     else if (m.look === 'bolt') { thread(ctx, pts, R.mid, 8 * a + 1, a); thread(ctx, pts, R.core, 2.5, a); }
-    else { ctx.save(); ctx.globalAlpha = a; for (let i = 0; i < n; i++) piece(ctx, m.look, pts[i][0], pts[i][1] + 30, 1.2, s.t, R, f, i); ctx.restore(); thread(ctx, pts, R.core, 2, a * .9); }
+    else { ctx.save(); ctx.globalAlpha = a; for (let i = 0; i < n; i++) piece(ctx, m.look, pts[i][0], pts[i][1] + 30, 1.2, s.t, R, f, i); ctx.restore(); ribbon(ctx, pts, (i, nn) => 3.5 * Math.sin((i / Math.max(1, nn - 1)) * Math.PI) + .5, R.mat, 4402, s.t, a * .9); }
     // The burst on the hit foes after the cut.
     if (s.after) for (const t of s.hit) { const ty = t.y ?? groundYForDepth(t.z ?? s.z); ctx.save(); ctx.globalAlpha = a; for (let i = 0; i < 5; i++) piece(ctx, m.look === 'bolt' ? 'bolt' : m.look, t.x + (i - 2) * 8, ty - 4 - (i % 2) * 14, 1.6, s.t, R, f, i + 7); ctx.restore(); }
     // Blades: the cut marks open on the foes (opaque crossing blades in the element).

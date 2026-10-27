@@ -13,7 +13,7 @@ import { groundDistance, groundYForDepth } from './world.js';
 import { environment } from './environment.js';
 import { plate as materialPlate } from './buff_vfx.js';
 import { drawStream, drawGather, materialForVfx } from './element_fx.js';
-import { drawSheetBeam, SpriteBurst, spellSheetReady, drawSpellSprite, drawBreathCone } from './spell_visuals.js';
+import { drawSheetBeam, SpriteBurst, spellSheetReady, drawSpellSprite, drawBreathCone, markPixelLayer, fineQueueMark, flushFineFromLayer } from './spell_visuals.js';
 // A hand-drawn one-shot burst into the spell system (visual only; outlives the spell that spawned it).
 const sheetBurst = (spell, opts) => { if (!spellSheetReady(opts.sheet)) return false; spell.system?.activeSpells.push(Object.assign(new SpriteBurst(opts), { fineVfx: true })); return true; };
 
@@ -1181,12 +1181,13 @@ export function renderPixelated(ctx, pixelSize, draw, { hard = false } = {}) {
     // Pixel-art rule: no soft shadow glows in the VFX layer — every effect keeps hard edges (the contour pass outlines it).
     try { Object.defineProperty(layerCtx, 'shadowBlur', { get: () => 0, set: () => {}, configurable: true }); } catch { /* read-only in some engines */ }
     if (hard) hardenContext(layerCtx);
-    pixelLayer = pixelLayers[key] = { canvas, ctx: layerCtx };
+    pixelLayer = pixelLayers[key] = { canvas, ctx: layerCtx }; markPixelLayer(layerCtx);
   }
   const lctx = pixelLayer.ctx;
   lctx.setTransform(1, 0, 0, 1, 0, 0);
   lctx.clearRect(0, 0, w, h);
   lctx.setTransform(transform.a / pixelSize, transform.b / pixelSize, transform.c / pixelSize, transform.d / pixelSize, transform.e / pixelSize, transform.f / pixelSize);
+  const fineFrom = fineQueueMark();
   draw(lctx);
   const shown = PIXEL_OUTLINE.enabled ? outlined(doc, pixelLayer.canvas, w, h) : pixelLayer.canvas;
   ctx.save();
@@ -1194,5 +1195,6 @@ export function renderPixelated(ctx, pixelSize, draw, { hard = false } = {}) {
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(shown, 0, 0, w * pixelSize, h * pixelSize);
   ctx.restore();
+  flushFineFromLayer(ctx, pixelSize, fineFrom); // crisp sprites queued from inside the layer
   return true;
 }
