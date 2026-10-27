@@ -818,7 +818,9 @@ export function renderManifestation(ctx, player, form, layer, renderY, fade = 1,
   if (spellSheetReady(sheetName) && !(morph && player.isGuarding)) {
     const s0 = sockets(player, renderY); const p0 = poseOf(player); const fr = Math.floor((player.animTime ?? 0) * 10);
     const n = SPELL_SPRITE_SHEETS[sheetName]?.frames ?? 1;
-    drawSpellSprite(ctx, sheetName, fr % n, s0.chest[0], s0.chest[1], { anchor: 'center', flip: (player.facing || 1) < 0, alpha: fade, scale: 1 + .15 * Math.max(peak, p0.full ? .6 : 0) });
+    // The manifestation leans into a released technique and further at the peak (it follows the strike).
+    const lean = (p0.tech ? 12 * p0.tech.k : 0) + 10 * Math.max(peak, p0.full ? .6 : 0);
+    drawSpellSprite(ctx, sheetName, fr % n, s0.chest[0] + s0.f * lean, s0.chest[1], { anchor: 'center', flip: (player.facing || 1) < 0, alpha: fade, scale: 1 + .15 * Math.max(peak, p0.full ? .6 : 0) });
     FORM_EXTRAS[form.id]?.(ctx, s0, { ...p0, t: player.animTime ?? 0, player }, form, layer, fade);
     if (!SHEET_AND_RENDERER.has(form.id)) return;
   }

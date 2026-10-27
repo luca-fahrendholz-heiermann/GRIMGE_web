@@ -7,7 +7,7 @@
 //   T23 Nullfeldträger   three black negative spaces with an acid-lime rim, specks streaming into them
 //   T24 Fadenregent      a gold control cross above the back, two flat indigo marionettes hanging on light threads
 //   T35 Kältestillstand  broken frosted-glass bands round back and hip, ice flakes frozen in the air
-//   T37 Säuregerüst      a back rig of hexagonal dosing chambers (bubbling acid), glass tubes over the shoulders, drips
+//   (T37 Säuregerüst keeps its V3.2 look — user, 27 Oct 2026: "vorher cooler")
 //   A05 Dehnleib         curling white steam clouds rising round the body (the stretch arms stay the form renderer)
 //   A06 Beben            a web of glass cracks hanging behind the hero with drifting shards (fist cracks stay)
 //   A08 Sprengleib       smoke plumes, a spark ring and glowing blast marks behind the body (fist smoke stays)
@@ -94,23 +94,6 @@ function t35() {
   }
   return [bk, fr];
 }
-function t37() {
-  const [bk, fr] = pair('T37', 8); const glass = ramp('#1f3a2e', '#4a7a62', '#a8d8bc', '#e9fff1'); const acid = ramp('#2a5a00', '#6ac010', '#c6ff3d', '#f4ffc0'); const metal = ramp('#14201a', '#2a3a32', '#4a5e54', '#7a9084');
-  for (let f = 0; f < 8; f++) {
-    const ph = f / 8;
-    // Back rig: three hexagonal dosing chambers in a frame behind the back, acid level sloshing, bubbles rising.
-    [[CX - 34, CY - 6], [CX - 40, CY + 16], [CX - 30, CY + 32]].forEach(([hx, hy], i) => {
-      const R = 11; for (let y = -R; y <= R; y++) for (let x = -R; x <= R; x++) { const hexd = Math.max(Math.abs(y) * 1.15, Math.abs(x) * .58 + Math.abs(y) * .58); if (hexd > R) continue; const rim = hexd > R - 2; const level = y > -2 + Math.sin((ph + i * .3) * TAU) * 1.5; tone(bk, f, rim ? metal : level ? acid : glass, hx + x, hy + y, rim ? (y < 0 ? .8 : .45) : level ? (x < 0 ? .7 : .5) : .45); }
-      for (let q = 0; q < 3; q++) { const life = (ph + q / 3 + i * .2) % 1; tone(bk, f, acid, hx - 3 + q * 3, hy + 5 - life * 9, 1); }
-    });
-    // Glass tubes from the chambers over the shoulders, a nozzle at each, acid pulses running through.
-    for (const [x0, y0, x1, y1] of [[CX - 30, CY - 14, CX + 10, CY - 24], [CX - 44, CY + 8, CX - 14, CY - 26]]) { const n = 30; for (let i = 0; i <= n; i++) { const u = i / n; const x = x0 + (x1 - x0) * u; const y = y0 + (y1 - y0) * u - Math.sin(u * Math.PI) * 10; for (let d = -1; d <= 1; d++) tone(bk, f, (i + f * 4) % 10 < 3 && d === 0 ? acid : glass, x, y + d, d === -1 ? .9 : d === 0 ? .55 : .4); } disc(bk, f, metal, x1, y1, 2, 2, (dx, dy) => (dx + dy < 0 ? .85 : .45)); }
-    // Acid drips falling from the rig.
-    for (let q = 0; q < 3; q++) { const r = rng(330 + q); const life = (ph + r()) % 1; const x = CX - 44 + r() * 24; tone(bk, f, acid, x, CY + 42 + life * 22, .9); tone(bk, f, acid, x, CY + 41 + life * 22, .6); }
-    B.selOutline(bk, f, OUT('#06100a')); sparks(fr, f, acid, 920);
-  }
-  return [bk, fr];
-}
 function a05() {
   const [bk, fr] = pair('A05', 8); const steam = ramp('#8a8a94', '#c8c8d0', '#eeeef4', '#ffffff');
   for (let f = 0; f < 8; f++) {
@@ -152,4 +135,4 @@ function a08() {
   }
   return [bk, fr];
 }
-module.exports = { arcane2Sheets: () => [...t08(), ...t23(), ...t24(), ...t35(), ...t37(), ...a05(), ...a06(), ...a08()] };
+module.exports = { arcane2Sheets: () => [...t08(), ...t23(), ...t24(), ...t35(), ...a05(), ...a06(), ...a08()] };

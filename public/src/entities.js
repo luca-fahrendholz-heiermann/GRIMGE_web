@@ -488,10 +488,10 @@ export class Player extends GroundEntity {
     }
     if (this.focusTransformTimer <= 0) { this.focusTransformPower = 1; this._focusT = 0; this.focusStage = 0; }
     else {
-      // Aufstiegsstufen (user, 27 Oct 2026, after example sprites 29–32): stage 2 after 10 s, stage 3 after 20 s.
+      // Aufstiegsstufen (user, 27 Oct 2026, after example sprites 29–32): gold → blue (10 s) → white god mode (20 s).
       this._focusT = (this._focusT ?? 0) + dt; const stage = 1 + (this._focusT >= ASCEND_STAGE_TIME ? 1 : 0) + (this._focusT >= ASCEND_STAGE_TIME * 2 ? 1 : 0);
       if (stage !== this.focusStage) {
-        if (this.focusStage) { combat.spawnShockwave(this.x, this.y - 40, 70 + stage * 14, stage === 3 ? '#5a9cff' : '#fff2b0'); combat.shakeCamera(4 + stage, .15); window.gameWorld?.showAnnouncement?.(stage === 3 ? 'AUFSTIEG III' : 'AUFSTIEG II', 1.2); }
+        if (this.focusStage) { combat.spawnShockwave(this.x, this.y - 40, 70 + stage * 14, stage === 3 ? '#ffffff' : '#5a9cff'); combat.shakeCamera(4 + stage, .15); window.gameWorld?.showAnnouncement?.(stage === 3 ? 'AUFSTIEG III — GOTTMODUS' : 'AUFSTIEG II', 1.2); }
         this.focusStage = stage; this.focusTransformPower = ASCEND_POWER[stage - 1];
       }
     }
@@ -2334,7 +2334,7 @@ export class Player extends GroundEntity {
     if (sc) return sc;
     if (this.ninefoldTimer > 0) return { edge: 'rgba(255,110,20,1)', inner: 'rgba(255,170,60,1)', fade: Math.min(1, this.ninefoldTimer * 2) };
     if (this.eidolonTimer > 0) return { edge: 'rgba(150,80,255,1)', inner: 'rgba(200,150,255,1)', fade: Math.min(1, this.eidolonTimer * 2) };
-    if (this.focusTransformTimer > 0) { const st = this.focusStage || 1; return st === 3 ? { edge: 'rgba(58,138,255,1)', inner: 'rgba(168,208,255,1)', fade: Math.min(1, this.focusTransformTimer * 2) } : st === 2 ? { edge: 'rgba(255,248,216,1)', inner: 'rgba(255,255,255,1)', fade: Math.min(1, this.focusTransformTimer * 2) } : { edge: 'rgba(255,214,80,1)', inner: 'rgba(255,240,170,1)', fade: Math.min(1, this.focusTransformTimer * 2) }; }
+    if (this.focusTransformTimer > 0) { const st = this.focusStage || 1; return st === 2 ? { edge: 'rgba(58,138,255,1)', inner: 'rgba(168,208,255,1)', fade: Math.min(1, this.focusTransformTimer * 2) } : st === 3 ? { edge: 'rgba(240,246,255,1)', inner: 'rgba(255,255,255,1)', fade: Math.min(1, this.focusTransformTimer * 2) } : { edge: 'rgba(255,214,80,1)', inner: 'rgba(255,240,170,1)', fade: Math.min(1, this.focusTransformTimer * 2) }; }
     return null;
   }
 

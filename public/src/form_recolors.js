@@ -113,9 +113,9 @@ registerFormCloak('A10', '#3ad0e0', '#a8f6ff');
 // A11 Drachengeist: no recolour (the dragon and the blaze are attachments), an ember-orange aura.
 registerFormCloak('A11', '#ff5a1f', '#ffd27a');
 
-// Aufstiegsstufen (Focus transformation, user 27 Oct 2026): stage 2 turns the hair white, stage 3 blue. Only for the
+// Aufstiegsstufen (Focus transformation, user 27 Oct 2026): stage 2 turns the hair blue, stage 3 (god mode) white. Only for the
 // tailored base hero(es) — the dark, non-skin pixels in the top quarter are the hair there (light horns stay).
-const HAIR = { 2: ramp('#8a92a8', '#c4ccdc', '#eef2fa', '#ffffff'), 3: ramp('#14308a', '#2a62d8', '#5a9cff', '#b0d4ff') };
+const HAIR = { 2: ramp('#14308a', '#2a62d8', '#5a9cff', '#b0d4ff'), 3: ramp('#8a92a8', '#c4ccdc', '#eef2fa', '#ffffff') };
 const hairMemo = {};
 export function hairRecolor(stage, heroKey) {
   if (!HAIR[stage] || !TAILORED_HEROES.includes(heroKey)) return null;

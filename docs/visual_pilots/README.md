@@ -446,9 +446,9 @@ Nach dem Beispiel-Sprite 20, eigene Umsetzung. Neuer Arcane State (Feuer, Boss-D
 
 Nach den Beispiel-Sprites 29–32, eigene Umsetzung. Die Fokus-Verwandlung (Ascendant) steigt jetzt in drei Stufen auf:
 - **Stufe 1** sofort: goldene Energieaura mit Blitzfunken, goldene Kontur.
-- **Stufe 2** nach 10 s: weiß-goldene, höhere Aura, weiße Kontur, **weiße Haare**. Kraft ×1,15.
-- **Stufe 3** nach 20 s: blaue Flammenaura, blaue Kontur, **blaue Haare**. Kraft ×1,3.
-- Jeder Aufstieg gibt eine Druckwelle, ein Kamerawackeln und die Ansage „AUFSTIEG II“ bzw. „AUFSTIEG III“.
+- **Stufe 2** nach 10 s: blaue Flammenaura, blaue Kontur, **blaue Haare**. Kraft ×1,15.
+- **Stufe 3 (Gottmodus)** nach 20 s: die höchste, hellste weiße Aura mit dichten Blitzen, weiße Kontur, **weiße Haare**. Kraft ×1,3. (Reihenfolge vom User korrigiert: gelb, blau, dann weiß als Gottmodus.)
+- Jeder Aufstieg gibt eine Druckwelle, ein Kamerawackeln und die Ansage „AUFSTIEG II“ bzw. „AUFSTIEG III — GOTTMODUS“.
 - Die Haarfarbe gibt es nur für Thesen (`TAILORED_HEROES`), weil die Haare dort sicher erkannt werden. Alle anderen Helden bekommen Aura und Kontur.
 
 - `v43_aufstiegsstufen.png` (Thesen Stufe 1, 2, 3 · Nyx Stufe 3)
@@ -460,10 +460,11 @@ Nach den Beispiel-Sprites 29–32, eigene Umsetzung. Die Fokus-Verwandlung (Asce
 - **T23 Nullfeldträger:** drei schwarze Negativräume mit Säurerand und Verzerrungsringen, Partikel werden hineingezogen.
 - **T24 Fadenregent:** ein goldenes Führungskreuz über dem Rücken, zwei flache Schatten-Marionetten an Lichtfäden schwingen an den Seiten.
 - **T35 Kältestillstand:** gebrochene Frostglasbänder um Rücken und Hüfte, Eisflocken stehen still in der Luft.
-- **T37 Säuregerüst:** ein Rückengestell mit sechseckigen Dosierkammern (blubbernde Säure), Glasrohre über die Schultern, Tropfen.
+- **T37 Säuregerüst:** wieder der vorherige Look (dem User gefiel er besser).
 - **A05 Dehnleib:** große, verschnörkelte Dampfwolken steigen um den Körper auf.
 - **A06 Beben:** ein Netz aus Glasrissen hinter dem Helden, schwebende Splitter.
 - **A08 Sprengleib:** Rauchsäulen, ein Funkenring und glühende Sprengmarken.
 - Bei A05, A06 und A08 bleibt der eigene Look, der auf die Angriffe reagiert (Gummiarme, Faustrisse, Faustrauch). Das Sheet kommt dazu (`SHEET_AND_RENDERER`).
 
 - `v44_arcane_states_r2.png`
+- Nachtrag: Die Sheets der Formen holen beim Angriff nach vorn aus (bis 12 px, bei voller Ladung mehr). Der Silhouetten-Test misst jetzt auch gezeichnete Sheets.

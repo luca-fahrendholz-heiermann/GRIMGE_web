@@ -1809,24 +1809,6 @@ export const SPELL_SPRITE_SHEETS = Object.freeze({
   "hd": true,
   "anchor": "center"
  },
- "as_T37_back": {
-  "name": "as_T37_back",
-  "w": 64,
-  "h": 64,
-  "frames": 8,
-  "res": 2,
-  "hd": true,
-  "anchor": "center"
- },
- "as_T37_front": {
-  "name": "as_T37_front",
-  "w": 64,
-  "h": 64,
-  "frames": 8,
-  "res": 2,
-  "hd": true,
-  "anchor": "center"
- },
  "as_A05_back": {
   "name": "as_A05_back",
   "w": 64,
