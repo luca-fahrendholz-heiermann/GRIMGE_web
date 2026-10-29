@@ -72,7 +72,7 @@ const petalAt = (s, f, cx, cy, ang) => { const ca = Math.cos(ang); const sa = Ma
 const petal = () => sheet('petal', (s, f) => { petalAt(s, f, 9, 10, f * .5); petalAt(s, f, 17, 17, 1.8 - f * .6); });
 // A crescent moon blade with a travelling glint.
 const moon = () => sheet('moon', (s, f) => {
-  for (let y = 0; y < W; y++) for (let x = 0; x < W; x++) { const o = Math.hypot(x - C, y - C); const i = Math.hypot(x - C + 5, y - C - 1); if (o <= 10 && i > 9) tone(s, f, x, y, o > 9 ? 1 : .67); }
+  for (let y = 0; y < W; y++) for (let x = 0; x < W; x++) { const o = Math.hypot(x - C, y - C); const i = Math.hypot(x - C + 5, y - C - 1); if (o <= 10 && i > 9) tone(s, f, x, y, o > 9 ? 1 : i < 10.5 ? .67 : .33); }
   const a = -1.2 + f * .8; disc(s, f, C + Math.cos(a) * 9, C + Math.sin(a) * 9, 1.5, 1.5, () => 1);
 });
 // Three tapered claw rips; they extend over the frames.

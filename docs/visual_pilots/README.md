@@ -677,3 +677,12 @@ Die Geschosse der Waffen (`drawShotPixel` in `weapons_ext.js`) sind jetzt knacki
 - **Alle Linien als Pixel:** Uhrzeiger, Zahnräder, Ringe, Regen, Ranken, Windbänder, Hex-Gitter, Blasen — keine weichen Vektorstriche mehr; die Innenwelt läuft in feiner Auflösung.
 
 - `v64_sphaeren_innenwelten.png`
+
+## v65 — Atem-Mal, Mondwand, Himmelswendel (29.10.2026)
+
+- **Mal erwacht:** das Zeichen ist jetzt pixelig (dunkle Kontur, Stilfarbe darüber, Gelenkpunkte blitzen im Herzschlag weiß) und sitzt auf Brust und Bauch statt auf dem Gesicht.
+- **Mondsicheln:** mit Kontrast (Kern in Mittelton, heller Innenrand, weißer Außenrand) — die Mondwand ist nicht mehr blass.
+- **Reißen:** das Krallen-X kleiner und sauberer.
+- **T40 Himmelswendel:** der aufsteigende Wyrm bricht schon auf halber Höhe hervor, windet sich weiter und dicker, mit dichter Wirbelsäule — ein geschlossener Leib statt dünner Streifen.
+
+- `v65_mal_wyrm.png`

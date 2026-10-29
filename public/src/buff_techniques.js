@@ -203,10 +203,11 @@ export class BuffStrikeSpell extends FormStrikeSpell {
         }
         if (this.buff.id === 'T40') {
           // Himmelswendel: a spiralling wyrm rising in front, head on top.
-          const h = 220 * Math.min(1, p * 2.4); const spine = [];
-          for (let i = 0; i < 18; i++) { const k = i / 17; spine.push([this.x + Math.cos(k * 12 + this.t * 6) * (26 - k * 8), y - h * (1 - k)]); }
+          // It bursts out at half height already (a short spiral packed its scales into thin stripes) and coils wider.
+          const h = 220 * (.5 + .5 * Math.min(1, p * 2.4)); const spine = [];
+          for (let i = 0; i < 30; i++) { const k = i / 29; spine.push([this.x + Math.cos(k * 9 + this.t * 6) * (34 - k * 10), y - h * (1 - k)]); }
           // Crisp, opaque wyrm (user: Sonnenwyrm attacks looked blurry / see-through).
-          drawWyrmBody(ctx, spine, m, this.seed, Math.min(1, fade * 3), 1.35);
+          drawWyrmBody(ctx, spine, m, this.seed, Math.min(1, fade * 3), 1.6);
           drawWyrmHead(ctx, spine[0][0], spine[0][1], spine[0][0] - spine[1][0], spine[0][1] - spine[1][1], 26, m, .5, 1, this.seed + 40);
           break;
         }

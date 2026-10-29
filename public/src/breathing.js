@@ -779,8 +779,10 @@ function awakenMark(p, st, gw) {
 }
 // The mark on the body: element-shaped lines on face, chest and arm.
 function drawMark(ctx, x, y, R, shape, t, f = 1) {
-  ctx.save(); ctx.globalAlpha = .75 + .25 * Math.sin(t * 6); ctx.strokeStyle = R.mid; ctx.lineWidth = 2; ctx.lineCap = 'round';
-  const at = (px, py) => [x + f * px, y + py];
+  // A pixel mark: a dark contour, the style's colour on top, the joints flaring white with the racing heart.
+  ctx.save(); const beat = .5 + .5 * Math.sin(t * 6);
+  // The shapes are authored around y -66; they are pressed onto the chest / belly — never over the face.
+  const at = (px, py) => [x + f * px, y - 52 + (py + 66) * .6];
   const lines = {
     flames: [[[-4, -62], [-1, -70], [2, -64], [4, -72]], [[-6, -40], [-2, -50], [1, -42]]], waves: [[[-6, -64], [-2, -67], [2, -64], [6, -67]], [[-7, -44], [-2, -47], [3, -44]]],
     bolts: [[[-3, -72], [1, -66], [-2, -64], [3, -58]], [[6, -48], [2, -42], [6, -40]]], swirls: [[[-5, -66], [0, -70], [4, -66], [0, -62]]], cracks: [[[-6, -70], [-2, -64], [-5, -58]], [[4, -48], [0, -42]]],
@@ -788,7 +790,10 @@ function drawMark(ctx, x, y, R, shape, t, f = 1) {
     clouds: [[[-6, -64], [-2, -68], [2, -64], [6, -68]]], fangs: [[[-6, -68], [-3, -60]], [[0, -68], [3, -60]]], rivets: [[[-5, -66], [5, -66]], [[-5, -60], [5, -60]]], runes: [[[-4, -70], [4, -70], [0, -60], [-4, -70]]],
     scales: [[[-6, -64], [-3, -67], [0, -64], [3, -67], [6, -64]]], snow: [[[0, -72], [0, -60]], [[-5, -69], [5, -63]], [[-5, -63], [5, -69]]], steam: [[[-4, -60], [-6, -65], [-4, -70]], [[3, -60], [1, -65], [3, -70]]], hearts: [[[-4, -66], [0, -62], [4, -66], [2, -69], [0, -67], [-2, -69], [-4, -66]]], wings: [[[-6, -62], [-1, -66], [-6, -70]], [[6, -62], [1, -66], [6, -70]]], notes: [[[-3, -60], [-3, -70], [3, -72]]]
   }[shape] ?? [];
-  for (const ln of lines) { ctx.beginPath(); ln.forEach(([px, py], i) => { const [qx, qy] = at(px, py); i ? ctx.lineTo(qx, qy) : ctx.moveTo(qx, qy); }); ctx.stroke(); }
+  const seg = (x0, y0, x1, y1, sz) => { const n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0) / (sz * .7))); for (let i = 0; i <= n; i++) ctx.fillRect(Math.round(x0 + (x1 - x0) * i / n - sz / 2), Math.round(y0 + (y1 - y0) * i / n - sz / 2), sz, sz); };
+  const pass = (color, sz) => { ctx.fillStyle = color; for (const ln of lines) for (let i = 1; i < ln.length; i++) { const [ax, ay] = at(...ln[i - 1]); const [bx, by] = at(...ln[i]); seg(ax, ay, bx, by, sz); } };
+  ctx.globalAlpha = .85; pass(R.dark, 4); ctx.globalAlpha = 1; pass(beat > .6 ? R.light : R.mid, 2);
+  ctx.fillStyle = R.core; ctx.globalAlpha = beat; for (const ln of lines) { const [qx, qy] = at(...ln[0]); ctx.fillRect(Math.round(qx) - 1, Math.round(qy) - 1, 2, 2); }
   ctx.restore();
 }
 
