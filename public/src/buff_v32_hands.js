@@ -12,7 +12,16 @@ export const PALM = { kind: 'crust', dark: '#5d2e0a', body: '#ffcc80', facet: '#
 const quad = (a, b, w) => { const dx = b[0] - a[0]; const dy = b[1] - a[1]; const l = Math.hypot(dx, dy) || 1; const nx = -dy / l * w / 2; const ny = dx / l * w / 2; return [[a[0] + nx, a[1] + ny], [b[0] + nx * .8, b[1] + ny * .8], [b[0] - nx * .8, b[1] - ny * .8], [a[0] - nx, a[1] - ny]]; };
 // One spirit arm from root to hand: lacquered forearm, a gold bracer, an open or closed hand.
 export function spiritArm(ctx, root, hand, f, curl, alpha, seed, size = 12) {
-  plate(ctx, quad(root, hand, size * .75), LACQUER, seed, { alpha, lit: .7, glowEdge: .6 });
+  const len = Math.hypot(hand[0] - root[0], hand[1] - root[1]);
+  if (len > size * 5) {
+    // A long reach is jointed: lacquered segments with gold rings between them (one stretched quad read as a flat bar).
+    const n = Math.ceil(len / (size * 2.4)); const nx = -(hand[1] - root[1]) / len; const ny = (hand[0] - root[0]) / len;
+    const at = (u) => { const q = lerpP(root, hand, u); const sway = Math.sin(u * Math.PI) * Math.sin(seed + u * 5) * size * .35; return [q[0] + nx * sway, q[1] + ny * sway]; };
+    for (let i = 0; i < n; i++) {
+      plate(ctx, quad(at(i / n), at((i + .84) / n), size * (.8 - .12 * i / n)), LACQUER, seed + 3 + i, { alpha, lit: .7, glowEdge: .6 });
+      if (i < n - 1) plate(ctx, quad(at((i + .82) / n), at((i + 1.02) / n), size * .95), { ...LACQUER, body: '#ffb300', facet: '#ffe082' }, seed + 40 + i, { alpha, lit: 1 });
+    }
+  } else plate(ctx, quad(root, hand, size * .75), LACQUER, seed, { alpha, lit: .7, glowEdge: .6 });
   const b = lerpP(root, hand, .72);
   const dx = hand[0] - root[0]; const dy = hand[1] - root[1]; const l = Math.hypot(dx, dy) || 1;
   plate(ctx, quad([b[0] - dx / l * 3, b[1] - dy / l * 3], [b[0] + dx / l * 3, b[1] + dy / l * 3], size * .95), { ...LACQUER, body: '#ffb300', facet: '#ffe082' }, seed + 1, { alpha, lit: 1 });

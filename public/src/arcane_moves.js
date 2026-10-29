@@ -12,7 +12,7 @@
 import { SigSequence, SigBolt, foesOf, groundDist, hit, massOf, DEPTH } from './signature_core.js';
 import { plate, band, fallout, shard, orbitItem, hashStr, TAU, lerp, clamp01, frame, shape, line, specks, groundRing, channel, column } from './buff_v32_kit.js';
 import { stoneRing, STONE, ACID_GLASS, drawWyrmHead, ghostOf } from './buff_signatures.js';
-import { applyStatuses } from './buff_techniques.js';
+import { applyStatuses, FINE_ARCANE_MOVES } from './buff_techniques.js';
 import { giantHand } from './buff_v32_extra.js';
 import { spiritArm } from './buff_v32_hands.js';
 import { petal } from './buff_v32_bloom.js';
@@ -272,6 +272,8 @@ export const ARCANE_MOVES = {
     (f, p) => new SigSequence(sigOf(f), p, { dur: 1.35, steps: [0, 1, 2, 3].map((i) => ({ at: .18 + i * .26, fn: (s, gw) => { const R = 80 + i * 40; s.strike(gw, (t, dx, dz) => Math.hypot(dx, dz) < R, i === 3 ? 34 : 14, (t, dx) => Math.sign(dx || s.facing) * (i === 3 ? 380 : 120), i === 3 ? 220 : 70, .35, { again: true, onHit: i === 3 ? status(s, ['stun']) : undefined }); combat.shakeCamera(4 + i * 2, .12); } })), draw: (ctx, s, k) => { const y = gy(s); for (let i = 0; i < 4; i++) { const at = .18 + i * .26; if (s.t < at) continue; const q = clamp01((s.t - at) / .45); groundRing(ctx, s.x, y, 30 + q * (80 + i * 40), apeFlame(f), i * .4, (1 - q) * fade(k, .05, .2), 14, 10000 + i * 14, 3 + (i === 3 ? 2 : 0)); } } })
   ]
 };
+// Fine-density moves (FINE_ARCANE_MOVES, buff_techniques.js).
+for (const id of FINE_ARCANE_MOVES) ARCANE_MOVES[id] = ARCANE_MOVES[id].map((mk) => mk && ((f, p) => { const s = mk(f, p); if (s) s.fineVfx = true; return s; }));
 
 // Spirit-ape materials (shared by the ape techniques).
 const APE_FUR = { kind: 'crust', dark: '#3d2f5c', body: '#e8e3f4', facet: '#ffffff', vein: '#b06cff', edge: '#ffffff', spark: '#b06cff', core: '#ffffff', glow: 'rgba(176,108,255,', edgeGlow: 'rgba(255,255,255,' };

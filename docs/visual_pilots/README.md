@@ -650,3 +650,12 @@ Die Geschosse der Waffen (`drawShotPixel` in `weapons_ext.js`) sind jetzt knacki
 - **Sprint-Schnitt:** Der graue Strich ist ein spitz zulaufender Schnitt in der Stilfarbe.
 
 - `v61_atemstile.png`
+
+## v62 — Durchsicht der restlichen Arcane States (29.10.2026)
+
+- **Durchgesehen:** B01 Risswild, B02 Arkengestell, T38 Asterglied, T40 Sonnenwyrm, A01 Göttlicher Riese, A02 Mystischer Affe, A03 Tausendhand, A04 Bankai — jeweils Ruhepose an Thesen und Nyx sowie alle Vorwärts-, Aufwärts- und Abwärts-Techniken.
+- **Bleibt wie es ist:** B01, B02, A02 und A04 (stark, sauber); A01 bleibt ein durchscheinender Lichtkörper (bewusst: göttlicher Riese, kein deckender Zwilling).
+- **T38 / T40 / A01 / A03 — Techniken scharf:** Ihre Techniken liefen durch die grobe Pixel-Ebene; der Ringturm von Asterglied wurde zu grauem Blockrauschen, der Himmelswendel-Wyrm zu einer dunklen Säule, die Geisterarme zu groben Balken. Sie laufen jetzt in feiner Auflösung, genauso scharf wie die Ruhepose.
+- **A03 — gegliederte Geisterarme:** Lange Arme (Hundert Fäuste, Säulenhände, Himmelsgriff) sind keine gestreckten roten Balken mehr, sondern Lack-Segmente mit Goldringen dazwischen und leichtem Schwung.
+
+- `v62_arcane_review.png`

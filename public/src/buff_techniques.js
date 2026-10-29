@@ -38,6 +38,10 @@ export function applyStatuses(target, statuses, caster, facing) {
   }
 }
 
+// Arcane States whose drawn-plate moves render at fine density (the coarse pixel layer turned their wyrms,
+// stone rings and spirit arms into blocky bars) — the same crispness as their idle look.
+export const FINE_ARCANE_MOVES = Object.freeze(['T38', 'T40', 'A01', 'A03']);
+
 export class BuffStrikeSpell extends FormStrikeSpell {
   constructor(caster, config, form) {
     super(caster, config);
@@ -47,6 +51,7 @@ export class BuffStrikeSpell extends FormStrikeSpell {
     if (this.kind === 'wyrms') this.heads = [-.13, .13].map((dz) => ({ x: caster.x + this.facing * 20, z: Math.max(.04, Math.min(.96, caster.z + dz)), trail: [], hits: new Set() }));
     if (this.kind === 'portals') this.setupPortals();
     this.impacts = [];
+    if (FINE_ARCANE_MOVES.includes(form.id)) this.fineVfx = true; // full techniques as crisp as the idle look
   }
 
   onHit(target) {
