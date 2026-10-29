@@ -1128,8 +1128,11 @@ export class Player extends GroundEntity {
     const gw = window.gameWorld;
     if (gw?.tryPickupWeapon?.(this)) { this.isGuarding = false; this.grabCooldown = .4; return true; }
     const obj = (gw?.getHostileTargets?.(this.team, true) ?? []).find((o) => o.isSceneObject && o.throwable && !o.flight && !o.carriedBy && !o.isDead && Math.abs(o.x - this.x) < 46 && Math.abs(((o.z ?? this.z) - this.z) * 150) < 24);
-    if (!obj?.carryBy?.(this)) return false;
-    this.carrying = obj; this.isGuarding = false; this.grabCooldown = .4; combat.spawnDamageText(this.x, this.y - 70, 'GETRAGEN', { color: '#ffd740' });
+    // Own doppelgängers are objects too: taken overhead like a boulder and thrown at the foes.
+    const dbl = obj ? null : spells.getSummons(this.team).find((d) => d.throwable && d.owner === this && !d.flight && !d.carriedBy && Math.abs(d.x - this.x) < 46 && Math.abs(((d.z ?? this.z) - this.z) * 150) < 24);
+    const held = obj ?? dbl;
+    if (!held?.carryBy?.(this)) return false;
+    this.carrying = held; this.isGuarding = false; this.grabCooldown = .4; combat.spawnDamageText(this.x, this.y - 70, 'GETRAGEN', { color: '#ffd740' });
     return true;
   }
 

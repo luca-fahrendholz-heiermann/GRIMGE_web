@@ -2040,6 +2040,48 @@ class SummonedCreature extends GroundEntity {
     this.dismissed = false; this.burstDone = false;
   }
 
+  // Doppelgänger as objects (user, 29 Oct 2026): taken overhead with block + down, thrown with sprint + swipe —
+  // the spinning double hits the first foes in its arc, lands with a slam and fights on.
+  get throwable() { return this.definition.role === 'doppel' && !this.isDead; }
+  carryBy(carrier) { if (!this.throwable || this.flight || this.carriedBy) return false; this.carriedBy = carrier; this.target = null; return true; }
+  dropCarry() { const c = this.carriedBy; if (!c) return; this.carriedBy = null; this.grounded = false; if (c.carrying === this) c.carrying = null; }
+  throwBy(thrower, speed = 460) {
+    if (!this.throwable || this.flight) return false;
+    const fromHead = this.carriedBy === thrower; this.dropCarry();
+    const dir = thrower.facing || 1; this.facing = dir;
+    this.flight = { vx: dir * speed, vh: fromHead ? 180 : 300, team: thrower.team, hit: new Set(), spin: 0 };
+    this.elevation = Math.max(this.elevation, fromHead ? 58 : 26); this.grounded = false; this.target = null;
+    return true;
+  }
+  // Carried: rides on the carrier's head. Thrown: a ballistic arc that hits foes on the way; the landing slams.
+  updateCarryFlight(dt, gameWorld) {
+    if (this.carriedBy) {
+      const c = this.carriedBy;
+      if (!c.isAlive || c.carrying !== this) { this.dropCarry(); return false; }
+      this.x = c.x + (c.facing || 1) * 4; this.z = c.z; this.surfaceHeight = c.surfaceHeight ?? this.surfaceHeight;
+      this.elevation = (c.elevation ?? 0) + 58; this.facing = c.facing || 1; this.state = 'idle'; this.vx = this.vz = 0;
+      return true;
+    }
+    const f = this.flight; if (!f) return false;
+    f.vh -= 984 * dt; this.elevation += f.vh * dt; this.x += f.vx * dt; f.spin += dt * 14 * Math.sign(f.vx || 1); this.state = 'attack';
+    for (const t of gameWorld.getHostileTargets?.(this.team) ?? []) {
+      if (f.hit.has(t) || t.isDead || t.isAlive === false || t.isProp) continue;
+      if (Math.abs(t.x - this.x) > this.radius + 18 || Math.abs(((t.z ?? this.z) - this.z) * 150) > 26) continue;
+      f.hit.add(t); t.takeDamage?.(Math.round(this.damage * 1.6), Math.sign(f.vx) * 300, 160, .5, false, 'melee');
+      combat.spawnHitSparks(t.x, (t.y ?? this.y) - 30, Math.sign(f.vx), this.definition.color, 10);
+    }
+    if (this.elevation <= 0) {
+      this.elevation = 0; this.grounded = true; this.flight = null; this.state = 'idle';
+      combat.spawnShockwave(this.x, this.y - 6, 54, this.definition.color); combat.spawnDust(this.x, this.y, 8); combat.shakeCamera?.(4, .12);
+      for (const t of gameWorld.getHostileTargets?.(this.team) ?? []) {
+        if (t.isDead || t.isAlive === false || t.isProp || groundDistance(this, t) > 62) continue;
+        t.takeDamage?.(Math.round(this.damage * .9), (Math.sign(t.x - this.x) || this.facing) * 220, 120, .35, false, 'melee');
+      }
+      this.attackTimer = 0; // and straight back into the fight
+    }
+    return true;
+  }
+
   // Replaced by a newer cast of the same kind: vanish without a burst.
   dismiss() {
     if (this.isDead) return;
@@ -2118,6 +2160,7 @@ class SummonedCreature extends GroundEntity {
       if (Math.random() < .5) combat.spawnDust(this.x, this.y, 1);
       return;
     }
+    if ((this.carriedBy || this.flight) && this.duration > 0 && this.updateCarryFlight(dt, gameWorld)) return;
     if (this.mimicKey && Math.random() < dt * 6) combat.spawnElementalParticles(this.x + (Math.random() - .5) * 20, this.y - 30 - Math.random() * 40, 'void', 1);
     if (this.duration <= 0) {
       this.rider?.dismount?.();
@@ -2208,6 +2251,7 @@ class SummonedCreature extends GroundEntity {
       ctx.beginPath(); ctx.ellipse(this.x, this.y, 30, 9, 0, 0, Math.PI * 2); ctx.stroke();
       ctx.beginPath(); ctx.rect(this.x - 120, this.y - 400, 240, 400); ctx.clip();
     }
+    if (this.flight || this.carriedBy) { const cy = this.y - height * .5; ctx.translate(this.x, cy); ctx.rotate(this.flight ? this.flight.spin : -(this.facing || 1) * Math.PI / 2); ctx.translate(-this.x, -cy); }
     manager.renderEntity(ctx, key, this.x, this.y + (1 - rise) * height, {
       facing: this.facing, state, animTime: this.animTime, visualHeight: height, hitFlash: this.hitFlash > 0,
       tint: this.mimicKey ? 'rgba(28,6,54,.8)' : 'rgba(170,205,150,.55)', alpha: this.mimicKey ? .9 : 1
