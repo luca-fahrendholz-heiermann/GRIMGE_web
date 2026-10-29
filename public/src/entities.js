@@ -1149,7 +1149,7 @@ export class Player extends GroundEntity {
   // Take an item (block + down): a field weapon under the feet, or a throwable scene object close by
   // (boulder, keg, barrel, icicle) — carried overhead until thrown with sprint + swipe.
   tryTakeItem() {
-    if (this.isMounted && this.grabCooldown <= 0) { window.gameWorld?.toggleMount?.(); this.isGuarding = false; this.grabCooldown = .4; return true; }
+    if (this.isMounted) { if (this.grabCooldown <= 0) { window.gameWorld?.toggleMount?.(); this.isGuarding = false; this.grabCooldown = .4; } return true; } // in the saddle: never pick up / grab
     if (this.carrying && (this.carrying.isDead || this.carrying.carriedBy !== this)) this.carrying = null; // the carried object broke / was dropped
     if (!this.isAlive || this.grabCooldown > 0 || this.carrying) return false;
     const gw = window.gameWorld;
