@@ -669,3 +669,11 @@ Die Geschosse der Waffen (`drawShotPixel` in `weapons_ext.js`) sind jetzt knacki
 - **Katzenschauer, Schmetterlingstanz, Hallende Hiebe:** Bögen aus Herzen, Schmetterlingsstiche, Noten-Ring — ohne Vektorlinien.
 
 - `v63_flutwelle.png`
+
+## v64 — Sphären: gezeichnete Innenwelten (29.10.2026)
+
+- **14 neue Kulissen-Sprites** (`dw_*`): schwarze Sonne mit flackernder Korona (Abgrundschrein), vergoldetes Zifferblatt (Stillstand, Zeiger live), Lavafall und abkühlende Krusteninseln (Glutkessel), breiter Baum mit Blätterkrone (Lebenshain), Glasscherben mit wanderndem Glanz (Spiegelwelt), Schwarzes Loch mit wirbelnder Akkretionsscheibe (Schwerkraft), Sturmwolken, von unten blitzbeleuchtet (Sturm), Schattenbestien mit blinzelnden Augen (Schattenmeer), Tropfsteine und Felsbrocken (Steingrab), wiegender Seetang, dunkle Kiefern im Mondlicht (Jagdgrund), kannelierte Goldsäulen (Sonnenheiligtum).
+- **Wiederverwendet:** Mond und Sonne vom Himmel, Schwerter (Klingenschmiede), Leere-Risse (Leere), Wächterschilde (Bollwerk).
+- **Alle Linien als Pixel:** Uhrzeiger, Zahnräder, Ringe, Regen, Ranken, Windbänder, Hex-Gitter, Blasen — keine weichen Vektorstriche mehr; die Innenwelt läuft in feiner Auflösung.
+
+- `v64_sphaeren_innenwelten.png`

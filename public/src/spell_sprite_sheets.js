@@ -2852,5 +2852,139 @@ export const SPELL_SPRITE_SHEETS = Object.freeze({
   "res": 2,
   "hd": true,
   "anchor": "center"
+ },
+ "dw_eclipse": {
+  "name": "dw_eclipse",
+  "w": 32,
+  "h": 32,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "dw_clock": {
+  "name": "dw_clock",
+  "w": 56,
+  "h": 56,
+  "frames": 1,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "dw_lavafall": {
+  "name": "dw_lavafall",
+  "w": 8,
+  "h": 32,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 1
+ },
+ "dw_crust": {
+  "name": "dw_crust",
+  "w": 22,
+  "h": 9,
+  "frames": 2,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "dw_tree": {
+  "name": "dw_tree",
+  "w": 55,
+  "h": 60,
+  "frames": 2,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 1
+ },
+ "dw_mirror": {
+  "name": "dw_mirror",
+  "w": 13,
+  "h": 42,
+  "frames": 2,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 1
+ },
+ "dw_blackhole": {
+  "name": "dw_blackhole",
+  "w": 50,
+  "h": 22,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "dw_stormcloud": {
+  "name": "dw_stormcloud",
+  "w": 42,
+  "h": 17,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "dw_beast": {
+  "name": "dw_beast",
+  "w": 20,
+  "h": 24,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 1
+ },
+ "dw_stalactite": {
+  "name": "dw_stalactite",
+  "w": 9,
+  "h": 24,
+  "frames": 2,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "dw_boulder": {
+  "name": "dw_boulder",
+  "w": 15,
+  "h": 10,
+  "frames": 1,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 1
+ },
+ "dw_kelp": {
+  "name": "dw_kelp",
+  "w": 8,
+  "h": 36,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 1
+ },
+ "dw_pine": {
+  "name": "dw_pine",
+  "w": 22,
+  "h": 65,
+  "frames": 1,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 1
+ },
+ "dw_pillar": {
+  "name": "dw_pillar",
+  "w": 12,
+  "h": 55,
+  "frames": 1,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 1
  }
 });

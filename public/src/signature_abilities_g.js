@@ -62,12 +62,10 @@ export const DOMAIN_RULES = Object.freeze({
     interior(ctx, d, x, y, rx, ry, h, k, fade) {
       ctx.fillStyle = '#e9d7ff';
       for (let i = 0; i < 40; i++) { const sx = x - rx + ((i * 97 + d.seed) % 1000) / 1000 * rx * 2; const sy = y - h + ((i * 53 + d.seed * 3) % 1000) / 1000 * h * .8; ctx.globalAlpha = fade * (.4 + .6 * Math.abs(Math.sin(d.t * 2 + i))); ctx.fillRect(Math.round(sx), Math.round(sy), i % 5 ? 1 : 2, i % 5 ? 1 : 2); }
-      ctx.globalAlpha = fade;
-      const ey = y - h * .8; const er = 24 * k; // the crimson eclipse above the caster
-      ctx.fillStyle = '#ff3d6e'; ctx.beginPath(); ctx.arc(x, ey, er + 5, 0, TAU); ctx.fill();
-      ctx.fillStyle = '#05020a'; ctx.beginPath(); ctx.arc(x + 3, ey + 1, er, 0, TAU); ctx.fill();
-      ctx.strokeStyle = '#ffd1dc'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x, ey, er + 9 + Math.sin(d.t * 3) * 2, 0, TAU); ctx.stroke();
-      for (let i = 0; i < 3; i++) { const a = d.t * (.6 + i * .25) + i * 2.1; ctx.strokeStyle = i % 2 ? '#6a2c91' : '#ff8fab'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(x + Math.cos(a) * rx * .55, ey + 30 + Math.sin(a) * 20, 14, 5, 0, 0, TAU); ctx.stroke(); }
+      ctx.globalAlpha = fade; const ey = y - h * .8;
+      // The crimson eclipse above the caster, rings of the abyss circling below it.
+      if (!prop(ctx, 'dw_eclipse', Math.floor(d.t * 8) % 4, x, ey, k * 1.15, { anchor: 'center' })) { ctx.fillStyle = '#ff3d6e'; pxDisc(ctx, x, ey, Math.round(29 * k)); ctx.fillStyle = '#05020a'; pxDisc(ctx, x + 3, ey + 1, Math.round(24 * k)); }
+      for (let i = 0; i < 3; i++) { const a = d.t * (.6 + i * .25) + i * 2.1; ctx.fillStyle = i % 2 ? '#6a2c91' : '#ff8fab'; pxArc(ctx, x + Math.cos(a) * rx * .55, ey + 30 + Math.sin(a) * 20, 14, 5, 0, TAU, 2, [2, 1], d.t * 10); }
     }
   },
   S56: {
@@ -82,17 +80,14 @@ export const DOMAIN_RULES = Object.freeze({
     },
     finale(d, gw, left) { for (const t of d.foesInside(gw)) { hit(t, Math.round((10 + left * 5) * d.power), 0, 0, .4); t.freeze?.(.8); } },
     interior(ctx, d, x, y, rx, ry, h, k, fade) {
-      // A giant clock face behind the caster with slow hands; sand grains frozen in the air.
-      const cy = y - h * .6; const R = 52 * k;
-      ctx.globalAlpha = fade * .85; ctx.strokeStyle = '#ffd54f'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, cy, R, 0, TAU); ctx.stroke();
-      ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x, cy, R * .82, 0, TAU); ctx.stroke();
-      for (let i = 0; i < 12; i++) { const a = i / 12 * TAU; ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * R * .82, cy + Math.sin(a) * R * .82); ctx.lineTo(x + Math.cos(a) * R * (i % 3 ? .74 : .66), cy + Math.sin(a) * R * (i % 3 ? .74 : .66)); ctx.stroke(); }
-      ctx.lineWidth = 3; const ha = -Math.PI / 2 + d.t * .4; ctx.beginPath(); ctx.moveTo(x, cy); ctx.lineTo(x + Math.cos(ha) * R * .7, cy + Math.sin(ha) * R * .7); ctx.stroke();
-      ctx.lineWidth = 2; const ma = -Math.PI / 2 + d.t * 1.6; ctx.beginPath(); ctx.moveTo(x, cy); ctx.lineTo(x + Math.cos(ma) * R * .5, cy + Math.sin(ma) * R * .5); ctx.stroke();
-      // Gears drifting at the edges.
+      // A gilded clock face behind the caster with slow hands, gears turning, sand grains frozen in the air.
+      const cy = y - h * .6; const R = 52 * k; ctx.globalAlpha = fade;
+      if (!prop(ctx, 'dw_clock', 0, x, cy, k, { anchor: 'center' })) { ctx.fillStyle = '#ffd54f'; pxArc(ctx, x, cy, R, R, 0, TAU, 3); pxArc(ctx, x, cy, R * .82, R * .82, 0, TAU, 1); }
+      const ha = -Math.PI / 2 + d.t * .4; const ma = -Math.PI / 2 + d.t * 1.6;
+      ctx.fillStyle = '#fff8e1'; pxLine(ctx, x, cy, x + Math.cos(ha) * R * .55, cy + Math.sin(ha) * R * .55, 3); pxLine(ctx, x, cy, x + Math.cos(ma) * R * .75, cy + Math.sin(ma) * R * .75, 2);
       for (const [gx, gy, gr, dir] of [[x - rx * .6, y - h * .45, 16, 1], [x + rx * .62, y - h * .5, 12, -1], [x + rx * .4, y - h * .25, 9, 1]]) {
-        ctx.globalAlpha = fade * .6; ctx.strokeStyle = '#4db6ac'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(gx, gy, gr * k, 0, TAU); ctx.stroke();
-        for (let i = 0; i < 8; i++) { const a = i / 8 * TAU + d.t * .5 * dir; ctx.beginPath(); ctx.moveTo(gx + Math.cos(a) * gr * k, gy + Math.sin(a) * gr * k); ctx.lineTo(gx + Math.cos(a) * (gr + 4) * k, gy + Math.sin(a) * (gr + 4) * k); ctx.stroke(); }
+        ctx.fillStyle = '#4db6ac'; pxArc(ctx, gx, gy, gr * k, gr * k, 0, TAU, 2);
+        for (let i = 0; i < 8; i++) { const a = i / 8 * TAU + d.t * .5 * dir; pxLine(ctx, gx + Math.cos(a) * gr * k, gy + Math.sin(a) * gr * k, gx + Math.cos(a) * (gr + 4) * k, gy + Math.sin(a) * (gr + 4) * k, 2); }
       }
       ctx.fillStyle = '#ffe082';
       for (let i = 0; i < 30; i++) { const sx = x - rx + ((i * 131 + d.seed) % 1000) / 1000 * rx * 2; const sy = y - h * .9 + ((i * 71 + d.seed) % 1000) / 1000 * h * .85; ctx.globalAlpha = fade * .7; ctx.fillRect(Math.round(sx + Math.sin(d.t * .3 + i) * 1.5), Math.round(sy), 2, 2); }
@@ -111,12 +106,13 @@ export const DOMAIN_RULES = Object.freeze({
     },
     finale(d, gw, left) { for (const t of d.foesInside(gw)) { hit(t, Math.round((16 + left * 5) * d.power), Math.sign(t.x - d.cx || 1) * 120, 420, .6, true); d.geysers.push({ t: 0, x: t.x, z: t.z ?? d.cz, big: true }); } },
     interior(ctx, d, x, y, rx, ry, h, k, fade) {
-      // Embers rising, lava falls at the dome edges, a bubbling magma floor.
+      // Embers rising, lava falls at the dome edges, a magma floor with cooling crust islands.
       for (let i = 0; i < 26; i++) { const ph = (d.t * .5 + i / 26) % 1; const sx = x - rx + ((i * 89 + d.seed) % 1000) / 1000 * rx * 2; const sy = y - ph * h; ctx.globalAlpha = fade * (1 - ph); ctx.fillStyle = i % 3 ? '#ffab40' : '#fff3e0'; ctx.fillRect(Math.round(sx), Math.round(sy), 2, 2); }
-      for (const side of [-1, 1]) { ctx.globalAlpha = fade * .8; ctx.fillStyle = '#ff6d00'; ctx.fillRect(Math.round(x + side * rx * .78 - 4), Math.round(y - h * .7), 8, Math.round(h * .7)); ctx.fillStyle = '#ffe0b2'; ctx.fillRect(Math.round(x + side * rx * .78 - 1), Math.round(y - h * .7), 2, Math.round(h * .7)); }
-      ctx.globalAlpha = fade; ctx.fillStyle = '#ff6d00'; ctx.beginPath(); ctx.ellipse(x, y, rx * .96, ry * .96, 0, 0, TAU); ctx.fill();
-      ctx.fillStyle = '#3a0a02'; for (let i = 0; i < 9; i++) { const a = i / 9 * TAU + .4; ctx.beginPath(); ctx.ellipse(x + Math.cos(a) * rx * .55, y + Math.sin(a) * ry * .55, rx * .16, ry * .14, 0, 0, TAU); ctx.fill(); }
-      ctx.fillStyle = '#ffd180'; for (let i = 0; i < 8; i++) { const ph = (d.t * 1.2 + i / 8) % 1; const bx = x + Math.cos(i * 2.3) * rx * .7 * ((i * 37 % 10) / 10); const by = y + Math.sin(i * 2.3) * ry * .6 * ((i * 53 % 10) / 10); ctx.globalAlpha = fade * (1 - ph); ctx.beginPath(); ctx.arc(bx, by, 2 + ph * 4, 0, TAU); ctx.fill(); }
+      ctx.globalAlpha = fade;
+      for (const side of [-1, 1]) { const lx = x + side * rx * .78; if (spellSheetReady('dw_lavafall')) { for (let yy = y; yy > y - h * .72; yy -= 58 * k) prop(ctx, 'dw_lavafall', Math.floor(d.t * 10) % 4, lx, yy, k); } else { ctx.fillStyle = '#ff6d00'; ctx.fillRect(Math.round(lx - 4), Math.round(y - h * .7), 8, Math.round(h * .7)); } }
+      ctx.fillStyle = '#ff6d00'; ctx.beginPath(); ctx.ellipse(x, y, rx * .96, ry * .96, 0, 0, TAU); ctx.fill();
+      for (let i = 0; i < 9; i++) { const a = i / 9 * TAU + .4; const cx = x + Math.cos(a) * rx * .55; const cy = y + Math.sin(a) * ry * .55; if (!prop(ctx, 'dw_crust', (i + Math.floor(d.t * 2)) % 2, cx, cy, k * (1 + (i % 3) * .2), { anchor: 'center', flip: i % 2 === 1 })) { ctx.fillStyle = '#3a0a02'; ctx.beginPath(); ctx.ellipse(cx, cy, rx * .16, ry * .14, 0, 0, TAU); ctx.fill(); } }
+      ctx.fillStyle = '#ffd180'; for (let i = 0; i < 8; i++) { const ph = (d.t * 1.2 + i / 8) % 1; const bx = x + Math.cos(i * 2.3) * rx * .7 * ((i * 37 % 10) / 10); const by = y + Math.sin(i * 2.3) * ry * .6 * ((i * 53 % 10) / 10); ctx.globalAlpha = fade * (1 - ph); const r = Math.round(2 + ph * 4); ctx.fillRect(Math.round(bx - r), Math.round(by - r), r * 2, r * 2); }
     }
   },
   S58: {
@@ -135,13 +131,13 @@ export const DOMAIN_RULES = Object.freeze({
       for (const t of d.foesInside(gw)) hit(t, Math.round((10 + left * 4) * d.power), 0, 120, .4);
     },
     interior(ctx, d, x, y, rx, ry, h, k, fade) {
-      // A tree crown behind the caster, sunbeams, drifting petals, flowers on a mossy floor.
+      // A broad tree behind the caster, sunbeams, drifting petals, flowers on a mossy floor.
       ctx.globalAlpha = fade * .25; ctx.fillStyle = '#fff59d';
       for (let i = 0; i < 4; i++) { const bx = x - rx * .5 + i * rx * .33; ctx.beginPath(); ctx.moveTo(bx, y - h); ctx.lineTo(bx + 10, y - h); ctx.lineTo(bx + 34, y); ctx.lineTo(bx + 14, y); ctx.closePath(); ctx.fill(); }
-      ctx.globalAlpha = fade; ctx.fillStyle = '#4e342e'; ctx.fillRect(Math.round(x - 5), Math.round(y - h * .55), 10, Math.round(h * .55 - 6));
-      for (const [ox, oy, r, c] of [[0, -.72, 46, '#2e7d32'], [-34, -.6, 34, '#388e3c'], [36, -.6, 32, '#43a047'], [0, -.82, 30, '#66bb6a']]) { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(x + ox * k, y + oy * h, r * k, 0, TAU); ctx.fill(); }
+      ctx.globalAlpha = fade;
+      if (!prop(ctx, 'dw_tree', Math.floor(d.t * 1.5) % 2, x, y - ry * .15, k * 1.15)) { ctx.fillStyle = '#4e342e'; ctx.fillRect(Math.round(x - 5), Math.round(y - h * .55), 10, Math.round(h * .55 - 6)); for (const [ox, oy, r, c] of [[0, -.72, 46, '#2e7d32'], [-34, -.6, 34, '#388e3c'], [36, -.6, 32, '#43a047']]) { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(x + ox * k, y + oy * h, r * k, 0, TAU); ctx.fill(); } }
       for (let i = 0; i < 22; i++) { const ph = (d.t * .35 + i / 22) % 1; const px = x - rx * .8 + ((i * 113 + d.seed) % 1000) / 1000 * rx * 1.6 + Math.sin(d.t * 2 + i) * 6; const py = y - h * .9 + ph * h * .85; ctx.globalAlpha = fade * (1 - ph * .5); ctx.fillStyle = i % 2 ? '#f8bbd0' : '#fff9c4'; ctx.fillRect(Math.round(px), Math.round(py), 3, 2); }
-      ctx.globalAlpha = fade; for (let i = 0; i < 12; i++) { const a = i / 12 * TAU + .3; const fx = x + Math.cos(a) * rx * .7; const fy = y + Math.sin(a) * ry * .7; ctx.fillStyle = i % 3 ? '#ffeb3b' : '#f48fb1'; ctx.fillRect(Math.round(fx) - 2, Math.round(fy) - 2, 4, 4); }
+      ctx.globalAlpha = fade; for (let i = 0; i < 12; i++) { const a = i / 12 * TAU + .3; const fx = x + Math.cos(a) * rx * .7; const fy = y + Math.sin(a) * ry * .7; ctx.fillStyle = i % 3 ? '#ffeb3b' : '#f48fb1'; ctx.fillRect(Math.round(fx) - 2, Math.round(fy) - 2, 4, 4); ctx.fillStyle = '#558b2f'; ctx.fillRect(Math.round(fx) - 1, Math.round(fy) + 2, 2, 3); }
     }
   },
   // S59 — mirror world: images of the caster strike from every side, foes lose their bearings.
@@ -158,11 +154,10 @@ export const DOMAIN_RULES = Object.freeze({
     },
     finale(d, gw, left) { for (const t of d.foesInside(gw)) { hit(t, Math.round((10 + left * 5) * d.power), 0, 160, .5, true); d.fx.push({ type: 'mirror', t: 0, x: t.x, z: t.z ?? d.cz, side: 1, big: true }, { type: 'mirror', t: 0, x: t.x, z: t.z ?? d.cz, side: -1, big: true }); } },
     interior(ctx, d, x, y, rx, ry, h, k, fade) {
-      // Tall mirror shards all around, each holding a reflection of the caster.
+      // Tall glass shards all around, each holding a reflection of the caster.
       for (let i = 0; i < 7; i++) {
-        const sx = x - rx * .8 + i * rx * .27; const sh = h * (.55 + (i % 3) * .12); const sy = y - ry * .2;
-        ctx.globalAlpha = fade * .5; ctx.fillStyle = '#b0bec5'; ctx.beginPath(); ctx.moveTo(sx - 10, sy); ctx.lineTo(sx - 7, sy - sh); ctx.lineTo(sx + 9, sy - sh + 8); ctx.lineTo(sx + 10, sy); ctx.closePath(); ctx.fill();
-        ctx.globalAlpha = fade * .9; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1; ctx.stroke();
+        const sx = x - rx * .8 + i * rx * .27; const sy = y - ry * .2; ctx.globalAlpha = fade * .9;
+        if (!prop(ctx, 'dw_mirror', (Math.floor(d.t * .8) + i) % 2, sx, sy, k * (.75 + (i % 3) * .16), { flip: i % 2 === 1 })) { const sh = h * (.55 + (i % 3) * .12); ctx.fillStyle = '#b0bec5'; ctx.beginPath(); ctx.moveTo(sx - 10, sy); ctx.lineTo(sx - 7, sy - sh); ctx.lineTo(sx + 9, sy - sh + 8); ctx.lineTo(sx + 10, sy); ctx.closePath(); ctx.fill(); }
         if (d.owner?.heroKey && i % 2) ghostOf(ctx, d.owner, sx, sy - 4, 'idle', d.owner.animTime ?? 0, i % 4 ? 1 : -1, .25 * fade, '#e0f7fa', .6);
       }
     }
@@ -184,12 +179,10 @@ export const DOMAIN_RULES = Object.freeze({
     },
     finale(d, gw, left) { for (const t of d.foesInside(gw)) { t.x += (d.cx - t.x) * .8; if (Number.isFinite(t.z)) t.z += (d.cz - t.z) * .8; hit(t, Math.round((14 + left * 6) * d.power), 0, -400, .7, true); } d.fx.push({ type: 'pulse', t: 0, x: d.cx, z: d.cz, big: true }); },
     interior(ctx, d, x, y, rx, ry, h, k, fade) {
-      // A black hole above the centre with an accretion disc; rings sink toward the floor.
-      const cy = y - h * .62;
-      ctx.globalAlpha = fade * .8; ctx.strokeStyle = '#b388ff'; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(x, cy, 44 * k, 12 * k, Math.sin(d.t) * .1, 0, TAU); ctx.stroke();
-      ctx.globalAlpha = fade; ctx.fillStyle = '#000000'; ctx.beginPath(); ctx.arc(x, cy, 18 * k, 0, TAU); ctx.fill();
-      ctx.strokeStyle = '#ede7f6'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x, cy, 20 * k, 0, TAU); ctx.stroke();
-      for (let i = 0; i < 4; i++) { const ph = (d.t * .5 + i / 4) % 1; ctx.globalAlpha = fade * (1 - ph) * .6; ctx.strokeStyle = '#7e57c2'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(x, y, rx * (1 - ph * .85), ry * (1 - ph * .85), 0, 0, TAU); ctx.stroke(); }
+      // A black hole above the centre with a swirling accretion disc; rings sink toward the floor.
+      const cy = y - h * .62; ctx.globalAlpha = fade;
+      if (!prop(ctx, 'dw_blackhole', Math.floor(d.t * 8) % 4, x, cy, k, { anchor: 'center' })) { ctx.fillStyle = '#b388ff'; pxArc(ctx, x, cy, 44 * k, 12 * k, 0, TAU, 3); ctx.fillStyle = '#000000'; pxDisc(ctx, x, cy, Math.round(18 * k)); }
+      for (let i = 0; i < 4; i++) { const ph = (d.t * .5 + i / 4) % 1; ctx.globalAlpha = fade * (1 - ph) * .8; ctx.fillStyle = '#7e57c2'; pxArc(ctx, x, y, rx * (1 - ph * .85), ry * (1 - ph * .85), 0, TAU, 2, [4, 3], d.t * 8); }
       ctx.fillStyle = '#d1c4e9'; for (let i = 0; i < 18; i++) { const ph = (d.t * .8 + i / 18) % 1; const sx = x - rx * .8 + ((i * 97 + d.seed) % 1000) / 1000 * rx * 1.6; ctx.globalAlpha = fade * .7; ctx.fillRect(Math.round(sx), Math.round(y - h * .9 + ph * h * .85), 2, 3); }
     }
   },
@@ -206,11 +199,11 @@ export const DOMAIN_RULES = Object.freeze({
     },
     finale(d, gw, left) { for (const t of d.foesInside(gw)) { hit(t, Math.round((16 + left * 5) * d.power), 0, 200, .6, true); d.fx.push({ type: 'bolt', t: 0, x: t.x, z: t.z ?? d.cz, big: true }); } },
     interior(ctx, d, x, y, rx, ry, h, k, fade) {
-      // Heavy clouds, slanted rain, lightning flickering in the sky.
-      ctx.globalAlpha = fade * .9; ctx.fillStyle = '#2b3a4d';
-      for (let i = 0; i < 6; i++) { const cx = x - rx * .75 + i * rx * .3; ctx.beginPath(); ctx.ellipse(cx, y - h * .82 + (i % 2) * 8, 34 * k, 14 * k, 0, 0, TAU); ctx.fill(); }
-      ctx.strokeStyle = '#90caf9'; ctx.lineWidth = 1;
-      for (let i = 0; i < 40; i++) { const ph = (d.t * 2.2 + i / 40) % 1; const sx = x - rx + ((i * 61 + d.seed) % 1000) / 1000 * rx * 2; const sy = y - h * .75 + ph * h * .8; ctx.globalAlpha = fade * .6; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx - 3, sy + 8); ctx.stroke(); }
+      // Heavy storm clouds (lit from below when the lightning flickers), slanted rain.
+      const lit = Math.sin(d.t * 5.3) > .85;
+      for (let i = 0; i < 6; i++) { const cx = x - rx * .75 + i * rx * .3; const cy = y - h * .82 + (i % 2) * 8; ctx.globalAlpha = fade; if (!prop(ctx, 'dw_stormcloud', lit ? 3 : (Math.floor(d.t * 3) + i) % 3, cx, cy, k, { anchor: 'center', flip: i % 2 === 1 })) { ctx.fillStyle = '#2b3a4d'; ctx.beginPath(); ctx.ellipse(cx, cy, 34 * k, 14 * k, 0, 0, TAU); ctx.fill(); } }
+      ctx.fillStyle = '#90caf9';
+      for (let i = 0; i < 40; i++) { const ph = (d.t * 2.2 + i / 40) % 1; const sx = x - rx + ((i * 61 + d.seed) % 1000) / 1000 * rx * 2; const sy = y - h * .75 + ph * h * .8; ctx.globalAlpha = fade * .7; pxLine(ctx, sx, sy, sx - 3, sy + 8, 1); }
       if (Math.sin(d.t * 5.3) > .92) { ctx.globalAlpha = fade * .25; ctx.fillStyle = '#e1f5fe'; ctx.fillRect(x - rx, y - h, rx * 2, h); }
     }
   },
@@ -226,16 +219,13 @@ export const DOMAIN_RULES = Object.freeze({
     },
     finale(d, gw, left) { for (const t of d.foesInside(gw)) { hit(t, Math.round((12 + left * 5) * d.power), 0, 0, .6, true); t.freeze?.(1); d.fx.push({ type: 'hands', t: 0, x: t.x, z: t.z ?? d.cz, big: true }); } },
     interior(ctx, d, x, y, rx, ry, h, k, fade) {
-      // A black sea; silhouettes of shadow beasts peek out, pale eyes blink.
+      // A black sea; shadow beasts peek out, pale eyes blink; tendrils crawl over the floor.
       for (let i = 0; i < 4; i++) {
-        const bx = x - rx * .6 + i * rx * .4; const by = y - ry * .1; const bob = Math.sin(d.t * 1.5 + i) * 4;
-        ctx.globalAlpha = fade * .9; ctx.fillStyle = '#000000'; ctx.beginPath(); ctx.ellipse(bx, by - 18 + bob, 16 * k, 20 * k, 0, Math.PI, TAU); ctx.fill();
-        ctx.beginPath(); ctx.moveTo(bx - 12 * k, by - 30 + bob); ctx.lineTo(bx - 8 * k, by - 44 * k + bob); ctx.lineTo(bx - 4 * k, by - 32 + bob); ctx.fill();
-        ctx.beginPath(); ctx.moveTo(bx + 12 * k, by - 30 + bob); ctx.lineTo(bx + 8 * k, by - 44 * k + bob); ctx.lineTo(bx + 4 * k, by - 32 + bob); ctx.fill();
-        if (Math.sin(d.t * 2 + i * 1.7) > -.6) { ctx.fillStyle = '#d1c4e9'; ctx.fillRect(Math.round(bx - 6), Math.round(by - 26 + bob), 3, 2); ctx.fillRect(Math.round(bx + 3), Math.round(by - 26 + bob), 3, 2); }
+        const bx = x - rx * .6 + i * rx * .4; const by = y - ry * .1; const bob = Math.sin(d.t * 1.5 + i) * 4; const blink = Math.sin(d.t * 2 + i * 1.7) <= -.6; ctx.globalAlpha = fade;
+        if (!prop(ctx, 'dw_beast', blink ? 3 : (Math.floor(d.t * 4) + i) % 3, bx, by + bob, k * 1.15, { flip: i % 2 === 1 })) { ctx.fillStyle = '#000000'; ctx.beginPath(); ctx.ellipse(bx, by - 18 + bob, 16 * k, 20 * k, 0, Math.PI, TAU); ctx.fill(); }
       }
-      ctx.strokeStyle = '#311b92'; ctx.lineWidth = 2;
-      for (let i = 0; i < 8; i++) { const a = i / 8 * TAU + d.t * .3; ctx.globalAlpha = fade * .7; ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * rx * .3, y + Math.sin(a) * ry * .3); ctx.quadraticCurveTo(x + Math.cos(a + .4) * rx * .6, y + Math.sin(a + .4) * ry * .6 - 10, x + Math.cos(a) * rx * .9, y + Math.sin(a) * ry * .9); ctx.stroke(); }
+      ctx.fillStyle = '#311b92';
+      for (let i = 0; i < 8; i++) { const a = i / 8 * TAU + d.t * .3; ctx.globalAlpha = fade * .8; const mx = x + Math.cos(a + .4) * rx * .6; const my = y + Math.sin(a + .4) * ry * .6 - 10; pxLine(ctx, x + Math.cos(a) * rx * .3, y + Math.sin(a) * ry * .3, mx, my, 2); pxLine(ctx, mx, my, x + Math.cos(a) * rx * .9, y + Math.sin(a) * ry * .9, 2); }
     }
   },
   // ── element domains (one per rune element) ──
@@ -255,8 +245,8 @@ export const DOMAIN_RULES = Object.freeze({
     finale(d, gw, left) { for (const t of d.foesInside(gw)) { hit(t, Math.round((12 + left * 5) * d.power), Math.sign(t.x - d.cx || 1) * 260, 560, .7, true); d.fx.push({ type: 'wind', t: 0, x: t.x, z: t.z ?? d.cz, big: true }); } },
     interior(ctx, d, x, y, rx, ry, h, k, fade) {
       // Wind bands circling the eye, leaves whirling.
-      for (let i = 0; i < 5; i++) { const rr = .25 + i * .16; ctx.globalAlpha = fade * .55; ctx.strokeStyle = i % 2 ? '#a7ffeb' : '#4db6ac'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(x, y - h * .35, rx * rr, h * .45 * rr, 0, d.t * (1.2 + i * .3), d.t * (1.2 + i * .3) + Math.PI * 1.3); ctx.stroke(); }
-      for (let i = 0; i < 14; i++) { const a = d.t * 2 + i * .45; const rr = rx * (.3 + (i % 5) * .12); ctx.globalAlpha = fade * .8; ctx.fillStyle = i % 2 ? '#c5e1a5' : '#e0f2f1'; ctx.fillRect(Math.round(x + Math.cos(a) * rr), Math.round(y - h * .35 + Math.sin(a) * rr * .4), 3, 2); }
+      for (let i = 0; i < 5; i++) { const rr = .25 + i * .16; ctx.globalAlpha = fade * .8; ctx.fillStyle = i % 2 ? '#a7ffeb' : '#4db6ac'; const a0 = d.t * (1.2 + i * .3); pxArc(ctx, x, y - h * .35, rx * rr, h * .45 * rr, a0, a0 + Math.PI * 1.3, 2, [6, 2], d.t * 6); }
+      for (let i = 0; i < 14; i++) { const a = d.t * 2 + i * .45; const rr = rx * (.3 + (i % 5) * .12); ctx.globalAlpha = fade * .9; ctx.fillStyle = i % 2 ? '#c5e1a5' : '#e0f2f1'; ctx.fillRect(Math.round(x + Math.cos(a) * rr), Math.round(y - h * .35 + Math.sin(a) * rr * .4), 3, 2); }
     }
   },
   // S64 — Terra: the stone grave — spikes burst up under the foes.
@@ -271,10 +261,10 @@ export const DOMAIN_RULES = Object.freeze({
     },
     finale(d, gw, left) { for (const t of d.foesInside(gw)) { hit(t, Math.round((12 + left * 5) * d.power), 0, 0, .6, true); t.freeze?.(1); d.fx.push({ type: 'spike', t: 0, x: t.x, z: t.z ?? d.cz, big: true }); } },
     interior(ctx, d, x, y, rx, ry, h, k, fade) {
-      // A cave: stalactites from the dome, boulders on the floor.
-      ctx.fillStyle = '#5d4037';
-      for (let i = 0; i < 9; i++) { const sx = x - rx * .8 + i * rx * .2; const sh = 20 + (i * 37 % 30); ctx.globalAlpha = fade * .9; ctx.beginPath(); ctx.moveTo(sx - 7, y - h * .78); ctx.lineTo(sx + 7, y - h * .78); ctx.lineTo(sx, y - h * .78 + sh * k); ctx.closePath(); ctx.fill(); }
-      ctx.fillStyle = '#6d4c41'; for (let i = 0; i < 6; i++) { const a = i / 6 * TAU + .5; ctx.beginPath(); ctx.ellipse(x + Math.cos(a) * rx * .75, y + Math.sin(a) * ry * .7, 12 * k, 7 * k, 0, 0, TAU); ctx.fill(); }
+      // A cave: ridged stalactites from the dome, faceted boulders on the floor.
+      ctx.globalAlpha = fade;
+      for (let i = 0; i < 9; i++) { const sx = x - rx * .8 + i * rx * .2; const top = y - h * .78; if (!prop(ctx, 'dw_stalactite', i % 2, sx, top + 24 * k * (.8 + (i % 3) * .15), k * (.8 + (i % 3) * .15), { anchor: 'center', flip: i % 2 === 1 })) { const sh = 20 + (i * 37 % 30); ctx.fillStyle = '#5d4037'; ctx.beginPath(); ctx.moveTo(sx - 7, top); ctx.lineTo(sx + 7, top); ctx.lineTo(sx, top + sh * k); ctx.closePath(); ctx.fill(); } }
+      for (let i = 0; i < 6; i++) { const a = i / 6 * TAU + .5; const bx = x + Math.cos(a) * rx * .75; const by = y + Math.sin(a) * ry * .7; if (!prop(ctx, 'dw_boulder', 0, bx, by + 4, k * (.8 + (i % 3) * .2), { flip: i % 2 === 1 })) { ctx.fillStyle = '#6d4c41'; ctx.beginPath(); ctx.ellipse(bx, by, 12 * k, 7 * k, 0, 0, TAU); ctx.fill(); } }
     }
   },
   // S65 — Aqua: the deep sea — everyone underwater is slow; foes are soaked and slowly drown.
@@ -288,12 +278,12 @@ export const DOMAIN_RULES = Object.freeze({
     },
     finale(d, gw, left) { for (const t of d.foesInside(gw)) { t.x += (d.cx - t.x) * .7; if (Number.isFinite(t.z)) t.z += (d.cz - t.z) * .7; hit(t, Math.round((12 + left * 5) * d.power), 0, 120, .6, true); } d.fx.push({ type: 'pulse', t: 0, x: d.cx, z: d.cz, big: true }); },
     interior(ctx, d, x, y, rx, ry, h, k, fade) {
-      // Light shafts from above, rising bubbles, swaying kelp.
+      // Light shafts from above, swaying kelp, rising bubbles.
       ctx.globalAlpha = fade * .18; ctx.fillStyle = '#81d4fa';
       for (let i = 0; i < 4; i++) { const bx = x - rx * .55 + i * rx * .35 + Math.sin(d.t + i) * 6; ctx.beginPath(); ctx.moveTo(bx, y - h); ctx.lineTo(bx + 14, y - h); ctx.lineTo(bx + 30, y); ctx.lineTo(bx + 4, y); ctx.closePath(); ctx.fill(); }
-      ctx.strokeStyle = '#2e7d32'; ctx.lineWidth = 3;
-      for (let i = 0; i < 5; i++) { const kx = x - rx * .7 + i * rx * .35; ctx.globalAlpha = fade * .8; ctx.beginPath(); ctx.moveTo(kx, y); for (let j = 1; j <= 5; j++) ctx.lineTo(kx + Math.sin(d.t * 2 + j + i) * 5, y - j * 14 * k); ctx.stroke(); }
-      for (let i = 0; i < 20; i++) { const ph = (d.t * .6 + i / 20) % 1; const bx = x - rx + ((i * 79 + d.seed) % 1000) / 1000 * rx * 2; ctx.globalAlpha = fade * (1 - ph) * .8; ctx.strokeStyle = '#e1f5fe'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(bx + Math.sin(d.t * 3 + i) * 3, y - ph * h * .9, 2 + (i % 3), 0, TAU); ctx.stroke(); }
+      ctx.globalAlpha = fade;
+      for (let i = 0; i < 5; i++) { const kx = x - rx * .7 + i * rx * .35; if (!prop(ctx, 'dw_kelp', (Math.floor(d.t * 4) + i) % 4, kx, y - ry * .05, k * (1 + (i % 2) * .25), { flip: i % 2 === 1 })) { ctx.fillStyle = '#2e7d32'; for (let j = 1; j <= 5; j++) pxLine(ctx, kx + Math.sin(d.t * 2 + j - 1 + i) * 5, y - (j - 1) * 14 * k, kx + Math.sin(d.t * 2 + j + i) * 5, y - j * 14 * k, 3); } }
+      for (let i = 0; i < 20; i++) { const ph = (d.t * .6 + i / 20) % 1; const bx = x - rx + ((i * 79 + d.seed) % 1000) / 1000 * rx * 2; ctx.globalAlpha = fade * (1 - ph) * .9; ctx.fillStyle = '#e1f5fe'; const r = 2 + (i % 3); pxArc(ctx, bx + Math.sin(d.t * 3 + i) * 3, y - ph * h * .9, r, r, 0, TAU, 1); }
     }
   },
   // S66 — Bestia: the hunting ground — spirit wolves leap at the foes.
@@ -308,9 +298,10 @@ export const DOMAIN_RULES = Object.freeze({
     },
     finale(d, gw, left) { for (const t of d.foesInside(gw)) { hit(t, Math.round((12 + left * 5) * d.power), 0, 140, .6, true); for (const side of [-1, 1]) d.fx.push({ type: 'wolf', t: 0, x: t.x, z: t.z ?? d.cz, side, big: true }); } },
     interior(ctx, d, x, y, rx, ry, h, k, fade) {
-      // A moonlit forest: tree trunks, a full moon, glowing eyes in the dark.
-      ctx.globalAlpha = fade; ctx.fillStyle = '#fff8e1'; ctx.beginPath(); ctx.arc(x + rx * .35, y - h * .75, 18 * k, 0, TAU); ctx.fill();
-      ctx.fillStyle = '#1b130a'; for (let i = 0; i < 7; i++) { const tx = x - rx * .85 + i * rx * .28; ctx.fillRect(Math.round(tx - 5), Math.round(y - h * .85), 10, Math.round(h * .85 - ry * .3)); }
+      // A moonlit forest: dark pines, a full moon, glowing eyes in the dark.
+      ctx.globalAlpha = fade;
+      if (!prop(ctx, 'sky_moon', 0, x + rx * .35, y - h * .75, k * .42, { anchor: 'center' })) { ctx.fillStyle = '#fff8e1'; pxDisc(ctx, x + rx * .35, y - h * .75, Math.round(18 * k)); }
+      for (let i = 0; i < 7; i++) { const tx = x - rx * .85 + i * rx * .28; if (!prop(ctx, 'dw_pine', 0, tx, y - ry * .3, k * (.85 + (i % 3) * .14), { flip: i % 2 === 1 })) { ctx.fillStyle = '#1b130a'; ctx.fillRect(Math.round(tx - 5), Math.round(y - h * .85), 10, Math.round(h * .85 - ry * .3)); } }
       for (let i = 0; i < 5; i++) { if (Math.sin(d.t * 1.7 + i * 2.1) < -.3) continue; const ex = x - rx * .7 + i * rx * .35; const ey = y - h * .3 + (i % 2) * 10; ctx.fillStyle = '#ffab40'; ctx.fillRect(Math.round(ex - 4), Math.round(ey), 2, 2); ctx.fillRect(Math.round(ex + 2), Math.round(ey), 2, 2); }
     }
   },
@@ -326,12 +317,12 @@ export const DOMAIN_RULES = Object.freeze({
     },
     finale(d, gw, left) { for (const t of d.foesInside(gw)) { hit(t, Math.round((14 + left * 5) * d.power), 0, 0, .6, true); for (let i = -1; i <= 1; i++) d.fx.push({ type: 'blade', t: -i * .05 - .05, x: t.x + i * 14, z: t.z ?? d.cz, big: true }); } },
     interior(ctx, d, x, y, rx, ry, h, k, fade) {
-      // A forge: hanging blades turning slowly, sparks from an anvil glow.
+      // A forge: hanging swords turning slowly, sparks from an anvil glow.
       for (let i = 0; i < 9; i++) {
         const bx = x - rx * .8 + i * rx * .2; const by = y - h * (.55 + (i % 3) * .1) + Math.sin(d.t * 2 + i) * 4; const a = Math.sin(d.t + i) * .3;
-        ctx.save(); ctx.translate(bx, by); ctx.rotate(Math.PI + a); ctx.globalAlpha = fade * .9;
-        ctx.fillStyle = '#cfd8dc'; ctx.beginPath(); ctx.moveTo(-3, 0); ctx.lineTo(3, 0); ctx.lineTo(0, -26 * k); ctx.closePath(); ctx.fill();
-        ctx.fillStyle = '#ffca28'; ctx.fillRect(-6, 0, 12, 3); ctx.fillStyle = '#5d4037'; ctx.fillRect(-1, 3, 3, 8); ctx.restore();
+        ctx.save(); ctx.translate(bx, by); ctx.rotate(Math.PI / 2 + a); ctx.globalAlpha = fade;
+        if (!prop(ctx, 'w_sword', 0, 0, 0, k * .9, { anchor: 'center' })) { ctx.fillStyle = '#cfd8dc'; ctx.fillRect(-13, -2, 26, 4); }
+        ctx.restore();
       }
       ctx.fillStyle = '#ffab00'; for (let i = 0; i < 10; i++) { const ph = (d.t * 1.5 + i / 10) % 1; ctx.globalAlpha = fade * (1 - ph); ctx.fillRect(Math.round(x + Math.cos(i * 2.4) * 30 * ph), Math.round(y - 10 - ph * 40), 2, 2); }
     }
@@ -350,9 +341,8 @@ export const DOMAIN_RULES = Object.freeze({
     },
     finale(d, gw, left) { const bonus = Math.min(30, (d.drained ?? 0) * .4); for (const t of d.foesInside(gw)) { hit(t, Math.round((12 + left * 4 + bonus) * d.power), 0, 100, .6, true); d.fx.push({ type: 'rift', t: 0, x: t.x, z: t.z ?? d.cz, big: true }); } },
     interior(ctx, d, x, y, rx, ry, h, k, fade) {
-      // Nothing — but cracks of violet light and motes being sucked into the centre.
-      ctx.strokeStyle = '#e040fb'; ctx.lineWidth = 2;
-      for (let i = 0; i < 5; i++) { const sx = x - rx * .6 + i * rx * .3; const sy = y - h * (.4 + (i % 2) * .2); ctx.globalAlpha = fade * (.5 + .4 * Math.sin(d.t * 3 + i)); ctx.beginPath(); ctx.moveTo(sx, sy - 18 * k); ctx.lineTo(sx + 4, sy - 4); ctx.lineTo(sx - 3, sy + 4); ctx.lineTo(sx + 2, sy + 18 * k); ctx.stroke(); }
+      // Nothing — but void tears of violet light and motes being sucked into the centre.
+      for (let i = 0; i < 5; i++) { const sx = x - rx * .6 + i * rx * .3; const sy = y - h * (.4 + (i % 2) * .2); ctx.globalAlpha = fade * (.6 + .4 * Math.sin(d.t * 3 + i)); if (!prop(ctx, 'rift_tear', (Math.floor(d.t * 8) + i) % 4, sx, sy + 22 * k, k * .6)) { ctx.fillStyle = '#e040fb'; pxLine(ctx, sx, sy - 18 * k, sx + 4, sy - 4, 2); pxLine(ctx, sx + 4, sy - 4, sx - 3, sy + 4, 2); pxLine(ctx, sx - 3, sy + 4, sx + 2, sy + 18 * k, 2); } }
       ctx.fillStyle = '#ea80fc'; for (let i = 0; i < 24; i++) { const ph = (d.t * .7 + i / 24) % 1; const a = i * 2.39; const rr = rx * .9 * (1 - ph); ctx.globalAlpha = fade * ph; ctx.fillRect(Math.round(x + Math.cos(a) * rr), Math.round(y - h * .4 + Math.sin(a) * rr * .45), 2, 2); }
     }
   },
@@ -368,12 +358,12 @@ export const DOMAIN_RULES = Object.freeze({
     },
     finale(d, gw, left) { for (const t of d.foesInside(gw)) { hit(t, Math.round((12 + left * 5) * d.power), 0, 0, .6, true); t.freeze?.(.6); d.fx.push({ type: 'beam', t: 0, x: t.x, z: t.z ?? d.cz, big: true }); } },
     interior(ctx, d, x, y, rx, ry, h, k, fade) {
-      // A radiant sun with rays, golden pillars of a temple.
-      const sy = y - h * .72;
-      ctx.globalAlpha = fade * .5; ctx.strokeStyle = '#fff59d'; ctx.lineWidth = 2;
-      for (let i = 0; i < 16; i++) { const a = i / 16 * TAU + d.t * .2; ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * 26 * k, sy + Math.sin(a) * 26 * k); ctx.lineTo(x + Math.cos(a) * (40 + (i % 2) * 14) * k, sy + Math.sin(a) * (40 + (i % 2) * 14) * k); ctx.stroke(); }
-      ctx.globalAlpha = fade; ctx.fillStyle = '#fff176'; ctx.beginPath(); ctx.arc(x, sy, 22 * k, 0, TAU); ctx.fill(); ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(x, sy, 12 * k, 0, TAU); ctx.fill();
-      ctx.fillStyle = '#c9a227'; for (const side of [-1, 1]) for (const o of [.55, .8]) { ctx.globalAlpha = fade * .8; ctx.fillRect(Math.round(x + side * rx * o - 6), Math.round(y - h * .6), 12, Math.round(h * .6 - ry * .2)); ctx.fillStyle = '#fff59d'; ctx.fillRect(Math.round(x + side * rx * o - 8), Math.round(y - h * .62), 16, 4); ctx.fillStyle = '#c9a227'; }
+      // A radiant sun, golden fluted columns of a temple.
+      const sy = y - h * .72; ctx.globalAlpha = fade;
+      if (!prop(ctx, 'sky_sun', Math.floor(d.t * 4) % 6, x, sy, k * .6, { anchor: 'center' })) { ctx.fillStyle = '#fff176'; pxDisc(ctx, x, sy, Math.round(22 * k)); }
+      ctx.fillStyle = '#fff59d'; for (let i = 0; i < 16; i++) { const a = i / 16 * TAU + d.t * .2; ctx.globalAlpha = fade * .7; pxLine(ctx, x + Math.cos(a) * 30 * k, sy + Math.sin(a) * 30 * k, x + Math.cos(a) * (42 + (i % 2) * 14) * k, sy + Math.sin(a) * (42 + (i % 2) * 14) * k, 2); }
+      ctx.globalAlpha = fade; const ph = h * .6 - ry * .2;
+      for (const side of [-1, 1]) for (const o of [.55, .8]) { const px = x + side * rx * o; if (!prop(ctx, 'dw_pillar', 0, px, y - ry * .2, Math.max(.05, ph / 110), { flip: side < 0 })) { ctx.fillStyle = '#c9a227'; ctx.fillRect(Math.round(px - 6), Math.round(y - h * .6), 12, Math.round(ph)); } }
     }
   },
   // S85 — Schutz: the bulwark — a shield that keeps refilling for you and your allies (it runs through
@@ -406,18 +396,16 @@ export const DOMAIN_RULES = Object.freeze({
       d.fx.push({ type: 'ward', t: 0, x: p.x, z: p.z ?? d.cz, big: true });
     },
     interior(ctx, d, x, y, rx, ry, h, k, fade) {
-      // A lattice of hexagonal shield panels, shields floating and turning slowly.
-      const hex = (cx, cy, r) => { ctx.beginPath(); for (let i = 0; i < 6; i++) { const a = i / 6 * TAU + Math.PI / 6; const px = cx + Math.cos(a) * r; const py = cy + Math.sin(a) * r; i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); } ctx.closePath(); };
-      ctx.strokeStyle = '#5e35b1'; ctx.lineWidth = 2;
+      // A lattice of hexagonal shield panels, ward shields floating and turning slowly.
+      const hex = (cx, cy, r) => { for (let i = 0; i < 6; i++) { const a0 = i / 6 * TAU + Math.PI / 6; const a1 = a0 + TAU / 6; pxLine(ctx, cx + Math.cos(a0) * r, cy + Math.sin(a0) * r, cx + Math.cos(a1) * r, cy + Math.sin(a1) * r, 2); } };
+      ctx.fillStyle = '#5e35b1';
       for (let row = 0; row < 5; row++) for (let col = -5; col <= 5; col++) {
         const r = 15 * k; const cx = x + col * r * 1.75 + (row % 2) * r * .87; const cy = y - h * .15 - row * r * 1.5;
-        ctx.globalAlpha = fade * (.35 + .3 * Math.max(0, Math.sin(d.t * 2 - row - col * .5))); hex(cx, cy, r); ctx.stroke();
+        ctx.globalAlpha = fade * (.45 + .4 * Math.max(0, Math.sin(d.t * 2 - row - col * .5))); hex(cx, cy, r);
       }
       for (let i = 0; i < 4; i++) {
-        const a = d.t * .6 + i * TAU / 4; const sx = x + Math.cos(a) * rx * .6; const sy = y - h * .55 + Math.sin(a) * 12 * k; const w = 9 * k * (.6 + .4 * Math.abs(Math.cos(a)));
-        ctx.globalAlpha = fade;
-        ctx.fillStyle = '#b388ff'; ctx.beginPath(); ctx.moveTo(sx, sy - 13 * k); ctx.lineTo(sx + w, sy - 8 * k); ctx.lineTo(sx + w, sy + 4 * k); ctx.lineTo(sx, sy + 13 * k); ctx.lineTo(sx - w, sy + 4 * k); ctx.lineTo(sx - w, sy - 8 * k); ctx.closePath(); ctx.fill();
-        ctx.fillStyle = '#ede7f6'; ctx.fillRect(Math.round(sx - 1), Math.round(sy - 8 * k), 2, Math.round(14 * k));
+        const a = d.t * .6 + i * TAU / 4; const sx = x + Math.cos(a) * rx * .6; const sy = y - h * .55 + Math.sin(a) * 12 * k; ctx.globalAlpha = fade;
+        if (!prop(ctx, 'w_shield_ward', Math.floor(d.t * 6 + i) % 4, sx, sy, k * .7, { anchor: 'center', flip: Math.cos(a) < 0 })) { ctx.fillStyle = '#b388ff'; ctx.fillRect(Math.round(sx - 8 * k), Math.round(sy - 12 * k), Math.round(16 * k), Math.round(24 * k)); }
       }
     }
   }
@@ -436,6 +424,8 @@ function pxArc(ctx, x, y, rx, ry, a0, a1, sz = 2, dash = null, phase = 0) {
   for (let i = 0; i <= n; i++) { if (dash && (((i + Math.floor(phase)) % per) + per) % per >= dash[0]) continue; const a = a0 + (a1 - a0) * i / n; ctx.fillRect(Math.round(x + Math.cos(a) * rx - sz / 2), Math.round(y + Math.sin(a) * ry - sz / 2), sz, sz); }
 }
 function pxLine(ctx, x0, y0, x1, y1, sz = 2) { const n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0) / (sz * .8))); for (let i = 0; i <= n; i++) ctx.fillRect(Math.round(x0 + (x1 - x0) * i / n - sz / 2), Math.round(y0 + (y1 - y0) * i / n - sz / 2), sz, sz); }
+// Interior props (art/authoring/vfx_domain_world.cjs and shared sheets): a drawn sprite, false when the sheet is missing.
+const prop = (ctx, name, frame, x, y, sc, opts = {}) => spellSheetReady(name) && drawSpellSprite(ctx, name, frame, x, y, { scale: Math.max(.05, sc), ...opts });
 function pxDisc(ctx, x, y, r) { for (let yy = -r; yy <= r; yy += 2) { const w = Math.round(Math.sqrt(Math.max(0, r * r - yy * yy))); ctx.fillRect(Math.round(x - w), Math.round(y + yy), w * 2, 2); } }
 
 export class Domain {
@@ -444,6 +434,7 @@ export class Domain {
     this.cx = owner.x; this.cz = owner.z; this.R = DOMAIN.radius; this.t = 0; this.life = DOMAIN.duration * (quality?.duration ?? 1);
     this.tickT = new Map(); this.trapped = new Set(); this.slashes = []; this.geysers = []; this.fx = []; this.collapseT = null; this.finale = 0; this.clash = null; this.isFinished = false;
     this.isGroundDecal = true; // the inner world lies under every actor
+    this.fineVfx = true; // drawn inner-world props and pixel rings at the character density
     this.seed = Math.floor(Math.random() * 1000);
     active.add(this);
     emit(new DomainShell(this), quality);
