@@ -86,7 +86,7 @@ function boulder() { const s = S('dw_boulder', 30, 20, 1, true); const r = ramp(
   line(s, 0, r, 12, 4, 15, 12, .3); line(s, 0, r, 15, 12, 24, 10, .3); B.selOutline(s, 0, OUT('#0a0806')); return s; }
 
 function kelp() { const s = S('dw_kelp', 16, 72, 4, true); const g = ramp('#0b2a10', '#1b5e20', '#2e7d32', '#66bb6a');
-  for (let f = 0; f < 4; f++) { let px = 8; for (let y = 71; y > 4; y--) { const u = (71 - y) / 67; const x = 8 + Math.sin(u * 4 + f / 4 * TAU) * 3 * u; for (let d = -1; d <= 1; d++) tone(s, f, g, x + d, y, d < 0 ? .67 : .33); if (y % 9 === 0) { const sg = (y / 9) % 2 ? 1 : -1; for (let j = 1; j < 5; j++) tone(s, f, g, x + sg * j, y - j * .5, j < 3 ? 1 : .67); } px = x; }
+  for (let f = 0; f < 4; f++) { for (let y = 71; y > 4; y--) { const u = (71 - y) / 67; const x = 8 + Math.sin(u * 4 + f / 4 * TAU) * 3 * u; for (let d = -1; d <= 1; d++) tone(s, f, g, x + d, y, d < 0 ? .67 : .33); if (y % 9 === 0) { const sg = (y / 9) % 2 ? 1 : -1; for (let j = 1; j < 5; j++) tone(s, f, g, x + sg * j, y - j * .5, j < 3 ? 1 : .67); } }
     B.selOutline(s, f, OUT('#04140a')); } return s; }
 
 function pine() { const s = S('dw_pine', 44, 130, 1, true); const k = ramp('#0b0805', '#1b130a', '#2d2416', '#5d4a2a');

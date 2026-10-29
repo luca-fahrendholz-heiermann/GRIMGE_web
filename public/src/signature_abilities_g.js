@@ -461,6 +461,10 @@ export class Domain {
     for (const f of this.fx) f.t += dt; this.fx = this.fx.filter((f) => f.t < .7);
     for (const s of this.slashes) s.t += dt; this.slashes = this.slashes.filter((s) => s.t < .22);
     if (this.collapseT != null) { if (this.t - this.collapseT > .6) { this.isFinished = true; active.delete(this); } return; }
+    // Sealed at the cast (user, 29 Oct 2026): every foe within the full radius when the domain is activated is
+    // enclosed at once — it cannot walk out while the hand sign forms and the dome unfolds, nor during a duel.
+    if (!this.sealed) { this.sealed = true; for (const t of foesOf(gw, this.team)) if (!t.isProp && alive(t) && Math.hypot(t.x - this.cx, ((t.z ?? this.cz) - this.cz) * DEPTH) < this.R) { this.trapped.add(t); combat.spawnDamageText?.(t.x, (t.y ?? 0) - 100, 'GEFANGEN', { color: this.rule.pal.rim, isCrit: true }); } }
+    this.holdTrapped();
     if (this.t < DOMAIN.sign) { p.state = 'heavyStrike'; p.stateTimer = .1; p.vx = 0; p.vz = 0; return; }
     if (!this.flashed) { this.flashed = true; combat.triggerHitstop?.(6); combat.shakeCamera(12, .5); audio.playImpact?.(true); combat.spawnShockwave(this.cx, this.y, 160, this.rule.pal.rim); }
     if (!alive(p)) { this.collapse(); return; }
@@ -478,6 +482,18 @@ export class Domain {
       if (dd > lim) { t.x = this.cx + dx / dd * lim; if (Number.isFinite(t.z)) t.z = this.cz + dz / dd * lim / DEPTH; t.kbVelX = 0; }
       t.slow?.(.3, this.rule.slow);
       this.rule.foe(this, dt, t, gw);
+    }
+  }
+  // The dome wall holds every trapped foe in (also against knockback, dashes and pushes out of the dome).
+  holdTrapped() {
+    const lim = this.R - 16;
+    for (const t of this.trapped) {
+      if (!alive(t)) continue;
+      const dx = t.x - this.cx; const dz = ((t.z ?? this.cz) - this.cz) * DEPTH; const dd = Math.hypot(dx, dz);
+      if (dd <= lim || dd === 0) continue;
+      t.x = this.cx + dx / dd * lim; if (Number.isFinite(t.z)) t.z = this.cz + dz / dd * lim / DEPTH;
+      if ('kbVelX' in t && Math.sign(t.kbVelX) === Math.sign(dx)) t.kbVelX = 0; if ('kbVelZ' in t) t.kbVelZ = 0;
+      if (Number.isFinite(t.vx) && Math.sign(t.vx) === Math.sign(dx)) t.vx = 0; if (Number.isFinite(t.vz) && Math.sign(t.vz) === Math.sign(dz)) t.vz = 0;
     }
   }
   // Sure-hit pressure on a trapped foe: no spells or beams, slower attacks; a trapped Wizard
