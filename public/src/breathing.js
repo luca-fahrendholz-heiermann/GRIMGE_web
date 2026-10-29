@@ -196,6 +196,12 @@ const piecePals = new Map();
 const shade = (h, k) => { const [r, g, b] = hexRgb(h); return '#' + [r, g, b].map((v) => Math.round(v * k).toString(16).padStart(2, '0')).join(''); };
 // [outline, dark, mid, light, core]; steam keeps white highlights (its core colour is the scald accent).
 function piecePal(R, look) { const key = R.mid + look; let p = piecePals.get(key); if (!p) piecePals.set(key, (p = [shade(R.dark, .4), R.dark, R.mid, R.light, look === 'steam' ? '#ffffff' : R.core])); return p; }
+// A large element sprite (the piece sheets scaled up) — crescent blades, moon walls, claw rips.
+function bigPiece(ctx, look, x, y, sc, t, R, flip, seed = 0) {
+  const sheet = 'bp_' + (PIECE_SHEET[look] ?? 'blast'); if (!spellSheetReady(sheet)) return false;
+  const fr = ((Math.floor(t * 12 + seed) % 4) + 4) % 4; const pal = piecePal(R, look);
+  drawFineFromLayer(ctx, (c) => drawSpellSpriteTinted(c, sheet, pal, fr, x, y, { anchor: 'center', scale: Math.max(.2, sc), flip })); return true;
+}
 function piece(ctx, look, x, y, s, t, R, f = 1, seed = 0) {
   const sheet = 'bp_' + (PIECE_SHEET[look] ?? 'blast');
   if (spellSheetReady(sheet)) { const fr = ((Math.floor(t * 12 + seed) % 4) + 4) % 4; const pal = piecePal(R, look); drawFineFromLayer(ctx, (c) => drawSpellSpriteTinted(c, sheet, pal, fr, x, y - 10 * s, { anchor: 'center', scale: Math.max(.2, s * .8), flip: f < 0 })); return; }
@@ -266,14 +272,16 @@ function torrent(p, st, k, m) {
     // The weapon shapes the body: an arrow's tail (thinner), a fissure along the ground (heavy), a straight thrust (polearm).
     const d = m.delivery; const dk = d?.kind ?? 'none';
     const bodyScale = dk === 'ranged' ? .6 : dk === 'polearm' ? .75 : 1; const bodyY = dk === 'heavy' ? 18 : 0; const straight = dk === 'polearm' || dk === 'ranged';
-    const n = 20;
-    for (let i = 0; i < n; i++) {
+    const n = 20; const gyW = groundYForDepth(s.z) + 2;
+    // Water: one continuous wave — a rolling body growing toward a breaking crest (hand-drawn tiles, style colours).
+    if (m.look === 'wave' && spellSheetReady('bw_wave_body')) { const pal = piecePal(R, 'wave'); const fr = Math.floor(s.t * 14) % 4; drawFineFromLayer(ctx, (c) => { let dd = 0; while (dd < head) { const sc = (.7 + .9 * dd / Math.max(1, head)) * bodyScale; drawSpellSpriteTinted(c, 'bw_wave_body', pal, fr, s.x + f * (20 + dd + 16 * sc), gyW, { scale: sc, flip: f < 0 }); dd += 32 * sc - 1; } drawSpellSpriteTinted(c, 'bw_wave_crest', pal, fr, s.x + f * (20 + head + 14), gyW, { scale: 1.7 * bodyScale, flip: f < 0 }); }); }
+    else for (let i = 0; i < n; i++) {
       const u = i / (n - 1); const x = s.x + f * (20 + head * u);
       const wav = straight ? Math.sin(u * 20 - s.t * 30) * 4 : m.look === 'serpent' || m.look === 'love' ? Math.sin(u * 14 - s.t * 16) * 18 : Math.sin(u * 9 - s.t * 18) * 10 * u;
       piece(ctx, m.look, x, y + wav + bodyY, (.9 + 1.3 * u) * bodyScale, s.t, R, f, i);
     }
     // The head: the weapon's projectile / blade / tip — else a bigger flare of the element (the ice dragon gets jaws).
-    if (!drawHead(ctx, d, s.x + f * (40 + head), y - 10, 1.3, s.t, R, f)) piece(ctx, m.look, s.x + f * (26 + head), y, 2.6, s.t, R, f, 99);
+    if (!drawHead(ctx, d, s.x + f * (40 + head), y - 10, 1.3, s.t, R, f) && !(m.look === 'wave' && spellSheetReady('bw_wave_crest'))) piece(ctx, m.look, s.x + f * (26 + head), y, 2.6, s.t, R, f, 99);
     if (m.look === 'ice' && dk === 'none') { const hx = s.x + f * (40 + head); plate(ctx, [[hx, y - 30], [hx + f * 34, y - 22], [hx + f * 8, y - 14]], R.mat, 960, { alpha: 1, glowEdge: .8 }); plate(ctx, [[hx, y - 8], [hx + f * 30, y - 4], [hx + f * 6, y + 2]], R.mat, 961, { alpha: 1, glowEdge: .8 }); }
     ctx.restore();
   } }), st.quality);
@@ -430,7 +438,7 @@ function crescents(p, st, k, m) {
   }, draw: (ctx, s) => {
     ctx.save(); const a = 1 - Math.max(0, (s.t - .6) / .3); ctx.globalAlpha = a;
     const dk = m.delivery?.kind; const own = dk && dk !== 'none' && dk !== 'blade' && dk !== 'iai';
-    for (const b of s.blades) { if (s.t < b.delay) continue; const y = groundYForDepth(b.z) - 36; if (own && drawHead(ctx, m.delivery, b.x, y, b.s * .8, s.t, R, f)) { piece(ctx, m.look, b.x - f * 26, y + 26, b.s * .7, s.t, R, f, 3); continue; } ctx.fillStyle = R.mid; ctx.beginPath(); ctx.arc(b.x, y, 18 * b.s, f > 0 ? -1.3 : Math.PI - 1.3, f > 0 ? 1.3 : Math.PI + 1.3); ctx.arc(b.x - f * 8 * b.s, y, 14 * b.s, f > 0 ? 1.1 : Math.PI + 1.1, f > 0 ? -1.1 : Math.PI - 1.1, true); ctx.closePath(); ctx.fill(); ctx.strokeStyle = R.core; ctx.lineWidth = 1.5; ctx.stroke(); }
+    for (const b of s.blades) { if (s.t < b.delay) continue; const y = groundYForDepth(b.z) - 36; if (own && drawHead(ctx, m.delivery, b.x, y, b.s * .8, s.t, R, f)) { piece(ctx, m.look, b.x - f * 26, y + 26, b.s * .7, s.t, R, f, 3); continue; } if (bigPiece(ctx, m.look, b.x, y, b.s * 1.6, s.t, R, m.look === 'moon' ? f < 0 : f > 0, b.delay * 40)) continue; ctx.fillStyle = R.mid; ctx.beginPath(); ctx.arc(b.x, y, 18 * b.s, f > 0 ? -1.3 : Math.PI - 1.3, f > 0 ? 1.3 : Math.PI + 1.3); ctx.arc(b.x - f * 8 * b.s, y, 14 * b.s, f > 0 ? 1.1 : Math.PI + 1.1, f > 0 ? -1.1 : Math.PI - 1.1, true); ctx.closePath(); ctx.fill(); ctx.strokeStyle = R.core; ctx.lineWidth = 1.5; ctx.stroke(); }
     ctx.restore();
   } }), st.quality);
 }
@@ -476,13 +484,13 @@ function drawRiseStyle(ctx, look, p, t, kk, R, f, by) {
     case 'wheel': for (let i = 0; i < 12; i++) { const a = i / 12 * TAU + t * 14 * f; piece(ctx, 'wave', px + f * 10 + Math.cos(a) * 42, cy + Math.sin(a) * 42 + 10, 1.1, t, R, f, i); } break; // a vertical water wheel
     case 'wind': for (let i = 0; i < 10; i++) { const a = t * 18 + i * .9; piece(ctx, 'wind', px + f * 50 + Math.cos(a) * (10 + i * 3), by - i * 18 * kk, 1 + i * .08, t, R, f, i); } break; // a tornado column
     case 'petal': for (let i = 0; i < 14; i++) { const a = i * .8 + t * 10; piece(ctx, 'petal', px + Math.cos(a) * (30 + i * 3), by - 10 - i * 8 * kk + Math.sin(a) * 8, 1, t, R, f, i); } break; // a petal spiral all around
-    case 'moon': { const wx = px + f * 50; ctx.fillStyle = R.mid; ctx.beginPath(); ctx.ellipse(wx, by - 50, 18, 60 * Math.min(1, kk * 2), 0, -Math.PI / 2, Math.PI / 2, f < 0); ctx.ellipse(wx - f * 10, by - 50, 10, 48 * Math.min(1, kk * 2), 0, Math.PI / 2, -Math.PI / 2, f > 0); ctx.closePath(); ctx.fill(); ctx.strokeStyle = R.core; ctx.lineWidth = 2; ctx.stroke(); break; } // a standing crescent wall
+    case 'moon': { const wx = px + f * 50; const h = Math.min(1, kk * 2); for (let i = 0; i < 3; i++) bigPiece(ctx, 'moon', wx - f * Math.abs(i - 1) * 6, by - 22 - i * 30 * h, 1.9 * (i === 1 ? 1.2 : 1), t, R, f < 0, i); break; } // a standing wall of crescents
     case 'mist': for (let i = 1; i <= 3; i++) { const a = -Math.PI / 2 + f * kk * TAU * (i / 3); piece(ctx, 'mist', px + Math.cos(a) * 30, cy + Math.sin(a) * 30, 1.6, t, R, f, i); } break; // somersault afterimages
-    case 'claw': for (const d of [1, -1]) { ctx.strokeStyle = R.light; ctx.lineWidth = 4; for (let i = -1; i <= 1; i++) { ctx.beginPath(); ctx.moveTo(px + f * (20 + i * 8), by - 10); ctx.lineTo(px + f * (60 + i * 8 + d * 20), by - 10 - 90 * kk); ctx.stroke(); } } break; // X rip upward
-    case 'shield': { ctx.strokeStyle = R.mid; ctx.lineWidth = 4; ctx.beginPath(); ctx.ellipse(px, by - 30, 70 * kk, 60 * kk, 0, Math.PI, TAU); ctx.stroke(); ctx.strokeStyle = R.light; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(px, by, 70 * kk, 20 * kk, 0, 0, TAU); ctx.stroke(); break; } // the guard dome turning out
-    case 'love': for (let i = 0; i < 3; i++) { ctx.strokeStyle = i % 2 ? R.light : R.mid; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(px + f * (20 + i * 22), cy - i * 12, 26, f > 0 ? -2 + i * .4 : Math.PI + 2 - i * .4, f > 0 ? .6 + i * .4 : Math.PI - .6 - i * .4, f < 0); ctx.stroke(); } break; // three leaping whip arcs
-    case 'sting': for (let i = 0; i < 3; i++) { const sx = px + f * (30 + i * 16); ctx.strokeStyle = R.light; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(sx, cy - 30 + i * 10); ctx.lineTo(sx + f * 26, cy - 10 + i * 10); ctx.stroke(); piece(ctx, 'sting', sx, cy - 10 + i * 10, 1, t, R, f, i); } break; // butterfly stabs
-    case 'sound': for (const o of [0, Math.PI]) { const a = t * 20 + o; ctx.fillStyle = R.mid; ctx.beginPath(); ctx.arc(px + Math.cos(a) * 46, cy + Math.sin(a) * 18, 9, 0, TAU); ctx.fill(); ctx.strokeStyle = R.light; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(px, cy, 46 * kk + 10, 18 * kk + 5, 0, 0, TAU); ctx.stroke(); } break; // twin blades spinning with rings
+    case 'claw': { const e = Math.min(1, kk * 1.6); bigPiece(ctx, 'claw', px + f * 52, by - 20 - 50 * e, 1.9 * (.5 + .5 * e), t, R, f < 0, 1); bigPiece(ctx, 'claw', px + f * 60, by - 26 - 50 * e, 1.9 * (.5 + .5 * e), t, R, f > 0, 2); break; } // X rip upward
+    case 'shield': for (let i = 0; i <= 6; i++) { const a = Math.PI + i / 6 * Math.PI; piece(ctx, 'shield', px + Math.cos(a) * 70 * kk, by - 20 + Math.sin(a) * 60 * kk, 1.3, t, R, f, i); } break; // the guard dome turning out (hex shards)
+    case 'love': for (let i = 0; i < 3; i++) for (let j = 0; j < 5; j++) { const a0 = f > 0 ? -2 + i * .4 : Math.PI + 2 - i * .4; const a1 = f > 0 ? .6 + i * .4 : Math.PI - .6 - i * .4; const a = a0 + (a1 - a0) * j / 4; piece(ctx, 'love', px + f * (20 + i * 22) + Math.cos(a) * 26, cy - i * 12 + Math.sin(a) * 26 + 10, .9 + j * .08, t, R, f, i * 5 + j); } break; // three leaping whip arcs of hearts
+    case 'sting': for (let i = 0; i < 3; i++) { const sx = px + f * (30 + i * 16); piece(ctx, 'sting', sx, cy - 10 + i * 10, 1.1, t, R, f, i); piece(ctx, 'sting', sx + f * 18, cy + i * 10, .8, t, R, f, i + 3); } break; // butterfly stabs
+    case 'sound': { for (const o of [0, Math.PI]) { const a = t * 20 + o; piece(ctx, 'sound', px + Math.cos(a) * 46, cy + Math.sin(a) * 18 + 10, 1.5, t, R, f, o); } for (let i = 0; i < 8; i++) { const a = i / 8 * TAU + t * 4; piece(ctx, 'sound', px + Math.cos(a) * (46 * kk + 10), cy + Math.sin(a) * (18 * kk + 5) + 10, .7, t, R, f, i + 2); } break; } // twin note blades spinning inside a ring of notes
     default: break;
   }
 }
@@ -647,8 +655,8 @@ function calm(p, st, k, m) {
     if (!s.waved && s.t >= dur) { s.waved = true; for (const t of foes(gw, p)) if ((t.x - p.x) * f > -20 && (t.x - p.x) * f < 160 && Math.abs(((t.z ?? p.z) - p.z) * DEPTH) < 50) strike(p, st, t, 18 + 14 * k, f * 520, 120, .5, true); quake(6, .2, 3); }
   }, draw: (ctx, s) => {
     const y = (p.y ?? 0); ctx.save(); ctx.lineWidth = 2;
-    if (s.t < dur) { ctx.globalAlpha = .55 + .25 * Math.sin(s.t * 6); ctx.strokeStyle = R.mid; ctx.beginPath(); ctx.ellipse(p.x, y - 40, 44, 56, 0, 0, TAU); ctx.stroke(); ctx.strokeStyle = R.light; ctx.beginPath(); ctx.ellipse(p.x, y, 50, 14, 0, 0, TAU); ctx.stroke(); }
-    else { const kk = (s.t - dur) / .4; ctx.globalAlpha = 1 - kk; ctx.strokeStyle = R.light; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(p.x + f * (30 + 120 * kk), y - 40, 40, f > 0 ? -1.2 : Math.PI - 1.2, f > 0 ? 1.2 : Math.PI + 1.2); ctx.stroke(); }
+    if (s.t < dur) { for (let i = 0; i < 8; i++) { const a = i / 8 * TAU + s.t * 1.5; piece(ctx, 'shield', p.x + Math.cos(a) * 40, y - 30 + Math.sin(a) * 50, 1.1, s.t, R, f, i); } }
+    else { const kk = (s.t - dur) / .4; ctx.globalAlpha = 1 - kk; if (!bigPiece(ctx, 'wind', p.x + f * (30 + 120 * kk), y - 40, 3, s.t, R, f > 0)) { ctx.strokeStyle = R.light; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(p.x + f * (30 + 120 * kk), y - 40, 40, f > 0 ? -1.2 : Math.PI - 1.2, f > 0 ? 1.2 : Math.PI + 1.2); ctx.stroke(); } }
     ctx.restore();
   } }), st.quality);
 }

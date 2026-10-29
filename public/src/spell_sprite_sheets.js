@@ -2671,6 +2671,26 @@ export const SPELL_SPRITE_SHEETS = Object.freeze({
   "anchor": "base",
   "baseOffset": 2
  },
+ "bw_wave_body": {
+  "name": "bw_wave_body",
+  "w": 16,
+  "h": 20,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 1
+ },
+ "bw_wave_crest": {
+  "name": "bw_wave_crest",
+  "w": 24,
+  "h": 30,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 1
+ },
  "bp_water": {
   "name": "bp_water",
   "w": 13,

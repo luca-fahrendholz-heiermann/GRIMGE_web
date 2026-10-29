@@ -103,4 +103,22 @@ const sound = () => sheet('sound', (s, f) => {
 const shard = (s, f, bx, by, ang, L, w) => { const ca = Math.cos(ang); const sa = Math.sin(ang); for (let j = 0; j <= L; j++) { const u = j / L; const ww = Math.round(w * (u < .7 ? 1 : (1 - u) / .3)); for (let d = -ww; d <= ww; d++) tone(s, f, bx + ca * j - sa * d, by + sa * j + ca * d, d === 0 ? 1 : d < 0 ? .67 : .33); } };
 const ice = () => sheet('ice', (s, f) => { shard(s, f, 12, 23, -Math.PI / 2 + .1, 20, 3); shard(s, f, 11, 22, -Math.PI / 2 - .7, 12, 2); shard(s, f, 14, 23, -Math.PI / 2 + .8, 11, 2); tone(s, f, 13 + (f % 2), 4 + f, 1); });
 
-module.exports = { breathSheets: () => [water(), serpent(), flame(), sun(), love(), steam(), bolt(), wind(), mist(), rock(), petal(), moon(), claw(), blast(), shield(), sting(), sound(), ice()] };
+
+// ── Flutwelle: a continuous wave (grey ramp, recoloured per style like the pieces) ──
+//   bw_wave_body  4×32×40 (base) a seamless rolling water body tile (surface swell, diagonal flow streaks, foam on the peaks)
+//   bw_wave_crest 4×48×60 (base) the breaking head: a tall face, the lip curling over a hollow tube, foam spray
+const waveBody = () => { const s = new Sheet('bw_wave_body', 32, 40, 4, { anchor: 'base', baseOffset: 1 }); for (let f = 0; f < 4; f++) {
+  const top = (x) => Math.round(17 + 3 * Math.sin(TAU * (x + f * 8) / 32) + 1.2 * Math.sin(TAU * 2 * (x + f * 8) / 32 + 1));
+  for (let x = 0; x < 32; x++) { const t0 = top(x); const peak = t0 <= 14; for (let y = t0; y < 40; y++) { const d = y - t0; let v = d < 2 ? (peak ? 1 : .67) : y > 35 ? 0 : .33; if (d > 4 && y <= 35 && ((x + f * 8 + y * 2) % 13) < 3) v = .67; if (d > 3 && y <= 35 && ((x + f * 8 + y * 2 + 6) % 17) === 0) v = 1; tone(s, f, x, y, v); } if (peak && (x + f) % 3 === 0) tone(s, f, x, t0 - 1, 1); }
+  B.selOutline(s, f, OUT); } return s; };
+const CREST = [[0, 59], [0, 38], [8, 32], [16, 24], [23, 15], [29, 9], [35, 6], [41, 7], [45, 11], [47, 17], [46, 23], [43, 26], [42, 21], [39, 17], [35, 16], [32, 20], [31, 27], [33, 35], [37, 44], [42, 52], [47, 59]];
+const inPoly = (P, x, y) => { let c = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) { const [xi, yi] = P[i]; const [xj, yj] = P[j]; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) c = !c; } return c; };
+const waveCrest = () => { const s = new Sheet('bw_wave_crest', 48, 60, 4, { anchor: 'base', baseOffset: 1 }); for (let f = 0; f < 4; f++) {
+  for (let y = 0; y < 60; y++) for (let x = 0; x < 48; x++) { if (!inPoly(CREST, x + .5, y + .5)) continue;
+    const lip = y < 22 && x > 30; const face = x > 30 && y >= 22; const edge = !inPoly(CREST, x + .5, y - 1.5);
+    let v = lip ? (((x + y + f) % 4) ? 1 : .67) : face ? .67 : .33; if (edge && !lip) v = .67; if (y > 55) v = 0;
+    if (!lip && y <= 55 && ((x + y * 2 + f * 5) % 12) < 2) v = face ? 1 : .67; tone(s, f, x, y, v); }
+  for (let k = 0; k < 10; k++) { const x = 40 + ((k * 5 + f * 3) % 8); const y = 1 + ((k * 7 + f * 4) % 9); tone(s, f, x, y, 1); }
+  for (let k = 0; k < 4; k++) tone(s, f, 44 + (k % 2), 27 + k * 2 + ((f + k) % 2), 1);
+  B.selOutline(s, f, OUT); } return s; };
+module.exports = { breathSheets: () => [waveBody(), waveCrest(), water(), serpent(), flame(), sun(), love(), steam(), bolt(), wind(), mist(), rock(), petal(), moon(), claw(), blast(), shield(), sting(), sound(), ice()] };

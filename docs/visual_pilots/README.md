@@ -659,3 +659,13 @@ Die Geschosse der Waffen (`drawShotPixel` in `weapons_ext.js`) sind jetzt knacki
 - **A03 — gegliederte Geisterarme:** Lange Arme (Hundert Fäuste, Säulenhände, Himmelsgriff) sind keine gestreckten roten Balken mehr, sondern Lack-Segmente mit Goldringen dazwischen und leichtem Schwung.
 
 - `v62_arcane_review.png`
+
+## v63 — Flutwelle als durchgehende Welle, große Atem-Formen gezeichnet (29.10.2026)
+
+- **Flutwelle:** eine durchgehende rollende Welle statt einer Reihe einzelner Kämme — Wellenkörper aus nahtlosen Kacheln (Wogen, schräge Strömungslinien, Schaum auf den Spitzen), die zur Spitze hin anwächst, vorne ein brechender Kamm mit überschlagender Lippe, hohlem Tunnel und Gischt. Graustufen, in die Stilfarbe umgefärbt.
+- **Sturmsicheln / Nachtpalast:** die großen Sicheln sind die gezeichneten Wind- bzw. Mondsicheln (konvexe Seite nach vorn).
+- **Mondwall:** eine stehende Wand aus drei Mondsicheln. **Reißen:** ein Krallen-X aus zwei gezeichneten Krallenrissen.
+- **Schattenpflaume, Stille See:** Kuppeln aus Hex-Schildsplittern; der Konter von Stille See ist eine Windsichel.
+- **Katzenschauer, Schmetterlingstanz, Hallende Hiebe:** Bögen aus Herzen, Schmetterlingsstiche, Noten-Ring — ohne Vektorlinien.
+
+- `v63_flutwelle.png`
