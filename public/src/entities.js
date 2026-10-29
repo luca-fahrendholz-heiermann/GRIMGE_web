@@ -11,7 +11,7 @@ import { WEAPONS, ThrownWeaponSpell, drawHeldWeapon, weaponMotion, makeWeaponSho
 import { drawBeastBomb, drawSpiritBow } from './form_attacks.js';
 import { FULL_CHARGE_TIME, activeMoveset, releaseFormTechnique, FORM_PALETTES } from './form_moves.js';
 import { releaseWeaponReach, releaseFormPull, isOnCastle, weaponReachShot } from './hold_actions.js';
-import { onStatusHit, setStatusSource, getStatusSource, isBladeLook, hasStatus, drawIceBlock } from './status_effects.js';
+import { onStatusHit, setStatusSource, getStatusSource, isBladeLook, hasStatus, drawIceBlock, applyStatus } from './status_effects.js';
 import { sceneAiHint, followSceneHint } from './scene_systems.js';
 import { tryAICounterDomain, tryAISpecial, updateAIRecast } from './ai_specials.js';
 import { formDive, FORM_SPECIAL_MANA, tickFormSpecials } from './form_specials.js';
@@ -694,9 +694,35 @@ export class Player extends GroundEntity {
     this.facing = mount.facing || this.facing;
   }
 
+  // Riding (user, 29 Oct 2026): in the saddle tap / swipe are the creature's own attacks —
+  //   wolf  tap = biting lunge          swipe = pounce, the landing hits all around
+  //   golem tap = a heavy fist ahead    swipe = ground stomp (shockwave all around)
+  //   snake tap = tail sweep both sides swipe = long venom bite (poison)
+  mountAttack(attackKind) {
+    const m = this.mountedSummon; if (!m || (this.mountAttackT ?? 0) > 0) return false;
+    const gw = window.gameWorld; const f = m.facing || this.facing || 1; const heavy = attackKind === 'heavy'; const col = m.definition.color;
+    const kind = /golem/.test(m.definition.id) ? 'golem' : m.definition.id === 'rune_snake' ? 'snake' : 'wolf';
+    const foes = (gw?.getHostileTargets?.(this.team) ?? []).filter((t) => !t.isDead && t.isAlive !== false && !t.isProp);
+    const r = m.radius ?? 16; const base = (m.damage ?? 12) * (this.buildModifiers?.summonDamage ?? 1);
+    const hitIf = (pred, mult, kx, lift, stun, onHit) => { let n = 0; for (const t of foes) { const dx = (t.x - m.x) * f; const dz = ((t.z ?? m.z) - m.z) * 150; if (!pred(dx, dz)) continue; const dir = kx === 'out' ? (Math.sign(t.x - m.x) || f) : f; t.takeDamage?.(Math.round(base * mult), dir * (kx === 'out' ? 260 : kx), lift, stun, false, 'summon'); combat.spawnHitSparks(t.x, (t.y ?? m.y) - 24, dir, col, 8); onHit?.(t); n++; } return n; };
+    const lunge = (dist) => { const px = m.x; const pz = m.z; m.x += f * dist; gw?.battlefield?.resolveEntityCollision?.(m); gw?.resolveSpellObstacles?.(m, px, pz); this.syncToMount(); combat.spawnDust(m.x, m.y, 4); };
+    let hits = 0;
+    if (kind === 'wolf' && !heavy) { lunge(46); hits = hitIf((dx, dz) => dx > -10 && dx < 74 + r && Math.abs(dz) < 28, 1.5, 220, 90, .3); combat.spawnSlashArc(m.x + f * 26, m.y - 20, f, { radius: 30, color: col, glow: col, width: 4 }); }
+    if (kind === 'wolf' && heavy) { lunge(130); hits = hitIf((dx, dz) => Math.hypot(dx, dz) < 74 + r, 2.2, 'out', 160, .45); combat.spawnShockwave(m.x, m.y - 6, 74, col); combat.shakeCamera?.(5, .15); }
+    if (kind === 'golem' && !heavy) { hits = hitIf((dx, dz) => dx > 0 && dx < 96 + r && Math.abs(dz) < 34, 2, 340, 140, .4); combat.spawnSlashArc(m.x + f * 40, m.y - 34, f, { radius: 44, color: col, glow: col, width: 6 }); combat.shakeCamera?.(4, .12); }
+    if (kind === 'golem' && heavy) { hits = hitIf((dx, dz) => Math.hypot(dx, dz) < 112 + r, 1.8, 'out', 200, .5); combat.spawnShockwave(m.x, m.y - 4, 120, col); combat.spawnDust(m.x, m.y, 10); combat.shakeCamera?.(9, .25); combat.triggerHitstop?.(4); }
+    if (kind === 'snake' && !heavy) { hits = hitIf((dx, dz) => Math.abs(dx) < 84 + r && Math.abs(dz) < 36, 1.4, 'out', 60, .3); combat.spawnSlashArc(m.x, m.y - 14, f, { radius: 70, color: col, glow: col, width: 5 }); combat.spawnSlashArc(m.x, m.y - 14, -f, { radius: 70, color: col, glow: col, width: 5 }); }
+    if (kind === 'snake' && heavy) { lunge(40); hits = hitIf((dx, dz) => dx > 0 && dx < 150 + r && Math.abs(dz) < 26, 2.2, 260, 70, .35, (t) => applyStatus(t, 'poison')); combat.spawnSlashArc(m.x + f * 70, m.y - 30, f, { radius: 60, color: col, glow: col, width: 5 }); }
+    if (hits) combat.triggerHitstop?.(2);
+    this.mountAttackT = heavy ? .7 : .38; m.state = 'attack'; m.animTime = 0;
+    this.state = 'attack1'; this.stateTimer = .25;
+    return true;
+  }
+
   updateMountedMovement(dt, input, battlefield, gameWorld, blocked) {
     const mount = this.mountedSummon;
     if (!mount) return;
+    this.mountAttackT = Math.max(0, (this.mountAttackT ?? 0) - dt);
     // Jump is a quick dismount. This keeps elevated Castle routes and combat
     // readable without giving ground summons fake flight physics.
     if (!blocked && input.justPressed('Space')) {
@@ -720,7 +746,7 @@ export class Player extends GroundEntity {
     if (Math.abs(move.x) > .02) mount.facing = Math.sign(move.x);
     mount.x += mount.vx * dt;
     mount.z += mount.vz * dt;
-    mount.state = moving ? 'run' : 'idle';
+    mount.state = this.mountAttackT > .1 ? 'attack' : moving ? 'run' : 'idle';
     battlefield.resolveEntityCollision(mount);
     gameWorld?.resolveSpellObstacles(mount, previousX, previousZ);
     this.syncToMount();
@@ -1123,6 +1149,7 @@ export class Player extends GroundEntity {
   // Take an item (block + down): a field weapon under the feet, or a throwable scene object close by
   // (boulder, keg, barrel, icicle) — carried overhead until thrown with sprint + swipe.
   tryTakeItem() {
+    if (this.isMounted && this.grabCooldown <= 0) { window.gameWorld?.toggleMount?.(); this.isGuarding = false; this.grabCooldown = .4; return true; }
     if (this.carrying && (this.carrying.isDead || this.carrying.carriedBy !== this)) this.carrying = null; // the carried object broke / was dropped
     if (!this.isAlive || this.grabCooldown > 0 || this.carrying) return false;
     const gw = window.gameWorld;
@@ -1131,6 +1158,7 @@ export class Player extends GroundEntity {
     // Own doppelgängers are objects too: taken overhead like a boulder and thrown at the foes.
     const dbl = obj ? null : spells.getSummons(this.team).find((d) => d.throwable && d.owner === this && !d.flight && !d.carriedBy && Math.abs(d.x - this.x) < 46 && Math.abs(((d.z ?? this.z) - this.z) * 150) < 24);
     const held = obj ?? dbl;
+    if (!held) { const mountable = gw?.updateMountCandidate?.(); if (mountable && gw.toggleMount()) { this.isGuarding = false; this.grabCooldown = .4; return true; } }
     if (!held?.carryBy?.(this)) return false;
     this.carrying = held; this.isGuarding = false; this.grabCooldown = .4; combat.spawnDamageText(this.x, this.y - 70, 'GETRAGEN', { color: '#ffd740' });
     return true;
@@ -1293,6 +1321,7 @@ export class Player extends GroundEntity {
 
   executeAttack(input, attackKind = 'normal') {
     if (!this.isAlive || this.isGuarding || this.burrowed || !window.gameWorld?.isMatchRunning?.()) return false;
+    if (this.isMounted && (attackKind === 'normal' || attackKind === 'heavy')) return this.mountAttack(attackKind);
     // A guided chain (guided_chains.js) owns every attack input while it runs: taps / swipes confirm its beats.
     if (this.guidedChain) return this.guidedChain.press(attackKind);
     // A stance may own attack inputs (S89 GRENZENLOS: swipe → Sog, tap → Stoß / Nichts); true = consumed.
