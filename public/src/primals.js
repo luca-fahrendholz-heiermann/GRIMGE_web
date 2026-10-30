@@ -34,6 +34,7 @@ import { combat } from './combat.js';
 import { GroundEntity, groundDistance } from './world.js';
 import { SIEGE_ZONES } from './siege_match.js';
 import { renderBondOverlay } from './primal_bond_vfx.js';
+import { dragonReady, drawDragon, drawDragonHead, drawBreathCone } from './spell_visuals.js';
 
 const U = 24;                 // px per Unity unit (lateral)
 const UZ = 1 / 6;             // z per Unity unit (depth)
@@ -42,7 +43,10 @@ const HP_SCALE = 3;
 export const PRIMAL_ARCHETYPES = Object.freeze({
   wolf: Object.freeze({ id: 'wolf', name: 'PRIMAL WOLF', role: 'HUNTER', aura: 'rgba(115,235,71,', variant: '#f2d12e' }),
   turtle: Object.freeze({ id: 'turtle', name: 'PRIMAL TURTLE', role: 'BULWARK', aura: 'rgba(56,173,209,', variant: '#57e0f0' }),
-  ape: Object.freeze({ id: 'ape', name: 'PRIMAL APE', role: 'BRAWLER', aura: 'rgba(176,108,255,', variant: '#c9a8ff' })
+  ape: Object.freeze({ id: 'ape', name: 'PRIMAL APE', role: 'BRAWLER', aura: 'rgba(176,108,255,', variant: '#c9a8ff' }),
+  // Prototype archetype (user, 29 Oct 2026: "Begleiter sollten fliegen können wie ein Drache — dann mounten"):
+  // a serpentine spirit dragon that grows over the stages, hovers, breathes fire and can be ridden through the air.
+  dragon: Object.freeze({ id: 'dragon', name: 'PRIMAL DRAGON', role: 'SKYRIDER', aura: 'rgba(255,145,0,', variant: '#ffb300' })
 });
 
 // BondForms/*.asset — index = evolution stage − 1.
@@ -59,6 +63,11 @@ export const BOND_FORMS = Object.freeze({
   ]),
   // Prototype archetype (no Unity asset): punch = melee damage, knock = melee
   // knockback, slam = Spirit Slam push, quake = chest-drum quake (damage, radius px).
+  dragon: Object.freeze([
+    Object.freeze({ name: 'Ember Wyrmling', stage: 1, presentation: 'overlay', drain: 1.1, move: 1.2, pounceCarry: 1.2, shellGuard: 1, fortified: 1, fortifiedDuration: 0, shellRushPush: 1 }),
+    Object.freeze({ name: 'Sky Wyrm', stage: 2, presentation: 'overlay', drain: 1.3, move: 1.3, pounceCarry: 1.35, shellGuard: .9, fortified: 1, fortifiedDuration: 0, shellRushPush: 1 }),
+    Object.freeze({ name: 'Elder Dragon', stage: 3, presentation: 'overlay', drain: 1.55, move: 1.4, pounceCarry: 1.5, shellGuard: .8, fortified: 1, fortifiedDuration: 0, shellRushPush: 1 })
+  ]),
   ape: Object.freeze([
     Object.freeze({ name: 'Spirit Rage', stage: 1, presentation: 'overlay', drain: 1.1, move: 1, pounceCarry: 1, shellGuard: 1, fortified: 1, fortifiedDuration: 0, shellRushPush: 1, punch: 1.15, knock: 1.2, slam: 1.25, quake: Object.freeze({ damage: 14, radius: 80 }) }),
     Object.freeze({ name: 'Silverback', stage: 2, presentation: 'replacement', drain: 1.3, move: 1.05, pounceCarry: 1, shellGuard: .85, fortified: 1, fortifiedDuration: 0, shellRushPush: 1, punch: 1.25, knock: 1.3, slam: 1.4, quake: Object.freeze({ damage: 20, radius: 100 }) }),
@@ -110,7 +119,22 @@ export class PrimalCompanion extends GroundEntity {
     this.hitRadiusX = 30; this.hitRadiusZ = .12;
     this.lastOwnerPresence = null;
     this.focusTarget = null;
+    this.isFlying = this.archetype === 'dragon'; this.rider = null; this.breathT = 0; this.diveT = 0;
   }
+
+  // ── Riding (user, 29 Oct 2026) — the same interface as a rideable summon (Wizard.mount / mountAttack) ──
+  get definition() {
+    const a = this.archetype; const dragon = a === 'dragon';
+    return { id: 'primal_' + a, name: this.info.name, color: this.info.variant, mountable: dragon || this.stage >= 2, flying: dragon,
+      mountSpeed: dragon ? 400 + this.stage * 25 : a === 'wolf' ? 420 : a === 'ape' ? 300 : 240,
+      riderOffsetY: dragon ? 8 + 6 * this.bodyScale : a === 'ape' ? 46 : a === 'turtle' ? 30 : 34 };
+  }
+  get damage() { return (this.archetype === 'ape' ? PRIMAL_STATS.punch : PRIMAL_STATS.bite).damage; }
+  get radius() { return this.archetype === 'dragon' ? 22 : 18; }
+  // The Dragon grows with its stage and swells to riding size under a rider.
+  get bodyScale() { return this.rider ? 1.15 : [.55, .78, 1][this.stage - 1]; }
+  get reachX() { return this.archetype === 'dragon' ? PRIMAL_STATS.attackReachX + 46 : PRIMAL_STATS.attackReachX; }
+  get hoverHeight() { return this.archetype === 'dragon' ? 30 + 8 * this.stage + Math.sin(this.animTime * 2.5) * 3 : 0; }
 
   // Sticky focus target: overrides the search until it falls.
   setFocusTarget(target) {
@@ -195,6 +219,7 @@ export class PrimalCompanion extends GroundEntity {
   }
 
   goDown() {
+    this.rider?.dismount?.(); this.rider = null;
     this.hp = 0;
     this.recoveryTimer = PRIMAL_STATS.recoveryTime;
     this.attack = null; this.interceptWindow = 0;
@@ -239,6 +264,9 @@ export class PrimalCompanion extends GroundEntity {
       if (this.recoveryTimer <= 0) this.respawn(game);
       return;
     }
+    this.breathT = Math.max(0, this.breathT - dt); this.diveT = Math.max(0, this.diveT - dt);
+    if (this.rider?.isAlive) { this.attack = null; this.target = null; this.vx = 0; this.vz = 0; if (this.state !== 'attack' || this.breathT <= 0) this.state = this.rider.state === 'run' ? 'run' : 'idle'; return; }
+    this.rider = null;
     const match = this.siegeMatch(game);
     if (match) this.updateSiegePresence(dt, game, match);
     else this.onLane = true;
@@ -290,14 +318,14 @@ export class PrimalCompanion extends GroundEntity {
         this.target = target;
         if (target) {
           const dx = target.x - this.x;
-          if (Math.abs(dx) <= PRIMAL_STATS.attackReachX + (target.isObjective ? 40 : 0) && Math.abs(target.z - this.z) <= PRIMAL_STATS.attackReachZ + .05) {
+          if (Math.abs(dx) <= this.reachX + (target.isObjective ? 40 : 0) && Math.abs(target.z - this.z) <= PRIMAL_STATS.attackReachZ + .05) {
             this.facing = Math.sign(dx) || this.facing;
             this.startBite(target);
             this.integrate(dt, game);
             return;
           }
           // Close in well inside the bite reach (the steering stops a few px short).
-          goal = { x: target.x - Math.sign(dx || 1) * PRIMAL_STATS.attackReachX * .5, z: target.z };
+          goal = { x: target.x - Math.sign(dx || 1) * this.reachX * .5, z: target.z };
         } else if (this.mode === 'owner') {
           goal = { x: owner.x + PRIMAL_STATS.followOffsetX * (owner.facing || 1), z: owner.z + PRIMAL_STATS.followOffsetZ };
           if (groundDistance(this, goal) <= PRIMAL_STATS.followDistance) goal = null;
@@ -350,8 +378,9 @@ export class PrimalCompanion extends GroundEntity {
     if (!a.struck && a.t >= bite.windup) {
       a.struck = true;
       const t = a.target;
-      if (t && !t.isDead && t.lifeState !== 'Dead' && Math.abs(t.x - this.x) <= PRIMAL_STATS.attackReachX + 20 + (t.isObjective ? 40 : 0)) {
-        t.takeDamage(bite.damage, this.facing * (bite.kx ?? 120), bite.lift ?? 30, .2, false, 'melee');
+      if (this.archetype === 'dragon') this.breathT = .4; // the Dragon breathes fire instead of biting
+      if (t && !t.isDead && t.lifeState !== 'Dead' && Math.abs(t.x - this.x) <= this.reachX + 20 + (t.isObjective ? 40 : 0)) {
+        t.takeDamage(Math.round(bite.damage * (this.archetype === 'dragon' ? 1.15 : 1)), this.facing * (bite.kx ?? 120), bite.lift ?? 30, .2, false, this.archetype === 'dragon' ? 'fire' : 'melee');
         combat.spawnHitSparks(t.x, (t.y ?? this.y) - 24, this.facing, this.info.variant, 6);
         audio.playSlash?.(1.7);
       }
@@ -365,6 +394,7 @@ export class PrimalCompanion extends GroundEntity {
     this.x += (this.vx + this.kbVelX) * dt; this.z += this.vz * dt;
     game.battlefield.resolveEntityCollision(this);
     game.resolveSpellObstacles?.(this, px, pz);
+    if (this.isFlying) { this.elevation = this.hoverHeight; this.grounded = false; this.vElevation = 0; }
   }
 
   render(ctx) {
@@ -381,16 +411,35 @@ export class PrimalCompanion extends GroundEntity {
       ctx.beginPath(); ctx.arc(x, y - 18, 24, 0, Math.PI * 2); ctx.stroke();
     }
     ctx.globalCompositeOperation = 'source-over';
+    if (this.archetype === 'dragon' && this.renderDragon(ctx)) { ctx.restore(); this.renderHealth(ctx); return; }
     ctx.translate(x, y - bob); ctx.scale(f * 1.35, 1.35);
     if (this.archetype === 'wolf') drawWolf(ctx, this.hitFlash > 0, this.state === 'attack', this.animTime);
     else if (this.archetype === 'ape') drawApe(ctx, this.hitFlash > 0, this.state === 'attack', this.animTime);
     else drawTurtle(ctx, this.hitFlash > 0, this.state === 'attack', this.animTime);
     ctx.restore();
-    // Health.
+    this.renderHealth(ctx);
+  }
+
+  renderHealth(ctx) {
+    const x = this.x; const y = this.y - (this.isFlying ? 30 * this.bodyScale : 0);
     ctx.save();
     ctx.fillStyle = 'rgba(0,0,0,.75)'; ctx.fillRect(x - 16, y - 54, 32, 4);
     ctx.fillStyle = this.info.variant; ctx.fillRect(x - 16, y - 54, 32 * this.hp / this.maxHp, 4);
     ctx.restore();
+  }
+
+  // A serpentine spirit dragon (the hand-drawn dragon kit): the head leads, the body waves behind, a shadow on
+  // the ground below; fire breath when it attacks. False when the kit is missing (fallback: the wolf body).
+  renderDragon(ctx) {
+    const look = dragonReady('ember') ? 'ember' : dragonReady('sun') ? 'sun' : null; if (!look) return false;
+    const sc = this.bodyScale; const f = this.facing || 1; const t = this.animTime; const run = this.state === 'run';
+    const gy = this.y + this.elevation; const hx = this.x + f * (this.rider ? 36 : 18) * sc; const hy = this.y - 8 * sc; // a rider sits on the fore body
+    ctx.save(); ctx.globalAlpha = .35; ctx.fillStyle = '#000000'; ctx.beginPath(); ctx.ellipse(this.x - f * 10 * sc, gy, 34 * sc, 7 * sc, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+    const spine = [[hx, hy]]; for (let j = 1; j <= 16; j++) spine.push([hx - f * j * 6.5 * sc, hy + 6 * sc + Math.sin(t * (run ? 9 : 5) - j * .65) * (5 + j * .35) * sc - j * .4 * sc]);
+    drawDragon(ctx, look, spine.slice(1), { thickness: .62 * sc, alpha: this.hitFlash > 0 ? .7 : 1, t });
+    drawDragonHead(ctx, look, hx, hy, spine[0][0] - spine[1][0], spine[0][1] - spine[1][1], .55 * sc, this.breathT > 0 ? 1 : .15, 1);
+    if (this.breathT > 0) drawBreathCone(ctx, hx + f * 12 * sc, hy + 2, f, (this.rider ? 150 : 90) * Math.min(1, (.4 - this.breathT) * 6 + .2), t, .8);
+    return true;
   }
 }
 

@@ -1459,16 +1459,16 @@ export class GameWorld {
     if (this.player.isMounted) {
       const name = this.player.mountedSummon.definition.name;
       this.player.dismount();
-      this.showAnnouncement(`DISMOUNTED: ${name}`, 1.1);
+      this.showAnnouncement(`ABGESTIEGEN: ${name}`, 1.1);
       return true;
     }
     const mount = this.updateMountCandidate();
     if (!mount) {
-      this.showAnnouncement('MOVE CLOSE TO YOUR WOLF OR GOLEM TO MOUNT', 1.25);
+      this.showAnnouncement('GEH NÄHER AN DEIN REITTIER (WOLF, GOLEM, SPINNE, PRIMAL …) — DANN R ODER BLOCK + RUNTER', 1.5);
       return false;
     }
     if (!this.player.mount(mount)) return false;
-    this.showAnnouncement(`RIDING: ${mount.definition.name}  [R TO DISMOUNT]`, 1.25);
+    this.showAnnouncement(`REITEN: ${mount.definition.name}${mount.definition.flying ? ' — FLIEGT' : ''}  ·  TIPPEN / WISCHEN = ANGRIFFE  ·  R ODER BLOCK + RUNTER = ABSTEIGEN`, 1.8);
     return true;
   }
 
@@ -1486,7 +1486,9 @@ export class GameWorld {
     // Preserve the current target through a small range margin. This stops
     // the contextual UI from flickering between two equally close mounts.
     if (this.isValidMountCandidate(this.mountCandidate, 84)) return this.mountCandidate;
-    const candidates = spells.getSummons(this.player.team)
+    // Rideable summons and the own Primal (the Dragon from stage 1, the others from stage 2).
+    const own = this.primal && this.primal.team === this.player.team && !this.primal.isDead ? [this.primal] : [];
+    const candidates = [...spells.getSummons(this.player.team), ...own]
       .filter((summon) => this.isValidMountCandidate(summon));
     candidates.sort((a, b) => groundDistance(this.player, a) - groundDistance(this.player, b));
     this.mountCandidate = candidates[0] ?? null;
@@ -2624,7 +2626,7 @@ export class GameWorld {
 
   // Training: cycle NONE → WOLF I–III → TURTLE I–III → APE I–III (B / PRIMAL button).
   cyclePrimal() {
-    const order = ['none', 'wolf:1', 'wolf:2', 'wolf:3', 'turtle:1', 'turtle:2', 'turtle:3', 'ape:1', 'ape:2', 'ape:3'];
+    const order = ['none', 'wolf:1', 'wolf:2', 'wolf:3', 'turtle:1', 'turtle:2', 'turtle:3', 'ape:1', 'ape:2', 'ape:3', 'dragon:1', 'dragon:2', 'dragon:3'];
     const current = this.primalChoice === 'none' ? 'none' : `${this.primalChoice}:${this.primalStage}`;
     const next = order[(order.indexOf(current) + 1) % order.length];
     const [choice, stage] = next.split(':');

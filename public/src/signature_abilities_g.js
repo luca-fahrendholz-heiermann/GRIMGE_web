@@ -317,11 +317,11 @@ export const DOMAIN_RULES = Object.freeze({
     },
     finale(d, gw, left) { for (const t of d.foesInside(gw)) { hit(t, Math.round((14 + left * 5) * d.power), 0, 0, .6, true); for (let i = -1; i <= 1; i++) d.fx.push({ type: 'blade', t: -i * .05 - .05, x: t.x + i * 14, z: t.z ?? d.cz, big: true }); } },
     interior(ctx, d, x, y, rx, ry, h, k, fade) {
-      // A forge: hanging swords turning slowly, sparks from an anvil glow.
+      // A forge: freshly forged blades hanging point down (white-hot edges), sparks from an anvil glow.
       for (let i = 0; i < 9; i++) {
         const bx = x - rx * .8 + i * rx * .2; const by = y - h * (.55 + (i % 3) * .1) + Math.sin(d.t * 2 + i) * 4; const a = Math.sin(d.t + i) * .3;
-        ctx.save(); ctx.translate(bx, by); ctx.rotate(Math.PI / 2 + a); ctx.globalAlpha = fade;
-        if (!prop(ctx, 'w_sword', 0, 0, 0, k * .9, { anchor: 'center' })) { ctx.fillStyle = '#cfd8dc'; ctx.fillRect(-13, -2, 26, 4); }
+        ctx.save(); ctx.translate(bx, by); ctx.rotate(a); ctx.globalAlpha = fade;
+        if (!prop(ctx, 'dw_blade', (Math.floor(d.t * 3) + i) % 2, 0, 0, k * (.85 + (i % 3) * .1), { anchor: 'center' })) { ctx.fillStyle = '#cfd8dc'; ctx.fillRect(-2, -13, 4, 26); }
         ctx.restore();
       }
       ctx.fillStyle = '#ffab00'; for (let i = 0; i < 10; i++) { const ph = (d.t * 1.5 + i / 10) % 1; ctx.globalAlpha = fade * (1 - ph); ctx.fillRect(Math.round(x + Math.cos(i * 2.4) * 30 * ph), Math.round(y - 10 - ph * 40), 2, 2); }

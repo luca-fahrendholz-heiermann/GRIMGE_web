@@ -686,3 +686,12 @@ Die Geschosse der Waffen (`drawShotPixel` in `weapons_ext.js`) sind jetzt knacki
 - **T40 Himmelswendel:** der aufsteigende Wyrm bricht schon auf halber Höhe hervor, windet sich weiter und dicker, mit dichter Wirbelsäule — ein geschlossener Leib statt dünner Streifen.
 
 - `v65_mal_wyrm.png`
+
+## v66 — Primal-Drache, Reiten erweitert, Sphären-Feinschliff (30.10.2026)
+
+- **Neuer Begleiter: PRIMAL DRAGON (Skyrider)** — ein schlanker Geisterdrache aus dem gezeichneten Drachen-Kit, wächst über drei Stufen (Glutwurm → Himmelswurm → Urdrache), schwebt, speit Feuer statt zu beißen; Bond: kleiner Drache um den Rücken, Kopf auf der Schulter (nie übers Gesicht). Im Hub und per Training-Zyklus wählbar.
+- **Reiten:** der Drache ist ab Stufe 1 reitbar und **fliegt** mit dem Reiter (Schwebehöhe, Sturzflug); Wolf, Schildkröte, Affe ab Stufe 2 (am Boden); die **Leerenspinne** ist reitbar und hat jetzt einen gezeichneten Körper (statt Kasten). Angriffe im Sattel: Drache Feueratem (verbrennt) / Sturzflug mit Flächentreffer; Spinne Giftbiss (verlangsamt) / Netzstoß rundum; Affe & Schildkröte wie der Golem (Faust / Stampfen). Der Reiter bleibt beim Tierangriff ruhig sitzen.
+- **Ansagen auf Deutsch:** „REITEN: … — FLIEGT · TIPPEN / WISCHEN = ANGRIFFE · R ODER BLOCK + RUNTER = ABSTEIGEN“, Hinweis bei fehlendem Reittier, „ABGESTIEGEN“.
+- **Sphären:** Sturmwolken als runde dunkle Wolkenballen (von oben links beleuchtet, Blitzlicht von unten); Schattenbestien dunkelviolett mit hellem Rand (auf dem schwarzen Meer lesbar); Klingenschmiede mit frisch geschmiedeten Klingen (Stahl, weißglühende Kanten, Goldparierstange).
+
+- `v66_drache_reiten.png`

@@ -2853,6 +2853,15 @@ export const SPELL_SPRITE_SHEETS = Object.freeze({
   "hd": true,
   "anchor": "center"
  },
+ "dw_blade": {
+  "name": "dw_blade",
+  "w": 7,
+  "h": 25,
+  "frames": 2,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
  "dw_eclipse": {
   "name": "dw_eclipse",
   "w": 32,
@@ -2982,6 +2991,16 @@ export const SPELL_SPRITE_SHEETS = Object.freeze({
   "w": 12,
   "h": 55,
   "frames": 1,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 1
+ },
+ "summon_void_spider": {
+  "name": "summon_void_spider",
+  "w": 30,
+  "h": 20,
+  "frames": 4,
   "res": 2,
   "hd": true,
   "anchor": "base",

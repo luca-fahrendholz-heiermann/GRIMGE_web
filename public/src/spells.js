@@ -41,7 +41,7 @@ export const SUMMON_DEFINITIONS = Object.freeze({
   storm_wolf: Object.freeze({ id: 'storm_wolf', spriteKey: 'storm_wolf', name: 'STORM WOLF', hp: 86, duration: 11, speed: 275, attackRange: 42, damage: 23, attackCooldown: .62, radius: 17, color: '#ffd54f', role: 'hunter', particleElement: 'fulgur', mountable: true, mountSpeed: 465, riderOffsetY: 42 }),
   siege_golem: Object.freeze({ id: 'siege_golem', name: 'SIEGE GOLEM', hp: 260, duration: 16, speed: 105, attackRange: 48, damage: 38, attackCooldown: 1.15, radius: 25, color: '#a1887f', role: 'vanguard', mountable: true, mountSpeed: 245, riderOffsetY: 64 }),
   rune_golem: Object.freeze({ id: 'rune_golem', spriteKey: 'siege_golem', name: 'RUNE GOLEM', hp: 235, duration: 15, speed: 120, attackRange: 48, damage: 32, attackCooldown: 1.0, radius: 24, color: '#b0bec5', role: 'vanguard', mountable: true, mountSpeed: 260, riderOffsetY: 64 }),
-  void_spider: Object.freeze({ id: 'void_spider', spriteKey: 'void_spider', name: 'VOID SPIDER', hp: 125, duration: 14, speed: 178, attackRange: 54, damage: 14, attackCooldown: .9, radius: 22, color: '#d500f9', role: 'control', particleElement: 'void', slowDuration: 1.35, slowFactor: .45 }),
+  void_spider: Object.freeze({ id: 'void_spider', spriteKey: 'void_spider', name: 'VOID SPIDER', hp: 125, duration: 14, speed: 178, attackRange: 54, damage: 14, attackCooldown: .9, radius: 22, color: '#d500f9', role: 'control', particleElement: 'void', slowDuration: 1.35, slowFactor: .45, mountable: true, mountSpeed: 360, riderOffsetY: 40 }),
   // Solo special runes. A shadow double copies its caster's look; a revenant
   // borrows the body of a fallen fighter and bursts when it breaks.
   shadow_double: Object.freeze({ id: 'shadow_double', name: 'SHADOW DOUBLE', hp: 120, duration: 28, speed: 300, attackRange: 40, damage: 16, attackCooldown: .7, radius: 16, color: '#5e35b1', role: 'doppel', particleElement: 'void', limitKey: 'extraDoppels' }),
@@ -2268,6 +2268,13 @@ class SummonedCreature extends GroundEntity {
     const spriteKey = this.definition.spriteKey ?? this.definition.id;
     if (this.spriteManager?.renderSummon(ctx, spriteKey, this.x, this.y, { facing: this.facing, state: this.state, animTime: this.animTime, visualHeight: spriteKey === 'siege_golem' ? 84 : spriteKey === 'rune_snake' ? 90 : 58 })) {
       ctx.save(); ctx.fillStyle = 'rgba(0,0,0,.75)'; ctx.fillRect(this.x - 17, this.y - 64, 34, 4); ctx.fillStyle = color; ctx.fillRect(this.x - 17, this.y - 64, 34 * (this.hp / this.maxHp), 4); ctx.restore();
+      return;
+    }
+    // Drawn bodies for summons without a character sprite (art/authoring/vfx_summons.cjs).
+    const drawn = 'summon_' + this.definition.id;
+    if (spellSheetReady(drawn)) {
+      drawSpellSprite(ctx, drawn, this.state === 'idle' ? 0 : Math.floor(this.animTime * (this.state === 'attack' ? 14 : 10)) % 4, this.x, this.y, { flip: this.facing < 0, alpha: this.hitFlash > 0 ? .7 : 1 });
+      ctx.save(); ctx.fillStyle = 'rgba(0,0,0,.75)'; ctx.fillRect(this.x - 17, this.y - 46, 34, 4); ctx.fillStyle = color; ctx.fillRect(this.x - 17, this.y - 46, 34 * (this.hp / this.maxHp), 4); ctx.restore();
       return;
     }
     ctx.save(); ctx.translate(this.x, this.y - 20);

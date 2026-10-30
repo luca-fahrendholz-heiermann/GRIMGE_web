@@ -701,7 +701,7 @@ export class Player extends GroundEntity {
   mountAttack(attackKind) {
     const m = this.mountedSummon; if (!m || (this.mountAttackT ?? 0) > 0) return false;
     const gw = window.gameWorld; const f = m.facing || this.facing || 1; const heavy = attackKind === 'heavy'; const col = m.definition.color;
-    const kind = /golem/.test(m.definition.id) ? 'golem' : m.definition.id === 'rune_snake' ? 'snake' : 'wolf';
+    const id = m.definition.id; const kind = /golem|primal_ape|primal_turtle/.test(id) ? 'golem' : id === 'rune_snake' ? 'snake' : id === 'void_spider' ? 'spider' : id === 'primal_dragon' ? 'dragon' : 'wolf';
     const foes = (gw?.getHostileTargets?.(this.team) ?? []).filter((t) => !t.isDead && t.isAlive !== false && !t.isProp);
     const r = m.radius ?? 16; const base = (m.damage ?? 12) * (this.buildModifiers?.summonDamage ?? 1);
     const hitIf = (pred, mult, kx, lift, stun, onHit) => { let n = 0; for (const t of foes) { const dx = (t.x - m.x) * f; const dz = ((t.z ?? m.z) - m.z) * 150; if (!pred(dx, dz)) continue; const dir = kx === 'out' ? (Math.sign(t.x - m.x) || f) : f; t.takeDamage?.(Math.round(base * mult), dir * (kx === 'out' ? 260 : kx), lift, stun, false, 'summon'); combat.spawnHitSparks(t.x, (t.y ?? m.y) - 24, dir, col, 8); onHit?.(t); n++; } return n; };
@@ -713,9 +713,13 @@ export class Player extends GroundEntity {
     if (kind === 'golem' && heavy) { hits = hitIf((dx, dz) => Math.hypot(dx, dz) < 112 + r, 1.8, 'out', 200, .5); combat.spawnShockwave(m.x, m.y - 4, 120, col); combat.spawnDust(m.x, m.y, 10); combat.shakeCamera?.(9, .25); combat.triggerHitstop?.(4); }
     if (kind === 'snake' && !heavy) { hits = hitIf((dx, dz) => Math.abs(dx) < 84 + r && Math.abs(dz) < 36, 1.4, 'out', 60, .3); combat.spawnSlashArc(m.x, m.y - 14, f, { radius: 70, color: col, glow: col, width: 5 }); combat.spawnSlashArc(m.x, m.y - 14, -f, { radius: 70, color: col, glow: col, width: 5 }); }
     if (kind === 'snake' && heavy) { lunge(40); hits = hitIf((dx, dz) => dx > 0 && dx < 150 + r && Math.abs(dz) < 26, 2.2, 260, 70, .35, (t) => applyStatus(t, 'poison')); combat.spawnSlashArc(m.x + f * 70, m.y - 30, f, { radius: 60, color: col, glow: col, width: 5 }); }
+    // Spider: a venom bite that webs the foe / a web burst all around. Dragon: fire breath ahead / a swooping dive.
+    if (kind === 'spider' && !heavy) { lunge(30); hits = hitIf((dx, dz) => dx > -10 && dx < 70 + r && Math.abs(dz) < 30, 1.5, 160, 60, .3, (t) => t.slow?.(1.4, .45)); combat.spawnSlashArc(m.x + f * 24, m.y - 16, f, { radius: 30, color: col, glow: col, width: 4 }); }
+    if (kind === 'spider' && heavy) { hits = hitIf((dx, dz) => Math.hypot(dx, dz) < 96 + r, 1.2, 'out', 40, .4, (t) => t.slow?.(2.4, .35)); combat.spawnShockwave(m.x, m.y - 6, 100, col); }
+    if (kind === 'dragon' && !heavy) { m.breathT = .45; m.state = 'attack'; hits = hitIf((dx, dz) => dx > 0 && dx < 150 + r && Math.abs(dz) < 34 + dx * .12, 1.7, 180, 50, .25, (t) => applyStatus(t, 'burn')); }
+    if (kind === 'dragon' && heavy) { m.diveT = .45; lunge(90); hits = hitIf((dx, dz) => Math.hypot(dx, dz) < 92 + r, 2.3, 'out', 220, .5); combat.spawnShockwave(m.x, m.y + (m.elevation ?? 0) - 4, 96, col); combat.shakeCamera?.(7, .2); }
     if (hits) combat.triggerHitstop?.(2);
-    this.mountAttackT = heavy ? .7 : .38; m.state = 'attack'; m.animTime = 0;
-    this.state = 'attack1'; this.stateTimer = .25;
+    this.mountAttackT = heavy ? .7 : .38; m.state = 'attack'; m.animTime = 0; // the creature attacks — the rider stays seated
     return true;
   }
 
@@ -749,6 +753,7 @@ export class Player extends GroundEntity {
     mount.state = this.mountAttackT > .1 ? 'attack' : moving ? 'run' : 'idle';
     battlefield.resolveEntityCollision(mount);
     gameWorld?.resolveSpellObstacles(mount, previousX, previousZ);
+    if (mount.definition.flying) { const dive = (mount.diveT ?? 0) > 0 ? Math.sin(Math.PI * (1 - mount.diveT / .45)) : 0; mount.elevation = (64 + Math.sin((mount.animTime ?? 0) * 2.5) * 3) * (1 - .85 * dive); mount.grounded = false; mount.vElevation = 0; }
     this.syncToMount();
     this.state = moving && !ACTION_STATES.has(this.state) ? 'run' : this.state;
     if (!moving && this.state === 'run') this.state = 'idle';

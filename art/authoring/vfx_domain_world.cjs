@@ -67,13 +67,13 @@ function blackhole() { const s = S('dw_blackhole', 100, 44, 4); const d = ramp('
     B.selOutline(s, f, OUT('#000000')); } return s; }
 
 function stormcloud() { const s = S('dw_stormcloud', 84, 34, 4); const c = ramp('#0b1118', '#1f2b38', '#2b3a4d', '#455a70', '#90caf9', '#e1f5fe');
-  for (let f = 0; f < 4; f++) { const lit = f === 3; for (const [cx, cy, r] of [[20, 20, 12], [38, 15, 15], [58, 17, 13], [72, 22, 9], [46, 24, 12]]) { const blob = B.noisyBlob(cx + (f % 2), cy, r, cx + cy, .2, .7); for (let y = 0; y < 34; y++) for (let x = 0; x < 84; x++) if (blob(x, y)) tone(s, f, c, x, y, (y < cy - r * .3 ? .5 : y > cy + r * .3 ? (lit ? .8 : .1) : .3) + (((x + y * 3 + f) % 17) === 0 ? .15 : 0)); }
+  for (let f = 0; f < 4; f++) { const lit = f === 3; for (const [cx, cy, r] of [[14, 22, 10], [28, 17, 13], [44, 13, 15], [60, 16, 13], [73, 21, 9], [38, 24, 11], [54, 25, 10]]) { const blob = B.noisyBlob(cx + (f % 2), cy, r, cx + cy, .08, .75); for (let y = 0; y < 34; y++) for (let x = 0; x < 84; x++) if (blob(x, y)) { const u = (x - cx) / r; const v = (y - cy) / (r * .75); const lightT = -(u + v) * .5; tone(s, f, c, x, y, v > .45 ? (lit ? .82 : .08) : lightT > .35 ? .55 : lightT > -.1 ? .32 : .18); } }
     B.selOutline(s, f, OUT('#05080c')); } return s; }
 
-function beast() { const s = S('dw_beast', 40, 48, 4, true); const k = ramp('#000000', '#12101e', '#311b92', '#7e57c2'); const eye = ramp('#d1c4e9', '#ffffff');
+function beast() { const s = S('dw_beast', 40, 48, 4, true); const k = ramp('#05030a', '#241a42', '#4a3585', '#9d8bd6'); const eye = ramp('#d1c4e9', '#ffffff');
   for (let f = 0; f < 4; f++) { const bob = Math.round(Math.sin(f / 4 * TAU) * 1.5);
-    disc(s, f, k, 20, 34 + bob, 15, 14, (x, y, e) => (e > .85 && x < 0 && y < 0 ? .67 : 0)); for (let y = 34; y < 48; y++) for (let x = -15; x <= 15; x++) tone(s, f, k, 20 + x, y + bob, 0);
-    for (const sg of [-1, 1]) for (let j = 0; j < 14; j++) { const w = Math.max(0, Math.round(3 * (1 - j / 14))); for (let x = -w; x <= w; x++) tone(s, f, k, 20 + sg * (9 + j * .4) + x, 24 - j + bob, x === -w ? .67 : 0); }
+    disc(s, f, k, 20, 34 + bob, 15, 14, (x, y, e) => (e > .8 && y < 0 ? (x < 0 ? 1 : .67) : .33)); for (let y = 34; y < 48; y++) for (let x = -15; x <= 15; x++) tone(s, f, k, 20 + x, y + bob, Math.abs(x) > 13 ? .67 : y > 44 ? 0 : .33);
+    for (const sg of [-1, 1]) for (let j = 0; j < 14; j++) { const w = Math.max(0, Math.round(3 * (1 - j / 14))); for (let x = -w; x <= w; x++) tone(s, f, k, 20 + sg * (9 + j * .4) + x, 24 - j + bob, x === -w ? 1 : .33); }
     if (f !== 3) for (const sg of [-1, 1]) { tone(s, f, eye, 20 + sg * 6, 32 + bob, 1); tone(s, f, eye, 20 + sg * 6 + sg, 32 + bob, 0); tone(s, f, eye, 20 + sg * 6, 33 + bob, 0); } else for (const sg of [-1, 1]) line(s, f, eye, 20 + sg * 5, 33 + bob, 20 + sg * 7, 33 + bob, 0);
     B.selOutline(s, f, OUT('#000000'), OUT('#7e57c2')); } return s; }
 
@@ -99,4 +99,11 @@ function pillar() { const s = S('dw_pillar', 24, 110, 1, true); const g = ramp('
   for (const [y0, y1, w] of [[0, 4, 11], [4, 10, 9], [100, 104, 9], [104, 110, 11]]) for (let y = y0; y < y1; y++) for (let x = -w; x <= w; x++) tone(s, 0, g, 12 + x, y, y === y0 ? 1 : x < 0 ? .75 : .45);
   B.selOutline(s, 0, OUT('#2a1a04')); return s; }
 
-module.exports = { domainWorldSheets: () => [eclipse(), clock(), lavafall(), crust(), tree(), mirror(), blackhole(), stormcloud(), beast(), stalactite(), boulder(), kelp(), pine(), pillar()] };
+function forgeBlade() { const s = S('dw_blade', 14, 50, 2); const st = ramp('#263238', '#546e7a', '#b0bec5', '#eceff1'); const hot = ramp('#bf360c', '#ff6d00', '#ffd180', '#fffde7'); const g = ramp('#5a3a08', '#c9a227', '#ffe082'); const lea = ramp('#2a1a10', '#5d4037');
+  for (let f = 0; f < 2; f++) {
+    for (let y = 0; y < 8; y++) for (let x = -1; x <= 1; x++) tone(s, f, lea, 7 + x, y, x < 0 ? 1 : 0); disc(s, f, g, 7, 1, 2, 1.5, () => 1);
+    for (let x = -6; x <= 6; x++) for (let y = 8; y <= 10; y++) tone(s, f, g, 7 + x, y, y === 8 ? 2 : 1);
+    for (let y = 11; y < 49; y++) { const w = y > 40 ? Math.round(3 * (49 - y) / 9) : 3; for (let x = -w; x <= w; x++) { const heat = (y - 30) / 19 + (f ? .15 : 0); if (heat > .2 && Math.abs(x) >= w - 1) tone(s, f, hot, 7 + x, y, heat); else tone(s, f, st, 7 + x, y, x < 0 ? .8 : x === 0 ? 1 : .4); } }
+    B.selOutline(s, f, OUT('#0b0f12')); } return s; }
+
+module.exports = { domainWorldSheets: () => [forgeBlade(), eclipse(), clock(), lavafall(), crust(), tree(), mirror(), blackhole(), stormcloud(), beast(), stalactite(), boulder(), kelp(), pine(), pillar()] };
