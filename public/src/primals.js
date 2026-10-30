@@ -438,7 +438,7 @@ export class PrimalCompanion extends GroundEntity {
     const spine = [[hx, hy]]; for (let j = 1; j <= 16; j++) spine.push([hx - f * j * 6.5 * sc, hy + 6 * sc + Math.sin(t * (run ? 9 : 5) - j * .65) * (5 + j * .35) * sc - j * .4 * sc]);
     drawDragon(ctx, look, spine.slice(1), { thickness: .62 * sc, alpha: this.hitFlash > 0 ? .7 : 1, t });
     drawDragonHead(ctx, look, hx, hy, spine[0][0] - spine[1][0], spine[0][1] - spine[1][1], .55 * sc, this.breathT > 0 ? 1 : .15, 1);
-    if (this.breathT > 0) drawBreathCone(ctx, hx + f * 12 * sc, hy + 2, f, (this.rider ? 150 : 90) * Math.min(1, (.4 - this.breathT) * 6 + .2), t, .8);
+    if (this.breathT > 0) drawBreathCone(ctx, hx + f * 12 * sc, hy + 2, f, (this.rider ? 150 : 90) * Math.min(1, Math.max(.2, (.45 - this.breathT) * 6 + .2)), t, .8);
     return true;
   }
 }
