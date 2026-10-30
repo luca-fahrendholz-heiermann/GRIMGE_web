@@ -34,7 +34,7 @@ import { combat } from './combat.js';
 import { GroundEntity, groundDistance } from './world.js';
 import { SIEGE_ZONES } from './siege_match.js';
 import { renderBondOverlay } from './primal_bond_vfx.js';
-import { dragonReady, drawDragon, drawDragonHead, drawBreathCone } from './spell_visuals.js';
+import { dragonReady, drawDragon, drawBreathCone } from './spell_visuals.js';
 
 const U = 24;                 // px per Unity unit (lateral)
 const UZ = 1 / 6;             // z per Unity unit (depth)
@@ -127,7 +127,7 @@ export class PrimalCompanion extends GroundEntity {
     const a = this.archetype; const dragon = a === 'dragon';
     return { id: 'primal_' + a, name: this.info.name, color: this.info.variant, mountable: dragon || this.stage >= 2, flying: dragon,
       mountSpeed: dragon ? 400 + this.stage * 25 : a === 'wolf' ? 420 : a === 'ape' ? 300 : 240,
-      riderOffsetY: dragon ? 8 + 6 * this.bodyScale : a === 'ape' ? 46 : a === 'turtle' ? 30 : 34 };
+      riderOffsetY: dragon ? 8 + 6 * this.bodyScale : a === 'ape' ? 58 : a === 'turtle' ? 34 : 40 };
   }
   get damage() { return (this.archetype === 'ape' ? PRIMAL_STATS.punch : PRIMAL_STATS.bite).damage; }
   get radius() { return this.archetype === 'dragon' ? 22 : 18; }
@@ -412,7 +412,8 @@ export class PrimalCompanion extends GroundEntity {
     }
     ctx.globalCompositeOperation = 'source-over';
     if (this.archetype === 'dragon' && this.renderDragon(ctx)) { ctx.restore(); this.renderHealth(ctx); return; }
-    ctx.translate(x, y - bob); ctx.scale(f * 1.35, 1.35);
+    // Ridden, a ground Primal swells to riding size (the rider sits on its back).
+    const rs = this.rider ? 2.1 : 1.35; ctx.translate(x, y - bob); ctx.scale(f * rs, rs);
     if (this.archetype === 'wolf') drawWolf(ctx, this.hitFlash > 0, this.state === 'attack', this.animTime);
     else if (this.archetype === 'ape') drawApe(ctx, this.hitFlash > 0, this.state === 'attack', this.animTime);
     else drawTurtle(ctx, this.hitFlash > 0, this.state === 'attack', this.animTime);
@@ -436,8 +437,14 @@ export class PrimalCompanion extends GroundEntity {
     const gy = this.y + this.elevation; const hx = this.x + f * (this.rider ? 36 : 18) * sc; const hy = this.y - 8 * sc; // a rider sits on the fore body
     ctx.save(); ctx.globalAlpha = .35; ctx.fillStyle = '#000000'; ctx.beginPath(); ctx.ellipse(this.x - f * 10 * sc, gy, 34 * sc, 7 * sc, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
     const spine = [[hx, hy]]; for (let j = 1; j <= 16; j++) spine.push([hx - f * j * 6.5 * sc, hy + 6 * sc + Math.sin(t * (run ? 9 : 5) - j * .65) * (5 + j * .35) * sc - j * .4 * sc]);
-    drawDragon(ctx, look, spine.slice(1), { thickness: .62 * sc, alpha: this.hitFlash > 0 ? .7 : 1, t });
-    drawDragonHead(ctx, look, hx, hy, spine[0][0] - spine[1][0], spine[0][1] - spine[1][1], .55 * sc, this.breathT > 0 ? 1 : .15, 1);
+    drawDragon(ctx, look, spine, { thickness: .62 * sc, open: this.breathT > 0 ? 1 : .15, alpha: this.hitFlash > 0 ? .7 : 1, t });
+    if (this.rider) {
+      // A saddle on the fore body where the rider sits: red blanket, leather seat with a raised cantle, gold trim and strap.
+      const at = spine.reduce((b, q) => (Math.abs(q[0] - this.x) < Math.abs(b[0] - this.x) ? q : b), spine[0]); const sx = Math.round(at[0]); const sy = Math.round(at[1] - 5 * sc);
+      ctx.fillStyle = '#1a0a04'; ctx.fillRect(sx - 13, sy - 1, 26, 7); ctx.fillStyle = '#8e1b1b'; ctx.fillRect(sx - 12, sy, 24, 5); ctx.fillStyle = '#ffca28'; ctx.fillRect(sx - 12, sy + 4, 24, 1);
+      ctx.fillStyle = '#1a0a04'; ctx.fillRect(sx - 8, sy - 5, 16, 6); ctx.fillStyle = '#6d4c41'; ctx.fillRect(sx - 7, sy - 4, 14, 4); ctx.fillStyle = '#8d6e63'; ctx.fillRect(sx - 7, sy - 4, 14, 1);
+      ctx.fillStyle = '#5d4037'; ctx.fillRect(sx - f * 8, sy - 8, 3, 5); ctx.fillStyle = '#ffca28'; ctx.fillRect(sx - 1, sy + 5, 2, 6);
+    }
     if (this.breathT > 0) drawBreathCone(ctx, hx + f * 12 * sc, hy + 2, f, (this.rider ? 150 : 90) * Math.min(1, Math.max(.2, (.45 - this.breathT) * 6 + .2)), t, .8);
     return true;
   }

@@ -17,7 +17,7 @@
 //    crystal flames curling at the feet; stage II+ adds huge spirit forearms
 //    resting on their knuckles beside the Wizard. Attacks throw a spirit fist,
 //    Spirit Slam hammers both fists down ahead.
-import { dragonReady, drawDragon, drawDragonHead } from './spell_visuals.js';
+import { dragonReady, drawDragon } from './spell_visuals.js';
 import { plate, band, fallout, sockets } from './buff_vfx.js';
 
 const TAU = Math.PI * 2;
@@ -150,8 +150,7 @@ function dragonOverlay(ctx, p, s, k, layer) {
   if (layer !== 'back') return; const look = dragonReady('ember') ? 'ember' : dragonReady('sun') ? 'sun' : null; if (!look) return;
   const t = p.animTime ?? 0; const f = p.facing || 1; const spine = [];
   for (let j = 0; j <= 18; j++) { const a = j / 18 * Math.PI * 1.6 + t * 1.5; spine.push([s.chest[0] - f * (8 + Math.cos(a) * 22 * k), s.chest[1] + 10 - j * 2.4 + Math.sin(a) * 9 * k]); }
-  drawDragon(ctx, look, spine.slice(1), { thickness: .42 * k, t });
-  drawDragonHead(ctx, look, spine[0][0], spine[0][1], spine[0][0] - spine[1][0], spine[0][1] - spine[1][1], .4 * k, .2, 1);
+  drawDragon(ctx, look, spine, { thickness: .42 * k, open: .2, t });
 }
 export function renderBondOverlay(ctx, player, renderY, layer, bond) {
   const s = sockets(player, renderY);

@@ -1666,7 +1666,7 @@ export class GameWorld {
     if (!primal.canBond(p)) { this.showAnnouncement(primal.isAlive ? `${primal.info.name} MUST BE CLOSE` : `${primal.info.name} IS DOWN`, 1.1); return false; }
     const bond = startPrimalBond(p, primal);
     // Transition in the Primal's colours (wolf green, turtle cyan, ape violet).
-    const PRIMAL_TRANSITION = { wolf: ['#c6ff7a', '#73eb47', '#16341a'], turtle: ['#bff6ff', '#57e0f0', '#0e2a33'], ape: ['#efe6ff', '#b06cff', '#1c1030'] }[bond.archetype] ?? ['#ffffff', '#ffd54f', '#3a1d00'];
+    const PRIMAL_TRANSITION = { wolf: ['#c6ff7a', '#73eb47', '#16341a'], turtle: ['#bff6ff', '#57e0f0', '#0e2a33'], ape: ['#efe6ff', '#b06cff', '#1c1030'], dragon: ['#fff3c4', '#ffb300', '#3a1a04'] }[bond.archetype] ?? ['#ffffff', '#ffd54f', '#3a1d00'];
     spells.addSpell(new TransformationFx(p, { core: '#ffffff', main: PRIMAL_TRANSITION[0], rim: PRIMAL_TRANSITION[1], dark: PRIMAL_TRANSITION[2], particle: bond.archetype === 'turtle' ? 'shard' : 'wisp', label: bond.form.name }), 'B');
     this.showAnnouncement(`PRIMAL BOND — ${bond.form.name.toUpperCase()}`, 1.4);
     return true;

@@ -373,7 +373,7 @@ export function drawDragonHead(ctx, look, x, y, dx, dy, scale = 1, open = 0, alp
   rotated(ctx, x, y, ang, () => drawSpellSprite(ctx, `dragon_${look}_head`, frame, 14 * scale, 0, { anchor: 'center', scale, alpha }));
   return true;
 }
-export function drawDragon(ctx, look, spine, { thickness = 1, open = 0, alpha = 1, behind = null, only = null, t = performance.now() / 1000 } = {}) {
+export function drawDragon(ctx, look, spine, { thickness = 1, open = 0, alpha = 1, behind = null, only = null, t = performance.now() / 1000, head = true } = {}) {
   if (!dragonReady(look) || spine.length < 2) return false;
   const n = spine.length; const sideOk = (i) => !only || (only === 'back') === !!behind?.(i);
   const dir = (i) => { const a = spine[Math.max(0, i - 1)]; const b = spine[Math.min(n - 1, i + 1)]; return [a[0] - b[0], a[1] - b[1]]; }; // toward the head
@@ -385,6 +385,6 @@ export function drawDragon(ctx, look, spine, { thickness = 1, open = 0, alpha = 
     if (i % 3 === 0 && !back) { const [dx, dy] = dir(i); const l = Math.hypot(dx, dy) || 1; const nx = dy / l; const ny = -dx / l; const up = ny < 0 ? 1 : -1; rotated(ctx, x + nx * up * 10 * sc, y + ny * up * 10 * sc, Math.atan2(dy, dx) + Math.PI / 2 * -up, () => drawSpellSprite(ctx, `dragon_${look}_spine`, 0, 0, 0, { anchor: 'center', scale: sc * 1.1, alpha })); }
     if ((i === Math.round(n * .22) || i === Math.round(n * .5)) && !back) { const [dx, dy] = dir(i); rotated(ctx, x, y + 8 * sc, Math.atan2(dy, dx) + .6, () => drawSpellSprite(ctx, `dragon_${look}_claw`, Math.floor(t * 4 + i) % 2, 8 * sc, 0, { anchor: 'center', scale: sc, alpha })); }
   }
-  if (sideOk(0)) { const [dx, dy] = dir(0); drawDragonHead(ctx, look, spine[0][0], spine[0][1], dx, dy, thickness * 1.05, open, alpha); }
+  if (head && sideOk(0)) { const [dx, dy] = dir(0); drawDragonHead(ctx, look, spine[0][0], spine[0][1], dx, dy, thickness * 1.05, open, alpha); }
   return true;
 }

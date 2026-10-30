@@ -695,3 +695,11 @@ Die Geschosse der Waffen (`drawShotPixel` in `weapons_ext.js`) sind jetzt knacki
 - **Sphären:** Sturmwolken als runde dunkle Wolkenballen (von oben links beleuchtet, Blitzlicht von unten); Schattenbestien dunkelviolett mit hellem Rand (auf dem schwarzen Meer lesbar); Klingenschmiede mit frisch geschmiedeten Klingen (Stahl, weißglühende Kanten, Goldparierstange).
 
 - `v66_drache_reiten.png`
+
+## v67 — Reittiere geprüft, ein Drachenkopf, Sattel (30.10.2026)
+
+- **Geprüft im Spiel:** Wolf II, Schildkröte II, Affe III und Drache III lassen sich mit Block + runter besteigen; die Drachen-Verschmelzung (Primal Bond) startet (Übergang jetzt in Drachen-Gold).
+- **Boden-Primals im Sattel** wachsen auf Reitgröße (vorher saß der Held auf einem winzigen Tier).
+- **Drache:** ein Kopf statt zwei (das Drachen-Kit kann seinen Kopf weglassen; T40-Wyrm, Primal-Drache und Bond-Drache haben je genau einen); unter dem Reiter ein Sattel (rote Decke, Ledersitz mit hohem Rückenteil, Goldborte und Gurt).
+
+- `v67_reittiere.png`

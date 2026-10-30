@@ -35,7 +35,7 @@ function scale(ctx, x, y, dx, dy, len, wid, mat, seed, alpha) {
 // A wyrm body of overlapping rhombic scales along a spine (tail → head).
 export function drawWyrmBody(ctx, spine, mat, seed, alpha = 1, thickness = 1) {
   // Hand-drawn dragon kit (obsidian scales with gold rims) — the head is drawn separately by drawWyrmHead.
-  if (dragonReady('sun') && spine.length > 2) { drawDragon(ctx, 'sun', spine.slice(1), { thickness: thickness * .95, alpha }); return; }
+  if (dragonReady('sun') && spine.length > 2) { drawDragon(ctx, 'sun', spine.slice(1), { thickness: thickness * .95, alpha, head: false }); return; }
   const n = spine.length;
   // A continuous obsidian underbody so the scales read as one creature.
   if (n > 1) band(ctx, spine.slice().reverse(), (i, nn) => (4 + 10 * Math.sin(Math.min(1, (i / nn) * 1.3) * Math.PI * .5)) * thickness, { ...mat, kind: 'crust', body: mix(mat.dark, '#000000', .2), facet: mat.dark }, seed + 500, { alpha, glow: .6 });
