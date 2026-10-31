@@ -325,7 +325,10 @@ export function drawWeaponSolid(ctx, weapon, scale = 1, { fill = '#0a0006', edge
 // Current swing of the held weapon: motion name, progress and pose.
 export function weaponSwing(player, weaponId = player.weapon ?? player.classWeapon) {
   const swinging = player.stateTimer > 0 && /^attack|uppercut|heavyStrike/.test(player.state);
-  const progress = swinging ? 1 - Math.max(0, player.stateTimer) / (player._weaponSwingTime || .3) : 0;
+  let progress = swinging ? 1 - Math.max(0, player.stateTimer) / (player._weaponSwingTime || .3) : 0;
+  // A breathing move's swing (breathing_weapons.breathMotion): a fast strike in the first 35 %, then the end pose is
+  // held and settles slowly (follow-through) — weight without delaying the move's effect.
+  const bs = player._breathSwing; if (swinging && bs && bs.motion === player._weaponMotion && bs.time === player._weaponSwingTime) progress = progress < .35 ? progress / .35 * .62 : .62 + (progress - .35) / .65 * .38;
   const motion = swinging ? (player._weaponMotion ?? 'slash') : null;
   const pose = motion ? (MOTIONS[motion] ?? MOTIONS.slash)(clamp01(progress)) : null;
   return { swinging, progress, motion, pose };

@@ -717,3 +717,11 @@ Die Geschosse der Waffen (`drawShotPixel` in `weapons_ext.js`) sind jetzt knacki
 - Sie wachsen mit der Stufe und im Sattel auf Reitgröße; die Reiter sitzen auf dem Rücken.
 
 - `v69_primals.png`
+
+## v70 — Primals mit mehr Form, Atem-Schwünge mit Gewicht, Waffen-Matrix (31.10.2026)
+
+- **Primals neu gezeichnet:** Wolf mit Felltextur, hellem Brustpelz, Wangenkrause und Ohren; Schildkröte flach und breit — dunkle Panzerplatten mit leuchtend cyanfarbenen Nähten (Rückenreihe, Seitenplatten, geschuppter Rand), Bauchpanzer, schuppige Beine mit Krallen, Schnabelkopf; Affe als gebuckelter Geistergorilla — hohe Schultern, silberner Rücken, nackte Brust, dunkles Gesicht mit Brauenwulst, riesige Unterarme im Knöchelgang.
+- **Atem-Schwünge mit Gewicht:** der Schlag sitzt im ersten Drittel, dann wird die Endpose gehalten und setzt langsam nach (Nachschwung); das Ausholen ist die Aufladepose davor. Der Effekt startet weiter sofort.
+- **Alle Waffen geprüft:** 13 weitere Waffen × Vorwärts / Aufwärts / Sprint mit 13 Stilen im Spiel — keine Renderfehler. Korrigiert: Wurfmesser und Chakrams spannten beim Aufwärts-Move einen Bogen; sie werfen jetzt (Armbrust zielt, Bogen spannt).
+
+- `v70_primals_schwung.png`, `v70_atem_waffen_matrix.png`

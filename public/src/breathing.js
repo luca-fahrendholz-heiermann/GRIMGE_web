@@ -690,7 +690,7 @@ function arrowRain(p, st, k, m, gw, teleport) {
   const tx = t0 ? t0.x : p.x + f * (teleport ? 150 : 40); const tz = t0 ? (t0.z ?? p.z) : p.z;
   if (teleport) { combat.spawnShockwave?.(p.x, (p.y ?? 0) - 40, 30, R.mid); p.x = tx - f * 8; p.z = tz; clampToArena(p, gw?.battlefield?.boundsOverride ?? null); p.grounded = false; p.elevation = Math.max(p.elevation ?? 0, 140); /* high above the foe (user, 22 Oct 2026), still below the HUD chips */ p.invulnerableTimer = Math.max(p.invulnerableTimer ?? 0, .5); }
   p.state = 'heavyStrike'; p.stateTimer = .6; p.vx = 0; p.vz = 0; p.vElevation = 0; p.airLatch = null;
-  p._weaponMotion = 'draw'; p._weaponSwingTime = .6;
+  p._weaponMotion = d?.look === 'bow' ? 'draw' : d?.look === 'crossbow' ? 'aim' : 'throw'; p._weaponSwingTime = .6; /* bows are drawn, crossbows aimed, the rest is thrown */
   const n = 12; const arrows = Array.from({ length: n }, (_, i) => ({ at: .12 + i * .035, x: tx + Math.sin(i * 2.39) * 62, z: Math.max(.03, Math.min(.97, tz + Math.cos(i * 1.7) * .1)), done: false }));
   const end = .12 + n * .035 + .16;
   p.aerialAim = end + .15; // the archer lies flat in the air, the bow pointing down (entities.js render)
@@ -762,7 +762,7 @@ function runMove(p, st, move, k, gw) {
   if (delivery.kind !== 'none' && move.kind !== 'drill') emit(new SigSequence({ mat: R.mat, seed: 7800 }, p, { dur: .32, draw: (ctx, s, kk) => drawFlourish(ctx, delivery, p.x, p.y ?? groundYForDepth(p.z), kk, s.t, R, p.facing || 1) }), st.quality);
   // The Wizard swings the weapon its own way (the move may still take over the body afterwards).
   const mo = breathMotion(delivery, move.kind);
-  if (mo) { p._weaponMotion = mo.motion; p._weaponSwingTime = mo.dur; if (!(p.stateTimer > 0 && /^attack|heavyStrike|uppercut/.test(p.state))) p.state = 'heavyStrike'; p.stateTimer = Math.max(p.stateTimer ?? 0, mo.dur); }
+  if (mo) { p._weaponMotion = mo.motion; p._weaponSwingTime = mo.dur; p._breathSwing = { motion: mo.motion, time: mo.dur }; if (!(p.stateTimer > 0 && /^attack|heavyStrike|uppercut/.test(p.state))) p.state = 'heavyStrike'; p.stateTimer = Math.max(p.stateTimer ?? 0, mo.dur); }
   (WEAPON_KINDS[delivery.kind]?.[move.kind] ?? KINDS[move.kind] ?? torrent)(p, st, k, { ...move, delivery }, gw);
   return true;
 }

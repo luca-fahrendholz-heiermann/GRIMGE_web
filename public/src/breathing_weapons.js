@@ -42,7 +42,9 @@ const KIND_MOTION = Object.freeze({
   fist: { shot: 'smash', rise: 'upper', dash: 'punch', crash: 'slam', guard: 'punch' }
 });
 const LOOK_MOTION = Object.freeze({ bow: 'draw', crossbow: 'aim', knife: 'throw', card: 'throw', chakram: 'throw', harp: 'strum', zither: 'strum', fan: 'fan', claw: 'rake', chain_scythe: 'whip', scythe: 'reap', daggers: 'flurry', dual: 'cross' });
-const PHASE_TIME = Object.freeze({ shot: .5, rise: .45, dash: .36, crash: .45, guard: .4 });
+// Longer than a combo swing: the strike lands in the first third, then a held follow-through gives it weight
+// (the charge pose before the release is the wind-up). weaponSwing reshapes the progress (weapons.js).
+const PHASE_TIME = Object.freeze({ shot: .78, rise: .7, dash: .6, crash: .72, guard: .66 });
 export function breathMotion(d, moveKind) {
   if (!d || d.kind === 'none' || moveKind === 'drill') return null;
   const phase = PHASE[moveKind] ?? 'shot';
