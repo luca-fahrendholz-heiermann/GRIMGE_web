@@ -710,3 +710,10 @@ Die Geschosse der Waffen (`drawShotPixel` in `weapons_ext.js`) sind jetzt knacki
 - Vorher stand der Held mit der Waffe still da, während das Element losflog.
 
 - `v68_atem_waffen.png`
+
+## v69 — Gezeichnete Primals (31.10.2026)
+
+- **Wolf, Schildkröte, Affe** sind keine Canvas-Platzhalter mehr: gezeichnete Körper mit Laufzyklus (4 Frames), Ausholen und Zuschlagen — Geisterwolf (grünes Fell, goldene Streifen, Mähnen-Wisps, Kiefer öffnet beim Biss), Schildkröte (Kuppelpanzer aus Hex-Platten mit leuchtendem Rand, Kopf schnappt vor), Geisteraffe (violettes Fell, heller Brustpelz, mächtige Unterarme, Knöchelgang, Faust holt aus und schlägt).
+- Sie wachsen mit der Stufe und im Sattel auf Reitgröße; die Reiter sitzen auf dem Rücken.
+
+- `v69_primals.png`

@@ -34,7 +34,7 @@ import { combat } from './combat.js';
 import { GroundEntity, groundDistance } from './world.js';
 import { SIEGE_ZONES } from './siege_match.js';
 import { renderBondOverlay } from './primal_bond_vfx.js';
-import { dragonReady, drawDragon, drawBreathCone } from './spell_visuals.js';
+import { dragonReady, drawDragon, drawBreathCone, spellSheetReady, drawSpellSprite } from './spell_visuals.js';
 
 const U = 24;                 // px per Unity unit (lateral)
 const UZ = 1 / 6;             // z per Unity unit (depth)
@@ -127,7 +127,7 @@ export class PrimalCompanion extends GroundEntity {
     const a = this.archetype; const dragon = a === 'dragon';
     return { id: 'primal_' + a, name: this.info.name, color: this.info.variant, mountable: dragon || this.stage >= 2, flying: dragon,
       mountSpeed: dragon ? 400 + this.stage * 25 : a === 'wolf' ? 420 : a === 'ape' ? 300 : 240,
-      riderOffsetY: dragon ? 8 + 6 * this.bodyScale : a === 'ape' ? 58 : a === 'turtle' ? 34 : 40 };
+      riderOffsetY: dragon ? 8 + 6 * this.bodyScale : a === 'ape' ? 40 : a === 'turtle' ? 30 : 26 };
   }
   get damage() { return (this.archetype === 'ape' ? PRIMAL_STATS.punch : PRIMAL_STATS.bite).damage; }
   get radius() { return this.archetype === 'dragon' ? 22 : 18; }
@@ -412,6 +412,7 @@ export class PrimalCompanion extends GroundEntity {
     }
     ctx.globalCompositeOperation = 'source-over';
     if (this.archetype === 'dragon' && this.renderDragon(ctx)) { ctx.restore(); this.renderHealth(ctx); return; }
+    if (this.archetype !== 'dragon' && this.renderBody(ctx)) { ctx.restore(); this.renderHealth(ctx); return; }
     // Ridden, a ground Primal swells to riding size (the rider sits on its back).
     const rs = this.rider ? 2.1 : 1.35; ctx.translate(x, y - bob); ctx.scale(f * rs, rs);
     if (this.archetype === 'wolf') drawWolf(ctx, this.hitFlash > 0, this.state === 'attack', this.animTime);
@@ -427,6 +428,17 @@ export class PrimalCompanion extends GroundEntity {
     ctx.fillStyle = 'rgba(0,0,0,.75)'; ctx.fillRect(x - 16, y - 54, 32, 4);
     ctx.fillStyle = this.info.variant; ctx.fillRect(x - 16, y - 54, 32 * this.hp / this.maxHp, 4);
     ctx.restore();
+  }
+
+  // Wolf / turtle / ape (art/authoring/vfx_primals.cjs): run cycle 0–3, attack wind-up 4 and strike 5; grows with the
+  // stage and swells to riding size under a rider. False when the sheet is missing (fallback: the placeholder body).
+  renderBody(ctx) {
+    const name = 'primal_' + this.archetype; if (!spellSheetReady(name)) return false;
+    const bite = this.archetype === 'ape' ? PRIMAL_STATS.punch : PRIMAL_STATS.bite;
+    const frame = this.attack ? (this.attack.t < bite.windup ? 4 : 5) : this.state === 'run' ? Math.floor(this.animTime * 11) % 4 : 0;
+    const sc = this.rider ? 1.45 : [.75, .9, 1.1][this.stage - 1];
+    drawSpellSprite(ctx, name, frame, this.x, this.y, { flip: (this.facing || 1) < 0, scale: sc, alpha: this.hitFlash > 0 ? .7 : 1 });
+    return true;
   }
 
   // A serpentine spirit dragon (the hand-drawn dragon kit): the head leads, the body waves behind, a shadow on

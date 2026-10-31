@@ -3005,5 +3005,35 @@ export const SPELL_SPRITE_SHEETS = Object.freeze({
   "hd": true,
   "anchor": "base",
   "baseOffset": 1
+ },
+ "primal_wolf": {
+  "name": "primal_wolf",
+  "w": 32,
+  "h": 20,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 1
+ },
+ "primal_turtle": {
+  "name": "primal_turtle",
+  "w": 32,
+  "h": 20,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 1
+ },
+ "primal_ape": {
+  "name": "primal_ape",
+  "w": 29,
+  "h": 31,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "base",
+  "baseOffset": 1
  }
 });
