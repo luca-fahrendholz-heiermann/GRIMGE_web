@@ -28,6 +28,28 @@ export function deliveryOf(p) {
 
 const solid = (ctx, pts, fill, stroke = null, w = 1.5) => { ctx.fillStyle = fill; ctx.beginPath(); pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath(); ctx.fill(); if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = w; ctx.stroke(); } };
 
+// The Wizard's own weapon motion for a breathing move (user's plan, 21 Oct: "every weapon type animates these
+// moves its own way"): the move kind picks a phase (travelling shot, rising, dash, crash), the weapon the swing —
+// the katana draws from the sheath, the axe cleaves / slams, the spear lunges, the bow is drawn, the staff casts,
+// fists punch / uppercut. Motions are the weapon motions of weapons.js (MOTIONS / EXT_MOTION_FNS).
+const PHASE = Object.freeze({ torrent: 'shot', crescents: 'shot', blasts: 'shot', boomerang: 'shot', rising: 'rise', pillar: 'rise', orbit: 'rise', flash: 'dash', charge: 'dash', flurry: 'dash', crash: 'crash', calm: 'guard' });
+const KIND_MOTION = Object.freeze({
+  iai: { shot: 'iaido', rise: 'rising', dash: 'iaido', crash: 'overhead', guard: 'iaido' },
+  blade: { shot: 'slash', rise: 'rising', dash: 'thrust', crash: 'overhead', guard: 'backhand' },
+  heavy: { shot: 'cleave', rise: 'rising', dash: 'whirl', crash: 'slam', guard: 'slam' },
+  polearm: { shot: 'lunge', rise: 'rising', dash: 'lunge', crash: 'overhead', guard: 'whirl' },
+  caster: { shot: 'cast', rise: 'cast', dash: 'cast', crash: 'overhead', guard: 'cast' },
+  fist: { shot: 'smash', rise: 'upper', dash: 'punch', crash: 'slam', guard: 'punch' }
+});
+const LOOK_MOTION = Object.freeze({ bow: 'draw', crossbow: 'aim', knife: 'throw', card: 'throw', chakram: 'throw', harp: 'strum', zither: 'strum', fan: 'fan', claw: 'rake', chain_scythe: 'whip', scythe: 'reap', daggers: 'flurry', dual: 'cross' });
+const PHASE_TIME = Object.freeze({ shot: .5, rise: .45, dash: .36, crash: .45, guard: .4 });
+export function breathMotion(d, moveKind) {
+  if (!d || d.kind === 'none' || moveKind === 'drill') return null;
+  const phase = PHASE[moveKind] ?? 'shot';
+  const motion = (phase !== 'crash' && LOOK_MOTION[d.look]) || KIND_MOTION[d.kind]?.[phase] || (d.kind === 'ranged' ? 'draw' : 'slash');
+  return { motion, dur: PHASE_TIME[phase] };
+}
+
 // The head of a travelling breathing move, per weapon (x, y = head position, f = direction).
 export function drawHead(ctx, d, x, y, s, t, R, f) {
   if (!d || d.kind === 'none') return false;

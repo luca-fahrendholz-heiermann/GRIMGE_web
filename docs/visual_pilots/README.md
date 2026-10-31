@@ -703,3 +703,10 @@ Die Geschosse der Waffen (`drawShotPixel` in `weapons_ext.js`) sind jetzt knacki
 - **Drache:** ein Kopf statt zwei (das Drachen-Kit kann seinen Kopf weglassen; T40-Wyrm, Primal-Drache und Bond-Drache haben je genau einen); unter dem Reiter ein Sattel (rote Decke, Ledersitz mit hohem Rückenteil, Goldborte und Gurt).
 
 - `v67_reittiere.png`
+
+## v68 — Atem-Moves mit Waffenanimation (31.10.2026)
+
+- **Jede Waffe führt die Atem-Moves auf ihre Art aus** (gleicher Effekt): die Move-Art bestimmt die Phase (Schuss / Aufstieg / Ansturm / Sturz / Abwehr), die Waffe den Schwung — Katana zieht aus der Scheide (Iai), Schwert schlägt / sticht, Axt & Hammer spalten / schmettern, Speer stößt vor, Bogen wird gespannt, Armbrust zielt, Wurfwaffen werfen, Stab & Zepter zaubern, Fäuste schlagen / Aufwärtshaken; Harfe zupft, Fächer fächert, Klauen reißen, Kettensense peitscht, Sense mäht, Dolche wirbeln.
+- Vorher stand der Held mit der Waffe still da, während das Element losflog.
+
+- `v68_atem_waffen.png`

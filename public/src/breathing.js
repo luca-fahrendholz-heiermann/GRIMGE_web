@@ -17,7 +17,7 @@ import { combat } from './combat.js';
 import { environment } from './environment.js';
 import { groundYForDepth, clampToArena } from './world.js';
 import { applyStatus, hasStatus } from './status_effects.js';
-import { deliveryOf, drawHead, drawFlourish } from './breathing_weapons.js';
+import { deliveryOf, drawHead, drawFlourish, breathMotion } from './breathing_weapons.js';
 import { RayCrownFx } from './cast_circle.js';
 import { spellSheetReady, drawSpellSpriteTinted, drawFineFromLayer } from './spell_visuals.js';
 
@@ -760,6 +760,9 @@ function runMove(p, st, move, k, gw) {
   const delivery = deliveryOf(p); const R = styleOf(st).ramp;
   combat.spawnDamageText?.(p.x, (p.y ?? 0) - 96, move.name, { color: R.light });
   if (delivery.kind !== 'none' && move.kind !== 'drill') emit(new SigSequence({ mat: R.mat, seed: 7800 }, p, { dur: .32, draw: (ctx, s, kk) => drawFlourish(ctx, delivery, p.x, p.y ?? groundYForDepth(p.z), kk, s.t, R, p.facing || 1) }), st.quality);
+  // The Wizard swings the weapon its own way (the move may still take over the body afterwards).
+  const mo = breathMotion(delivery, move.kind);
+  if (mo) { p._weaponMotion = mo.motion; p._weaponSwingTime = mo.dur; if (!(p.stateTimer > 0 && /^attack|heavyStrike|uppercut/.test(p.state))) p.state = 'heavyStrike'; p.stateTimer = Math.max(p.stateTimer ?? 0, mo.dur); }
   (WEAPON_KINDS[delivery.kind]?.[move.kind] ?? KINDS[move.kind] ?? torrent)(p, st, k, { ...move, delivery }, gw);
   return true;
 }
