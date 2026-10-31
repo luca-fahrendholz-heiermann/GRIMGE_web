@@ -937,7 +937,7 @@ export class Player extends GroundEntity {
         this.sprintDive = null;
       }
     }
-    if (this.grounded) this.airLatchCount = 0;
+    if (this.grounded) { this.airLatchCount = 0; if (this.state !== 'uppercut') this.airUpUsed = false; }
   }
 
   // A connected air hit latches onto the first foe hit (max AIR_LATCH_MAX per jump).
@@ -953,6 +953,7 @@ export class Player extends GroundEntity {
 
   performJump() {
     if (this.jumpsLeft <= 0 || this.rootTimer > 0) return;
+    if (this.grounded && this.state !== 'uppercut') this.airUpUsed = false; // a fresh jump from the ground: the air up-swipe is available again
     const wasSprinting = this.sprintActive;
     this.cancelSprint();
     this.jumpsLeft--;
@@ -1385,8 +1386,12 @@ export class Player extends GroundEntity {
     if ((attackKind === 'uppercut' || attackKind === 'heavy') && this.grounded && this.comboStep >= 1 && this.comboResetTimer > 0) return this.comboBranch(this.branchFor(attackKind));
     if (attackKind === 'normal' && this.followUp && this.grounded) return this.autoFollow();
     if (attackKind === 'uppercut' || input.keys?.KeyU) {
+      // In the air the up-swipe attack works ONCE per jump (user, 31 Oct 2026, like Smash Bros. Brawl): one lift,
+      // then the Wizard falls; a further up-swipe does nothing until landing. Air combos only continue on hits (air latch).
+      // The ground uppercut's hop counts too (it already lifts the Wizard).
+      if (!this.grounded && this.airUpUsed) return false; this.airUpUsed = true;
       const up = weapon ? { ...MELEE_BASELINE.uppercut, ...weapon.uppercut } : MELEE_BASELINE.uppercut;
-      this.state = 'uppercut'; this.stateTimer = up.time; this._weaponSwingTime = up.time; this.vElevation = 280 * PLAYER_ARC_SCALE;
+      this.state = 'uppercut'; this.stateTimer = up.time; this._weaponSwingTime = up.time; this.vElevation = this.grounded ? 280 * PLAYER_ARC_SCALE : Math.max(this.vElevation, 220 * PLAYER_ARC_SCALE);
       this.setWeaponMotion('uppercut');
       audio.playSlash(1.2);
       // An astral weapon draws its own trail; bare hands keep the slash arc.

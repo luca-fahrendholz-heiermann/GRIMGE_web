@@ -4485,6 +4485,12 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
     assert(air > .95, 'A launched foe floats from the apex on (lighter fall, a hang): ' + air.toFixed(2) + ' s in the air');
     reset(); const m2 = foe(); P.state = 'idle'; P.canAttack = true; P.executeAttack(neutral, 'uppercut'); stepAll(14); P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.jumpsLeft = 2; P.performJump(); stepAll(8);
     const hp2 = m2.hp; P.canAttack = true; P.state = 'jump'; P.executeAttack(neutral, 'normal'); assert(m2.hp < hp2, 'Uppercut, jump, attack: the air magnet meets the launched foe at its height (no crossing past)'); }
+  // Air up-swipe once per jump (user, 31 Oct 2026, like Smash Bros. Brawl): no endless hovering by up-swiping.
+  { const stepAll = (n) => { for (let i = 0; i < n; i++) { P.update(1 / 60, neutral, game.battlefield, game); for (const mm of game.minions) mm.update?.(1 / 60, game, game.battlefield); } };
+    reset(); P.jumpsLeft = 2; P.performJump(); stepAll(8); const first = P.executeAttack(neutral, 'uppercut'); stepAll(24);
+    P.state = 'jump'; P.stateTimer = 0; P.canAttack = true; const v = P.vElevation; const second = P.executeAttack(neutral, 'uppercut');
+    let air = 0; for (let i = 0; i < 400 && !P.grounded; i++) { if (i % 6 === 0) { P.state = 'jump'; P.stateTimer = 0; P.canAttack = true; P.executeAttack(neutral, 'uppercut'); } stepAll(1); air += 1 / 60; } stepAll(2);
+    assert(first && !second && P.grounded && air < 2.5 && !P.airUpUsed, 'Air up-swipe works once per jump, further up-swipes do not lift — the Wizard lands (' + air.toFixed(2) + ' s), the next jump allows it again ' + JSON.stringify({ first, second, grounded: P.grounded, used: P.airUpUsed })); }
   { reset(); const m3 = foe(); let broke = false; for (let i = 0; i < 7; i++) { m3.x = 340; P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.triggerMeleeHitbox(5, 0, 0, .4, false, {}); if (m3.comboBreakT > 0) broke = true; }
     assert(broke, 'Endless spam without finisher: the 7th hit in a row is a KOMBO-BRUCH (the foe breaks free)'); }
   { const UI = await import('./public/src/ui.js'); const el = globalThis.document?.getElementById?.('combo-moveset-guide'); UI.ui.renderComboGuide?.();
