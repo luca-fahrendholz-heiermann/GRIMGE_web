@@ -2647,9 +2647,12 @@ export class GameWorld {
     // already live game through an accidental overlay tap.
     if (this.matchState === 'Running' || this.matchState === 'Ending') return;
     // Training is a sandbox with its own decks: it never waits for a complete profile deck.
+    // An incomplete deck (cards removed, runes retired) no longer bounces silently back to the hub (bug, 1 Nov 2026:
+    // Castle Siege / Invasion seemed broken): it is topped up with unlocked runes and the match starts.
+    if (this.activeMode.progression === 'profile' && this.activeMode.id !== 'training' && !this.profile.isDeckReady()) this.repairDeckForMatch();
     if (this.activeMode.progression === 'profile' && this.activeMode.id !== 'training' && !this.profile.isDeckReady()) {
-      this.showAnnouncement(`BUILD A ${10}-CARD RUNE DECK FIRST`, 1.8);
-      ui.showHub(true);
+      this.showAnnouncement(`DECK UNVOLLSTÄNDIG — BAUE EIN ${10}-KARTEN-DECK`, 2.5);
+      ui.showHub(true); ui.showAnnouncement?.(`DECK UNVOLLSTÄNDIG — BAUE EIN ${10}-KARTEN-DECK`, 3);
       return;
     }
     this.resetMatch();
@@ -2657,10 +2660,21 @@ export class GameWorld {
     this.syncOrientationState();
     ui.showHub(false);
     ui.showResults(false);
-    this.showAnnouncement(this.activeMode.objective, 1.5);
+    this.showAnnouncement(this.pendingDeckNotice ? `${this.pendingDeckNotice} · ${this.activeMode.objective}` : this.activeMode.objective, this.pendingDeckNotice ? 2.6 : 1.5);
+    this.pendingDeckNotice = null;
+  }
+
+  // Fill an incomplete profile deck with unlocked runes (deck rules kept) so a match can start.
+  repairDeckForMatch() {
+    const before = this.profile.matchDeck.length;
+    this.profile.matchDeck = this.profile.topUpDeck(this.profile.matchDeck); this.profile.save?.();
+    const added = this.profile.matchDeck.length - before;
+    if (added > 0) this.pendingDeckNotice = `DECK AUFGEFÜLLT: +${added} RUNE${added > 1 ? 'N' : ''}`;
+    return added;
   }
 
   restartMatch() {
+    if (this.activeMode.progression === 'profile' && this.activeMode.id !== 'training' && !this.profile.isDeckReady()) this.repairDeckForMatch();
     if (this.activeMode.progression === 'profile' && this.activeMode.id !== 'training' && !this.profile.isDeckReady()) return false;
     this.resetMatch();
     this.matchState = 'Running';

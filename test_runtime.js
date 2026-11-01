@@ -2063,6 +2063,8 @@ game.returnToHub(); game.setMatchMode('training'); game.startMatch();
 assert(game.renderWidth === 1024 && game.stage.width === 1920, 'Training uses the same stage framing');
 game.returnToHub(); game.setMatchMode('arena'); game.startMatch();
 assert(game.renderWidth === 1024 && game.worldOffsetY === 0, 'The Arena uses the same stage framing');
+// An incomplete deck no longer bounces Castle Siege / Invasion back to the hub (bug, 1 Nov 2026): it is topped up.
+{ const keep = [...game.profile.matchDeck]; for (const m of ['siege', 'invasion']) { game.returnToHub(); game.profile.matchDeck = game.profile.matchDeck.slice(0, 7); game.setMatchMode(m); game.startMatch(); assert(game.matchState === 'Running' && game.profile.isDeckReady(), m + ': an incomplete deck (7 cards) is topped up and the match starts instead of returning to the hub'); } game.profile.matchDeck = keep; }
 game.returnToHub(); game.setMatchMode('siege'); game.startMatch();
 game.render();
 screenSize(1024, 576);

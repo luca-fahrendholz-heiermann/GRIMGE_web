@@ -4,6 +4,8 @@ export class SoundManager {
     this.ctx = null;
     this.masterGain = null;
     this.initialized = false;
+    this.noiseCache = new Map(); // noise buffers are built once per kind and reused (no 20 KB buffer per sound)
+    this.voiceTimes = [];
   }
 
   init() {
@@ -22,24 +24,38 @@ export class SoundManager {
 
   ensureContext() {
     if (!this.initialized) this.init();
-    if (this.ctx && this.ctx.state === 'suspended') {
-      this.ctx.resume();
+    // Resume at most every 2 s (each blocked resume() left a rejected promise and a console warning behind).
+    const now = performance.now();
+    if (this.ctx && this.ctx.state === 'suspended' && now - (this.lastResume ?? -1e9) > 2000) {
+      this.lastResume = now;
+      this.ctx.resume()?.catch?.(() => {});
     }
+  }
+
+  // A sound is only built while the context actually plays (bug, 1 Nov 2026: with a suspended context — tab in the
+  // background, autoplay blocked — every sound left its nodes and a fresh noise buffer behind, the memory grew until
+  // the tab could crash and reload into the hub). At most 40 voices per second.
+  canPlay() {
+    if (!this.ctx || this.ctx.state !== 'running') return false;
+    const now = this.ctx.currentTime; while (this.voiceTimes.length && now - this.voiceTimes[0] > 1) this.voiceTimes.shift();
+    if (this.voiceTimes.length >= 40) return false;
+    this.voiceTimes.push(now); return true;
+  }
+  noise(key, size, fill) {
+    let b = this.noiseCache.get(key + size); if (b) return b;
+    b = this.ctx.createBuffer(1, size, this.ctx.sampleRate); const d = b.getChannelData(0); for (let i = 0; i < size; i++) d[i] = fill(i, size);
+    this.noiseCache.set(key + size, b); return b;
   }
 
   // Melee slash swoosh
   playSlash(pitch = 1.0) {
     this.ensureContext();
-    if (!this.ctx) return;
+    if (!this.canPlay()) return;
     const t = this.ctx.currentTime;
 
     // Noise buffer for swoosh texture
     const bufferSize = this.ctx.sampleRate * 0.12;
-    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) {
-      data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.4));
-    }
+    const buffer = this.noise('slash', Math.round(bufferSize), (i, n) => (Math.random() * 2 - 1) * Math.exp(-i / (n * 0.4)));
 
     const noise = this.ctx.createBufferSource();
     noise.buffer = buffer;
@@ -64,7 +80,7 @@ export class SoundManager {
   // Heavy Melee impact
   playImpact(isCrit = false) {
     this.ensureContext();
-    if (!this.ctx) return;
+    if (!this.canPlay()) return;
     const t = this.ctx.currentTime;
 
     // Low sub-thud
@@ -84,11 +100,7 @@ export class SoundManager {
 
     // Crunch noise
     const bufferSize = Math.floor(this.ctx.sampleRate * 0.08);
-    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) {
-      data[i] = (Math.random() * 2 - 1) * 0.8;
-    }
+    const buffer = this.noise('impact', Math.round(bufferSize), () => (Math.random() * 2 - 1) * 0.8);
     const noise = this.ctx.createBufferSource();
     noise.buffer = buffer;
 
@@ -110,7 +122,7 @@ export class SoundManager {
   // Jump / Dash whoosh
   playJump() {
     this.ensureContext();
-    if (!this.ctx) return;
+    if (!this.canPlay()) return;
     const t = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
     osc.type = 'sine';
@@ -129,7 +141,7 @@ export class SoundManager {
 
   playDash() {
     this.ensureContext();
-    if (!this.ctx) return;
+    if (!this.canPlay()) return;
     const t = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
     osc.type = 'sawtooth';
@@ -154,7 +166,7 @@ export class SoundManager {
   // Rune drawing ethereal bell / point chime
   playRuneChime(freq = 520) {
     this.ensureContext();
-    if (!this.ctx) return;
+    if (!this.canPlay()) return;
     const t = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
     osc.type = 'sine';
@@ -173,7 +185,7 @@ export class SoundManager {
   // Rune successfully recognized: triumphant harmonic chord
   playRuneSuccess() {
     this.ensureContext();
-    if (!this.ctx) return;
+    if (!this.canPlay()) return;
     const t = this.ctx.currentTime;
     const freqs = [523.25, 659.25, 783.99, 1046.50]; // C Major arpeggio
     freqs.forEach((f, i) => {
@@ -196,7 +208,7 @@ export class SoundManager {
   // Rune failed recognition: low muted buzz
   playRuneFail() {
     this.ensureContext();
-    if (!this.ctx) return;
+    if (!this.canPlay()) return;
     const t = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
     osc.type = 'sawtooth';
@@ -221,7 +233,7 @@ export class SoundManager {
   // Spell cast audio by type
   playSpell(spellType) {
     this.ensureContext();
-    if (!this.ctx) return;
+    if (!this.canPlay()) return;
     const t = this.ctx.currentTime;
 
     switch (spellType) {
@@ -247,9 +259,7 @@ export class SoundManager {
       case 'gale': {
         // High-velocity wind burst
         const bufferSize = Math.floor(this.ctx.sampleRate * 0.3);
-        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-        const data = buffer.getChannelData(0);
-        for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+        const buffer = this.noise('spell', Math.round(bufferSize), () => Math.random() * 2 - 1);
 
         const noise = this.ctx.createBufferSource();
         noise.buffer = buffer;
@@ -318,7 +328,7 @@ export class SoundManager {
   // Tower Laser shot
   playTowerShot() {
     this.ensureContext();
-    if (!this.ctx) return;
+    if (!this.canPlay()) return;
     const t = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
     osc.type = 'sine';
