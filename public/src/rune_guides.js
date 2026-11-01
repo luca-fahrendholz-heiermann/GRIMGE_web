@@ -79,6 +79,8 @@ export const SIGNATURE_GLYPHS = Object.freeze({
   S93: [L(-.8, -.4, .7, -.4), L(-.8, 0, .85, 0), L(-.8, .4, .7, .4), L(.85, 0, .55, -.25)],
   // S94 BLUTFINSTERNIS: an eclipse (a ring over a filled half) and a drop below.
   S94: [ring(0, -.25, .45), arc(0, -.25, .45, Math.PI * .1, Math.PI * .9), L(0, .35, 0, .8)],
+  // S95 NULLKLINGE: a jagged blade (zigzag down), its crossguard and a cut across.
+  S95: [[[0, -.9], [.2, -.6], [-.15, -.3], [.2, 0], [0, .45]], L(-.4, .45, .4, .45), L(-.75, -.2, .75, .2)],
   // S90 BLUTSCHIRM: an umbrella — the canopy arc, the shaft and the hook.
   S90: [arc(0, 0, .8, Math.PI, Math.PI * 2), L(0, 0, 0, .75), arc(-.14, .75, .14, 0, Math.PI)],
   // S89 GRENZENLOS: two rings touching (attraction · repulsion) with a line through their meeting point.

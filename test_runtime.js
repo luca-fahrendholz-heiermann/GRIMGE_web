@@ -2572,7 +2572,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   const step = (n, dt = 1 / 60) => { for (let i = 0; i < n; i++) { P.update(dt, neutral, game.battlefield, game); game.updateProjectiles(dt); spells.update(dt, game); } };
   const cast = (id, target = null) => spells.cast(P, spells.resolveSpell([{ id: 'sig_' + id }]), game, null, target);
   const ids = Object.keys(core.SIGNATURES);
-  assert(ids.length === 94 && ids.every((id) => core.signatureImpl(id)?.cast) && sigMod.SIGNATURE_RUNE_IDS.every((id) => isSpecialRune(id) && runeManaCost(id) >= 28 && runeManaCost(id) <= 46), 'All 94 signature specials (atlas S01–S36 + S37–S94) are special runes with their own mechanic and bound mana');
+  assert(ids.length === 95 && ids.every((id) => core.signatureImpl(id)?.cast) && sigMod.SIGNATURE_RUNE_IDS.every((id) => isSpecialRune(id) && runeManaCost(id) >= 28 && runeManaCost(id) <= 46), 'All 94 signature specials (atlas S01–S36 + S37–S94) are special runes with their own mechanic and bound mana');
   assert(ids.every((id) => spellHowTo('sig_' + id)?.effect?.length > 40) && !spells.resolveSpell([{ id: 'sig_S03' }, { id: 'ignis' }]), 'Signature specials explain themselves in the grimoire and never fuse');
   // Every special casts, runs and renders (strict canvas) without errors.
   const strict = new Proxy({}, { get: (t, k) => (k === 'ellipse' || k === 'arc') ? (x, y, rx, ry) => { if (rx < 0 || (k === 'ellipse' && ry < 0)) throw new Error('IndexSizeError ' + k); } : (k === 'canvas' ? undefined : () => {}), set: () => true });
@@ -4825,6 +4825,13 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
     try { const sigMod = await import('./public/src/signature_runes.js');
       for (const id of ['S91', 'S92', 'S93', 'S94']) { start(id); dummy.homeX = dummy.x = 420; for (let i = 0; i < 40; i++) { if (i % 4 === 0) tap(); step(1); for (const sp of spells.activeSpells) sp.render?.(strict); for (const layer of ['back', 'front']) sigMod.renderSignatureStance?.(strict, P, P.y, layer); } if (P.signature) tap('heavy'); for (let i = 0; i < 40; i++) { step(1); for (const sp of spells.activeSpells) sp.render?.(strict); } } } catch (e) { bad = e.message; }
     assert(!bad, 'The tap / mash runes render cleanly ' + bad); }
+  // S95 NULLKLINGE (user, 1 Nov 2026: anti-magic — a cut destroys other spells).
+  { start('S95'); const st = P.signature; const red = { kind: 'crystal', dark: '#000', body: '#f00', facet: '#f88', vein: '#800', edge: '#fcc', spark: '#fff', core: '#fff', glow: 'rgba(255,0,0,', edgeGlow: 'rgba(255,255,255,' };
+    const bolt = core.emit(new core.SigBolt({ x: P.x + 50, z: P.z, height: 44, team: 'red', mat: red, vx: -10, damage: 5, life: 4 }));
+    spells.castStoneWall(game.enemyChampion, game, { grade: 'B', power: 1, duration: 1, area: 1, particles: 1 }, { x: P.x + 45, z: P.z });
+    const wall = spells.activeSpells.find((s) => s.isStoneWall && s.team === 'red'); tap(); step(2);
+    const far = core.emit(new core.SigBolt({ x: P.x + 300, z: P.z, height: 44, team: 'red', mat: red, vx: 0, damage: 5, life: 4 })); P.mp = P.maxMp; st.impl.stance.charge(P, st, 'forward', 1, game); step(40);
+    assert(st.id === 'S95' && bolt.isFinished && wall?.isDead && far.isFinished, 'NULLKLINGE: a swing negates hostile shots and breaks walls in its arc; the charged NULLSCHNITT erases spells down the lane'); }
   if (P.signature) core.endStance(P, 'replaced'); spells.clearRuntime(); ENV.effects = []; P.hp = P.maxHp; P.x = 300; P.z = .58; dummy.homeX = dummy.x = 512;
 }
 

@@ -749,3 +749,11 @@ Die Geschosse der Waffen (`drawShotPixel` in `weapons_ext.js`) sind jetzt knacki
 - **Respawnen kostet:** jeder Tod verlängert die Wartezeit (+2,5 s, bis +14 s) — kein schneller Sieg mehr durch Wiederbeleben.
 
 - `v73_invasion_level.png`
+
+## v74 — S95 NULLKLINGE: Antimagie (01.11.2026)
+
+- **Neue Spezialrune (Haltung, 12 s, eigene Adaption der Black-Clover-Antimagie):** eine gezackte Obsidianklinge mit aschweißer Kante und türkisen Rissen.
+- **Jeder Schlag** zerschneidet gegnerische Magie im Schlagbogen: Geschosse, Strahlen, Mauern, Beschwörungen werden negiert („NEGIERT“); ein Schnitt in einer feindlichen Sphäre zerbricht sie; getroffene Gegner verlieren Schilde und Haltung.
+- **Aufladen →** Nullschnitt (schwarzer Halbmond löscht alle Zauber die Lane hinunter) · **↑** Nullwirbel (rundum) · **↓** Aschenmantel (2 s zerfallen Geschosse an dir).
+
+- `v74_nullklinge.png`
