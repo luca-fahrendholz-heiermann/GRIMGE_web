@@ -758,7 +758,31 @@ export class SpellSystem {
       wall.owner = caster; wall.wallGroup = group;
       return wall;
     });
+    this.shoveFromRisingWall(blocks, gameWorld, caster, points);
     return blocks;
+  }
+
+  // The rising wall shoves whoever stands on a block (user, 1 Nov 2026): out to the nearer side across the wall line,
+  // with a small hop; inside a ring the side is the ring's centre, so a walled-in foe stays walled in. Foes take a little damage.
+  shoveFromRisingWall(blocks, gameWorld, caster, points) {
+    if (!gameWorld || !blocks.length) return;
+    const cx = points.reduce((s, p) => s + p.x, 0) / points.length; const cz = points.reduce((s, p) => s + p.z, 0) / points.length;
+    const closed = points.length > 4 && Math.hypot(points[0].x - points[points.length - 1].x, (points[0].z - points[points.length - 1].z) * 150) < 60;
+    const actors = [gameWorld.player, gameWorld.enemyChampion, ...(gameWorld.minions ?? []), ...this.getSummons()].filter((a) => a && !a.isDead && a.lifeState !== 'Dead' && a.isAlive !== false);
+    for (const actor of actors) {
+      const hit = blocks.find((w) => Math.abs(actor.x - w.x) <= w.halfX + (actor.width ?? 24) * .5 && Math.abs((actor.z ?? w.z) - w.z) <= w.halfZ + .05);
+      if (!hit) continue;
+      const i = blocks.indexOf(hit); const prev = points[Math.max(0, i - 1)]; const next = points[Math.min(points.length - 1, i + 1)];
+      let nx = -((next.z - prev.z) * 150); let nz = next.x - prev.x; const nl = Math.hypot(nx, nz) || 1; nx /= nl; nz /= nl;
+      if (nx === 0 && nz === 0) { nx = Math.sign(actor.x - hit.x) || 1; nz = 0; }
+      const ref = closed ? { x: cx, z: cz } : actor; const side = Math.sign(nx * (ref.x - hit.x) + nz * ((ref.z - hit.z) * 150)) || (closed ? 1 : Math.sign(nx * (actor.x - caster.x)) || 1);
+      const push = hit.halfX + (actor.width ?? 24) * .5 + 8;
+      actor.x = hit.x + nx * side * push; if (Number.isFinite(actor.z)) actor.z = hit.z + nz * side * push / 150;
+      if ('kbVelX' in actor) actor.kbVelX = nx * side * 220;
+      if (actor.grounded !== undefined && 'vElevation' in actor) { actor.vElevation = Math.max(actor.vElevation ?? 0, 220); actor.grounded = false; }
+      if (actor.team !== caster.team) actor.takeDamage?.(8, nx * side * 200, 140, .25, false, 'spell');
+      combat.spawnDust(actor.x, actor.y ?? hit.y, 6);
+    }
   }
 
   castStoneWall(caster, gameWorld, quality = RUNE_GRADE_PROFILES.B, target = null) {
