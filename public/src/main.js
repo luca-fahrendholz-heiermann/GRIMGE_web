@@ -350,6 +350,7 @@ export class GameWorld {
     ui.syncScreenFitLabel(this.screenFit);
     this.resetMatch();
     this.matchState = 'Menu';
+    this.reportReloadedMatch();
     // A mode changes only match rules. It never forks input, combat or spell
     // code into a separate minigame implementation.
     this.matchMode = 'siege';
@@ -358,7 +359,7 @@ export class GameWorld {
     ui.showHub(true);
 
     this.running = true;
-    requestAnimationFrame((t) => this.loop(t));
+    this.scheduleFrame();
     console.log('⚔️ GRIMGE Game Loop running with a 1024×576 combat field and adaptive camera.');
   }
 
@@ -2657,6 +2658,7 @@ export class GameWorld {
     }
     this.resetMatch();
     this.matchState = 'Running';
+    this.markMatchSession(true);
     this.syncOrientationState();
     ui.showHub(false);
     ui.showResults(false);
@@ -2692,7 +2694,7 @@ export class GameWorld {
 
   completeResults() {
     if (this.matchState !== 'Ending') return;
-    this.matchState = 'Results';
+    this.matchState = 'Results'; this.markMatchSession(false);
     this.projectiles = [];
     spells.clearRuntime(); environment.clear();
     // A compact match reward gives the tree a real play loop without making
@@ -2712,7 +2714,26 @@ export class GameWorld {
     ui.showResults(true, { winner: this.winnerTeam, elapsed: this.matchDuration - this.matchTime, stats: this.stats });
   }
 
-  returnToHub() {
+  // Diagnosis (user, 1 Nov 2026): a running match is marked in sessionStorage; if the page comes back with the mark
+  // still set, it was reloaded / crashed mid-match — the hub then says so, with the last caught error.
+  markMatchSession(on) {
+    try { if (on) globalThis.sessionStorage?.setItem?.('grimge-match', JSON.stringify({ mode: this.activeMode?.id, at: Date.now() })); else globalThis.sessionStorage?.removeItem?.('grimge-match'); } catch { /* optional */ }
+  }
+  reportReloadedMatch() {
+    let mark = null; let last = null;
+    try { mark = JSON.parse(globalThis.sessionStorage?.getItem?.('grimge-match') ?? 'null'); last = JSON.parse(globalThis.localStorage?.getItem?.('grimge-last-error') ?? 'null'); } catch { /* optional */ }
+    if (!mark) return null;
+    this.markMatchSession(false);
+    const err = last && Date.now() - Date.parse(last.at) < 10 * 60000 ? ` · LETZTER FEHLER: ${last.msg}` : '';
+    const note = `DAS SPIEL WURDE IM MATCH (${String(mark.mode).toUpperCase()}) NEU GELADEN${err}`;
+    console.warn('[GRIMGE]', note, last);
+    setTimeout(() => ui.showAnnouncement?.(note, 8), 600);
+    return note;
+  }
+
+  returnToHub(reason = 'menu') {
+    this.markMatchSession(false);
+    try { const log = JSON.parse(globalThis.localStorage?.getItem?.('grimge-hub-log') ?? '[]'); log.push({ reason, mode: this.activeMode?.id, at: new Date().toISOString(), stack: String(new Error().stack).split(String.fromCharCode(10)).slice(2, 6).join(' < ').slice(0, 400) }); globalThis.localStorage?.setItem?.('grimge-hub-log', JSON.stringify(log.slice(-10))); } catch { /* optional */ }
     this.matchState = 'Menu';
     this.orientationBlocked = false;
     this.menuPaused = false;
@@ -2763,7 +2784,22 @@ export class GameWorld {
     ui.showAnnouncement(msg, dur);
   }
 
+  // One broken frame must never freeze the game or lose the match (user, 1 Nov 2026: thrown into the main menu at a
+  // beam clash / a transformation): the error is caught, recorded (localStorage grimge-last-error) and shown once.
+  scheduleFrame() { this._frameScheduled = true; requestAnimationFrame((t) => this.loop(t)); }
   loop(currentTime) {
+    this._frameScheduled = false;
+    try { this.loopBody(currentTime); } catch (error) { this.reportCrash(error); this.lastFrameTime = currentTime; }
+    if (this.running && !this._frameScheduled) this.scheduleFrame();
+  }
+  reportCrash(error) {
+    const msg = String(error?.message ?? error).slice(0, 160);
+    console.error('Frame error (caught):', error);
+    try { globalThis.localStorage?.setItem?.('grimge-last-error', JSON.stringify({ msg, stack: String(error?.stack ?? '').slice(0, 900), mode: this.activeMode?.id, at: new Date().toISOString() })); } catch { /* optional */ }
+    const now = performance.now(); if (now - (this._lastCrashNote ?? -1e9) > 6000) { this._lastCrashNote = now; this.showAnnouncement('FEHLER ABGEFANGEN: ' + msg.toUpperCase(), 3); }
+  }
+
+  loopBody(currentTime) {
     if (!this.running) return;
 
     let dt = (currentTime - this.lastFrameTime) * 0.001;
@@ -2779,7 +2815,7 @@ export class GameWorld {
     if (this.orientationBlocked) {
       this.input.gameplayBlocked = true;
       this.clearGameplayInput();
-      requestAnimationFrame((t) => this.loop(t));
+      this.scheduleFrame();
       return;
     }
 
@@ -2787,7 +2823,7 @@ export class GameWorld {
       this.input.gameplayBlocked = true;
       this.clearGameplayInput();
       this.render();
-      requestAnimationFrame((t) => this.loop(t));
+      this.scheduleFrame();
       return;
     }
 
@@ -2811,7 +2847,7 @@ export class GameWorld {
       this.input.gameplayBlocked = true;
       this.clearGameplayInput();
       this.render();
-      requestAnimationFrame((t) => this.loop(t));
+      this.scheduleFrame();
       return;
     }
 
@@ -2883,7 +2919,7 @@ export class GameWorld {
 
     this.render();
 
-    requestAnimationFrame((t) => this.loop(t));
+    this.scheduleFrame();
   }
 
   // A fallen Wizard leaves a grave once per death (Revenant Call).
