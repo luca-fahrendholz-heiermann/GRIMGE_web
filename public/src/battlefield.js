@@ -392,61 +392,25 @@ export class Battlefield {
     if (this.mode?.world === 'invasion') this._paintInvasionBridge(ctx, cameraOffsetX, gameplayWidth, viewH, renderWidth);
   }
 
-  _paintInvasionBridge(ctx, cameraOffsetX, gameplayWidth, viewH, renderWidth) {
-    const fadeStart = cameraOffsetX + gameplayWidth * 0.48;
-    const solidStart = cameraOffsetX + gameplayWidth * 0.52;
-    const endX = renderWidth;
+  // Invasion (user, 1 Nov 2026: 'szenenmäßig im Spielstil'): the enemy castle on the right of the painted arena art
+  // is replaced by the arena's own middle — the right-centre strip (floor, battlement, waterfalls, sky) mirrored at
+  // the seam, so floor and wall run on seamlessly — and the side the enemy marches in from darkens to a dusk in
+  // hard pixel steps (no soft gradient). Built once into an offscreen canvas.
+  invasionBackdrop() {
+    if (this._invasionBg) return this._invasionBg;
+    const img = this.bgImage; const doc = globalThis.document; if (!img?.width || typeof doc?.createElement !== 'function') return null;
+    const W = img.width; const H = img.height; const c = doc.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d'); if (!g) return null;
+    g.imageSmoothingEnabled = false; g.drawImage(img, 0, 0);
+    const seam = Math.round(W * .76); const span = W - seam;
+    g.save(); g.translate(seam * 2, 0); g.scale(-1, 1); g.drawImage(img, seam - span, 0, span, H, seam - span, 0, span, H); g.restore();
+    const steps = 18; for (let i = 0; i < steps; i++) { const x0 = Math.round(W * (.6 + i * .4 / steps)); g.fillStyle = `rgba(28,10,22,${(.018).toFixed(3)})`; g.fillRect(x0, 0, W - x0, H); }
+    for (let i = 0; i < 8; i++) { const y0 = Math.round(H * (i * .035)); g.fillStyle = `rgba(140,40,30,${(.016).toFixed(3)})`; g.fillRect(Math.round(W * (.72 + i * .02)), 0, W, y0 + Math.round(H * .035)); }
+    this._invasionBg = c; return c;
+  }
 
-    const fade = ctx.createLinearGradient(fadeStart, 0, solidStart, 0);
-    fade.addColorStop(0, 'rgba(18,12,10,0)');
-    fade.addColorStop(1, 'rgba(18,12,10,1)');
-    ctx.fillStyle = fade;
-    ctx.fillRect(fadeStart, 0, solidStart - fadeStart, viewH);
-
-    const sky = ctx.createLinearGradient(0, 0, 0, viewH * 0.55);
-    sky.addColorStop(0, '#0c0a14');
-    sky.addColorStop(0.4, '#1a1222');
-    sky.addColorStop(0.7, '#2a1620');
-    sky.addColorStop(1, '#201418');
-    ctx.fillStyle = sky;
-    ctx.fillRect(solidStart, 0, endX - solidStart, viewH * 0.55);
-
-    const glow = ctx.createRadialGradient(endX - 30, viewH * 0.38, 20, endX - 30, viewH * 0.38, 200);
-    glow.addColorStop(0, 'rgba(160,50,20,.12)');
-    glow.addColorStop(0.6, 'rgba(100,30,40,.05)');
-    glow.addColorStop(1, 'rgba(60,15,20,0)');
-    ctx.fillStyle = glow;
-    ctx.beginPath(); ctx.arc(endX - 30, viewH * 0.38, 200, 0, Math.PI * 2); ctx.fill();
-
-    const wallTop = viewH * 0.37;
-    const wallH = viewH * 0.16;
-    ctx.fillStyle = '#3a2820';
-    ctx.fillRect(solidStart, wallTop, endX - solidStart, wallH);
-
-    ctx.strokeStyle = '#2a1a12';
-    ctx.lineWidth = 1;
-    for (let row = 0; row < Math.ceil(wallH / 16); row++) {
-      const y = wallTop + row * 16;
-      const off = (row % 2) * 20;
-      for (let x = solidStart + off; x < endX; x += 40) {
-        ctx.strokeRect(x, y, 40, 16);
-      }
-    }
-
-    ctx.fillStyle = '#4a3828';
-    ctx.fillRect(solidStart, wallTop - 6, endX - solidStart, 6);
-    ctx.fillStyle = '#544030';
-    for (let x = solidStart; x < endX; x += 28) {
-      ctx.fillRect(x + 8, wallTop - 14, 12, 14);
-    }
-
-    const groundY = wallTop + wallH;
-    const gnd = ctx.createLinearGradient(0, groundY, 0, viewH);
-    gnd.addColorStop(0, '#1a100c');
-    gnd.addColorStop(0.4, '#201410');
-    gnd.addColorStop(1, '#0e0a06');
-    ctx.fillStyle = gnd;
-    ctx.fillRect(solidStart, groundY, endX - solidStart, viewH - groundY);
+  _paintInvasionBridge(ctx, cameraOffsetX, gameplayWidth, viewH) {
+    const bg = this.invasionBackdrop(); if (!bg) return;
+    ctx.save(); ctx.imageSmoothingEnabled = false; ctx.drawImage(bg, cameraOffsetX, 0, gameplayWidth, viewH); ctx.restore();
   }
 
   renderModeBackground(ctx, gameplayWidth, viewH, renderWidth, cameraOffsetX, modeState = null) {

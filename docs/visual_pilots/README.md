@@ -725,3 +725,9 @@ Die Geschosse der Waffen (`drawShotPixel` in `weapons_ext.js`) sind jetzt knacki
 - **Alle Waffen geprüft:** 13 weitere Waffen × Vorwärts / Aufwärts / Sprint mit 13 Stilen im Spiel — keine Renderfehler. Korrigiert: Wurfmesser und Chakrams spannten beim Aufwärts-Move einen Bogen; sie werfen jetzt (Armbrust zielt, Bogen spannt).
 
 - `v70_primals_schwung.png`, `v70_atem_waffen_matrix.png`
+
+## v71 — Invasion-Szene im Spielstil (01.11.2026)
+
+- Die feindliche Burg rechts war mit einer simplen Verlaufs-Mauer übermalt (Programmer-Art). Jetzt wird die rechte Seite aus dem gemalten Arena-Bild selbst gebaut: der Mittelstreifen (Boden, Zinnenmauer, Wasserfälle, Berge, Himmel) gespiegelt an der Naht — alles läuft nahtlos weiter; die rote Säule am Rand markiert das Feindtor; die Seite, von der der Feind anrückt, dunkelt in feinen Pixelstufen zur Dämmerung ab.
+
+- `v71_invasion_szene.png`
