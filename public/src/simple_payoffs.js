@@ -75,12 +75,13 @@ const PAYOFFS = {
     if (s.t > .5 && every(s, 'soak', .5, dt)) for (const t of foesOf(gw, s.team)) if (s.inside(t)) { hit(t, Math.round(4 * powOf(s)), 0, 0, .05); applyStatus(t, 'wet'); }
   },
   EmberPump(s, dt, gw) {
-    if (s.isDead || s.bursted) return;
+    if (s.isDead) return;
     if (s.t >= 1.2 && once(s, 'heat')) s.trigger?.('heat', gw);
     if (s.t >= 3 && once(s, 'erupt')) {
       if (typeof s.burst === 'function') s.burst(gw);
       ring(s.x, s.z, 90, '#ff6d00'); combat.spawnDamageText?.(s.x, gy(s.z) - 90, 'AUSBRUCH', { color: '#ffab40' });
-      for (const t of foesOf(gw, s.team)) if (dist(t, s.x, s.z) < 100) { hit(t, Math.round(24 * powOf(s)), (Math.sign(t.x - s.x) || 1) * 220, 160, .35); applyStatus(t, 'burn'); }
+      // burst() already deals the blast damage; the eruption adds burning (no second hit).
+      for (const t of foesOf(gw, s.team)) if (dist(t, s.x, s.z) < 100) { if (typeof s.burst !== 'function') hit(t, Math.round(24 * powOf(s)), (Math.sign(t.x - s.x) || 1) * 220, 160, .35); applyStatus(t, 'burn'); }
     }
   },
   SpaceFold(s, dt, gw) {
