@@ -74,7 +74,9 @@ export const ART_ASSETS = Object.freeze({
     enemy_knight: Object.freeze({
       key: 'enemy_knight',
       sheets: ['assets/sprites/sheets/enemy_knight_0.png', 'assets/sprites/sheets/enemy_knight_1.png'],
-      grid: CELL,
+      // This sheet is laid out in 160×200 cells (taller than the others) — read with 160×160 the legs landed on top of
+      // the next frame (bug, 1 Nov 2026).
+      grid: Object.freeze({ w: 160, h: 200, cols: 10, rows: 5 }),
       anims: STANDARD_ANIMS,
       role: 'enemy',
       label: 'Void Knight'
