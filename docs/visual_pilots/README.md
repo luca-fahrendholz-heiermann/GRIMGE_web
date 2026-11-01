@@ -731,3 +731,11 @@ Die Geschosse der Waffen (`drawShotPixel` in `weapons_ext.js`) sind jetzt knacki
 - Die feindliche Burg rechts war mit einer simplen Verlaufs-Mauer übermalt (Programmer-Art). Jetzt wird die rechte Seite aus dem gemalten Arena-Bild selbst gebaut: der Mittelstreifen (Boden, Zinnenmauer, Wasserfälle, Berge, Himmel) gespiegelt an der Naht — alles läuft nahtlos weiter; die rote Säule am Rand markiert das Feindtor; die Seite, von der der Feind anrückt, dunkelt in feinen Pixelstufen zur Dämmerung ab.
 
 - `v71_invasion_szene.png`
+
+## v72 — Gezeichnete Mauern: freie Form, zerstörbar, kein Ablaufen (01.11.2026)
+
+- **Freie Form:** die Mauer folgt dem ganzen Wischweg (Kurven, Ecken, geschlossene Ringe) statt nur der Linie Start→Ende; ein Pfad darf doppelt so viele Blöcke + 2 haben (S-Rang: 14), genug, um einen Gegner einzukreisen. Die Vorschau zeigt den gezeichneten Pfad.
+- **Bleiben stehen:** Stein- und Bollwerk-Mauern verschwinden nicht mehr nach Zeit, nur wenn sie zerstört werden (pro Zauberer weiter eine Mauer — eine neue ersetzt die alte).
+- **Zerstörbar:** Lebenspunkte wie bisher; der gegnerische Champion schlägt sich jetzt durch eine Mauer, die ihn einschließt oder ihm den Weg versperrt (Minions taten das schon). Barrier Mastery: Mauern 50 % stabiler.
+
+- `v72_mauer_ring.png`

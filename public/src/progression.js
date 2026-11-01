@@ -8,7 +8,7 @@ export const MAGE_SKILL_TREE = Object.freeze([
   { id: 'elemental_reach', branch: 'ELEMENTAL', title: 'Elemental Reach', desc: '+12% spell area and reach.', cost: 1, prerequisites: ['elemental_power'], modifiers: { spellArea: 1.12 } },
   { id: 'resonance', branch: 'ELEMENTAL', title: 'Rune Resonance', desc: '+15% combined-spell power.', cost: 1, prerequisites: ['elemental_reach'], modifiers: { comboPower: 1.15 } },
   { id: 'arcane_skin', branch: 'DEFENSE', title: 'Arcane Skin', desc: 'Take 10% less damage.', cost: 1, modifiers: { damageTaken: .90 } },
-  { id: 'barrier_mastery', branch: 'DEFENSE', title: 'Barrier Mastery', desc: 'Walls last 30% longer and cover more ground.', cost: 1, prerequisites: ['arcane_skin'], modifiers: { wallDuration: 1.30, wallHp: 1.25 } },
+  { id: 'barrier_mastery', branch: 'DEFENSE', title: 'Barrier Mastery', desc: 'Walls are 50% sturdier and cover more ground.', cost: 1, prerequisites: ['arcane_skin'], modifiers: { wallDuration: 1.30, wallHp: 1.5 } },
   { id: 'rampart_mason', branch: 'DEFENSE', title: 'Rampart Mason', desc: 'Keep up to 3 walls on the field at once; older walls only fall when destroyed or expired.', cost: 1, prerequisites: ['barrier_mastery'], modifiers: { maxWalls: 2 } },
   { id: 'last_stand', branch: 'DEFENSE', title: 'Letztes Gefecht', desc: 'Below 25% HP your melee and charged hits deal +50% damage.', cost: 1, prerequisites: ['arcane_skin'], modifiers: { lastStand: .5 } },
   { id: 'aura_shock_mastery', branch: 'DEFENSE', title: 'Aura Shock Mastery', desc: '+18% Aura Shock radius and knockback.', cost: 1, prerequisites: ['barrier_mastery'], modifiers: { auraArea: 1.18, auraPush: 1.18 } },

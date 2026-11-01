@@ -2786,6 +2786,11 @@ export class EnemyChampion extends GroundEntity {
     else if (player.isAlive && this.tryAICounterBeam(gameWorld)) {
       this.vx = this.vz = 0;
     }
+    else if (this.blockingWallToward(player)) {
+      // Walled in / walled off: the champion breaks through the wall in its way (walls stand until destroyed).
+      const wall = this.blockingWallToward(player); this.aiMode = 'BREAK_WALL'; this.vx = this.vz = 0; this.facing = Math.sign(wall.x - this.x) || this.facing;
+      if (this.attackCooldown <= 0) { this.attackCooldown = .75; this.state = 'attack1'; this.stateTimer = .3; wall.takeDamage(26); combat.spawnSlashArc?.(this.x + this.facing * 20, this.y - 30, this.facing, { radius: 30, color: '#ff8a65', glow: '#ff5722', width: 4 }); }
+    }
     else if (gameWorld.activeMode?.id === 'arena' && !this.arenaCastAllowed() && gameWorld.modeState?.runeCollectibles?.length && distance > 70) {
       this.aiMode = 'COLLECT_RELIC';
       const relic = gameWorld.modeState.runeCollectibles.reduce((b, r) => (Math.hypot(r.x - this.x, (r.z - this.z) * 150) < Math.hypot(b.x - this.x, (b.z - this.z) * 150) ? r : b));
@@ -2847,6 +2852,13 @@ export class EnemyChampion extends GroundEntity {
   // Arena: the champion may only cast what it collected (relics give 3 casts each).
   arenaCastAllowed() { return this.arenaCasts === undefined || this.arenaCasts > 0; }
   spendArenaCast() { if (this.arenaCasts !== undefined) this.arenaCasts = Math.max(0, this.arenaCasts - 1); }
+  // A hostile wall within reach that stands between this fighter and its target (or closes it in).
+  blockingWallToward(target) {
+    if (!target) return null;
+    const dir = Math.sign(target.x - this.x) || this.facing || 1; const dzT = (target.z ?? this.z) - this.z;
+    return spells.activeSpells.find((w) => w.isStoneWall && !w.isDead && w.team !== this.team && Math.abs(w.x - this.x) <= w.halfX + 30 && Math.abs(w.z - this.z) <= w.halfZ + .09
+      && (Math.sign(w.x - this.x) === dir || Math.sign(w.z - this.z) === Math.sign(dzT))) ?? null;
+  }
   tryAIDeckSpell(player, distance, gameWorld) {
     if (!this.deckSpells) return this.tryAICast('fireball', gameWorld, 12, 3.1);
     if (this.spellCooldown > 0 || !this.deckSpells.length || !this.arenaCastAllowed()) return false;

@@ -695,6 +695,19 @@ export class SpellSystem {
   // `orientation: 'lateral'`.
   wallLine(caster, target, maxSegments, spacing = WALL_SEGMENT_SPACING, bounds = null) {
     const depth = 150;
+    // A drawn path (curve, corner, ring): blocks are laid along it every `spacing` px. A path may hold more blocks
+    // than a straight swipe (2× + 2) so a foe can be walled in completely.
+    if (target?.path?.length >= 3) {
+      const area = bounds ?? ARENA_LAYOUT.playableBounds; const budget = maxSegments * 2 + 2; const pts = target.path; const out = [{ ...pts[0] }];
+      let carry = 0;
+      for (let i = 1; i < pts.length && out.length < budget; i++) {
+        const a = pts[i - 1]; const b = pts[i]; const len = Math.hypot(b.x - a.x, (b.z - a.z) * depth); if (len <= 0) continue;
+        let d = spacing - carry;
+        while (d <= len && out.length < budget) { const u = d / len; out.push({ x: a.x + (b.x - a.x) * u, z: a.z + (b.z - a.z) * u }); d += spacing; }
+        carry = len - (d - spacing);
+      }
+      return out.map((p) => ({ x: p.x, z: Math.max(area.farZ ?? .06, Math.min(area.nearZ ?? .94, p.z)) }));
+    }
     let sx; let sz; let ex; let ez;
     const swiped = target?.start && target?.end && Math.hypot(target.end.x - target.start.x, (target.end.z - target.start.z) * depth) >= spacing * .75;
     if (swiped) {
@@ -751,7 +764,7 @@ export class SpellSystem {
   castStoneWall(caster, gameWorld, quality = RUNE_GRADE_PROFILES.B, target = null) {
     const mods = caster.buildModifiers ?? {};
     const blocks = this.placeWall(caster, gameWorld, quality, target, 'stone_wall', {
-      halfX: 13, halfZ: .075, wallHeight: 72, life: 16 * (mods.wallDuration ?? 1), hp: Math.round(110 * (mods.wallHp ?? 1)), style: 'masonry'
+      halfX: 13, halfZ: .075, wallHeight: 72, life: Infinity, hp: Math.round(110 * (mods.wallHp ?? 1)), style: 'masonry'
     });
     audio.playSpell('stone_spikes');
     combat.shakeCamera(5, 0.2);
@@ -777,7 +790,7 @@ export class SpellSystem {
   castConstructBulwark(caster, gameWorld, quality = RUNE_GRADE_PROFILES.B, target = null) {
     const mods = caster.buildModifiers ?? {};
     const blocks = this.placeWall(caster, gameWorld, quality, target, 'construct_bulwark', {
-      halfX: 12, halfZ: .07, wallHeight: 66, life: 9 * (mods.wallDuration ?? 1), hp: Math.round(80 * (mods.wallHp ?? 1)), color: '#90a4ae', style: 'bulwark'
+      halfX: 12, halfZ: .07, wallHeight: 66, life: Infinity, hp: Math.round(80 * (mods.wallHp ?? 1)), color: '#90a4ae', style: 'bulwark'
     });
     audio.playSpell('stone_spikes');
     for (const wall of blocks) combat.spawnElementalParticles(wall.x, wall.y, 'construct', Math.round(5 * quality.particles));

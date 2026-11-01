@@ -118,8 +118,10 @@ export class SpellTargeting {
     const a = this.active;
     if (!a) return;
     if (a.mode === TARGETING.PLACEMENT && a.lineStart) {
-      // The wall follows the swipe exactly: any direction, including depth.
+      // The wall follows the swipe exactly: any direction, including depth — and the whole drawn path (curves, rings).
       a.lineEnd = this.clampToRange(world, TARGET_RANGE.placement);
+      a.path ??= [{ ...a.lineStart }]; const last = a.path[a.path.length - 1];
+      if (Math.hypot(a.lineEnd.x - last.x, (a.lineEnd.z - last.z) * 150) >= 8) a.path.push({ ...a.lineEnd });
       const dxPx = a.lineEnd.x - a.lineStart.x;
       const dzPx = (a.lineEnd.z - a.lineStart.z) * 150;
       a.orientation = Math.abs(dxPx) > Math.abs(dzPx) ? 'lateral' : 'depth';
@@ -158,7 +160,7 @@ export class SpellTargeting {
     if (a.mode === TARGETING.PLACEMENT) {
       a.lineStart = this.clampToRange(world, TARGET_RANGE.placement);
       a.lineEnd = a.lineStart;
-      a.point = a.lineStart; a.length = 0;
+      a.point = a.lineStart; a.length = 0; a.path = [{ ...a.lineStart }];
     } else this.setPoint(world);
     return true;
   }
@@ -189,7 +191,8 @@ export class SpellTargeting {
       case TARGETING.GROUND: return { x: a.point.x, z: a.point.z };
       case TARGETING.PLACEMENT: return {
         x: a.point.x, z: a.point.z, orientation: a.orientation, length: a.length,
-        ...(a.lineStart && a.lineEnd && a.length > 8 ? { start: { ...a.lineStart }, end: { ...a.lineEnd } } : {})
+        ...(a.lineStart && a.lineEnd && a.length > 8 ? { start: { ...a.lineStart }, end: { ...a.lineEnd } } : {}),
+        ...(a.path?.length >= 3 ? { path: a.path.map((p) => ({ ...p })) } : {})
       };
       case TARGETING.ALLY: return a.entity ? { entity: a.entity } : null;
       case TARGETING.AIM: return { x: a.point.x, z: a.point.z, aim: true };
@@ -266,7 +269,10 @@ export class SpellTargeting {
       // Preview exactly the blocks the wall will have (count = drawing grade).
       const max = spells.wallSegmentLimit(a.definition.id, a.slot.quality, player);
       const blocks = spells.wallLine(player, this.buildTarget(), max, undefined, this.game.battlefield?.boundsOverride);
-      if (a.lineStart && a.lineEnd) {
+      if (a.path?.length >= 2) {
+        ctx.strokeStyle = `rgba(255,255,255,${pulse})`;
+        ctx.beginPath(); a.path.forEach((p, i) => (i ? ctx.lineTo(p.x, groundY(p.z)) : ctx.moveTo(p.x, groundY(p.z)))); ctx.stroke();
+      } else if (a.lineStart && a.lineEnd) {
         ctx.strokeStyle = `rgba(255,255,255,${pulse})`;
         ctx.beginPath(); ctx.moveTo(a.lineStart.x, groundY(a.lineStart.z)); ctx.lineTo(a.lineEnd.x, groundY(a.lineEnd.z)); ctx.stroke();
       }
