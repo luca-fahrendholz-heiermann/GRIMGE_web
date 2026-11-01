@@ -361,6 +361,7 @@ export class GameWorld {
     this.resetMatch();
     this.matchState = 'Menu';
     this.reportReloadedMatch();
+    this.installBackGuard();
     { const base = ui.showHub.bind(ui); ui.showHub = (visible) => { if (visible && (this.matchState === 'Running' || this.matchState === 'Ending')) { try { const log = JSON.parse(globalThis.localStorage?.getItem?.('grimge-hub-log') ?? '[]'); log.push({ reason: 'showHub während ' + this.matchState, mode: this.activeMode?.id, at: new Date().toISOString(), stack: String(new Error().stack).split(String.fromCharCode(10)).slice(2, 6).join(' < ').slice(0, 400) }); globalThis.localStorage?.setItem?.('grimge-hub-log', JSON.stringify(log.slice(-10))); } catch { /* optional */ } } const r = base(visible); if (visible) setTimeout(() => this.showHubDiagnosis(), 50); else this.hideHubDiagnosis(); return r; }; }
     // A mode changes only match rules. It never forks input, combat or spell
     // code into a separate minigame implementation.
@@ -2726,6 +2727,7 @@ export class GameWorld {
     this.resetMatch();
     this.matchState = 'Running';
     this.markMatchSession(true);
+    this.armBackGuard(); // started by a user click: the trap entry counts for the back button
     this.syncOrientationState();
     ui.showHub(false);
     ui.showResults(false);
@@ -2800,6 +2802,25 @@ export class GameWorld {
     el.textContent = lines.length ? '[DIAGNOSE] ' + lines.join('\n') : ''; el.style.display = lines.length ? 'block' : 'none';
   }
   hideHubDiagnosis() { const el = globalThis.document?.getElementById?.('grimge-diag'); if (el) el.style.display = 'none'; }
+
+  // Back-navigation guard (user report, 1 Nov 2026: the diagnosis showed 'NEU GELADEN … Navigation: back_forward' —
+  // a browser BACK (edge-swipe / touchpad gesture, the mouse's back button, Alt+←) left the page mid-match and the
+  // return reloaded it into the hub). During a match: a trap history entry swallows BACK, the mouse back buttons and
+  // Alt+← are ignored, and leaving the page asks first.
+  installBackGuard() {
+    const w = globalThis.window; if (!w?.addEventListener || typeof w.history?.pushState !== 'function' || this._backGuard) return; this._backGuard = true;
+    const running = () => this.matchState === 'Running' || this.matchState === 'Ending';
+    w.addEventListener('popstate', () => {
+      if (!running()) return;
+      try { w.history.pushState({ grimge: 'trap' }, ''); } catch { /* optional */ }
+      this.showAnnouncement('ZURÜCK IST IM MATCH GESPERRT — MENÜ ÜBER ☰', 1.6);
+    });
+    const blockMouseBack = (e) => { if ((e.button === 3 || e.button === 4) && running()) { e.preventDefault(); e.stopPropagation(); } };
+    for (const type of ['mousedown', 'mouseup', 'pointerdown', 'pointerup', 'auxclick']) w.addEventListener(type, blockMouseBack, { capture: true });
+    w.addEventListener('keydown', (e) => { if (running() && ((e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) || e.key === 'BrowserBack' || e.key === 'BrowserForward')) e.preventDefault(); }, { capture: true });
+    w.addEventListener('beforeunload', (e) => { if (!running()) return; e.preventDefault(); e.returnValue = ''; return ''; });
+  }
+  armBackGuard() { try { const h = globalThis.window?.history; if (h && h.state?.grimge !== 'trap') h.pushState({ grimge: 'trap' }, ''); } catch { /* optional */ } }
 
   reportReloadedMatch() {
     let mark = null; let last = null;
