@@ -1620,6 +1620,9 @@ export class GameWorld {
         this.enemyChampion.lifeState = 'Alive';
         this.enemyChampion.respawnTimer = Infinity;
         this.modeState.bossActive = true;
+        // Fair start (user, 1 Nov 2026): the champion begins empty and must collect the rune relics too.
+        this.enemyChampion.setDeck([]); this.enemyChampion.arenaCasts = 0;
+        this.modeState.relicTimer = 6;
         this.spawnArenaRuneCollectibles();
       }
     }
@@ -2148,9 +2151,18 @@ export class GameWorld {
     ctx.restore();
   }
 
-  updateArenaRuneCollectibles() {
+  updateArenaRuneCollectibles(dt = 0) {
     const relics = this.modeState?.runeCollectibles;
-    if (this.activeMode?.id !== 'arena' || !relics?.length) return;
+    if (this.activeMode?.id !== 'arena' || !relics) return;
+    // New relics keep appearing (up to 3 on the field), so both fighters can keep collecting.
+    if (relics.length < 3 && (this.modeState.relicTimer = (this.modeState.relicTimer ?? 6) - dt) <= 0) {
+      this.modeState.relicTimer = 7 + Math.random() * 4;
+      const pool = recognizer.runes.filter((rune) => rune.id !== 'special' && !String(rune.id).startsWith('transform_') && !!spells.resolveSpell([{ id: rune.id }]));
+      const spots = [{ x: 438, z: .27 }, { x: 535, z: .80 }, { x: 625, z: .48 }, { x: 330, z: .5 }, { x: 720, z: .35 }, { x: 512, z: .55 }].filter((p) => !relics.some((r) => Math.abs(r.x - p.x) < 40 && Math.abs(r.z - p.z) < .1));
+      const spot = spots[Math.floor(Math.random() * spots.length)];
+      if (spot && pool.length) { relics.push({ ...spot, rune: pool[Math.floor(Math.random() * pool.length)] }); this.showAnnouncement('NEUES RUNEN-RELIKT', 1); }
+    }
+    if (!relics.length) return;
     for (let i = relics.length - 1; i >= 0; i--) {
       const relic = relics[i];
       if (this.player.isAlive && Math.hypot(this.player.x - relic.x, (this.player.z - relic.z) * 150) <= 42) {
@@ -2162,8 +2174,10 @@ export class GameWorld {
       }
       if (this.enemyChampion.isAlive && Math.hypot(this.enemyChampion.x - relic.x, (this.enemyChampion.z - relic.z) * 150) <= 42) {
         relics.splice(i, 1);
-        this.showAnnouncement(`ENEMY SEIZED ${relic.rune.name} RUNE!`, 1.2);
-        this.enemyChampion.spellCooldown = Math.min(this.enemyChampion.spellCooldown, 0.5);
+        // The champion learns the rune (its deck) and gets 3 casts from it.
+        const E = this.enemyChampion; E.setDeck([...(E.deckIds ?? []), relic.rune.id]); E.arenaCasts = (E.arenaCasts ?? 0) + 3;
+        this.showAnnouncement(`GEGNER HOLT ${relic.rune.name} (+3 ZAUBER)`, 1.2);
+        E.spellCooldown = Math.min(E.spellCooldown, 0.5);
       }
     }
   }
@@ -2877,7 +2891,7 @@ export class GameWorld {
       this.siegeMatch?.tick(scaledDt);
       this.primal?.update(scaledDt, this);
       this.noteFallenWizards();
-      this.updateArenaRuneCollectibles();
+      this.updateArenaRuneCollectibles(scaledDt);
 
       if (this.isMatchRunning()) {
         for (let i = this.minions.length - 1; i >= 0; i--) {

@@ -60,6 +60,7 @@ export function tryAICounterDomain(ai, gw, spells) {
 // Pick a special that fits the moment.
 export function tryAISpecial(ai, player, distance, gw, spells) {
   if ((ai.specialCooldown ?? 0) > 0 || ai.aiRecast || !player?.isAlive) return false;
+  if (ai.arenaCasts !== undefined && ai.arenaCasts <= 0) return false; // arena: only collected runes
   const ids = aiSpecialIds(ai, gw); if (!ids.length) return false;
   const sameLane = Math.abs((player.z ?? 0) - (ai.z ?? 0)) < .12;
   ai.facing = Math.sign(player.x - ai.x) || ai.facing;

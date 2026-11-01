@@ -2786,6 +2786,12 @@ export class EnemyChampion extends GroundEntity {
     else if (player.isAlive && this.tryAICounterBeam(gameWorld)) {
       this.vx = this.vz = 0;
     }
+    else if (gameWorld.activeMode?.id === 'arena' && !this.arenaCastAllowed() && gameWorld.modeState?.runeCollectibles?.length && distance > 70) {
+      this.aiMode = 'COLLECT_RELIC';
+      const relic = gameWorld.modeState.runeCollectibles.reduce((b, r) => (Math.hypot(r.x - this.x, (r.z - this.z) * 150) < Math.hypot(b.x - this.x, (b.z - this.z) * 150) ? r : b));
+      const move = normalizeMove({ x: relic.x - this.x, z: (relic.z - this.z) * 150 });
+      this.facing = Math.sign(move.x) || this.facing; this.vx = move.x * this.speed * this.slowFactor; this.vz = move.z * this.speed / 150 * this.slowFactor; this.state = 'run';
+    }
     else if (player.isAlive && distance <= 70) {
       this.aiMode = 'DUEL';
       this.vx = this.vz = 0;
@@ -2822,8 +2828,8 @@ export class EnemyChampion extends GroundEntity {
     this.integrateElevation(dt, 1200); const previousX = this.x; const previousZ = this.z; this.x += (this.vx + this.kbVelX) * dt; this.z += this.vz * dt; battlefield.resolveEntityCollision(this); gameWorld.resolveSpellObstacles(this, previousX, previousZ);
   }
   tryAICast(id, gameWorld, manaCost, cooldown) {
-    if (this.spellCooldown > 0 || this.mp < manaCost) return false;
-    this.mp -= manaCost; this.spellCooldown = cooldown;
+    if (this.spellCooldown > 0 || this.mp < manaCost || !this.arenaCastAllowed()) return false;
+    this.mp -= manaCost; this.spellCooldown = cooldown; this.spendArenaCast();
     spells.cast(this, { id, tier: ['stone_wall', 'arcane_aegis', 'inferno_beam', 'glacial_ray', 'thunder_lance', 'null_ray'].includes(id) ? 2 : 1 }, gameWorld);
     return true;
   }
@@ -2838,9 +2844,12 @@ export class EnemyChampion extends GroundEntity {
     return { boss_firelord: 'inferno_beam', darklord: 'null_ray', mage: 'glacial_ray' }[this.heroKey] ?? 'thunder_lance';
   }
   // Pick a spell from the deck that suits the moment and give it a target.
+  // Arena: the champion may only cast what it collected (relics give 3 casts each).
+  arenaCastAllowed() { return this.arenaCasts === undefined || this.arenaCasts > 0; }
+  spendArenaCast() { if (this.arenaCasts !== undefined) this.arenaCasts = Math.max(0, this.arenaCasts - 1); }
   tryAIDeckSpell(player, distance, gameWorld) {
     if (!this.deckSpells) return this.tryAICast('fireball', gameWorld, 12, 3.1);
-    if (this.spellCooldown > 0 || !this.deckSpells.length) return false;
+    if (this.spellCooldown > 0 || !this.deckSpells.length || !this.arenaCastAllowed()) return false;
     const hurt = this.hp / this.maxHp < .6;
     const usable = this.deckSpells.filter(({ def, cost }) => {
       // Special runes go through ai_specials.js (situation + second stage), never the plain pick.
@@ -2854,7 +2863,7 @@ export class EnemyChampion extends GroundEntity {
     const target = def.targetingMode === 'ground' ? { x: player.x, z: player.z }
       : def.targetingMode === 'placement' ? { x: this.x + this.facing * 80, z: this.z }
       : def.targetingMode === 'ally' ? { entity: this } : null;
-    this.mp -= cost; this.spellCooldown = 2.4;
+    this.mp -= cost; this.spellCooldown = 2.4; this.spendArenaCast();
     spells.cast(this, def, gameWorld, null, target);
     return true;
   }
