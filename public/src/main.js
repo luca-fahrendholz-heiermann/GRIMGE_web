@@ -361,6 +361,7 @@ export class GameWorld {
     this.resetMatch();
     this.matchState = 'Menu';
     this.reportReloadedMatch();
+    { const base = ui.showHub.bind(ui); ui.showHub = (visible) => { if (visible && (this.matchState === 'Running' || this.matchState === 'Ending')) { try { const log = JSON.parse(globalThis.localStorage?.getItem?.('grimge-hub-log') ?? '[]'); log.push({ reason: 'showHub während ' + this.matchState, mode: this.activeMode?.id, at: new Date().toISOString(), stack: String(new Error().stack).split(String.fromCharCode(10)).slice(2, 6).join(' < ').slice(0, 400) }); globalThis.localStorage?.setItem?.('grimge-hub-log', JSON.stringify(log.slice(-10))); } catch { /* optional */ } } const r = base(visible); if (visible) setTimeout(() => this.showHubDiagnosis(), 50); else this.hideHubDiagnosis(); return r; }; }
     // A mode changes only match rules. It never forks input, combat or spell
     // code into a separate minigame implementation.
     this.matchMode = 'siege';
@@ -2785,14 +2786,31 @@ export class GameWorld {
   markMatchSession(on) {
     try { if (on) globalThis.sessionStorage?.setItem?.('grimge-match', JSON.stringify({ mode: this.activeMode?.id, at: Date.now() })); else globalThis.sessionStorage?.removeItem?.('grimge-match'); } catch { /* optional */ }
   }
+  // Visible diagnosis in the hub (user, 1 Nov 2026: still thrown into the main menu mid-match): how the hub was
+  // reached — a page RELOAD (crash / browser) or a CODE path (with its reason and caller) — and the last caught error.
+  showHubDiagnosis(extra = null) {
+    const doc = globalThis.document; if (!doc?.body) return;
+    let el = doc.getElementById('grimge-diag'); if (!el) { el = doc.createElement('div'); el.id = 'grimge-diag'; el.style.cssText = 'position:fixed;left:6px;bottom:6px;z-index:99999;max-width:60vw;font:10px/1.3 monospace;color:#ffe082;background:rgba(0,0,0,.72);padding:4px 6px;border:1px solid #ffb300;pointer-events:none;white-space:pre-wrap'; doc.body.appendChild(el); }
+    let log = []; let last = null; try { log = JSON.parse(globalThis.localStorage?.getItem?.('grimge-hub-log') ?? '[]'); last = JSON.parse(globalThis.localStorage?.getItem?.('grimge-last-error') ?? 'null'); } catch { /* optional */ }
+    const h = log[log.length - 1];
+    const lines = [];
+    if (extra) lines.push(extra);
+    if (h) lines.push('LETZTER MENÜ-SPRUNG: ' + h.reason + ' · ' + (h.mode ?? '?') + ' · ' + new Date(h.at).toLocaleTimeString() + (h.stack ? '\n  ' + String(h.stack).slice(0, 220) : ''));
+    if (last) lines.push('LETZTER FEHLER: ' + last.msg + ' · ' + new Date(last.at).toLocaleTimeString());
+    el.textContent = lines.length ? '[DIAGNOSE] ' + lines.join('\n') : ''; el.style.display = lines.length ? 'block' : 'none';
+  }
+  hideHubDiagnosis() { const el = globalThis.document?.getElementById?.('grimge-diag'); if (el) el.style.display = 'none'; }
+
   reportReloadedMatch() {
     let mark = null; let last = null;
     try { mark = JSON.parse(globalThis.sessionStorage?.getItem?.('grimge-match') ?? 'null'); last = JSON.parse(globalThis.localStorage?.getItem?.('grimge-last-error') ?? 'null'); } catch { /* optional */ }
     if (!mark) return null;
     this.markMatchSession(false);
     const err = last && Date.now() - Date.parse(last.at) < 10 * 60000 ? ` · LETZTER FEHLER: ${last.msg}` : '';
-    const note = `DAS SPIEL WURDE IM MATCH (${String(mark.mode).toUpperCase()}) NEU GELADEN${err}`;
+    const nav = globalThis.performance?.getEntriesByType?.('navigation')?.[0]?.type ?? '?';
+    const note = `DAS SPIEL WURDE IM MATCH (${String(mark.mode).toUpperCase()}) NEU GELADEN (${nav})${err}`;
     console.warn('[GRIMGE]', note, last);
+    setTimeout(() => this.showHubDiagnosis('NEU GELADEN mitten im Match (' + mark.mode + ', Navigation: ' + nav + ')'), 700);
     setTimeout(() => ui.showAnnouncement?.(note, 8), 600);
     return note;
   }
