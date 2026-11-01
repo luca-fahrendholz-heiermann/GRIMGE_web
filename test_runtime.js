@@ -4832,6 +4832,12 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
     const wall = spells.activeSpells.find((s) => s.isStoneWall && s.team === 'red'); tap(); step(2);
     const far = core.emit(new core.SigBolt({ x: P.x + 300, z: P.z, height: 44, team: 'red', mat: red, vx: 0, damage: 5, life: 4 })); P.mp = P.maxMp; st.impl.stance.charge(P, st, 'forward', 1, game); step(40);
     assert(st.id === 'S95' && bolt.isFinished && wall?.isDead && far.isFinished, 'NULLKLINGE: a swing negates hostile shots and breaks walls in its arc; the charged NULLSCHNITT erases spells down the lane'); }
+  // EINFACH runes do something by themselves (user, 1 Nov 2026: they had no visible effect without combos).
+  { const quiet = []; for (const id of ['S06', 'S09', 'S11', 'S12', 'S15', 'S16', 'S18', 'S19', 'S30', 'S31', 'S33', 'S35']) {
+      start(id); if (P.signature) core.endStance(P, 'replaced'); dummy.homeX = dummy.x = P.x + 190; dummy.homeZ = dummy.z = P.z; let dealt = 0; const otd = dummy.takeDamage.bind(dummy); dummy.takeDamage = (a, ...r) => { if (a > 0) dealt += a; return otd(a, ...r); };
+      P.mp = P.maxMp; spells.cast(P, spells.resolveSpell([{ id: 'sig_' + id }]), game, null, { x: dummy.x, z: dummy.z, targetobj: dummy, a: { x: dummy.x - 60, z: dummy.z - .05 }, b: { x: dummy.x + 60, z: dummy.z + .05 }, start: { x: dummy.x - 80, z: dummy.z }, end: { x: dummy.x + 80, z: dummy.z } });
+      step(360); dummy.takeDamage = otd; if (!(dealt > 0)) quiet.push(id); }
+    assert(!quiet.length, 'EINFACH special runes have an effect on their own (no combo needed) ' + quiet.join(',')); }
   if (P.signature) core.endStance(P, 'replaced'); spells.clearRuntime(); ENV.effects = []; P.hp = P.maxHp; P.x = 300; P.z = .58; dummy.homeX = dummy.x = 512;
 }
 

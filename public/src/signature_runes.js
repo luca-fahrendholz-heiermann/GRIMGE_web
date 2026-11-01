@@ -29,6 +29,7 @@ import './signature_abilities_h.js'; // S54 (shadow bind)
 import './signature_abilities_i.js'; // S55 (azure flame lane dash)
 import './signature_abilities_j.js'; // S70–S73 (seal cube, wrath beam, blood pact, time stop)
 import './signature_abilities_k.js'; // S74 (illusion doubles)
+import { runSimplePayoffs } from './simple_payoffs.js'; // the EINFACH runes' own effects (after all signatures are defined)
 
 export { SIGNATURES, isSignatureRuneId, SIGNATURE_RUNE_IDS, SIG_PREFIX, setHitContext, startStance, endStance };
 
@@ -132,4 +133,5 @@ export function updateSignatureWorld(dt, gameWorld) {
   world = gameWorld ?? world;
   for (const p of gameWorld?.projectiles ?? []) if (p._vz) { p.z = Math.max(.02, Math.min(.98, p.z + p._vz * dt)); if (p.type === 'bolt') p.targetZ = p.z; }
   for (const s of sigSink()?.activeSpells ?? []) if (s._vz && !s.isSigProjectile && !s.isFinished) s.z = Math.max(.02, Math.min(.98, s.z + s._vz * dt));
+  runSimplePayoffs(sigSink(), dt, gameWorld);
 }
