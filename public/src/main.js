@@ -62,6 +62,16 @@ function dungeonRoomBounds(stage) {
   return { left, right: left + DUNGEON_ROOMS[index].width };
 }
 
+// Invasion levels: waves per level, the enemy pool (sprite keys = ART_ASSETS archetypes), the boss title; the last
+// level ends with a great army instead of a boss.
+const INVASION_LEVELS = Object.freeze([
+  { name: 'VORPOSTEN', waves: 3, base: 3, pool: ['enemy_knight', 'enemy_bandit', 'enemy_sorcerer'], boss: 'DER RISS-TYRANN' },
+  { name: 'GRENZWALL', waves: 4, base: 4, pool: ['enemy_knight', 'enemy_bandit', 'enemy_sorcerer', 'deep', 'henry'], boss: 'DER KLINGENFÜRST' },
+  { name: 'BRANDLAND', waves: 5, base: 5, pool: ['enemy_knight', 'enemy_bandit', 'enemy_sorcerer', 'deep', 'henry', 'firen', 'freeze', 'woody'], boss: 'DIE ASCHENKÖNIGIN' },
+  { name: 'LETZTE NACHT', waves: 2, base: 6, pool: ['enemy_knight', 'enemy_bandit', 'enemy_sorcerer', 'deep', 'henry', 'firen', 'freeze', 'woody'], army: 70 }
+]);
+const INVASION_BOSSES = Object.freeze(['boss_firelord', 'darklord', 'mage', 'warlord']);
+
 export class GameWorld {
   constructor() {
     this.canvas = document.getElementById('game-canvas');
@@ -1896,20 +1906,49 @@ export class GameWorld {
     return this.enemyChampion;
   }
 
+  // Invasion levels (user, 1 Nov 2026): several levels of ever harder waves with a random enemy mix and a random boss;
+  // the last level ends in a great army that keeps streaming in faster than runes can be drawn.
+  invasionLevel() { return INVASION_LEVELS[Math.min(INVASION_LEVELS.length - 1, (this.modeState?.level ?? 1) - 1)]; }
   spawnInvasionWave() {
     const state = this.modeState;
     if (!state || this.activeMode.id !== 'invasion') return;
+    state.level ??= 1; const L = this.invasionLevel();
     state.wave++;
-    const count = Math.min(12, 3 + state.wave + Math.floor(state.wave / 3));
-    const scale = 1 + (state.wave - 1) * .08;
-    const firstNew = this.minions.length;
-    this.spawnModeWave('red', count, { x: 900, z: 0.58, spread: 0.17, elite: state.wave >= 5 });
-    for (const minion of this.minions.slice(firstNew)) {
-      minion.modeWave = state.wave;
+    const count = Math.min(16, L.base + state.wave * 2);
+    this.spawnInvasionGroup(count, 1 + (state.level - 1) * .28 + (state.wave - 1) * .07, L);
+    this.showAnnouncement(`LEVEL ${state.level} · ${L.name} — WELLE ${state.wave}/${L.waves}`, 1.6);
+  }
+  // A random mix from the level's pool; hp / damage scaled with level and wave.
+  spawnInvasionGroup(count, scale, L, x = 905) {
+    const state = this.modeState; const archetypes = ART_ASSETS.archetypes ?? {};
+    for (let i = 0; i < count; i++) {
+      const key = L.pool[Math.floor(Math.random() * L.pool.length)]; const arch = archetypes[key];
+      const minion = new Minion(x + i * 9 + Math.random() * 20, .58 + (Math.random() * 2 - 1) * .3, 'red', arch?.combatType === 'ranged' ? 'ranged' : 'melee', i % 3);
+      minion.spriteKey = key; minion.configureArchetype(arch);
       minion.maxHp = Math.round(minion.maxHp * scale); minion.hp = minion.maxHp;
-      minion.damage = Math.round(minion.damage * scale); minion.speed *= 1 + (state.wave - 1) * .015;
+      minion.damage = Math.round(minion.damage * scale); minion.speed *= 1 + (scale - 1) * .12;
+      minion.modeWave = state.wave; minion.preferredZ = minion.z;
+      this.battlefield.placeOnSurface(minion); this.minions.push(minion);
     }
-    this.showAnnouncement(`INVASION WAVE ${state.wave}/${this.activeMode.waveGoal}`, 1.4);
+  }
+  // Boss of a level: a random champion; beating it opens the next level.
+  beginInvasionBoss() {
+    const state = this.modeState; const L = this.invasionLevel();
+    const heroKey = INVASION_BOSSES[Math.floor(Math.random() * INVASION_BOSSES.length)];
+    this.beginModeBoss(`LEVEL ${state.level} — BOSS: ${L.boss}`, Math.round(700 + state.level * 260));
+    this.enemyChampion.heroKey = heroKey; this.enemyChampion.x = 860;
+  }
+  // The great army: groups keep marching in until the whole host is spent (more alive than a rune drawer can handle).
+  updateInvasionArmy(dt) {
+    const state = this.modeState; const army = state.army; const L = this.invasionLevel();
+    army.timer -= dt;
+    const alive = this.minions.filter((m) => m.team === 'red' && !m.isDead).length;
+    if (army.left > 0 && army.timer <= 0 && alive < 26) {
+      const n = Math.min(army.left, 7); army.left -= n; army.timer = 2.4;
+      this.spawnInvasionGroup(n, 1 + (state.level - 1) * .28 + .25, L);
+      if (army.left <= 0) this.showAnnouncement('DIE LETZTE WOGE DER ARMEE!', 1.6);
+    }
+    if (army.left <= 0 && alive === 0) this.finishMode('blue', 'SIEG — DIE ARMEE IST ZERSCHLAGEN');
   }
 
   spawnDungeonStage(stage) {
@@ -2233,13 +2272,20 @@ export class GameWorld {
         this.finishMode('red', 'DEFEAT — YOUR CASTLE HAS FALLEN');
         return;
       }
+      state.level ??= 1; const L = this.invasionLevel();
+      if (state.army) { this.updateInvasionArmy(dt); return; }
       if (state.bossActive) {
-        if (this.enemyChampion.lifeState === 'Dead') this.finishMode('blue', 'VICTORY — THE INVASION IS REPULSED');
+        if (this.enemyChampion.lifeState === 'Dead') {
+          state.bossActive = false; state.level++; state.wave = 0; state.intermission = -3;
+          const castle = this.battlefield.blueCastle; if (castle && !castle.isDestroyed) castle.hp = Math.min(castle.maxHp, castle.hp + castle.maxHp * .25);
+          this.showAnnouncement(`BOSS BESIEGT — LEVEL ${state.level}: ${this.invasionLevel().name}`, 2.2);
+        }
         return;
       }
       if (!this.minions.some((minion) => minion.team === 'red' && !minion.isDead)) {
-        if (state.wave >= this.activeMode.waveGoal) {
-          this.beginModeBoss('INVASION BOSS — RIFT TYRANT', 900);
+        if (state.wave >= L.waves) {
+          if (L.army) { state.army = { left: L.army, timer: 1.5 }; this.showAnnouncement(`DIE GROSSE ARMEE MARSCHIERT — ${L.army} FEINDE`, 2.4); }
+          else this.beginInvasionBoss();
         } else {
           state.intermission += dt;
           if (state.intermission >= 2.1) { state.intermission = 0; this.spawnInvasionWave(); }
@@ -2398,6 +2444,12 @@ export class GameWorld {
     this.matchPhase = phase;
   }
 
+  respawnPenalty(entity) {
+    if (this.activeMode?.id !== 'invasion' || entity !== this.player) return 0;
+    this.modeState.deaths = (this.modeState.deaths ?? 0) + 1;
+    return Math.min(14, this.modeState.deaths * 2.5);
+  }
+
   canRespawn(team) {
     if (!this.isMatchRunning()) return false;
     if (this.activeMode?.respawn === 'unlimited') return true;
@@ -2448,7 +2500,7 @@ export class GameWorld {
 
   getObjectiveStatus() {
     if (this.matchState === 'Ending' || this.matchState === 'Results') return this.winnerTeam === 'blue' ? 'VICTORY' : 'DEFEAT';
-    if (this.activeMode?.id === 'invasion') return this.modeState?.bossActive ? 'DEFEAT THE RIFT TYRANT' : `DEFEND LEFT KEEP — WAVE ${this.modeState?.wave ?? 1}/${this.activeMode.waveGoal}`;
+    if (this.activeMode?.id === 'invasion') { const s = this.modeState; const L = this.invasionLevel(); return s?.army ? `LEVEL ${s.level} — HALTE DIE ARMEE AUF (${s.army.left} NOCH IM ANMARSCH)` : s?.bossActive ? `LEVEL ${s.level} — BESIEGE ${L.boss}` : `LEVEL ${s?.level ?? 1} · ${L.name} — WELLE ${s?.wave ?? 1}/${L.waves}`; }
     if (this.activeMode?.id === 'dungeon') return this.isRunChoicePending() ? 'CHOOSE A FOUND RUNE' : this.modeState?.stage === 4 ? 'DEFEAT THE VOID WARDEN' : this.modeState?.stage === 0 ? 'DEFEAT THE SCOUT WITH MELEE' : this.isDungeonExitOpen() ? `DUNGEON ROOM ${this.modeState.stage} CLEARED — GO RIGHT` : `DUNGEON ROOM ${this.modeState?.stage} — PUSH FORWARD`;
     if (this.activeMode?.id === 'arena') {
       if (this.modeState?.transformationRelic) return 'CLAIM THE TRANSFORMATION RELIC — DEFEAT THE CHAMPION';

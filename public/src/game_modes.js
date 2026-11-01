@@ -10,7 +10,7 @@ export const GAME_MODES = Object.freeze({
     objectives: true, autoWaves: true, respawn: 'castle', enemyBehavior: 'siege', world: 'siege', progression: 'profile'
   }),
   invasion: Object.freeze({
-    id: 'invasion', label: 'INVASION', objective: 'DEFEND THE CASTLE — WAVE 1/6',
+    id: 'invasion', label: 'INVASION', objective: 'VERTEIDIGE DIE BURG — 4 LEVEL, AM ENDE DIE GROSSE ARMEE',
     // A one-sided defense: the player's blue castle lives on the left edge,
     // two nearby defense towers protect it, and monsters enter from open land.
     objectives: true, autoWaves: false, respawn: 'castle', enemyBehavior: 'disabled', world: 'invasion', progression: 'profile', waveGoal: 6

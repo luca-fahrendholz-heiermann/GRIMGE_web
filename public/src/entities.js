@@ -442,7 +442,7 @@ export class Player extends GroundEntity {
       if (this.stateTimer <= 0) {
         this.lifeState = 'Dead';
         this.state = 'dead';
-        this.respawnTimer = gameWorld?.canRespawn(this.team) === false ? Infinity : this.respawnDuration;
+        this.respawnTimer = gameWorld?.canRespawn(this.team) === false ? Infinity : this.respawnDuration + (gameWorld?.respawnPenalty?.(this) ?? 0);
         if (!Number.isFinite(this.respawnTimer)) gameWorld?.onFinalWizardDeath(this.team);
       }
       return;

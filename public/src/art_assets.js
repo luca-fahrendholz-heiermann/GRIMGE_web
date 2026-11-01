@@ -233,6 +233,12 @@ export const ART_ASSETS = Object.freeze({
     enemy_sorcerer: Object.freeze({ hpMul: 0.7, dmgMul: 1.2, spdMul: 0.9, combatType: 'ranged', specialCd: 7, special: 'arcane_burst', color: '#b388ff', renderHeight: 56 }),
     ally_fighter: Object.freeze({ hpMul: 1.1, dmgMul: 1.1, spdMul: 1.0, combatType: 'melee', specialCd: 4, special: 'combo_strike', color: '#42a5f5', renderHeight: 58 }),
     ally_blade: Object.freeze({ hpMul: 0.9, dmgMul: 1.4, spdMul: 1.15, combatType: 'melee', specialCd: 5, special: 'blade_dash', color: '#66bb6a', renderHeight: 56 }),
+    // Invasion variety (user, 1 Nov 2026): phantom fighters join the enemy ranks in later levels.
+    deep: Object.freeze({ hpMul: 0.95, dmgMul: 1.5, spdMul: 1.25, combatType: 'melee', specialCd: 5, special: 'backstab', color: '#ef5350', renderHeight: 58 }),
+    henry: Object.freeze({ hpMul: 0.75, dmgMul: 1.15, spdMul: 1.0, combatType: 'ranged', specialCd: 8, special: null, color: '#8bc34a', renderHeight: 58 }),
+    firen: Object.freeze({ hpMul: 0.8, dmgMul: 1.4, spdMul: 0.95, combatType: 'ranged', specialCd: 6, special: 'arcane_burst', color: '#ff7043', renderHeight: 58 }),
+    freeze: Object.freeze({ hpMul: 0.85, dmgMul: 1.2, spdMul: 0.95, combatType: 'ranged', specialCd: 7, special: 'arcane_burst', color: '#4fc3f7', renderHeight: 58 }),
+    woody: Object.freeze({ hpMul: 2.3, dmgMul: 1.45, spdMul: 0.7, combatType: 'melee', specialCd: 6, special: 'shield_charge', color: '#a1887f', renderHeight: 64 }),
     boss_firelord: Object.freeze({ hpMul: 3.0, dmgMul: 1.8, spdMul: 0.8, combatType: 'melee', specialCd: 4, special: 'fire_dash', color: '#ff6d00', renderHeight: 72 })
   }),
 

@@ -739,3 +739,13 @@ Die Geschosse der Waffen (`drawShotPixel` in `weapons_ext.js`) sind jetzt knacki
 - **Zerstörbar:** Lebenspunkte wie bisher; der gegnerische Champion schlägt sich jetzt durch eine Mauer, die ihn einschließt oder ihm den Weg versperrt (Minions taten das schon). Barrier Mastery: Mauern 50 % stabiler.
 
 - `v72_mauer_ring.png`
+
+## v73 — Invasion mit Leveln und großer Armee (01.11.2026)
+
+- **4 Level:** Vorposten (3 Wellen), Grenzwall (4), Brandland (5), Letzte Nacht (2 + Armee); Wellen werden pro Level und Welle größer und stärker.
+- **Zufällige Gegner:** jede Welle mischt zufällig aus dem Pool des Levels; ab Level 2 kommen Phantom-Kämpfer dazu (schnelle Klinge, Bogenschütze), ab Level 3 Feuer- und Eismagier und ein schwerer Brecher.
+- **Zufälliger Boss** am Ende von Level 1–3 (wechselnde Champions); danach das nächste Level, die Burg heilt 25 %.
+- **Finale: die große Armee** — 70 Feinde marschieren in Gruppen nach (bis 26 gleichzeitig), schneller als man Runen zeichnen kann.
+- **Respawnen kostet:** jeder Tod verlängert die Wartezeit (+2,5 s, bis +14 s) — kein schneller Sieg mehr durch Wiederbeleben.
+
+- `v73_invasion_level.png`
