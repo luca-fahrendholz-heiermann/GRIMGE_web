@@ -27,6 +27,7 @@ html, body {
   display: block;
   touch-action: none;
   overscroll-behavior: none;
+  overscroll-behavior-x: none; /* no swipe-to-navigate (back / forward) on touchpads and touch screens */
 }
 
 #rotate-overlay {

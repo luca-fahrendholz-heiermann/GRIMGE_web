@@ -2819,6 +2819,13 @@ export class GameWorld {
     for (const type of ['mousedown', 'mouseup', 'pointerdown', 'pointerup', 'auxclick']) w.addEventListener(type, blockMouseBack, { capture: true });
     w.addEventListener('keydown', (e) => { if (running() && ((e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) || e.key === 'BrowserBack' || e.key === 'BrowserForward')) e.preventDefault(); }, { capture: true });
     w.addEventListener('beforeunload', (e) => { if (!running()) return; e.preventDefault(); e.returnValue = ''; return ''; });
+    // Re-arm the trap on every real interaction (Chrome skips history entries made without a user gesture, so the
+    // entry re-pushed inside popstate alone would not catch the next BACK).
+    const rearm = () => { if (running()) this.armBackGuard(); };
+    for (const type of ['pointerdown', 'keydown', 'touchstart']) w.addEventListener(type, rearm, { capture: true, passive: true });
+    // Two-finger horizontal touchpad swipes navigate back / forward in Chrome / Edge through overscrolling wheel
+    // events: during a match horizontal wheel movement is swallowed.
+    w.addEventListener('wheel', (e) => { if (running() && Math.abs(e.deltaX) > Math.abs(e.deltaY) * .5) e.preventDefault(); }, { capture: true, passive: false });
   }
   armBackGuard() { try { const h = globalThis.window?.history; if (h && h.state?.grimge !== 'trap') h.pushState({ grimge: 'trap' }, ''); } catch { /* optional */ } }
 
