@@ -2812,7 +2812,7 @@ export class GameWorld {
     const running = () => this.matchState === 'Running' || this.matchState === 'Ending';
     w.addEventListener('popstate', () => {
       if (!running()) return;
-      try { w.history.pushState({ grimge: 'trap' }, ''); } catch { /* optional */ }
+      try { w.history.pushState({ grimge: 'trap' }, ''); this._trapActivated = false; } catch { /* optional */ }
       this.showAnnouncement('ZURÜCK IST IM MATCH GESPERRT — MENÜ ÜBER ☰', 1.6);
     });
     const blockMouseBack = (e) => { if ((e.button === 3 || e.button === 4) && running()) { e.preventDefault(); e.stopPropagation(); } };
@@ -2822,12 +2822,21 @@ export class GameWorld {
     // Re-arm the trap on every real interaction (Chrome skips history entries made without a user gesture, so the
     // entry re-pushed inside popstate alone would not catch the next BACK).
     const rearm = () => { if (running()) this.armBackGuard(); };
-    for (const type of ['pointerdown', 'keydown', 'touchstart']) w.addEventListener(type, rearm, { capture: true, passive: true });
+    // Touch grants the user activation only on RELEASE (touchend / pointerup / click), so the trap is armed there too.
+    for (const type of ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown', 'keyup']) w.addEventListener(type, rearm, { capture: true, passive: true });
     // Two-finger horizontal touchpad swipes navigate back / forward in Chrome / Edge through overscrolling wheel
     // events: during a match horizontal wheel movement is swallowed.
     w.addEventListener('wheel', (e) => { if (running() && Math.abs(e.deltaX) > Math.abs(e.deltaY) * .5) e.preventDefault(); }, { capture: true, passive: false });
   }
-  armBackGuard() { try { const h = globalThis.window?.history; if (h && h.state?.grimge !== 'trap') h.pushState({ grimge: 'trap' }, ''); } catch { /* optional */ } }
+  // A trap entry only stops BACK when it was pushed during a user activation (Chrome skips the others): push a fresh
+  // one whenever an activation is present and the current trap was made without one.
+  armBackGuard() {
+    try {
+      const h = globalThis.window?.history; if (!h) return;
+      const active = globalThis.navigator?.userActivation?.isActive ?? true;
+      if (h.state?.grimge !== 'trap' || (active && !this._trapActivated)) { h.pushState({ grimge: 'trap' }, ''); this._trapActivated = active; }
+    } catch { /* optional */ }
+  }
 
   reportReloadedMatch() {
     let mark = null; let last = null;
