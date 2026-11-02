@@ -64,6 +64,8 @@ function dungeonRoomBounds(stage) {
 
 // Invasion levels: waves per level, the enemy pool (sprite keys = ART_ASSETS archetypes), the boss title; the last
 // level ends with a great army instead of a boss.
+// FILL view: logical px kept free at the left / right screen edge (edge-swipe BACK gestures on phones).
+const HUD_EDGE = 22;
 const INVASION_LEVELS = Object.freeze([
   { name: 'VORPOSTEN', waves: 3, base: 3, pool: ['enemy_knight', 'enemy_bandit', 'enemy_sorcerer'], boss: 'DER RISS-TYRANN' },
   { name: 'GRENZWALL', waves: 4, base: 4, pool: ['enemy_knight', 'enemy_bandit', 'enemy_sorcerer', 'deep', 'henry'], boss: 'DER KLINGENFÜRST' },
@@ -291,8 +293,12 @@ export class GameWorld {
     const stageH = Math.round(this.logicalHeight * fit);
     const stageTop = filling ? -Math.round((stageH - height) * .55) : Math.round((height - stageH) / 2);
     this.stage = { left: Math.round((width - stageW) / 2), top: stageTop, width: stageW, height: stageH, scale: fit };
+    // FILL zooms only the SCENE. The HUD keeps the size it has in FIT (scaled by the screen height) and spreads over
+    // the full screen width — scaled with the zoom it grew taller than the screen and its parts overlapped (user, 2 Nov 2026).
+    const hudScale = Math.min(width / this.logicalWidth, height / this.logicalHeight);
     this.hud = filling
-      ? { left: 0, top: 0, width: Math.round(width / fit), height: Math.round(height / fit), scale: fit }
+      // A side margin keeps the controls out of the phones' edge-swipe BACK gesture zone.
+      ? { left: Math.round(HUD_EDGE * hudScale), top: Math.round((height - this.logicalHeight * hudScale) / 2), width: Math.round(width / hudScale - HUD_EDGE * 2), height: this.logicalHeight, scale: hudScale }
       : { left: this.stage.left, top: this.stage.top, width: this.logicalWidth, height: this.logicalHeight, scale: fit };
     for (const element of [this.canvas, this.runeCanvas]) {
       if (!element?.style) continue;
@@ -329,7 +335,8 @@ export class GameWorld {
   // Canvas (stage) coordinates → HUD coordinates (they differ in FILL).
   canvasToHud(pt) {
     const hud = this.hud ?? this.stage;
-    return { x: pt.x + (this.stage.left - hud.left) / hud.scale, y: pt.y + (this.stage.top - hud.top) / hud.scale };
+    // Stage px → screen px → HUD px (stage and HUD scale differ in FILL).
+    return { x: (this.stage.left + pt.x * this.stage.scale - hud.left) / hud.scale, y: (this.stage.top + pt.y * this.stage.scale - hud.top) / hud.scale };
   }
 
   // Ambient fill for the bars: a tiny copy of the stage, blurred by CSS.

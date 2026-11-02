@@ -757,3 +757,10 @@ Die Geschosse der Waffen (`drawShotPixel` in `weapons_ext.js`) sind jetzt knacki
 - **Aufladen →** Nullschnitt (schwarzer Halbmond löscht alle Zauber die Lane hinunter) · **↑** Nullwirbel (rundum) · **↓** Aschenmantel (2 s zerfallen Geschosse an dir).
 
 - `v74_nullklinge.png`
+
+## v75 — Zoom-Ansicht (FILL): Oberfläche in normaler Größe (02.11.2026)
+
+- In der Zoom-Ansicht wuchs die Oberfläche mit dem Zoom mit und wurde höher als der Bildschirm — Leisten und Knöpfe schoben sich übereinander. Jetzt zoomt nur die Szene; die Oberfläche behält die Größe der normalen Ansicht und verteilt sich über die ganze Bildschirmbreite, mit einem kleinen Abstand zum linken / rechten Rand (dort liegt auf Handys die Zurück-Wischgeste).
+- Oben: normale Ansicht, unten: Zoom-Ansicht (Handy 844×390).
+
+- `v75_zoom_ansicht.png`

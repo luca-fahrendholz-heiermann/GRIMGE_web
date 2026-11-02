@@ -72,12 +72,13 @@ game.canvas.getBoundingClientRect = () => ({ left: 112, top: 0, width: 1024, hei
 assert(game.getCanvasCoords(624, 288).x === 512 && game.getCanvasCoords(624, 288).y === 288, 'Input coordinates map through the centred stage');
 game.canvas.getBoundingClientRect = savedCanvasRect;
 screenSize(1024, 576);
-// Option FILL: wide screens zoom to full width (a little sky/foreground cut),
-// the HUD covers the visible screen; narrower screens still fit.
+// Option FILL: wide screens zoom the scene to full width (a little sky/foreground cut);
+// the HUD keeps its FIT size and spans the visible screen width; narrower screens still fit.
 elements.get('screen-fit-btn').listeners.pointerdown({ preventDefault() {}, stopPropagation() {} });
 screenSize(1248, 576);
-assert(game.screenFit === 'fill' && game.stage.width === 1248 && game.stage.left === 0 && game.stage.top < 0 && game.hud.left === 0 && game.hud.width === 1024 && game.hud.height === 473 && game.uiLayer.style.left === '0px' && elements.get('screen-fit-btn').textContent.includes('FILL'), 'Screen option FILL zooms a 19.5:9 screen to full width; the HUD sits on the visible screen');
-assert(Math.round(game.canvasToHud({ x: 512, y: 288 }).y) === Math.round(288 + game.stage.top / game.stage.scale), 'Canvas points convert into HUD coordinates for the dynamic joystick');
+assert(game.screenFit === 'fill' && game.stage.width === 1248 && game.stage.left === 0 && game.stage.top < 0 && game.hud.left === 22 && game.hud.width === 1204 && game.hud.height === 576 && game.hud.scale === 1 && game.uiLayer.style.left === '22px' && elements.get('screen-fit-btn').textContent.includes('FILL'), 'Screen option FILL zooms a 19.5:9 screen to full width; the HUD sits on the visible screen');
+assert(Math.round(game.canvasToHud({ x: 512, y: 288 }).y) === Math.round((game.stage.top + 288 * game.stage.scale - game.hud.top) / game.hud.scale) && Math.round(game.canvasToHud({ x: 512, y: 288 }).x) === Math.round((game.stage.left + 512 * game.stage.scale - game.hud.left) / game.hud.scale), 'Canvas points convert into HUD coordinates for the dynamic joystick (stage and HUD scale differ in FILL)');
+// FILL keeps the HUD at its FIT size (height-scaled) and spreads it over the screen width (user, 2 Nov 2026: it overlapped when zoomed).
 screenSize(1024, 768);
 assert(game.stage.top === 96 && game.stage.width === 1024, 'FILL never crops the field on screens narrower than 16:9');
 elements.get('screen-fit-btn').listeners.pointerdown({ preventDefault() {}, stopPropagation() {} });
