@@ -80,8 +80,10 @@ function shapeContains(shape, x, z, pad = 0) {
 function shapeExtentX(shape) { return shape.shape === 'ellipse' ? shape.rx : shape.shape === 'rect' ? shape.hx : shape.radius; }
 
 class GroundEffect {
-  constructor(type, x, z, { radius = 50, team = null, life = null, angle = 0, shape = 'circle', rx, rz, hx, hz } = {}) {
+  constructor(type, x, z, { radius = 50, team = null, life = null, angle = 0, shape = 'circle', rx, rz, hx, hz, ownerSafe = false } = {}) {
     this.type = type; this.x = x; this.z = z; this.radius = radius; this.team = team;
+    // ownerSafe: the surface rules (slow, slip, wet) spare the team that laid it (breathing footprints).
+    this.ownerSafe = ownerSafe;
     this.shape = shape; this.rx = rx; this.rz = rz; this.hx = hx; this.hz = hz;
     this.maxLife = life ?? GROUND_EFFECTS[type].life; this.life = this.maxLife;
     this.angle = angle; this.seed = Math.random() * 1000; this.electrified = 0; this.age = 0;
@@ -372,6 +374,7 @@ export class EnvironmentSystem {
       let wet = false;
       for (const effect of dynamicHere) {
         const rules = effect.rules;
+        if (effect.ownerSafe && effect.team && actor.team === effect.team) continue;
         if (rules.slippery) {
           if (actor === gameWorld.player) actor.onIce = true;
           else actor.slow?.(.2, .7);

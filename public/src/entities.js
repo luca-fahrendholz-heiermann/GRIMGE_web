@@ -1831,7 +1831,7 @@ export class Player extends GroundEntity {
         const outcome = target.takeDamage(targetDmg, kx, lift, stunNow, isFinisher, 'melee');
         { if (lift >= 250) target.launchFloatT = 1.3; else if (!this.grounded && (target.elevation ?? 0) > 0) { target.launchFloatT = Math.max(target.launchFloatT ?? 0, .45); target.vElevation = Math.max(target.vElevation ?? 0, 60); } }
         if (!outcome?.ignored) onWeaponMeleeHit(this, target, targetDmg, spells);
-        sigHits.push({ target, blocked: !!outcome?.blocked || (!!target.isGuarding && Math.sign(-kx) === (target.facing || 0)) });
+        sigHits.push({ target, damage: outcome?.ignored || outcome?.intercepted ? 0 : targetDmg, blocked: !!outcome?.blocked || (!!target.isGuarding && Math.sign(-kx) === (target.facing || 0)) });
         hitMeta.hitSet?.add(target);
         combat.spawnHitSparks(target.x, target.y - 25, this.facing, isFinisher ? '#ffea00' : '#fff', isFinisher ? 16 : 8);
         if (hitMeta.freeze) target.freeze?.(hitMeta.freeze);

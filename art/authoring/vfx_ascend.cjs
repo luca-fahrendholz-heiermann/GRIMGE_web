@@ -3,6 +3,7 @@
 // behind the body, sparks / lightning) and a front layer (crackles at the sides only). 128×128, chest at the centre.
 //   asc_1_back / _front   gold energy with yellow-white lightning sparks
 //   asc_2_back / _front   blue flame aura with white cores and cyan sparks
+//   bra_N_back / _front   the same in a grey ramp for the breathing aura (tinted per style at runtime)
 //   asc_3_back / _front   white god mode: the tallest, brightest aura, dense lightning (user: "gelb, blau und dann weiß als god mode")
 const B = require('./vfx_brush.cjs');
 const { Sheet, rng, TAU, clamp01 } = B;
@@ -21,8 +22,8 @@ function tongue(s, f, r, x, y, h, w, lean, ph) {
   }
 }
 function zig(s, f, r, x0, y0, x1, y1, seed) { const rr = rng(seed); let px = x0; let py = y0; const n = 5; for (let j = 1; j <= n; j++) { const nx = x0 + (x1 - x0) * j / n + (j < n ? (rr() - .5) * 8 : 0); const ny = y0 + (y1 - y0) * j / n; const m = Math.ceil(Math.hypot(nx - px, ny - py)); for (let k = 0; k <= m; k++) tone(s, f, r, px + (nx - px) * k / m, py + (ny - py) * k / m, k % 2 ? 1 : .7); px = nx; py = ny; } }
-function stage(st) {
-  const bk = new Sheet(`asc_${st.id}_back`, 128, 128, 8, { anchor: 'center' }); const fr = new Sheet(`asc_${st.id}_front`, 128, 128, 8, { anchor: 'center' }); const CX = 64; const CY = 64;
+function stage(st, prefix = 'asc') {
+  const bk = new Sheet(`${prefix}_${st.id}_back`, 128, 128, 8, { anchor: 'center' }); const fr = new Sheet(`${prefix}_${st.id}_front`, 128, 128, 8, { anchor: 'center' }); const CX = 64; const CY = 64;
   for (let f = 0; f < 8; f++) {
     const ph = f / 8;
     for (let i = 0; i < st.n; i++) { const u = i / (st.n - 1); const side = i % 2 ? 1 : -1; const k = (u * .9 + .05); const ox = side * (16 + Math.sin(k * Math.PI) * 12); const oy = 60 - k * 82; const h = (26 + (1 - k) * 24) * st.h * (1 + Math.sin((ph + i * .29) * TAU) * .18); tongue(bk, f, st.aura, CX + ox, CY + oy, h, 10 + (i % 3) * 3, side * (.6 + k * .8), (ph + i * .3) * TAU); }
@@ -36,4 +37,8 @@ function stage(st) {
   }
   return [bk, fr];
 }
-module.exports = { ascendSheets: () => STAGES.flatMap(stage) };
+// Breathing aura (user, 3 Nov 2026: "wie bei transformations gelb → blau → weiß nur jeweils für das element der atmung"):
+// the same three stage shapes in a grey ramp (outline / dark / mid / light / core), recoloured at runtime to the style.
+const G = ramp('#404040', '#404040', '#787878', '#b4b4b4', '#f0f0f0'); const GS = ramp('#787878', '#b4b4b4', '#f0f0f0');
+const GREY = STAGES.map((st) => ({ ...st, aura: G, spark: GS, out: '#141414' }));
+module.exports = { ascendSheets: () => [...STAGES.flatMap((st) => stage(st)), ...GREY.flatMap((st) => stage(st, 'bra'))] };

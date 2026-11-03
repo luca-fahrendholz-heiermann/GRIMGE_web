@@ -20,6 +20,7 @@ import { applyStatus, hasStatus } from './status_effects.js';
 import { deliveryOf, drawHead, drawFlourish, breathMotion } from './breathing_weapons.js';
 import { RayCrownFx } from './cast_circle.js';
 import { spellSheetReady, drawSpellSpriteTinted, drawFineFromLayer } from './spell_visuals.js';
+import { auraPower, auraStage, noteBreathDamage, updateBreathAura, endBreathAura, renderBreathAura, breathCloak, sideMoveMult, sideDamageTaken, sideOnHit } from './breathing_aura.js';
 
 // ── palettes (dark, mid, light, core: pixel-art ramps) ───────────────────
 const hexRgb = (h) => { const n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
@@ -133,13 +134,15 @@ export const MARK = Object.freeze({ dur: 10, dmg: 1.25, speed: 1.2, drain: 1.5, 
 
 // ── helpers ──────────────────────────────────────────────────────────────
 const styleOf = (st) => BREATH_STYLES[st.style] ?? BREATH_STYLES.water;
-const powerOf = (p, st) => (st.quality?.power ?? 1) * (st.mark ? MARK.dmg : 1) * (styleOf(st).power ?? 1);
+const powerOf = (p, st) => (st.quality?.power ?? 1) * (st.mark ? MARK.dmg : 1) * (styleOf(st).power ?? 1) * auraPower(st);
 const alive = (t) => t && !t.isDead && t.lifeState !== 'Dead' && t.lifeState !== 'Dying' && (t.hp ?? 1) > 0;
 const foes = (gw, p) => foesOf(gw, p.team).filter((t) => !t.isProp);
 const inLane = (t, x0, x1, z, depth) => t.x >= Math.min(x0, x1) - 14 && t.x <= Math.max(x0, x1) + 14 && Math.abs(((t.z ?? z) - z) * DEPTH) < depth;
 const statusFor = { solar: 'burn', ignite: 'burn', paralyze: 'paralysis', poison: 'poison', bleed: 'bleed', wet: 'wet', freeze: 'frozen', scald: 'burn' };
 function strike(p, st, t, dmg, kx, lift, stun, force = false) {
-  hit(t, Math.round(dmg * powerOf(p, st)), kx, lift, stun);
+  const amount = Math.round(dmg * powerOf(p, st)); const r = hit(t, amount, kx, lift, stun);
+  // The damage dealt fills the breathing aura (breathing_aura.js); a blocked hit counts a third.
+  if (!r?.ignored && !r?.intercepted && !t.isProp) { noteBreathDamage(p, st, r?.blocked ? amount / 3 : amount, styleOf(st)); sideOnHit(p, st, t); }
   const s = styleOf(st).status; if (s && (force || (st.hits = (st.hits ?? 0) + 1) % 3 === 0)) applyStatus(t, s, { force });
   if (styleOf(st).heals && Number.isFinite(p.hp)) p.hp = Math.min(p.maxHp, p.hp + 3);
   applyTrait(p, st, t, dmg);
@@ -808,9 +811,13 @@ function breathStance() {
   return {
     duration: 15,
     hint: (p, st) => `${styleOf(st).name} · ↑ ${styleOf(st).up.name} · → ${styleOf(st).forward.name} · ↓ MAL`,
-    moveMult: (p, st) => (st.mark ? MARK.speed : 1),
-    meleeMult: (p, st) => (st.mark ? MARK.dmg : 1),
+    moveMult: (p, st) => (st.mark ? MARK.speed : 1) * sideMoveMult(st),
+    meleeMult: (p, st) => (st.mark ? MARK.dmg : 1) * auraPower(st),
+    // Aura stage pips (I–III) and the contour cloak from stage II on.
+    counter: (p, st) => ({ n: auraStage(st), max: 3 }),
+    cloak: (p, st) => breathCloak(p, st, styleOf(st)),
     damageTaken(p, st, amount) {
+      amount = sideDamageTaken(st, amount);
       if (st.calmUntil > st.t) {
         // Stille See: the hit is turned away and answered.
         combat.spawnHitSparks?.(p.x + (p.facing || 1) * 20, (p.y ?? 0) - 42, p.facing || 1, styleOf(st).ramp.light, 12);
@@ -824,6 +831,7 @@ function breathStance() {
       if (type === 'attack') st.arcs.push({ t: 0, step: info.step ?? 1, f, big: (info.step ?? 1) >= 3 });
       if (type === 'hit') for (const h of info.hits ?? []) {
         if (h.target.isProp) continue;
+        if (h.damage > 0) { noteBreathDamage(p, st, h.blocked ? h.damage / 3 : h.damage, styleOf(st)); if (!h.blocked) sideOnHit(p, st, h.target); }
         const s = styleOf(st).status; if (s && (st.hits = (st.hits ?? 0) + 1) % 3 === 0) applyStatus(h.target, s);
         if (st.mark) applyStatus(h.target, 'burn'); // the marked blade is hot
         applyTrait(p, st, h.target, 8);
@@ -844,7 +852,8 @@ function breathStance() {
     // Thunder keeps its lightning-step sprint (a piercing lunge variant).
     sprint: (p, st) => (styleOf(st).sprint ? null : { name: 'BLITZSCHRITT', primal: true, pierce: true, lungeSpeed: 1.8, carryMult: 1, recoilMult: 1.1, damageMult: 1.1, color: styleOf(st).ramp.mid }),
     diveMove(p, st, gw) { return runMove(p, st, { ...styleOf(st).dive, kind: 'crash' }, 1, gw) || true; },
-    update(p, st, dt) {
+    update(p, st, dt, gw) {
+      updateBreathAura(p, st, dt, gw, styleOf(st));
       for (const a of st.arcs) a.t += dt; st.arcs = st.arcs.filter((a) => a.t < (a.big ? .4 : .28));
       if (st.mark) {
         st.mark.t -= dt;
@@ -853,9 +862,10 @@ function breathStance() {
       }
       for (const a of st.markAllies ?? []) if (a.breathMark) { a.breathMark.t -= dt; if (a.breathMark.t <= 0) { if (a._markSpeed) { a.speed = a._markSpeed; a._markSpeed = null; } a.breathMark = null; } }
     },
-    end(p, st) { for (const a of st.markAllies ?? []) { if (a._markSpeed) { a.speed = a._markSpeed; a._markSpeed = null; } a.breathMark = null; } },
+    end(p, st) { endBreathAura(p); for (const a of st.markAllies ?? []) { if (a._markSpeed) { a.speed = a._markSpeed; a._markSpeed = null; } a.breathMark = null; } },
     render(ctx, p, st, ry, layer) {
       const s = styleOf(st); const R = s.ramp;
+      renderBreathAura(ctx, p, st, ry, layer, s, 'bp_' + (PIECE_SHEET[s.trail === 'flame' ? 'flame' : s.forward.look] ?? 'blast'));
       if (layer !== 'front') { if (st.t < 1) { ctx.save(); for (let i = 0; i < 8; i++) { const a = i / 8 * TAU + st.t * 4; piece(ctx, s.trail === 'flame' ? 'flame' : s.forward.look, p.x + Math.cos(a) * 24, ry - 30 + Math.sin(a) * 26, .8 * (1 - st.t), st.t, R, p.facing || 1, i); } ctx.restore(); } return; }
       // The swing trail of the element.
       for (const a of st.arcs) {
@@ -878,7 +888,9 @@ function castBreath(c, id) {
   const running = p.signature && BREATH_RUNES[p.signature.id] ? p.signature.baseStyle : null;
   const derived = running && running !== base ? comboOf(running, base) : null;
   const style = derived ?? base;
-  startStance(p, id, c.quality, { arcs: [], style, baseStyle: base });
+  // A derived style keeps the aura (damage dealt) and the fog built so far.
+  const keep = running ? { auraDmg: p.signature.auraDmg ?? 0, fog: p.signature.fog ?? 0 } : {};
+  startStance(p, id, c.quality, { arcs: [], style, baseStyle: base, ...keep });
   if (style === 'sun') emit(new RayCrownFx(p, { life: 1.4, size: 1.2 }), c.quality); // the origin of all styles shines
   if (derived) { c.gw?.showAnnouncement?.(`ABGELEITET: ${BREATH_STYLES[derived].name}`, 1.6); combat.spawnShockwave?.(p.x, (p.y ?? 0) - 40, 90, BREATH_STYLES[derived].ramp.mid); }
 }

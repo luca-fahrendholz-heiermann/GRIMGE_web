@@ -4225,6 +4225,17 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   // Ward: still sea — every hit is turned away for a moment.
   setup('S83'); charged('forward'); const hpCalm = P.hp; P.invulnerableTimer = 0; P.takeDamage(30, -100, 0, .2, false, 'melee');
   assert(P.hp === hpCalm, 'Ward breathing STILLE SEE: in total calm every hit is turned away');
+  // Breathing aura (user, 3 Nov 2026): the damage dealt during the stance grows it in three stages (element → hotter hue → white).
+  { const AU = await import('./public/src/breathing_aura.js'); setup('S40'); const m = foeAt(360); let stages = new Set([AU.auraStage(P.signature)]);
+    for (let i = 0; i < 40 && AU.auraStage(P.signature) < 3; i++) { ready(); m.x = 360; P.x = 300; P.executeAttack(neutral, 'normal'); step(16); stages.add(AU.auraStage(P.signature)); }
+    assert(stages.has(1) && stages.has(2) && stages.has(3) && AU.auraPower(P.signature) === 1.2 && P.signature.impl.stance.cloak(P, P.signature)?.edge, 'Breathing aura: hits fill it from stage I over II (250 dmg) to III (600 dmg) — +20 % power and an element-coloured contour cloak (' + Math.round(P.signature.auraDmg) + ')');
+    const kept = P.signature.auraDmg; spells.cast(P, spells.resolveSpell([{ id: 'sig_S41' }]), game);
+    assert(P.signature.style === 'steam' && P.signature.auraDmg === kept, 'A derived breathing keeps the aura already earned');
+    let threw = null; try { for (const L of ['back', 'front']) P.signature.impl.stance.render(strict, P, P.signature, P.y, L); } catch (e) { threw = e; } assert(!threw, 'The breathing aura renders on both layers' + (threw ? ' — ' + String(threw.stack).split('\n').slice(0, 3).join(' | ') : '')); }
+  // Side effects: mist builds a fog bank around the Wizard (foes in it are slowed, the Wizard is concealed); thunder sparks jump over.
+  { setup('S80'); const m = foeAt(350); step(300); assert(P.signature.fog > .3 && P.concealment > .3 && m.slowTimer > 0, 'Mist side effect: the fog grows the longer you breathe, slows foes inside and conceals the Wizard (fog ' + P.signature.fog.toFixed(2) + ')');
+    core.endStance(P, 'replaced'); assert(!P.concealment, 'The fog is gone with the stance'); }
+  { setup('S42'); const m = foeAt(380); step(160); assert(m.hp < 3000, 'Thunder side effect: static sparks jump to a foe nearby'); }
   // With a weapon the breathing overrides the weapon moves (user, 21 Oct 2026).
   const moveOf = (weapon, field, act) => {
     setup('S41'); if (field) { P.equipClassWeapon(null); P.equipWeapon(weapon); } else P.equipClassWeapon(weapon); foeAt(400); P.lastBreathMove = null; P.lastWeaponDive = null; P.weaponBuff = null;
