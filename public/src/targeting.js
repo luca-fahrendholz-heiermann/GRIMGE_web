@@ -54,6 +54,9 @@ export class SpellTargeting {
 
   clampToRange(point, range) {
     const caster = this.game.player;
+    // Castle Siege (user, 3 Nov 2026): ground-target spells (meteor & co.) can be aimed at the enemy castle from the
+    // own battlement — the ground range reaches across the field.
+    if (this.game.activeMode?.id === 'siege' && range === TARGET_RANGE.ground) range = 800;
     const bounds = this.game.battlefield?.boundsOverride ?? ARENA_LAYOUT.playableBounds;
     const dx = point.x - caster.x;
     const dz = (point.z - caster.z) * 150;
