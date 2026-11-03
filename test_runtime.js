@@ -1615,10 +1615,14 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
   assert(game.activateFocusTransformation() && P.runeDeck.length + P.runeHand.length === deckBefore, 'Transforming adds no extra rune card to deck or hand');
   for (let i = 0; i < 60; i++) P.update(1 / 60, neutralInput, game.battlefield, game);
   const afterSecond = P.focus;
-  assert(P.focusTransformTimer > 0 && Math.abs(afterSecond - (P.maxFocus - 1.5)) < .05, 'While transformed the Focus meter drains 1.5 per second (Unity value)');
+  assert(P.focusTransformTimer > 0 && Math.abs((P.maxFocus - afterSecond) - 5.15) < .15, 'While transformed the Focus meter drains 5/s, climbing +0.3/s per second (user, 2 Nov 2026: no endless form) — ' + (P.maxFocus - afterSecond).toFixed(2) + ' in the first second');
   P.focus = 60; P.focusTransformTimer = 40;
   P.gainFocus(20, 'COMBO');
-  assert(Math.abs(P.focus - 70) < .01 && Math.abs(P.focusTransformTimer - 70 / 1.5) < .01, 'Combos refill the meter at half rate and extend the transformation');
+  assert(Math.abs(P.focus - 67) < .01 && Math.abs(P.focusTransformTimer - 67 / Math.min(12, 5 + .3 * P._focusT)) < .01, 'Combos refill the meter at a third (melee a fifth) while transformed and extend the form');
+  { const f0 = P.focus; P.gainFocus(20, 'MELEE'); assert(Math.abs(P.focus - f0 - 4) < .01, 'Melee refills only a fifth while transformed (it kept the form up too easily)'); }
+  { const left = P.focus; assert(game.activateFocusTransformation() && P.focusTransformTimer === 0 && P.focus === left && P.focusSaved, 'Pressing T again ends the transformation and saves the rest of the Focus');
+    for (let i = 0; i < 300; i++) P.update(1 / 60, neutralInput, game.battlefield, game);
+    assert(P.focus === left && (left < P.maxFocus * .4 || P.canLightFocus()), 'Saved Focus does not decay and may be lit again from 40 %'); P.focusSaved = false; P.focus = P.maxFocus; P.activateFocusTransformation(); }
   P.focus = .02; P.update(1 / 60, neutralInput, game.battlefield, game);
   assert(P.focusTransformTimer === 0 && P.focus === 0, 'The transformation ends when the Focus meter is empty');
   resetForm();
@@ -2162,7 +2166,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   assert(P.primalBond.active && W.merged && !game.getHostileTargets('red').includes(W), 'After the 0.5 s wind-up the Primal merges into the Wizard');
   assert(bondMoveMultiplier(P) === BOND_FORMS.wolf[0].move, 'Wolf bond (Synchronization): ×1.25 movement');
   const f0 = P.focus; step(1);
-  assert(Math.abs((f0 - P.focus) - 1.5 * BOND_FORMS.wolf[0].drain) < .05, 'The bond drains Focus at 1.5/s × the form multiplier');
+  assert(Math.abs((f0 - P.focus) - 5.15 * .8 * BOND_FORMS.wolf[0].drain) < .2, 'The bond drains Focus at the climbing rate (× 0.8) × the form multiplier — ' + (f0 - P.focus).toFixed(2));
   P.gainFocus(10); const fGain = P.focus; P.gainFocus(10);
   assert(Math.abs(P.focus - fGain - 5) < .01 || P.focus === P.maxFocus, 'Focus gains are halved while bonded');
   P.sprintActive = true; P.canAttack = true; P.state = 'idle'; P.stateTimer = 0;

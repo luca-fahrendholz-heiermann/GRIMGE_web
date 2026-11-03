@@ -1455,12 +1455,19 @@ export class GameWorld {
     }
     // With a Primal the transformation loadout is the Primal Bond.
     if (this.primal) return this.togglePrimalBond();
+    // Pressing it again ends the form and saves the rest of the Focus (relight from 40 %).
+    if (this.isMatchRunning() && this.player?.focusTransformTimer > 0) {
+      this.player.endFocusTransformation();
+      this.showAnnouncement(`TRANSFORMATION BEENDET — ${Math.round(this.player.focus)} FOKUS GESPART`, 1.6);
+      return true;
+    }
     if (!this.isMatchRunning() || !this.player?.activateFocusTransformation?.()) {
-      this.showAnnouncement(this.player?.focus >= this.player?.maxFocus ? 'FOCUS ALREADY ACTIVE' : `FOCUS ${Math.round(this.player?.focus ?? 0)}/${this.player?.maxFocus ?? 100}`);
+      const p = this.player; const need = p?.focusSaved ? Math.ceil((p.maxFocus ?? 100) * .4) : (p?.maxFocus ?? 100);
+      this.showAnnouncement(`FOKUS ${Math.round(p?.focus ?? 0)}/${need}`);
       return false;
     }
     // No extra rune card: the form's techniques live on the charged heavy attack.
-    this.showAnnouncement('FOCUS ASCENDANT — 8 SECONDS', 1.4);
+    this.showAnnouncement('AUFSTIEG — ERNEUT DRÜCKEN BEENDET (FOKUS WIRD GESPART)', 1.6);
     return true;
   }
 

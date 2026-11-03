@@ -245,8 +245,14 @@ const FOCUS_DECAY_RATE = 1.0;    // per second (_focusDecayPerTick 1/60), after 
 // A real transformation has no timer of its own: it burns the Focus meter
 // (full meter ≈ 67 s) and lasts as long as combos keep refilling it.
 const ASCEND_STAGE_TIME = 10; const ASCEND_POWER = Object.freeze([1, 1.15, 1.3]); // Aufstiegsstufen
-const FOCUS_TRANSFORM_DRAIN = 1.5; // Focus per second while transformed (_transformationFocusDrainPerSecond)
-const FOCUS_TRANSFORM_GAIN_MULT = 0.5; // gains are halved while transformed (_transformationFocusGainMultiplier)
+const FOCUS_TRANSFORM_DRAIN = 1.5; // Unity base value (_transformationFocusDrainPerSecond) — the prototype drains harder:
+// Transformation drain (user, 2 Nov 2026: "sonst hat man einen ewigen State"): starts at 5 Focus/s and climbs the
+// longer the form lasts (+0.3/s per second, up to 12/s) — a full meter lasts ~14 s without gains.
+const focusDrainRate = (seconds) => Math.min(12, 5 + 0.3 * Math.max(0, seconds));
+// Gains while transformed: melee refills only a fifth (it kept the form up too easily), everything else a third.
+const FOCUS_TRANSFORM_GAIN_MULT = 0.35; const FOCUS_TRANSFORM_MELEE_GAIN_MULT = 0.2;
+// A transformation ended by hand keeps the rest of the meter (no decay) and may be lit again from 40 %.
+const FOCUS_RELIGHT_RATIO = 0.4;
 const FOCUS_DECAY_DELAY = 5;     // _focusDecayGraceTicks 300 @ 60 Hz
 const CLASH_MOVE_MULT = 0.45;
 
@@ -458,7 +464,7 @@ export class Player extends GroundEntity {
     this.mp = Math.min(this.maxMp, this.mp + dt * MANA_REGEN * (MANA_BALANCE.modeRegen[window.gameWorld?.activeMode?.id] ?? 1) * (this.manaRegenMult ?? 1));
     // Focus drains after a short grace period without gains. A full meter
     // holds while the transformation is ready to be activated.
-    if (this.focusTransformTimer <= 0 && !this.primalBond && this.focus < this.maxFocus) {
+    if (this.focusTransformTimer <= 0 && !this.primalBond && this.focus < this.maxFocus && !this.focusSaved) {
       this.focusDecayDelay = Math.max(0, this.focusDecayDelay - dt);
       if (this.focusDecayDelay <= 0) this.focus = Math.max(0, this.focus - FOCUS_DECAY_RATE * dt);
     }
@@ -482,9 +488,10 @@ export class Player extends GroundEntity {
     this.ninefoldCooldown = Math.max(0, this.ninefoldCooldown - dt);
     if (this.ninefoldTimer <= 0) this.ninefoldPower = 1;
     if (this.focusTransformTimer > 0) {
-      this.focus = Math.max(0, this.focus - FOCUS_TRANSFORM_DRAIN * dt);
+      const drain = focusDrainRate(this._focusT ?? 0);
+      this.focus = Math.max(0, this.focus - drain * dt);
       // Remaining time at the current meter (kept for every "is transformed" check).
-      this.focusTransformTimer = this.focus > 0 ? this.focus / FOCUS_TRANSFORM_DRAIN : 0;
+      this.focusTransformTimer = this.focus > 0 ? this.focus / drain : 0;
     }
     if (this.focusTransformTimer <= 0) { this.focusTransformPower = 1; this._focusT = 0; this.focusStage = 0; }
     else {
@@ -496,7 +503,9 @@ export class Player extends GroundEntity {
       }
     }
     // Primal Bond: wind-up, merge, Focus drain (1.5/s × form), Fortified.
-    updatePrimalBond(this, dt, FOCUS_TRANSFORM_DRAIN);
+    // The Primal Bond drains the same climbing way (× the form's drain factor).
+    this._bondT = this.primalBond?.active ? (this._bondT ?? 0) + dt : 0;
+    updatePrimalBond(this, dt, focusDrainRate(this._bondT) * .8);
     updateWeaponKit(this, dt, window.gameWorld);
     tickFormSpecials(dt);
     // Buff transformation (special rune): limited time, one at a time.
@@ -2465,11 +2474,12 @@ export class Player extends GroundEntity {
     const previous = this.focus;
     const transformed = this.focusTransformTimer > 0;
     this.focusDecayDelay = FOCUS_DECAY_DELAY;
-    const gainMult = (this.buildModifiers?.focusGain ?? 1) * (transformed ? FOCUS_TRANSFORM_GAIN_MULT : 1) * bondGainMultiplier(this);
+    const melee = source === 'MELEE' || source === 'FINISHER';
+    const gainMult = (this.buildModifiers?.focusGain ?? 1) * (transformed || this.primalBond?.active ? (melee ? FOCUS_TRANSFORM_MELEE_GAIN_MULT : FOCUS_TRANSFORM_GAIN_MULT) : 1) * (this.primalBond?.active ? 1 : bondGainMultiplier(this));
     this.focus = Math.min(this.maxFocus, this.focus + Math.max(0, amount) * gainMult);
     // While transformed, combos refill the meter and so extend the form.
     if (transformed) {
-      this.focusTransformTimer = this.focus / FOCUS_TRANSFORM_DRAIN;
+      this.focusTransformTimer = this.focus / focusDrainRate(this._focusT ?? 0);
       return this.focus > previous;
     }
     if (previous < this.maxFocus && this.focus >= this.maxFocus && !this.primalBond) {
@@ -2479,10 +2489,21 @@ export class Player extends GroundEntity {
     return this.focus > previous;
   }
 
+  // Ending the transformation by hand saves the rest of the Focus (user, 2 Nov 2026).
+  endFocusTransformation() {
+    if (!(this.focusTransformTimer > 0)) return false;
+    this.focusTransformTimer = 0; this._focusT = 0; this.focusStage = 0; this.focusTransformPower = 1;
+    this.focusSaved = this.focus > 0;
+    combat.spawnShockwave(this.x, this.y - 38, 60, '#b388ff');
+    return true;
+  }
+  canLightFocus() { return this.focus >= this.maxFocus || (this.focusSaved && this.focus >= this.maxFocus * FOCUS_RELIGHT_RATIO); }
+
   activateFocusTransformation() {
-    if (!this.isAlive || this.focus < this.maxFocus || this.focusTransformTimer > 0 || this.activeClash) return false;
-    // No own timer: the transformation now burns the Focus meter.
-    this.focusTransformTimer = this.focus / FOCUS_TRANSFORM_DRAIN;
+    if (!this.isAlive || !this.canLightFocus() || this.focusTransformTimer > 0 || this.activeClash) return false;
+    this.focusSaved = false;
+    // No own timer: the transformation burns the Focus meter (faster the longer it lasts).
+    this.focusTransformTimer = this.focus / focusDrainRate(0);
     this.focusTransformPower = 1;
     combat.spawnShockwave(this.x, this.y - 38, 92, '#f0a6ff');
     // Transition (charge → flash → pillar) in the Ascendant colours.
