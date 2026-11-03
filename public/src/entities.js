@@ -253,6 +253,8 @@ const focusDrainRate = (seconds) => Math.min(12, 5 + 0.3 * Math.max(0, seconds))
 const FOCUS_TRANSFORM_GAIN_MULT = 0.35; const FOCUS_TRANSFORM_MELEE_GAIN_MULT = 0.2;
 // A transformation ended by hand keeps the rest of the meter (no decay) and may be lit again from 40 %.
 const FOCUS_RELIGHT_RATIO = 0.4;
+// A technique in the Focus transformation / Primal Bond costs Focus (short / full charge).
+const FOCUS_TECH_COST = Object.freeze({ short: 8, full: 16 });
 const FOCUS_DECAY_DELAY = 5;     // _focusDecayGraceTicks 300 @ 60 Hz
 const CLASH_MOVE_MULT = 0.45;
 
@@ -1148,6 +1150,16 @@ export class Player extends GroundEntity {
         return false;
       }
       this.mp -= cost;
+    } else if (this.focusTransformTimer > 0 || this.primalBond?.active) {
+      // Focus transformation / Primal Bond (user, 3 Nov 2026): a technique costs FOCUS — spells are traded against
+      // the time the form lasts.
+      const fc = full ? FOCUS_TECH_COST.full : FOCUS_TECH_COST.short;
+      if (this.focus < fc) {
+        combat.spawnDamageText(this.x, this.y - 70, 'ZU WENIG FOKUS', { color: '#f0a6ff' });
+        this.state = 'attack1'; this.stateTimer = .2; this.canAttack = false;
+        return false;
+      }
+      this.focus -= fc; combat.spawnDamageText(this.x, this.y - 84, '-' + fc + ' FOKUS', { color: '#f0a6ff' });
     }
     const name = releaseFormTechnique(this, window.gameWorld, spells, this.chargeDir ?? 'forward', full);
     if (!name) return false;

@@ -1623,6 +1623,7 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
   { const left = P.focus; assert(game.activateFocusTransformation() && P.focusTransformTimer === 0 && P.focus === left && P.focusSaved, 'Pressing T again ends the transformation and saves the rest of the Focus');
     for (let i = 0; i < 300; i++) P.update(1 / 60, neutralInput, game.battlefield, game);
     assert(P.focus === left && (left < P.maxFocus * .4 || P.canLightFocus()), 'Saved Focus does not decay and may be lit again from 40 %'); P.focusSaved = false; P.focus = P.maxFocus; P.activateFocusTransformation(); }
+  { const f0 = P.focus; P.chargeDir = 'forward'; P.state = 'idle'; P.stateTimer = 0; const ok = P.releaseFormTechnique(true); assert(ok && Math.abs(f0 - P.focus - 16) < .01, 'A full technique in the Focus transformation costs 16 Focus (spells traded against form time) — ' + (f0 - P.focus)); P.focus = P.maxFocus; }
   P.focus = .02; P.update(1 / 60, neutralInput, game.battlefield, game);
   assert(P.focusTransformTimer === 0 && P.focus === 0, 'The transformation ends when the Focus meter is empty');
   resetForm();
