@@ -62,6 +62,10 @@ function withinHeight(target, sourceHeight, fallback = 110) {
 
 // Placed walls are chains of blocks; the drawing grade sets the length.
 export const WALL_SEGMENT_SPACING = 24;
+// Castle Siege reach (user, 3 Nov 2026: most attacks must get to the enemy castle): from the own battlement (x 146)
+// to the enemy castle (x 878) — travelling spells fly that far, spike rows and the first lightning hop reach it too.
+const SIEGE_REACH = 800;
+const inSiege = () => globalThis.window?.gameWorld?.activeMode?.id === 'siege';
 const WALL_SEGMENTS = Object.freeze({
   stone: Object.freeze({ C: 3, B: 4, A: 5, S: 6 }),
   bulwark: Object.freeze({ C: 2, B: 2, A: 3, S: 3 })
@@ -150,6 +154,7 @@ export class SpellSystem {
 
   addSpell(spell, quality) {
     spell.quality = this.normalizeQuality(quality);
+    if (inSiege() && Number.isFinite(spell.vx) && Math.abs(spell.vx) > 100 && Number.isFinite(spell.life) && !spell.isStoneWall) spell.life = Math.max(spell.life, SIEGE_REACH / Math.abs(spell.vx));
     // These cover projectile collision, radial coverage, path width and the
     // persistence of fields.  Individual damage ticks below read quality.power.
     if (typeof spell.radius === 'number') spell.radius *= spell.quality.area;
@@ -1110,7 +1115,7 @@ class GaleBlastSpell {
     const targets = gameWorld.getHostileTargets(this.team);
     for (const t of targets) {
       if (!this.hitEntities.has(t)) {
-        if (Math.abs(t.x - this.x) < 45 && Math.abs(t.z - this.z) < 0.2 && Math.abs((t.worldHeight ?? 0) - this.heightAboveSurface) < 105) {
+        if (Math.abs(t.x - this.x) < 45 && Math.abs(t.z - this.z) < 0.2 && (Math.abs((t.worldHeight ?? 0) - this.heightAboveSurface) < 105 || (inSiege() && (t.isObjective || t.isCastle)))) {
           this.hitEntities.add(t);
           t.takeDamage(35 * this.quality.power, this.facing * 600, 280, 0.6, false, 'spell');
           combat.spawnHitSparks(t.x, t.y - 20, this.facing, '#4deeea', 10);
@@ -1150,11 +1155,11 @@ class ChainLightningSpell {
 
     for (let c = 0; c < 4; c++) {
       let nearest = null;
-      let nearDist = 320;
+      let nearDist = c === 0 && inSiege() ? SIEGE_REACH : 320;
       for (const t of targets) {
         if (!hitList.includes(t)) {
           const d = Math.hypot(t.x - currX, (t.z - currZ) * 150);
-          if (d < nearDist && Math.abs((t.worldHeight ?? 0) - currHeight) < 125) {
+          if (d < nearDist && Math.abs((t.worldHeight ?? 0) - currHeight) < (inSiege() ? 320 : 125)) {
             nearDist = d;
             nearest = t;
           }
@@ -1212,15 +1217,17 @@ class StoneSpikesSpell {
     this.isFinished = false;
     this.fineVfx = true; this.seed = Math.floor(Math.random() * 1000);
 
-    // 4 Sequential spikes advancing forward
-    for (let i = 0; i < 4; i++) {
+    // 4 sequential spikes advancing forward (Castle Siege: a row long enough to reach the enemy castle)
+    const count = inSiege() ? Math.ceil(SIEGE_REACH / 45) : 4;
+    if (count > 4) this.life = 1.6 + (count - 4) * 0.05;
+    for (let i = 0; i < count; i++) {
       this.spikes.push({
         x: startX + facing * (i * 45 + 30),
         y: this.y,
         z,
         height: 0,
-        maxHeight: 48 + i * 8,
-        delay: i * 0.1,
+        maxHeight: 48 + Math.min(i, 3) * 8,
+        delay: i * (count > 4 ? 0.05 : 0.1),
         active: false,
         hitDone: false
       });
