@@ -287,7 +287,7 @@ export class BeamSpell {
     if (!best) return;
     const cur = this.blockedAtX == null ? Infinity : (this.blockedAtX - this.originX) * this.facing;
     if (best.d < cur) this.blockedAtX = best.face;
-    if (best.w.team !== this.team) best.w.takeDamage?.(this.damage / this.profile.tick * dt * .6);
+    best.w.takeDamage?.(this.damage / this.profile.tick * dt * .6); // own walls too (user, 4 Nov 2026)
   }
 
   end(reason = 'expired') {

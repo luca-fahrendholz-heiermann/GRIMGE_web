@@ -78,9 +78,11 @@ export class TidalWaveSpell {
     for (const w of this.system?.activeSpells ?? []) {
       if (!w.isStoneWall || w.isDead || Math.abs(w.z - this.z) > (w.halfZ ?? .2) + .04) continue;
       const d = (w.x - this.x0) * this.facing - (w.halfX ?? 16);
-      if (d > 0 && d < this.length && d >= this.head - 10) this.length = d;
+      if (d > 0 && d < this.length && d >= this.head - 10) { this.length = d; this.wall = w; }
     }
     const head = this.head; const front = this.x0 + this.facing * head; this.x = front;
+    // It breaks on the own side's wall too and wears it down (a hostile wall is already one of its targets).
+    if (this.wall?.team === this.team && head >= this.length - 1 && !this.wallHit) { this.wallHit = true; if (!this.wall.isDead) this.wall.takeDamage?.(this.damage); }
     if (this.age < this.length / this.speed) {
       // The breaking front carries what it meets; everyone it passes is soaked.
       for (const t of gw.getHostileTargets(this.team)) {

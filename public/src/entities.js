@@ -2376,7 +2376,7 @@ export class Player extends GroundEntity {
     const ready = this.focus >= this.maxFocus;
     const touch = globalThis.window?.gameWorld?.inputMode === 'touch';
     drawFocusAura(ctx, this.x, renderY, this.animTime, (ratio - .25) / .75, {
-      height: ENTITY_VISUALS.heroHeight, ready, hint: ready ? (touch ? '✦ TAP TO TRANSFORM' : '✦ CLICK OR T TO TRANSFORM') : ''
+      height: ENTITY_VISUALS.heroHeight, ready, hint: ready ? (touch ? '✦ PROFIL OBEN LINKS ANTIPPEN' : '✦ T ZUM VERWANDELN') : ''
     });
   }
 

@@ -2047,6 +2047,8 @@ class StoneWallSpell {
       if (Math.abs(s.x - this.x) > this.halfX + (s.radius ?? 10) || Math.abs((s.z ?? this.z) - this.z) > this.halfZ + .03) continue;
       if ((s.heightAboveSurface ?? s.height ?? 0) > this.surfaceHeight + this.wallHeight + 18 && !s.isWallBlockable) continue;
       s.x = this.x - Math.sign(s.vx) * (this.halfX + 2);
+      // Own spells wear their own wall down too (user, 4 Nov 2026); hostile ones already hit it as their target.
+      if (s.team === this.team) this.takeDamage(Math.max(8, s.damage ?? 20));
       combat.spawnHitSparks(s.x, this.y - Math.min(this.wallHeight, 40), -Math.sign(s.vx), '#c7b299', 10);
       if (typeof s.detonate === 'function') s.detonate(gameWorld);
       else if (typeof s.pop === 'function') s.pop(gameWorld);

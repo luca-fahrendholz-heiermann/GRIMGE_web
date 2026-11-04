@@ -1059,9 +1059,9 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
     assert(blk.hp < hp0 && P0.mp === mp0 && P0.focus === f0, 'The creator breaks its own wall with melee (no mana / Focus gained from it) ' + hp0 + '→' + blk.hp);
     // Own spells do not pass the own wall either (user, 4 Nov 2026): a fireball bursts at it, a beam's tip stops at its face.
     P0.x = blk.x - 110; P0.z = blk.z; P0.facing = 1; P0.elevation = 0; game.battlefield.placeOnSurface(P0);
-    spells.cast(P0, spells.resolveSpell([{ id: 'ignis' }]), game); const fb = spells.activeSpells.find((sp) => sp.constructor.name === 'FireballSpell');
+    blk.hp = blk.maxHp; spells.cast(P0, spells.resolveSpell([{ id: 'ignis' }]), game); const fb = spells.activeSpells.find((sp) => sp.constructor.name === 'FireballSpell');
     for (let i = 0; i < 40 && !fb.isFinished; i++) spells.update(1 / 60, game);
-    assert(fb.isFinished && fb.x < blk.x, 'The own wall stops the own fireball (no shooting through walls) — burst at ' + Math.round(fb.x) + ' / wall ' + Math.round(blk.x));
+    assert(fb.isFinished && fb.x < blk.x && blk.hp < blk.maxHp, 'The own wall stops the own fireball (no shooting through walls) and takes its damage — burst at ' + Math.round(fb.x) + ' / wall ' + Math.round(blk.x));
     spells.cast(P0, spells.resolveSpell([{ id: 'ignis' }, { id: 'ignis' }]), game); const bm = spells.activeSpells.find((sp) => sp.isBeam && sp.team === P0.team);
     for (let i = 0; i < 60; i++) spells.update(1 / 60, game);
     assert(bm && bm.tipX <= blk.x, 'A beam stops at the face of the own wall too (tip ' + Math.round(bm?.tipX) + ')'); bm?.end?.('test');
@@ -1569,7 +1569,7 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
   P.focus = P.maxFocus;
   game.render();
   assert(!game.tryTransformByTap({ x: P.x + 200, y: P.y - 40 }) && P.focusTransformTimer === 0, 'Tapping beside the Wizard does not transform');
-  assert(game.tryTransformByTap({ x: P.x + 5, y: P.y - 40 }) && P.focusTransformTimer > 0, 'With full Focus, tapping your own Wizard transforms');
+  assert(!game.tryTransformByTap({ x: P.x + 5, y: P.y - 40 }) && P.focusTransformTimer === 0 && game.activateFocusTransformation() && P.focusTransformTimer > 0, 'Even with full Focus, tapping the own Wizard does not transform (accidental taps in a fight) — the profile panel / ✦ / T do');
   game.render();
   P.focusTransformTimer = 0; P.focus = P.maxFocus;
   ui.update(1 / 60, P, game.hudOpponent(), game.battlefield);
@@ -1662,8 +1662,8 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
   { const left = P.focus; assert(game.activateFocusTransformation() && P.focusTransformTimer === 0 && P.focus === left && P.focusSaved, 'Pressing T again ends the transformation and saves the rest of the Focus');
     for (let i = 0; i < 300; i++) P.update(1 / 60, neutralInput, game.battlefield, game);
     assert(P.focus === left && (left < P.maxFocus * .4 || P.canLightFocus()), 'Saved Focus does not decay and may be lit again from 40 %'); P.focusSaved = false; P.focus = P.maxFocus; P.activateFocusTransformation(); }
-  { const wasPrimal = game.primal; game.primal = null; const tap = { x: P.x, y: P.y - 40 }; const ended = game.tryTransformByTap(tap) && P.focusTransformTimer === 0 && P.focusSaved; const relit = P.focus >= P.maxFocus * .4 && game.tryTransformByTap(tap) && P.focusTransformTimer > 0; game.primal = wasPrimal;
-    assert(ended && relit, 'Tapping the own Wizard ends the transformation (Focus saved) and lights it again from the saved meter (phone path)'); if (!(P.focusTransformTimer > 0)) { P.focusSaved = false; P.focus = P.maxFocus; P.activateFocusTransformation(); } P.focus = P.maxFocus; }
+  { const wasPrimal = game.primal; game.primal = null; const tap = { x: P.x, y: P.y - 40 }; const tapped = game.tryTransformByTap(tap); const stillOn = P.focusTransformTimer > 0; const ended = game.activateFocusTransformation() && P.focusTransformTimer === 0 && P.focusSaved; const relit = P.focus >= P.maxFocus * .4 && game.activateFocusTransformation() && P.focusTransformTimer > 0; game.primal = wasPrimal;
+    assert(!tapped && stillOn && ended && relit, 'Tapping the own Wizard does nothing (no accidental transform in a fight); the profile / button path ends the form and relights it from the saved meter'); if (!(P.focusTransformTimer > 0)) { P.focusSaved = false; P.focus = P.maxFocus; P.activateFocusTransformation(); } P.focus = P.maxFocus; }
   { const f0 = P.focus; P.chargeDir = 'forward'; P.state = 'idle'; P.stateTimer = 0; const ok = P.releaseFormTechnique(true); assert(ok && Math.abs(f0 - P.focus - 16) < .01, 'A full technique in the Focus transformation costs 16 Focus (spells traded against form time) — ' + (f0 - P.focus)); P.focus = P.maxFocus; }
   P.focus = .02; P.update(1 / 60, neutralInput, game.battlefield, game);
   assert(P.focusTransformTimer === 0 && P.focus === 0, 'The transformation ends when the Focus meter is empty');
