@@ -20,7 +20,7 @@ import { applyStatus, hasStatus } from './status_effects.js';
 import { deliveryOf, drawHead, drawFlourish, breathMotion } from './breathing_weapons.js';
 import { RayCrownFx } from './cast_circle.js';
 import { spellSheetReady, drawSpellSpriteTinted, drawFineFromLayer } from './spell_visuals.js';
-import { auraPower, auraStage, noteBreathDamage, updateBreathAura, endBreathAura, renderBreathAura, breathCloak, sideMoveMult, sideDamageTaken, sideOnHit } from './breathing_aura.js';
+import { auraPower, auraStage, noteBreathDamage, updateBreathAura, endBreathAura, renderBreathAura, breathCloak, breathBodyPose, sideMoveMult, sideDamageTaken, sideOnHit } from './breathing_aura.js';
 
 // ── palettes (dark, mid, light, core: pixel-art ramps) ───────────────────
 const hexRgb = (h) => { const n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
@@ -784,11 +784,16 @@ function awakenMark(p, st, gw) {
   return true;
 }
 // The mark on the body: element-shaped lines on face, chest and arm.
-function drawMark(ctx, x, y, R, shape, t, f = 1) {
+function drawMark(ctx, x, y, R, shape, t, f = 1, spread = 0) {
   // A pixel mark: a dark contour, the style's colour on top, the joints flaring white with the racing heart.
-  ctx.save(); const beat = .5 + .5 * Math.sin(t * 6);
-  // The shapes are authored around y -66; they are pressed onto the chest / belly — never over the face.
-  const at = (px, py) => [x + f * px, y - 52 + (py + 66) * .6];
+  // spread 0 … 1: the mark creeps from the chest over the upper arm, the shoulder, the thigh and at last the cheek.
+  for (const pl of MARK_SPREAD) if (spread >= pl.need) drawMarkAt(ctx, x, y, R, shape, t, f, pl);
+}
+const MARK_SPREAD = [{ need: 0, dx: 0, dy: 0, k: 1 }, { need: .25, dx: 11, dy: 10, k: .7 }, { need: .45, dx: -5, dy: -13, k: .6 }, { need: .65, dx: 3, dy: 34, k: .75 }, { need: .8, dx: -10, dy: 22, k: .6 }, { need: .95, dx: 4, dy: -29, k: .4 }];
+function drawMarkAt(ctx, x, y, R, shape, t, f, pl) {
+  ctx.save(); const beat = .5 + .5 * Math.sin(t * 6 - pl.need * 3);
+  // The shapes are authored around y -66; they are pressed onto the chest / belly (then spread as above).
+  const at = (px, py) => [x + f * (px * pl.k + pl.dx), y - 52 + (py + 66) * .6 * pl.k + pl.dy];
   const lines = {
     flames: [[[-4, -62], [-1, -70], [2, -64], [4, -72]], [[-6, -40], [-2, -50], [1, -42]]], waves: [[[-6, -64], [-2, -67], [2, -64], [6, -67]], [[-7, -44], [-2, -47], [3, -44]]],
     bolts: [[[-3, -72], [1, -66], [-2, -64], [3, -58]], [[6, -48], [2, -42], [6, -40]]], swirls: [[[-5, -66], [0, -70], [4, -66], [0, -62]]], cracks: [[[-6, -70], [-2, -64], [-5, -58]], [[4, -48], [0, -42]]],
@@ -816,6 +821,7 @@ function breathStance() {
     // Aura stage pips (I–III) and the contour cloak from stage II on.
     counter: (p, st) => ({ n: auraStage(st), max: 3 }),
     cloak: (p, st) => breathCloak(p, st, styleOf(st)),
+    bodyPose: (p, st) => breathBodyPose(p, st),
     damageTaken(p, st, amount) {
       amount = sideDamageTaken(st, amount);
       if (st.calmUntil > st.t) {
@@ -876,7 +882,7 @@ function breathStance() {
         else ribbon(ctx, pts, (i, n) => (a.big ? 9 : 6) * Math.sin((i / n) * Math.PI) + 1, R.mat, 4200 + a.step, st.t, fade);
         if (s.trail !== 'bolt' && s.trail !== 'ribbon') { ctx.save(); ctx.globalAlpha = fade; const look = s.trail === 'shards' ? (st.style === 'forge' ? 'blast' : 'rock') : TRAIL_LOOK[s.trail] ?? 'flame'; for (let i = 2; i < 9; i += 3) piece(ctx, look, pts[i][0], pts[i][1] + 10, .9, st.t, R, a.f, i); ctx.restore(); }
       }
-      if (st.mark) drawMark(ctx, p.x, ry, R, s.mark, st.t, p.facing || 1);
+      if (st.mark) drawMark(ctx, p.x, ry, R, s.mark, st.t, p.facing || 1, Math.min(1, (MARK.dur - st.mark.t) / MARK.dur * .7 + (auraStage(st) - 1) * .2));
       for (const a of st.markAllies ?? []) if (a.breathMark && alive(a)) drawMark(ctx, a.x, (a.y ?? 0) + 14, R, a.breathMark.look, st.t, a.facing || 1);
     }
   };

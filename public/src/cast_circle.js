@@ -90,6 +90,11 @@ export function drawCastTell(ctx, { x, y, facing = 1, t = 0, color = '#ff5252', 
 // The player's own strokes (canvas space) fitted into the circle in front of the Wizard.
 export function renderPlayerDrawTell(ctx, p, drawing, now = performance.now()) {
   if (!drawing?.active || !p) return;
+  const hidden = Math.max(0, Math.min(1, (p.concealment ?? 0) * 1.3)); if (hidden >= .95) return;
+  ctx.save(); ctx.globalAlpha *= 1 - hidden;
+  try { drawPlayerTell(ctx, p, drawing, now); } finally { ctx.restore(); }
+}
+function drawPlayerTell(ctx, p, drawing, now) {
   const all = [...(drawing.strokes ?? []), drawing.currentStroke ?? []].filter((s) => s.length);
   drawing.tellT = drawing.tellT ?? now;
   const t = (now - drawing.tellT) / 1000; const open = Math.min(1, t / .15);

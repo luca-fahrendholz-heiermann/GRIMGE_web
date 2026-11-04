@@ -6,7 +6,8 @@
 //          effect stronger; a derived style (combo) keeps the damage already dealt.
 //   side   every style changes the ground / air around the Wizard while it breathes (SIDE below) — mist builds a
 //          fog bank that grows the longer you breathe (foes in it are slowed, the Wizard is harder to track).
-import { hit, foesOf, projectilesOf, DEPTH, TAU } from './signature_core.js';
+import { hit, foesOf, projectilesOf, projKill, DEPTH, TAU } from './signature_core.js';
+import { drawWardShell } from './ward_shell.js';
 import { combat } from './combat.js';
 import { environment } from './environment.js';
 import { applyStatus } from './status_effects.js';
@@ -70,7 +71,7 @@ const SIDE = {
   water: { every: .45, tick(p, st, gw, lvl) { if (moving(p)) environment.add('water', p.x, p.z, { radius: 20 + 6 * lvl, team: p.team, ownerSafe: true, life: 2.5 + lvl }); for (const t of near(gw, p, 60 + 20 * lvl)) if (chance(.3 * lvl)) applyStatus(t, 'wet', { quiet: true }); } },
   flame: { every: .5, tick(p, st, gw, lvl) { if (moving(p)) environment.add('scorch', p.x, p.z, { radius: 16 + 5 * lvl, team: p.team, ownerSafe: true, life: 1.5 + .5 * lvl }); for (const t of near(gw, p, 55 + 15 * lvl)) if (chance(.12 * lvl)) applyStatus(t, 'burn', { quiet: true }); } },
   sun: { every: .5, tick(p, st, gw, lvl) { if (moving(p)) environment.add('scorch', p.x, p.z, { radius: 18 + 5 * lvl, team: p.team, ownerSafe: true, life: 1.5 + .5 * lvl }); for (const t of near(gw, p, 70 + 15 * lvl)) if (chance(.15 * lvl)) applyStatus(t, 'burn', { quiet: true }); } },
-  thunder: { every: (lvl) => 2.4 - .5 * lvl, tick(p, st, gw, lvl, s) { const t = nearest(gw, p, 110 + 20 * lvl); if (!t) return; zap(p, st, s, t, 4 * lvl, 'bolt'); if (lvl >= 3) applyStatus(t, 'paralysis', { quiet: true }); } },
+  thunder: { every: (lvl, st) => Math.max(.45, 2.4 - .5 * lvl - .25 * (st?.heat ?? 0)), tick(p, st, gw, lvl, s) { const t = nearest(gw, p, 110 + 20 * lvl); if (!t) return; zap(p, st, s, t, 4 * lvl, 'bolt'); if (lvl >= 3) applyStatus(t, 'paralysis', { quiet: true }); } },
   wind: { every: .2, tick(p, st, gw, lvl) {
     // A wind wall: hostile shots near the Wizard are slowed (from stage III turned away), foes pressed back.
     const r = 70 + 20 * lvl;
@@ -106,12 +107,16 @@ export function sideOnHit(p, st, t) {
   if (st.style === 'forge' && chance(.25 * l)) applyStatus(t, 'burn', { quiet: true });
   if (st.style === 'beast' && Number.isFinite(p.hp)) p.hp = Math.min(p.maxHp, p.hp + l); // the hunt feeds
   if (st.style === 'mist' || st.style === 'steam') st.fog = Math.min(FOG_CAP[st.style][l - 1], (st.fog ?? 0) + .04);
+  // Every hit charges the air (thunder: more bolts round the Wizard, faster sparks).
+  st.heat = Math.min(6, (st.heat ?? 0) + 1);
 }
 
 export function updateBreathAura(p, st, dt, gw, s) {
   st.zaps = st.zaps ?? []; for (const z of st.zaps) z.t += dt; st.zaps = st.zaps.filter((z) => z.t < .3);
   st.auraPop = Math.max(0, (st.auraPop ?? 0) - dt);
   const lvl = auraStage(st);
+  st.heat = Math.max(0, (st.heat ?? 0) - dt * .8);
+  updateDrones(p, st, dt, gw, lvl);
   // Fog builds up while the Wizard breathes (and with every hit); foes inside are slowed, the Wizard is concealed.
   const cap = FOG_CAP[st.style];
   if (cap) {
@@ -121,61 +126,144 @@ export function updateBreathAura(p, st, dt, gw, s) {
     p.concealment = st.style === 'mist' ? st.fog : st.fog * .5;
   }
   const side = SIDE[st.style]; if (!side) return;
-  const every = typeof side.every === 'function' ? side.every(lvl) : side.every;
+  const every = typeof side.every === 'function' ? side.every(lvl, st) : side.every;
   st.sideT = (st.sideT ?? 0) + dt;
   if (st.sideT >= every) { st.sideT = 0; side.tick(p, st, gw, lvl, s); }
 }
 export function endBreathAura(p) { p.concealment = 0; }
+// Blossom / butterfly drones (flower, insect, love): 2 per stage orbit the Wizard and each catches one hostile shot,
+// then regrows after 2.5 s.
+function updateDrones(p, st, dt, gw, lvl) {
+  if (surroundOf(st.style) !== 'drones') return;
+  const want = 2 * lvl; st.drones = st.drones ?? [];
+  while (st.drones.length < want) st.drones.push({ i: st.drones.length, a: 0, cd: 0, x: p.x, y: p.y ?? 0, z: p.z });
+  const n = st.drones.length;
+  for (const d of st.drones) {
+    d.cd = Math.max(0, d.cd - dt); d.a = d.i / n * TAU + st.t * 1.4; const R = 34;
+    d.x = p.x + Math.cos(d.a) * R; d.z = p.z + Math.sin(d.a) * R * .28 / DEPTH; d.y = (p.y ?? 0) - 38 - (d.i % 3) * 14 + Math.sin(d.a) * R * .28;
+    if (d.cd > 0) continue;
+    for (const pr of projectilesOf(gw)) { if (pr.team === p.team || !Number.isFinite(pr.x)) continue; if (Math.abs(pr.x - d.x) < 20 && Math.abs(((pr.z ?? p.z) - p.z) * DEPTH) < 30) { projKill(pr); d.cd = 2.5; combat.spawnHitSparks?.(d.x, d.y, 1, '#ffc1e3', 8); break; } }
+  }
+}
 
-// ── look ─────────────────────────────────────────────────────────────────
+// ── look: the surroundings of each element (user, 4 Nov 2026: "nicht die typische aura nur in anderen farben, sondern
+// quasi umgebung um den charakter herum elementweise affektiert") ─────────────────────────────────────────────
+// Every style changes the space round the Wizard and grows with the stage: lightning crackles in the air (more with every
+// hit), the body catches fire until it blazes, a blizzard rages, water rings orbit, wind sickles spiral, a spirit serpent
+// coils, a spirit predator crouches behind (and the Wizard drops into a four-legged sprint stance), blossom drones guard,
+// rocks orbit, moons circle, a ward lattice shields, sound rings pulse, fog swallows the Wizard. The mark spreads.
 const sprite = (ctx, sheet, pal, frame, x, y, opts) => { if (!spellSheetReady(sheet)) return false; drawFineFromLayer(ctx, (c) => drawSpellSpriteTinted(c, sheet, pal, frame, x, y, opts)); return true; };
-// The stance cloak (contour aura along the sprite) from stage II on.
+const FAMILY = { flame: 'fire', sun: 'fire', forge: 'fire', ice: 'snow', water: 'water', steam: 'water', wind: 'wind', serpent: 'serpent', beast: 'beast', flower: 'drones', insect: 'drones', love: 'drones', stone: 'rocks', moon: 'moons', ward: 'ward', sound: 'sound', thunder: 'bolts', mist: 'fog' };
+export const surroundOf = (style) => FAMILY[style] ?? 'none';
+const HERO_H = 92;
+// Body stance of the style (applied in Player.render): the beast crouches into a sprint start, fire grows, fog veils.
+export function breathBodyPose(p, st) {
+  const fam = surroundOf(st.style); const l = auraStage(st); const f = p.facing || 1;
+  if (fam === 'beast' && p.grounded && !/^attack|heavyStrike|uppercut|dive|dash/.test(p.state ?? '')) {
+    const run = Math.min(1, (Math.abs(p.vx ?? 0) + Math.abs(p.vz ?? 0) * DEPTH) / 260);
+    return { rot: f * (9 + 3 * l + 8 * run), ox: f * (4 + 3 * run), oy: 6 + l, sx: 1.05, sy: .84 - .02 * l };
+  }
+  if (fam === 'fire' && l >= 3) return { sx: 1.12, sy: 1.12 };
+  if (fam === 'fog' && (p.concealment ?? 0) > .05) return { alpha: 1 - .5 * Math.min(1, p.concealment) };
+  return null;
+}
+// The contour cloak only where the body itself becomes the element: blazing fire (III), stone skin (III).
 export function breathCloak(p, st, s) {
-  const l = auraStage(st); if (l < 2 || p.focusTransformTimer > 0) return null;
-  const P = auraPalettes(st.style, s.ramp)[l - 1];
+  const l = auraStage(st); if (l < 3 || p.focusTransformTimer > 0) return null;
+  const fam = surroundOf(st.style); if (fam !== 'fire' && fam !== 'rocks') return null;
+  const P = auraPalettes(st.style, s.ramp)[fam === 'fire' ? 1 : 0];
   return { edge: css(P[2]), inner: css(P[3]), fade: Math.min(1, st.timer * 2) };
 }
-export function renderBreathAura(ctx, p, st, ry, layer, s, pieceSheet) {
-  const l = auraStage(st); const P = auraPalettes(st.style, s.ramp)[l - 1]; const t = st.t; const f = p.facing || 1;
-  const fade = Math.min(1, st.t * 3, st.timer * 2);
+const px = (ctx, x, y, c) => { ctx.fillStyle = c; ctx.fillRect(Math.round(x), Math.round(y), 1, 1); };
+function pline(ctx, x0, y0, x1, y1, c, w = 1) { const n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0))); ctx.fillStyle = c; for (let i = 0; i <= n; i++) { const x = x0 + (x1 - x0) * i / n; const y = y0 + (y1 - y0) * i / n; ctx.fillRect(Math.round(x - (w - 1) / 2), Math.round(y - (w - 1) / 2), w, w); } }
+const seeded = (seed) => { let x = Math.sin(seed * 999.13) * 43758.5; return () => { x = Math.sin(x * 12.9898 + 78.233) * 43758.5453; return x - Math.floor(x); }; };
+// Lightning in the air: jagged bolts flickering between points round the body, more with the stage and every hit.
+function airBolts(ctx, p, st, ry, layer, P, l) {
+  const n = 2 + 2 * l + Math.min(6, Math.round(st.heat ?? 0)); const tick = Math.floor(st.t / .07); const R = 36 + l * 12;
+  for (let b = 0; b < n; b++) {
+    const r = seeded(tick * 13 + b * 7 + 1); if (r() < .25) continue;
+    const a0 = r() * TAU; const front = Math.sin(a0) > 0; if (front !== (layer === 'front')) continue;
+    const x0 = p.x + Math.cos(a0) * R * (.6 + r() * .5); const y0 = ry - 18 - r() * (HERO_H - 10) + Math.sin(a0) * 8;
+    const a1 = a0 + (r() - .5) * 2.2; const x1 = p.x + Math.cos(a1) * R * (.6 + r() * .7); const y1 = y0 + (r() - .3) * 64;
+    let lx = x0; let ly = y0; const seg = 5 + l;
+    for (let i = 1; i <= seg; i++) { const u = i / seg; const nx = x0 + (x1 - x0) * u + (i < seg ? (r() - .5) * 14 : 0); const ny = y0 + (y1 - y0) * u + (i < seg ? (r() - .5) * 8 : 0); pline(ctx, lx, ly, nx, ny, P[1], 5); pline(ctx, lx, ly, nx, ny, P[3], 3); pline(ctx, lx, ly, nx, ny, P[4], 1); if (r() < .3) { const bx = nx + (r() - .5) * 14; const by = ny + r() * 10; pline(ctx, nx, ny, bx, by, P[3], 1); } lx = nx; ly = ny; }
+  }
+  // Ground sparks round the feet (front layer).
+  if (layer === 'front') { const r = seeded(tick * 3 + 5); for (let i = 0; i < 2 + l * 2; i++) { const a = r() * TAU; const x = p.x + Math.cos(a) * (14 + r() * 26); const y = ry + Math.sin(a) * 6; px(ctx, x, y - r() * 4, P[4]); px(ctx, x + 1, y, P[3]); } }
+}
+// Fire eating up the body: tongues from the feet (I), to the waist (II), the whole body blazing (III).
+function bodyFire(ctx, p, st, ry, layer, P, l, grow) {
+  const reach = Math.min(1, .3 + .28 * (l - 1) + .2 * grow); const n = 4 + l * 4;
+  for (let i = 0; i < n; i++) {
+    const r = seeded(i * 17 + 3); const a = i / n * TAU + st.t * .6; const front = Math.sin(a) > 0; if (front !== (layer === 'front')) continue;
+    const h = r() * reach; const w = (1 - h * .55) * (13 + l * 2);
+    const x = p.x + Math.cos(a) * w * .8; const y = ry - h * HERO_H * .95 + 2;
+    ctx.save(); ctx.globalAlpha = front ? .92 : .8;
+    sprite(ctx, 'br_flame_tongue', P, (Math.floor(st.t * 14) + i) % 8, x, y, { scale: .55 + .2 * l + r() * .2, flip: (i % 2) === 1 });
+    ctx.restore();
+  }
+  // The sun's corona / the forge's sparks.
+  if (st.style === 'sun' && layer === 'back') { for (let k = 0; k < 12; k++) { const a = k / 12 * TAU + st.t * .4; const L = 30 + l * 12 + (k % 2) * 10; pline(ctx, p.x + Math.cos(a) * 20, ry - 52 + Math.sin(a) * 20, p.x + Math.cos(a) * L, ry - 52 + Math.sin(a) * L, k % 2 ? P[3] : P[2], 2); } }
+  if (st.style === 'forge' && layer === 'front') { const r = seeded(Math.floor(st.t / .05)); for (let i = 0; i < 4 + l * 3; i++) { const u = r(); const x = p.x + (r() - .5) * 40; const y = ry - 20 - u * 60; px(ctx, x, y, u < .5 ? P[4] : P[3]); px(ctx, x - 1, y + 1, P[2]); } }
+}
+function drones(ctx, p, st, ry, layer, P) {
+  const sheet = st.style === 'flower' ? 'br_petal_drone' : 'br_butterfly';
+  for (const d of st.drones ?? []) { if (d.cd > 0) continue; const front = Math.sin(d.a) > 0; if (front !== (layer === 'front')) continue; sprite(ctx, sheet, P, (Math.floor(st.t * 10) + d.i) % (sheet === 'br_butterfly' ? 4 : 6), d.x, d.y, { anchor: 'center', scale: 1.1 }); }
+}
+function orbiters(ctx, p, st, ry, layer, P, l, sheet, count, R, sc) {
+  for (let i = 0; i < count; i++) { const a = i / count * TAU + st.t * (sheet === 'bp_moon' ? 1.6 : .9); const front = Math.sin(a) > 0; if (front !== (layer === 'front')) continue; const y = ry - 30 - (i % 3) * 18 + Math.sin(st.t * 2 + i) * 3; sprite(ctx, sheet, P, (Math.floor(st.t * 8) + i) % 4, p.x + Math.cos(a) * R, y + Math.sin(a) * R * .28, { anchor: 'center', scale: sc }); }
+}
+function soundRings(ctx, p, st, ry, layer, P, l) {
+  if (layer !== 'front') return;
+  for (let k = 0; k < 1 + l; k++) { const u = ((st.t * .9 + k / (1 + l)) % 1); const R = 18 + u * (50 + l * 14); ctx.save(); ctx.globalAlpha = 1 - u; for (let i = 0; i < 48; i++) { const a = i / 48 * TAU; if (i % 6 === 0) continue; px(ctx, p.x + Math.cos(a) * R, ry - 40 + Math.sin(a) * R * .55, i % 2 ? P[3] : P[2]); } ctx.restore(); }
+}
+export function renderBreathAura(ctx, p, st, ry, layer, s) {
+  const l = auraStage(st); const t = st.t; const f = p.facing || 1; const fam = surroundOf(st.style);
+  // The element keeps its own colours at every stage (no white god mode); only fire heats up (orange → hot hue).
+  const pals = auraPalettes(st.style, s.ramp); const P = fam === 'fire' ? pals[Math.min(1, l - 1)] : pals[0];
+  const fade = Math.min(1, st.t * 3, st.timer * 2); const grow = stageProgress(st); const side = layer === 'front' ? 'front' : 'back';
   // Fog bank (mist / steam): clouds on a ring around the Wizard — behind it on the back layer, thinner in front.
   if (st.fog > .02 && spellSheetReady('bp_mist')) {
     const fp = st.style === 'steam' ? auraPalettes('steam', s.ramp)[0] : ['#263238', '#546e7a', '#90a4ae', '#cfd8dc', '#eceff1'];
-    const n = Math.round(5 + 15 * st.fog); const R = fogRadius(st);
+    const n = Math.round(6 + 22 * st.fog); const R = fogRadius(st);
     ctx.save();
     for (let i = 0; i < n; i++) {
       const a = i / n * TAU + t * .25 + Math.sin(i * 1.7) * .4; const front = Math.sin(a) > 0;
       if (front !== (layer === 'front')) continue;
-      const rr = R * (.45 + .55 * ((i * 37 % 11) / 11));
-      ctx.globalAlpha = fade * (front ? .45 : .85) * Math.min(1, st.fog * 2);
-      sprite(ctx, 'bp_mist', fp, (i + Math.floor(t * 6)) % 4, p.x + Math.cos(a) * rr, ry - 14 + Math.sin(a) * rr * .3 - (i % 3) * 8, { anchor: 'center', scale: 1.3 + st.fog * 1.2 + (i % 3) * .3 });
+      const rr = R * (.2 + .8 * ((i * 37 % 11) / 11));
+      // Dense enough, the fog swallows the Wizard (the front clouds close in over the body).
+      ctx.globalAlpha = fade * (front ? .35 + .4 * st.fog : .85) * Math.min(1, st.fog * 2);
+      sprite(ctx, 'bp_mist', fp, (i + Math.floor(t * 6)) % 4, p.x + Math.cos(a) * rr, ry - 14 + Math.sin(a) * rr * .3 - (i % 4) * 14, { anchor: 'center', scale: 1.3 + st.fog * 1.4 + (i % 3) * .3 });
     }
     ctx.restore();
   }
   // Side-effect strikes: zig-zag bolts, moon crescents, sound rings.
   if (layer === 'front') for (const z of st.zaps ?? []) {
     const k = z.t / .3; ctx.save(); ctx.globalAlpha = 1 - k;
-    if (z.kind === 'ring') { ctx.strokeStyle = P[3]; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(z.x0, ry - 20, z.r * (.3 + .7 * k), z.r * .3 * (.3 + .7 * k), 0, 0, TAU); ctx.stroke(); }
+    if (z.kind === 'ring') { for (let i = 0; i < 60; i++) { const a = i / 60 * TAU; px(ctx, z.x0 + Math.cos(a) * z.r * (.3 + .7 * k), ry - 20 + Math.sin(a) * z.r * .3 * (.3 + .7 * k), P[3]); } }
     else {
       const pts = []; for (let i = 0; i <= 6; i++) { const u = i / 6; pts.push([z.x0 + (z.x1 - z.x0) * u + (i % 6 ? (i % 2 ? 6 : -6) : 0) * (z.kind === 'bolt' ? 1 : 0), z.y0 + (z.y1 - z.y0) * u - (z.kind === 'moon' ? Math.sin(u * Math.PI) * 26 : 0)]); }
-      for (const [w, c] of [[5, P[1]], [3, P[3]], [1, P[4]]]) { ctx.strokeStyle = c; ctx.lineWidth = w; ctx.beginPath(); pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.stroke(); }
+      for (let i = 1; i < pts.length; i++) { pline(ctx, pts[i - 1][0], pts[i - 1][1], pts[i][0], pts[i][1], P[1], 3); pline(ctx, pts[i - 1][0], pts[i - 1][1], pts[i][0], pts[i][1], P[4], 1); }
     }
     ctx.restore();
   }
-  if (p.focusTransformTimer > 0) return; // the transformation's own aura wins
-  // The stage aura: the transformation's flame shapes in the style's colours, growing towards the next stage.
-  const grow = (.78 + .22 * stageProgress(st)) * (1 + (st.auraPop ?? 0) * .4) + (l === 3 ? .08 : 0);
-  const frame = Math.floor(t * 12) % 8;
-  ctx.save(); ctx.globalAlpha = fade * (l === 1 ? .7 : .9);
-  sprite(ctx, `bra_${l}_${layer === 'front' ? 'front' : 'back'}`, P, frame, p.x, ry - 58 + (1 - grow) * 30, { anchor: 'center', flip: f < 0, scale: grow });
-  ctx.restore();
-  // Motes of the element rising around the body (more per stage).
-  if (layer === 'back' || !pieceSheet || !spellSheetReady(pieceSheet)) return;
-  ctx.save();
-  for (let i = 0; i < 1 + 2 * l; i++) {
-    const u = (t * .7 + i * .37) % 1; const x = p.x + Math.sin(i * 2.3 + t * 1.5) * (22 + 4 * l); const y = ry - 10 - u * (70 + 12 * l);
-    ctx.globalAlpha = fade * (1 - u) * .9;
-    sprite(ctx, pieceSheet, P, (i + Math.floor(t * 12)) % 4, x, y, { anchor: 'center', scale: .45 + .1 * l });
+  if (p.focusTransformTimer > 0) return; // the transformation's own look wins
+  ctx.save(); ctx.globalAlpha = fade;
+  const sc = .7 + .12 * l + .08 * grow;
+  switch (fam) {
+    case 'bolts': airBolts(ctx, p, st, ry, layer, P, l); break;
+    case 'fire': bodyFire(ctx, p, st, ry, layer, P, l, grow); break;
+    case 'snow': ctx.globalAlpha = fade * (.55 + .15 * l); sprite(ctx, `br_snow_${side}`, P, Math.floor(t * 12) % 8, p.x, ry + 6, { scale: sc }); break;
+    case 'water': for (let k = 0; k < Math.min(3, l); k++) sprite(ctx, `br_water_${side}`, P, (Math.floor(t * 12) + k * 3) % 8, p.x, ry + 4 - [0, 24, -22][k] , { scale: [.75, .62, .58][k] + .1 * grow, flip: k === 1 }); break;
+    case 'wind': sprite(ctx, `br_wind_${side}`, P, Math.floor(t * 14) % 8, p.x, ry + 6, { scale: sc, flip: f < 0 }); break;
+    case 'serpent': sprite(ctx, `br_serpent_${side}`, P, Math.floor(t * 8) % 8, p.x, ry + 6, { scale: .72 + .1 * l, flip: f < 0 }); break;
+    case 'beast': if (layer !== 'front') { ctx.globalAlpha = fade * (.45 + .14 * l); sprite(ctx, 'br_beast_spirit', P, Math.floor(t * 6) % 6, p.x - f * 18, ry + 4, { scale: .5 + .14 * l + .06 * grow, flip: f < 0 }); } break;
+    case 'drones': drones(ctx, p, st, ry, layer, P); break;
+    case 'rocks': orbiters(ctx, p, st, ry, layer, P, l, 'bp_rock', 2 + 2 * l, 30 + l * 4, .9); break;
+    case 'moons': orbiters(ctx, p, st, ry, layer, P, l, 'bp_moon', 1 + 2 * l, 34 + l * 5, .8 + .15 * l); break;
+    case 'ward': if (layer === 'front') drawWardShell(ctx, p.x, ry, { frac: l / 3, t, scale: .8 + .1 * l, color: P[2], light: P[3], dark: P[0] }); break;
+    case 'sound': soundRings(ctx, p, st, ry, layer, P, l); break;
+    default: break;
   }
   ctx.restore();
 }

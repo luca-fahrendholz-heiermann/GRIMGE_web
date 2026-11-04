@@ -35,6 +35,7 @@ import { isShellRolled } from './arcane_konstrukt.js'; // A10 Schalenrolle: the 
 import { cloakFor, hairRecolor } from './form_recolors.js'; // armour aura colours; Aufstiegsstufen hair
 import { drawSpellSprite, spellSheetReady } from './spell_visuals.js'; // Aufstiegsstufen aura sheets
 import { masteryOnShieldHit, masteryTickShield, masteryChargedRelease, masteryPerfectBlock, masteryTier, currentAttacker, masteryTick, masteryMoveMult, masteryIncoming } from './mastery.js';
+import { signatureBodyPose } from './signature_runes.js';
 import { updateSignatureStance, renderSignatureStance, signatureHover, signatureMoveMult, signatureEvent, signatureDamageTaken, setHitContext, signatureSprintVariant, signatureCharge, signatureSprintMove, signatureDive, signatureMeleeMult } from './signature_runes.js';
 
 // Every spell a rune deck can produce: single runes plus every valid two-
@@ -2246,6 +2247,9 @@ export class Player extends GroundEntity {
     if (this.followUp && this.isAlive && this.grounded) { useProc = true; pOY += 3; pSY *= .94; pSX *= 1.04; }
     // Finisher window: the Wizard winds up (leans back, gathers) toward the moment.
     if (this.finisherChance && this.isAlive) { const u = Math.min(1, this.finisherElapsed() / this.finisherChance.peak); useProc = true; pRot += -(this.facing || 1) * 7 * u; pOX += -(this.facing || 1) * 3 * u; pSY *= 1 + .03 * u; pSX *= 1 - .02 * u; }
+    // Stance body pose (breathing: four-legged beast crouch, blazing fire grows, fog veils the body).
+    const stPose = this.isAlive ? signatureBodyPose(this) : null;
+    if (stPose && (stPose.rot || stPose.ox || stPose.oy || stPose.sx || stPose.sy)) { useProc = true; pRot += stPose.rot ?? 0; pOX += stPose.ox ?? 0; pOY += stPose.oy ?? 0; pSX *= stPose.sx ?? 1; pSY *= stPose.sy ?? 1; }
     // Aerial bow shot (breathing arrow rain): the body lies flat, face to the ground, centred over the spot.
     const aerial = this.aerialAim > 0 && this.isAlive && !this.grounded;
     if (aerial) { useProc = true; pRot = 90; pOX = -(this.facing || 1) * 34; pOY = -30; pSX = 1; pSY = 1; }
@@ -2269,7 +2273,7 @@ export class Player extends GroundEntity {
     const renderOpts = {
       facing: this.facing, state: this.state, animTime: this.animTime,
       hitFlash: this.hitFlash > 0 ? 1 : 0,
-      alpha: this.lifeState === 'Dead' || rolled ? 0 : 1,
+      alpha: this.lifeState === 'Dead' || rolled ? 0 : (stPose?.alpha ?? 1),
       cadence, reverse, procOffsetX: pOX, procOffsetY: pOY,
     };
     if (useProc) { renderOpts.procRot = pRot; renderOpts.procScaleX = pSX; renderOpts.procScaleY = pSY; }

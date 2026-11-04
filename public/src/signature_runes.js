@@ -103,6 +103,8 @@ export function signatureSprintVariant(player) {
 export function signatureCharge(player, dir, ratio) { const st = player.signature; return !!st?.impl.stance.charge?.(player, st, dir, ratio, world); }
 export function signatureSprintMove(player) { const st = player.signature; return !!st?.impl.stance.sprintMove?.(player, st, world); }
 export function signatureDive(player) { const st = player.signature; return !!st?.impl.stance.diveMove?.(player, st, world); }
+// A stance may change the body pose (breathing: the beast crouches, fire grows, fog veils): { rot, ox, oy, sx, sy, alpha }.
+export function signatureBodyPose(player) { const st = player.signature; return st?.impl.stance.bodyPose?.(player, st) ?? null; }
 export function signatureMeleeMult(player) { const st = player.signature; const m = st?.impl.stance.meleeMult; return typeof m === 'function' ? m(player, st) : (m ?? 1); }
 export function signatureDamageTaken(player, amount, kx, kind) {
   const st = player.signature;

@@ -3188,5 +3188,113 @@ export const SPELL_SPRITE_SHEETS = Object.freeze({
   "res": 2,
   "hd": true,
   "anchor": "center"
+ },
+ "br_flame_tongue": {
+  "name": "br_flame_tongue",
+  "w": 11,
+  "h": 22,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "base"
+ },
+ "br_snow_back": {
+  "name": "br_snow_back",
+  "w": 92,
+  "h": 62,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "base"
+ },
+ "br_snow_front": {
+  "name": "br_snow_front",
+  "w": 92,
+  "h": 62,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "base"
+ },
+ "br_water_back": {
+  "name": "br_water_back",
+  "w": 76,
+  "h": 48,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "base"
+ },
+ "br_water_front": {
+  "name": "br_water_front",
+  "w": 76,
+  "h": 48,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "base"
+ },
+ "br_wind_back": {
+  "name": "br_wind_back",
+  "w": 76,
+  "h": 72,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "base"
+ },
+ "br_wind_front": {
+  "name": "br_wind_front",
+  "w": 76,
+  "h": 72,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "base"
+ },
+ "br_serpent_back": {
+  "name": "br_serpent_back",
+  "w": 66,
+  "h": 68,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "base"
+ },
+ "br_serpent_front": {
+  "name": "br_serpent_front",
+  "w": 66,
+  "h": 68,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "base"
+ },
+ "br_beast_spirit": {
+  "name": "br_beast_spirit",
+  "w": 74,
+  "h": 50,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "base"
+ },
+ "br_petal_drone": {
+  "name": "br_petal_drone",
+  "w": 11,
+  "h": 11,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "br_butterfly": {
+  "name": "br_butterfly",
+  "w": 11,
+  "h": 9,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
  }
 });

@@ -4277,7 +4277,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   // Breathing aura (user, 3 Nov 2026): the damage dealt during the stance grows it in three stages (element → hotter hue → white).
   { const AU = await import('./public/src/breathing_aura.js'); setup('S40'); const m = foeAt(360); let stages = new Set([AU.auraStage(P.signature)]);
     for (let i = 0; i < 40 && AU.auraStage(P.signature) < 3; i++) { ready(); m.x = 360; P.x = 300; P.executeAttack(neutral, 'normal'); step(16); stages.add(AU.auraStage(P.signature)); }
-    assert(stages.has(1) && stages.has(2) && stages.has(3) && AU.auraPower(P.signature) === 1.2 && P.signature.impl.stance.cloak(P, P.signature)?.edge, 'Breathing aura: hits fill it from stage I over II (250 dmg) to III (600 dmg) — +20 % power and an element-coloured contour cloak (' + Math.round(P.signature.auraDmg) + ')');
+    assert(stages.has(1) && stages.has(2) && stages.has(3) && AU.auraPower(P.signature) === 1.2 && !P.signature.impl.stance.cloak(P, P.signature) && AU.surroundOf('water') === 'water', 'Breathing stages: hits fill them from I over II (250 dmg) to III (600 dmg) — +20 % power; water shows its rings, no coloured aura (' + Math.round(P.signature.auraDmg) + ')');
     const kept = P.signature.auraDmg; spells.cast(P, spells.resolveSpell([{ id: 'sig_S41' }]), game);
     assert(P.signature.style === 'steam' && P.signature.auraDmg === kept, 'A derived breathing keeps the aura already earned');
     let threw = null; try { for (const L of ['back', 'front']) P.signature.impl.stance.render(strict, P, P.signature, P.y, L); } catch (e) { threw = e; } assert(!threw, 'The breathing aura renders on both layers' + (threw ? ' — ' + String(threw.stack).split('\n').slice(0, 3).join(' | ') : '')); }
@@ -4285,6 +4285,23 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   { setup('S80'); const m = foeAt(350); step(300); assert(P.signature.fog > .3 && P.concealment > .3 && m.slowTimer > 0, 'Mist side effect: the fog grows the longer you breathe, slows foes inside and conceals the Wizard (fog ' + P.signature.fog.toFixed(2) + ')');
     core.endStance(P, 'replaced'); assert(!P.concealment, 'The fog is gone with the stance'); }
   { setup('S42'); const m = foeAt(380); step(160); assert(m.hp < 3000, 'Thunder side effect: static sparks jump to a foe nearby'); }
+  // Element surroundings (user, 4 Nov 2026): no recoloured aura — each element changes the space round the Wizard.
+  { const AU = await import('./public/src/breathing_aura.js'); const AB = await import('./public/src/ai_brain.js'); const proxy = new Proxy({}, { get: (t, k) => (k === 'canvas' ? undefined : k === 'measureText' ? () => ({ width: 10 }) : () => {}), set: () => true });
+    setup('S41'); P.signature.auraDmg = 700; const pose = P.signature.impl.stance.bodyPose(P, P.signature);
+    assert(pose?.sx > 1.05 && P.signature.impl.stance.cloak(P, P.signature)?.edge, 'Flame III: the body blazes (flame contour) and grows');
+    setup('S81'); P.vx = 0; const crouch = P.signature.impl.stance.bodyPose(P, P.signature);
+    assert(crouch && crouch.sy < .85 && Math.abs(crouch.rot) > 10, 'Beast breathing: the Wizard drops into a four-legged sprint stance (crouch + lean)');
+    setup('S42'); const m = foeAt(360); const h0 = P.signature.heat ?? 0; for (let i = 0; i < 3; i++) { ready(); m.x = 360; P.x = 300; P.executeAttack(neutral, 'normal'); step(16); }
+    assert((P.signature.heat ?? 0) > h0 + 1, 'Thunder: every hit charges the air (more bolts crackle round the Wizard)');
+    setup('S77'); P.signature.auraDmg = 300; step(3); const shooter = foeAt(600); const before = spells.activeSpells.length;
+    spells.cast(shooter, spells.resolveSpell([{ id: 'ignis' }]), game); const shot = spells.activeSpells.find((sp) => sp.constructor.name === 'FireballSpell' && sp.team === 'red'); if (shot) { shot.x = P.x + 60; shot.vx = -300; shot.z = P.z; }
+    for (let i = 0; i < 30 && shot && !shot.isFinished; i++) step(1);
+    assert(P.signature.drones?.length === 4 && P.signature.drones.some((d) => d.cd > 0), 'Flower II: four blossom drones orbit and catch a hostile shot');
+    setup('S80'); P.signature.fog = 1; step(2); game.drawing.active = true;
+    assert(P.concealment > .45 && !AB.playerDrawing(P, game) && P.signature.impl.stance.bodyPose(P, P.signature)?.alpha < .8, 'Mist: dense fog veils the Wizard and the AI cannot see the rune being drawn');
+    game.drawing.active = false;
+    let threw = null; try { for (const id of ['S40', 'S41', 'S42', 'S75', 'S76', 'S77', 'S78', 'S79', 'S80', 'S81', 'S82', 'S83', 'S84']) { setup(id); P.signature.auraDmg = 700; P.signature.heat = 4; step(2); if (id === 'S41') { charged('down'); step(30); } for (const L of ['back', 'front']) P.signature.impl.stance.render(proxy, P, P.signature, P.y, L); } } catch (e) { threw = e; }
+    assert(!threw, 'Every breathing surroundings renders at stage III (and the spreading mark)' + (threw ? ' — ' + threw.message : '')); }
   // AQUA is water now (user, 4 Nov 2026): the water orb bursts and soaks, the double-water wave washes foes along.
   { setup('S40'); core.endStance(P, 'replaced'); const m = foeAt(430); spells.cast(P, spells.resolveSpell([{ id: 'aqua' }]), game); step(50);
     assert(m.hp < 3000 && STATUS.hasStatus(m, 'wet') && environment.effects.some((e) => e.type === 'water'), 'WASSERKUGEL: the water orb bursts on the foe, soaks it and leaves a puddle');

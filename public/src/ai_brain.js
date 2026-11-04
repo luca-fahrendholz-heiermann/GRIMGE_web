@@ -118,7 +118,8 @@ export function canAfford(ai, cost, target) {
 
 // ── plans ────────────────────────────────────────────────────────────────
 // The player is drawing a rune (main.js drawing mode) — a window to punish.
-export const playerDrawing = (player, gw) => !!(player && player === gw?.player && gw?.drawing?.active);
+// In a fog bank (Nebelatmung) the drawing cannot be seen.
+export const playerDrawing = (player, gw) => !!(player && player === gw?.player && gw?.drawing?.active && !((player.concealment ?? 0) > .45));
 // Re-think every 1.5–3 s (or at once when the situation flips).
 export function choosePlan(ai, player, gw) {
   const sk = aiSkill(ai, gw); const hp = ai.hp / ai.maxHp; const mp = (ai.mp ?? 0) / (ai.maxMp || 100);
