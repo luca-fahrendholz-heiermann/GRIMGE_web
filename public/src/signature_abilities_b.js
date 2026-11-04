@@ -517,6 +517,7 @@ class WeightlessBand {
   render(ctx) {
     const mat = this.mat; const k = Math.min(1, this.t * 3) * Math.max(0, Math.min(1, (6.4 - this.t) / .4));
     const base = linePts(this.a, this.b, 10);
+    if (spellSheetReady('gravity_column')) { ctx.save(); ctx.globalAlpha = k; for (let i = 0; i <= 10; i += 2) drawSpellSprite(ctx, 'gravity_column', (Math.floor(this.t * 8) + i) % 6, base[i][0], base[i][1] + 4); ctx.restore(); return; }
     if (spellSheetReady('lift_column')) { ctx.save(); ctx.globalAlpha = k; for (let i = 0; i <= 10; i += 2) drawSpellSprite(ctx, 'lift_column', Math.floor(this.t * 8 + i) % 6, base[i][0], base[i][1] + 2, { scale: .5 }); ctx.restore(); return; }
     thread(ctx, base, mat.dark, 3, .7 * k); thread(ctx, base, mat.vein, 1, .5 * k);
     // Curved, textured field lines rising over the narrow ground crack.

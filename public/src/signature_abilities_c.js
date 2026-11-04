@@ -311,6 +311,8 @@ defineSignature('S31', { cast(c) { emit(new RuneCourt(c.sig, c.caster, c.target?
 // S32 EXILKORRIDOR — enemies entering the corridor lose their dodge speed briefly.
 // ═════════════════════════════════════════════════════════════════════════
 class ExileCorridor {
+  // Drawn at the characters' density (fine layer) once the redrawn sheets are loaded.
+  get fineVfx() { return spellSheetReady('exile_veil'); }
   constructor(sig, owner, line) { this.sig = sig; this.mat = sig.mat; this.owner = owner; this.team = owner.team; this.a = line.a; this.b = line.b; this.t = 0; this.isFinished = false; this.inside = new Set(); this.x = (this.a.x + this.b.x) / 2; this.z = (this.a.z + this.b.z) / 2; }
   get y() { return groundYForDepth(this.z); }
   update(dt, gw) {
@@ -326,6 +328,10 @@ class ExileCorridor {
     const mat = this.mat; const k = Math.min(1, this.t * 3) * Math.max(0, Math.min(1, (6.3 - this.t) / .3)); const open = this.t > 6 ? (this.t - 6) / .3 : 0;
     const base = linePts(this.a, this.b, 10); const top = linePts(this.a, this.b, 10, 46);
     // Two vertical, translucent effect planes like a spatial tear.
+    if (spellSheetReady('exile_veil')) {
+      // Two banishing curtains — the back and the front wall of the corridor (the front one thinner).
+      ctx.save(); for (const [dy, al] of [[-12, .9], [10, .5]]) { ctx.globalAlpha = k * al; for (let i = Math.floor(open * 5); i <= 10 - Math.floor(open * 5); i += 2) drawSpellSprite(ctx, 'exile_veil', (Math.floor(this.t * 8) + i + (dy > 0 ? 3 : 0)) % 6, base[i][0] + (dy > 0 ? 8 : 0), base[i][1] + dy); } ctx.restore(); return;
+    }
     if (spellSheetReady('exile_plane')) { ctx.save(); ctx.globalAlpha = k; for (let i = Math.floor(open * 5); i <= 10 - Math.floor(open * 5); i += 2) drawSpellSprite(ctx, 'exile_plane', Math.floor(this.t * 6 + i) % 4, base[i][0], base[i][1] + 2, { scale: .5 }); ctx.restore(); return; }
     for (let i = Math.floor(open * 5); i < 10 - Math.floor(open * 5); i++) plate(ctx, [base[i], base[i + 1], top[i + 1], top[i]], { ...mat, kind: 'crystal' }, 3200 + i, { alpha: .18 * k, glowEdge: .5 });
     thread(ctx, top, mat.edge, 1, .6 * k);
@@ -338,6 +344,8 @@ defineSignature('S32', { cast(c) { emit(new ExileCorridor(c.sig, c.caster, lineO
 // S33 ERNTEZIRKEL — own hits charge three seeds, then three lances burst.
 // ═════════════════════════════════════════════════════════════════════════
 class HarvestCircle {
+  // Drawn at the characters' density (fine layer) once the redrawn sheets are loaded.
+  get fineVfx() { return spellSheetReady('harvest_ring'); }
   constructor(sig, owner, power) { this.sig = sig; this.mat = sig.mat; this.owner = owner; this.team = owner.team; this.x = owner.x; this.z = owner.z; this.t = 0; this.isFinished = false; this.R = 110; this.seeds = 0; this.power = power; this.released = null; }
   get y() { return groundYForDepth(this.z); }
   onSigEvent(type, info) {
@@ -360,12 +368,14 @@ class HarvestCircle {
   render(ctx) {
     const mat = this.mat; const t = this.t; const k = this.released != null ? 1 - (t - this.released) / .7 : Math.min(1, t * 3);
     const drawnH = spellSheetReady('harvest_seal') && spellSheetReady('harvest_seed');
-    if (drawnH) { drawSpellSprite(ctx, 'harvest_seal', Math.floor(t * 6) % 6, this.x, groundYForDepth(this.z), { anchor: 'center', scale: this.R / 80, alpha: k }); for (let i = 0; i < 3; i++) { const [x, y] = groundPt(this.x, this.z, this.R * .45, i * TAU / 3 + .5); drawSpellSprite(ctx, 'harvest_seed', i < this.seeds ? 1 : 0, x, y - 4, { anchor: 'center', alpha: k, scale: .5 }); } }
+    if (spellSheetReady('harvest_ring')) { drawSpellSprite(ctx, 'harvest_ring', Math.floor(t * 6) % 6, this.x, groundYForDepth(this.z), { anchor: 'center', scale: this.R / 110, alpha: k }); for (let i = 0; i < 3; i++) { const [x, y] = groundPt(this.x, this.z, this.R * .45, i * TAU / 3 + .5); drawSpellSprite(ctx, 'harvest_seed2', i < this.seeds ? 2 + (Math.floor(t * 6) % 2) : Math.floor(t * 2) % 2, x, y - 8, { anchor: 'center', alpha: k }); } }
+    else if (drawnH) { drawSpellSprite(ctx, 'harvest_seal', Math.floor(t * 6) % 6, this.x, groundYForDepth(this.z), { anchor: 'center', scale: this.R / 80, alpha: k }); for (let i = 0; i < 3; i++) { const [x, y] = groundPt(this.x, this.z, this.R * .45, i * TAU / 3 + .5); drawSpellSprite(ctx, 'harvest_seed', i < this.seeds ? 1 : 0, x, y - 4, { anchor: 'center', alpha: k, scale: .5 }); } }
     if (!drawnH) segRing(ctx, this.x, this.z, this.R, mat, t, .6 * k, { segs: 9, thick: 4, gap: .55, spin: .2, seed: 3300 });
     // Moss-gold screw lines toward the centre.
     if (!drawnH) for (let i = 0; i < 3; i++) { const pts = []; for (let s = 0; s <= 8; s++) { const u = s / 8; pts.push(groundPt(this.x, this.z, this.R * (1 - u * .8), i * TAU / 3 + u * 2 + t * .3)); } thread(ctx, pts, mat.vein, 1.5, .7 * k); }
     if (!drawnH) for (let i = 0; i < 3; i++) { const [x, y] = groundPt(this.x, this.z, this.R * .45, i * TAU / 3 + .5); plate(ctx, [[x - 4, y], [x, y - 6], [x + 4, y], [x, y + 3]], { ...mat, body: '#0c0c08', facet: '#1c1c14' }, 3310 + i, { alpha: k, core: i < this.seeds ? 1 : 0, glowEdge: i < this.seeds ? 1.3 : .4 }); }
-    if (this.released != null) for (const l of this.lances) { const y = groundYForDepth(l.z); const g = Math.min(1, (t - this.released) / .1); crystal(ctx, l.x, y, 10, 54 * g, mat, 3320 + Math.round(l.x), k, Math.cos(l.a) * 10); sparks(ctx, [[l.x, y - 40 * g]], { ...mat, spark: '#a8ff7a' }, t, 3330, 5, k); }
+    if (this.released != null && spellSheetReady('harvest_lance')) for (const l of this.lances) drawSpellSprite(ctx, 'harvest_lance', Math.min(5, Math.floor((t - this.released) / .7 * 6)), l.x, groundYForDepth(l.z) + 2);
+    else if (this.released != null) for (const l of this.lances) { const y = groundYForDepth(l.z); const g = Math.min(1, (t - this.released) / .1); crystal(ctx, l.x, y, 10, 54 * g, mat, 3320 + Math.round(l.x), k, Math.cos(l.a) * 10); sparks(ctx, [[l.x, y - 40 * g]], { ...mat, spark: '#a8ff7a' }, t, 3330, 5, k); }
   }
 }
 defineSignature('S33', { cast(c) { c.listen(emit(new HarvestCircle(c.sig, c.caster, c.quality.power))); } });

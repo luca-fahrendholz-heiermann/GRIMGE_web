@@ -3341,5 +3341,77 @@ export const SPELL_SPRITE_SHEETS = Object.freeze({
   "res": 2,
   "hd": true,
   "anchor": "center"
+ },
+ "chrono_dial": {
+  "name": "chrono_dial",
+  "w": 140,
+  "h": 50,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "base"
+ },
+ "chrono_watch": {
+  "name": "chrono_watch",
+  "w": 28,
+  "h": 34,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "gravity_column": {
+  "name": "gravity_column",
+  "w": 20,
+  "h": 48,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "base"
+ },
+ "exile_veil": {
+  "name": "exile_veil",
+  "w": 22,
+  "h": 38,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "base"
+ },
+ "harvest_ring": {
+  "name": "harvest_ring",
+  "w": 118,
+  "h": 42,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "harvest_seed2": {
+  "name": "harvest_seed2",
+  "w": 10,
+  "h": 12,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "harvest_lance": {
+  "name": "harvest_lance",
+  "w": 17,
+  "h": 50,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "base"
+ },
+ "pledge_seal2": {
+  "name": "pledge_seal2",
+  "w": 104,
+  "h": 36,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
  }
 });

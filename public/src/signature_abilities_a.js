@@ -387,6 +387,9 @@ defineSignature('S07', {
 // S08 SEKUNDENPFAND — records positions for 1.5 s, then pillars strike them.
 // ═════════════════════════════════════════════════════════════════════════
 class SecondPledge {
+  // Drawn at the characters' density (fine layer) once the redrawn sheets are loaded.
+  get fineVfx() { return spellSheetReady('pledge_seal2'); }
+
   constructor(sig, owner, x, z, power) { this.sig = sig; this.mat = sig.mat; this.owner = owner; this.team = owner.team; this.x = x; this.z = z; this.t = 0; this.isFinished = false; this.marks = []; this.sample = 0; this.power = power; this.R = 95; }
   get y() { return groundYForDepth(this.z); }
   update(dt, gw) {
@@ -411,7 +414,13 @@ class SecondPledge {
   render(ctx) {
     const mat = this.mat; const t = this.t; const fold = this.t > 1.5 + this.marks.length * .14 ? Math.max(0, 1 - (this.t - 1.5 - this.marks.length * .14) / .8) : 1;
     // Open asymmetric seal with six jagged digit marks and a wandering light point.
-    if (spellSheetReady('pledge_seal')) { drawSpellSprite(ctx, 'pledge_seal', Math.floor(t * 4) % 6, this.x, this.y, { anchor: 'center', scale: this.R / 70 * (fold * .5 + .5), alpha: fold }); for (const m of this.marks) { const y = groundYForDepth(m.z); if (!m.struck) { thread(ctx, [[m.x - 7, y - 2], [m.x - 6, y - 40], [m.x, y - 48], [m.x + 6, y - 40], [m.x + 7, y - 2]], mat.edge, 1, .7); continue; } const k = (this.t - m.at) / .45; if (k <= 1) drawSpellSprite(ctx, 'pledge_pillar', Math.min(5, Math.floor(k * 6)), m.x, y + 2); } return; }
+    if (spellSheetReady('pledge_seal2')) {
+      // The stone seal and its second hand sweeping round: the countdown until the pillars strike.
+      const sc = this.R / 96 * (fold * .5 + .5); drawSpellSprite(ctx, 'pledge_seal2', Math.floor(t * 6) % 6, this.x, this.y, { anchor: 'center', scale: sc, alpha: fold });
+      const sweep = Math.min(1, t / 1.5); const ang = -Math.PI / 2 + sweep * TAU; const n = Math.round(80 * sc);
+      ctx.save(); ctx.globalAlpha = fold; for (let i = 0; i <= n; i++) { const u = i / n; const xx = this.x + Math.cos(ang) * 92 * sc * u; const yy = this.y + Math.sin(ang) * 28 * sc * u; ctx.fillStyle = i > n * .8 ? '#ffffff' : '#5aa0e8'; ctx.fillRect(Math.round(xx - 1), Math.round(yy - 1), 3, 2); } ctx.restore();
+    }
+    if (spellSheetReady('pledge_seal')) { if (!spellSheetReady('pledge_seal2')) drawSpellSprite(ctx, 'pledge_seal', Math.floor(t * 4) % 6, this.x, this.y, { anchor: 'center', scale: this.R / 70 * (fold * .5 + .5), alpha: fold }); for (const m of this.marks) { const y = groundYForDepth(m.z); if (!m.struck) { thread(ctx, [[m.x - 7, y - 2], [m.x - 6, y - 40], [m.x, y - 48], [m.x + 6, y - 40], [m.x + 7, y - 2]], mat.edge, 1, .7); continue; } const k = (this.t - m.at) / .45; if (k <= 1) drawSpellSprite(ctx, 'pledge_pillar', Math.min(5, Math.floor(k * 6)), m.x, y + 2); } return; }
     segRing(ctx, this.x, this.z, this.R * (fold * .5 + .5), mat, 0, .75 * fold, { segs: 6, thick: 6, gap: .5, spin: 0, seed: 700 });
     const lp = groundPt(this.x, this.z, this.R + 3, t * 4.2); plate(ctx, [[lp[0], lp[1] - 4], [lp[0] + 3, lp[1]], [lp[0], lp[1] + 4], [lp[0] - 3, lp[1]]], mat, 710, { alpha: fold, core: 1, glowEdge: 1.2 });
     for (const m of this.marks) {
