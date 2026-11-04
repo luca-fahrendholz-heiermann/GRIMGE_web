@@ -66,7 +66,7 @@ const BASE_MODIFIERS = Object.freeze({
 const ADDITIVE_MODIFIERS = new Set(['lastStand', 'maxWalls', 'extraSummons', 'liftTargets', 'bindTargets', 'extraDoppels', 'extraRevenants']);
 
 export const RUNE_XP_BY_GRADE = Object.freeze({ C: 6, B: 10, A: 14, S: 18 });
-export const STARTER_RUNES = Object.freeze(['ignis', 'ventus', 'fulgur', 'terra', 'aqua']);
+export const STARTER_RUNES = Object.freeze(['ignis', 'ventus', 'fulgur', 'terra', 'aqua', 'frost']);
 export const MATCH_DECK_SIZE = 10;
 // Deck builder (user, 20 Oct 2026): saved builds that load in one tap, favourite runes.
 export const MAX_DECK_PRESETS = 8;
@@ -113,7 +113,7 @@ export function runeCategory(id) {
   return 'simple';
 }
 export const isDomainRuneId = (id) => DOMAIN_RUNE_IDS.includes(id);
-export const ALL_RUNE_IDS = Object.freeze(['ignis', 'ventus', 'fulgur', 'terra', 'aqua', 'bestia', 'construct', 'void', 'lux', 'umbra', 'natura', 'ward', 'doppel', 'mortis', ...BUFF_RUNE_IDS, ...SIGNATURE_RUNE_IDS]);
+export const ALL_RUNE_IDS = Object.freeze(['ignis', 'ventus', 'fulgur', 'terra', 'aqua', 'frost', 'bestia', 'construct', 'void', 'lux', 'umbra', 'natura', 'ward', 'doppel', 'mortis', ...BUFF_RUNE_IDS, ...SIGNATURE_RUNE_IDS]);
 // Elemental runes combine and may be in a deck twice. Special runes (DOPPEL,
 // MORTIS, signature specials, Arcane States) need no combination but have a
 // harder glyph: each only once — and of all Arcane States only one at all.
@@ -175,7 +175,7 @@ export function lateRuneRoute(id) {
   if (element === 'weapon') return { kind: 'bankai', level: LATE_RUNE_LEVEL.bankai };
   return element ? { kind: 'arcane', element, level: LATE_RUNE_LEVEL.arcane } : { kind: 'boss' };
 }
-const ELEMENT_LABEL = { ignis: 'IGNIS', natura: 'NATURA', fulgur: 'FULGUR', umbra: 'UMBRA', ventus: 'VENTUS', terra: 'TERRA', aqua: 'AQUA', bestia: 'BESTIA', construct: 'KONSTRUKT', void: 'VOID', lux: 'LUX' };
+const ELEMENT_LABEL = { ignis: 'IGNIS', natura: 'NATURA', fulgur: 'FULGUR', umbra: 'UMBRA', ventus: 'VENTUS', terra: 'TERRA', aqua: 'AQUA', frost: 'GLACIES', bestia: 'BESTIA', construct: 'KONSTRUKT', void: 'VOID', lux: 'LUX' };
 export function runeUnlockLabel(runeId) {
   const late = lateRuneRoute(runeId);
   if (late) return late.kind === 'boss' ? 'BOSS-DROP' : late.kind === 'bankai' ? `BOSS-DROP / KLASSENWAFFE LV.${late.level} (JE KLASSE)` : `BOSS-DROP / ${ELEMENT_LABEL[late.element]} RUNE LV.${late.level}`;
@@ -207,6 +207,8 @@ export class MageProfile {
     this.weaponXp = { ...(source?.weaponXp ?? {}) };
     this.discoveredSpells = new Set(source?.discoveredSpells ?? []);
     this.unlockedRunes = new Set(source?.unlockedRunes ?? STARTER_RUNES);
+    // Migration (4 Nov 2026): GLACIES (ice) split off AQUA — whoever owned AQUA owns both.
+    if (this.unlockedRunes.has('aqua')) this.unlockedRunes.add('frost');
     this.syncRuneUnlocks();
     // Favourites and build presets first: the deck repair below already saves the profile.
     this.favoriteRunes = new Set((Array.isArray(source?.favoriteRunes) ? source.favoriteRunes : []).filter((id) => ALL_RUNE_IDS.includes(id)));

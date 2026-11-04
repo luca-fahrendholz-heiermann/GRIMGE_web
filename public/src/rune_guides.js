@@ -136,6 +136,8 @@ export const RUNE_GUIDES = Object.freeze({
   fulgur: [[[-.75, -.7], [.75, -.7], [-.75, .7], [.75, .7]]],
   terra: [[[-.7, -.7], [.7, -.7], [.7, .7], [-.7, .7], [-.7, -.66]]],
   aqua: [circle(1.02)],
+  // GLACIES (ice): icicles — a bar across, then the icicles hanging from it in one zigzag (a snowflake read as LUX).
+  frost: [[[-.9, -.6], [.9, -.6]], [[-.9, -.6], [-.6, .9], [-.3, -.6], [0, .6], [.3, -.6], [.6, .9], [.9, -.6]]],
   bestia: [[[-.9, .7], [-.6, -.6], [-.3, .45], [0, -.75], [.3, .45], [.6, -.6], [.9, .7]]],
   construct: [[[0, -1], [0, 1]]],
   // SCHUTZ: a heater-shield outline (flat top, curved sides to a point), then a bar across.

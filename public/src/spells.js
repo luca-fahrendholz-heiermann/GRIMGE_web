@@ -1,5 +1,6 @@
 // GRIMGE Prototype — Composable Spell System & Elemental Combinations
 import { audio } from './audio.js';
+import { WaterOrbSpell, TidalWaveSpell } from './water_spells.js'; // AQUA = water (user, 4 Nov 2026)
 import { combat } from './combat.js';
 import { GroundEntity, groundDistance, groundYForDepth, ENTITY_VISUALS, ARENA_LAYOUT } from './world.js';
 import { lookupRecipe, SHADOW_STOMP } from './spell_catalog.js';
@@ -304,6 +305,16 @@ export class SpellSystem {
       case 'stone_spikes': {
         this.addSpell(new StoneSpikesSpell(startX, startZ, facing, caster.team), castQuality);
         environment.add('crack', startX + facing * 70, startZ, { radius: 70, angle: facing > 0 ? 0 : Math.PI });
+        break;
+      }
+
+      case 'water_orb': {
+        this.addSpell(new WaterOrbSpell(startX, startZ, facing, caster.team, startHeight), castQuality);
+        break;
+      }
+
+      case 'tidal_wave': {
+        this.addSpell(new TidalWaveSpell(caster.x + facing * 10, startZ, facing, caster.team), castQuality);
         break;
       }
 

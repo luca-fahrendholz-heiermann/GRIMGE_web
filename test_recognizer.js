@@ -221,7 +221,7 @@ const guideMisses = Object.keys(RUNE_GUIDES).filter((key) => {
   // The buff sigil resolves to whichever buff rune is in the hand.
   const id = key === 'buff_sigil' ? 'buff_T13' : key;
   // Special glyphs (buff sigil, signature specials) are matched when that rune is in the hand.
-  const free = recognizer.recognize(guideStrokes(id, 400, 300, 150), key === 'buff_sigil' || key.startsWith('sig_') || key === 'natura' || key === 'ward' ? [...BASE_HAND, id] : null);
+  const free = recognizer.recognize(guideStrokes(id, 400, 300, 150), key === 'buff_sigil' || key.startsWith('sig_') || key === 'natura' || key === 'ward' || key === 'frost' ? [...BASE_HAND, id] : null);
   const own = recognizer.recognize(guideStrokes(id, 400, 300, 110), [id]);
   return free?.rune.id !== id || own?.grade !== 'S';
 });
@@ -232,6 +232,11 @@ assert(recognizer.recognize([wobblyStar], ['mortis', 'aqua', 'terra'])?.rune.id 
 const rLux = { id: 'lux' }; const rUmbra = { id: 'umbra' };
 assert(spells.resolveSpell([rTerra, rUmbra])?.id === 'shadow_stomper', 'Spell: Umbra + Terra -> SHADOW STOMPER');
 assert(spells.resolveSpell([rUmbra, rAqua])?.id === 'lunar_orb', 'Spell: Umbra + Aqua -> LUNAR ORB');
+// Water vs ice (user, 4 Nov 2026): AQUA is water (circle), GLACIES is ice (icicles); only the double-ice combo moved.
+{ const r = (id) => ({ id }); const R = (...ids) => spells.resolveSpell(ids.map(r))?.id;
+  assert(R('aqua') === 'water_orb' && R('aqua', 'aqua') === 'tidal_wave' && R('frost') === 'frost_nova' && R('frost', 'frost') === 'glacial_ray' && R('aqua', 'ventus') === 'blizzard_surge' && R('aqua', 'umbra') === 'lunar_orb' && R('frost', 'ventus') == null, 'Spell: AQUA → WASSERKUGEL, AQUA+AQUA → SPRINGFLUT, GLACIES → FROST NOVA, GLACIES+GLACIES → GLACIAL RAY; the other AQUA combos stay');
+  const hand = [...BASE_HAND, 'frost'];
+  assert(recognizer.recognize(guideStrokes('frost', 400, 300, 120), hand)?.rune.id === 'frost' && recognizer.recognize(guideStrokes('lux', 400, 300, 120), hand)?.rune.id === 'lux' && recognizer.recognize(guideStrokes('aqua', 400, 300, 120), hand)?.rune.id === 'aqua' && recognizer.recognize(guideStrokes('bestia', 400, 300, 120), hand)?.rune.id === 'bestia', 'Recognize: the icicles are GLACIES; LUX, the AQUA circle and BESTIA stay themselves with GLACIES in the hand'); }
 assert(spells.resolveSpell([rLux, rIgnis])?.id === 'solar_orb', 'Spell: Lux + Ignis -> SOLAR ORB');
 assert(spells.resolveSpell([rLux, rUmbra])?.id === 'eclipse', 'Spell: Lux + Umbra -> ECLIPSE');
 assert(spells.resolveSpell([{ id: 'doppel' }])?.id === 'shadow_doppelganger' && spells.resolveSpell([{ id: 'mortis' }])?.id === 'revenant_call', 'Spell: DOPPEL / MORTIS are complete solo spells');

@@ -7,7 +7,7 @@ const guideIdOf = (id) => (String(id).startsWith('buff_') ? 'buff_sigil' : Strin
 const TEMPLATE_CACHE = new Map();
 const templateOf = (id) => { const key = guideIdOf(id); if (!RUNE_GUIDES[key]) return null; if (!TEMPLATE_CACHE.has(key)) TEMPLATE_CACHE.set(key, cloudOf(RUNE_GUIDES[key])); return TEMPLATE_CACHE.get(key); };
 // Runes recognised by point-cloud template (complex glyphs): signature specials and NATURA's leaf.
-const isTemplateRune = (id) => String(id).startsWith('sig_') || id === 'natura' || id === 'ward';
+const isTemplateRune = (id) => String(id).startsWith('sig_') || id === 'natura' || id === 'ward' || id === 'frost';
 export class RuneRecognizer {
   constructor() {
     this.runes = [
@@ -54,12 +54,23 @@ export class RuneRecognizer {
       {
         id: 'aqua',
         name: 'AQUA',
-        element: 'Frost',
+        element: 'Water',
         glyph: '○',
+        color: '#2f8fff',
+        glowColor: '#9fdcff',
+        icon: '💧',
+        desc: 'Circle (a drop of water)'
+      },
+      {
+        // GLACIES (user, 4 Nov 2026): ice is its own rune now — AQUA was really ice before.
+        id: 'frost',
+        name: 'GLACIES',
+        element: 'Ice',
+        glyph: '❄',
         color: '#00e5ff',
-        glowColor: '#b2ebf2',
+        glowColor: '#e0f7fa',
         icon: '❄️',
-        desc: 'Circular Glyph'
+        desc: 'Icicles: a bar across, then the icicles hanging from it in one zigzag'
       },
       {
         id: 'bestia',

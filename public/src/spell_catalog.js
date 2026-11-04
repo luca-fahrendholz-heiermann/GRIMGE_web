@@ -49,7 +49,7 @@ export const SHADOW_STOMP = Object.freeze({ range: 320, halfAngle: .62 });
 // Mana is paid (bound) when a rune is drawn into a slot, never again at cast.
 // Values are first playtest numbers (concept doc §11 keeps them open).
 export const RUNE_MANA_COSTS = Object.freeze({
-  ignis: 10, ventus: 10, fulgur: 12, terra: 10, aqua: 10,
+  ignis: 10, ventus: 10, fulgur: 12, terra: 10, aqua: 10, frost: 10,
   bestia: 18, construct: 16, void: 16, lux: 12, umbra: 12, natura: 12, ward: 14,
   // Solo special runes: one hard glyph, a full spell on its own, never fused.
   doppel: 22, mortis: 26,
@@ -76,6 +76,9 @@ const SPELL_DEFINITIONS_EXT = {
   gale_blast: def('gale_blast', { name: 'GALE SHOCKWAVE', color: '#00bcd4', deliveryType: DELIVERY.AREA, desc: 'High-velocity wind wave knocking enemies back.' }),
   chain_lightning: def('chain_lightning', { name: 'ARC LIGHTNING', color: '#ffeb3b', deliveryType: DELIVERY.AREA, desc: 'Crackling bolt leaping between targets.' }),
   stone_spikes: def('stone_spikes', { name: 'STONE SPIKES', color: '#795548', deliveryType: DELIVERY.AREA, desc: 'Erupts jagged stone spikes from the ground.' }),
+  // WATER (user, 4 Nov 2026): AQUA is real water now — its old ice spells belong to the ICE rune (GLACIES).
+  water_orb: def('water_orb', { name: 'WASSERKUGEL', color: '#2f8fff', deliveryType: DELIVERY.PROJECTILE, desc: 'A heavy water orb: it bursts on the first foe — a splash push, everyone around wet, a puddle on the ground.' }),
+  tidal_wave: def('tidal_wave', { name: 'SPRINGFLUT', tier: 2, color: '#2f8fff', deliveryType: DELIVERY.ZONE, desc: 'A wave rolls down the lane: it washes foes along, soaks them and leaves puddles behind (wet foes take lightning harder).' }),
   frost_nova: def('frost_nova', { name: 'FROST NOVA', color: '#00e5ff', deliveryType: DELIVERY.AREA, desc: 'Freezes surrounding foes solid.' }),
   summon_lesser_beast: def('summon_lesser_beast', { name: 'BEAST FAMILIAR', manaCost: 18, color: '#b388ff', deliveryType: DELIVERY.SUMMON, desc: 'Summons a short-lived hunter familiar.' }),
   construct_bulwark: def('construct_bulwark', { name: 'CONSTRUCT BULWARK', manaCost: 16, color: '#b0bec5', deliveryType: DELIVERY.WALL, desc: 'Raises a short physical barrier in front of the caster.' }),
@@ -169,7 +172,7 @@ const SPELL_DEFINITIONS_EXT = {
 // Sorted rune-id key → spell id.
 const SPELL_RECIPES_EXT = {
   ignis: 'fireball', ventus: 'gale_blast', fulgur: 'chain_lightning', terra: 'stone_spikes',
-  aqua: 'frost_nova', bestia: 'summon_lesser_beast', construct: 'construct_bulwark', void: 'void_bolt',
+  aqua: 'water_orb', frost: 'frost_nova', bestia: 'summon_lesser_beast', construct: 'construct_bulwark', void: 'void_bolt',
   lux: 'halo_pulse', umbra: 'shadow_step', doppel: 'shadow_doppelganger', mortis: 'revenant_call',
   transform_beam: 'annihilation_beam',
 
@@ -177,7 +180,7 @@ const SPELL_RECIPES_EXT = {
   'ignis+ventus': 'firestorm', 'fulgur+ignis': 'meteor_cataclysm', 'fulgur+ventus': 'tempest_blitz',
   'ignis+terra': 'magma_fissure', 'terra+ventus': 'sandstorm_bastion', 'aqua+ventus': 'blizzard_surge',
   'aqua+fulgur': 'aura_shock', 'aqua+terra': 'arcane_aegis', 'terra+terra': 'stone_wall',
-  'ignis+ignis': 'inferno_beam', 'aqua+aqua': 'glacial_ray', 'fulgur+fulgur': 'thunder_lance', 'void+void': 'null_ray',
+  'ignis+ignis': 'inferno_beam', 'aqua+aqua': 'tidal_wave', 'frost+frost': 'glacial_ray', 'fulgur+fulgur': 'thunder_lance', 'void+void': 'null_ray',
   'construct+ventus': 'mirror_ward', 'ventus+void': 'gravity_lift', 'fulgur+terra': 'seismic_slam',
   'bestia+terra': 'titan_stomp', 'ignis+void': 'soul_seekers',
   'bestia+ignis': 'dragon_breath', 'terra+void': 'burrow_strike',

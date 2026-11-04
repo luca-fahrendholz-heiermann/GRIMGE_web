@@ -17,7 +17,7 @@ import { tryAICounterDomain, tryAISpecial, updateAIRecast } from './ai_specials.
 import { renderPlayerDrawTell } from './cast_circle.js'; // the magic circle in front of the drawing Wizard
 import { aiSkill, perceive, aimPoint, beginAIDraw, updateAIDraw, cancelAIDraw, renderAIDraw, canAfford, updatePlan, planMove, dodgeShot, AI_MANA_REGEN } from './ai_brain.js'; // a human-like AI Wizard
 // Runes the AI draws for its built-in spells (time + the glyph shown in its casting circle).
-const AI_SPELL_RUNES = Object.freeze({ fireball: ['ignis'], frost_nova: ['aqua', 'ventus'], stone_wall: ['terra', 'construct'], arcane_aegis: ['ward'], inferno_beam: ['ignis', 'construct'], glacial_ray: ['aqua', 'construct'], thunder_lance: ['fulgur', 'construct'], null_ray: ['void', 'construct'] });
+const AI_SPELL_RUNES = Object.freeze({ fireball: ['ignis'], frost_nova: ['frost'], stone_wall: ['terra', 'terra'], arcane_aegis: ['ward'], inferno_beam: ['ignis', 'ignis'], glacial_ray: ['frost', 'frost'], thunder_lance: ['fulgur', 'fulgur'], null_ray: ['void', 'void'] });
 import { formDive, FORM_SPECIAL_MANA, tickFormSpecials } from './form_specials.js';
 import { renderInfusion } from './nature_spells.js';
 import { TransformationFx } from './transform_fx.js';

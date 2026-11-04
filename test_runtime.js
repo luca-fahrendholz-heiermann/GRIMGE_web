@@ -4268,6 +4268,11 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   { setup('S80'); const m = foeAt(350); step(300); assert(P.signature.fog > .3 && P.concealment > .3 && m.slowTimer > 0, 'Mist side effect: the fog grows the longer you breathe, slows foes inside and conceals the Wizard (fog ' + P.signature.fog.toFixed(2) + ')');
     core.endStance(P, 'replaced'); assert(!P.concealment, 'The fog is gone with the stance'); }
   { setup('S42'); const m = foeAt(380); step(160); assert(m.hp < 3000, 'Thunder side effect: static sparks jump to a foe nearby'); }
+  // AQUA is water now (user, 4 Nov 2026): the water orb bursts and soaks, the double-water wave washes foes along.
+  { setup('S40'); core.endStance(P, 'replaced'); const m = foeAt(430); spells.cast(P, spells.resolveSpell([{ id: 'aqua' }]), game); step(50);
+    assert(m.hp < 3000 && STATUS.hasStatus(m, 'wet') && environment.effects.some((e) => e.type === 'water'), 'WASSERKUGEL: the water orb bursts on the foe, soaks it and leaves a puddle');
+    setup('S40'); core.endStance(P, 'replaced'); const w1 = foeAt(380); const w2 = foeAt(560); const x2 = w2.x; spells.cast(P, spells.resolveSpell([{ id: 'aqua' }, { id: 'aqua' }]), game); step(80);
+    assert(w1.hp < 3000 && w2.hp < 3000 && STATUS.hasStatus(w2, 'wet') && (w2.kbVelX > 100 || w2.x > x2 + 20), 'SPRINGFLUT: the wave rolls down the lane, hits and soaks every foe and washes them along'); }
   // With a weapon the breathing overrides the weapon moves (user, 21 Oct 2026).
   const moveOf = (weapon, field, act) => {
     setup('S41'); if (field) { P.equipClassWeapon(null); P.equipWeapon(weapon); } else P.equipClassWeapon(weapon); foeAt(400); P.lastBreathMove = null; P.lastWeaponDive = null; P.weaponBuff = null;
