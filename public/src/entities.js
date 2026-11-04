@@ -56,11 +56,12 @@ export function deckSpellOptions(ids = []) {
 }
 
 // Mana price of an Arcane State heavy technique (short / full release).
-export const ARCANE_TECH_MANA = Object.freeze({ short: 5, full: 12 });
+// Raised 4 Nov 2026 (user: "verbrauchen viel zu wenig mana, sodass es sich direkt immer auffüllt"): rune-level prices.
+export const ARCANE_TECH_MANA = Object.freeze({ short: 14, full: 28 });
 // Charge-activated SKILLS cost mana like runes (user, 23 Oct 2026: "sonst werden sie gespammt" — e.g. the breathing
 // forward charge back and forth): stance charges (breathing, Wille, Edles Opfer …), the weapon's charged-UP skill and
 // stance sprint / dive moves. The plain heavy / uppercut without a skill stays free (the combo is the playstyle).
-export const CHARGE_SKILL_MANA = Object.freeze({ short: 5, full: 12, move: 4, fullAt: .7 });
+export const CHARGE_SKILL_MANA = Object.freeze({ short: 12, full: 24, move: 9, fullAt: .7 }); // raised 4 Nov 2026 (was 5 / 12 / 4)
 const chargeSkillCost = (ratio) => (ratio >= CHARGE_SKILL_MANA.fullAt ? CHARGE_SKILL_MANA.full : CHARGE_SKILL_MANA.short);
 const ACTION_STATES = new Set(['attack1', 'attack2', 'attack3', 'uppercut', 'heavyStrike', 'dive', 'dash', 'hurt']);
 // Deliberately the shared prototype baseline, not the future weapon system.

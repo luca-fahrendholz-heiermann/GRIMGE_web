@@ -74,6 +74,12 @@ export class TidalWaveSpell {
   update(dt, gw) {
     this.age += dt; this.life -= dt;
     if (this.life <= 0) { this.isFinished = true; return; }
+    // A wall in the lane stops the wave at its face (any side's wall).
+    for (const w of this.system?.activeSpells ?? []) {
+      if (!w.isStoneWall || w.isDead || Math.abs(w.z - this.z) > (w.halfZ ?? .2) + .04) continue;
+      const d = (w.x - this.x0) * this.facing - (w.halfX ?? 16);
+      if (d > 0 && d < this.length && d >= this.head - 10) this.length = d;
+    }
     const head = this.head; const front = this.x0 + this.facing * head; this.x = front;
     if (this.age < this.length / this.speed) {
       // The breaking front carries what it meets; everyone it passes is soaked.

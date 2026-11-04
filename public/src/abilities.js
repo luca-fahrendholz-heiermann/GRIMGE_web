@@ -219,6 +219,7 @@ export class BeamSpell {
     this.tipDistance = Math.min(this.maxLength, this.tipDistance + this.profile.extendSpeed * dt);
     this.blockedAtX = null;
     this.interactWithHeavyObjects(dt);
+    this.interactWithWalls(dt);
     this.tickTimer -= dt;
     if (this.tickTimer <= 0) {
       this.tickTimer = this.profile.tick;
@@ -270,6 +271,23 @@ export class BeamSpell {
       this.blockedAtX = spell.x;
       spell.takeBeamDamage?.(this.damage / this.profile.tick * dt * 2 * this.profile.clashPower, this);
     }
+  }
+
+  // Walls stop a beam at their face — the caster's own wall too (user, 4 Nov 2026); a hostile wall is worn down.
+  interactWithWalls(dt) {
+    let best = null;
+    for (const w of this.system?.activeSpells ?? []) {
+      if (!w.isStoneWall || w.isDead) continue;
+      if (Math.abs(w.z - this.z) > (w.halfZ ?? .2) + .04) continue;
+      if ((w.surfaceHeight ?? 0) + (w.wallHeight ?? 80) < this.sourceHeight) continue;
+      const face = w.x - this.facing * (w.halfX ?? 16); const d = (face - this.originX) * this.facing;
+      if (d < -4 || d > this.tipDistance) continue;
+      if (!best || d < best.d) best = { w, d, face };
+    }
+    if (!best) return;
+    const cur = this.blockedAtX == null ? Infinity : (this.blockedAtX - this.originX) * this.facing;
+    if (best.d < cur) this.blockedAtX = best.face;
+    if (best.w.team !== this.team) best.w.takeDamage?.(this.damage / this.profile.tick * dt * .6);
   }
 
   end(reason = 'expired') {

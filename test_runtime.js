@@ -1057,6 +1057,14 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
   { const blk = lateralBlocks.reduce((m, w) => (w.x < m.x ? w : m)); const P0 = game.player; const sx = P0.x, sz = P0.z, sf = P0.facing; P0.x = blk.x - 40; P0.z = blk.z; P0.facing = 1; P0.elevation = 0; const mp0 = P0.mp, f0 = P0.focus, hp0 = blk.hp;
     P0.triggerMeleeHitbox(30, 0, 0, .2);
     assert(blk.hp < hp0 && P0.mp === mp0 && P0.focus === f0, 'The creator breaks its own wall with melee (no mana / Focus gained from it) ' + hp0 + '→' + blk.hp);
+    // Own spells do not pass the own wall either (user, 4 Nov 2026): a fireball bursts at it, a beam's tip stops at its face.
+    P0.x = blk.x - 110; P0.z = blk.z; P0.facing = 1; P0.elevation = 0; game.battlefield.placeOnSurface(P0);
+    spells.cast(P0, spells.resolveSpell([{ id: 'ignis' }]), game); const fb = spells.activeSpells.find((sp) => sp.constructor.name === 'FireballSpell');
+    for (let i = 0; i < 40 && !fb.isFinished; i++) spells.update(1 / 60, game);
+    assert(fb.isFinished && fb.x < blk.x, 'The own wall stops the own fireball (no shooting through walls) — burst at ' + Math.round(fb.x) + ' / wall ' + Math.round(blk.x));
+    spells.cast(P0, spells.resolveSpell([{ id: 'ignis' }, { id: 'ignis' }]), game); const bm = spells.activeSpells.find((sp) => sp.isBeam && sp.team === P0.team);
+    for (let i = 0; i < 60; i++) spells.update(1 / 60, game);
+    assert(bm && bm.tipX <= blk.x, 'A beam stops at the face of the own wall too (tip ' + Math.round(bm?.tipX) + ')'); bm?.end?.('test');
     blk.hp = blk.maxHp; P0.x = sx; P0.z = sz; P0.facing = sf; }
   { const CC = await import('./public/src/cast_circle.js'); let threw = null; const d = { active: true, strokes: [[{ x: 10, y: 10 }, { x: 80, y: 60 }]], currentStroke: [{ x: 80, y: 60 }, { x: 20, y: 90 }], autoLockArmed: true, lastStrokeTime: 1 };
     try { CC.renderPlayerDrawTell(new Proxy({}, { get: (t, k) => (k === 'canvas' ? undefined : () => {}), set: () => true }), { x: 300, y: 400, facing: 1 }, d, 1000); } catch (e) { threw = e; }
@@ -1584,7 +1592,7 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
   // per transformation and manifest — no extra rune card is ever added.
   const { FORM_MOVESETS, FULL_CHARGE_TIME, activeMoveset } = await import('./public/src/form_moves.js');
   const neutralInput = { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false };
-  const resetForm = () => { spellSystem.clearRuntime(); P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.grounded = true; P.elevation = 0; P.chargeTimer = 0; P.formCharge = null; P.facing = 1; P.x = 300; P.z = .5; P.ninefoldTimer = 0; P.eidolonTimer = 0; P.focusTransformTimer = 0; game.battlefield.placeOnSurface(P); };
+  const resetForm = () => { spellSystem.clearRuntime(); P.mp = P.maxMp; /* the moves are tested, not the mana budget */ P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.grounded = true; P.elevation = 0; P.chargeTimer = 0; P.formCharge = null; P.facing = 1; P.x = 300; P.z = .5; P.ninefoldTimer = 0; P.eidolonTimer = 0; P.focusTransformTimer = 0; game.battlefield.placeOnSurface(P); };
   const formTarget = game.trainingDummy; formTarget.homeX = formTarget.x = 400; formTarget.homeZ = formTarget.z = .5;
   const chargeAndRelease = (dir, full) => {
     P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.grounded = true;
@@ -1654,6 +1662,8 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
   { const left = P.focus; assert(game.activateFocusTransformation() && P.focusTransformTimer === 0 && P.focus === left && P.focusSaved, 'Pressing T again ends the transformation and saves the rest of the Focus');
     for (let i = 0; i < 300; i++) P.update(1 / 60, neutralInput, game.battlefield, game);
     assert(P.focus === left && (left < P.maxFocus * .4 || P.canLightFocus()), 'Saved Focus does not decay and may be lit again from 40 %'); P.focusSaved = false; P.focus = P.maxFocus; P.activateFocusTransformation(); }
+  { const wasPrimal = game.primal; game.primal = null; const tap = { x: P.x, y: P.y - 40 }; const ended = game.tryTransformByTap(tap) && P.focusTransformTimer === 0 && P.focusSaved; const relit = P.focus >= P.maxFocus * .4 && game.tryTransformByTap(tap) && P.focusTransformTimer > 0; game.primal = wasPrimal;
+    assert(ended && relit, 'Tapping the own Wizard ends the transformation (Focus saved) and lights it again from the saved meter (phone path)'); if (!(P.focusTransformTimer > 0)) { P.focusSaved = false; P.focus = P.maxFocus; P.activateFocusTransformation(); } P.focus = P.maxFocus; }
   { const f0 = P.focus; P.chargeDir = 'forward'; P.state = 'idle'; P.stateTimer = 0; const ok = P.releaseFormTechnique(true); assert(ok && Math.abs(f0 - P.focus - 16) < .01, 'A full technique in the Focus transformation costs 16 Focus (spells traded against form time) — ' + (f0 - P.focus)); P.focus = P.maxFocus; }
   P.focus = .02; P.update(1 / 60, neutralInput, game.battlefield, game);
   assert(P.focusTransformTimer === 0 && P.focus === 0, 'The transformation ends when the Focus meter is empty');

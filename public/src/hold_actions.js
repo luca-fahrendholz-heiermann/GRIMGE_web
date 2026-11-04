@@ -20,7 +20,7 @@ import { groundYForDepth } from './world.js';
 
 const DEPTH_PX = 150;
 
-export const HOLD_MANA = Object.freeze({ lane: 2, castle: 4, pull: 5 });
+export const HOLD_MANA = Object.freeze({ lane: 6, castle: 10, pull: 10 }); // raised 4 Nov 2026 (was 2 / 4 / 5)
 export const HOLD_MIN_TIME = .3;          // touch: a hold shorter than this stays a tap
 
 export const isOnCastle = (p) => /CastleUpperPlatform|CastleAccessRamp/.test(p?.surfaceId ?? '');

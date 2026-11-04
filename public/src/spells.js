@@ -1102,6 +1102,7 @@ class FireballSpell {
 
 class GaleBlastSpell {
   constructor(x, z, facing, team, height = 0) {
+    this.isWallBlockable = true; // walls stop the gust (StoneWallSpell.update)
     this.x = x;
     this.z = z;
     this.heightAboveSurface = height;
@@ -2037,6 +2038,20 @@ class StoneWallSpell {
       projectile.life = 0;
       combat.spawnHitSparks(projectile.x, groundYForDepth(projectile.z) - 20, projectile.facing ?? 1, '#c7b299', 8);
       combat.spawnShockwave(projectile.x, groundYForDepth(projectile.z) - 20, 18, '#8d6e63');
+    }
+    // No spell flies through a wall — not even the caster's own (user, 4 Nov 2026: "durch eine mauer feuern mit spells
+    // sollte auch nicht gehen auch nicht durch seine eigenen"). Hostile shots also wear the wall down (it is their target).
+    for (const s of this.system?.activeSpells ?? []) {
+      if (s === this || s.isFinished || s.isStoneWall || s.held || !(s.isCapturableProjectile || s.isSigProjectile || s.isWallBlockable)) continue;
+      if (!Number.isFinite(s.vx) || Math.abs(s.vx) < 60 || !Number.isFinite(s.x)) continue;
+      if (Math.abs(s.x - this.x) > this.halfX + (s.radius ?? 10) || Math.abs((s.z ?? this.z) - this.z) > this.halfZ + .03) continue;
+      if ((s.heightAboveSurface ?? s.height ?? 0) > this.surfaceHeight + this.wallHeight + 18 && !s.isWallBlockable) continue;
+      s.x = this.x - Math.sign(s.vx) * (this.halfX + 2);
+      combat.spawnHitSparks(s.x, this.y - Math.min(this.wallHeight, 40), -Math.sign(s.vx), '#c7b299', 10);
+      if (typeof s.detonate === 'function') s.detonate(gameWorld);
+      else if (typeof s.pop === 'function') s.pop(gameWorld);
+      else if (typeof s.burst === 'function') s.burst();
+      else { s.life = 0; s.isFinished = true; }
     }
     if (this.life <= 0) {
       this.isFinished = true;

@@ -27,7 +27,7 @@ import { rubberArm, cracks, dome, boom, explode } from './arcane_devil.js';
 import { bloodSpear, bloodWeapon } from './arcane_bloodarsenal.js';
 import { armCannon } from './arcane_konstrukt.js';
 
-export const FORM_SPECIAL_MANA = Object.freeze({ sprint: 4, dive: 4 });
+export const FORM_SPECIAL_MANA = Object.freeze({ sprint: 8, dive: 8 }); // raised 4 Nov 2026 (was 4 / 4)
 // Delayed follow-up hits in game time (puppets, echoes); ticked from Player.update.
 const pending = [];
 const later = (delay, fn) => pending.push({ t: delay, fn });

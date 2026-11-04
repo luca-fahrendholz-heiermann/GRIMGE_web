@@ -434,7 +434,8 @@ export class UIManager {
     });
     this.blueSidePanel?.addEventListener?.('pointerdown', (e) => {
       const game = window.gameWorld;
-      if (!game?.player || game.player.focus < game.player.maxFocus || game.player.focusTransformTimer > 0) return;
+      // The profile panel lights the form and ends it again (the rest of the Focus is saved).
+      const pl = game?.player; if (!pl || !(pl.focusTransformTimer > 0 || (pl.canLightFocus?.() ?? pl.focus >= pl.maxFocus))) return;
       e.preventDefault(); e.stopPropagation(); game.activateFocusTransformation();
     });
     this.focusActivateBtn?.addEventListener('pointerdown', (e) => {
@@ -1244,7 +1245,8 @@ export class UIManager {
       : `${blueCurrentMp} / ${blueMpMax}`;
 
     // Focus sits in the top HUD with a compact transformation icon.
-    const focusReady = player.focus >= player.maxFocus && player.focusTransformTimer <= 0 && !player.primalBond;
+    const focusReady = (player.canLightFocus?.() ?? player.focus >= player.maxFocus) && player.focusTransformTimer <= 0 && !player.primalBond;
+    const focusActive = player.focusTransformTimer > 0 && !player.primalBond;
     if (this.blueFocusFill) {
       this.blueFocusFill.style.width = `${Math.max(0, Math.min(100, player.focus / player.maxFocus * 100))}%`;
       this.blueFocusFill.parentElement?.classList?.toggle('focus-ready', focusReady);
@@ -1258,9 +1260,10 @@ export class UIManager {
     }
     this.blueSidePanel?.classList?.toggle('focus-ready', focusReady);
     if (this.focusActivateBtn) {
-      this.focusActivateBtn.classList.toggle('ready', focusReady);
-      this.focusActivateBtn.disabled = !focusReady;
-      this.focusActivateBtn.title = focusReady ? 'Activate transformation (T)' : `Focus ${Math.round(player.focus)}/${player.maxFocus}`;
+      this.focusActivateBtn.classList.toggle('ready', focusReady || focusActive);
+      this.focusActivateBtn.classList.toggle('active', focusActive);
+      this.focusActivateBtn.disabled = !(focusReady || focusActive);
+      this.focusActivateBtn.title = focusActive ? 'Transformation beenden (T) — der restliche Fokus wird gespart' : focusReady ? 'Activate transformation (T)' : `Focus ${Math.round(player.focus)}/${player.maxFocus}`;
     }
     this.updateSpellTriangle(player);
     if (this.trainingSparringBtn) {

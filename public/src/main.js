@@ -1445,7 +1445,8 @@ export class GameWorld {
     // A tap on an enemy marks it as the Primal's focus target (an armed
     // spell's targeting is handled before this and keeps priority).
     if (this.tryPrimalFocus(pt)) return true;
-    if (p.focus < p.maxFocus || p.focusTransformTimer > 0) return false;
+    // Tapping the Wizard again ends the form (Focus is saved); a saved meter relights from 40 %.
+    if (!(p.focusTransformTimer > 0) && !(p.canLightFocus?.() ?? p.focus >= p.maxFocus)) return false;
     const height = ENTITY_VISUALS.heroHeight;
     const inside = Math.abs(pt.x - p.x) <= 30 && pt.y <= p.y + 10 && pt.y >= p.y - height - 12;
     return inside ? this.activateFocusTransformation() : false;
