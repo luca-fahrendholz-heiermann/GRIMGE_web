@@ -12,6 +12,7 @@
 //               player who is drawing or out of mana). Incoming shots are dodged in depth now and then.
 import { RUNE_GUIDES, guideStrokes } from './rune_guides.js';
 import { combat } from './combat.js';
+import { drawCastTell } from './cast_circle.js';
 
 // Skill profiles. reaction: s until a new snapshot; speed: drawing px/s on a 60 px glyph; pause: s per rune;
 // aim: px error at 300 px; grades: chances of S / A / B (rest C); fail: misfire chance; dodge: chance to side-step.
@@ -99,33 +100,13 @@ export function updateAIDraw(ai, dt, gw) {
 // Readable from afar, so a player can punish it (a hit breaks the rune).
 export function renderAIDraw(ctx, ai) {
   const d = ai.aiDraw; if (!d) return;
-  const TAU = Math.PI * 2; const f = ai.facing || 1;
   const per = d.dur / d.runes.length; const i = Math.min(d.runes.length - 1, Math.floor(d.t / per)); const k = Math.min(1, (d.t - i * per) / per);
-  const all = Math.min(1, d.t / d.dur); const open = Math.min(1, d.t / .15); const rot = d.t * 2.2;
-  const cx = Math.round(ai.x + f * 36); const cy = Math.round((ai.y ?? 0) - 56); const R = 24 * open;
-  ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-  // Ground circle at the feet, growing with the drawing.
-  { const gy = ai.y ?? 0; const gr = (26 + 18 * all) * open; ctx.globalAlpha = .55; ctx.strokeStyle = d.color; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.ellipse(ai.x, gy, gr, gr * .3, 0, 0, TAU); ctx.stroke();
-    ctx.fillStyle = '#ffffff'; for (let n = 0; n < 6; n++) { const an = -rot + n * TAU / 6; ctx.fillRect(Math.round(ai.x + Math.cos(an) * gr) - 1, Math.round(gy + Math.sin(an) * gr * .3) - 1, 2, 2); } }
-  // The circle in front: a soft fill, outer + inner ring, a turning hexagram, ticks, the progress arc.
-  ctx.globalAlpha = .16; ctx.fillStyle = d.color; ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.fill();
-  ctx.globalAlpha = .9; ctx.strokeStyle = 'rgba(20,0,0,.85)'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.stroke();
-  ctx.strokeStyle = d.color; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.stroke();
-  ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(cx, cy, R * .74, 0, TAU); ctx.stroke();
-  ctx.globalAlpha = .3; for (const off of [0, Math.PI / 3]) { ctx.beginPath(); for (let n = 0; n <= 3; n++) { const an = rot + off + n * TAU / 3; const px = cx + Math.cos(an) * R * .74; const py = cy + Math.sin(an) * R * .74; n ? ctx.lineTo(px, py) : ctx.moveTo(px, py); } ctx.stroke(); }
-  ctx.globalAlpha = 1; ctx.fillStyle = d.color; for (let n = 0; n < 10; n++) { const an = -rot * .7 + n * TAU / 10; ctx.fillRect(Math.round(cx + Math.cos(an) * R * .87) - 1, Math.round(cy + Math.sin(an) * R * .87) - 1, 2, 2); }
-  ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(cx, cy, R + 3, -Math.PI / 2, -Math.PI / 2 + TAU * all); ctx.stroke();
-  // Rune pips above: done / current / still to come.
-  for (let j = 0; j < d.runes.length; j++) { ctx.fillStyle = j < i ? '#ffffff' : j === i ? d.color : 'rgba(0,0,0,.6)'; ctx.fillRect(Math.round(cx - d.runes.length * 4 + j * 8), Math.round(cy - R - 11), 5, 5); }
-  // The glyph traced inside.
-  const strokes = guideStrokes(d.runes[i], cx, cy, 13 * open); const total = strokes.reduce((n, s) => n + s.length, 0); let left = Math.round(total * k);
-  for (const st of strokes) {
-    if (left <= 1) break; const pts = st.slice(0, left); left -= pts.length;
-    for (const [w, c] of [[4, 'rgba(20,0,0,.8)'], [2, '#ffffff']]) { ctx.strokeStyle = c; ctx.lineWidth = w; ctx.beginPath(); pts.forEach((p, n) => (n ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y))); ctx.stroke(); }
-    const tip = pts[pts.length - 1]; ctx.fillStyle = d.color; ctx.fillRect(Math.round(tip.x) - 2, Math.round(tip.y) - 2, 4, 4);
-  }
-  ctx.restore();
+  const open = Math.min(1, d.t / .15); const f = ai.facing || 1;
+  const cx = Math.round(ai.x + f * 36); const cy = Math.round((ai.y ?? 0) - 56);
+  // The guide of the current rune, traced up to the drawing progress.
+  const guide = guideStrokes(d.runes[i], cx, cy, 13 * open); let left = Math.round(guide.reduce((n, s) => n + s.length, 0) * k); const strokes = [];
+  for (const st of guide) { if (left <= 1) break; const pts = st.slice(0, left); left -= pts.length; strokes.push(pts); }
+  drawCastTell(ctx, { x: ai.x, y: ai.y ?? 0, facing: f, t: d.t, color: d.color, open, progress: d.t / d.dur, pips: d.runes.map((_, j) => (j < i ? 'done' : j === i ? 'now' : 'todo')), strokes, groundY: ai.y ?? 0, groundGrow: d.t / d.dur });
 }
 
 // ── mana discipline ──────────────────────────────────────────────────────

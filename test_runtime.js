@@ -1053,6 +1053,14 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
   game.targeting.pointerDown(a, 'mouse'); game.targeting.pointerMove(b, 'mouse'); game.targeting.pointerUp(b, 'mouse');
   const lateralBlocks = spells.activeSpells.filter((s) => s.isStoneWall);
   const lateralXs = lateralBlocks.map((s) => s.x);
+  // The creator can break its own wall (user, 4 Nov 2026) — without mana / Focus from it.
+  { const blk = lateralBlocks.reduce((m, w) => (w.x < m.x ? w : m)); const P0 = game.player; const sx = P0.x, sz = P0.z, sf = P0.facing; P0.x = blk.x - 40; P0.z = blk.z; P0.facing = 1; P0.elevation = 0; const mp0 = P0.mp, f0 = P0.focus, hp0 = blk.hp;
+    P0.triggerMeleeHitbox(30, 0, 0, .2);
+    assert(blk.hp < hp0 && P0.mp === mp0 && P0.focus === f0, 'The creator breaks its own wall with melee (no mana / Focus gained from it) ' + hp0 + '→' + blk.hp);
+    blk.hp = blk.maxHp; P0.x = sx; P0.z = sz; P0.facing = sf; }
+  { const CC = await import('./public/src/cast_circle.js'); let threw = null; const d = { active: true, strokes: [[{ x: 10, y: 10 }, { x: 80, y: 60 }]], currentStroke: [{ x: 80, y: 60 }, { x: 20, y: 90 }], autoLockArmed: true, lastStrokeTime: 1 };
+    try { CC.renderPlayerDrawTell(new Proxy({}, { get: (t, k) => (k === 'canvas' ? undefined : () => {}), set: () => true }), { x: 300, y: 400, facing: 1 }, d, 1000); } catch (e) { threw = e; }
+    assert(!threw && d.tellT === 1000, 'While drawing, a magic circle in front of the Wizard shows the own strokes' + (threw ? ' — ' + threw.message : '')); }
   assert(lateralBlocks.length >= 3 && Math.abs(Math.min(...lateralXs) - 420) < 4 && Math.max(...lateralXs) - Math.min(...lateralXs) > 60 && lateralBlocks.every((s) => Math.abs(s.z - .5) < .03), 'A horizontal swipe places a row of wall blocks exactly along the swiped line');
   reset();
   slotFused(['terra', 'terra']);

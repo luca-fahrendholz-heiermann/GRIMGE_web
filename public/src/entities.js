@@ -14,6 +14,7 @@ import { releaseWeaponReach, releaseFormPull, isOnCastle, weaponReachShot } from
 import { onStatusHit, setStatusSource, getStatusSource, isBladeLook, hasStatus, drawIceBlock, applyStatus } from './status_effects.js';
 import { sceneAiHint, followSceneHint } from './scene_systems.js';
 import { tryAICounterDomain, tryAISpecial, updateAIRecast } from './ai_specials.js';
+import { renderPlayerDrawTell } from './cast_circle.js'; // the magic circle in front of the drawing Wizard
 import { aiSkill, perceive, aimPoint, beginAIDraw, updateAIDraw, cancelAIDraw, renderAIDraw, canAfford, updatePlan, planMove, dodgeShot, AI_MANA_REGEN } from './ai_brain.js'; // a human-like AI Wizard
 // Runes the AI draws for its built-in spells (time + the glyph shown in its casting circle).
 const AI_SPELL_RUNES = Object.freeze({ fireball: ['ignis'], frost_nova: ['aqua', 'ventus'], stone_wall: ['terra', 'construct'], arcane_aegis: ['ward'], inferno_beam: ['ignis', 'construct'], glacial_ray: ['aqua', 'construct'], thunder_lance: ['fulgur', 'construct'], null_ray: ['void', 'construct'] });
@@ -1846,6 +1847,18 @@ export class Player extends GroundEntity {
         hitAny = true; hitCount++;
       }
     }
+    // Own walls (user, 4 Nov 2026: "sollen auch vom ersteller selbst zerstört werden können"): the creator's swings
+    // wear them down too — no mana, Focus or combo from them (they are not foes).
+    let ownWallHit = false;
+    for (const w of spells.activeSpells) {
+      if (!w.isStoneWall || w.isDead || w.team !== this.team || (w.owner && w.owner !== this) || hitMeta.hitSet?.has(w)) continue;
+      const limit = reach ?? Math.max(78, w.hitRadiusX ?? 0);
+      if ((w.x - this.x) * this.facing < -10 || Math.abs(w.x - this.x) > limit + (w.halfX ?? 0) || Math.abs(w.z - this.z) > (w.halfZ ?? .2) + .06) continue;
+      if (Math.abs((w.surfaceHeight ?? 0) - (this.worldHeight ?? 0)) > (w.wallHeight ?? 80) + 20) continue;
+      w.takeDamage(dmg); hitMeta.hitSet?.add(w); ownWallHit = true;
+      combat.spawnHitSparks(w.x, w.y - (w.wallHeight ?? 60) * .5, this.facing, '#d7ccc8', 8);
+    }
+    if (ownWallHit && !hitAny) { audio.playImpact(false); combat.triggerHitstop(2); }
     setHitContext(null);
     setStatusSource(prevStatusSource);
     if (shrine && hitAny) shrine.n--;
@@ -2296,6 +2309,7 @@ export class Player extends GroundEntity {
     // Buff transformation manifestation in front of the body (P5).
     if (this.isAlive) renderBuffManifestation(ctx, this, renderY, 'front');
     if (this.isAlive) renderSignatureStance(ctx, this, renderY, 'front');
+    if (this.isAlive && this === window.gameWorld?.player) renderPlayerDrawTell(ctx, { x: this.x, y: renderY, facing: this.facing }, window.gameWorld.drawing);
     if (this.isAlive && this.primalBond) renderPrimalBond(ctx, this, renderY, 'front');
     if (this.isAlive && this.weaponInfusion) renderInfusion(ctx, this, renderY);
     if (this.isAlive) {

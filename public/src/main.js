@@ -986,6 +986,7 @@ export class GameWorld {
     this.player.reservedMana = reserved;
     this.player.cancelSprint?.(); // drawing stops the Wizard (the sprint does not carry on)
     this.drawing.active = true;
+    this.drawing.tellT = null; // the magic circle in front of the Wizard opens again (cast_circle.js)
     this.drawing.expectedCardId = expectedCardId;
     this.drawing.strokes = [];
     this.drawing.currentStroke = [];
