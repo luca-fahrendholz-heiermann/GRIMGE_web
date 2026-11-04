@@ -13,7 +13,7 @@ import { activateBuffForm } from './buff_forms.js';
 import { castSignature, signatureProjectileSpawned, updateSignatureWorld } from './signature_runes.js';
 import { castNatureSpell, isNatureOrInfusion } from './nature_spells.js';
 import { renderWallLook } from './wall_looks.js';
-import { renderSpellVisual, meteorShatterBurst, spellVisualActive, spellSheetReady, SpriteBurst, drawSpellSprite, drawSheetBeam } from './spell_visuals.js';
+import { renderSpellVisual, meteorShatterBurst, spellVisualActive, spellSheetReady, SpriteBurst, drawSpellSprite, drawSheetBeam, drawBreathCone } from './spell_visuals.js';
 import { drawFireBall, drawVoidOrb, drawWindGust, drawBolt, drawRockSpike, drawFrostSpread, drawFunnel } from './element_fx.js';
 import { offerRecast } from './recast.js';
 import { statusElementsOf, setStatusSource, updateStatuses, statusDepthEntries, clearStatuses } from './status_effects.js';
@@ -2383,6 +2383,8 @@ class SummonedCreature extends GroundEntity {
 }
 
 class DragonInvocationSpell {
+  // The hand-drawn fire breath (fire_jet sheets) draws at the characters' density.
+  get fineVfx() { return spellSheetReady('fire_jet'); }
   constructor(caster, spriteManager = null) {
     this.team = caster.team; this.x = caster.x + caster.facing * 175; this.z = caster.z;
     this.y = groundYForDepth(this.z) - 180; this.life = 1.45; this.didBreathe = false; this.isFinished = false;
@@ -2394,6 +2396,10 @@ class DragonInvocationSpell {
       this.didBreathe = true;
       const radius = 135 * this.quality.area;
       combat.shakeCamera(16, .55); combat.spawnShockwave(this.x, groundYForDepth(this.z), radius, '#ff5722');
+      // The breath hits the ground: a fire blast and scorched earth where it lands.
+      const gx = this.x + this.facing * 112; const gy = groundYForDepth(this.z);
+      if (spellSheetReady('fire_explosion')) this.system?.activeSpells.push(Object.assign(new SpriteBurst({ sheet: 'fire_explosion', x: gx, y: gy - 30, z: this.z, fps: 14 }), { fineVfx: true }));
+      environment.add('scorch', gx, this.z, { radius: radius * .7, team: this.team });
       for (const target of gameWorld.getHostileTargets(this.team)) {
         if (groundDistance(this, target) <= radius && Math.abs((target.worldHeight ?? 0)) < 180) target.takeDamage(110 * this.quality.power, Math.sign(target.x - this.x || 1) * 430, 260, .65, true, 'spell');
       }
@@ -2402,8 +2408,11 @@ class DragonInvocationSpell {
   }
   render(ctx) {
     if (this.spriteManager?.renderSummon(ctx, 'dragon', this.x, this.y + 46, { facing: this.facing, visualHeight: 170, alpha: Math.min(1, this.life * 3) })) {
-      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = '#ffe082'; ctx.shadowColor = '#ff5722'; ctx.shadowBlur = 18; ctx.lineWidth = 6;
-      ctx.beginPath(); ctx.moveTo(this.x + this.facing * 35, this.y + 28); ctx.lineTo(this.x + this.facing * 112, groundYForDepth(this.z) - 12); ctx.stroke(); ctx.restore();
+      // The breath: the hand-drawn flame cone turned from the jaws down onto the ground (strongest at the strike).
+      const k = this.life > 1.0 ? 0 : this.life > .78 ? (1.0 - this.life) / .22 : Math.max(0, (this.life - .3) / .48);
+      const mx = this.x + this.facing * 35; const my = this.y + 28; const gx = this.x + this.facing * 112; const gy = groundYForDepth(this.z) - 12;
+      if (k > 0 && spellSheetReady('fire_jet')) { ctx.save(); ctx.translate(Math.round(mx), Math.round(my)); ctx.scale(this.facing, 1); ctx.rotate(Math.atan2(gy - my, Math.abs(gx - mx))); drawBreathCone(ctx, 0, 0, 1, Math.hypot(gx - mx, gy - my) + 30, performance.now() / 1000, k); ctx.restore(); }
+      else if (k > 0) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = '#ffe082'; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(mx, my); ctx.lineTo(gx, gy); ctx.stroke(); ctx.restore(); }
       return;
     }
     ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = '#ff7044'; ctx.shadowColor = '#ffd54f'; ctx.shadowBlur = 22;
