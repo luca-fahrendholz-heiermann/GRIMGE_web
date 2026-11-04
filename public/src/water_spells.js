@@ -21,6 +21,7 @@ export class WaterOrbSpell {
     this.x = x; this.z = z; this.height = height; this.facing = facing; this.team = team;
     this.vx = facing * 600; this.radius = 18; this.life = 1.3; this.damage = 30;
     this.isCapturableProjectile = true; this.fineVfx = true; this.age = 0; this.burst = null; this.isFinished = false;
+    this.element = 'aqua'; // water for every reaction (Glutpumpe steam, scene objects …)
   }
   get y() { return groundYForDepth(this.z) - this.height - 30; }
   update(dt, gw) {
@@ -68,7 +69,7 @@ export class TidalWaveSpell {
   constructor(x, z, facing, team) {
     this.x0 = x; this.x = x; this.z = z; this.facing = facing; this.team = team;
     this.length = 420; this.speed = 470; this.width = 44; this.damage = 34; this.life = 1.35; this.age = 0;
-    this.hit = new Set(); this.puddleAt = 0; this.fineVfx = true; this.isFinished = false;
+    this.hit = new Set(); this.puddleAt = 0; this.fineVfx = true; this.isFinished = false; this.element = 'aqua';
   }
   get head() { return Math.min(this.length, this.age * this.speed); }
   update(dt, gw) {

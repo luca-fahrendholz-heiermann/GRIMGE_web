@@ -1065,6 +1065,9 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
     spells.cast(P0, spells.resolveSpell([{ id: 'ignis' }, { id: 'ignis' }]), game); const bm = spells.activeSpells.find((sp) => sp.isBeam && sp.team === P0.team);
     for (let i = 0; i < 60; i++) spells.update(1 / 60, game);
     assert(bm && bm.tipX <= blk.x, 'A beam stops at the face of the own wall too (tip ' + Math.round(bm?.tipX) + ')'); bm?.end?.('test');
+    blk.hp = blk.maxHp; spells.cast(P0, spells.resolveSpell([{ id: 'terra' }]), game); const row = spells.activeSpells.find((sp) => sp.constructor.name === 'StoneSpikesSpell');
+    for (let i = 0; i < 40; i++) spells.update(1 / 60, game);
+    assert(row?.blocked && row.spikes.some((sp) => sp.cancelled) && row.spikes.every((sp) => sp.cancelled || sp.x < blk.x) && blk.hp < blk.maxHp, 'A stone spike row stops at a wall in its lane (the own too) and hits the wall');
     blk.hp = blk.maxHp; P0.x = sx; P0.z = sz; P0.facing = sf; }
   { const CC = await import('./public/src/cast_circle.js'); let threw = null; const d = { active: true, strokes: [[{ x: 10, y: 10 }, { x: 80, y: 60 }]], currentStroke: [{ x: 80, y: 60 }, { x: 20, y: 90 }], autoLockArmed: true, lastStrokeTime: 1 };
     try { CC.renderPlayerDrawTell(new Proxy({}, { get: (t, k) => (k === 'canvas' ? undefined : () => {}), set: () => true }), { x: 300, y: 400, facing: 1 }, d, 1000); } catch (e) { threw = e; }

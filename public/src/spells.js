@@ -1217,6 +1217,18 @@ class ChainLightningSpell {
   }
 }
 
+// The nearest wall standing in a ground lane between x0 and x1 (any side's wall): ground lines stop at it.
+function wallBetween(system, x0, x1, z) {
+  let best = null;
+  for (const w of system?.activeSpells ?? []) {
+    if (!w.isStoneWall || w.isDead || Math.abs(w.z - z) > (w.halfZ ?? .2) + .05) continue;
+    const lo = Math.min(x0, x1) - (w.halfX ?? 16); const hi = Math.max(x0, x1) + (w.halfX ?? 16);
+    if (w.x < lo || w.x > hi) continue;
+    if (!best || Math.abs(w.x - x0) < Math.abs(best.x - x0)) best = w;
+  }
+  return best;
+}
+
 class StoneSpikesSpell {
   constructor(startX, z, facing, team) {
     this.startX = startX;
@@ -1252,6 +1264,12 @@ class StoneSpikesSpell {
       if (sp.delay > 0) {
         sp.delay -= dt;
         if (sp.delay <= 0) {
+          // A wall in the lane stops the row (the caster's own too) and takes the blow (user, 4 Nov 2026).
+          const wall = this.blocked ? null : wallBetween(this.system, this.startX, sp.x, this.z);
+          if (this.blocked || wall) {
+            if (wall) { this.blocked = true; wall.takeDamage?.(42 * this.quality.power); combat.spawnHitSparks(wall.x, wall.y - 30, -this.facing, '#c7b299', 12); }
+            sp.cancelled = true; continue;
+          }
           sp.active = true;
           audio.playImpact(false);
           combat.shakeCamera(3, 0.15);
