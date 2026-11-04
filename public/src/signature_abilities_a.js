@@ -419,11 +419,14 @@ defineSignature('S08', { cast(c) { emit(new SecondPledge(c.sig, c.caster, c.targ
 // S09 STILLFUGE — a stasis dome: projectiles crawl, small foes attack slowly.
 // ═════════════════════════════════════════════════════════════════════════
 class StillFugue {
+  // Drawn at the characters' density (fine layer) once the redrawn sheets are loaded.
+  get fineVfx() { return spellSheetReady('stasis_dome'); }
   constructor(sig, owner, x, z, area) { this.sig = sig; this.mat = sig.mat; this.owner = owner; this.team = owner.team; this.x = x; this.z = z; this.t = 0; this.isFinished = false; this.R = 95 * area; this.held = new Set(); }
   get y() { return groundYForDepth(this.z); }
   update(dt, gw) {
     this.t += dt;
     if (this.t < .8) return;
+    if (this.endT != null) { if (this.t - this.endT > .6) this.isFinished = true; return; }
     const ending = this.t >= 4.8;
     for (const p of projectilesOf(gw)) {
       const inside = groundDist(p, this) < this.R;
@@ -434,11 +437,19 @@ class StillFugue {
     if (ending) {
       // Collapse: own projectiles fly on, hostile ones dissolve.
       for (const p of this.held) { projRelease(p); if (p.team !== this.team) { projKill(p); combat.spawnHitSparks(p.x, yOf(p.z, projHeight(p)), 1, this.mat.vein, 6); } }
-      this.held.clear(); this.isFinished = true; debris(this.x, this.y - 40, this.mat, 800, 12, 90);
+      this.held.clear(); this.endT = this.t; debris(this.x, this.y - 40, this.mat, 800, 12, 90);
     }
   }
   render(ctx) {
     const mat = this.mat; const t = this.t; const close = Math.min(1, t / .8); const R = this.R;
+    if (spellSheetReady('stasis_dome')) {
+      // The sheets' clock ring sits 34 px above their base: lift the anchor so the ring lies on the ground point.
+      const sc = R / 100; const by = this.y + 34 * sc;
+      if (this.endT != null) { drawSpellSprite(ctx, 'stasis_shatter', Math.min(5, Math.floor((t - this.endT) / .6 * 6)), this.x, by, { scale: sc }); return; }
+      if (t < .8) { drawSpellSprite(ctx, 'stasis_rise', Math.min(5, Math.floor(t / .8 * 6)), this.x, by, { scale: sc, alpha: .8 }); return; }
+      drawSpellSprite(ctx, 'stasis_dome', Math.floor(t * 6) % 8, this.x, by, { scale: sc, alpha: .6 });
+      return;
+    }
     if (t < .8) { hexMark(ctx, this.x, this.z, 26 + close * 20, mat, t, .9, 810); for (let i = 0; i < 6; i++) { const a = i * 1.7; shard(ctx, this.x + Math.cos(a) * 14, this.y - 10 - ((t * .15 + i * .17) % 1) * 30, 2.5, t * .4 + i, mat, 820 + i, .9); } return; }
     // Contoured dome: segmented warning rim + glass flakes floating too slowly inside.
     if (spellSheetReady('fugue_dome')) { drawSpellSprite(ctx, 'fugue_dome', Math.floor(t * 2) % 8, this.x, this.y, { scale: R / 104 }); return; }
@@ -525,6 +536,8 @@ defineSignature('S11', {
 // S12 SCHICKSALSNADEL — thread one foe, pin, charge twice, follow-up thrust.
 // ═════════════════════════════════════════════════════════════════════════
 class FateNeedle {
+  // Drawn at the characters' density (fine layer) once the redrawn sheets are loaded.
+  get fineVfx() { return spellSheetReady('fate_needle2'); }
   constructor(sig, owner, target, power) { this.sig = sig; this.mat = sig.mat; this.owner = owner; this.team = owner.team; this.target = target; this.t = 0; this.isFinished = false; this.pinned = false; this.charges = 0; this.power = power; this.vec = owner.facing || 1; }
   get x() { return this.target.x; } get z() { return this.target.z; } get y() { return groundYForDepth(this.z); }
   onSigEvent(type, info, gw) {
@@ -540,8 +553,9 @@ class FateNeedle {
   release(gw) {
     // A limited follow-up thrust along the last attack vector — no execute.
     this.done = true; this.endAt = this.t + .5; const f = this.vec; const x0 = this.target.x - f * 50;
-    emit(new SigSequence(this.sig, this.owner, { dur: .5, x: x0, z: this.target.z, steps: [{ at: .05, fn: (s, w) => s.strike(w, (t, dx, dz) => dx * f > -6 && dx * f < 130 && Math.abs(dz) < 20, 30 * this.power, f * 260, 100, .35) }],
-      draw: (ctx, s) => { const k = s.t / .5; const y = s.y - 40; plate(ctx, [[x0, y - 3], [x0 + f * 140 * Math.min(1, k * 3), y], [x0, y + 3]], this.mat, 990, { alpha: 1 - k, core: 1, glowEdge: 1.2 }); } }));
+    const thrust = emit(new SigSequence(this.sig, this.owner, { dur: .5, x: x0, z: this.target.z, steps: [{ at: .05, fn: (s, w) => s.strike(w, (t, dx, dz) => dx * f > -6 && dx * f < 130 && Math.abs(dz) < 20, 30 * this.power, f * 260, 100, .35) }],
+      draw: (ctx, s) => { const k = s.t / .5; const y = s.y - 40; if (spellSheetReady('fate_thrust')) { drawSpellSprite(ctx, 'fate_thrust', Math.min(5, Math.floor(k * 6)), x0 + f * 62, y, { anchor: 'center', flip: f < 0 }); return; } plate(ctx, [[x0, y - 3], [x0 + f * 140 * Math.min(1, k * 3), y], [x0, y + 3]], this.mat, 990, { alpha: 1 - k, core: 1, glowEdge: 1.2 }); } }));
+    thrust.fineVfx = spellSheetReady('fate_thrust');
     for (let i = 0; i < 3; i++) debris(this.target.x, this.target.y - 50, this.mat, 995 + i, 2, 50);
   }
   update(dt) { this.t += dt; if (!aliveFoe(this.target)) { this.isFinished = true; return; } if (this.t > 8 && !this.done) this.fail('NADEL VERFALLEN'); if (this.endAt && this.t > this.endAt) this.isFinished = true; }
@@ -550,12 +564,12 @@ class FateNeedle {
     if (!this.pinned) {
       thread(ctx, [[o.x + o.facing * 14, o.y - 46], [tg.x, tg.y - 44]], mat.edge, 1, .5);
       // Three asymmetric needles spinning over the target.
-      if (spellSheetReady('fate_needle')) { for (let i = 0; i < 3; i++) { const ang = this.t * 4 + i * TAU / 3; ctx.save(); ctx.translate(Math.round(tg.x + Math.cos(ang) * 10), Math.round(top + Math.sin(ang) * 4 - 6)); ctx.rotate(Math.cos(ang) * .5); drawSpellSprite(ctx, 'fate_needle', Math.floor(this.t * 8 + i) % 4, 0, 0, { anchor: 'center' }); ctx.restore(); } return; }
+      if (spellSheetReady('fate_needle2')) { for (let i = 0; i < 3; i++) { const ang = this.t * 3 + i * TAU / 3; ctx.save(); ctx.translate(Math.round(tg.x + Math.cos(ang) * 16), Math.round(top - 20 + Math.sin(ang) * 5)); ctx.rotate(Math.cos(ang) * .35); drawSpellSprite(ctx, 'fate_needle2', Math.floor(this.t * 8 + i) % 4, 0, 0, { anchor: 'center', scale: .7 }); ctx.restore(); } return; }
       for (let i = 0; i < 3; i++) { const a = this.t * 4 + i * TAU / 3; plate(ctx, [[tg.x + Math.cos(a) * 8, top + Math.sin(a) * 3], [tg.x + Math.cos(a) * 2, top - 12 - i * 2], [tg.x - Math.cos(a) * 3, top + Math.sin(a) * 2]], mat, 1000 + i, { alpha: .95, glowEdge: .9 }); }
       return;
     }
     if (this.done) return;
-    if (spellSheetReady('fate_needle')) { ctx.save(); ctx.translate(Math.round(tg.x - 2), Math.round(tg.y - 46)); ctx.rotate(-.9); drawSpellSprite(ctx, 'fate_needle', Math.floor(this.t * 8) % 4, 0, 0, { anchor: 'center' }); ctx.restore(); }
+    if (spellSheetReady('fate_needle2')) { ctx.save(); ctx.translate(Math.round(tg.x - 12), Math.round(tg.y - 64)); ctx.rotate(-.6); drawSpellSprite(ctx, 'fate_needle2', Math.floor(this.t * 8) % 4, 0, 0, { anchor: 'center' }); ctx.restore(); }
     else plate(ctx, [[tg.x - 8, tg.y - 50], [tg.x + 6, tg.y - 40], [tg.x + 4, tg.y - 38]], mat, 1010, { alpha: 1, core: 1, glowEdge: 1 });
     // Thin blue heartbeat lines show the charge.
     for (let k = 0; k < this.charges + 1; k++) thread(ctx, [[tg.x - 10, top + k * 5], [tg.x - 4, top + k * 5], [tg.x - 2, top - 4 + k * 5], [tg.x + 1, top + 4 + k * 5], [tg.x + 4, top + k * 5], [tg.x + 10, top + k * 5]], mat.vein, 1, .8);

@@ -236,6 +236,8 @@ defineSignature('S29', { cast(c) { emit(new BreakColossus(c.sig, c.caster, c.tar
 // S30 JÄGERGLOCKE — a bell marks enemy summons; your summons hunt them first.
 // ═════════════════════════════════════════════════════════════════════════
 class HunterBell extends SigProp {
+  // Drawn at the characters' density (fine layer) once the redrawn sheets are loaded.
+  get fineVfx() { return spellSheetReady('hunt_bell'); }
   constructor(sig, owner, x, z) { super(sig, owner, x, z, { hp: 40, size: 12, duration: 8 }); this.marked = new Set(); }
   update(dt, gw) {
     this.tick(dt);
@@ -245,12 +247,19 @@ class HunterBell extends SigProp {
     // Own beasts and golems prioritise the marked summons.
     const alive = [...this.marked];
     for (const s of summons) if (s.team === this.team) s.priorityTarget = !this.isDead && alive.length ? alive.sort((a, b) => groundDist(a, s) - groundDist(b, s))[0] : null;
-    if (this.t > 1 && !alive.length) this.duration = Math.min(this.duration, this.t + .4);
+    // Nothing to hunt: the bell tolls out (2.5 s) and sinks.
+    if (this.t > 2.5 && !alive.length) this.duration = Math.min(this.duration, this.t + .4);
   }
   onExpire() { for (const s of sigSink()?.getSummons?.() ?? []) if (s.team === this.team) s.priorityTarget = null; }
   onShatter() { this.onExpire(); }
   render(ctx) {
     const mat = this.mat; const y = this.y; const t = this.t; const sinkK = this.duration - this.t < .4 ? (this.duration - this.t) / .4 : 1;
+    if (spellSheetReady('hunt_bell')) {
+      for (let w = 0; w < 3; w++) { const kk = t - w * .3; if (kk >= 0 && kk <= .9) drawSpellSprite(ctx, 'hunt_wave', Math.min(5, Math.floor(kk / .9 * 6)), this.x, y, { anchor: 'center', scale: 1 + kk * 1.4, alpha: 1 - kk / .9 * .6 }); }
+      drawSpellSprite(ctx, 'hunt_bell', Math.floor(t * 8) % 8, this.x + 14, y + 2 + (1 - sinkK) * 30, { alpha: this.fade });
+      for (const s of this.marked) drawSpellSprite(ctx, 'hunt_mark', Math.floor(t * 6) % 4, s.x, s.y - (s.renderHeight ?? 60) - 16, { anchor: 'center' });
+      return;
+    }
     if (spellSheetReady('hunter_bell')) { for (let w = 0; w < 3; w++) { const kk = t - w * .3; if (kk >= 0 && kk <= .9) dashRing(ctx, this.x, this.z, 20 + kk * 260, '#6ae0d0', t, 1 - kk / .9); } drawSpellSprite(ctx, 'hunter_bell', Math.floor(t * 8) % 4, this.x, y + 2 + (1 - sinkK) * 18, { alpha: this.fade, scale: .5 }); return; }
     for (let w = 0; w < 3; w++) { const k = (t - w * .3); if (k < 0 || k > .9) continue; segRing(ctx, this.x, this.z, 20 + k * 260, mat, t, (1 - k / .9) * .7, { segs: 14, thick: 3, gap: .4, seed: 3000 + w }); }
     // Bell core with three bronze sound tongues and a fine cracked sound film.

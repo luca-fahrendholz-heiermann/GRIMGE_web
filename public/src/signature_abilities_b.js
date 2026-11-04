@@ -98,6 +98,8 @@ defineSignature('S14', { cast(c) { emit(new SeismicSteg(c.sig, c.caster, lineOf(
 // S15 FLUTSCHIENE — a water channel that carries projectiles and light minions.
 // ═════════════════════════════════════════════════════════════════════════
 class FloodRail {
+  // Drawn at the characters' density (fine layer) once the redrawn sheets are loaded.
+  get fineVfx() { return spellSheetReady('flood_channel'); }
   constructor(sig, owner, line) { this.sig = sig; this.mat = sig.mat; this.owner = owner; this.team = owner.team; this.a = line.a; this.b = line.b; this.t = 0; this.life = 7; this.isFinished = false; this.x = (this.a.x + this.b.x) / 2; this.z = (this.a.z + this.b.z) / 2; }
   get y() { return groundYForDepth(this.z); }
   retire() { this.life = Math.min(this.life, this.t + .4); }
@@ -118,9 +120,17 @@ class FloodRail {
     if (spellSheetReady('flood_rail')) {
       // The channel: tiles laid along the line (rotated to it), drying from the start toward the end.
       const L = Math.hypot(pts[14][0] - pts[0][0], pts[14][1] - pts[0][1]); const ang = Math.atan2(pts[14][1] - pts[0][1], pts[14][0] - pts[0][0]);
-      ctx.save(); ctx.translate(Math.round(pts[0][0]), Math.round(pts[0][1])); ctx.rotate(ang); ctx.beginPath(); ctx.rect(L * dry, -14, L * (1 - dry), 28); ctx.clip();
-      for (let d = 0; d < L; d += 48) drawSpellSprite(ctx, 'flood_rail', Math.floor(this.t * 12) % 6, d + 24, 0, { anchor: 'center' });
-      ctx.restore(); return;
+      const ch = spellSheetReady('flood_channel');
+      ctx.save(); ctx.translate(Math.round(pts[0][0]), Math.round(pts[0][1])); ctx.rotate(ang); ctx.beginPath(); ctx.rect(L * dry, ch ? -22 : -14, L * (1 - dry), ch ? 44 : 28); ctx.clip();
+      if (ch) for (let d = 0; d < L + 32; d += 62) drawSpellSprite(ctx, 'flood_channel', Math.floor(this.t * 12) % 8, d + 32, -6, { anchor: 'center' });
+      else for (let d = 0; d < L; d += 48) drawSpellSprite(ctx, 'flood_rail', Math.floor(this.t * 12) % 6, d + 24, 0, { anchor: 'center' });
+      ctx.restore();
+      if (ch) {
+        const fx = Math.cos(ang) >= 0 ? 1 : -1;
+        if (dry < .05) drawSpellSprite(ctx, 'flood_spring', Math.floor(this.t * 10) % 6, pts[0][0], pts[0][1] + 6, { alpha: 1 - dry * 10 });
+        if (roll < 1) drawSpellSprite(ctx, 'flood_head', Math.floor(this.t * 12) % 6, pts[14][0], pts[14][1] - 14, { anchor: 'center', flip: fx < 0 });
+      }
+      return;
     }
     ribbon(ctx, pts, (i, n) => (i / n < dry ? 0 : 9), { ...mat, kind: 'crystal' }, 1500, this.t, .45);
     // Platinum wave ridges travelling downstream and crystal fish markers.

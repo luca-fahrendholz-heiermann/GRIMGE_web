@@ -3089,5 +3089,104 @@ export const SPELL_SPRITE_SHEETS = Object.freeze({
   "hd": true,
   "anchor": "base",
   "baseOffset": 1
+ },
+ "stasis_dome": {
+  "name": "stasis_dome",
+  "w": 116,
+  "h": 83,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "base"
+ },
+ "stasis_rise": {
+  "name": "stasis_rise",
+  "w": 116,
+  "h": 83,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "base"
+ },
+ "stasis_shatter": {
+  "name": "stasis_shatter",
+  "w": 116,
+  "h": 83,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "base"
+ },
+ "flood_channel": {
+  "name": "flood_channel",
+  "w": 32,
+  "h": 20,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "flood_spring": {
+  "name": "flood_spring",
+  "w": 24,
+  "h": 26,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "base"
+ },
+ "flood_head": {
+  "name": "flood_head",
+  "w": 22,
+  "h": 24,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "hunt_bell": {
+  "name": "hunt_bell",
+  "w": 38,
+  "h": 54,
+  "frames": 8,
+  "res": 2,
+  "hd": true,
+  "anchor": "base"
+ },
+ "hunt_wave": {
+  "name": "hunt_wave",
+  "w": 110,
+  "h": 30,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "hunt_mark": {
+  "name": "hunt_mark",
+  "w": 12,
+  "h": 12,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "fate_needle2": {
+  "name": "fate_needle2",
+  "w": 15,
+  "h": 38,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "fate_thrust": {
+  "name": "fate_thrust",
+  "w": 92,
+  "h": 22,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
  }
 });
