@@ -239,6 +239,8 @@ defineSignature('S04', {
 // S05 KOMETENTRÄGER — leap, diagonal comet flight dropping shards, steered dive.
 // ═════════════════════════════════════════════════════════════════════════
 class CometFlight {
+  // Drawn at the characters' density (fine layer) once the redrawn sheets are loaded.
+  get fineVfx() { return spellSheetReady('meteor_trail'); }
   constructor(sig, caster, gw, power) {
     this.sig = sig; this.mat = sig.mat; this.caster = caster; this.team = caster.team; this.f = caster.facing || 1; this.t = 0; this.isFinished = false; this.power = power;
     this.x0 = caster.x; this.z = caster.z; this.landX = clampX(gw, caster.x + this.f * 250); this.dropped = 0; this.landed = false;
@@ -256,6 +258,7 @@ class CometFlight {
       c.x = this.t < T2 ? this.x0 + (midX - this.x0) * k : midX + (this.landX - midX) * d;
       c.elevation = this.t < T2 ? Math.sin(k * Math.PI * .5) * 120 : 120 * (1 - d * d);
       c.grounded = false; c.vElevation = 0; c.z = this.z;
+      (this.trail = this.trail ?? []).unshift([c.x, c.y - 40]); if (this.trail.length > 7) this.trail.length = 7;
       // Up to three small shards dropped once during the flight.
       if (this.dropped < 3 && this.t > T1 + .15 + this.dropped * .15) { this.dropped++; this.dropShard(c.x, c.elevation); }
       return;
@@ -264,6 +267,7 @@ class CometFlight {
       this.landed = true; c.x = this.landX; c.elevation = 0; c.grounded = true; c.vElevation = 0;
       combat.shakeCamera(9, .3);
       if (spellSheetReady('comet_crash')) emit(Object.assign(new SpriteBurst({ sheet: 'comet_crash', x: this.landX, y: this.y, z: this.z, fps: 14, anchor: 'base' }), { fineVfx: true }));
+      if (spellSheetReady('meteor_explosion')) emit(Object.assign(new SpriteBurst({ sheet: 'meteor_explosion', x: this.landX, y: this.y + 6, z: this.z, fps: 14, anchor: 'base' }), { fineVfx: true }));
       [0, .15, .3].forEach((at, i) => emit(new SigSequence(this.sig, c, { dur: at + .4, x: this.landX, steps: [{ at, fn: (s, w) => { s.strike(w, (t, dx, dz) => { const r = Math.hypot(dx, dz); return r >= i * 34 - 10 && r < 44 + i * 34; }, [30, 16, 10][i] * this.power, (t, dx) => Math.sign(dx || 1) * 220, 180 - i * 40, .35); combat.spawnShockwave(this.landX, this.y, 44 + i * 34, this.mat.spark); } }],
         draw: (ctx, s) => { if (s.t >= at) segRing(ctx, this.landX, this.z, 40 + i * 34, this.mat, s.t * 2, Math.max(0, 1 - (s.t - at) / .4), { segs: 10 + i * 2, thick: 4, gap: .45, seed: 400 + i * 20 }); } })));
       environment.add('crack', this.landX, this.z, { radius: 80 });
@@ -279,7 +283,12 @@ class CometFlight {
     const c = this.caster; const mat = this.mat;
     if (!this.landed) segRing(ctx, this.landX, this.z, 38, mat, this.t * 2, .8, { segs: 10, thick: 3, seed: 440 });
     if (this.t < .18) { for (const sg of [-1, 1]) ribbon(ctx, [[c.x + sg * 6, c.y], [c.x + sg * 10, c.y - 6], [c.x + sg * 5, c.y - 12]], 2, mat, 450, this.t, 1); }
-    else if (!this.landed && spellSheetReady('comet_mantle')) drawSpellSprite(ctx, 'comet_mantle', Math.floor(this.t * 14) % 6, c.x - this.f * 8, c.y - 40, { anchor: 'center', flip: this.f < 0 });
+    else if (!this.landed && spellSheetReady('comet_mantle')) {
+      // A comet trail streams behind the Wizard (the meteor's puffs), a blazing head round the body.
+      (this.trail ?? []).forEach(([tx, ty], i) => { if (i > 0 && spellSheetReady('meteor_trail')) drawSpellSprite(ctx, 'meteor_trail', Math.min(3, i - 1), tx, ty, { anchor: 'center' }); });
+      if (spellSheetReady('meteor_flame')) drawSpellSprite(ctx, 'meteor_flame', Math.floor(this.t * 16) % 4, c.x, c.y - 40, { anchor: 'center' });
+      drawSpellSprite(ctx, 'comet_mantle', Math.floor(this.t * 14) % 6, c.x - this.f * 8, c.y - 40, { anchor: 'center', flip: this.f < 0 });
+    }
     else if (!this.landed) {
       // Ellipsoid sky fragment as comet mantle around the Wizard, core behind the back.
       const cy = c.y - 40; // y already includes the elevation

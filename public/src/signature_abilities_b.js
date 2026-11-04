@@ -289,6 +289,8 @@ defineSignature('S18', { cast(c) { c.listen(emit(new GlassField(c.sig, c.caster,
 // S19 STRAHLENWEBER — a prism splits YOUR beam into two weaker angled branches.
 // ═════════════════════════════════════════════════════════════════════════
 class BeamPrism extends SigProp {
+  // Drawn at the characters' density (fine layer) once the redrawn sheets are loaded.
+  get fineVfx() { return spellSheetReady('prism_weaver'); }
   constructor(sig, owner, x, z) { super(sig, owner, x, z, { hp: 80, size: 14, duration: 14, heavyObject: true }); this.energy = 3; this.lastBeam = -9; this.beam = null; this.rot = 0; this.tickT = 0; }
   onFriendlyBeam(beam) { this.beam = beam; this.lastBeam = this.t; this.rot += (Math.atan2(0, beam.facing) - this.rot) * .2; }
   branches() { const f = this.beam?.facing ?? 1; return [-.45, .45].map((a) => ({ a: { x: this.x, z: this.z }, b: { x: this.x + f * Math.cos(a) * 170, z: Math.max(.03, Math.min(.97, this.z + Math.sin(a) * 170 / DEPTH)) } })); }
@@ -307,6 +309,21 @@ class BeamPrism extends SigProp {
   }
   render(ctx) {
     const mat = this.mat; const y = this.y - 24; const t = this.t; const active = this.beam && this.t - this.lastBeam < .15;
+    if (spellSheetReady('prism_weaver')) {
+      // The light crystal on its tripod; a passing beam flares in it and leaves as two bright branches.
+      const cy = this.y - 64;
+      drawSpellSprite(ctx, 'prism_weaver', Math.floor(t * 6) % 6, this.x, this.y + 2, { alpha: this.fade * (this.hitFlash ? .7 : 1) });
+      if (active) {
+        drawSpellSprite(ctx, 'prism_flare', Math.floor(t * 16) % 4, this.x, cy, { anchor: 'center' });
+        for (const br of this.branches()) {
+          const ex = br.b.x; const ey = groundYForDepth(br.b.z) - 64; const n = Math.ceil(Math.hypot(ex - this.x, ey - cy));
+          for (const [w, c] of [[7, mat.dark ?? '#1a2350'], [5, '#5a86d8'], [3, '#9cc6f8'], [1, '#ffffff']]) { ctx.fillStyle = c; for (let i = 0; i <= n; i += 1) { const x = this.x + (ex - this.x) * i / n; const yy = cy + (ey - cy) * i / n + Math.sin(i * .3 - t * 40) * (w > 3 ? 1 : 0); ctx.fillRect(Math.round(x - w / 2), Math.round(yy - w / 2), w, w); } }
+          drawSpellSprite(ctx, 'prism_flare', (Math.floor(t * 16) + 2) % 4, ex, ey, { anchor: 'center', scale: .5 });
+        }
+      }
+      for (let k = 0; k < Math.ceil(this.energy); k++) { ctx.fillStyle = '#d8f0ff'; ctx.fillRect(Math.round(this.x - 8 + k * 7), Math.round(this.y - 112), 4, 4); ctx.fillStyle = '#2f4a9a'; ctx.fillRect(Math.round(this.x - 8 + k * 7), Math.round(this.y - 108), 4, 1); }
+      return;
+    }
     // Three copper prism arms around a bright central light seam (drawn sheet; the procedural arms are the fallback).
     const drawn = spellSheetReady('beam_prism'); if (drawn) drawSpellSprite(ctx, 'beam_prism', Math.floor(t * 6) % 4, this.x, this.y + 2, { alpha: this.fade, scale: .5 });
     if (!drawn) for (let i = 0; i < 3; i++) { const a = i * TAU / 3 + this.rot - Math.PI / 2; plate(ctx, [[this.x, y], [this.x + Math.cos(a - .25) * 18, y + Math.sin(a - .25) * 14], [this.x + Math.cos(a) * 22, y + Math.sin(a) * 18], [this.x + Math.cos(a + .25) * 18, y + Math.sin(a + .25) * 14]], mat, this.seed + i, { alpha: this.fade * (this.hitFlash ? .6 : 1), glowEdge: .8, lit: .9 }); }

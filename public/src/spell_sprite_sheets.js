@@ -3296,5 +3296,50 @@ export const SPELL_SPRITE_SHEETS = Object.freeze({
   "res": 2,
   "hd": true,
   "anchor": "center"
+ },
+ "prism_weaver": {
+  "name": "prism_weaver",
+  "w": 34,
+  "h": 54,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "base"
+ },
+ "prism_flare": {
+  "name": "prism_flare",
+  "w": 28,
+  "h": 28,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "rift_seam": {
+  "name": "rift_seam",
+  "w": 20,
+  "h": 16,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "puppet_cross": {
+  "name": "puppet_cross",
+  "w": 24,
+  "h": 17,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
+ },
+ "puppet_knot2": {
+  "name": "puppet_knot2",
+  "w": 14,
+  "h": 14,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "center"
  }
 });

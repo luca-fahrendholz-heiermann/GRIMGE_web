@@ -68,6 +68,8 @@ defineSignature('S25', {
 const rpx = (ctx, x, y, c, sz = 2) => { ctx.fillStyle = c; ctx.fillRect(Math.round(x - sz / 2), Math.round(y - sz / 2), sz, sz); };
 const dashRing = (ctx, x, z, R, c, t, a = 1) => { const y = groundYForDepth(z); ctx.save(); ctx.globalAlpha = Math.max(0, a); for (let i = 0; i < 72; i++) { if ((i + Math.floor(t * 8)) % 4 === 3) continue; const u = i / 72 * TAU; rpx(ctx, x + Math.cos(u) * R, y + Math.sin(u) * R * .32, c); } ctx.restore(); };
 class PuppetThread {
+  // Drawn at the characters' density (fine layer) once the redrawn sheets are loaded.
+  get fineVfx() { return spellSheetReady('puppet_cross'); }
   constructor(sig, owner, obj, kind, power) { this.sig = sig; this.mat = sig.mat; this.owner = owner; this.team = owner.team; this.obj = obj; this.kind = kind; this.t = 0; this.isFinished = false; this.power = power; this.bowled = new Set(); }
   get x() { return this.obj.x; } get z() { return this.obj.z ?? this.owner.z; } get y() { return groundYForDepth(this.z); }
   snap(why) { if (this.snapped) return; this.snapped = this.t; if (why) window.gameWorld?.showAnnouncement?.(why, .6); }
@@ -86,7 +88,12 @@ class PuppetThread {
     const o = this.owner; const obj = this.obj; const mat = this.mat; const k = this.snapped != null ? 1 - (this.t - this.snapped) / .35 : Math.min(1, this.t * 4);
     const oy = groundYForDepth(obj.z ?? o.z) - (obj.heroKey ? 50 : 20);
     for (let i = 0; i < 3; i++) { const sx = o.x + (o.facing || 1) * (12 + i * 3); const sy = o.y - 46 - i * 3; const mx = (sx + obj.x) / 2; const my = Math.min(sy, oy) - 18 + Math.sin(this.t * 5 + i) * 3; const cut = this.snapped != null && i * .1 < this.t - this.snapped; thread(ctx, cut ? [[sx, sy], [mx, my]] : [[sx, sy], [mx, my], [obj.x + (i - 1) * 5, oy]], i === 1 ? mat.vein : mat.edge, 1, k * .9); }
-    if (spellSheetReady('puppet_knot')) drawSpellSprite(ctx, 'puppet_knot', Math.floor(this.t * 8) % 4, obj.x, oy, { anchor: 'center', alpha: k, scale: .5 });
+    if (spellSheetReady('puppet_cross')) {
+      // The control cross floats over the Wizard's hand; the knot glows on what the threads hold.
+      const f = o.facing || 1; drawSpellSprite(ctx, 'puppet_cross', Math.floor(this.t * 8) % 6, o.x + f * 22, o.y - 92, { anchor: 'center', alpha: k });
+      for (let i = 0; i < 3; i++) { const sx = o.x + f * (6 + i * 10); const sy = o.y - 82 + (i === 1 ? -8 : 0); const n = Math.ceil(Math.hypot(obj.x - sx, oy - sy)); ctx.save(); ctx.globalAlpha = k; for (let j = 0; j <= n; j += 2) { const u = j / n; const x = sx + (obj.x - sx) * u; const yy = sy + (oy - sy) * u - Math.sin(u * Math.PI) * 14 + Math.sin(this.t * 6 + i + u * 6) * 1.5; ctx.fillStyle = j % 6 ? '#c4a8ff' : '#ffffff'; ctx.fillRect(Math.round(x), Math.round(yy), 2, 2); } ctx.restore(); }
+      drawSpellSprite(ctx, 'puppet_knot2', Math.floor(this.t * 8) % 6, obj.x, oy, { anchor: 'center', alpha: k });
+    } else if (spellSheetReady('puppet_knot')) drawSpellSprite(ctx, 'puppet_knot', Math.floor(this.t * 8) % 4, obj.x, oy, { anchor: 'center', alpha: k, scale: .5 });
     else plate(ctx, [[obj.x - 4, oy - 4], [obj.x + 4, oy - 4], [obj.x + 4, oy + 4], [obj.x - 4, oy + 4]], mat, 2600, { alpha: k, glowEdge: 1 });
   }
 }
@@ -461,6 +468,8 @@ defineSignature('S35', { cast(c) { emit(new ResonanceCorridor(c.sig, c.caster, l
 // ═════════════════════════════════════════════════════════════════════════
 let seamOf = new Map();
 class WorldSeam {
+  // Drawn at the characters' density (fine layer) once the redrawn sheets are loaded.
+  get fineVfx() { return spellSheetReady('rift_seam'); }
   constructor(sig, owner, line, power) {
     this.sig = sig; this.mat = sig.mat; this.owner = owner; this.team = owner.team; this.t = 0; this.isFinished = false; this.power = power; this.done = new Map(); this.sides = new Map(); this.tipped = new Set();
     const { a, b } = line; const n = segInfo(a, b, a.x, a.z); const mid = { x: (a.x + b.x) / 2 + n.nx * 30, z: (a.z + b.z) / 2 + n.nz * 30 / DEPTH };
@@ -493,6 +502,7 @@ class WorldSeam {
       const u = i / n; if (u > wave) break; const fromEnd = Math.min(u, 1 - u); if (fromEnd < heal * .5) continue;
       const [x0, y0] = sp[i]; const [x1, y1] = sp[i + 1];
       // Black volcanic glass with an emerald core light and a doubled jagged outer seam.
+      if (spellSheetReady('rift_seam')) { ctx.save(); ctx.translate(Math.round((x0 + x1) / 2), Math.round((y0 + y1) / 2)); ctx.rotate(Math.atan2(y1 - y0, x1 - x0)); drawSpellSprite(ctx, 'rift_seam', Math.floor(this.t * 8 + i) % 6, 0, 0, { anchor: 'center', scale: Math.max(.8, Math.hypot(x1 - x0, y1 - y0) / 34) }); ctx.restore(); continue; }
       if (spellSheetReady('seam_crack')) { drawSpellSprite(ctx, 'seam_crack', Math.floor(this.t * 8 + i) % 4, (x0 + x1) / 2, (y0 + y1) / 2, { anchor: 'center', scale: .5 }); continue; }
       plate(ctx, [[x0, y0 - 3], [x1, y1 - 3], [x1, y1 + 3], [x0, y0 + 3]], mat, 3600 + i, { alpha: .95, glowEdge: .9, core: .3 });
       thread(ctx, [[x0, y0 - 5 - (i % 2) * 2], [x1, y1 - 5 - ((i + 1) % 2) * 2]], mat.vein, 1, .7);
