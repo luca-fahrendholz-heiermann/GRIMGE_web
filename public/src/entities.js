@@ -14,6 +14,9 @@ import { releaseWeaponReach, releaseFormPull, isOnCastle, weaponReachShot } from
 import { onStatusHit, setStatusSource, getStatusSource, isBladeLook, hasStatus, drawIceBlock, applyStatus } from './status_effects.js';
 import { sceneAiHint, followSceneHint } from './scene_systems.js';
 import { tryAICounterDomain, tryAISpecial, updateAIRecast } from './ai_specials.js';
+import { aiSkill, perceive, aimPoint, beginAIDraw, updateAIDraw, cancelAIDraw, renderAIDraw, canAfford, updatePlan, planMove, dodgeShot, AI_MANA_REGEN } from './ai_brain.js'; // a human-like AI Wizard
+// Runes the AI draws for its built-in spells (time + the glyph shown in its casting circle).
+const AI_SPELL_RUNES = Object.freeze({ fireball: ['ignis'], frost_nova: ['aqua', 'ventus'], stone_wall: ['terra', 'construct'], arcane_aegis: ['ward'], inferno_beam: ['ignis', 'construct'], glacial_ray: ['aqua', 'construct'], thunder_lance: ['fulgur', 'construct'], null_ray: ['void', 'construct'] });
 import { formDive, FORM_SPECIAL_MANA, tickFormSpecials } from './form_specials.js';
 import { renderInfusion } from './nature_spells.js';
 import { TransformationFx } from './transform_fx.js';
@@ -39,7 +42,7 @@ export function deckSpellOptions(ids = []) {
   const options = new Map();
   const addRecipe = (combo) => {
     const def = lookupRecipe(combo.map((id) => ({ id })));
-    if (def && !options.has(def.id)) options.set(def.id, { def, cost: combo.reduce((sum, id) => sum + runeManaCost(id), 0) });
+    if (def && !options.has(def.id)) options.set(def.id, { def, runes: combo, cost: combo.reduce((sum, id) => sum + runeManaCost(id), 0) });
   };
   for (let i = 0; i < ids.length; i++) {
     addRecipe([ids[i]]);
@@ -637,6 +640,10 @@ export class Player extends GroundEntity {
         } else {
           if (input.justPressed('Space') && !silkAirJump(this)) this.jumpBufferTimer = JUMP_BUFFER_TIME;
         }
+      } else if (input.gameplayBlocked && this.grounded && !isAction) {
+        // Drawing a rune (user, 4 Nov 2026): the Wizard stands — a sprint no longer carries on while drawing.
+        this.vx = 0; this.vz = 0; this.cancelSprint();
+        if (this.state === 'run' || this.state === 'sprint') this.state = 'idle';
       }
       const previousX = this.x; const previousZ = this.z;
       // Fadenschlag swing: the pendulum sets position and elevation itself (no gravity, no velocity step).
@@ -2785,7 +2792,7 @@ export class EnemyChampion extends GroundEntity {
     if (this.lifeState === 'Dying') { this.stateTimer -= dt; if (this.stateTimer <= 0) { this.lifeState = 'Dead'; this.respawnTimer = gameWorld.canRespawn(this.team) ? this.respawnDuration : Infinity; if (!Number.isFinite(this.respawnTimer)) gameWorld.onFinalWizardDeath(this.team); } return; }
     if (this.lifeState === 'Dead') { this.respawnTimer -= dt; if (this.respawnTimer <= 0) this.respawn(battlefield, gameWorld); return; }
     this.specialCooldown = Math.max(0, (this.specialCooldown ?? 0) - dt); updateAIRecast(this, dt, gameWorld);
-    this.attackCooldown -= dt; this.spellCooldown -= dt; this.defensiveCooldown -= dt; this.beamCooldown -= dt; this.mp = Math.min(this.maxMp, this.mp + dt * 11); this.arcaneShieldTimer = Math.max(0, this.arcaneShieldTimer - dt); if (this.arcaneShieldTimer <= 0) this.arcaneShield = 0; this.freezeTimer = Math.max(0, this.freezeTimer - dt); this.slowTimer = Math.max(0, this.slowTimer - dt); if (!this.slowTimer) this.slowFactor = 1;
+    this.attackCooldown -= dt; this.spellCooldown -= dt; this.defensiveCooldown -= dt; this.beamCooldown -= dt; this.mp = Math.min(this.maxMp, this.mp + dt * AI_MANA_REGEN * (this.manaRegenMult ?? 1)); this.arcaneShieldTimer = Math.max(0, this.arcaneShieldTimer - dt); if (this.arcaneShieldTimer <= 0) this.arcaneShield = 0; this.freezeTimer = Math.max(0, this.freezeTimer - dt); this.slowTimer = Math.max(0, this.slowTimer - dt); if (!this.slowTimer) this.slowFactor = 1;
     if (this.stateTimer > 0) { this.stateTimer -= dt; if (this.stateTimer <= 0) this.state = this.grounded ? 'idle' : 'fall'; }
     // Deceived (S74 Trugbild): the AI Wizard goes for an illusion double instead of the real one.
     this.deceiveTimer = Math.max(0, (this.deceiveTimer ?? 0) - dt);
@@ -2796,6 +2803,11 @@ export class EnemyChampion extends GroundEntity {
     const ownCastle = battlefield.getCastle(this.team);
     const objectiveThreat = battlefield.objectivesActive && player.isAlive
       && [ownTower, ownCastle].some((objective) => !objective.isDead && !objective.isDestroyed && groundDistance(player, objective) < 245);
+    // Human-like AI (ai_brain.js): a delayed, imperfect picture of the player, runes drawn over time, a plan.
+    const seen = player.isAlive && !this.passive ? perceive(this, player, dt, gameWorld) : null;
+    const drawingRune = !this.passive && updateAIDraw(this, dt, gameWorld);
+    const staggered = this.state === 'hurt' && this.stateTimer > 0;
+    this.aiDodge = this.aiDodge && this.aiDodge.t > 0 ? { ...this.aiDodge, t: this.aiDodge.t - dt } : null;
     if (this.freezeTimer > 0) { this.vx = this.vz = 0; }
     else if (this.activeClash) {
       // Locked in a Beam Clash: hold the beam; the clash coordinator drives
@@ -2813,11 +2825,21 @@ export class EnemyChampion extends GroundEntity {
       this.passiveIdle = (this.passiveIdle ?? 0) + dt;
       if (this.passiveIdle > 3 && this.hp < this.maxHp) this.hp = this.maxHp;
     }
+    else if (staggered) {
+      // A hit staggers the Wizard for the stun time (it used to keep walking and casting through every hit).
+      this.vx = this.vz = 0;
+    }
+    // Reflexes (after the reaction time) beat a rune being drawn: a counter domain / counter beam.
     else if (player.isAlive && tryAICounterDomain(this, gameWorld, spells)) {
       this.vx = this.vz = 0;
     }
     else if (player.isAlive && this.tryAICounterBeam(gameWorld)) {
       this.vx = this.vz = 0;
+    }
+    else if (drawingRune) {
+      // Drawing a rune: it stands and faces where it thinks the player is (the circle shows in front of it).
+      this.aiMode = 'DRAWING'; this.vx = this.vz = 0; this.state = 'idle';
+      if (seen) this.facing = Math.sign(seen.x - this.x) || this.facing;
     }
     else if (this.blockingWallToward(player)) {
       // Walled in / walled off: the champion breaks through the wall in its way (walls stand until destroyed).
@@ -2833,6 +2855,8 @@ export class EnemyChampion extends GroundEntity {
     else if (player.isAlive && distance <= 70) {
       this.aiMode = 'DUEL';
       this.vx = this.vz = 0;
+      // Close quarters: the first swing comes after the reaction time, not on the frame the player arrives.
+      this.duelT = (this.prevAIMode === 'DUEL' ? (this.duelT ?? 0) : 0) + dt;
       this.facing = Math.sign(player.x - this.x) || this.facing;
       // The upper battlements are Wizard-only spell-duel spaces.  Champions
       // can pressure each other there, but not with grounded melee strings.
@@ -2841,19 +2865,26 @@ export class EnemyChampion extends GroundEntity {
         this.tryAICast('fireball', gameWorld, 12, 2.0);
       } else if (this.tryAIDefense(player, distance, objectiveThreat, gameWorld)) {
         this.vx = this.vz = 0;
-      } else if (this.attackCooldown <= 0) this.executeAIAttack(player);
+      } else if (this.attackCooldown <= 0 && this.duelT >= aiSkill(this, gameWorld).reaction) this.executeAIAttack(player);
     }
     else if (player.isAlive && (this.tauntTimer > 0 || distance < 430 && (gameWorld.activeMode?.enemyBehavior === 'duel' || gameWorld.modeState?.bossActive || objectiveThreat || Math.abs(player.x - home.x) < 430))) {
       this.aiMode = this.tauntTimer > 0 ? 'TAUNTED' : objectiveThreat ? 'PROTECT_OBJECTIVE' : 'INTERCEPT';
-      // Taunted: no retreat, straight at the challenger.
-      const retreating = !(this.tauntTimer > 0) && this.hp / this.maxHp < .30 && distance < 180;
-      const destination = retreating ? home : player;
-      const move = normalizeMove({ x: destination.x - this.x, z: (destination.z - this.z) * 150 });
-      this.facing = retreating ? -Math.sign(move.x || this.facing) : Math.sign(move.x) || this.facing;
-      this.vx = move.x * this.speed * this.slowFactor * (retreating ? -.82 : 1);
-      this.vz = move.z * this.speed / 150 * this.slowFactor * (retreating ? -.82 : 1);
-      this.state = 'run';
-      if (!this.tryAIDefense(player, distance, objectiveThreat, gameWorld) && distance > 110 && !this.tryAIBeam(player, distance, gameWorld)) {
+      // A plan for the moment (PRESS / KITE / RECOVER / PUNISH), walked toward the delayed snapshot of the player.
+      // Taunted: straight at the challenger; guarding an objective: no retreat from it.
+      updatePlan(this, player, dt, gameWorld);
+      if (objectiveThreat && this.aiPlan === 'RECOVER') this.aiPlan = 'KITE';
+      const goal = planMove(this, seen ?? player, home, this.tauntTimer > 0 ? 'PRESS' : this.aiPlan);
+      const move = normalizeMove({ x: goal.x - this.x, z: (goal.z - this.z) * 150 });
+      const arrived = Math.abs(goal.x - this.x) < 12 && Math.abs((goal.z - this.z) * 150) < 8;
+      this.facing = goal.face || this.facing;
+      this.vx = arrived ? 0 : move.x * this.speed * this.slowFactor * goal.speed;
+      this.vz = arrived ? 0 : move.z * this.speed / 150 * this.slowFactor * goal.speed;
+      // Incoming shot in its lane: a side-step in depth now and then (skill).
+      if (!this.aiDodge) dodgeShot(this, gameWorld, spells.activeSpells.filter((sp) => sp.isCapturableProjectile || sp.isSigProjectile).concat(gameWorld.projectiles ?? []));
+      if (this.aiDodge) this.vz = this.aiDodge.dir * this.speed / 150 * 1.3;
+      this.state = this.vx || this.vz ? 'run' : 'idle';
+      const castWindow = this.aiPlan !== 'RECOVER' || this.mp > this.maxMp * .7;
+      if (castWindow && !this.tryAIDefense(player, distance, objectiveThreat, gameWorld) && distance > 110 && !this.tryAIBeam(player, distance, gameWorld)) {
         if (tryAISpecial(this, player, distance, gameWorld, spells)) { /* special rune */ }
         else if (this.deckSpells) this.tryAIDeckSpell(player, distance, gameWorld);
         else this.tryAICast('fireball', gameWorld, 12, objectiveThreat ? 2.1 : 3.1);
@@ -2862,14 +2893,23 @@ export class EnemyChampion extends GroundEntity {
       this.aiMode = 'DEFEND_CASTLE';
       const move = normalizeMove({ x: home.x - this.x, z: (home.z - this.z) * 150 }); this.facing = Math.sign(move.x) || this.facing; this.vx = move.x * this.speed * .45; this.vz = move.z * this.speed / 150 * .45; this.state = 'run';
     }
+    this.prevAIMode = this.aiMode;
     if (Math.abs(this.kbVelX) > 0.5) { const decay = KB_DECAY_RATE * dt; this.kbVelX = Math.abs(this.kbVelX) <= decay ? 0 : this.kbVelX - Math.sign(this.kbVelX) * decay; } else { this.kbVelX = 0; }
     this.integrateElevation(dt, 1200); const previousX = this.x; const previousZ = this.z; this.x += (this.vx + this.kbVelX) * dt; this.z += this.vz * dt; battlefield.resolveEntityCollision(this); gameWorld.resolveSpellObstacles(this, previousX, previousZ);
   }
-  tryAICast(id, gameWorld, manaCost, cooldown) {
-    if (this.spellCooldown > 0 || this.mp < manaCost || !this.arenaCastAllowed()) return false;
-    this.mp -= manaCost; this.spellCooldown = cooldown; this.spendArenaCast();
-    spells.cast(this, { id, tier: ['stone_wall', 'arcane_aegis', 'inferno_beam', 'glacial_ray', 'thunder_lance', 'null_ray'].includes(id) ? 2 : 1 }, gameWorld);
-    return true;
+  // Every cast is drawn first (ai_brain.js: time like a skilled hand, a visible circle, a grade); instant = a reflex
+  // (beam answers after the reaction time). onCast runs with the finished cast.
+  tryAICast(id, gameWorld, manaCost, cooldown, { instant = false, onCast = null } = {}) {
+    if (this.spellCooldown > 0 || this.aiDraw || this.mp < manaCost || !this.arenaCastAllowed()) return false;
+    const fire = (grade) => {
+      if (this.mp < manaCost || !this.arenaCastAllowed()) return;
+      this.mp -= manaCost; this.spellCooldown = cooldown; this.spendArenaCast();
+      if (this.seen && !instant) this.facing = Math.sign(this.seen.x - this.x) || this.facing;
+      spells.cast(this, { id, tier: ['stone_wall', 'arcane_aegis', 'inferno_beam', 'glacial_ray', 'thunder_lance', 'null_ray'].includes(id) ? 2 : 1 }, gameWorld, grade);
+      onCast?.();
+    };
+    if (instant) { fire('B'); return true; }
+    return beginAIDraw(this, gameWorld, { runes: AI_SPELL_RUNES[id] ?? ['ignis'], run: fire });
   }
   // Training: the sparring partner fights with an editable rune deck.
   setDeck(ids = []) {
@@ -2894,23 +2934,29 @@ export class EnemyChampion extends GroundEntity {
   }
   tryAIDeckSpell(player, distance, gameWorld) {
     if (!this.deckSpells) return this.tryAICast('fireball', gameWorld, 12, 3.1);
-    if (this.spellCooldown > 0 || !this.deckSpells.length || !this.arenaCastAllowed()) return false;
+    if (this.spellCooldown > 0 || this.aiDraw || !this.deckSpells.length || !this.arenaCastAllowed()) return false;
     const hurt = this.hp / this.maxHp < .6;
     const usable = this.deckSpells.filter(({ def, cost }) => {
       // Special runes go through ai_specials.js (situation + second stage), never the plain pick.
-      if (cost > this.mp || def.deliveryType === 'beam' || def.isSignature || def.isBuffForm) return false;
+      if (!canAfford(this, cost, player) || def.deliveryType === 'beam' || def.isSignature || def.isBuffForm) return false;
       if (def.targetingMode === 'self' || def.targetingMode === 'ally') return hurt && ['arcane_aegis', 'sandstorm_bastion', 'mirror_ward', 'eidolon_mantle'].includes(def.id);
       return true;
     });
     if (!usable.length) return false;
-    const { def, cost } = usable[Math.floor(Math.random() * usable.length)];
-    this.facing = Math.sign(player.x - this.x) || this.facing;
-    const target = def.targetingMode === 'ground' ? { x: player.x, z: player.z }
-      : def.targetingMode === 'placement' ? { x: this.x + this.facing * 80, z: this.z }
-      : def.targetingMode === 'ally' ? { entity: this } : null;
-    this.mp -= cost; this.spellCooldown = 2.4; this.spendArenaCast();
-    spells.cast(this, def, gameWorld, null, target);
-    return true;
+    // Cheaper spells are picked more often than the big ones (it saves mana instead of firing everything).
+    const weights = usable.map((o) => 1 / Math.max(8, o.cost)); let r = Math.random() * weights.reduce((a, b) => a + b, 0);
+    const { def, cost, runes } = usable[Math.max(0, weights.findIndex((w) => (r -= w) <= 0))];
+    // Aimed when the glyph is done — at the snapshot of the player then, led a little (never pixel-perfect).
+    const fire = (grade) => {
+      if (this.mp < cost || !this.arenaCastAllowed()) return;
+      const seen = this.seen ?? player; this.facing = Math.sign(seen.x - this.x) || this.facing;
+      const target = def.targetingMode === 'ground' ? aimPoint(this, gameWorld) ?? { x: seen.x, z: seen.z }
+        : def.targetingMode === 'placement' ? { x: this.x + this.facing * 80, z: this.z }
+        : def.targetingMode === 'ally' ? { entity: this } : null;
+      this.mp -= cost; this.spellCooldown = 1.2 + Math.random() * .8; this.spendArenaCast();
+      spells.cast(this, def, gameWorld, grade, target);
+    };
+    return beginAIDraw(this, gameWorld, { runes, run: fire });
   }
   // Beams stay rare in narrow Castle Siege lanes: only duel / boss fighters
   // open with one, and only when lined up in the same depth lane.
@@ -2928,26 +2974,37 @@ export class EnemyChampion extends GroundEntity {
   tryAICounterBeam(gameWorld) {
     const incoming = spells.activeSpells.find((spell) => spell.isBeam && !spell.aiConsidered && spell.team !== this.team
       && spell.phase === 'charge' && Math.abs(spell.z - this.z) < .15 && Math.sign(this.x - spell.originX) === spell.facing);
-    if (!incoming) return false;
-    incoming.aiConsidered = true;
-    if (this.beamCooldown > 0 || this.mp < 26 || !this.aiBeamId() || Math.random() > .6) return false;
+    if (!incoming) { this.beamSeenT = 0; return false; }
+    // Can it answer at all? (decided once per beam: 60 % of the time it tries)
+    if (this.beamCooldown > 0 || this.mp < 26 || !this.aiBeamId()) { incoming.aiConsidered = true; return false; }
+    if (incoming.aiAnswer === undefined) incoming.aiAnswer = Math.random() <= .6;
+    if (!incoming.aiAnswer) { incoming.aiConsidered = true; return false; }
+    // A reflex, but not on the frame the beam appears: the charging glow is read for a beat first
+    // (40 % of the reaction time — beams charge only .2–.4 s). It holds still meanwhile.
+    this.beamSeenT = (this.beamSeenT ?? 0) + (gameWorld.lastDt ?? 1 / 60);
+    if (this.beamSeenT < aiSkill(this, gameWorld).reaction * .4) return true;
+    incoming.aiConsidered = true; this.beamSeenT = 0;
+    if (this.aiDraw) cancelAIDraw(this, 'KONTER!');
     this.facing = -incoming.facing;
     this.beamCooldown = 8;
     this.spellCooldown = 0;
-    return this.tryAICast(this.aiBeamId(), gameWorld, 26, 1.6);
+    return this.tryAICast(this.aiBeamId(), gameWorld, 26, 1.6, { instant: true });
   }
   tryAIDefense(player, distance, objectiveThreat, gameWorld) {
-    if (this.hp / this.maxHp < .48 && this.defensiveCooldown <= 0 && this.mp >= 24) {
-      this.mp -= 24; this.defensiveCooldown = 8; this.arcaneShield = 72; this.arcaneShieldTimer = 4;
-      spells.cast(this, { id: 'arcane_aegis', tier: 2 }, gameWorld);
-      return true;
+    if (this.hp / this.maxHp < .48 && this.defensiveCooldown <= 0 && this.mp >= 24 && !this.aiDraw) {
+      // The shield is drawn too (a hit breaks it); it only goes up when the glyph is done.
+      this.defensiveCooldown = 3;
+      return beginAIDraw(this, gameWorld, { runes: AI_SPELL_RUNES.arcane_aegis, color: '#82b1ff', run: () => {
+        if (this.mp < 24) return; this.mp -= 24; this.defensiveCooldown = 8; this.arcaneShield = 72; this.arcaneShieldTimer = 4;
+        spells.cast(this, { id: 'arcane_aegis', tier: 2 }, gameWorld);
+      } });
     }
     if (distance <= 105 && this.mp >= 18 && this.spellCooldown <= 0) return this.tryAICast('frost_nova', gameWorld, 18, 9.0);
     if (objectiveThreat && distance < 230 && this.mp >= 22 && this.spellCooldown <= 0) return this.tryAICast('stone_wall', gameWorld, 22, 5.0);
     return false;
   }
   executeAIAttack(target) { this.attackCooldown = 1.1; this.state = 'attack1'; this.stateTimer = .28; audio.playSlash(1.1); combat.spawnSlashArc(this.x + this.facing * 20, this.y - 28, this.facing, { radius: 42, color: '#f44336', glow: '#b71c1c' }); if (!(isUpperCastleBattlement(this) && isUpperCastleBattlement(target)) && Math.abs(target.z - this.z) <= .22 && Math.abs((target.worldHeight ?? 0) - this.worldHeight) <= 70) target.takeDamage(24, this.facing * 240, 100, .3); }
-  takeDamage(amount, kx = 0, lift = 0, stun = .35, isCrit = false, hitKind = 'melee') { if (!this.isAlive) return; if (this.arcaneShield > 0) { const absorbed = Math.min(amount, this.arcaneShield); this.arcaneShield -= absorbed; amount -= absorbed; if (amount <= 0) { combat.spawnElementalParticles(this.x, this.y - 35, 'fulgur', 5); return; } } this.passiveIdle = 0; this.hp = Math.max(this.passive ? 1 : 0, this.hp - amount); if (this.hp > 0) onStatusHit(this, amount, hitKind); this.hitFlash = .15; this.kbVelX = kx; this.vx = 0; this.vElevation = lift; this.state = 'hurt'; this.stateTimer = stun; combat.spawnDamageText(this.x, this.y - 45, amount, { isCrit, color: '#ff7043' }); if (!this.hp) { window.gameWorld?.recordWizardDeath?.(this.team); this.lifeState = 'Dying'; this.state = 'dead'; this.stateTimer = .45; combat.spawnShockwave(this.x, this.y - 30, 80, '#ff5252'); } }
+  takeDamage(amount, kx = 0, lift = 0, stun = .35, isCrit = false, hitKind = 'melee') { if (!this.isAlive) return; if (this.arcaneShield > 0) { const absorbed = Math.min(amount, this.arcaneShield); this.arcaneShield -= absorbed; amount -= absorbed; if (amount <= 0) { combat.spawnElementalParticles(this.x, this.y - 35, 'fulgur', 5); return; } } this.passiveIdle = 0; if (this.aiDraw && amount >= 6) cancelAIDraw(this); this.hp = Math.max(this.passive ? 1 : 0, this.hp - amount); if (this.hp > 0) onStatusHit(this, amount, hitKind); this.hitFlash = .15; this.kbVelX = kx; this.vx = 0; this.vElevation = lift; this.state = 'hurt'; this.stateTimer = stun; combat.spawnDamageText(this.x, this.y - 45, amount, { isCrit, color: '#ff7043' }); if (!this.hp) { window.gameWorld?.recordWizardDeath?.(this.team); this.lifeState = 'Dying'; this.state = 'dead'; this.stateTimer = .45; combat.spawnShockwave(this.x, this.y - 30, 80, '#ff5252'); } }
   takeHazardDamage(amount) {
     if (!this.isAlive || !(amount > 0)) return;
     if (this.arcaneShield > 0) { const absorbed = Math.min(amount, this.arcaneShield); this.arcaneShield -= absorbed; amount -= absorbed; if (amount <= 0) return; }
@@ -2959,7 +3016,7 @@ export class EnemyChampion extends GroundEntity {
   freeze(duration) { this.freezeTimer = duration; } slow(duration, factor) { this.slowTimer = duration; this.slowFactor = factor; }
   // Damage over time (burn, poison, bleed, hazards): HP only — the AI keeps acting (no 'hurt' state every tick).
   takeHazardDamage(amount) { if (!this.isAlive || !(amount > 0)) return; if (this.arcaneShield > 0) { const absorbed = Math.min(amount, this.arcaneShield); this.arcaneShield -= absorbed; amount -= absorbed; if (amount <= 0) return; } if (this.hp - amount <= 0 && !this.passive) { this.takeDamage(amount, 0, 0, 0, false, 'status'); return; } this.hp = Math.max(this.passive ? 1 : 0, this.hp - amount); this.passiveIdle = 0; this.hitFlash = Math.max(this.hitFlash, .06); combat.spawnDamageText(this.x, this.y - 45, Math.round(amount), { color: '#ff8a65' }); }
-  render(ctx) { sprites.renderEntity(ctx, this.heroKey, this.x, this.y, { facing: this.facing, state: this.state, animTime: this.animTime, hitFlash: this.hitFlash > 0, alpha: this.lifeState === 'Dead' ? 0 : 1 }); if (this.lifeState !== 'Dead') { const healthBarY = this.y - ENTITY_VISUALS.heroHeight - 8; ctx.fillStyle = 'rgba(0,0,0,.8)'; ctx.fillRect(this.x - 27, healthBarY, 54, 6); ctx.fillStyle = '#f44336'; ctx.fillRect(this.x - 27, healthBarY, 54 * this.hp / this.maxHp, 6); } }
+  render(ctx) { sprites.renderEntity(ctx, this.heroKey, this.x, this.y, { facing: this.facing, state: this.state, animTime: this.animTime, hitFlash: this.hitFlash > 0, alpha: this.lifeState === 'Dead' ? 0 : 1 }); if (this.lifeState === 'Alive') renderAIDraw(ctx, this); if (this.lifeState !== 'Dead') { const healthBarY = this.y - ENTITY_VISUALS.heroHeight - 8; ctx.fillStyle = 'rgba(0,0,0,.8)'; ctx.fillRect(this.x - 27, healthBarY, 54, 6); ctx.fillStyle = '#f44336'; ctx.fillRect(this.x - 27, healthBarY, 54 * this.hp / this.maxHp, 6); } }
 }
 
 // Training yard straw dummy: a stationary, unkillable hostile target. It is

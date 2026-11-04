@@ -536,11 +536,13 @@ spells.clearRuntime();
 game.player.lifeState = 'Alive'; game.player.x = redTower.x - 95; game.player.z = redTower.z; game.player.elevation = 0; game.player.grounded = true; game.battlefield.resolveEntityCollision(game.player);
 game.enemyChampion.isDead = false; game.enemyChampion.hp = game.enemyChampion.maxHp; game.enemyChampion.mp = game.enemyChampion.maxMp; game.enemyChampion.x = redTower.x + 70; game.enemyChampion.z = redTower.z; game.enemyChampion.spellCooldown = 0; game.enemyChampion.defensiveCooldown = 0; game.battlefield.resolveEntityCollision(game.enemyChampion);
 game.enemyChampion.update(.1, game, game.battlefield);
-assert(game.enemyChampion.aiMode === 'PROTECT_OBJECTIVE' && spells.activeSpells.some((spell) => spell.isStoneWall && spell.team === 'red'), 'Enemy Wizard detects pressure on its Tower and creates real defensive wall pressure');
+const finishAIDraw = (E) => { if (E.aiDraw) { E.aiDraw.fail = false; E.aiDraw.t = E.aiDraw.dur; } E.update(1 / 60, game, game.battlefield); };
+const drewWall = game.enemyChampion.aiDraw?.runes?.includes('terra'); finishAIDraw(game.enemyChampion);
+assert(drewWall && game.enemyChampion.aiMode === 'PROTECT_OBJECTIVE' && spells.activeSpells.some((spell) => spell.isStoneWall && spell.team === 'red'), 'Enemy Wizard detects pressure on its Tower, draws the wall rune and creates real defensive wall pressure');
 spells.clearRuntime();
 game.enemyChampion.hp = 100; game.enemyChampion.mp = game.enemyChampion.maxMp; game.enemyChampion.spellCooldown = 0; game.enemyChampion.defensiveCooldown = 0;
-game.enemyChampion.update(.1, game, game.battlefield);
-assert(game.enemyChampion.arcaneShield > 0, 'Low-health Enemy Wizard uses the shared Arcane Aegis defense instead of only walking or meleeing');
+game.enemyChampion.update(.1, game, game.battlefield); const shieldBefore = game.enemyChampion.arcaneShield; finishAIDraw(game.enemyChampion);
+assert(!(shieldBefore > 0) && game.enemyChampion.arcaneShield > 0, 'Low-health Enemy Wizard draws and raises the shared Arcane Aegis (only once the glyph is done)');
 game.enemyChampion.arcaneShield = 0; game.enemyChampion.arcaneShieldTimer = 0; game.enemyChampion.hp = game.enemyChampion.maxHp;
 const laneMinion = game.minions.find((minion) => minion.team === 'blue' && minion.type === 'melee');
 const frontLaneMinion = game.minions.find((minion) => minion.team === 'blue' && minion.laneIndex === 2);
@@ -861,9 +863,30 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
   E.beamCooldown = 0; E.spellCooldown = 0;
   Math.random = () => .1;
   spells.cast(P, spells.resolveSpell([rune('fulgur'), rune('fulgur')]), game);
-  E.update(1 / 60, game, game.battlefield);
+  E.update(1 / 60, game, game.battlefield); const instantBeam = spells.activeSpells.some((s) => s.isBeam && s.team === 'red');
+  for (let i = 0; i < 40 && !spells.activeSpells.some((s) => s.isBeam && s.team === 'red'); i++) { spells.update(1 / 60, game); E.update(1 / 60, game, game.battlefield); }
   Math.random = realRandom;
-  assert(spells.activeSpells.some((s) => s.isBeam && s.team === 'red'), 'A duel champion can answer a charging beam with a counter-beam');
+  assert(!instantBeam && spells.activeSpells.some((s) => s.isBeam && s.team === 'red'), 'A duel champion answers a charging beam with a counter-beam — after its reaction time, not on the same frame');
+  // Human-like AI (user, 3 Nov 2026): runes take a skilled hand's time and show a casting circle, a hit breaks them,
+  // the mana regenerates like the player's, the AI acts on a delayed snapshot and is staggered by hits.
+  { const AB = await import('./public/src/ai_brain.js');
+    resetDuel(300, 600); E.passive = false; E.mp = 0; E.update(1, game, game.battlefield);
+    assert(Math.abs(E.mp - AB.AI_MANA_REGEN) < .6, 'AI mana regenerates at the player rate (5.5/s), not double (' + E.mp.toFixed(1) + ')');
+    resetDuel(300, 600); E.mp = E.maxMp; E.setDeck(['ignis']); E.spellCooldown = 0; E.aiDraw = null; const before = spells.activeSpells.length;
+    assert(E.tryAIDeckSpell(P, 300, game) && E.aiDraw && E.aiDraw.dur >= .5 && spells.activeSpells.length === before && E.mp === E.maxMp, 'The AI draws its rune first (' + E.aiDraw?.dur.toFixed(2) + ' s for IGNIS) — nothing is cast or paid before the glyph is done');
+    let threw = null; try { const AB2 = AB; AB2.renderAIDraw(new Proxy({}, { get: (t, k) => (k === 'measureText' ? () => ({ width: 10 }) : k === 'canvas' ? undefined : () => {}), set: () => true }), E); } catch (e) { threw = e; }
+    E.invulnerableTimer = 0; E.takeDamage(20, 0, 0, .2);
+    assert(!threw && !E.aiDraw && E.mp === E.maxMp, 'Its casting circle renders, and a hit breaks the rune (no mana spent)' + (threw ? ' — ' + threw.message : ''));
+    E.state = 'idle'; E.stateTimer = 0; E.deckSpells = null; E.deckIds = [];
+    resetDuel(300, 650); E.passive = false; E.seen = null; E.update(1 / 60, game, game.battlefield); const seenX = E.seen?.x; P.x -= 200; E.update(1 / 60, game, game.battlefield);
+    assert(Number.isFinite(seenX) && Math.abs(E.seen.x - seenX) < 1, 'The AI acts on a delayed snapshot of the player (it does not trace every step at once)');
+    resetDuel(300, 520); E.passive = false; E.invulnerableTimer = 0; E.takeDamage(10, 0, 0, .4); E.update(1 / 60, game, game.battlefield);
+    assert(E.vx === 0 && E.vz === 0 && E.state === 'hurt', 'A hit staggers the AI Wizard (it no longer walks through every hit)');
+    // The player too: drawing a rune stops a running sprint (user, 4 Nov 2026).
+    const blocked = { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false, gameplayBlocked: true };
+    E.passive = true; P.state = 'run'; P.stateTimer = 0; P.grounded = true; P.elevation = 0; P.sprintActive = true; P.vx = 420; P.vz = 0; const xd = P.x;
+    for (let i = 0; i < 20; i++) P.update(1 / 60, blocked, game.battlefield, game);
+    assert(Math.abs(P.x - xd) < 10 && !P.sprintActive && P.vx === 0, 'While drawing a rune the Wizard stands — a sprint does not carry on (' + Math.round(P.x - xd) + ' px)'); E.passive = false; }
 
   // Projectile capture + return volley.
   resetDuel(300, 470);
@@ -3425,31 +3448,32 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   {
     const AI = await import('./public/src/ai_specials.js'); const D = await import('./public/src/signature_abilities_g.js'); const H = await import('./public/src/signature_abilities_h.js');
     const E = game.enemyChampion;
-    const arm = (kit, dx) => { spells.clearRuntime(); E.lifeState = 'Alive'; E.hp = E.maxHp; E.mp = E.maxMp; E.passive = false; E.aiRecast = null; E.specialCooldown = 0; E.spellCooldown = 0; E.freezeTimer = 0; E.deckIds = []; E.aiSpecialIds = kit; E.x = P.x + dx; E.z = P.z; E.elevation = 0; E.state = 'idle'; E.stateTimer = 0; game.battlefield.placeOnSurface(E); };
+    const arm = (kit, dx) => { spells.clearRuntime(); E.lifeState = 'Alive'; E.hp = E.maxHp; E.mp = E.maxMp; E.passive = false; E.aiRecast = null; E.aiDraw = null; E.specialCooldown = 0; E.spellCooldown = 0; E.freezeTimer = 0; E.deckIds = []; E.aiSpecialIds = kit; E.x = P.x + dx; E.z = P.z; E.elevation = 0; E.state = 'idle'; E.stateTimer = 0; game.battlefield.placeOnSurface(E); };
     const stepAI = (sec) => { for (let i = 0; i < sec * 60; i++) { P.update(1 / 60, neutral, game.battlefield, game); game.updateRecasts(1 / 60); spells.update(1 / 60, game); E.update(1 / 60, game, game.battlefield); } };
     // Training without a kit: no specials.
     reset(); arm(null, 200); E.aiSpecialIds = undefined;
     assert(!AI.tryAISpecial(E, P, 200, game, spells), 'AI: without a deck / kit the training partner casts no special runes');
     // Counter domain → domain duel.
     reset(); dummy.homeX = dummy.x = 900; arm(['sig_S53'], 120);
-    const sd = game.slotRuneSpell(runeById('sig_S53')); game.castSlotAt(sd.position); stepAI(.2);
+    const sd = game.slotRuneSpell(runeById('sig_S53')); game.castSlotAt(sd.position); stepAI(.6);
     const aiDomain = D.activeDomains().find((d) => d.owner === E); const myDomain = D.activeDomains().find((d) => d.owner === P);
     assert(aiDomain && myDomain && aiDomain.clash && aiDomain.clash === myDomain.clash && E.lastAISpecial === 'S53', 'AI: a hostile domain around it → it opens its own (domain duel)');
     stepAI(3.4);
     assert(myDomain.collapseT != null && aiDomain.collapseT == null, 'AI: in the duel the AI taps on its own — without tapping your dome loses');
     // Shadow binding: the AI binds the Wizard and strangles after a moment.
     reset(); dummy.homeX = dummy.x = 900; arm(['sig_S54'], 200); P.invulnerableTimer = 0; const hpS = P.hp;
-    assert(AI.tryAISpecial(E, P, 200, game, spells) && E.aiRecast?.sig === 'S54', 'AI: at mid range in the same lane it casts the shadow binding');
+    const finishDraw = () => { if (E.aiDraw) { E.aiDraw.fail = false; E.aiDraw.t = E.aiDraw.dur; } E.update(1 / 60, game, game.battlefield); };
+    assert(AI.tryAISpecial(E, P, 200, game, spells) && E.aiDraw && !E.aiRecast && (finishDraw(), E.aiRecast?.sig === 'S54'), 'AI: at mid range in the same lane it draws and casts the shadow binding');
     stepAI(.8); const bindAI = spells.activeSpells.find((sp) => sp instanceof H.ShadowBind);
     assert(bindAI?.victim === P && P.freezeTimer > 0, 'AI: the shadow reaches the Wizard and binds him');
     stepAI(2.6);
     assert(P.hp <= hpS - H.SHADOW.strangle + 1 && !E.aiRecast, 'AI: it uses the second stage (strangle) on its own');
     // A two-stage rush: the AI fires stage 2 by itself.
     reset(); dummy.homeX = dummy.x = 900; arm(['sig_S46'], 150); P.invulnerableTimer = 0; const hpR = P.hp;
-    assert(AI.tryAISpecial(E, P, 150, game, spells) && E.aiRecast?.sig === 'S46', 'AI: in the same lane it opens with the spiral rush');
+    assert(AI.tryAISpecial(E, P, 150, game, spells) && (finishDraw(), E.aiRecast?.sig === 'S46'), 'AI: in the same lane it opens with the spiral rush');
     stepAI(2.5);
     assert(P.hp < hpR && !E.aiRecast && E.lastAISpecial === 'S46', 'AI: stage 2 (teleport above, slam) follows without the player');
-    E.aiSpecialIds = undefined; E.passive = false; E.x = 900; spells.clearRuntime(); P.freezeTimer = 0;
+    E.aiSpecialIds = undefined; E.aiDraw = null; E.passive = false; E.x = 900; spells.clearRuntime(); P.freezeTimer = 0;
   }
   // S55 TAUSENDVOGEL: lightning dash through everyone in the lane; 2nd tap runs back.
   {

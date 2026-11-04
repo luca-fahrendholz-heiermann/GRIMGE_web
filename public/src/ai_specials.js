@@ -11,6 +11,7 @@
 import { lookupRecipe, runeManaCost } from './spell_catalog.js';
 import { takeOfferedRecast } from './recast.js';
 import { activeDomains, DOMAIN, isDomainSigId } from './signature_abilities_g.js';
+import { beginAIDraw, aimPoint, aiSkill } from './ai_brain.js';
 
 export const AI_SPECIAL_COOLDOWN = 7;
 // Arena duels and boss fights without a configured deck still get a small special kit.
@@ -28,9 +29,19 @@ export function aiSpecialIds(ai, gw) {
 const defOf = (id) => lookupRecipe([{ id }]);
 const cost = (id) => runeManaCost(id) ?? 40;
 
-function cast(ai, id, gw, spells, target = null) {
+function cast(ai, id, gw, spells, target = null, instant = false) {
   const def = defOf(id); if (!def) return false;
   const price = cost(id);
+  if ((ai.mp ?? 0) < price || (ai.aiDraw && !instant)) return false;
+  if (instant) ai.aiDraw = null; // a reflex drops the rune being drawn
+  if (!instant) {
+    // Drawn first (ai_brain.js); a ground target is aimed when the glyph is done.
+    ai.specialCooldown = AI_SPECIAL_COOLDOWN;
+    return beginAIDraw(ai, gw, { runes: [id], color: '#ff4081', run: () => release(ai, id, def, price, gw, spells, target && Number.isFinite(target.x) ? aimPoint(ai, gw) ?? target : target) });
+  }
+  return release(ai, id, def, price, gw, spells, target);
+}
+function release(ai, id, def, price, gw, spells, target) {
   if ((ai.mp ?? 0) < price) return false;
   ai.mp -= price;
   takeOfferedRecast(null);
@@ -52,9 +63,12 @@ function firstDelay(offer, sig) {
 export function tryAICounterDomain(ai, gw, spells) {
   const ids = aiSpecialIds(ai, gw); const domainId = ids.find(isDomainSigId); if (!domainId) return false;
   const threat = activeDomains().find((d) => d.team !== ai.team && d.collapseT == null && !d.clash && Math.hypot(d.cx - ai.x, ((d.cz - (ai.z ?? d.cz)) * 150)) < d.R + DOMAIN.radius);
-  if (!threat || (ai.mp ?? 0) < cost(domainId)) return false;
+  if (!threat || (ai.mp ?? 0) < cost(domainId)) { ai.domainSeenT = 0; return false; }
+  // A reflex, after the reaction time.
+  ai.domainSeenT = (ai.domainSeenT ?? 0) + (gw?.lastDt ?? 1 / 60); if (ai.domainSeenT < aiSkill(ai, gw).reaction) return true; // it reads the dome for a beat (and holds still)
+  ai.domainSeenT = 0;
   ai.facing = Math.sign(threat.cx - ai.x) || ai.facing;
-  return cast(ai, domainId, gw, spells);
+  return cast(ai, domainId, gw, spells, null, true);
 }
 
 // Pick a special that fits the moment.

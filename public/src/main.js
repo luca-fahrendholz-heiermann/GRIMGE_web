@@ -984,6 +984,7 @@ export class GameWorld {
       this.showAnnouncement('NOT ENOUGH FREE MANA'); audio.playRuneFail(); return;
     }
     this.player.reservedMana = reserved;
+    this.player.cancelSprint?.(); // drawing stops the Wizard (the sprint does not carry on)
     this.drawing.active = true;
     this.drawing.expectedCardId = expectedCardId;
     this.drawing.strokes = [];
