@@ -256,8 +256,8 @@ const FOCUS_TRANSFORM_DRAIN = 1.5; // Unity base value (_transformationFocusDrai
 const focusDrainRate = (seconds) => Math.min(12, 5 + 0.3 * Math.max(0, seconds));
 // Gains while transformed: melee refills only a fifth (it kept the form up too easily), everything else a third.
 const FOCUS_TRANSFORM_GAIN_MULT = 0.35; const FOCUS_TRANSFORM_MELEE_GAIN_MULT = 0.2;
-// A transformation ended by hand keeps the rest of the meter (no decay) and may be lit again from 40 %.
-const FOCUS_RELIGHT_RATIO = 0.4;
+// A transformation ended by hand keeps the rest of the meter (no decay); it lights again only at a full meter.
+const FOCUS_RELIGHT_RATIO = 1;
 // A technique in the Focus transformation / Primal Bond costs Focus (short / full charge).
 const FOCUS_TECH_COST = Object.freeze({ short: 8, full: 16 });
 const FOCUS_DECAY_DELAY = 5;     // _focusDecayGraceTicks 300 @ 60 Hz
@@ -2531,7 +2531,7 @@ export class Player extends GroundEntity {
     combat.spawnShockwave(this.x, this.y - 38, 60, '#b388ff');
     return true;
   }
-  canLightFocus() { return this.focus >= this.maxFocus || (this.focusSaved && this.focus >= this.maxFocus * FOCUS_RELIGHT_RATIO); }
+  canLightFocus() { return this.focus >= this.maxFocus * FOCUS_RELIGHT_RATIO; }
 
   activateFocusTransformation() {
     if (!this.isAlive || !this.canLightFocus() || this.focusTransformTimer > 0 || this.activeClash) return false;

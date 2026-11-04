@@ -1456,14 +1456,14 @@ export class GameWorld {
     }
     // With a Primal the transformation loadout is the Primal Bond.
     if (this.primal) return this.togglePrimalBond();
-    // Pressing it again ends the form and saves the rest of the Focus (relight from 40 %).
+    // Pressing it again ends the form and saves the rest of the Focus (it lights again at a full meter).
     if (this.isMatchRunning() && this.player?.focusTransformTimer > 0) {
       this.player.endFocusTransformation();
       this.showAnnouncement(`TRANSFORMATION BEENDET — ${Math.round(this.player.focus)} FOKUS GESPART`, 1.6);
       return true;
     }
     if (!this.isMatchRunning() || !this.player?.activateFocusTransformation?.()) {
-      const p = this.player; const need = p?.focusSaved ? Math.ceil((p.maxFocus ?? 100) * .4) : (p?.maxFocus ?? 100);
+      const p = this.player; const need = p?.maxFocus ?? 100;
       this.showAnnouncement(`FOKUS ${Math.round(p?.focus ?? 0)}/${need}`);
       return false;
     }
@@ -1692,8 +1692,8 @@ export class GameWorld {
     const p = this.player; const primal = this.primal;
     if (!this.isMatchRunning() || !p?.isAlive) return false;
     if (p.primalBond) return endPrimalBond(p, 'decouple');
-    // Same rule as the Focus transformation: full meter, or 40 % of a meter saved by releasing the bond.
-    if (!(p.canLightFocus?.() ?? p.focus >= p.maxFocus)) { this.showAnnouncement(`FOKUS ${Math.round(p.focus)}/${p.focusSaved ? Math.ceil(p.maxFocus * .4) : p.maxFocus}`); return false; }
+    // Same rule as the Focus transformation: it lights at a full meter (a released bond saved the rest of it).
+    if (!(p.canLightFocus?.() ?? p.focus >= p.maxFocus)) { this.showAnnouncement(`FOKUS ${Math.round(p.focus)}/${p.maxFocus}`); return false; }
     if (!p.grounded || p.freezeTimer > 0) { this.showAnnouncement('PRIMAL BOND NEEDS SOLID GROUND', 1); return false; }
     if (!primal.canBond(p)) { this.showAnnouncement(primal.isAlive ? `${primal.info.name} MUST BE CLOSE` : `${primal.info.name} IS DOWN`, 1.1); return false; }
     const bond = startPrimalBond(p, primal); p.focusSaved = false;

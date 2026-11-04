@@ -540,7 +540,7 @@ export function endPrimalBond(player, reason = 'drained') {
     }
     combat.spawnShockwave(primal.x, primal.y - 16, 36, primal.info.variant);
   }
-  // Released by hand: like the Focus transformation the rest of the meter is saved (no decay, relight from 40 %).
+  // Released by hand: like the Focus transformation the rest of the meter is saved (no decay; it lights again at a full meter).
   if (reason === 'decouple') { player.focusSaved = (player.focus ?? 0) > 0; player._bondT = 0; }
   if (reason === 'decouple' && player === window.gameWorld?.player) window.gameWorld?.showAnnouncement?.(`PRIMAL BOND GELÖST — ${Math.round(player.focus ?? 0)} FOKUS GESPART`, 1.3);
   return true;
