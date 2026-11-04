@@ -435,7 +435,7 @@ export class UIManager {
     this.blueSidePanel?.addEventListener?.('pointerdown', (e) => {
       const game = window.gameWorld;
       // The profile panel lights the form and ends it again (the rest of the Focus is saved).
-      const pl = game?.player; if (!pl || !(pl.focusTransformTimer > 0 || (pl.canLightFocus?.() ?? pl.focus >= pl.maxFocus))) return;
+      const pl = game?.player; if (!pl || !(pl.focusTransformTimer > 0 || pl.primalBond || (pl.canLightFocus?.() ?? pl.focus >= pl.maxFocus))) return;
       e.preventDefault(); e.stopPropagation(); game.activateFocusTransformation();
     });
     this.focusActivateBtn?.addEventListener('pointerdown', (e) => {
@@ -1246,7 +1246,7 @@ export class UIManager {
 
     // Focus sits in the top HUD with a compact transformation icon.
     const focusReady = (player.canLightFocus?.() ?? player.focus >= player.maxFocus) && player.focusTransformTimer <= 0 && !player.primalBond;
-    const focusActive = player.focusTransformTimer > 0 && !player.primalBond;
+    const focusActive = player.focusTransformTimer > 0 || !!player.primalBond; // the button / panel end the form or the Primal Bond
     if (this.blueFocusFill) {
       this.blueFocusFill.style.width = `${Math.max(0, Math.min(100, player.focus / player.maxFocus * 100))}%`;
       this.blueFocusFill.parentElement?.classList?.toggle('focus-ready', focusReady);

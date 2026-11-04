@@ -2170,7 +2170,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
 
 // Primals (Unity PetCompanionRuntime / PrimalBondRuntime).
 {
-  const { PRIMAL_STATS, BOND_FORMS, bondMoveMultiplier, bondDisplacement, bondMelee, primalQuake } = await import('./public/src/primals.js');
+  const { PRIMAL_STATS, BOND_FORMS, bondMoveMultiplier, bondDisplacement, bondMelee, primalQuake, endPrimalBond } = await import('./public/src/primals.js');
   const { SIEGE_ZONES } = await import('./public/src/siege_match.js');
   const neutral = { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false };
   globalThis.localStorage?.setItem?.('grimge-primal-stage', '1');
@@ -2215,7 +2215,11 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   P.executeAttack(neutral, 'normal');
   assert(P.lastSprintAttack === 'PRIMAL POUNCE', 'Wolf bond: the sprint attack becomes the Primal Pounce');
   P.state = 'idle'; P.stateTimer = 0; P.sprintStrike = null;
+  P.focus = P.maxFocus * .55;
   assert(game.activateFocusTransformation() !== false && !P.primalBond && !W.merged && W.isTargetable, 'T again releases the bond; the Primal reappears');
+  { const idleIn = { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false }; const kept = P.focus; for (let i = 0; i < 120; i++) P.update(1 / 60, idleIn, game.battlefield, game);
+    assert(P.focusSaved && Math.abs(P.focus - kept) < .5 && P.canLightFocus() && game.activateFocusTransformation() && P.primalBond, 'Releasing the bond saves the rest of the Focus (no decay) and it relights from 40 % like the Focus transformation');
+    endPrimalBond(P, 'test'); P.focusSaved = false; }
   // Bond refused when the Primal is far away.
   P.focus = P.maxFocus; W.place(game, P.x + 300, P.z);
   assert(!game.activateFocusTransformation() && !P.primalBond, 'The bond needs the Primal within 3.5 u');

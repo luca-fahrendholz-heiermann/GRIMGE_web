@@ -1692,10 +1692,11 @@ export class GameWorld {
     const p = this.player; const primal = this.primal;
     if (!this.isMatchRunning() || !p?.isAlive) return false;
     if (p.primalBond) return endPrimalBond(p, 'decouple');
-    if (p.focus < p.maxFocus) { this.showAnnouncement(`FOCUS ${Math.round(p.focus)}/${p.maxFocus}`); return false; }
+    // Same rule as the Focus transformation: full meter, or 40 % of a meter saved by releasing the bond.
+    if (!(p.canLightFocus?.() ?? p.focus >= p.maxFocus)) { this.showAnnouncement(`FOKUS ${Math.round(p.focus)}/${p.focusSaved ? Math.ceil(p.maxFocus * .4) : p.maxFocus}`); return false; }
     if (!p.grounded || p.freezeTimer > 0) { this.showAnnouncement('PRIMAL BOND NEEDS SOLID GROUND', 1); return false; }
     if (!primal.canBond(p)) { this.showAnnouncement(primal.isAlive ? `${primal.info.name} MUST BE CLOSE` : `${primal.info.name} IS DOWN`, 1.1); return false; }
-    const bond = startPrimalBond(p, primal);
+    const bond = startPrimalBond(p, primal); p.focusSaved = false;
     // Transition in the Primal's colours (wolf green, turtle cyan, ape violet).
     const PRIMAL_TRANSITION = { wolf: ['#c6ff7a', '#73eb47', '#16341a'], turtle: ['#bff6ff', '#57e0f0', '#0e2a33'], ape: ['#efe6ff', '#b06cff', '#1c1030'], dragon: ['#fff3c4', '#ffb300', '#3a1a04'] }[bond.archetype] ?? ['#ffffff', '#ffd54f', '#3a1d00'];
     spells.addSpell(new TransformationFx(p, { core: '#ffffff', main: PRIMAL_TRANSITION[0], rim: PRIMAL_TRANSITION[1], dark: PRIMAL_TRANSITION[2], particle: bond.archetype === 'turtle' ? 'shard' : 'wisp', label: bond.form.name }), 'B');
