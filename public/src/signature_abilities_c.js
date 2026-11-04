@@ -281,7 +281,7 @@ defineSignature('S30', { cast(c) { emit(new HunterBell(c.sig, c.caster, c.target
 // S31 RUNENGERICHT — four tablets frame a team-neutral projectile rule.
 // ═════════════════════════════════════════════════════════════════════════
 class RuleTablet extends SigProp { constructor(sig, owner, x, z, i) { super(sig, owner, x, z, { hp: 30, size: 10, duration: 8.2 + i * .15 }); this.i = i; } update(dt) { this.tick(dt); }
-  render(ctx) { const y = this.y; const rise = Math.min(1, this.t / .3); const lean = Math.max(0, 1 - this.t / .4) * 6; if (spellSheetReady('rule_tablet')) { drawSpellSprite(ctx, 'rule_tablet', this.hp < (this.maxHp ?? 30) * .5 ? 1 : 0, this.x + lean, y + 2 + (1 - rise) * 26, { alpha: this.fade * (this.hitFlash ? .6 : 1, { scale: .5 }) }); return; } slab(ctx, this.x + lean, y, 14, 22 * rise, this.mat, this.seed, this.fade * (this.hitFlash ? .6 : 1), lean); for (let k = 0; k < 3; k++) thread(ctx, [[this.x - 4 + (k % 2) * 3, y - 18 * rise + k * 5], [this.x + 3 - k, y - 16 * rise + k * 5]], this.mat.dark, 1, .8 * this.fade); } }
+  render(ctx) { const y = this.y; const rise = Math.min(1, this.t / .3); const lean = Math.max(0, 1 - this.t / .4) * 6; if (spellSheetReady('rule_stele')) { drawSpellSprite(ctx, 'rule_stele', (this.hp < (this.maxHp ?? 30) * .5 ? 2 : 0) + Math.floor(this.t * 3) % 2, this.x + lean, y + 2 + (1 - rise) * 30, { alpha: this.fade * (this.hitFlash ? .6 : 1) }); return; } if (spellSheetReady('rule_tablet')) { drawSpellSprite(ctx, 'rule_tablet', this.hp < (this.maxHp ?? 30) * .5 ? 1 : 0, this.x + lean, y + 2 + (1 - rise) * 26, { alpha: this.fade * (this.hitFlash ? .6 : 1, { scale: .5 }) }); return; } slab(ctx, this.x + lean, y, 14, 22 * rise, this.mat, this.seed, this.fade * (this.hitFlash ? .6 : 1), lean); for (let k = 0; k < 3; k++) thread(ctx, [[this.x - 4 + (k % 2) * 3, y - 18 * rise + k * 5], [this.x + 3 - k, y - 16 * rise + k * 5]], this.mat.dark, 1, .8 * this.fade); } }
 class RuneCourt {
   constructor(sig, owner, x, z) { this.sig = sig; this.mat = sig.mat; this.owner = owner; this.team = owner.team; this.x = x; this.z = z; this.t = 0; this.isFinished = false; this.R = 110; this.uses = {}; this.seen = new WeakSet();
     this.tablets = [0, 1, 2, 3].map((i) => { const a = Math.PI / 4 + i * Math.PI / 2; return emit(new RuleTablet(sig, owner, x + Math.cos(a) * this.R, z + Math.sin(a) * this.R / DEPTH, i)); }); }
@@ -433,7 +433,7 @@ class ResonancePlate extends SigProp {
   render(ctx) {
     const mat = this.mat; const y = this.y; const g = this.fade * (this.hitFlash ? .6 : 1); const torn = this.chain.relays >= 3;
     // Ivory-silver membrane, red resonance veins, a broken half-open sound shell.
-    if (spellSheetReady('res_plate')) { drawSpellSprite(ctx, 'res_plate', torn ? 2 : this.ring > .2 ? 1 : 0, this.x, y + 2, { alpha: g, scale: .5 }); return; }
+    if (spellSheetReady('res_plate')) { drawSpellSprite(ctx, 'res_plate', torn ? 2 : this.ring > .2 ? 1 : 0, this.x, y + 2, { alpha: g, scale: .85 }); return; }
     plate(ctx, [[this.x - 5, y], [this.x - 6, y - 48], [this.x + 1, y - 54], [this.x + 6, y - 46], [this.x + 5, y]], { ...mat, kind: 'crystal' }, this.seed, { alpha: g * (torn ? .4 : .85), glowEdge: .6 + this.ring });
     for (let k = 0; k < 3; k++) thread(ctx, [[this.x - 3 + k * 3, y - 6], [this.x - 2 + k * 2, y - 26], [this.x - 3 + k * 3, y - 44]], mat.vein, 1, g * (.5 + this.ring));
     plate(ctx, [[this.x + 6, y - 40], [this.x + 14, y - 34], [this.x + 12, y - 22], [this.x + 6, y - 26]], mat, this.seed + 1, { alpha: g, lit: .9 });
@@ -528,4 +528,4 @@ defineSignature('S36', { cast(c) { emit(new WorldSeam(c.sig, c.caster, lineOf(c.
 
 export const SIGNATURES_C = ['S25', 'S26', 'S27', 'S28', 'S29', 'S30', 'S31', 'S32', 'S33', 'S34', 'S35', 'S36'];
 // Hand-drawn rune objects (rounds 7–10) render at fine density, not through the coarse pixel layer.
-for (const C of [PuppetThread, BreakColossus, HunterBell, RuleTablet, ExileCorridor, HarvestCircle, ResonancePlate, WorldSeam]) Object.defineProperty(C.prototype, 'fineVfx', { value: true, writable: true, configurable: true });
+for (const C of [PuppetThread, BreakColossus, HunterBell, RuleTablet, ExileCorridor, HarvestCircle, ResonancePlate, WorldSeam, RuneCourt, ResonanceCorridor]) Object.defineProperty(C.prototype, 'fineVfx', { value: true, writable: true, configurable: true });

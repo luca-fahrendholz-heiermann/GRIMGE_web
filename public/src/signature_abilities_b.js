@@ -2,7 +2,7 @@
 // terrain, objects & spatial building (S13–S18), projectiles, beams &
 // counter-magic (S19–S24). World objects are breakable SigProps; the
 // metamagic runes act on the shared projectile pipeline.
-import { drawSpellSprite, spellSheetReady } from './spell_visuals.js';
+import { drawSpellSprite, drawSpellSpriteTinted, spellSheetReady } from './spell_visuals.js';
 import {
   defineSignature, SigBolt, SigProp, SigSequence, startStance, emit, debris, sigSink,
   foesOf, aliveFoe, groundDist, yOf, massOf, hit, projectilesOf, projKill, projSetVel, projVel, projHeight, projDamage, reflectVel,
@@ -182,7 +182,12 @@ class EmberPump extends SigProp {
   }
   render(ctx) {
     const mat = this.mat; const y = this.y; const t = this.t; const g = this.fade * (this.hitFlash ? .7 : 1);
-    if (spellSheetReady('ember_pump')) { drawSpellSprite(ctx, 'ember_pump', Math.min(this.triggers ?? 0, 2) + (this.hot ? 3 : 0), this.x, y + 2, { alpha: g }); return; }
+    if (spellSheetReady('ember_pump')) {
+      drawSpellSprite(ctx, 'ember_pump', Math.min(this.triggers ?? 0, 2) + (this.hot ? 3 : 0), this.x, y + 2, { alpha: g });
+      // Stored heat: flames lick out of the vent, embers rise.
+      if (this.hot && spellSheetReady('br_flame_tongue')) for (let i = 0; i < 3; i++) drawSpellSpriteTinted(ctx, 'br_flame_tongue', ['#3a0a02', '#7a1206', '#ff5a1f', '#ffb300', '#fff1c2'], (Math.floor(t * 14) + i * 3) % 8, this.x - 6 + i * 6, y - 76, { scale: .55 + (i === 1 ? .2 : 0), alpha: g });
+      return;
+    }
     for (const v of this.valves) { const [vx, vy] = groundPt(this.x, this.z, v.r, v.a); slab(ctx, vx, vy, 5, 14, mat, this.seed + v.r, g, 2); }
     // Narrow ribbed pressure body of porous black glass stone.
     for (let i = 0; i < 4; i++) plate(ctx, [[this.x - 11 + i, y - i * 12], [this.x + 11 - i, y - i * 12 - 1], [this.x + 10 - i, y - (i + 1) * 12], [this.x - 10 + i, y - (i + 1) * 12 + 1]], mat, this.seed + 20 + i, { alpha: g, lit: .8, pulse: this.hot ? .5 + .5 * Math.sin(t * 8 + i) : .2, glowEdge: this.hot ? 1.2 : .3 });
@@ -229,7 +234,7 @@ class SpaceFold {
     const base = linePts(this.a, this.b, 12, 0, 0); const top = linePts(this.a, this.b, 12, 70, 14);
     if (spellSheetReady('space_fold')) {
       // Panes of folded space hung along the curve (each pane tilted with the fold), then the gold seam on top.
-      for (let i = 0; i < 12; i += 2) { const mx = (base[i][0] + top[i][0] + base[i + 2 > 12 ? 12 : i + 2][0] + top[i + 2 > 12 ? 12 : i + 2][0]) / 4; const my = (base[i][1] + top[i][1]) / 2; drawSpellSprite(ctx, 'space_fold', Math.floor(this.t * 6 + i) % 4, mx, my, { anchor: 'center', scale: .55, alpha: .5 * Math.max(.4, k) }); }
+      for (let i = 0; i < 12; i += 2) { const mx = (base[i][0] + top[i][0] + base[i + 2 > 12 ? 12 : i + 2][0] + top[i + 2 > 12 ? 12 : i + 2][0]) / 4; const my = (base[i][1] + top[i][1]) / 2; drawSpellSprite(ctx, 'space_fold', Math.floor(this.t * 6 + i) % 4, mx, my, { anchor: 'center', scale: .9, alpha: .5 * Math.max(.4, k) }); }
       thread(ctx, top, mat.edge, 2, k); return;
     }
     for (let i = 0; i < 12; i++) plate(ctx, [base[i], base[i + 1], top[i + 1], top[i]], { ...mat, kind: 'crystal' }, 1710 + i, { alpha: .22 * k, glowEdge: .6 });
@@ -274,7 +279,7 @@ class GlassField {
   }
   render(ctx) {
     const mat = this.mat; const k = Math.min(1, this.t * 3) * Math.min(1, (8 - this.t) / .5);
-    if (spellSheetReady('glass_tile')) { for (const tile of this.tiles) drawSpellSprite(ctx, 'glass_tile', tile.state === 'spent' ? 5 : tile.state === 'charged' ? 4 : Math.floor(this.t * 4 + tile.seed) % 4, tile.x, groundYForDepth(tile.z), { anchor: 'center', alpha: k, scale: .5 }); return; }
+    if (spellSheetReady('glass_tile')) { for (const tile of this.tiles) drawSpellSprite(ctx, 'glass_tile', tile.state === 'spent' ? 5 : tile.state === 'charged' ? 4 : Math.floor(this.t * 4 + tile.seed) % 4, tile.x, groundYForDepth(tile.z), { anchor: 'center', alpha: k, scale: .85 }); return; }
     for (const tile of this.tiles) {
       const y = groundYForDepth(tile.z); const r = 15;
       const pts = Array.from({ length: 6 }, (_, i) => [tile.x + Math.cos(i * TAU / 6 + .3) * r, y + Math.sin(i * TAU / 6 + .3) * r * .32]);
@@ -423,7 +428,7 @@ class RiftEdge extends SigProp {
   update(dt) { this.tick(dt); }
   render(ctx) {
     const mat = this.mat; const y = this.y; const g = this.fade * (this.hitFlash ? .6 : 1);
-    if (spellSheetReady('rift_gate')) { drawSpellSprite(ctx, 'rift_gate', Math.floor(this.t * 6) % 4, this.x, y + 2, { alpha: g, scale: .5 }); return; }
+    if (spellSheetReady('rift_gate')) { drawSpellSprite(ctx, 'rift_gate', Math.floor(this.t * 6) % 4, this.x, y + 2, { alpha: g, scale: .9 }); return; }
     // A half-height broken gate frame of frayed lapis splinters with a gold inner rim.
     for (const sg of [-1, 1]) for (let i = 0; i < 4; i++) plate(ctx, [[this.x + sg * (10 + (i % 2) * 2), y - i * 11], [this.x + sg * (14 + (i % 2)), y - i * 11 - 2], [this.x + sg * 13, y - (i + 1) * 11], [this.x + sg * 9, y - (i + 1) * 11 + 1]], mat, this.seed + sg * 10 + i, { alpha: g, glowEdge: .6, lit: .8 });
     thread(ctx, [[this.x - 8, y - 2], [this.x - 8, y - 42], [this.x + 8, y - 42], [this.x + 8, y - 2]], mat.vein, 1.5, g * (.6 + .3 * Math.sin(this.t * 6)));
@@ -528,4 +533,4 @@ defineSignature('S24', { cast(c) { emit(new WeightlessBand(c.sig, c.caster, line
 
 export const SIGNATURES_B = ['S13', 'S14', 'S15', 'S16', 'S17', 'S18', 'S19', 'S20', 'S21', 'S22', 'S23', 'S24'];
 // Hand-drawn rune objects (rounds 7–10) render at fine density, not through the coarse pixel layer.
-for (const C of [GlassField, BeamPrism, RiftEdge, PolarRotor, WeightlessBand]) Object.defineProperty(C.prototype, 'fineVfx', { value: true, writable: true, configurable: true });
+for (const C of [GlassField, BeamPrism, RiftEdge, PolarRotor, WeightlessBand, EmberPump, SpaceFold, RiftSwitch]) Object.defineProperty(C.prototype, 'fineVfx', { value: true, writable: true, configurable: true });

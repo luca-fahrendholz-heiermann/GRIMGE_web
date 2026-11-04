@@ -306,7 +306,10 @@ defineSignature('S05', { cast(c) { c.caster.cancelSprint?.(); emit(new CometFlig
 class SeamAnchor extends SigProp {
   constructor(sig, owner, x, z) { super(sig, owner, x, z, { hp: 30, size: 10, duration: 6 }); }
   update(dt) { this.tick(dt); }
-  render(ctx) { const y = this.y - 34 + Math.sin(this.t * 3) * 2; plate(ctx, [[this.x, y - 7], [this.x + 6, y], [this.x, y + 7], [this.x - 6, y]], this.mat, this.seed, { alpha: this.fade * (this.hitFlash ? .6 : 1), core: 1, glowEdge: 1 }); }
+  render(ctx) {
+    if (spellSheetReady('wind_anchor')) { drawSpellSprite(ctx, 'wind_anchor', Math.floor(this.t * 12) % 6, this.x, this.y + 2, { alpha: this.fade * (this.hitFlash ? .6 : 1) }); return; }
+    const y = this.y - 34 + Math.sin(this.t * 3) * 2; plate(ctx, [[this.x, y - 7], [this.x + 6, y], [this.x, y + 7], [this.x - 6, y]], this.mat, this.seed, { alpha: this.fade * (this.hitFlash ? .6 : 1), core: 1, glowEdge: 1 });
+  }
 }
 class AirSeam {
   constructor(sig, owner, a, b, gw) {
@@ -340,9 +343,21 @@ class AirSeam {
     }
   }
   render(ctx) {
-    const mat = this.mat; const pa = [this.a.x, groundYForDepth(this.a.z) - 34]; const pb = [this.b.x, groundYForDepth(this.b.z) - 34];
+    const eye = spellSheetReady('wind_anchor') ? 57 : 34; // tied at the wind eyes of the anchors
+    const mat = this.mat; const pa = [this.a.x, groundYForDepth(this.a.z) - eye]; const pb = [this.b.x, groundYForDepth(this.b.z) - eye];
     const pts = []; for (let i = 0; i <= 12; i++) { const u = i / 12; pts.push([pa[0] + (pb[0] - pa[0]) * u, pa[1] + (pb[1] - pa[1]) * u - Math.sin(u * Math.PI) * 18 + Math.sin(this.t * 6 + u * 9) * (this.torn ? 6 : 1)]); }
     if (this.torn) { const k = 1 - (this.t - this.tornAt) / .35; thread(ctx, pts.map(([x, y], i) => [x, y + (i % 2 ? -6 : 6)]), mat.core, 2, k); return; }
+    if (spellSheetReady('wind_anchor')) {
+      // A rope of wind between the anchors: two strands twisting round each other, gusts running along it.
+      for (let i = 1; i < pts.length; i++) {
+        const [ax, ay] = pts[i - 1]; const [bx, by] = pts[i]; const n = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay)));
+        for (let k = 0; k <= n; k++) { const u = (i - 1 + k / n) / (pts.length - 1); const x = ax + (bx - ax) * k / n; const y = ay + (by - ay) * k / n; const tw = Math.sin(u * 28 - this.t * 10) * 3;
+          ctx.fillStyle = '#3a7aa8'; ctx.fillRect(Math.round(x), Math.round(y + tw), 2, 2); ctx.fillStyle = '#c8ecff'; ctx.fillRect(Math.round(x), Math.round(y - tw), 2, 2);
+          if (((u * 60 - this.t * 30) % 6 + 6) % 6 < 1) { ctx.fillStyle = '#ffffff'; ctx.fillRect(Math.round(x), Math.round(y - 4), 1, 8); } }
+      }
+      for (let k = 0; k < 2 - this.crossings; k++) { ctx.fillStyle = '#ffffff'; ctx.fillRect(Math.round(pts[6][0] - 7 + k * 10), Math.round(pts[6][1] - 18), 4, 4); ctx.fillStyle = '#3a7aa8'; ctx.fillRect(Math.round(pts[6][0] - 7 + k * 10), Math.round(pts[6][1] - 14), 4, 1); }
+      return;
+    }
     if (spellSheetReady('seam_knot')) {
       // A taut seam of wind: a stitched pale line (blue stitches running along it), wind knots at the anchors.
       for (let i = 1; i < pts.length; i++) { const [ax, ay] = pts[i - 1]; const [bx, by] = pts[i]; const n = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay))); for (let k = 0; k <= n; k++) { const x = Math.round(ax + (bx - ax) * k / n); const y = Math.round(ay + (by - ay) * k / n); ctx.fillStyle = '#4e5a66'; ctx.fillRect(x, y - 1, 1, 3); ctx.fillStyle = (k + i * 7 + Math.floor(this.t * 30)) % 9 < 3 ? mat.vein : mat.body; ctx.fillRect(x, y, 1, 1); if ((k + i * 7) % 6 === 0) { ctx.fillStyle = mat.vein; ctx.fillRect(x, y - 2, 1, 5); } } }
@@ -602,4 +617,6 @@ defineSignature('S12', {
   }
 });
 
+// The redrawn / full-size EINFACH objects render at the characters' density, not through the coarse pixel layer.
+for (const C of [StarAnchor, SeamAnchor, AirSeam, MirrorOffset]) Object.defineProperty(C.prototype, 'fineVfx', { value: true, writable: true, configurable: true });
 export const SIGNATURES_A = ['S01', 'S02', 'S03', 'S04', 'S05', 'S06', 'S07', 'S08', 'S09', 'S10', 'S11', 'S12'];

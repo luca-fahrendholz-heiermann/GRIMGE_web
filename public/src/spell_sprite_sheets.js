@@ -3413,5 +3413,23 @@ export const SPELL_SPRITE_SHEETS = Object.freeze({
   "res": 2,
   "hd": true,
   "anchor": "center"
+ },
+ "wind_anchor": {
+  "name": "wind_anchor",
+  "w": 18,
+  "h": 34,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "base"
+ },
+ "rule_stele": {
+  "name": "rule_stele",
+  "w": 17,
+  "h": 32,
+  "frames": 4,
+  "res": 2,
+  "hd": true,
+  "anchor": "base"
  }
 });
