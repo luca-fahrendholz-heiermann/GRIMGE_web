@@ -2884,7 +2884,7 @@ export class EnemyChampion extends GroundEntity {
       if (this.aiDodge) this.vz = this.aiDodge.dir * this.speed / 150 * 1.3;
       this.state = this.vx || this.vz ? 'run' : 'idle';
       const castWindow = this.aiPlan !== 'RECOVER' || this.mp > this.maxMp * .7;
-      if (castWindow && !this.tryAIDefense(player, distance, objectiveThreat, gameWorld) && distance > 110 && !this.tryAIBeam(player, distance, gameWorld)) {
+      if (!this.tryAIDefense(player, distance, objectiveThreat, gameWorld) && castWindow && distance > 110 && !this.tryAIBeam(player, distance, gameWorld)) {
         if (tryAISpecial(this, player, distance, gameWorld, spells)) { /* special rune */ }
         else if (this.deckSpells) this.tryAIDeckSpell(player, distance, gameWorld);
         else this.tryAICast('fireball', gameWorld, 12, objectiveThreat ? 2.1 : 3.1);
