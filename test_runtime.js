@@ -4297,7 +4297,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   // Element surroundings (user, 4 Nov 2026): no recoloured aura — each element changes the space round the Wizard.
   { const AU = await import('./public/src/breathing_aura.js'); const AB = await import('./public/src/ai_brain.js'); const proxy = new Proxy({}, { get: (t, k) => (k === 'canvas' ? undefined : k === 'measureText' ? () => ({ width: 10 }) : () => {}), set: () => true });
     setup('S41'); P.signature.auraDmg = 700; const pose = P.signature.impl.stance.bodyPose(P, P.signature);
-    assert(pose?.sx > 1.05 && P.signature.impl.stance.cloak(P, P.signature)?.edge, 'Flame III: the body blazes (flame contour) and grows');
+    assert(pose?.sx > 1.05 && !P.signature.impl.stance.cloak(P, P.signature) && typeof P.signature.impl.stance.bodyOverlay === 'function', 'Flame III: the body itself burns (material over the sprite, no colour aura) and grows');
     setup('S81'); P.vx = 0; const crouch = P.signature.impl.stance.bodyPose(P, P.signature);
     assert(crouch && crouch.sy < .85 && Math.abs(crouch.rot) > 10, 'Beast breathing: the Wizard drops into a four-legged sprint stance (crouch + lean)');
     setup('S42'); const m = foeAt(360); const h0 = P.signature.heat ?? 0; for (let i = 0; i < 3; i++) { ready(); m.x = 360; P.x = 300; P.executeAttack(neutral, 'normal'); step(16); }

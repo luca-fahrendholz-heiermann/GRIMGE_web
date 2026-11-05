@@ -20,7 +20,7 @@ import { applyStatus, hasStatus } from './status_effects.js';
 import { deliveryOf, drawHead, drawFlourish, breathMotion } from './breathing_weapons.js';
 import { RayCrownFx } from './cast_circle.js';
 import { spellSheetReady, drawSpellSpriteTinted, drawFineFromLayer } from './spell_visuals.js';
-import { auraPower, auraStage, noteBreathDamage, updateBreathAura, endBreathAura, renderBreathAura, breathCloak, breathBodyPose, sideMoveMult, sideDamageTaken, sideOnHit } from './breathing_aura.js';
+import { auraPower, auraStage, noteBreathDamage, updateBreathAura, endBreathAura, renderBreathAura, renderBodyMaterial, breathCloak, breathBodyPose, sideMoveMult, sideDamageTaken, sideOnHit } from './breathing_aura.js';
 
 // ── palettes (dark, mid, light, core: pixel-art ramps) ───────────────────
 const hexRgb = (h) => { const n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
@@ -822,6 +822,8 @@ function breathStance() {
     counter: (p, st) => ({ n: auraStage(st), max: 3 }),
     cloak: (p, st) => breathCloak(p, st, styleOf(st)),
     bodyPose: (p, st) => breathBodyPose(p, st),
+    // The body turns into the element (X-Men style), drawn over the Wizard's own sprite.
+    bodyOverlay: (ctx, p, st, ry, drawBody) => renderBodyMaterial(ctx, p, st, ry, drawBody, styleOf(st)),
     damageTaken(p, st, amount) {
       amount = sideDamageTaken(st, amount);
       if (st.calmUntil > st.t) {

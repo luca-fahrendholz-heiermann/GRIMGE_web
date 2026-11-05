@@ -156,74 +156,165 @@ const sprite = (ctx, sheet, pal, frame, x, y, opts) => { if (!spellSheetReady(sh
 const FAMILY = { flame: 'fire', sun: 'fire', forge: 'fire', ice: 'snow', water: 'water', steam: 'water', wind: 'wind', serpent: 'serpent', beast: 'beast', flower: 'drones', insect: 'drones', love: 'drones', stone: 'rocks', moon: 'moons', ward: 'ward', sound: 'sound', thunder: 'bolts', mist: 'fog' };
 export const surroundOf = (style) => FAMILY[style] ?? 'none';
 const HERO_H = 92;
-// Body stance of the style (applied in Player.render): the beast crouches into a sprint start, fire grows, fog veils.
+// Body stance of the style (applied in Player.render): the beast crouches into a sprint start, fire grows, fog veils,
+// sound makes the body hum.
 export function breathBodyPose(p, st) {
   const fam = surroundOf(st.style); const l = auraStage(st); const f = p.facing || 1;
   if (fam === 'beast' && p.grounded && !/^attack|heavyStrike|uppercut|dive|dash/.test(p.state ?? '')) {
     const run = Math.min(1, (Math.abs(p.vx ?? 0) + Math.abs(p.vz ?? 0) * DEPTH) / 260);
     return { rot: f * (9 + 3 * l + 8 * run), ox: f * (4 + 3 * run), oy: 6 + l, sx: 1.05, sy: .84 - .02 * l };
   }
-  if (fam === 'fire' && l >= 3) return { sx: 1.12, sy: 1.12 };
+  if (fam === 'fire' && l >= 3) return { sx: 1.1, sy: 1.1 };
+  if (fam === 'sound') return { ox: Math.sin(st.t * 70) * .5 * l };
   if (fam === 'fog' && (p.concealment ?? 0) > .05) return { alpha: 1 - .5 * Math.min(1, p.concealment) };
   return null;
 }
-// The contour cloak only where the body itself becomes the element: blazing fire (III), stone skin (III).
-export function breathCloak(p, st, s) {
-  const l = auraStage(st); if (l < 3 || p.focusTransformTimer > 0) return null;
-  const fam = surroundOf(st.style); if (fam !== 'fire' && fam !== 'rocks') return null;
-  const P = auraPalettes(st.style, s.ramp)[fam === 'fire' ? 1 : 0];
-  return { edge: css(P[2]), inner: css(P[3]), fade: Math.min(1, st.timer * 2) };
-}
+// No colour cloak any more: the body itself turns into the element (renderBodyMaterial).
+export function breathCloak() { return null; }
 const px = (ctx, x, y, c) => { ctx.fillStyle = c; ctx.fillRect(Math.round(x), Math.round(y), 1, 1); };
 function pline(ctx, x0, y0, x1, y1, c, w = 1) { const n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0))); ctx.fillStyle = c; for (let i = 0; i <= n; i++) { const x = x0 + (x1 - x0) * i / n; const y = y0 + (y1 - y0) * i / n; ctx.fillRect(Math.round(x - (w - 1) / 2), Math.round(y - (w - 1) / 2), w, w); } }
 const seeded = (seed) => { let x = Math.sin(seed * 999.13) * 43758.5; return () => { x = Math.sin(x * 12.9898 + 78.233) * 43758.5453; return x - Math.floor(x); }; };
-// Lightning in the air: jagged bolts flickering between points round the body, more with the stage and every hit.
-function airBolts(ctx, p, st, ry, layer, P, l) {
-  const n = 2 + 2 * l + Math.min(6, Math.round(st.heat ?? 0)); const tick = Math.floor(st.t / .07); const R = 36 + l * 12;
-  for (let b = 0; b < n; b++) {
-    const r = seeded(tick * 13 + b * 7 + 1); if (r() < .25) continue;
-    const a0 = r() * TAU; const front = Math.sin(a0) > 0; if (front !== (layer === 'front')) continue;
-    const x0 = p.x + Math.cos(a0) * R * (.6 + r() * .5); const y0 = ry - 18 - r() * (HERO_H - 10) + Math.sin(a0) * 8;
-    const a1 = a0 + (r() - .5) * 2.2; const x1 = p.x + Math.cos(a1) * R * (.6 + r() * .7); const y1 = y0 + (r() - .3) * 64;
-    let lx = x0; let ly = y0; const seg = 5 + l;
-    for (let i = 1; i <= seg; i++) { const u = i / seg; const nx = x0 + (x1 - x0) * u + (i < seg ? (r() - .5) * 14 : 0); const ny = y0 + (y1 - y0) * u + (i < seg ? (r() - .5) * 8 : 0); pline(ctx, lx, ly, nx, ny, P[1], 5); pline(ctx, lx, ly, nx, ny, P[3], 3); pline(ctx, lx, ly, nx, ny, P[4], 1); if (r() < .3) { const bx = nx + (r() - .5) * 14; const by = ny + r() * 10; pline(ctx, nx, ny, bx, by, P[3], 1); } lx = nx; ly = ny; }
+
+// ── real lightning: midpoint displacement with branches; a soft glow, a coloured body, a white core ─────────────
+function boltPath(x0, y0, x1, y1, r, rough, depth) {
+  let pts = [[x0, y0], [x1, y1]];
+  for (let d = 0; d < depth; d++) {
+    const next = [pts[0]];
+    for (let i = 1; i < pts.length; i++) {
+      const [ax, ay] = pts[i - 1]; const [bx, by] = pts[i]; const len = Math.hypot(bx - ax, by - ay);
+      const nx = -(by - ay) / (len || 1); const ny = (bx - ax) / (len || 1); const off = (r() - .5) * len * rough;
+      next.push([(ax + bx) / 2 + nx * off, (ay + by) / 2 + ny * off], pts[i]);
+    }
+    pts = next;
   }
-  // Ground sparks round the feet (front layer).
-  if (layer === 'front') { const r = seeded(tick * 3 + 5); for (let i = 0; i < 2 + l * 2; i++) { const a = r() * TAU; const x = p.x + Math.cos(a) * (14 + r() * 26); const y = ry + Math.sin(a) * 6; px(ctx, x, y - r() * 4, P[4]); px(ctx, x + 1, y, P[3]); } }
+  return pts;
 }
-// Fire eating up the body: tongues from the feet (I), to the waist (II), the whole body blazing (III).
-function bodyFire(ctx, p, st, ry, layer, P, l, grow) {
-  const reach = Math.min(1, .3 + .28 * (l - 1) + .2 * grow); const n = 4 + l * 4;
+function strokePts(ctx, pts, c, w) { for (let i = 1; i < pts.length; i++) pline(ctx, pts[i - 1][0], pts[i - 1][1], pts[i][0], pts[i][1], c, w); }
+function drawBolt(ctx, x0, y0, x1, y1, P, r, { width = 1, branches = 2, alpha = 1 } = {}) {
+  const main = boltPath(x0, y0, x1, y1, r, .55, 5);
+  ctx.save(); ctx.globalAlpha *= alpha;
+  ctx.globalAlpha *= .35; strokePts(ctx, main, P[2], 3 + width * 2); ctx.globalAlpha /= .35;
+  strokePts(ctx, main, P[3], 1 + width); strokePts(ctx, main, P[4], 1);
+  for (let b = 0; b < branches; b++) {
+    const i = 3 + Math.floor(r() * (main.length - 6)); const [bx, by] = main[i]; const ang = Math.atan2(y1 - y0, x1 - x0) + (r() - .5) * 2; const L = Math.hypot(x1 - x0, y1 - y0) * (.2 + r() * .3);
+    const br = boltPath(bx, by, bx + Math.cos(ang) * L, by + Math.sin(ang) * L, r, .6, 3); strokePts(ctx, br, P[3], 1); if (r() < .5) strokePts(ctx, br.slice(0, 4), P[4], 1);
+  }
+  ctx.restore();
+}
+// Thunder: bolts crack through the air behind the Wizard (more with the stage and every hit); in front only thin arcs
+// crawl over the body, and a few sparks.
+function thunderSurround(ctx, p, st, ry, layer, P, l) {
+  const tick = Math.floor(st.t / .055);
+  if (layer !== 'front') {
+    const n = 1 + l + Math.min(5, Math.round(st.heat ?? 0));
+    for (let b = 0; b < n; b++) {
+      const r = seeded(tick * 13 + b * 7 + 1); if (r() < .3) continue;
+      const a0 = Math.PI + r() * Math.PI; const R = 40 + l * 14 + r() * 20;
+      const x0 = p.x + Math.cos(a0) * R * .4; const y0 = ry - HERO_H * (.5 + r() * .6);
+      const x1 = p.x + Math.cos(a0 + (r() - .5)) * R * 1.4; const y1 = Math.min(ry, y0 + 30 + r() * 60);
+      drawBolt(ctx, x0, y0, x1, y1, P, r, { width: l >= 3 ? 2 : 1, branches: 1 + l });
+    }
+    return;
+  }
+  // Arcs crawling over the body (thin — the Wizard stays visible).
+  const r = seeded(tick * 5 + 3);
+  for (let k = 0; k < l + Math.min(3, Math.round((st.heat ?? 0) / 2)); k++) {
+    const x0 = p.x + (r() - .5) * 26; const y0 = ry - 10 - r() * (HERO_H - 20); const x1 = x0 + (r() - .5) * 22; const y1 = y0 + (r() - .5) * 26;
+    const pts = boltPath(x0, y0, x1, y1, r, .7, 3); ctx.save(); ctx.globalAlpha *= .85; strokePts(ctx, pts, P[3], 1); ctx.restore(); px(ctx, x1, y1, P[4]);
+  }
+  for (let i = 0; i < l * 2; i++) { const a = r() * TAU; const x = p.x + Math.cos(a) * (14 + r() * 22); const y = ry + Math.sin(a) * 5; px(ctx, x, y - r() * 3, P[4]); }
+}
+// Fire: flames lick up behind the Wizard; the body itself burns (material); in front only small, half transparent
+// tongues at the feet.
+function fireSurround(ctx, p, st, ry, layer, P, l, grow) {
+  const reach = Math.min(1, .35 + .28 * (l - 1) + .2 * grow);
+  const n = layer === 'front' ? 1 + l : 3 + l * 3;
   for (let i = 0; i < n; i++) {
-    const r = seeded(i * 17 + 3); const a = i / n * TAU + st.t * .6; const front = Math.sin(a) > 0; if (front !== (layer === 'front')) continue;
-    const h = r() * reach; const w = (1 - h * .55) * (13 + l * 2);
-    const x = p.x + Math.cos(a) * w * .8; const y = ry - h * HERO_H * .95 + 2;
-    ctx.save(); ctx.globalAlpha = front ? .92 : .8;
-    sprite(ctx, 'br_flame_tongue', P, (Math.floor(st.t * 14) + i) % 8, x, y, { scale: .55 + .2 * l + r() * .2, flip: (i % 2) === 1 });
+    const r = seeded(i * 17 + (layer === 'front' ? 99 : 3)); const h = layer === 'front' ? r() * .25 : r() * reach;
+    const x = p.x + (r() - .5) * (26 + l * 6); const y = ry - h * HERO_H + 3;
+    ctx.save(); ctx.globalAlpha *= layer === 'front' ? .45 : .85;
+    sprite(ctx, 'br_flame_tongue', P, (Math.floor(st.t * 14) + i) % 8, x, y, { scale: (layer === 'front' ? .45 : .6 + .22 * l) + r() * .2, flip: (i % 2) === 1 });
     ctx.restore();
   }
-  // The sun's corona / the forge's sparks.
-  if (st.style === 'sun' && layer === 'back') { for (let k = 0; k < 12; k++) { const a = k / 12 * TAU + st.t * .4; const L = 30 + l * 12 + (k % 2) * 10; pline(ctx, p.x + Math.cos(a) * 20, ry - 52 + Math.sin(a) * 20, p.x + Math.cos(a) * L, ry - 52 + Math.sin(a) * L, k % 2 ? P[3] : P[2], 2); } }
-  if (st.style === 'forge' && layer === 'front') { const r = seeded(Math.floor(st.t / .05)); for (let i = 0; i < 4 + l * 3; i++) { const u = r(); const x = p.x + (r() - .5) * 40; const y = ry - 20 - u * 60; px(ctx, x, y, u < .5 ? P[4] : P[3]); px(ctx, x - 1, y + 1, P[2]); } }
+  if (st.style === 'sun' && layer !== 'front') { for (let k = 0; k < 12; k++) { const a = k / 12 * TAU + st.t * .4; const L = 34 + l * 12 + (k % 2) * 10; pline(ctx, p.x + Math.cos(a) * 24, ry - 52 + Math.sin(a) * 24, p.x + Math.cos(a) * L, ry - 52 + Math.sin(a) * L, k % 2 ? P[3] : P[2], 2); } }
+  if (st.style === 'forge' && layer !== 'front') { const r = seeded(Math.floor(st.t / .05)); for (let i = 0; i < 4 + l * 3; i++) { const u = r(); const x = p.x + (r() - .5) * 46; const y = ry - 20 - u * 70; px(ctx, x, y, u < .5 ? P[4] : P[3]); px(ctx, x - 1, y + 1, P[2]); } }
 }
 function drones(ctx, p, st, ry, layer, P) {
-  // Flower and love: blossom drones (love in its pink), insect: big butterflies.
+  // Flower and love: blossom drones (love in its pink), insect: big butterflies. The front ones are see-through.
   const sheet = st.style === 'insect' ? 'br_butterfly' : 'br_petal_drone';
-  for (const d of st.drones ?? []) { if (d.cd > 0) continue; const front = Math.sin(d.a) > 0; if (front !== (layer === 'front')) continue; sprite(ctx, sheet, P, (Math.floor(st.t * 10) + d.i) % (sheet === 'br_butterfly' ? 4 : 6), d.x, d.y, { anchor: 'center', scale: sheet === 'br_butterfly' ? 1.6 : 1.3 }); }
+  for (const d of st.drones ?? []) { if (d.cd > 0) continue; const front = Math.sin(d.a) > 0; if (front !== (layer === 'front')) continue; ctx.save(); if (front) ctx.globalAlpha *= .7; sprite(ctx, sheet, P, (Math.floor(st.t * 10) + d.i) % (sheet === 'br_butterfly' ? 4 : 6), d.x, d.y, { anchor: 'center', scale: sheet === 'br_butterfly' ? 1.6 : 1.3 }); ctx.restore(); }
 }
-function orbiters(ctx, p, st, ry, layer, P, l, sheet, count, R, sc) {
-  for (let i = 0; i < count; i++) { const a = i / count * TAU + st.t * (sheet === 'bp_moon' ? 1.6 : .9); const front = Math.sin(a) > 0; if (front !== (layer === 'front')) continue; const y = ry - 30 - (i % 3) * 18 + Math.sin(st.t * 2 + i) * 3; sprite(ctx, sheet, P, (Math.floor(st.t * 8) + i) % 4, p.x + Math.cos(a) * R, y + Math.sin(a) * R * .28, { anchor: 'center', scale: sc }); }
+// A few pieces drifting behind the Wizard (rocks, moons, notes) — never a ring in front of the body.
+function behind(ctx, p, st, ry, layer, P, sheet, count, spread, sc, speed = .6) {
+  if (layer === 'front') return;
+  for (let i = 0; i < count; i++) { const u = ((st.t * speed * .3 + i / count) % 1); const x = p.x + Math.sin(i * 2.1 + st.t * speed) * spread; const y = ry - 20 - u * (HERO_H + 10); ctx.save(); ctx.globalAlpha *= Math.sin(u * Math.PI); sprite(ctx, sheet, P, (Math.floor(st.t * 8) + i) % 4, x, y, { anchor: 'center', scale: sc }); ctx.restore(); }
 }
-function soundRings(ctx, p, st, ry, layer, P, l) {
-  if (layer !== 'front') return;
-  for (let k = 0; k < 1 + l; k++) { const u = ((st.t * .9 + k / (1 + l)) % 1); const R = 18 + u * (50 + l * 14); ctx.save(); ctx.globalAlpha = 1 - u; for (let i = 0; i < 72; i++) { const a = i / 72 * TAU; if (i % 8 === 0) continue; const x = p.x + Math.cos(a) * R; const y = ry - 40 + Math.sin(a) * R * .55; ctx.fillStyle = P[1]; ctx.fillRect(Math.round(x) - 1, Math.round(y) - 1, 3, 3); ctx.fillStyle = i % 2 ? P[3] : P[4]; ctx.fillRect(Math.round(x), Math.round(y), 1, 1); } ctx.restore(); }
+
+// ── the body turns into the element (X-Men style: from the feet up, further with every stage) ────────────────────
+// The Wizard's own sprite is drawn into an offscreen canvas, the material is laid over its pixels only (source-atop),
+// covering the body from the feet up to `cover` of its height, with a bright transformation front; then composited
+// over the body. Patterns per material: ice facets, flame skin, rock cracks, liquid bands, lightning veins, glowing
+// cracks, vines, scales, hex plates, moon shadow, sunlight.
+const MATERIAL = {
+  ice: { tint: '#bfe9fb', a: .42, front: '#ffffff', pat: 'facets' },
+  flame: { tint: '#ff7a1a', a: .38, front: '#fff1c2', pat: 'flame' }, sun: { tint: '#ffd54f', a: .35, front: '#ffffff', pat: 'flame' }, forge: { tint: '#5a2a10', a: .45, front: '#ffb300', pat: 'cracksHot' },
+  stone: { tint: '#8d7a66', a: .45, front: '#d2c3ad', pat: 'cracks' }, water: { tint: '#2f8fff', a: .36, front: '#d4f4ff', pat: 'liquid' }, steam: { tint: '#eceff1', a: .3, front: '#ffffff', pat: 'liquid' },
+  thunder: { tint: '#fff176', a: .18, front: '#ffffff', pat: 'veins' }, flower: { tint: '#f8bbd0', a: .2, front: '#ffc1e3', pat: 'vines' }, love: { tint: '#ff80ab', a: .25, front: '#ffd6e8', pat: 'vines' },
+  insect: { tint: '#7b1fa2', a: .28, front: '#e1bee7', pat: 'scales' }, serpent: { tint: '#66bb6a', a: .35, front: '#c8e6c9', pat: 'scales' }, ward: { tint: '#90caf9', a: .35, front: '#e3f2fd', pat: 'hex' },
+  moon: { tint: '#2a1550', a: .4, front: '#d1c4e9', pat: 'moon' }, beast: { tint: '#6d4c41', a: .25, front: '#e0d4cd', pat: 'fur' }, wind: { tint: '#d7fff4', a: .18, front: '#ffffff', pat: 'streaks' }, sound: { tint: '#ffca28', a: .15, front: '#fff3c4', pat: 'streaks' }
+};
+let off = null;
+function offscreen(w, h) {
+  const doc = globalThis.document; if (!doc?.createElement) return null;
+  if (!off) { off = doc.createElement('canvas'); }
+  if (off.width !== w) off.width = w; if (off.height !== h) off.height = h;
+  const c = off.getContext?.('2d'); return c ? { c, canvas: off } : null;
 }
+function materialPattern(c, kind, W, top, bottom, t, P, l) {
+  const r = seeded(7);
+  const dot = (x, y, col) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), 1, 1); };
+  const line = (x0, y0, x1, y1, col) => { const n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0))); c.fillStyle = col; for (let i = 0; i <= n; i++) c.fillRect(Math.round(x0 + (x1 - x0) * i / n), Math.round(y0 + (y1 - y0) * i / n), 1, 1); };
+  switch (kind) {
+    case 'facets': for (let k = 0; k < 18; k++) { const x = r() * W; const y = top + r() * (bottom - top); line(x, y, x + 6 + r() * 6, y - 8 - r() * 6, '#ffffff'); line(x, y, x - 5, y - 4, '#7cc4ec'); } for (let k = 0; k < 6; k++) { const x = (r() * W + t * 20) % W; dot(x, top + r() * (bottom - top), '#ffffff'); } break;
+    case 'flame': for (let k = 0; k < 26; k++) { const x = r() * W; const y = bottom - ((r() * (bottom - top) + t * 60) % (bottom - top)); line(x, y, x + Math.sin(y * .2 + t * 8) * 2, y - 5, k % 3 ? P[3] : P[4]); } break;
+    case 'cracksHot': case 'cracks': for (let k = 0; k < 8; k++) { let x = r() * W; let y = top + r() * (bottom - top); for (let s = 0; s < 6; s++) { const nx = x + (r() - .5) * 6; const ny = y + 3 + r() * 3; line(x, y, nx, ny, kind === 'cracksHot' ? (s % 2 ? '#ffb300' : '#ff6d00') : '#3e2f22'); x = nx; y = ny; } } break;
+    case 'liquid': for (let y = Math.floor(top); y < bottom; y += 6) { const ph = y * .3 - t * 6; for (let x = 0; x < W; x += 2) if (Math.sin(x * .25 + ph) > .85) dot(x, y + Math.sin(x * .2 + ph) * 1.5, '#d4f4ff'); } break;
+    case 'veins': { const rr = seeded(Math.floor(t / .07)); for (let k = 0; k < 3 + l * 2; k++) { const x0 = W / 2 + (rr() - .5) * 24; const y0 = top + rr() * (bottom - top); const pts = boltPath(x0, y0, x0 + (rr() - .5) * 20, y0 + (rr() - .3) * 26, rr, .7, 3); for (let i = 1; i < pts.length; i++) line(pts[i - 1][0], pts[i - 1][1], pts[i][0], pts[i][1], i % 2 ? '#ffffff' : P[3]); } break; }
+    case 'vines': for (let k = 0; k < 6; k++) { let x = r() * W; let y = bottom; for (let s = 0; s < 10 && y > top; s++) { const nx = x + Math.sin(s + k) * 3; const ny = y - 5; line(x, y, nx, ny, '#4a8a2a'); if (s % 3 === 2) { dot(nx + 1, ny, P[3]); dot(nx - 1, ny, P[4]); } x = nx; y = ny; } } break;
+    case 'scales': for (let y = Math.floor(top); y < bottom; y += 4) for (let x = (y / 4) % 2 ? 2 : 0; x < W; x += 4) { dot(x, y, P[3]); dot(x + 1, y + 1, P[1]); } break;
+    case 'hex': for (let y = Math.floor(top); y < bottom; y += 7) for (let x = (y / 7) % 2 ? 4 : 0; x < W; x += 8) { line(x, y, x + 4, y, '#e3f2fd'); line(x + 4, y, x + 6, y + 3, '#e3f2fd'); } break;
+    case 'moon': for (let y = Math.floor(top); y < bottom; y += 1) dot(W / 2 - 14 + Math.sin(y * .1) * 2, y, '#d1c4e9'); break;
+    case 'fur': for (let k = 0; k < 40; k++) { const x = r() * W; const y = top + r() * (bottom - top); line(x, y, x + 1, y + 3, '#3e2723'); } break;
+    case 'streaks': for (let k = 0; k < 10; k++) { const y = top + r() * (bottom - top); const x = (r() * W + t * 120) % W; line(x, y, x - 8, y, P[4]); } break;
+    default: break;
+  }
+}
+export function renderBodyMaterial(ctx, p, st, ry, drawBody, s) {
+  if (p.focusTransformTimer > 0) return;
+  const m = MATERIAL[st.style]; if (!m || typeof drawBody !== 'function') return;
+  const l = auraStage(st); const grow = stageProgress(st); const cover = Math.min(1, .28 + (l - 1) * .34 + grow * .3) * Math.min(1, st.t * 2);
+  if (cover <= .02) return;
+  const W = 170; const H = 190; const base = H - 14; const o = offscreen(W, H); if (!o) return;
+  const { c, canvas } = o; const pals = auraPalettes(st.style, s.ramp); const P = surroundOf(st.style) === 'fire' ? pals[Math.min(1, l - 1)] : pals[0];
+  c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1; c.clearRect(0, 0, W, H); c.imageSmoothingEnabled = false;
+  c.save(); c.translate(W / 2 - p.x, base - ry); drawBody(c, p.x, ry); c.restore();
+  // Material over the body pixels only, from the feet up to the transformation front.
+  const top = base - cover * (HERO_H + 16);
+  c.globalCompositeOperation = 'source-atop';
+  c.globalAlpha = m.a + .06 * (l - 1); // the Wizard stays readable under the material c.fillStyle = m.tint; c.fillRect(0, top, W, H - top);
+  c.globalAlpha = 1; materialPattern(c, m.pat, W, top, base, st.t, P, l);
+  // The bright front where the body is turning (ice line, flame edge …).
+  if (cover < .99) { c.globalAlpha = .9; c.fillStyle = m.front; c.fillRect(0, Math.round(top), W, 1); c.globalAlpha = .45; c.fillRect(0, Math.round(top) + 1, W, 2); }
+  c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1;
+  ctx.save(); ctx.imageSmoothingEnabled = false; ctx.globalAlpha *= Math.min(1, st.timer * 2); ctx.drawImage(canvas, Math.round(p.x - W / 2), Math.round(ry - base)); ctx.restore();
+}
+
 export function renderBreathAura(ctx, p, st, ry, layer, s) {
   const l = auraStage(st); const t = st.t; const f = p.facing || 1; const fam = surroundOf(st.style);
   // The element keeps its own colours at every stage (no white god mode); only fire heats up (orange → hot hue).
   const pals = auraPalettes(st.style, s.ramp); const P = fam === 'fire' ? pals[Math.min(1, l - 1)] : pals[0];
   const fade = Math.min(1, st.t * 3, st.timer * 2); const grow = stageProgress(st); const side = layer === 'front' ? 'front' : 'back';
-  // Fog bank (mist / steam): clouds on a ring around the Wizard — behind it on the back layer, thinner in front.
+  // Fog bank (mist / steam): clouds round the Wizard — dense behind, see-through in front.
   if (st.fog > .02 && spellSheetReady('bp_mist')) {
     const fp = st.style === 'steam' ? ['#3a3a3a', '#8d8d8d', '#cfd8dc', '#eceff1', '#ffffff'] : ['#263238', '#546e7a', '#90a4ae', '#cfd8dc', '#eceff1'];
     const n = Math.round(6 + 22 * st.fog); const R = fogRadius(st);
@@ -232,38 +323,40 @@ export function renderBreathAura(ctx, p, st, ry, layer, s) {
       const a = i / n * TAU + t * .25 + Math.sin(i * 1.7) * .4; const front = Math.sin(a) > 0;
       if (front !== (layer === 'front')) continue;
       const rr = R * (.2 + .8 * ((i * 37 % 11) / 11));
-      // Dense enough, the fog swallows the Wizard (the front clouds close in over the body).
-      ctx.globalAlpha = fade * (front ? .35 + .4 * st.fog : .85) * Math.min(1, st.fog * 2);
+      ctx.globalAlpha = fade * (front ? .25 + .3 * st.fog : .85) * Math.min(1, st.fog * 2);
       sprite(ctx, 'bp_mist', fp, (i + Math.floor(t * 6)) % 4, p.x + Math.cos(a) * rr, ry - 14 + Math.sin(a) * rr * .3 - (i % 4) * 14, { anchor: 'center', scale: 1.3 + st.fog * 1.4 + (i % 3) * .3 });
     }
     ctx.restore();
   }
-  // Side-effect strikes: zig-zag bolts, moon crescents, sound rings.
+  // Side-effect strikes (thunder sparks are real bolts now, moon cuts, sound rings).
   if (layer === 'front') for (const z of st.zaps ?? []) {
     const k = z.t / .3; ctx.save(); ctx.globalAlpha = 1 - k;
     if (z.kind === 'ring') { for (let i = 0; i < 60; i++) { const a = i / 60 * TAU; px(ctx, z.x0 + Math.cos(a) * z.r * (.3 + .7 * k), ry - 20 + Math.sin(a) * z.r * .3 * (.3 + .7 * k), P[3]); } }
-    else {
-      const pts = []; for (let i = 0; i <= 6; i++) { const u = i / 6; pts.push([z.x0 + (z.x1 - z.x0) * u + (i % 6 ? (i % 2 ? 6 : -6) : 0) * (z.kind === 'bolt' ? 1 : 0), z.y0 + (z.y1 - z.y0) * u - (z.kind === 'moon' ? Math.sin(u * Math.PI) * 26 : 0)]); }
-      for (let i = 1; i < pts.length; i++) { pline(ctx, pts[i - 1][0], pts[i - 1][1], pts[i][0], pts[i][1], P[1], 3); pline(ctx, pts[i - 1][0], pts[i - 1][1], pts[i][0], pts[i][1], P[4], 1); }
-    }
+    else if (z.kind === 'bolt') drawBolt(ctx, z.x0, z.y0, z.x1, z.y1, P, seeded(Math.floor(z.t / .05) + Math.round(z.x1)), { width: 1, branches: 2 });
+    else { const pts = []; for (let i = 0; i <= 6; i++) { const u = i / 6; pts.push([z.x0 + (z.x1 - z.x0) * u, z.y0 + (z.y1 - z.y0) * u - Math.sin(u * Math.PI) * 26]); } for (let i = 1; i < pts.length; i++) { pline(ctx, pts[i - 1][0], pts[i - 1][1], pts[i][0], pts[i][1], P[1], 3); pline(ctx, pts[i - 1][0], pts[i - 1][1], pts[i][0], pts[i][1], P[4], 1); } }
     ctx.restore();
   }
   if (p.focusTransformTimer > 0) return; // the transformation's own look wins
   ctx.save(); ctx.globalAlpha = fade;
-  const sc = .7 + .12 * l + .08 * grow;
+  const sc = .7 + .12 * l + .08 * grow; const thin = layer === 'front' ? .35 : 1; // in front: see-through
   switch (fam) {
-    case 'bolts': airBolts(ctx, p, st, ry, layer, P, l); break;
-    case 'fire': bodyFire(ctx, p, st, ry, layer, P, l, grow); break;
-    case 'snow': ctx.globalAlpha = fade * (.55 + .15 * l); sprite(ctx, `br_snow_${side}`, P, Math.floor(t * 12) % 8, p.x, ry + 6, { scale: sc }); break;
-    case 'water': for (let k = 0; k < Math.min(3, l); k++) sprite(ctx, `br_water_${side}`, P, (Math.floor(t * 12) + k * 3) % 8, p.x, ry + 4 - [0, 24, -22][k] , { scale: [.75, .62, .58][k] + .1 * grow, flip: k === 1 }); break;
-    case 'wind': sprite(ctx, `br_wind_${side}`, P, Math.floor(t * 14) % 8, p.x, ry + 6, { scale: sc, flip: f < 0 }); break;
-    case 'serpent': sprite(ctx, `br_serpent_${side}`, P, Math.floor(t * 8) % 8, p.x, ry + 6, { scale: .72 + .1 * l, flip: f < 0 }); break;
+    case 'bolts': thunderSurround(ctx, p, st, ry, layer, P, l); break;
+    case 'fire': fireSurround(ctx, p, st, ry, layer, P, l, grow); break;
+    case 'snow': ctx.globalAlpha = fade * (.5 + .15 * l) * thin; sprite(ctx, `br_snow_${side}`, P, Math.floor(t * 12) % 8, p.x, ry + 6, { scale: sc }); break;
+    case 'water': {
+      // Water: the body turns liquid (material); a stream swirls behind from stage II, drops fall from the body.
+      if (layer !== 'front' && l >= 2) sprite(ctx, 'br_water_back', P, Math.floor(t * 12) % 8, p.x, ry + 4, { scale: .7 + .1 * grow });
+      if (layer === 'front') { const r = seeded(Math.floor(t / .1)); for (let i = 0; i < 2 + l * 2; i++) { const u = (t * 1.5 + i * .37) % 1; px(ctx, p.x + (r() - .5) * 28, ry - 60 + u * 62, P[3]); } }
+      break;
+    }
+    case 'wind': ctx.globalAlpha = fade * thin; sprite(ctx, `br_wind_${side}`, P, Math.floor(t * 14) % 8, p.x, ry + 6, { scale: sc, flip: f < 0 }); break;
+    case 'serpent': ctx.globalAlpha = fade * (layer === 'front' ? .45 : 1); sprite(ctx, `br_serpent_${side}`, P, Math.floor(t * 8) % 8, p.x, ry + 6, { scale: .72 + .1 * l, flip: f < 0 }); break;
     case 'beast': if (layer !== 'front') { ctx.globalAlpha = fade * (.45 + .14 * l); sprite(ctx, 'br_beast_spirit', P, Math.floor(t * 6) % 6, p.x - f * 18, ry + 4, { scale: .5 + .14 * l + .06 * grow, flip: f < 0 }); } break;
     case 'drones': drones(ctx, p, st, ry, layer, P); break;
-    case 'rocks': orbiters(ctx, p, st, ry, layer, P, l, 'bp_rock', 2 + 2 * l, 30 + l * 4, .9); break;
-    case 'moons': orbiters(ctx, p, st, ry, layer, P, l, 'bp_moon', 1 + 2 * l, 34 + l * 5, .8 + .15 * l); break;
-    case 'ward': if (layer === 'front') drawWardShell(ctx, p.x, ry, { frac: l / 3, t, scale: .8 + .1 * l, color: P[2], light: P[3], dark: P[0] }); break;
-    case 'sound': soundRings(ctx, p, st, ry, layer, P, l); orbiters(ctx, p, st, ry, layer, P, l, 'bp_sound', 1 + 2 * l, 32 + l * 4, .9 + .1 * l); break;
+    case 'rocks': behind(ctx, p, st, ry, layer, P, 'bp_rock', 2 + 2 * l, 26, .9, .5); break;
+    case 'moons': if (layer !== 'front') { for (let i = 0; i < l; i++) sprite(ctx, 'bp_moon', P, (Math.floor(t * 6) + i) % 4, p.x - f * (10 + i * 12), ry - HERO_H - 6 - i * 6 + Math.sin(t * 2 + i) * 3, { anchor: 'center', scale: 1 + .2 * l - i * .2 }); } break;
+    case 'ward': if (layer !== 'front' && l >= 2) { ctx.globalAlpha = fade * .35; drawWardShell(ctx, p.x, ry, { frac: l / 3, t, scale: .85 + .1 * l, color: P[2], light: P[3], dark: P[0] }); } break;
+    case 'sound': behind(ctx, p, st, ry, layer, P, 'bp_sound', 2 + 2 * l, 30, .9 + .1 * l, 1.2); break;
     default: break;
   }
   ctx.restore();

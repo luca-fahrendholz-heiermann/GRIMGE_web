@@ -2296,6 +2296,8 @@ export class Player extends GroundEntity {
     };
     held('back');
     sprites.renderEntity(ctx, this.renderKey, this.x, renderY, renderOpts);
+    // A stance may turn the body itself into its element (breathing: ice, flame skin, rock …) — over the own sprite.
+    if (this.isAlive && !rolled && this.signature?.impl?.stance?.bodyOverlay) this.signature.impl.stance.bodyOverlay(ctx, this, this.signature, renderY, (c, x, y) => sprites.renderEntity(c, this.renderKey, x, y, renderOpts));
     held('front');
     if (this.isAlive && this.focusTransformTimer > 0) this.renderFocusAscendant(ctx, renderY, 'front');
     // HOLD charge without a weapon: the bare hands glow (with a weapon, the weapon pulses).
