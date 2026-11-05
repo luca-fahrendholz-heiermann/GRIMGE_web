@@ -207,15 +207,16 @@ function bodyFire(ctx, p, st, ry, layer, P, l, grow) {
   if (st.style === 'forge' && layer === 'front') { const r = seeded(Math.floor(st.t / .05)); for (let i = 0; i < 4 + l * 3; i++) { const u = r(); const x = p.x + (r() - .5) * 40; const y = ry - 20 - u * 60; px(ctx, x, y, u < .5 ? P[4] : P[3]); px(ctx, x - 1, y + 1, P[2]); } }
 }
 function drones(ctx, p, st, ry, layer, P) {
-  const sheet = st.style === 'flower' ? 'br_petal_drone' : 'br_butterfly';
-  for (const d of st.drones ?? []) { if (d.cd > 0) continue; const front = Math.sin(d.a) > 0; if (front !== (layer === 'front')) continue; sprite(ctx, sheet, P, (Math.floor(st.t * 10) + d.i) % (sheet === 'br_butterfly' ? 4 : 6), d.x, d.y, { anchor: 'center', scale: 1.1 }); }
+  // Flower and love: blossom drones (love in its pink), insect: big butterflies.
+  const sheet = st.style === 'insect' ? 'br_butterfly' : 'br_petal_drone';
+  for (const d of st.drones ?? []) { if (d.cd > 0) continue; const front = Math.sin(d.a) > 0; if (front !== (layer === 'front')) continue; sprite(ctx, sheet, P, (Math.floor(st.t * 10) + d.i) % (sheet === 'br_butterfly' ? 4 : 6), d.x, d.y, { anchor: 'center', scale: sheet === 'br_butterfly' ? 1.6 : 1.3 }); }
 }
 function orbiters(ctx, p, st, ry, layer, P, l, sheet, count, R, sc) {
   for (let i = 0; i < count; i++) { const a = i / count * TAU + st.t * (sheet === 'bp_moon' ? 1.6 : .9); const front = Math.sin(a) > 0; if (front !== (layer === 'front')) continue; const y = ry - 30 - (i % 3) * 18 + Math.sin(st.t * 2 + i) * 3; sprite(ctx, sheet, P, (Math.floor(st.t * 8) + i) % 4, p.x + Math.cos(a) * R, y + Math.sin(a) * R * .28, { anchor: 'center', scale: sc }); }
 }
 function soundRings(ctx, p, st, ry, layer, P, l) {
   if (layer !== 'front') return;
-  for (let k = 0; k < 1 + l; k++) { const u = ((st.t * .9 + k / (1 + l)) % 1); const R = 18 + u * (50 + l * 14); ctx.save(); ctx.globalAlpha = 1 - u; for (let i = 0; i < 48; i++) { const a = i / 48 * TAU; if (i % 6 === 0) continue; px(ctx, p.x + Math.cos(a) * R, ry - 40 + Math.sin(a) * R * .55, i % 2 ? P[3] : P[2]); } ctx.restore(); }
+  for (let k = 0; k < 1 + l; k++) { const u = ((st.t * .9 + k / (1 + l)) % 1); const R = 18 + u * (50 + l * 14); ctx.save(); ctx.globalAlpha = 1 - u; for (let i = 0; i < 72; i++) { const a = i / 72 * TAU; if (i % 8 === 0) continue; const x = p.x + Math.cos(a) * R; const y = ry - 40 + Math.sin(a) * R * .55; ctx.fillStyle = P[1]; ctx.fillRect(Math.round(x) - 1, Math.round(y) - 1, 3, 3); ctx.fillStyle = i % 2 ? P[3] : P[4]; ctx.fillRect(Math.round(x), Math.round(y), 1, 1); } ctx.restore(); }
 }
 export function renderBreathAura(ctx, p, st, ry, layer, s) {
   const l = auraStage(st); const t = st.t; const f = p.facing || 1; const fam = surroundOf(st.style);
@@ -224,7 +225,7 @@ export function renderBreathAura(ctx, p, st, ry, layer, s) {
   const fade = Math.min(1, st.t * 3, st.timer * 2); const grow = stageProgress(st); const side = layer === 'front' ? 'front' : 'back';
   // Fog bank (mist / steam): clouds on a ring around the Wizard — behind it on the back layer, thinner in front.
   if (st.fog > .02 && spellSheetReady('bp_mist')) {
-    const fp = st.style === 'steam' ? auraPalettes('steam', s.ramp)[0] : ['#263238', '#546e7a', '#90a4ae', '#cfd8dc', '#eceff1'];
+    const fp = st.style === 'steam' ? ['#3a3a3a', '#8d8d8d', '#cfd8dc', '#eceff1', '#ffffff'] : ['#263238', '#546e7a', '#90a4ae', '#cfd8dc', '#eceff1'];
     const n = Math.round(6 + 22 * st.fog); const R = fogRadius(st);
     ctx.save();
     for (let i = 0; i < n; i++) {
@@ -262,7 +263,7 @@ export function renderBreathAura(ctx, p, st, ry, layer, s) {
     case 'rocks': orbiters(ctx, p, st, ry, layer, P, l, 'bp_rock', 2 + 2 * l, 30 + l * 4, .9); break;
     case 'moons': orbiters(ctx, p, st, ry, layer, P, l, 'bp_moon', 1 + 2 * l, 34 + l * 5, .8 + .15 * l); break;
     case 'ward': if (layer === 'front') drawWardShell(ctx, p.x, ry, { frac: l / 3, t, scale: .8 + .1 * l, color: P[2], light: P[3], dark: P[0] }); break;
-    case 'sound': soundRings(ctx, p, st, ry, layer, P, l); break;
+    case 'sound': soundRings(ctx, p, st, ry, layer, P, l); orbiters(ctx, p, st, ry, layer, P, l, 'bp_sound', 1 + 2 * l, 32 + l * 4, .9 + .1 * l); break;
     default: break;
   }
   ctx.restore();
