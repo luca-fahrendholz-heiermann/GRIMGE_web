@@ -4220,6 +4220,15 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   const charged = (dir) => { ready(); P.beginCharge(dir); P.chargeTimer = P.chargeMaxTime * .1; P.chargeDir = dir; return P.releaseCharge(); };
   let bad = 0; const strict = new Proxy({}, { get: (t, k) => (k === 'arc' || k === 'ellipse') ? (x, y, r1, r2) => { if (r1 < 0 || (k === 'ellipse' && r2 < 0)) bad++; } : k === 'canvas' ? undefined : k === 'measureText' ? () => ({ width: 10 }) : () => {}, set: () => true });
   const renderAll = () => { for (const sp of spells.activeSpells) sp.render?.(strict); core.SIGNATURES && P.signature?.impl.stance.render?.(strict, P, P.signature, P.y, 'front'); };
+    // Back-navigation guard (user report, 5 Nov 2026: touch, training): two activated trap entries stay on top, entries are
+  // only pushed with a user activation (Chrome skips the others).
+  { const w = globalThis.window; const hadH = Object.getOwnPropertyDescriptor(w, 'history'); const nav = globalThis.navigator; const hadUA = nav && Object.getOwnPropertyDescriptor(nav, 'userActivation');
+    const H = { stack: [{}], i: 0, get state() { return this.stack[this.i]; }, pushState(st) { this.stack = this.stack.slice(0, this.i + 1); this.stack.push(st); this.i++; } };
+    let active = true; try { Object.defineProperty(w, 'history', { value: H, configurable: true }); if (nav) Object.defineProperty(nav, 'userActivation', { get: () => ({ isActive: active }), configurable: true }); } catch {}
+    game._trapDepth = 0; game.armBackGuard(); const two = H.stack.length === 3 && game._trapDepth === 2; game.armBackGuard(); const noMore = H.stack.length === 3;
+    H.i -= 1; game._trapDepth -= 1; active = false; game.armBackGuard(); const skipWithoutGesture = H.stack.length === 3 && game._trapDepth === 1; active = true; game.armBackGuard(); const refilled = game._trapDepth === 2;
+    if (hadH) Object.defineProperty(w, 'history', hadH); else delete w.history; if (nav) { if (hadUA) Object.defineProperty(nav, 'userActivation', hadUA); else delete nav.userActivation; } game._trapDepth = 0;
+    assert(two && noMore && skipWithoutGesture && refilled, 'Back guard keeps two activated trap entries and refills them only on a real interaction'); }
   assert(Object.keys(BR.BREATH_STYLES).length === 18 && Object.keys(BR.BREATH_RUNES).length === 13 && ['ventus', 'terra', 'natura', 'lux', 'umbra', 'void', 'bestia', 'construct', 'ward'].length === 9, 'Every element has its breathing rune (12 base styles)');
   const broken = [];
   const styles = Object.keys(BR.BREATH_STYLES);

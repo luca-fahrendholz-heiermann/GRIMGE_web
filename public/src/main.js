@@ -37,6 +37,8 @@ import { TransformationFx } from './transform_fx.js';
 // Free drawing (DRAW, no template) adds this to the recognition confidence before grading.
 export const FREE_DRAW_BONUS = .06;
 import { PrimalCompanion, normalizePrimalChoice, startPrimalBond, endPrimalBond, bondForm, PRIMAL_ARCHETYPES } from './primals.js';
+// Activated trap entries kept on top of the history during a match (back-navigation guard).
+const BACK_TRAPS = 2;
 // Every own shield recipe (Ward principle) shares one cooldown.
 const WARD_SPELL_IDS = new Set(['arcane_aegis', 'storm_ward', 'sacrifice_bulwark']);
 
@@ -2826,9 +2828,19 @@ export class GameWorld {
   installBackGuard() {
     const w = globalThis.window; if (!w?.addEventListener || typeof w.history?.pushState !== 'function' || this._backGuard) return; this._backGuard = true;
     const running = () => this.matchState === 'Running' || this.matchState === 'Ending';
+    // First line (Chrome 123+, Navigation API): a BACK / FORWARD traversal during a match is cancelled outright.
+    const nav = w.navigation;
+    if (nav?.addEventListener) nav.addEventListener('navigate', (e) => {
+      if (!running() || e.navigationType !== 'traverse' || !e.cancelable) return;
+      e.preventDefault(); this.showAnnouncement('ZURÜCK IST IM MATCH GESPERRT — MENÜ ÜBER ☰', 1.6);
+    });
+    // Second line: trap history entries. A BACK that gets through consumes one; a buffer of two activated traps means
+    // even two quick gestures in a row (user report, 5 Nov 2026: touch, training) stay inside the page.
     w.addEventListener('popstate', () => {
       if (!running()) return;
-      try { w.history.pushState({ grimge: 'trap' }, ''); this._trapActivated = false; } catch { /* optional */ }
+      this._trapDepth = Math.max(0, (this._trapDepth ?? 0) - 1);
+      if (!this._trapDepth) { try { w.history.pushState({ grimge: 'trap' }, ''); } catch { /* optional */ } }
+      this.armBackGuard();
       this.showAnnouncement('ZURÜCK IST IM MATCH GESPERRT — MENÜ ÜBER ☰', 1.6);
     });
     const blockMouseBack = (e) => { if ((e.button === 3 || e.button === 4) && running()) { e.preventDefault(); e.stopPropagation(); } };
@@ -2846,11 +2858,15 @@ export class GameWorld {
   }
   // A trap entry only stops BACK when it was pushed during a user activation (Chrome skips the others): push a fresh
   // one whenever an activation is present and the current trap was made without one.
+  // Keeps BACK_TRAPS activated trap entries on top of the page (only pushes with a user activation present: entries
+  // pushed without one are skipped by Chrome's back button).
   armBackGuard() {
     try {
       const h = globalThis.window?.history; if (!h) return;
       const active = globalThis.navigator?.userActivation?.isActive ?? true;
-      if (h.state?.grimge !== 'trap' || (active && !this._trapActivated)) { h.pushState({ grimge: 'trap' }, ''); this._trapActivated = active; }
+      if (!active) { if (h.state?.grimge !== 'trap') h.pushState({ grimge: 'trap' }, ''); return; }
+      while ((this._trapDepth ?? 0) < BACK_TRAPS) { h.pushState({ grimge: 'trap' }, ''); this._trapDepth = (this._trapDepth ?? 0) + 1; }
+      this._trapActivated = true;
     } catch { /* optional */ }
   }
 
