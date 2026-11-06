@@ -294,19 +294,23 @@ export function renderBodyMaterial(ctx, p, st, ry, drawBody, s) {
   const m = MATERIAL[st.style]; if (!m || typeof drawBody !== 'function') return;
   const l = auraStage(st); const grow = stageProgress(st); const cover = Math.min(1, .28 + (l - 1) * .34 + grow * .3) * Math.min(1, st.t * 2);
   if (cover <= .02) return;
-  const W = 170; const H = 190; const base = H - 14; const o = offscreen(W, H); if (!o) return;
+  // The offscreen copy must be rasterised at the SAME screen scale as the body (renderEntity snaps the hero scale to
+  // the transform), else it lands a pixel off / a size off and the Wizard looks doubled (user report, 6 Nov 2026).
+  const k = Math.abs(ctx.getTransform?.()?.a ?? 1) || 1;
+  const W = 170; const H = 190; const base = H - 14; const o = offscreen(Math.ceil(W * k), Math.ceil(H * k)); if (!o) return;
   const { c, canvas } = o; const pals = auraPalettes(st.style, s.ramp); const P = surroundOf(st.style) === 'fire' ? pals[Math.min(1, l - 1)] : pals[0];
-  c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1; c.clearRect(0, 0, W, H); c.imageSmoothingEnabled = false;
+  c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1; c.clearRect(0, 0, canvas.width, canvas.height); c.setTransform(k, 0, 0, k, 0, 0); c.imageSmoothingEnabled = false;
   c.save(); c.translate(W / 2 - p.x, base - ry); drawBody(c, p.x, ry); c.restore();
   // Material over the body pixels only, from the feet up to the transformation front.
   const top = base - cover * (HERO_H + 16);
   c.globalCompositeOperation = 'source-atop';
-  c.globalAlpha = m.a + .06 * (l - 1); // the Wizard stays readable under the material c.fillStyle = m.tint; c.fillRect(0, top, W, H - top);
+  c.globalAlpha = m.a + .06 * (l - 1); /* the Wizard stays readable under the material */ c.fillStyle = m.tint; c.fillRect(0, top, W, H - top);
   c.globalAlpha = 1; materialPattern(c, m.pat, W, top, base, st.t, P, l);
   // The bright front where the body is turning (ice line, flame edge …).
   if (cover < .99) { c.globalAlpha = .9; c.fillStyle = m.front; c.fillRect(0, Math.round(top), W, 1); c.globalAlpha = .45; c.fillRect(0, Math.round(top) + 1, W, 2); }
-  c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1;
-  ctx.save(); ctx.imageSmoothingEnabled = false; ctx.globalAlpha *= Math.min(1, st.timer * 2); ctx.drawImage(canvas, Math.round(p.x - W / 2), Math.round(ry - base)); ctx.restore();
+  // Above the transformation front only the original body shows (no second copy).
+  c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1; c.clearRect(0, 0, W, Math.max(0, Math.floor(top) - 1));
+  ctx.save(); ctx.imageSmoothingEnabled = false; ctx.globalAlpha *= Math.min(1, st.timer * 2); ctx.drawImage(canvas, p.x - W / 2, ry - base, W, H); ctx.restore();
 }
 
 export function renderBreathAura(ctx, p, st, ry, layer, s) {
