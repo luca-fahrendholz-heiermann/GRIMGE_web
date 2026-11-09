@@ -17,6 +17,67 @@ viral; Deckbau, Klassen und Masteries tragen den Langzeit-Fortschritt.
 - Konsequenz für die Technik: Kamera-Zoom und Scrolling-Level, größere und detailliertere Figuren-Sprites,
   Animations-Pipeline in Seitenansicht (Körperteile oder Mischform).
 
+### 1a. DNA-Analyse der beiden Vorbilder (Stand 10. Nov 2026)
+Belegt (Quellen unten) ist markiert mit ✔; der Rest stammt aus Spielkenntnis und ist im Playtest der Vorbilder zu
+verifizieren.
+
+**Castle Crashers**
+- ✔ **Weltkarte** mit wählbaren Stationen: 36 Hauptlevel in acht Abschnitten, jederzeit wieder spielbar; Shops und
+  Schmied (Waffen / Tier-Begleiter wechseln) liegen auf der Karte.
+- ✔ **Arenen** als eigene Stationen: Wellen gemischter Gegner, schaltet Figuren frei.
+- ✔ **Geheimnisse pro Level** (z. B. Schaufel in einem bestimmten Raum → versteckte Waffe / Tier-Kugel).
+- ✔ **Neues Spiel+** („Insane Mode“) als neuer Pfad auf der Weltkarte nach dem ersten Durchspielen.
+- Ein Level = **kurze Strecke (≈ 3–8 min)** aus Abschnitten: Laufen → **Kamera-Sperre** („Kampfraum“: weiter erst
+  wenn alle besiegt) → Laufen → Zwischenboss oder Set-Piece → Boss. Jeder Abschnitt hat **eine Idee**
+  (Reitlevel, Fluss, Lava, Eisburg, Belagerung) — Abwechslung durch Szenen-Thema statt Länge.
+- **Ebenen-Gefühl:** Tiefenband zum Ausweichen, Leitern / Klippen / Hintergrund-Wege, Vordergrund-Silhouetten.
+- **Charakter = Element** (Feuer-, Eis-, Blitz-, Gift-Ritter …) mit eigener Magie; Level-Ups verteilen Punkte auf
+  Stärke / Magie / Verteidigung / Agilität; **Tier-Begleiter** helfen passiv.
+- Viraler Kern: Humor, 4-Spieler-Chaos, große Boss-Auftritte, das Wettrennen um die Prinzessin am Ende.
+
+**Dragon's Crown**
+- ✔ **9 Stages mit je zwei Routen**: zuerst Route A (leichter), danach öffnet sich Route B mit **neuen Bossen**; die
+  B-Bosse bewachen Talismane, die man alle für den Endboss braucht. B-Routen in beliebiger Reihenfolge.
+- ✔ **Viele versteckte Türen und Geheimnisse** in den Stages.
+- ✔ **Knochen gefallener Abenteurer** im Dungeon aufsammeln → im Tempel **wiederbeleben** → optionale
+  **KI-Gefährten**. ✔ Begrenzte Leben pro Quest, danach Wiederbeleben mit Gold; ✔ Gebete im Tempel geben Segen
+  (Gold, Extra-Leben).
+- ✔ **Runen-Magie:** Runen in der Stadt kaufen, im Dungeon **Markierungen an Wänden** finden — zwei eigene Runen +
+  eine Rune der Umgebung ergeben ein Wort mit Effekt (Schatz, Segen, Geheimraum). Für GRIMGE ein Volltreffer:
+  **unsere Runen reagieren schon mit der Umgebung** (Wasser → Baum, Natura → Truhe).
+- ✔ **Rannie**, ein Dieb ohne Gruppenplatz, öffnet Truhen und Türen; Schätze im Hintergrund werden per Zeiger
+  (Touch!) entdeckt — perfekt fürs Handy.
+- Stadt als **Hub** (Gilde, Tempel, Shop, Taverne); nach jeder Stage Beute **schätzen** lassen, Wertung, Kochen.
+- **Sechs Klassen** mit klar verschiedenen Spielweisen — Vorbild für unsere Klassenwahl.
+
+**Was GRIMGE übernimmt (Feldzug / Dungeon)**
+1. **Weltkarte** mit Stationen (Level, Burg-Zwischenboss, Arena, Händler, Tempel); wiederspielbar, Neues Spiel+.
+2. **Level ≈ 4–8 min**, aus Abschnitten mit Kampfräumen (Kamera-Sperre), einer Szenen-Idee pro Abschnitt, Ebenen
+   (Wege oben / unten / im Hintergrund), am Ende eine **Burg als Zwischenboss** (erst weiter, wenn sie fällt).
+3. **Zwei Routen pro Gebiet** (A leicht, B mit neuem Boss + Talisman / späten Runen-Drops).
+4. **Armee aus Gefallenen:** besiegte Gegner / gefundene Überreste → im Lager rekrutieren (wie Knochen im
+   Tempel); Einheiten können endgültig fallen.
+5. **Runen + Umgebung:** Markierungen, Setzlinge, Schlösser in der Szene reagieren auf bestimmte Runen → Geheimraum,
+   Schatz, Abkürzung (Glück + Erfahrung, §6).
+6. **Touch-Schatzsuche:** im Hintergrund versteckte Dinge antippen (Rannie-Prinzip).
+
+Quellen: [Castle Crashers (Wikipedia)](https://en.wikipedia.org/wiki/Castle_Crashers) ·
+[Castle Crashers Guide (Steam)](https://steamcommunity.com/sharedfiles/filedetails/?id=187562643) ·
+[Dragon's Crown (Giant Bomb)](https://www.giantbomb.com/games/3030-35594/) ·
+[Dragon's Crown Review (CheatCC)](https://cheatcc.com/articles/dragon-s-crown-review-for-playstation-3-ps3-ps3/) ·
+[Dragon's Crown Tipps (Destructoid)](https://destructoid.com/?p=129902) ·
+[Talismaster-Trophäe (TrueTrophies)](https://www.truetrophies.com/t58686/talismaster-trophy)
+
+### 1b. Ablauf der Modi im Detail
+- **Feldzug:** Weltkarte → Station wählen → Level (Abschnitte, Kampfräume, Geheimnisse, Rekruten sammeln) →
+  Burg-Zwischenboss (Bodentruppen und Armee zerstören die Burg) → Lager (rekrutieren, heilen, Deck anpassen) →
+  nächste Station; Gebietsende: Endboss → Drops (späte Runen) → Route B öffnet sich.
+- **Dungeon (Roguelite):** Start mit kleinem Deck → Raum für Raum, nach Räumen **1 aus 3 Runen** → Zwischenboss
+  → Geheimrouten bei passender Rune → Endboss oder Tod → Belohnung nach Tiefe; Wissen über Geheimnisse bleibt.
+- **Arena (PvP):** Regel-Entscheidung offen — siehe §4a (Empfehlung: Prozent + Leben, Rausschleudern).
+- **Castle Siege (PvP):** jede Seite auf ihrer Burg → Lane mit Truppen → von oben unterstützen / beschwören →
+  gezielt auf die Lane absetzen für Druck → Turm, dann Burg zerstören.
+
 ## 2. Deck-System
 
 ### Grundbegriffe
@@ -85,6 +146,17 @@ Ketten-Gefühl — „ich sehe deine Rune und antworte“:
 - **Armee im Feldzug:** nach gewonnenen Gefechten Einheiten auswählen und rekrutieren; sie begleiten den Spieler
   durch die nächsten Ebenen und können sterben. Wer gut kämpft und gut unterstützt, hat im nächsten Level eine
   Riesenarmee — und Geschichten zum Teilen („mein Golem hat drei Ebenen überlebt“).
+
+### 4a. Arena-Regeln (Entscheidung offen)
+| Variante | Ablauf | Stärken | Schwächen |
+|---|---|---|---|
+| **Prozent + Leben** (Smash-Prinzip) | Treffer erhöhen den Prozentwert statt HP zu senken; je höher, desto weiter fliegt man; KO durch Rausschleudern aus der Arena (Seiten, Abgründe, Absturz von Plattformen) oder einen harten Treffer bei hohem Prozent; 2–3 Leben | spektakuläre Wegflieger (Clips!), Comebacks jederzeit möglich, nutzt das vorhandene Knockback / Launcher-System, Arena-Gestaltung wird Taktik | Umbau des Schadensmodells (Status-Schaden → Prozent), Arenen brauchen Ränder / Abgründe / Plattformen |
+| **Lebensbalken, ein Leben** | klassisch HP → 0 = Ende | klar, schnell, passt zum jetzigen System | weniger Spektakel, Comebacks seltener |
+| **Lebensbalken, mehrere Leben** | HP → 0 = ein Leben weg, Neustart | Comebacks | lange Matches, wenig Neues |
+
+Empfehlung: **Prozent + Leben** als Standard der Arena (Smash-Prinzip, aber 2,5D: rausfliegen an den Seiten und in
+Abgründe zwischen den Ebenen), die HP-Variante als Option für Ranked-Duelle. Melee-Prinzip: der Prozentwert ändert
+auch, welche Combos funktionieren — niedrige % = lange Combos, hohe % = Finisher-Momente.
 
 ## 5. Fortschritt
 
