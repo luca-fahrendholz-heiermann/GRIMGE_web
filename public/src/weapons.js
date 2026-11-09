@@ -345,11 +345,19 @@ function drawTrail(ctx, pose, tip, hue, progress) {
     const from = pose.from ?? pose.angle; const to = pose.angle;
     if (Math.abs(to - from) > .05) {
       const a0 = Math.min(from, to); const a1 = Math.max(from, to);
-      ctx.globalAlpha = .28 * fade; ctx.strokeStyle = hue; ctx.lineWidth = pose.wide ? 20 : 13;
-      ctx.beginPath(); ctx.arc(0, 0, tip * .78, a0, a1); ctx.stroke();
-      ctx.globalAlpha = .55 * fade; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.5;
-      const head = to > from ? [Math.max(from, to - 1), to] : [to, Math.min(from, to + 1)];
-      ctx.beginPath(); ctx.arc(0, 0, tip * .96, head[0], head[1]); ctx.stroke();
+      // A smear crescent that traces the tip (animation tips: trace the tip, fade the tail): thin and gone at the tail,
+      // full width at the blade, flat colour bands stepped in alpha instead of a soft glow, a white leading edge.
+      ctx.globalCompositeOperation = 'source-over';
+      const R = tip * .98; const maxW = pose.wide ? 24 : 16;
+      const band = (uA, uB, rOut, rIn, color, alpha) => {
+        ctx.globalAlpha = alpha * fade; ctx.fillStyle = color; ctx.beginPath();
+        for (let k = 0; k <= 6; k++) { const u = uA + (uB - uA) * k / 6; const a = from + (to - from) * u; ctx.lineTo(Math.cos(a) * rOut(u), Math.sin(a) * rOut(u)); }
+        for (let k = 6; k >= 0; k--) { const u = uA + (uB - uA) * k / 6; const a = from + (to - from) * u; ctx.lineTo(Math.cos(a) * rIn(u), Math.sin(a) * rIn(u)); }
+        ctx.closePath(); ctx.fill();
+      };
+      const inner = (u) => R - maxW * Math.pow(u, 1.4);
+      for (const [uA, uB, al] of [[.15, .42, .3], [.42, .72, .6], [.72, 1, .9]]) band(uA, uB, () => R, inner, hue, al);
+      band(.55, 1, () => R, (u) => R - 1.5 - 2 * u, '#ffffff', .9);
       if (pose.cross) {
         // The second blade crosses the first: an X of two crescents.
         ctx.globalAlpha = .3 * fade; ctx.strokeStyle = hue; ctx.lineWidth = 13;

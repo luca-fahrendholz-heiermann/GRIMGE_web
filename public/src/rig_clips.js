@@ -1,6 +1,7 @@
 // GRIMGE Prototype — base animation clips for the parts rig (rig.js). Test placeholders (AGENDA 1, stage 2): the final
 // animations are the user's (drawn / AI-generated sheets replace these by clip name).
-// A clip: { frames, hold (60 Hz ticks per frame), loop, air?, keys: [{ t: 0..1, pose }] } — grounded clips get their feet
+// A clip: { frames, hold (60 Hz ticks per frame), loop, air?, keys: [{ t: 0..1, pose }] } or a key-pose clip
+// { holds: [ticks per frame], seq: [pose per frame], smear?: [frame indices], smearHand? } — grounded clips get their feet
 // locked to the floor by the baker (rig.js), so o.pelvis there only matters for air clips.
 // Pose: a = degrees per part (positive: the far end swings forward, toward the facing side), o = pixel offset per part
 // (o.pelvis moves the whole body); cape = how far a cape trails (negative = behind; rigs with a cape part only). Parts: pelvis, torso, head, padF, armFU/armFL (front arm), armBU/armBL (back arm),
@@ -34,38 +35,52 @@ export const BASE_CLIPS = Object.freeze({
     { t: 0, pose: P({ legFU: 14, legFL: -20, legBU: -14, legBL: -12, armFU: 62, armFL: 18, armBU: -52, armBL: -8, head: 2 }) },
     { t: .5, pose: P({ legFU: 16, legFL: -24, legBU: -12, legBL: -14, armFU: 68, armFL: 22, armBU: -58, armBL: -10, head: 2 }) }
   ] },
-  land: { cape: -4, frames: 1, hold: 8, loop: false, keys: [{ t: 0, pose: P({ ...crouch(1), torso: 6, armFU: 25, armBU: -25 }, { pelvis: [0, 6] }) }] },
+  land: { cape: -4, holds: [3, 5], loop: false, seq: [
+    P({ ...crouch(1), torso: 8, armFU: 28, armBU: -28 }),
+    P({ ...crouch(.4), torso: 3, armFU: 10, armBU: -10 })
+  ] },
   dash: { cape: 14, frames: 3, hold: 5, loop: false, keys: [
     { t: 0, pose: P({ torso: -6, armFU: 20, armBU: 15, legFU: 15, legBU: -15 }) },
     { t: .5, pose: P({ torso: -14, head: -6, armFU: 40, armFL: 20, armBU: 30, armBL: 20, legFU: 30, legFL: -12, legBU: -28, legBL: -10 }, { pelvis: [0, 1] }) },
     { t: 1, pose: P({ torso: -8, armFU: 25, armBU: 15, legFU: 18, legBU: -16 }) }
   ] },
-  attack1: { cape: -10, frames: 4, hold: 3, loop: false, keys: [
-    { t: 0, pose: P({ torso: -6, armFU: -38, armFL: 25, armBU: 10, legFU: 8, legBU: -8 }) },
-    { t: .34, pose: P({ torso: 9, head: 2, armFU: 88, armFL: 8, armBU: -25, legFU: 18, legFL: -6, legBU: -16 }, { pelvis: [1, 1] }) },
-    { t: .67, pose: P({ torso: 8, armFU: 82, armFL: 4, armBU: -22, legFU: 18, legBU: -16 }, { pelvis: [1, 1] }) },
-    { t: 1, pose: P({ torso: 3, armFU: 35, armFL: 20, armBU: -8, legFU: 10, legBU: -8 }) }
+  // Strikes are key poses with their own timing (animation tips: anticipation → a one-tick strike with a smear →
+  // overshoot / follow-through → a held hit → settle). holds are 60 Hz ticks per frame and fit the state time
+  // (attack1 .22 s, attack2 .24 s, attack3 .35 s, uppercut .28 s, heavy .34 s); smear marks the frame with the arc.
+  attack1: { cape: -10, holds: [4, 1, 2, 3, 3], loop: false, smear: [1], seq: [
+    P({ torso: -8, head: -2, armFU: -48, armFL: 30, armBU: 14, legFU: 6, legBU: -8 }),
+    P({ torso: 10, armFU: 92, armFL: 6, armBU: -26, legFU: 18, legFL: -6, legBU: -16 }, { pelvis: [2, 0] }),
+    P({ torso: 13, head: 3, armFU: 104, armFL: 2, armBU: -30, legFU: 20, legFL: -6, legBU: -18 }, { pelvis: [3, 0] }),
+    P({ torso: 10, armFU: 90, armFL: 6, armBU: -24, legFU: 18, legFL: -6, legBU: -16 }, { pelvis: [2, 0] }),
+    P({ torso: 3, armFU: 36, armFL: 22, armBU: -6, legFU: 8, legBU: -6 })
   ] },
-  attack2: { cape: -10, frames: 4, hold: 3, loop: false, keys: [
-    { t: 0, pose: P({ torso: -4, armBU: -35, armBL: 30, armFU: 30, armFL: 40 }) },
-    { t: .34, pose: P({ torso: 12, head: 3, armBU: 98, armBL: 5, armFU: -35, armFL: 30, legFU: 20, legFL: -8, legBU: -18 }, { pelvis: [2, 1] }) },
-    { t: .67, pose: P({ torso: 11, armBU: 92, armBL: 5, armFU: -30, legFU: 20, legBU: -18 }, { pelvis: [2, 1] }) },
-    { t: 1, pose: P({ torso: 4, armBU: 30, armBL: 20, armFU: 0, legFU: 10, legBU: -8 }) }
+  attack2: { cape: -10, holds: [4, 1, 2, 3, 4], loop: false, smear: [1], smearHand: 'handBack', seq: [
+    P({ torso: -6, head: -2, armBU: -42, armBL: 35, armFU: 32, armFL: 40 }),
+    P({ torso: 13, head: 3, armBU: 100, armBL: 4, armFU: -36, armFL: 30, legFU: 20, legFL: -8, legBU: -18 }, { pelvis: [2, 0] }),
+    P({ torso: 16, head: 4, armBU: 112, armBL: 0, armFU: -40, armFL: 30, legFU: 22, legFL: -8, legBU: -20 }, { pelvis: [3, 0] }),
+    P({ torso: 12, armBU: 96, armBL: 4, armFU: -34, armFL: 30, legFU: 20, legFL: -8, legBU: -18 }, { pelvis: [2, 0] }),
+    P({ torso: 4, armBU: 30, armBL: 20, armFU: 0, legFU: 8, legBU: -6 })
   ] },
-  attack3: { cape: -6, frames: 5, hold: 3, loop: false, keys: [
-    { t: 0, pose: P({ torso: -12, head: -4, armFU: 160, armFL: 20, armBU: 150, armBL: 20, legFU: 8, legBU: -8 }, { pelvis: [0, -2] }) },
-    { t: .4, pose: P({ torso: 16, head: 4, armFU: 55, armFL: 10, armBU: 45, armBL: 10, ...crouch(.7) }, { pelvis: [2, 4] }) },
-    { t: 1, pose: P({ torso: 14, armFU: 45, armFL: 10, armBU: 40, armBL: 10, ...crouch(.6) }, { pelvis: [2, 3] }) }
+  attack3: { cape: -6, holds: [6, 1, 3, 5, 6], loop: false, smear: [1], seq: [
+    P({ torso: -14, head: -5, armFU: 165, armFL: 18, armBU: 155, armBL: 18, legFU: 8, legBU: -8 }),
+    P({ torso: 18, head: 5, armFU: 60, armFL: 8, armBU: 50, armBL: 8, ...crouch(.7) }, { pelvis: [2, 0] }),
+    P({ torso: 22, head: 6, armFU: 42, armFL: 4, armBU: 34, armBL: 4, ...crouch(.85) }, { pelvis: [3, 0] }),
+    P({ torso: 17, head: 4, armFU: 48, armFL: 8, armBU: 40, armBL: 8, ...crouch(.7) }, { pelvis: [2, 0] }),
+    P({ torso: 6, armFU: 25, armFL: 15, armBU: 15, armBL: 10, ...crouch(.3) })
   ] },
-  uppercut: { cape: 8, frames: 4, hold: 4, loop: false, keys: [
-    { t: 0, pose: P({ torso: 8, armFU: -40, armFL: 70, armBU: 20, ...crouch(.9) }, { pelvis: [0, 5] }) },
-    { t: .5, pose: P({ torso: -8, head: -6, armFU: 172, armFL: 0, armBU: -30, legFU: 10, legBU: -20, legBL: -10 }, { pelvis: [0, -3] }) },
-    { t: 1, pose: P({ torso: -6, head: -5, armFU: 165, armFL: 5, armBU: -25, legFU: 12, legBU: -18 }, { pelvis: [0, -2] }) }
+  uppercut: { cape: 8, holds: [5, 1, 3, 4, 4], loop: false, smear: [1], seq: [
+    P({ torso: 10, head: 2, armFU: -45, armFL: 75, armBU: 22, ...crouch(.95) }),
+    P({ torso: -8, head: -6, armFU: 170, armFL: 2, armBU: -30, legFU: 10, legBU: -20, legBL: -10 }),
+    P({ torso: -12, head: -8, armFU: 182, armFL: -4, armBU: -36, legFU: 12, legBU: -22, legBL: -10 }),
+    P({ torso: -8, head: -5, armFU: 168, armFL: 4, armBU: -28, legFU: 10, legBU: -18 }),
+    P({ torso: -3, armFU: 120, armFL: 15, armBU: -12, legFU: 6, legBU: -8 })
   ] },
-  heavyStrike: { cape: -14, frames: 5, hold: 4, loop: false, keys: [
-    { t: 0, pose: P({ torso: -12, head: -3, armFU: -60, armFL: 35, armBU: -20, legFU: 10, legBU: -6 }) },
-    { t: .35, pose: P({ torso: 16, head: 3, armFU: 92, armFL: 0, armBU: -40, armBL: 20, legFU: 36, legFL: -26, legBU: -36, legBL: 6 }, { pelvis: [3, 4] }) },
-    { t: 1, pose: P({ torso: 14, armFU: 85, armFL: 4, armBU: -35, armBL: 20, legFU: 34, legFL: -24, legBU: -34, legBL: 6 }, { pelvis: [3, 4] }) }
+  heavyStrike: { cape: -14, holds: [6, 1, 3, 5, 5], loop: false, smear: [1], seq: [
+    P({ torso: -14, head: -4, armFU: -66, armFL: 38, armBU: -22, legFU: 10, legBU: -6 }),
+    P({ torso: 17, head: 3, armFU: 94, armFL: 0, armBU: -42, armBL: 20, legFU: 36, legFL: -26, legBU: -36, legBL: 6 }, { pelvis: [3, 0] }),
+    P({ torso: 21, head: 4, armFU: 104, armFL: -2, armBU: -46, armBL: 22, legFU: 38, legFL: -28, legBU: -38, legBL: 6 }, { pelvis: [4, 0] }),
+    P({ torso: 16, head: 3, armFU: 90, armFL: 2, armBU: -40, armBL: 20, legFU: 36, legFL: -26, legBU: -36, legBL: 6 }, { pelvis: [3, 0] }),
+    P({ torso: 8, armFU: 50, armFL: 15, armBU: -20, legFU: 20, legFL: -12, legBU: -18 })
   ] },
   dive: { cape: 20, air: true, frames: 2, hold: 6, loop: true, keys: [
     { t: 0, pose: P({ torso: 20, head: 6, armFU: 50, armFL: -10, armBU: 42, armBL: -10, legFU: 45, legFL: -72, legBU: 30, legBL: -70 }) },

@@ -3431,5 +3431,23 @@ export const SPELL_SPRITE_SHEETS = Object.freeze({
   "res": 2,
   "hd": true,
   "anchor": "base"
+ },
+ "mv_dust_kick": {
+  "name": "mv_dust_kick",
+  "w": 32,
+  "h": 14,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "base"
+ },
+ "mv_dust_land": {
+  "name": "mv_dust_land",
+  "w": 40,
+  "h": 12,
+  "frames": 6,
+  "res": 2,
+  "hd": true,
+  "anchor": "base"
  }
 });

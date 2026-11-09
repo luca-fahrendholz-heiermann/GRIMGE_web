@@ -95,9 +95,9 @@ export class SpriteManager {
       const make = (fill) => { const cv = doc.createElement('canvas'); cv.width = f.w; cv.height = f.h; const g = cv.getContext('2d'); const im = g?.createImageData?.(f.w, f.h); if (im?.data?.length === f.data.length) { im.data.set(f.data); g.putImageData(im, 0, 0); } if (fill) { g.globalCompositeOperation = 'source-in'; g.fillStyle = fill; g.fillRect(0, 0, f.w, f.h); } return cv; };
       return { canvas: make(null), flashCanvas: make('#ffffff'), width: f.w, height: f.h, anchorX: f.pad + img.width * .5, anchorY: f.pad + img.height - 2, baseHeight: img.height, hand: f.hand, handBack: f.handBack };
     };
-    spr.frames = {}; spr.hold = { ...baked.hold }; spr.loop = {};
+    spr.frames = {}; spr.hold = { ...baked.hold }; spr.holdSeq = { ...baked.holdSeq }; spr.loop = {};
     for (const [name, list] of Object.entries(baked.frames)) { spr.frames[name] = list.map(toFrame); spr.loop[name] = !!BASE_CLIPS[name].loop; }
-    for (const [state, clip] of Object.entries(CLIP_ALIASES)) { spr.frames[state] = spr.frames[clip]; spr.hold[state] = spr.hold[clip]; spr.loop[state] = spr.loop[clip]; }
+    for (const [state, clip] of Object.entries(CLIP_ALIASES)) { spr.frames[state] = spr.frames[clip]; spr.hold[state] = spr.hold[clip]; spr.loop[state] = spr.loop[clip]; if (spr.holdSeq[clip]) spr.holdSeq[state] = spr.holdSeq[clip]; }
     spr.rig = true; spr.procFull = false;
   }
 
@@ -605,7 +605,13 @@ export class SpriteManager {
       || animKey === 'uppercut' || animKey === 'dive');
     const cadence = opts.cadence || 1.0;
     const frameDur = (holdTicks / 60) / cadence;
-    const rawIdx = Math.floor(Math.abs(animTime) / frameDur);
+    let rawIdx = Math.floor(Math.abs(animTime) / frameDur);
+    // Key-pose clips: each frame holds its own number of ticks (anticipation long, strike short).
+    const seq = spr.holdSeq?.[animKey];
+    if (seq?.length === frames.length) {
+      const total = seq.reduce((a, b) => a + b, 0); let tick = Math.abs(animTime) * 60 * cadence; if (loops) tick %= total;
+      rawIdx = frames.length - 1; for (let k = 0, acc = 0; k < seq.length; k++) { acc += seq[k]; if (tick < acc) { rawIdx = k; break; } }
+    }
     let idx;
     if (opts.reverse) {
       idx = loops

@@ -33,7 +33,7 @@ import { updateBuffForm, endBuffForm, isGenericBuff, currentBuffForm, renderBuff
 import { silkAirJump, silkSwingStep } from './arcane_fadenschlag.js'; // T13 Fadenschlag: air-jump swing on a silk wire
 import { isShellRolled } from './arcane_konstrukt.js'; // A10 Schalenrolle: the body is hidden inside the ball
 import { cloakFor, hairRecolor } from './form_recolors.js'; // armour aura colours; Aufstiegsstufen hair
-import { drawSpellSprite, spellSheetReady } from './spell_visuals.js'; // Aufstiegsstufen aura sheets
+import { drawSpellSprite, spellSheetReady, SpriteBurst } from './spell_visuals.js'; // Aufstiegsstufen aura sheets
 import { masteryOnShieldHit, masteryTickShield, masteryChargedRelease, masteryPerfectBlock, masteryTier, currentAttacker, masteryTick, masteryMoveMult, masteryIncoming } from './mastery.js';
 import { signatureBodyPose } from './signature_runes.js';
 import { updateSignatureStance, renderSignatureStance, signatureHover, signatureMoveMult, signatureEvent, signatureDamageTaken, setHitContext, signatureSprintVariant, signatureCharge, signatureSprintMove, signatureDive, signatureMeleeMult } from './signature_runes.js';
@@ -662,6 +662,7 @@ export class Player extends GroundEntity {
         if (this._wasAirborne) {
           formJumpFx(this, 'land');
           combat.spawnDust(this.x, this.y, 6);
+          this._landAt = this.animTime; this.motionDust('mv_dust_land');
           if (this.launcherMode) {
             combat.spawnShockwave(this.x, this.y - 2, 28, '#b0bec5');
             this.landingRecoveryTimer = LAUNCHER_LANDING_RECOVERY_TICKS / 60;
@@ -987,6 +988,13 @@ export class Player extends GroundEntity {
     formJumpFx(this, 'takeoff');
   }
 
+  // Drawn key moments (vfx_motion.cjs): a dust kick behind the heel at the sprint start, puffs on landing.
+  motionDust(sheet) {
+    if (!spellSheetReady(sheet) || !Number.isFinite(this.x)) return;
+    const f = this.facing || 1; const kick = sheet === 'mv_dust_kick';
+    spells.activeSpells.push(Object.assign(new SpriteBurst({ sheet, x: this.x - (kick ? f * 14 : 0), y: this.y + 1, z: this.z, fps: 16, flip: kick && f < 0, anchor: 'base' }), { fineVfx: true, surfaceHeight: this.surfaceHeight ?? 0 }));
+  }
+
   activateSprint(dir) {
     this._sprintHits = new Set();
     if (this.rootTimer > 0 || this.isGuarding || this.backdashTimer > 0 || this.backdashSuppressTimer > 0 || !this.grounded || this.activeClash) return;
@@ -994,6 +1002,7 @@ export class Player extends GroundEntity {
     this.sprintDir = dir;
     audio.playDash();
     combat.spawnDust(this.x, this.y, 5);
+    this.motionDust('mv_dust_kick');
     combat.spawnShockwave(this.x, this.y - 15, 18, '#80ffea');
   }
 
@@ -2266,6 +2275,7 @@ export class Player extends GroundEntity {
       else if (this.chargeTimer > 0) animState = 'charge';
       else if (this.backdashTimer > 0) animState = 'dash';
       else if (free && !this.grounded) animState = this.vElevation > 0 ? 'jump' : 'fall';
+      else if (free && this.state !== 'run' && this.animTime - (this._landAt ?? -9) < .14) animState = 'land';
       else if (this.state === 'run' && this.sprintActive) animState = 'sprint';
     }
     if (this._animState !== animState) { this._animState = animState; this._animStart = this.animTime; }

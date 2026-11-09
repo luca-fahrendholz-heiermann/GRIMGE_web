@@ -97,9 +97,11 @@ export function partMatrices(rig, pose = {}) {
 }
 
 // Bake one posed frame into a padded RGBA frame: nearest-neighbour inverse mapping keeps the pixel art crisp.
-export function bakePose(src, rig, map, pose, pad = 24) {
+export function bakePose(src, rig, map, pose, pad = 24, under = null) {
   const W = src.w + pad * 2; const H = src.h + pad * 2; const data = new Uint8ClampedArray(W * H * 4);
   const mats = partMatrices(rig, pose);
+  // Drawn key moments (a smear) go in first, behind every part.
+  under?.(data, W, H);
   for (const id of rig.draw) {
     const k = rig.claim.indexOf(id); const m = mats[id]; const im = inv(m); const poly = rig.parts[id].poly;
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
@@ -127,6 +129,8 @@ export function blendPose(p, q, u) {
 
 // Frame i of a clip: keys [{ t: 0..1, pose }] sampled at i / frames (loops wrap the last key into the first).
 export function sampleClip(clip, i) {
+  // Key-pose clips (clip.seq): one hand-set pose per frame, no tweening (the pixel-art way for strikes).
+  if (clip.seq) { const q = clip.seq[Math.min(i, clip.seq.length - 1)]; return blendPose(q, q, 0); }
   const keys = clip.keys; const t = clip.loop ? i / clip.frames : (clip.frames > 1 ? i / (clip.frames - 1) : 0);
   if (keys.length === 1) return blendPose(keys[0].pose, keys[0].pose, 0);
   for (let k = 0; k < keys.length; k++) {
@@ -137,24 +141,59 @@ export function sampleClip(clip, i) {
   return blendPose(keys[0].pose, keys[0].pose, 0);
 }
 
+// Frames of a clip (key-pose clips: one per pose).
+export const clipLength = (clip) => clip.seq ? clip.seq.length : clip.frames;
+
+// Hand point of a rig in a pose (padded frame coordinates).
+function handPoint(rig, pose, which, pad) { const h = rig[which]; if (!h) return null; const [x, y] = apply(partMatrices(rig, pose)[h.part], h.at[0], h.at[1]); return [x + pad, y + pad]; }
+
+// The smear of a strike frame, drawn into the frame data (behind the body): it traces the hand's path from the previous
+// pose to this one (animation tips: trace the tip, fade the tail). Thin and gone at the tail, a stepped checker fade in
+// the middle, full at the head with a white leading core — flat pixel colours, no blur.
+const SMEAR = { body: [244, 230, 200], edge: [196, 176, 140], core: [255, 255, 255] };
+function drawSmear(data, W, H, path) {
+  const pts = [];
+  for (let i = 1; i < path.length; i++) { const [ax, ay] = path[i - 1]; const [bx, by] = path[i]; const n = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay))); for (let k = 0; k < n; k++) pts.push([ax + (bx - ax) * k / n, ay + (by - ay) * k / n]); }
+  pts.push(path[path.length - 1]);
+  const put = (x, y, c) => { if (x < 0 || y < 0 || x >= W || y >= H) return; const i = (y * W + x) * 4; data[i] = c[0]; data[i + 1] = c[1]; data[i + 2] = c[2]; data[i + 3] = 255; };
+  pts.forEach(([px, py], j) => {
+    const u = j / Math.max(1, pts.length - 1); if (u < .22) return;
+    const r = .6 + 4.6 * Math.pow(u, 1.3); const checker = u < .5;
+    for (let y = Math.floor(py - r); y <= Math.ceil(py + r); y++) for (let x = Math.floor(px - r); x <= Math.ceil(px + r); x++) {
+      const d = Math.hypot(x + .5 - px, y + .5 - py); if (d > r) continue;
+      if (checker && (x + y) % 2) continue;
+      put(x, y, u > .78 && d < r * .45 ? SMEAR.core : d > r - 1 ? SMEAR.edge : SMEAR.body);
+    }
+  });
+}
+
 function lowestRow(f) { for (let y = f.h - 1; y >= 0; y--) for (let x = 0; x < f.w; x++) if (f.data[(y * f.w + x) * 4 + 3] >= 8) return y; return -1; }
 
-// All clips of a rig baked: { clipName: [{ w, h, data, pad, hand }] } plus per-clip hold ticks and loop flags.
+// All clips of a rig baked: { clipName: [{ w, h, data, pad, hand }] } plus per-clip hold ticks (holdSeq: per frame).
 export function bakeClips(src, rig, clips, pad = 24) {
-  const map = claimMap(src, rig); const frames = {}; const hold = {};
+  const map = claimMap(src, rig); const frames = {}; const hold = {}; const holdSeq = {};
   // Grounded clips keep the feet on the floor: each frame is shifted so its lowest pixel sits where the standing image's
   // does (a simple foot lock — the leg angles alone sink or lift the body). Air clips (clip.air) keep their offsets.
   const floor = lowestRow(bakePose(src, rig, map, { a: {}, o: {} }, pad));
   for (const [name, clip] of Object.entries(clips)) {
-    frames[name] = Array.from({ length: clip.frames }, (_, i) => {
+    const n = clipLength(clip); const poses = [];
+    frames[name] = Array.from({ length: n }, (_, i) => {
       const pose = sampleClip(clip, i);
-      if (rig.parts.cape && pose.a.cape === undefined) pose.a.cape = (clip.cape ?? -2) + (clip.loop ? Math.sin(i / clip.frames * Math.PI * 2) * 2.5 : -i * .8);
+      if (rig.parts.cape && pose.a.cape === undefined) pose.a.cape = (clip.cape ?? -2) + (clip.loop ? Math.sin(i / n * Math.PI * 2) * 2.5 : -i * .8);
       let f = bakePose(src, rig, map, pose, pad);
       const d = clip.air ? 0 : floor - lowestRow(f);
       if (d) { const [ox, oy] = pose.o.pelvis ?? [0, 0]; pose.o.pelvis = [ox, oy + d]; f = bakePose(src, rig, map, pose, pad); }
+      // Smear frames: the hand's arc from the previous pose to this one, baked in behind the body.
+      if (clip.smear?.includes(i) && poses[i - 1]) {
+        const which = clip.smearHand ?? 'hand'; const path = [];
+        for (let k = 0; k <= 8; k++) { const q = handPoint(rig, blendPose(poses[i - 1], pose, k / 8), which, pad); if (q) path.push(q); }
+        if (path.length > 1) { const hand = f.hand; const handBack = f.handBack; f = bakePose(src, rig, map, pose, pad, (data, W, H) => drawSmear(data, W, H, path)); f.hand = hand; f.handBack = handBack; }
+      }
+      poses[i] = pose;
       return f;
     });
-    hold[name] = clip.hold;
+    hold[name] = clip.hold ?? 4;
+    if (clip.holds) holdSeq[name] = clip.holds;
   }
-  return { frames, hold, map };
+  return { frames, hold, holdSeq, map };
 }

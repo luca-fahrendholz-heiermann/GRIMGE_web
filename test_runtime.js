@@ -4996,7 +4996,7 @@ game.running = false;
   const { frames } = R.bakeClips(src, rig, C.BASE_CLIPS);
   const lowest = (f) => { for (let y = f.h - 1; y >= 0; y--) for (let x = 0; x < f.w; x++) if (f.data[(y * f.w + x) * 4 + 3] >= 8) return y; return -1; };
   const base = lowest(rest); const walkFeet = frames.walk.map(lowest); const feetOk = walkFeet.every((y) => Math.abs(y - base) <= 4);
-  const allBaked = Object.entries(C.BASE_CLIPS).every(([k, c]) => frames[k]?.length === c.frames && frames[k].every((f) => f.hand && lowest(f) > 0));
+  const allBaked = Object.entries(C.BASE_CLIPS).every(([k, c]) => frames[k]?.length === R.clipLength(c) && frames[k].every((f) => f.hand && lowest(f) > 0));
   const needed = ['idle', 'walk', 'sprint', 'jump', 'fall', 'attack1', 'attack2', 'attack3', 'uppercut', 'heavyStrike', 'dive', 'guard', 'hurt', 'dead', 'draw', 'charge', 'dash'].every((k) => C.BASE_CLIPS[k]);
   assert(opaque > 3000 && unclaimed === 0 && diff === 0 && allBaked && feetOk && needed, 'Parts rig: every hero pixel has a part (' + unclaimed + ' unclaimed), the rest pose is the image (' + diff + ' px off), all base clips bake, walking keeps the feet on the ground (' + walkFeet.join(',') + ' vs ' + base + ')');
 }
@@ -5029,7 +5029,16 @@ game.running = false;
   for (let y = 0; y < src.h; y++) for (let x = 0; x < src.w; x++) { const a = (y * src.w + x) * 4; const b = ((y + 24) * rest.w + x + 24) * 4; if (src.data[a + 3] >= 8 && rest.data[b] !== src.data[a]) diff++; }
   const capePx = [...map].filter((k) => k === rig.claim.indexOf('cape')).length;
   const { frames } = R.bakeClips(src, rig, { sprint: C.BASE_CLIPS.sprint });
-  assert(unclaimed === 0 && diff === 0 && capePx > 300 && frames.sprint.length === C.BASE_CLIPS.sprint.frames && C.BASE_CLIPS.sprint.cape < -10, 'Focus form rig: all pixels claimed, rest pose exact, a cape part (' + capePx + ' px) that trails while sprinting');
+  assert(unclaimed === 0 && diff === 0 && capePx > 300 && frames.sprint.length === R.clipLength(C.BASE_CLIPS.sprint) && C.BASE_CLIPS.sprint.cape < -10, 'Focus form rig: all pixels claimed, rest pose exact, a cape part (' + capePx + ' px) that trails while sprinting');
+}
+{
+  // Key-pose timing (animation tips: anticipation long, strike one tick): per-frame holds pick the right frame.
+  const { sprites: SM } = await import('./public/src/sprites.js'); const fr = (i) => ({ canvas: { i }, width: 1, height: 1, anchorX: 0, anchorY: 0 });
+  const spr = { frames: { attack1: [fr(0), fr(1), fr(2)] }, holdSeq: { attack1: [4, 1, 2] }, loop: { attack1: false } };
+  const at = (ticks) => SM.resolveFrame(spr, 'attack1', ticks / 60, 0).canvas.i;
+  const C = await import('./public/src/rig_clips.js');
+  const fits = [['attack1', 13], ['attack2', 14], ['attack3', 21], ['uppercut', 17], ['heavyStrike', 20]].every(([k, t]) => C.BASE_CLIPS[k].holds.reduce((a, b) => a + b, 0) <= t + 1 && C.BASE_CLIPS[k].smear?.length);
+  assert(at(3) === 0 && at(4.5) === 1 && at(5.5) === 2 && at(30) === 2 && fits, 'Key-pose strikes: per-frame holds (wind-up 4 ticks → strike 1 → …), every strike fits its state time and has a smear frame');
 }
 {
   // Guard against code swallowed by a mid-line comment ("x = 1; // note y = 2;" — happened twice, 6 + 10 Nov 2026).
