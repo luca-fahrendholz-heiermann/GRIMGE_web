@@ -7,9 +7,10 @@
 import { groundYForDepth } from './world.js';
 
 // defs: [{ type: 'stairs', x0, x1, zMin, zMax, from, to } | { type: 'gallery', x0, x1, zMin, zMax, h }], x relative to left.
+// Furniture (below) is landing-only too, but never walked onto: you jump up. Foreground pieces have no surface.
 export function structureSurfaces(defs = [], left = 0) {
-  return defs.map((d, i) => {
-    const xMin = left + d.x0; const xMax = left + d.x1; const base = { id: `structure${i}`, xMin, xMax, zMin: d.zMin, zMax: d.zMax, landingOnly: true, levelWalk: true, structure: d.type };
+  return defs.filter((d) => d.type === 'stairs' || d.type === 'gallery' || FURNITURE.has(d.type)).map((d, i) => {
+    const xMin = left + d.x0; const xMax = left + d.x1; const base = { id: `structure${i}`, xMin, xMax, zMin: d.zMin, zMax: d.zMax, landingOnly: true, levelWalk: !FURNITURE.has(d.type), structure: d.type };
     if (d.type === 'stairs') { const span = Math.max(1, xMax - xMin); return { ...base, baseHeight: Math.max(d.from, d.to), heightAt: (x) => d.from + (d.to - d.from) * Math.max(0, Math.min(1, (x - xMin) / span)) }; }
     return { ...base, baseHeight: d.h };
   });
@@ -48,5 +49,67 @@ export function renderStructures(ctx, defs = [], left = 0) {
   for (const d of defs) {
     if (d.type === 'gallery') gallery(ctx, left + d.x0, left + d.x1, d.zMin, d.zMax, d.h);
     else if (d.type === 'stairs') stairs(ctx, left + d.x0, left + d.x1, d.zMin, d.zMax, d.from, d.to);
+  }
+}
+
+// ── furniture platforms (Castle Crashers: bunk beds, tables, crates — jump on, fight from above) ────────────────
+// { type: 'table' | 'bunk' | 'crates', x0, x1, zMin, zMax, h } stand in the middle of the field: landing-only surfaces
+// (jumped onto, never walked into — the ground under them blocks like a wall), drawn in the painter's order with the
+// actors (front edge), and whoever stands on / above one is drawn right after it.
+export const FURNITURE = new Set(['table', 'bunk', 'crates']);
+export const furnitureDefs = (defs = []) => defs.filter((d) => FURNITURE.has(d.type));
+const WOOD = { top: '#9a7148', topLine: '#7a5634', front: '#6b4a2e', dark: '#3a2618', leg: '#5c3e26', cloth: '#8a8fa8', clothLight: '#b8bccf', metal: '#8c8c94' };
+function furniture(ctx, d, left) {
+  const x0 = left + d.x0; const x1 = left + d.x1; const yBackG = groundYForDepth(d.zMin); const yFrontG = groundYForDepth(d.zMax); const h = d.h;
+  const yBack = yBackG - h; const yFront = yFrontG - h;
+  if (d.type === 'table') {
+    for (const lx of [x0 + 4, x1 - 9]) { rect(ctx, lx, yFront, 5, yFrontG - yFront, WOOD.leg); rect(ctx, lx, yBack + 4, 4, yBackG - yBack - 4, WOOD.dark); }
+    rect(ctx, x0, yBack, x1 - x0, yFront - yBack, WOOD.top); for (let x = x0 + 12; x < x1; x += 14) rect(ctx, x, yBack, 1, yFront - yBack, WOOD.topLine);
+    rect(ctx, x0, yFront, x1 - x0, 6, WOOD.front); rect(ctx, x0, yFront, x1 - x0, 1, WOOD.top);
+  } else if (d.type === 'bunk') {
+    // Two tiers: posts, the lower mattress, the upper bed (its top is the platform).
+    for (const px of [x0 + 3, x1 - 8]) rect(ctx, px, yBack - 8, 5, yBackG - yBack + 8, WOOD.dark); /* back posts */
+    for (const px of [x0, x1 - 6]) rect(ctx, px, yFront - 8, 6, yFrontG - yFront + 8, WOOD.leg);
+    const mid = yFrontG - h * .45; rect(ctx, x0 + 6, mid, x1 - x0 - 12, 6, WOOD.front); rect(ctx, x0 + 6, mid - 7, x1 - x0 - 12, 7, WOOD.cloth); rect(ctx, x0 + 8, mid - 7, 14, 4, WOOD.clothLight);
+    rect(ctx, x0, yBack, x1 - x0, yFront - yBack, WOOD.cloth); rect(ctx, x0 + 3, yBack + 1, 16, yFront - yBack - 2, WOOD.clothLight);
+    rect(ctx, x0, yFront, x1 - x0, 7, WOOD.front); rect(ctx, x0, yFront, x1 - x0, 1, WOOD.top);
+    for (let y = yFront + 10; y < mid - 8; y += 9) rect(ctx, x1 - 4, y, 8, 2, WOOD.top); /* ladder rungs */
+  } else {
+    // A stack of crates: front faces with planks and a cross brace, lit tops.
+    const n = Math.max(1, Math.round((x1 - x0) / 34)); const w = (x1 - x0) / n;
+    for (let i = 0; i < n; i++) { const cx = x0 + i * w; rect(ctx, cx, yFront, w - 2, yFrontG - yFront, WOOD.front); rect(ctx, cx, yFront, w - 2, 2, WOOD.top); rect(ctx, cx, yFront, 2, yFrontG - yFront, WOOD.dark); for (let k = 0; k < w - 4; k++) rect(ctx, cx + 2 + k, yFront + 2 + (yFrontG - yFront - 4) * k / (w - 4), 1, 2, WOOD.dark); }
+    rect(ctx, x0, yBack, x1 - x0 - 2, yFront - yBack, WOOD.top); for (let x = x0 + 8; x < x1; x += 10) rect(ctx, x, yBack, 1, yFront - yBack, WOOD.topLine);
+  }
+}
+// Painter-order entries for the furniture (sorted with the actors by their front edge).
+export function furnitureEntries(defs = [], left = 0) {
+  return furnitureDefs(defs).map((d) => ({ y: groundYForDepth(d.zMax) + .01, render: (c) => furniture(c, d, left) }));
+}
+// The furniture an actor stands on or hovers above (drawn right after it), else null.
+export function furnitureUnder(defs = [], left = 0, a) {
+  if (!a || !Number.isFinite(a.x) || !Number.isFinite(a.z)) return null;
+  const wh = (a.surfaceHeight ?? 0) + (a.elevation ?? 0);
+  for (const d of furnitureDefs(defs)) if (a.x >= left + d.x0 - 6 && a.x <= left + d.x1 + 6 && a.z >= d.zMin - .02 && a.z <= d.zMax + .02 && wh >= d.h - 6) return { frontY: groundYForDepth(d.zMax) };
+  return null;
+}
+
+// ── foreground (in front of the battle line, parallax 1.25; see-through where the Wizard is behind) ────────────
+// { type: 'fg_pillar' | 'fg_chain', x } — dark silhouettes framing the scene like Castle Crashers' beds and pillars.
+export function renderForeground(ctx, defs = [], left = 0, camX = 0, player = null) {
+  for (const d of defs) {
+    if (d.type !== 'fg_pillar' && d.type !== 'fg_chain') continue;
+    const x = left + d.x - camX * .25; const behind = player && Math.abs(player.x - x) < (d.type === 'fg_pillar' ? 44 : 16);
+    ctx.save(); ctx.globalAlpha = behind ? .4 : .88;
+    if (d.type === 'fg_pillar') {
+      const top = groundYForDepth(.3) - 330; const bot = groundYForDepth(1) + 120;
+      rect(ctx, x - 26, top, 52, bot - top, '#120e16'); rect(ctx, x - 26, top, 4, bot - top, '#2a2232'); rect(ctx, x + 18, top, 3, bot - top, '#0a080c');
+      for (let y = top + 30; y < bot; y += 46) rect(ctx, x - 26, y, 52, 3, '#1e1824');
+      rect(ctx, x - 34, groundYForDepth(1) - 6, 68, 14, '#1a1420');
+    } else {
+      const top = groundYForDepth(0) - 420; const bot = groundYForDepth(.2) - 210;
+      for (let y = top; y < bot; y += 9) { rect(ctx, x - 3, y, 6, 6, '#1a1620'); rect(ctx, x - 1, y + 1, 2, 4, '#3a3442'); }
+      rect(ctx, x - 9, bot, 18, 10, '#141018');
+    }
+    ctx.restore();
   }
 }

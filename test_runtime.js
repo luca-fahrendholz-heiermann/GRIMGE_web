@@ -4965,6 +4965,25 @@ game.running = false;
     game.returnToHub(); }
 }
 {
+  // Furniture platforms + foreground (Castle Crashers DNA, user 10 Nov 2026): jump onto a table, never walk into it.
+  { game.returnToHub(); game.setMatchMode('dungeon'); game.startMatch(); if (!game.modeState.structures) game.spawnDungeonStage(1);
+    const LS = await import('./public/src/level_structures.js');
+    const P = game.player; const bf = game.battlefield; const st = game.modeState.structures; const L = st?.left ?? 0;
+    const table = st.defs.find((d) => d.type === 'table');
+    P.x = L + table.x0 - 40; P.z = .56; bf.placeOnSurface(P); P.grounded = true; P.elevation = 0; P._structSafe = null; bf.resolveEntityCollision(P);
+    for (let x = P.x; x <= L + table.x0 + 40; x += 4) { P.x = x; P.z = .56; bf.resolveEntityCollision(P); }
+    const blocked = P.x < L + table.x0 && (P.surfaceHeight ?? 0) === 0;
+    P.x = L + (table.x0 + table.x1) / 2; P.z = .56; P.grounded = false; P.elevation = table.h + 6; P.vElevation = -40; P.surfaceHeight = 0; P.surfaceId = null;
+    bf.resolveEntityCollision(P); for (let i = 0; i < 30 && !P.grounded; i++) game.update?.(1 / 60);
+    const landed = Math.abs((P.surfaceHeight ?? 0) - table.h) < 1;
+    const ents = LS.furnitureEntries(st.defs, L); const on = LS.furnitureUnder(st.defs, L, P);
+    let fg = 0; const ctx = new Proxy({}, { get: (t, k) => k === 'fillRect' ? () => { fg++; } : () => {}, set: () => true });
+    LS.renderForeground(ctx, st.defs, L, 0, P); let furnDrawn = 0; ents.forEach((e) => { const b = fg; e.render(ctx); furnDrawn += fg - b; });
+    assert(blocked && landed && ents.length === 2 && on && on.frontY + .02 > ents[0].y && fg > 0 && furnDrawn > 0 && LS.structureSurfaces([{ type: 'fg_pillar', x: 5 }]).length === 0,
+      'Furniture: walking into the table is blocked, a jump lands on it (h ' + Math.round(P.surfaceHeight ?? 0) + '), the Wizard on top draws after it; foreground pieces render and have no surface');
+    game.returnToHub(); }
+}
+{
   // Guard against code swallowed by a mid-line comment ("x = 1; // note y = 2;" — happened twice, 6 + 10 Nov 2026).
   const fsx = await import('node:fs'); const pathx = await import('node:path');
   const re = /[;)}]\s\/\/[^'"`]*?(\b[A-Za-z_$][\w$]*\.[A-Za-z_$][\w$]* = [^=]|\bconst [A-Za-z_$]+ =|\blet [A-Za-z_$]+ =|\bctx\.[A-Za-z]+\(|\breturn [A-Za-z_$(]|\bthis\.[A-Za-z_]+ = [^=])/;

@@ -38,7 +38,7 @@ import { TransformationFx } from './transform_fx.js';
 export const FREE_DRAW_BONUS = .06;
 import { PrimalCompanion, normalizePrimalChoice, startPrimalBond, endPrimalBond, bondForm, PRIMAL_ARCHETYPES } from './primals.js';
 import { currentBuffForm } from './buff_forms.js'; // transformation and Arcane State exclude each other
-import { structureSurfaces, renderStructures } from './level_structures.js'; // stairs / galleries (Castle Crashers DNA)
+import { structureSurfaces, renderStructures, furnitureEntries, furnitureUnder, renderForeground } from './level_structures.js'; // stairs / galleries (Castle Crashers DNA)
 // Activated trap entries kept on top of the history during a match (back-navigation guard).
 const BACK_TRAPS = 2;
 // Follow-camera zoom per mode (1 = the classic full stage). The zoom pivots on the near ground edge, so the near depth
@@ -60,9 +60,17 @@ const DUNGEON_ROOMS = Object.freeze([
   Object.freeze({ width: 2200, encounters: [{ at: 0, count: 2 }, { at: 800, count: 2 }], structures: Object.freeze([
     Object.freeze({ type: 'stairs', x0: 560, x1: 820, zMin: .06, zMax: .28, from: 0, to: 100 }),
     Object.freeze({ type: 'gallery', x0: 820, x1: 1300, zMin: .06, zMax: .28, h: 100 }),
-    Object.freeze({ type: 'stairs', x0: 1300, x1: 1560, zMin: .06, zMax: .28, from: 100, to: 0 })
+    Object.freeze({ type: 'stairs', x0: 1300, x1: 1560, zMin: .06, zMax: .28, from: 100, to: 0 }),
+    // Furniture to jump onto (Castle Crashers bunk beds / tables) and dark foreground pieces framing the scene.
+    Object.freeze({ type: 'table', x0: 300, x1: 420, zMin: .5, zMax: .62, h: 34 }),
+    Object.freeze({ type: 'bunk', x0: 1700, x1: 1840, zMin: .44, zMax: .58, h: 70 }),
+    Object.freeze({ type: 'fg_pillar', x: 700 }), Object.freeze({ type: 'fg_chain', x: 1150 }), Object.freeze({ type: 'fg_pillar', x: 1650 })
   ]) }),
-  Object.freeze({ width: 2400, encounters: [{ at: 0, count: 2 }, { at: 750, count: 2 }, { at: 1450, count: 2 }], rescueAt: 1150 }),
+  Object.freeze({ width: 2400, encounters: [{ at: 0, count: 2 }, { at: 750, count: 2 }, { at: 1450, count: 2 }], rescueAt: 1150, structures: Object.freeze([
+    Object.freeze({ type: 'crates', x0: 520, x1: 622, zMin: .38, zMax: .5, h: 50 }),
+    Object.freeze({ type: 'table', x0: 1500, x1: 1630, zMin: .55, zMax: .67, h: 34 }),
+    Object.freeze({ type: 'fg_chain', x: 400 }), Object.freeze({ type: 'fg_pillar', x: 1000 }), Object.freeze({ type: 'fg_chain', x: 1800 })
+  ]) }),
   Object.freeze({ width: 2400, encounters: [{ at: 0, count: 2 }, { at: 750, count: 3 }, { at: 1450, count: 3 }], elite: true }),
   Object.freeze({ width: 1400, boss: true })
 ]);
@@ -3318,7 +3326,13 @@ export class GameWorld {
     // Spells with a ground position and summons share the painter's order
     // with the actors, so a spike behind the dummy is hidden by the dummy.
     actors.push(...spells.depthEntries());
-    actors.sort((a, b) => a.y - b.y);
+    // Furniture shares the painter's order: whoever stands on one is drawn right after it, jumps sort by the ground depth.
+    const st = this.modeState?.structures; const furn = st ? furnitureEntries(st.defs, st.left) : [];
+    if (furn.length) {
+      const key = new Map(actors.map((a) => { const on = Number.isFinite(a.z) ? furnitureUnder(st.defs, st.left, a) : null; return [a, on ? on.frontY + .02 : a.y + (Number.isFinite(a.elevation) && a.elevation > 0 && Number.isFinite(a.z) ? a.elevation : 0)]; }));
+      for (const f of furn) { key.set(f, f.y); actors.push(f); }
+      actors.sort((a, b) => key.get(a) - key.get(b));
+    } else actors.sort((a, b) => a.y - b.y);
     let spellBatch = [];
     for (const actor of actors) {
       if (actor.spell) { spellBatch.push(actor.spell); continue; }
@@ -3343,6 +3357,8 @@ export class GameWorld {
 
     // Combat VFX
     combat.render(ctx);
+    // Foreground pillars / chains in front of the battle line (parallax, see-through over the Wizard).
+    if (this.modeState?.structures) renderForeground(ctx, this.modeState.structures.defs, this.modeState.structures.left, this.modeState?.dungeonCameraX ?? 0, this.player);
 
     if (this.debugVisible) this.battlefield.renderDebug(ctx, this);
 
