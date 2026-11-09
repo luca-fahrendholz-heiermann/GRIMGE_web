@@ -1,6 +1,8 @@
 // GRIMGE Prototype — Sprite Pipeline & Procedural Animation Engine
 import { ENTITY_VISUALS } from './world.js';
 import { ART_ASSETS } from './art_assets.js';
+import { RIGS, bakeClips } from './rig.js';
+import { BASE_CLIPS, CLIP_ALIASES } from './rig_clips.js';
 
 const CLIP_TIMING = {
   idle: 15, walk: 8, run: 6, jump: 10, fall: 10,
@@ -76,10 +78,29 @@ export class SpriteManager {
       const frames = imgs.map((img) => this.preparedFrame(img));
       const spr = { ...frames[0], pixel: true, procFull: true };
       if (frames.length > 1) { spr.frames = { idle: frames }; spr.hold = { idle: def.hold ?? 30 }; }
+      // Parts rig (rig.js): the standing image is cut into parts and baked into the base animations.
+      if (RIGS[key]) this.applyRig(spr, imgs[0], RIGS[key]);
       this.sprites[key] = spr;
       return spr;
     });
   }
+  // Bake the rig clips into frames (padded canvases; baseHeight keeps the on-screen size of the standing image).
+  applyRig(spr, img, rig) {
+    const doc = globalThis.document; if (typeof doc?.createElement !== 'function') return;
+    const c = doc.createElement('canvas'); c.width = img.width; c.height = img.height; const x = c.getContext('2d', { willReadFrequently: true });
+    if (!x?.getImageData) return;
+    x.drawImage(img, 0, 0); const id = x.getImageData(0, 0, img.width, img.height); if (!(id?.data?.length >= img.width * img.height * 4)) return;
+    const baked = bakeClips({ w: img.width, h: img.height, data: id.data }, rig, BASE_CLIPS);
+    const toFrame = (f) => {
+      const make = (fill) => { const cv = doc.createElement('canvas'); cv.width = f.w; cv.height = f.h; const g = cv.getContext('2d'); const im = g?.createImageData?.(f.w, f.h); if (im?.data?.length === f.data.length) { im.data.set(f.data); g.putImageData(im, 0, 0); } if (fill) { g.globalCompositeOperation = 'source-in'; g.fillStyle = fill; g.fillRect(0, 0, f.w, f.h); } return cv; };
+      return { canvas: make(null), flashCanvas: make('#ffffff'), width: f.w, height: f.h, anchorX: f.pad + img.width * .5, anchorY: f.pad + img.height - 2, baseHeight: img.height, hand: f.hand, handBack: f.handBack };
+    };
+    spr.frames = {}; spr.hold = { ...baked.hold }; spr.loop = {};
+    for (const [name, list] of Object.entries(baked.frames)) { spr.frames[name] = list.map(toFrame); spr.loop[name] = !!BASE_CLIPS[name].loop; }
+    for (const [state, clip] of Object.entries(CLIP_ALIASES)) { spr.frames[state] = spr.frames[clip]; spr.hold[state] = spr.hold[clip]; spr.loop[state] = spr.loop[clip]; }
+    spr.rig = true; spr.procFull = false;
+  }
+
   preparedFrame(img) {
     const make = (fill) => { const c = document.createElement('canvas'); c.width = img.width; c.height = img.height; const x = c.getContext('2d'); x.imageSmoothingEnabled = false; x.drawImage(img, 0, 0); if (fill) { x.globalCompositeOperation = 'source-in'; x.fillStyle = fill; x.fillRect(0, 0, c.width, c.height); } return c; };
     const canvas = make(null);
@@ -580,7 +601,7 @@ export class SpriteManager {
       };
     }
     const holdTicks = spr.hold?.[animKey] ?? CLIP_TIMING[animKey] ?? CLIP_TIMING._default;
-    const loops = !(animKey === 'attack' || animKey === 'dead' || animKey === 'hurt'
+    const loops = spr.loop?.[animKey] ?? !(animKey === 'attack' || animKey === 'dead' || animKey === 'hurt'
       || animKey === 'uppercut' || animKey === 'dive');
     const cadence = opts.cadence || 1.0;
     const frameDur = (holdTicks / 60) / cadence;
@@ -599,7 +620,7 @@ export class SpriteManager {
     return {
       canvas: (hitFlash > 0) ? (f.flashCanvas ?? f.canvas) : f.canvas,
       width: f.width, height: f.height,
-      anchorX: f.anchorX, anchorY: f.anchorY
+      anchorX: f.anchorX, anchorY: f.anchorY, baseHeight: f.baseHeight
     };
   }
 
@@ -632,7 +653,7 @@ export class SpriteManager {
     if (maskPaint?.recolor && !hitFlash && !tint) frame.canvas = this.recoloredCanvas(frame.canvas, maskPaint.recolor);
     // Contour-bound detail: paint only where the current frame has pixels.
     if (maskPaint && !hitFlash && !tint) frame.canvas = this.maskedCanvas(frame.canvas, maskPaint);
-    let renderScale = targetScale ?? (visualHeight / frame.height);
+    let renderScale = targetScale ?? (visualHeight / (frame.baseHeight ?? frame.height));
     let smooth = true;
     if (spr.pixel) {
       // Pixel heroes stay crisp: no smoothing once an art pixel covers a screen pixel, and a scale
@@ -659,7 +680,7 @@ export class SpriteManager {
       sy = procScaleY ?? 1.0;
     } else {
       // Sheets carry their own motion; prepared sprites (idle frames only) keep the full procedural motion.
-      const proc = spr.frames && !spr.procFull ? 0.4 : 1.0;
+      const proc = spr.rig ? 0.25 : spr.frames && !spr.procFull ? 0.4 : 1.0;
       switch (state) {
         case 'idle':
           sy = 1.0 + Math.sin(animTime * 3) * 0.025 * proc;

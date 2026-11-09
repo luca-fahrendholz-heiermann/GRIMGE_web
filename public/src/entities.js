@@ -2254,7 +2254,23 @@ export class Player extends GroundEntity {
     const aerial = this.aerialAim > 0 && this.isAlive && !this.grounded;
     if (aerial) { useProc = true; pRot = 90; pOX = -(this.facing || 1) * 34; pOY = -30; pSX = 1; pSY = 1; }
 
-    if (this.state === 'attack2') reverse = true;
+    // Parts-rig heroes (rig.js) play their own clips: the clip follows the action (sprint, air, guard, drawing, charge)
+    // and its time starts when the clip changes; the old reversed attack2 sweep is not needed there.
+    const rigged = !!sprites.sprites[this.renderKey]?.rig;
+    let animState = this.state;
+    if (rigged && this.isAlive) {
+      const drawingNow = this === window.gameWorld?.player && window.gameWorld?.drawing?.active;
+      const free = this.state === 'idle' || this.state === 'run' || this.state === 'jump' || this.state === 'fall';
+      if (drawingNow && free) animState = 'draw';
+      else if (this.isGuarding) animState = 'guard';
+      else if (this.chargeTimer > 0) animState = 'charge';
+      else if (this.backdashTimer > 0) animState = 'dash';
+      else if (free && !this.grounded) animState = this.vElevation > 0 ? 'jump' : 'fall';
+      else if (this.state === 'run' && this.sprintActive) animState = 'sprint';
+    }
+    if (this._animState !== animState) { this._animState = animState; this._animStart = this.animTime; }
+    const animTime = rigged ? this.animTime - (this._animStart ?? 0) : this.animTime;
+    if (this.state === 'attack2' && !rigged) reverse = true;
 
     if (this.hitFlash > 0 && this.state !== 'dead') {
       useProc = true;
@@ -2271,7 +2287,7 @@ export class Player extends GroundEntity {
     }
 
     const renderOpts = {
-      facing: this.facing, state: this.state, animTime: this.animTime,
+      facing: this.facing, state: animState, animTime,
       hitFlash: this.hitFlash > 0 ? 1 : 0,
       alpha: this.lifeState === 'Dead' || rolled ? 0 : (stPose?.alpha ?? 1),
       cadence, reverse, procOffsetX: pOX, procOffsetY: pOY,

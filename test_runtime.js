@@ -4984,6 +4984,23 @@ game.running = false;
     game.returnToHub(); }
 }
 {
+  // Parts rig (AGENDA 1 stage 2, user 10 Nov 2026: mixed pipeline for testing): every pixel of the hero belongs to a part,
+  // the rest pose reproduces the image exactly, every clip bakes, and walking keeps the feet on the ground.
+  const { createRequire } = await import('node:module'); const { PNG } = createRequire(import.meta.url)('pngjs'); const fsr = await import('node:fs');
+  const R = await import('./public/src/rig.js'); const C = await import('./public/src/rig_clips.js');
+  const png = PNG.sync.read(fsr.readFileSync('public/assets/sprites/char_thesen.png')); const src = { w: png.width, h: png.height, data: png.data };
+  const rig = R.RIGS.thesen; const map = R.claimMap(src, rig); let unclaimed = 0; let opaque = 0;
+  for (let i = 0; i < src.w * src.h; i++) if (src.data[i * 4 + 3] >= 8) { opaque++; if (map[i] < 0) unclaimed++; }
+  const rest = R.bakePose(src, rig, map, { a: {}, o: {} }, 24); let diff = 0;
+  for (let y = 0; y < src.h; y++) for (let x = 0; x < src.w; x++) { const a = (y * src.w + x) * 4; const b = ((y + 24) * rest.w + x + 24) * 4; if (src.data[a + 3] >= 8 && (rest.data[b + 3] < 8 || rest.data[b] !== src.data[a])) diff++; }
+  const { frames } = R.bakeClips(src, rig, C.BASE_CLIPS);
+  const lowest = (f) => { for (let y = f.h - 1; y >= 0; y--) for (let x = 0; x < f.w; x++) if (f.data[(y * f.w + x) * 4 + 3] >= 8) return y; return -1; };
+  const base = lowest(rest); const walkFeet = frames.walk.map(lowest); const feetOk = walkFeet.every((y) => Math.abs(y - base) <= 4);
+  const allBaked = Object.entries(C.BASE_CLIPS).every(([k, c]) => frames[k]?.length === c.frames && frames[k].every((f) => f.hand && lowest(f) > 0));
+  const needed = ['idle', 'walk', 'sprint', 'jump', 'fall', 'attack1', 'attack2', 'attack3', 'uppercut', 'heavyStrike', 'dive', 'guard', 'hurt', 'dead', 'draw', 'charge', 'dash'].every((k) => C.BASE_CLIPS[k]);
+  assert(opaque > 3000 && unclaimed === 0 && diff === 0 && allBaked && feetOk && needed, 'Parts rig: every hero pixel has a part (' + unclaimed + ' unclaimed), the rest pose is the image (' + diff + ' px off), all base clips bake, walking keeps the feet on the ground (' + walkFeet.join(',') + ' vs ' + base + ')');
+}
+{
   // Guard against code swallowed by a mid-line comment ("x = 1; // note y = 2;" — happened twice, 6 + 10 Nov 2026).
   const fsx = await import('node:fs'); const pathx = await import('node:path');
   const re = /[;)}]\s\/\/[^'"`]*?(\b[A-Za-z_$][\w$]*\.[A-Za-z_$][\w$]* = [^=]|\bconst [A-Za-z_$]+ =|\blet [A-Za-z_$]+ =|\bctx\.[A-Za-z]+\(|\breturn [A-Za-z_$(]|\bthis\.[A-Za-z_]+ = [^=])/;

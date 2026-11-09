@@ -14,6 +14,11 @@ Erledigtes steht in der Git-Historie.
 - Stand Etappe 1 (erledigt): Folgekamera mit Zoom (passt sich an Gegnerzahl / Boss an), Pfeile am Rand, Treppe + Galerie
   mit vertikaler Kamera, Möbel als Plattformen (Tisch, Etagenbett, Kisten), Vordergrund-Säulen / -Ketten mit Parallax.
   Räume mit Türen und Fortschrittsleiste kommen mit der Kampagnen-UI.
+- Stand Etappe 2 (begonnen): Teile-Gerüst für Thesen (public/src/rig.js: Körperteile per Polygon geschnitten, Drehpunkte,
+  Fuß-Lock) und Grund-Clips (rig_clips.js: Stehen, Gehen, Sprint, Sprung/Fall, Angriff 1–3, Aufwärtshieb, schwerer
+  Hieb, Sturz, Blocken, Treffer, Tod, Zeichnen, Aufladen, Rückwärtssprung), beim Laden zu Einzelbildern gebacken.
+  Platzhalter: eigene / KI-Sheets ersetzen die Clips über den Clip-Namen. Offen: Waffe an die Hand (frame.hand),
+  Focus-Form (Umhang) riggen, gezeichnete Schlüsselmomente.
 - Grund: Der Hauptheld ist ein einziges Standbild (82×123); alle Posen sind nur gedreht/gestaucht.
 - Grundsatz an Animationen: Stehen, Laufen, Sprint, Sprung / Fall, Angriff 1–3, Aufladen / Loslassen, **Zeichnen**
   (Platz für die Handzeichen), Blocken, Treffer, Ausweichen, Tod.
