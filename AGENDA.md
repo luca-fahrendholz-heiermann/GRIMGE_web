@@ -11,6 +11,9 @@ Erledigtes steht in der Git-Historie.
   zum Testen; die finalen Animationen erstellt der Nutzer später selbst.
 - Etappen: (1) Kamera-Prototyp (folgt der Figur, Zoom, Level breiter als der Bildschirm, Höhenebene, Parallax),
   (2) Teile-Gerüst + Grund-Animationen, (3) Bestehendes daran anschließen.
+- Stand Etappe 1 (erledigt): Folgekamera mit Zoom (passt sich an Gegnerzahl / Boss an), Pfeile am Rand, Treppe + Galerie
+  mit vertikaler Kamera, Möbel als Plattformen (Tisch, Etagenbett, Kisten), Vordergrund-Säulen / -Ketten mit Parallax.
+  Räume mit Türen und Fortschrittsleiste kommen mit der Kampagnen-UI.
 - Grund: Der Hauptheld ist ein einziges Standbild (82×123); alle Posen sind nur gedreht/gestaucht.
 - Grundsatz an Animationen: Stehen, Laufen, Sprint, Sprung / Fall, Angriff 1–3, Aufladen / Loslassen, **Zeichnen**
   (Platz für die Handzeichen), Blocken, Treffer, Ausweichen, Tod.
