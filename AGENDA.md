@@ -19,7 +19,7 @@ Erledigtes steht in der Git-Historie.
 - Klassenwahl am Anfang mit eigener Identität (Klassenwaffen und Bankai existieren schon).
 
 ## 3. Deck-System nach Budget (DESIGN.md §2–3)
-- Punktebudget (≤ 16), Deckgröße 10–14 Karten, Zieh-Rotation wie Clash Royale.
+- Punktebudget (≤ 20), Deckgröße 10–14 Karten, Zieh-Rotation wie Clash Royale.
 - Eigene Sperren für starke Karten (Fokus, einmal pro Runde, Abklingzeiten), Mana als Bremse.
 - Neue Kartentypen der Konter-Ebene: Schnellzauber, Fallen, Handfallen.
 

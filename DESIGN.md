@@ -37,8 +37,9 @@ viral; Deckbau, Klassen und Masteries tragen den Langzeit-Fortschritt.
 | Sphäre | 5 | genau 1 pro Deck |
 | Arcane State | 5 | genau 1 pro Deck |
 
-- **Deckgröße 10–14 Karten**, Budget **höchstens 16 Punkte** (erste Werte, im Playtest feinjustieren).
-- Damit gibt es **kein Mini-Deck** nur aus Sphäre + Transformation: mindestens 10 Karten heißt, der Rest wird mit
+- **Deckgröße 10–14 Karten**, Budget **höchstens 20 Punkte** (erste Werte, im Playtest feinjustieren).
+- Damit gibt es **kein Mini-Deck** nur aus Sphäre + Transformation: mindestens 10 Karten heißt, der Rest (mindestens
+  8 Karten, z. B. Sphäre 5 + Arcane State 5 + 8 Element-Runen = 18 Punkte) wird mit
   Element-Runen, Kontern oder Spezialrunen aufgefüllt.
 
 ### Warum ein „starkes“ Deck nicht dauernd starke Karten spielt
