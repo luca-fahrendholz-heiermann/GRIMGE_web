@@ -17,8 +17,10 @@ Erledigtes steht in der Git-Historie.
 - Stand Etappe 2 (begonnen): Teile-Gerüst für Thesen (public/src/rig.js: Körperteile per Polygon geschnitten, Drehpunkte,
   Fuß-Lock) und Grund-Clips (rig_clips.js: Stehen, Gehen, Sprint, Sprung/Fall, Angriff 1–3, Aufwärtshieb, schwerer
   Hieb, Sturz, Blocken, Treffer, Tod, Zeichnen, Aufladen, Rückwärtssprung), beim Laden zu Einzelbildern gebacken.
-  Platzhalter: eigene / KI-Sheets ersetzen die Clips über den Clip-Namen. Offen: Waffe an die Hand (frame.hand),
-  Focus-Form (Umhang) riggen, gezeichnete Schlüsselmomente.
+  Platzhalter: eigene / KI-Sheets ersetzen die Clips über den Clip-Namen. Erledigt: Waffe an der Hand, Focus-Form mit
+  eigenem Umhang-Teil, Schläge als Schlüsselposen (Ausholen → Schlag mit eingebackener Schliere → Durchschwung →
+  Halten → Zurück; Tipps aus Videos/GRIMGE/animation_tips.mp4), spitz zulaufende Waffenschliere, Staub bei Sprintstart
+  und Landung. Nächstes: Etappe 3 (Atemtechnik-Posen, Arcane States, Gegner-Champions an Animationen anschließen).
 - Grund: Der Hauptheld ist ein einziges Standbild (82×123); alle Posen sind nur gedreht/gestaucht.
 - Grundsatz an Animationen: Stehen, Laufen, Sprint, Sprung / Fall, Angriff 1–3, Aufladen / Loslassen, **Zeichnen**
   (Platz für die Handzeichen), Blocken, Treffer, Ausweichen, Tod.
