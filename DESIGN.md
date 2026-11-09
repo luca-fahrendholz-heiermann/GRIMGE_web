@@ -74,7 +74,7 @@ Quellen: [Castle Crashers (Wikipedia)](https://en.wikipedia.org/wiki/Castle_Cras
   nächste Station; Gebietsende: Endboss → Drops (späte Runen) → Route B öffnet sich.
 - **Dungeon (Roguelite):** Start mit kleinem Deck → Raum für Raum, nach Räumen **1 aus 3 Runen** → Zwischenboss
   → Geheimrouten bei passender Rune → Endboss oder Tod → Belohnung nach Tiefe; Wissen über Geheimnisse bleibt.
-- **Arena (PvP):** Regel-Entscheidung offen — siehe §4a (Empfehlung: Prozent + Leben, Rausschleudern).
+- **Arena (PvP):** Riss + Leben (eigene Ausprägung des Prozent-Prinzips), KO durch Rausschleudern — siehe §4a.
 - **Castle Siege (PvP):** jede Seite auf ihrer Burg → Lane mit Truppen → von oben unterstützen / beschwören →
   gezielt auf die Lane absetzen für Druck → Turm, dann Burg zerstören.
 
@@ -147,14 +147,22 @@ Ketten-Gefühl — „ich sehe deine Rune und antworte“:
   durch die nächsten Ebenen und können sterben. Wer gut kämpft und gut unterstützt, hat im nächsten Level eine
   Riesenarmee — und Geschichten zum Teilen („mein Golem hat drei Ebenen überlebt“).
 
-### 4a. Arena-Regeln (Entscheidung offen)
+### 4a. Arena-Regeln (entschieden 10. Nov 2026: Riss + Leben, in eigener Ausprägung)
 | Variante | Ablauf | Stärken | Schwächen |
 |---|---|---|---|
 | **Prozent + Leben** (Smash-Prinzip) | Treffer erhöhen den Prozentwert statt HP zu senken; je höher, desto weiter fliegt man; KO durch Rausschleudern aus der Arena (Seiten, Abgründe, Absturz von Plattformen) oder einen harten Treffer bei hohem Prozent; 2–3 Leben | spektakuläre Wegflieger (Clips!), Comebacks jederzeit möglich, nutzt das vorhandene Knockback / Launcher-System, Arena-Gestaltung wird Taktik | Umbau des Schadensmodells (Status-Schaden → Prozent), Arenen brauchen Ränder / Abgründe / Plattformen |
 | **Lebensbalken, ein Leben** | klassisch HP → 0 = Ende | klar, schnell, passt zum jetzigen System | weniger Spektakel, Comebacks seltener |
 | **Lebensbalken, mehrere Leben** | HP → 0 = ein Leben weg, Neustart | Comebacks | lange Matches, wenig Neues |
 
-Empfehlung: **Prozent + Leben** als Standard der Arena (Smash-Prinzip, aber 2,5D: rausfliegen an den Seiten und in
+**Entscheidung:** Prinzip „Prozent + Leben“, aber **eigenständig umgesetzt**, damit es keine Kopie eines
+bestehenden Spiels ist (Mechaniken als Idee sind in der Regel nicht geschützt, wohl aber Namen, Optik, Assets und
+ggf. konkrete Patente — vor kommerzieller Veröffentlichung rechtlich prüfen lassen):
+- **Riss statt Prozent:** jeder Treffer lässt den Runenschild der Figur weiter reißen; je zerrissener, desto weiter
+  fliegt sie. Anzeige als **Schild mit Rissen**, keine große Prozentzahl.
+- **Bannrand:** am Arenarand schließt sich ein Runenkreis; Abgründe zwischen Höhenebenen; 2,5D-Tiefe.
+- **Eigene Begriffe** (Leben z. B. „Seelenfunken“).
+
+Ursprüngliche Empfehlung: **Prozent + Leben** als Standard der Arena (Smash-Prinzip, aber 2,5D: rausfliegen an den Seiten und in
 Abgründe zwischen den Ebenen), die HP-Variante als Option für Ranked-Duelle. Melee-Prinzip: der Prozentwert ändert
 auch, welche Combos funktionieren — niedrige % = lange Combos, hohe % = Finisher-Momente.
 

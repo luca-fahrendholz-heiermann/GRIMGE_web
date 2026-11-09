@@ -7,8 +7,10 @@ Erledigtes steht in der Git-Historie.
 - **Seitenansicht in 2,5D** (Vorbild Castle Crashers / Dragon's Crown), keine freien Blickrichtungen.
 - **Kamera folgt der Figur** und zoomt näher; Figuren größer und detailreicher; Level länger als der Bildschirm, mit
   mehreren Höhenebenen und Vorder-/Hintergrund-Parallax (siehe DESIGN.md §1).
-- **Animations-Pipeline** in Seitenansicht: Körperteil-Animation (Kopf / Rumpf / Arme / Beine / Waffe per Keyframes)
-  oder Mischform (Teile + gezeichnete Schlüsselmomente) — Entscheidung beim Start dieses Punkts.
+- **Animations-Pipeline** in Seitenansicht: **Mischform** (Körperteile per Keyframes + gezeichnete Schlüsselmomente) —
+  zum Testen; die finalen Animationen erstellt der Nutzer später selbst.
+- Etappen: (1) Kamera-Prototyp (folgt der Figur, Zoom, Level breiter als der Bildschirm, Höhenebene, Parallax),
+  (2) Teile-Gerüst + Grund-Animationen, (3) Bestehendes daran anschließen.
 - Grund: Der Hauptheld ist ein einziges Standbild (82×123); alle Posen sind nur gedreht/gestaucht.
 - Grundsatz an Animationen: Stehen, Laufen, Sprint, Sprung / Fall, Angriff 1–3, Aufladen / Loslassen, **Zeichnen**
   (Platz für die Handzeichen), Blocken, Treffer, Ausweichen, Tod.
@@ -30,7 +32,7 @@ Erledigtes steht in der Git-Historie.
 - Dungeon-Geheimrouten nach dem Prinzip „Glück + Erfahrung“ (DESIGN.md §6).
 
 ## 5. PvP-Modi schärfen
-- Arena mit der Konter-Ebene, später Ranked.
+- Arena mit der Konter-Ebene, später Ranked; Regeln: Riss + Leben in eigener Ausprägung (DESIGN.md §4a).
 - Castle Siege als Kommandanten-Modus: Beschwörung und Unterstützung von der Burg stärker, Buff-Zonen, gezieltes Absetzen.
 
 ## 6. Mastery
