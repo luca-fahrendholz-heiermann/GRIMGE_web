@@ -39,6 +39,7 @@ export class SpellTargeting {
   // ── coordinate helpers ───────────────────────────────────────────────
   screenToWorld(pt) {
     const game = this.game;
+    pt = game.unzoomPoint?.(pt) ?? pt; // follow-camera zoom
     const { farY, nearY } = getGroundProjection();
     const x = pt.x - (game.cameraOffsetX ?? 0) + (game.modeState?.dungeonCameraX ?? 0);
     const groundY = pt.y - (game.worldOffsetY ?? 0);
@@ -49,7 +50,8 @@ export class SpellTargeting {
 
   worldToScreen(x, z) {
     const game = this.game;
-    return { x: x + (game.cameraOffsetX ?? 0) - (game.modeState?.dungeonCameraX ?? 0), y: groundYForDepth(z) + (game.worldOffsetY ?? 0) };
+    const pt = { x: x + (game.cameraOffsetX ?? 0) - (game.modeState?.dungeonCameraX ?? 0), y: groundYForDepth(z) + (game.worldOffsetY ?? 0) };
+    return game.zoomPoint?.(pt) ?? pt; // follow-camera zoom
   }
 
   clampToRange(point, range) {

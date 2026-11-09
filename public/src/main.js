@@ -40,6 +40,9 @@ import { PrimalCompanion, normalizePrimalChoice, startPrimalBond, endPrimalBond,
 import { currentBuffForm } from './buff_forms.js'; // transformation and Arcane State exclude each other
 // Activated trap entries kept on top of the history during a match (back-navigation guard).
 const BACK_TRAPS = 2;
+// Follow-camera zoom per mode (1 = the classic full stage). The zoom pivots on the near ground edge, so the near depth
+// lane stays in view and the extra size grows upward (room for jumps).
+const FOLLOW_ZOOM = Object.freeze({ dungeon: 1.3 });
 // Every own shield recipe (Ward principle) shares one cooldown.
 const WARD_SPELL_IDS = new Set(['arcane_aegis', 'storm_ward', 'sacrifice_bulwark']);
 
@@ -1443,6 +1446,7 @@ export class GameWorld {
   tryTransformByTap(pt) {
     const p = this.player;
     if (!pt || !this.isMatchRunning() || !p?.isAlive || this.drawing.active || this.targeting.isActive) return false;
+    pt = this.screenToWorldPx(pt); // taps on actors compare in world pixels (zoom + scrolling camera)
     // Siege: a tap on the waiting Primal sends it to the lane alone.
     if (this.primal?.tryTapDeploy(pt, this)) return true;
     // A tap on an enemy marks it as the Primal's focus target (an armed
@@ -2017,11 +2021,34 @@ export class GameWorld {
     this.showAnnouncement('DUNGEON BOSS — VOID WARDEN', 2.1);
   }
 
+  // ── follow camera with zoom ─────────────────────────────────────────
+  cameraZoom() { return FOLLOW_ZOOM[this.activeMode?.id] ?? 1; }
+  zoomPivot() {
+    const bounds = this.battlefield?.boundsOverride ?? ARENA_LAYOUT.playableBounds;
+    return { x: this.renderWidth / 2, y: (this.worldOffsetY ?? 0) + groundYForDepth(bounds?.nearZ ?? .94) };
+  }
+  applyWorldZoom(ctx) { const z = this.cameraZoom(); if (z === 1) return; const p = this.zoomPivot(); ctx.translate(p.x, p.y); ctx.scale(z, z); ctx.translate(-p.x, -p.y); }
+  // A screen point in world pixels (x along the battlefield, y on the world layer): for taps on actors.
+  screenToWorldPx(pt) { const u = this.unzoomPoint(pt); return { ...u, x: u.x - (this.cameraOffsetX ?? 0) + (this.modeState?.dungeonCameraX ?? 0), y: u.y - (this.worldOffsetY ?? 0) }; }
+  // Screen point → unzoomed screen point (and back): every screen↔world conversion goes through these.
+  unzoomPoint(pt) { const z = this.cameraZoom(); if (z === 1 || !pt) return pt; const p = this.zoomPivot(); return { ...pt, x: p.x + (pt.x - p.x) / z, y: p.y + (pt.y - p.y) / z }; }
+  zoomPoint(pt) { const z = this.cameraZoom(); if (z === 1 || !pt) return pt; const p = this.zoomPivot(); return { ...pt, x: p.x + (pt.x - p.x) * z, y: p.y + (pt.y - p.y) * z }; }
+  // The visible span in unzoomed screen x (0 … renderWidth without zoom).
+  visibleSpanX() { const z = this.cameraZoom(); const px = this.renderWidth / 2; return z === 1 ? { left: 0, right: this.renderWidth } : { left: px - px / z, right: px + (this.renderWidth - px) / z }; }
+
   dungeonCameraTarget() {
     const bounds = this.battlefield.boundsOverride;
-    const target = this.player.x - this.logicalWidth * 0.3;
-    const min = Math.max(0, bounds.left - DUNGEON_LEFT_EDGE);
-    const max = Math.max(min, bounds.right + DUNGEON_LEFT_EDGE - this.logicalWidth);
+    if (this.cameraZoom() === 1) {
+      const target = this.player.x - this.logicalWidth * 0.3;
+      const min = Math.max(0, bounds.left - DUNGEON_LEFT_EDGE);
+      const max = Math.max(min, bounds.right + DUNGEON_LEFT_EDGE - this.logicalWidth);
+      return Math.max(min, Math.min(max, target));
+    }
+    // Zoomed: the Wizard a third into the visible span; the room ends stay reachable at the edges of the view.
+    const { left, right } = this.visibleSpanX(); const span = right - left; const off = this.cameraOffsetX ?? 0;
+    const target = this.player.x + off - left - span * .33;
+    const min = bounds.left - DUNGEON_LEFT_EDGE + off - left;
+    const max = Math.max(min, bounds.right + DUNGEON_LEFT_EDGE + off - right);
     return Math.max(min, Math.min(max, target));
   }
 
@@ -2029,7 +2056,7 @@ export class GameWorld {
     // World x just past the visible right edge (wide screens included), so
     // new enemies walk into view instead of popping in on screen.
     const camX = Math.max(this.modeState?.dungeonCameraX ?? 0, this.dungeonCameraTarget());
-    return camX - this.cameraOffsetX + this.renderWidth + 40;
+    return camX - this.cameraOffsetX + this.visibleSpanX().right + 40;
   }
 
   spawnDueDungeonEncounters() {
@@ -3215,8 +3242,9 @@ export class GameWorld {
 
     ctx.clearRect(0, 0, viewW, viewH);
 
-    // 1. Scene Backdrop (the fixed 16:9 stage).
+    // 1. Scene Backdrop (the fixed 16:9 stage) — zoomed exactly like the world, so the painted floor matches the ground.
     ctx.save();
+    this.applyWorldZoom(ctx);
     ctx.translate(0, worldY);
     this.battlefield.renderBackground(ctx, cam, this.logicalWidth, this.logicalHeight, viewW, this.cameraOffsetX, this.modeState);
     renderSecretTint(ctx, this); // a secret room has its own ambience
@@ -3225,6 +3253,7 @@ export class GameWorld {
     // 2. World Space Layer (with Camera Shake + Dungeon Scroll)
     const dungeonCamX = this.modeState?.dungeonCameraX ?? 0;
     ctx.save();
+    this.applyWorldZoom(ctx);
     ctx.translate(this.cameraOffsetX + cam.shakeX - dungeonCamX, cam.shakeY + worldY);
 
     // Foreground Crystal Glows on Beacons
