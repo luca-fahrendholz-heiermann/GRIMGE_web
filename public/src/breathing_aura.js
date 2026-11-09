@@ -162,7 +162,8 @@ export function breathBodyPose(p, st) {
   const fam = surroundOf(st.style); const l = auraStage(st); const f = p.facing || 1;
   if (fam === 'beast' && p.grounded && !/^attack|heavyStrike|uppercut|dive|dash/.test(p.state ?? '')) {
     const run = Math.min(1, (Math.abs(p.vx ?? 0) + Math.abs(p.vz ?? 0) * DEPTH) / 260);
-    return { rot: f * (9 + 3 * l + 8 * run), ox: f * (4 + 3 * run), oy: 6 + l, sx: 1.05, sy: .84 - .02 * l };
+    // anim: rig heroes play the predator clips (rig_clips.js) and keep only a lighter lean from this pose.
+    return { rot: f * (9 + 3 * l + 8 * run), ox: f * (4 + 3 * run), oy: 6 + l, sx: 1.05, sy: .84 - .02 * l, anim: run > .2 ? 'prowlRun' : 'prowl' };
   }
   if (fam === 'fire' && l >= 3) return { sx: 1.1, sy: 1.1 };
   if (fam === 'sound') return { ox: Math.sin(st.t * 70) * .5 * l };

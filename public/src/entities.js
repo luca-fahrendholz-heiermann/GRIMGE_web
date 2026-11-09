@@ -2187,6 +2187,8 @@ export class Player extends GroundEntity {
     let useProc = false;
     let pRot = 0, pOX = 0, pOY = 0, pSX = 1.0, pSY = 1.0;
     let cadence = 1.0;
+    // Parts-rig heroes (rig.js) animate the body themselves: the old whole-sprite tilts and squashes are toned down.
+    const rigged = !!sprites.sprites[this.renderKey]?.rig;
     let reverse = false;
 
     if (this.state === 'run' && this.grounded) {
@@ -2246,6 +2248,7 @@ export class Player extends GroundEntity {
       else { pRot = this.facing * 10; pOX = -this.facing * 11; pOY = 2; pSX = 1.08; pSY = 1.03; }
     }
 
+    if (rigged && useProc) { pRot *= .35; pSX = 1 + (pSX - 1) * .3; pSY = 1 + (pSY - 1) * .3; }
     // The body moves with the held weapon: hammer raised high, bow drawn, spear lunges, iai crouch (weapon_body.js).
     const wielding = this.isAlive && (this.weapon || this.classWeapon) && !activeMoveset(this) && currentBuffForm(this)?.id !== 'A04' && !this.isGuarding && !(this.hitFlash > 0);
     const body = wielding && (!useProc || /^attack|uppercut|heavyStrike/.test(this.state)) ? weaponBodyPose(this) : null;
@@ -2258,14 +2261,15 @@ export class Player extends GroundEntity {
     if (this.finisherChance && this.isAlive) { const u = Math.min(1, this.finisherElapsed() / this.finisherChance.peak); useProc = true; pRot += -(this.facing || 1) * 7 * u; pOX += -(this.facing || 1) * 3 * u; pSY *= 1 + .03 * u; pSX *= 1 - .02 * u; }
     // Stance body pose (breathing: four-legged beast crouch, blazing fire grows, fog veils the body).
     const stPose = this.isAlive ? signatureBodyPose(this) : null;
-    if (stPose && (stPose.rot || stPose.ox || stPose.oy || stPose.sx || stPose.sy)) { useProc = true; pRot += stPose.rot ?? 0; pOX += stPose.ox ?? 0; pOY += stPose.oy ?? 0; pSX *= stPose.sx ?? 1; pSY *= stPose.sy ?? 1; }
+    // A stance clip (beast breathing: prowl) replaces the squash on rig heroes; a lighter lean stays.
+    const stanceClip = rigged && stPose?.anim; const stK = stanceClip ? .45 : 1;
+    if (stPose && (stPose.rot || stPose.ox || stPose.oy || stPose.sx || stPose.sy)) { useProc = true; pRot += (stPose.rot ?? 0) * stK; pOX += (stPose.ox ?? 0) * stK; pOY += stanceClip ? 0 : (stPose.oy ?? 0); if (!stanceClip) { pSX *= stPose.sx ?? 1; pSY *= stPose.sy ?? 1; } }
     // Aerial bow shot (breathing arrow rain): the body lies flat, face to the ground, centred over the spot.
     const aerial = this.aerialAim > 0 && this.isAlive && !this.grounded;
     if (aerial) { useProc = true; pRot = 90; pOX = -(this.facing || 1) * 34; pOY = -30; pSX = 1; pSY = 1; }
 
-    // Parts-rig heroes (rig.js) play their own clips: the clip follows the action (sprint, air, guard, drawing, charge)
-    // and its time starts when the clip changes; the old reversed attack2 sweep is not needed there.
-    const rigged = !!sprites.sprites[this.renderKey]?.rig;
+    // Parts-rig heroes (rig.js) play their own clips: the clip follows the action (sprint, air, guard, drawing, charge,
+    // stance clips, hovering) and its time starts when the clip changes; the old reversed attack2 sweep is not needed.
     let animState = this.state;
     if (rigged && this.isAlive) {
       const drawingNow = this === window.gameWorld?.player && window.gameWorld?.drawing?.active;
@@ -2276,7 +2280,9 @@ export class Player extends GroundEntity {
       else if (this.backdashTimer > 0) animState = 'dash';
       else if (free && !this.grounded) animState = this.vElevation > 0 ? 'jump' : 'fall';
       else if (free && this.state !== 'run' && this.animTime - (this._landAt ?? -9) < .14) animState = 'land';
-      else if (this.state === 'run' && this.sprintActive) animState = 'sprint';
+      else if (free && stanceClip) animState = stanceClip;
+      else if (free && levitationOffset(this) > 2) animState = 'hover';
+      else if (this.state === 'run' && this.sprintActive) animState = stanceClip ? 'prowlRun' : 'sprint';
     }
     if (this._animState !== animState) { this._animState = animState; this._animStart = this.animTime; }
     const animTime = rigged ? this.animTime - (this._animStart ?? 0) : this.animTime;
@@ -3069,7 +3075,12 @@ export class EnemyChampion extends GroundEntity {
   freeze(duration) { this.freezeTimer = duration; } slow(duration, factor) { this.slowTimer = duration; this.slowFactor = factor; }
   // Damage over time (burn, poison, bleed, hazards): HP only — the AI keeps acting (no 'hurt' state every tick).
   takeHazardDamage(amount) { if (!this.isAlive || !(amount > 0)) return; if (this.arcaneShield > 0) { const absorbed = Math.min(amount, this.arcaneShield); this.arcaneShield -= absorbed; amount -= absorbed; if (amount <= 0) return; } if (this.hp - amount <= 0 && !this.passive) { this.takeDamage(amount, 0, 0, 0, false, 'status'); return; } this.hp = Math.max(this.passive ? 1 : 0, this.hp - amount); this.passiveIdle = 0; this.hitFlash = Math.max(this.hitFlash, .06); combat.spawnDamageText(this.x, this.y - 45, Math.round(amount), { color: '#ff8a65' }); }
-  render(ctx) { sprites.renderEntity(ctx, this.heroKey, this.x, this.y, { facing: this.facing, state: this.state, animTime: this.animTime, hitFlash: this.hitFlash > 0, alpha: this.lifeState === 'Dead' ? 0 : 1 }); if (this.lifeState === 'Alive') renderAIDraw(ctx, this); if (this.lifeState !== 'Dead') { const healthBarY = this.y - ENTITY_VISUALS.heroHeight - 8; ctx.fillStyle = 'rgba(0,0,0,.8)'; ctx.fillRect(this.x - 27, healthBarY, 54, 6); ctx.fillStyle = '#f44336'; ctx.fillRect(this.x - 27, healthBarY, 54 * this.hp / this.maxHp, 6); } }
+  render(ctx) {
+    // Rig heroes (rig.js) as champions: drawing a rune plays the draw clip, every clip starts at its own time.
+    const rigged = !!sprites.sprites[this.heroKey]?.rig; let animState = this.state;
+    if (rigged && this.aiDraw && (this.state === 'idle' || this.state === 'run')) animState = 'draw';
+    if (this._animState !== animState) { this._animState = animState; this._animStart = this.animTime; }
+    sprites.renderEntity(ctx, this.heroKey, this.x, this.y, { facing: this.facing, state: animState, animTime: rigged ? this.animTime - (this._animStart ?? 0) : this.animTime, hitFlash: this.hitFlash > 0, alpha: this.lifeState === 'Dead' ? 0 : 1 }); if (this.lifeState === 'Alive') renderAIDraw(ctx, this); if (this.lifeState !== 'Dead') { const healthBarY = this.y - ENTITY_VISUALS.heroHeight - 8; ctx.fillStyle = 'rgba(0,0,0,.8)'; ctx.fillRect(this.x - 27, healthBarY, 54, 6); ctx.fillStyle = '#f44336'; ctx.fillRect(this.x - 27, healthBarY, 54 * this.hp / this.maxHp, 6); } }
 }
 
 // Training yard straw dummy: a stationary, unkillable hostile target. It is

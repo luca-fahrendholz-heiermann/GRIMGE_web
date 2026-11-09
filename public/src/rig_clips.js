@@ -99,6 +99,22 @@ export const BASE_CLIPS = Object.freeze({
     { t: .5, pose: P({ torso: -22, head: -14, armFU: -45, armFL: -20, armBU: -50, legFU: 45, legFL: -80, legBU: 35, legBL: -80 }, { pelvis: [-2, 14] }) },
     { t: 1, pose: P({ torso: -30, head: -18, armFU: -60, armFL: -25, armBU: -65, legFU: 60, legFL: -110, legBU: 50, legBL: -110 }, { pelvis: [-3, 22] }) }
   ] },
+  // Beast breathing (user, 4 Nov 2026: "mehr in die pose auf vier beine gehen … sprint startstellung … ein raubtier"):
+  // low and forward, hands reaching for the ground, head up; running it bounds like a predator.
+  prowl: { cape: -6, frames: 2, hold: 14, loop: true, keys: [
+    { t: 0, pose: P({ torso: 16, head: -12, armFU: 30, armFL: 46, armBU: 18, armBL: 46, legFU: 28, legFL: -56, legBU: 22, legBL: -50 }) },
+    { t: .5, pose: P({ torso: 17, head: -12, armFU: 33, armFL: 50, armBU: 20, armBL: 50, legFU: 29, legFL: -58, legBU: 23, legBL: -52 }) }
+  ] },
+  prowlRun: { cape: -16, frames: 6, hold: 4, loop: true, keys: [
+    { t: 0, pose: P({ torso: 22, head: -16, armFU: 50, armFL: 30, armBU: -20, armBL: 50, legFU: 30, legFL: -30, legBU: -30, legBL: -40 }) },
+    { t: .33, pose: P({ torso: 24, head: -17, armFU: 10, armFL: 50, armBU: 10, armBL: 50, legFU: 10, legFL: -70, legBU: 14, legBL: -60 }) },
+    { t: .67, pose: P({ torso: 22, head: -16, armFU: -20, armFL: 50, armBU: 50, armBL: 30, legFU: -30, legFL: -40, legBU: 30, legBL: -30 }) }
+  ] },
+  // Levitating Arcane States: the Wizard hovers — legs hang loose, arms float out a little.
+  hover: { cape: 4, air: true, frames: 4, hold: 12, loop: true, keys: [
+    { t: 0, pose: P({ legFU: 6, legFL: -14, legBU: -4, legBL: -18, armFU: 20, armFL: 14, armBU: -18, armBL: 10, head: -2 }) },
+    { t: .5, pose: P({ legFU: 8, legFL: -18, legBU: -6, legBL: -22, armFU: 26, armFL: 18, armBU: -24, armBL: 12, head: -2 }, { torso: [0, 1] }) }
+  ] },
   // Drawing a rune: the front hand raised with the palm forward (room for the hand signs later), the back hand at the chest.
   draw: { cape: -3, frames: 2, hold: 16, loop: true, keys: [
     { t: 0, pose: P({ torso: 3, armFU: 78, armFL: 52, armBU: 42, armBL: 82 }) },
