@@ -33,6 +33,7 @@ import { renderSceneHint } from './scene_systems.js';
 import { BUFF_ZONES } from './zone_buffs.js';
 import { drawSpellSprite, spellSheetReady } from './spell_visuals.js';
 import { SPELL_SPRITE_SHEETS } from './spell_sprite_sheets.js';
+import { levelHeightAt } from './level_structures.js';
 
 // Hand-drawn ground decals (art/authoring/vfx_ground.cjs): drawn for a radius-40 ellipse and scaled; the
 // offset puts the patch centre on the ground line. Circle-shaped effects only (map zones keep their shapes).
@@ -172,6 +173,8 @@ export class EnvironmentSystem {
   add(type, x, z, options = {}) {
     if (!GROUND_EFFECTS[type]) return null;
     const effect = new GroundEffect(type, x, z, options);
+    // On stairs / a gallery / furniture the effect lies on that level (drawn lifted, after the structures).
+    const lift = levelHeightAt(this.levelSurfaces?.(), x, z); if (lift > 0) effect.lift = lift;
     if (effect.rules.fire && this.map?.fireLifeMult) effect.maxLife = effect.life = effect.life * this.map.fireLifeMult;
     const sky = this.skyMods;
     if (sky?.fireLife && effect.rules.fire) effect.maxLife = effect.life = effect.life * sky.fireLife;
@@ -501,11 +504,12 @@ export class EnvironmentSystem {
 
   // ── rendering ────────────────────────────────────────────────────────
   // Procedural ground shapes (drawn through the pixel layer).
-  renderGround(ctx) {
+  // lifted: the pass for effects lying on level structures (main.js draws it after the structures).
+  renderGround(ctx, { lifted = false } = {}) {
     const t = performance.now() * .001;
     const depth = zDepthPx();
     // Map terrain overlays: burnt hay and storm warnings.
-    for (const zone of this.terrain) {
+    for (const zone of lifted ? [] : this.terrain) {
       if (zone.type === 'hay' && zone.burnt > 0 && zone.burning <= 0) {
         ctx.save(); ctx.globalAlpha = Math.min(1, zone.burnt / 3) * .8;
         this.pathShape(ctx, zone, depth); ctx.fillStyle = '#2b2118'; ctx.fill(); ctx.restore();
@@ -516,10 +520,11 @@ export class EnvironmentSystem {
       }
     }
     for (const effect of this.effects) {
-      if (effect.type === 'smoke' || groundSheet(effect)) continue;
+      if (effect.type === 'smoke' || groundSheet(effect) || !!effect.lift !== lifted) continue;
       const y = groundYForDepth(effect.z);
       const rx = effect.radius; const ry = effect.radius * .32;
       ctx.save();
+      if (effect.lift) ctx.translate(0, -effect.lift);
       ctx.globalAlpha = effect.fade;
       const ellipse = (sx, sy, fill, stroke = null) => {
         if (effect.shape !== 'circle') this.pathShape(ctx, effect, depth, sx);
@@ -620,8 +625,9 @@ export class EnvironmentSystem {
 
   // Pixel-art sprite details on the ground (flames, bubbles, crystals,
   // sparks, rubble) — drawn crisp, outside the low-res layer.
-  renderGroundDetails(ctx, debug = false) {
+  renderGroundDetails(ctx, debug = false, { lifted = false } = {}) {
     const t = performance.now() * .001;
+    if (lifted) { for (const effect of this.effects) if (effect.lift) { ctx.save(); ctx.translate(0, -effect.lift); this.renderEffectDetail(ctx, effect, t); ctx.restore(); } return; }
     // F3 debug: outline the gameplay terrain zones over the painted scene.
     if (debug) {
       const depth = zDepthPx();
@@ -637,7 +643,11 @@ export class EnvironmentSystem {
         for (const [i, p] of this.pointsIn(zone, 3, zone.seed).entries()) drawFx(ctx, 'fx_weather', 6 + ((t * 3 + i) | 0) % 2, p.x, groundYForDepth(p.z) - 6 - ((t * 20 + i * 9) % 22), { scale: 2, anchor: 'center', alpha: .85 });
       }
     }
-    for (const effect of this.effects) {
+    for (const effect of this.effects) if (!effect.lift) this.renderEffectDetail(ctx, effect, t);
+  }
+
+  renderEffectDetail(ctx, effect, t) {
+    {
       const gs = groundSheet(effect);
       if (gs) {
         // Up to 1.6× one sheet; bigger (merged) areas are tiled with several sheets instead of blowing the pixels up.
@@ -645,7 +655,7 @@ export class EnvironmentSystem {
         if (want <= 1.6) drawSpellSprite(ctx, gs[0], Math.floor(t * 8 + (effect.seed ?? 0)) % frames, effect.x, groundYForDepth(effect.z) - gs[1] * want, { anchor: 'center', scale: want, alpha: effect.fade > .4 ? 1 : .5 });
         else for (const [i, q] of this.pointsIn(effect, Math.min(9, Math.ceil((want / 1.2) ** 2)), effect.seed ?? 1).entries()) drawSpellSprite(ctx, gs[0], Math.floor(t * 8 + i) % frames, q.x, groundYForDepth(q.z) - gs[1] * 1.2, { anchor: 'center', scale: 1.2, alpha: effect.fade > .4 ? 1 : .5 });
         if (effect.type === 'water' && effect.electrified > 0) this.renderSparks(ctx, effect, 4, t);
-        continue;
+        return;
       }
       if (effect.type === 'scorch') this.renderFlames(ctx, effect, Math.max(2, Math.min(5, Math.round(effect.radius / 14))), t, 1.5, effect.fade);
       else if (effect.type === 'lava') this.renderBubbles(ctx, effect, 3, t);

@@ -21,6 +21,7 @@ import { TARGETING, TARGET_RANGE, SHADOW_STOMP } from './spell_catalog.js';
 import { spells } from './spells.js';
 import { sky } from './sky.js';
 import { aimDirection, pickShadowTargets } from './light_shadow.js';
+import { levelHeightAt, pickLevelPoint } from './level_structures.js';
 
 const NEEDS_TARGET = new Set([TARGETING.GROUND, TARGETING.PLACEMENT, TARGETING.ALLY, TARGETING.AIM, TARGETING.DUAL]);
 
@@ -45,8 +46,13 @@ export class SpellTargeting {
     const groundY = pt.y - (game.worldOffsetY ?? 0);
     const bounds = game.battlefield?.boundsOverride ?? ARENA_LAYOUT.playableBounds;
     const z = Math.max(bounds.farZ ?? .06, Math.min(bounds.nearZ ?? .94, (groundY - farY) / (nearY - farY)));
-    return { x, z };
+    // Stairs / galleries / furniture: a tap on their top aims up there (user, 10 Nov 2026).
+    const levels = game.battlefield?.levelSurfaces;
+    return levels?.length ? pickLevelPoint(levels, x, groundY, z, bounds.nearZ ?? .94) : { x, z };
   }
+
+  // Screen height of a ground point: the floor, lifted by the level structure standing there.
+  levelY(p) { return groundYForDepth(p.z) - levelHeightAt(this.game.battlefield?.levelSurfaces, p.x, p.z); }
 
   worldToScreen(x, z) {
     const game = this.game;
@@ -264,11 +270,13 @@ export class SpellTargeting {
       });
     } else if (a.mode === TARGETING.GROUND || a.mode === TARGETING.DIRECTION || a.mode === TARGETING.SELF) {
       const radius = a.mode === TARGETING.GROUND ? 70 : 18;
-      ctx.beginPath(); ctx.moveTo(player.x, groundY(player.z)); ctx.lineTo(a.point.x, groundY(a.point.z)); ctx.stroke();
+      // The marker sits on the level at the point (stairs / gallery / furniture), the line starts at the Wizard's feet.
+      const ty = this.levelY(a.point);
+      ctx.beginPath(); ctx.moveTo(player.x, groundY(player.z) - (player.surfaceHeight ?? 0)); ctx.lineTo(a.point.x, ty); ctx.stroke();
       ctx.setLineDash?.([]);
       ctx.strokeStyle = color; ctx.fillStyle = `${color}33`; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.ellipse(a.point.x, groundY(a.point.z), radius, radius * .3, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(a.point.x - 8, groundY(a.point.z)); ctx.lineTo(a.point.x + 8, groundY(a.point.z)); ctx.moveTo(a.point.x, groundY(a.point.z) - 6); ctx.lineTo(a.point.x, groundY(a.point.z) + 6); ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(a.point.x, ty, radius, radius * .3, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(a.point.x - 8, ty); ctx.lineTo(a.point.x + 8, ty); ctx.moveTo(a.point.x, ty - 6); ctx.lineTo(a.point.x, ty + 6); ctx.stroke();
     } else if (a.mode === TARGETING.PLACEMENT) {
       ctx.setLineDash?.([]);
       // Preview exactly the blocks the wall will have (count = drawing grade).

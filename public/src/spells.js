@@ -3,6 +3,7 @@ import { audio } from './audio.js';
 import { WaterOrbSpell, TidalWaveSpell } from './water_spells.js'; // AQUA = water (user, 4 Nov 2026)
 import { combat } from './combat.js';
 import { GroundEntity, groundDistance, groundYForDepth, ENTITY_VISUALS, ARENA_LAYOUT } from './world.js';
+import { levelHeightAt } from './level_structures.js';
 import { lookupRecipe, SHADOW_STOMP } from './spell_catalog.js';
 import { environment } from './environment.js';
 import { dropFromCast, setSceneSpellSource } from './scene_objects.js';
@@ -254,12 +255,31 @@ export class SpellSystem {
     const prevCaster = this.castCaster; this.castCaster = caster;
     // Damage dealt right during the cast (chain lightning, strikes) rolls statuses / combos too.
     const prevSource = setStatusSource(this.castElements ? { team: caster.team, statusElements: this.castElements, quality: this.normalizeQuality(quality), castBy: caster } : null);
+    const before = this.activeSpells.length;
     try {
       const out = this.castSpellDef(caster, spellDef, gameWorld, quality, target);
+      this.liftToLevel(this.activeSpells.slice(before), target, gameWorld);
       // Casts may leave objects behind (scene_objects.js): nature → seedling, light → lantern, earth → stalagmite.
       if (this.castElements?.length) dropFromCast(environment, caster, target, this.castElements);
       return out;
     } finally { this.castElements = prev; this.castCaster = prevCaster; setStatusSource(prevSource); }
+  }
+
+  // Aimed onto stairs / a gallery / furniture (user, 10 Nov 2026): the effects spawned at the aimed point stand on that
+  // level (drawn and depth-sorted there) instead of at floor height. Walls keep the floor (their collision lives there).
+  liftToLevel(spawned, target, gameWorld) {
+    if (!spawned.length || !Number.isFinite(target?.x) || !Number.isFinite(target?.z)) return;
+    const h = levelHeightAt(gameWorld?.battlefield?.levelSurfaces, target.x, target.z); if (!(h > 0)) return;
+    for (const spell of spawned) {
+      if (spell.isStoneWall || spell.surfaceHeight !== undefined) continue;
+      const sx = Number.isFinite(spell.targetX) ? spell.targetX : spell.x; const sz = Number.isFinite(spell.targetZ) ? spell.targetZ : spell.z;
+      if (!Number.isFinite(sx) || !Number.isFinite(sz) || Math.abs(sx - target.x) > 160 || Math.abs(sz - target.z) > .2) continue;
+      spell.surfaceHeight = h;
+      // Falling strikes (meteor & co.) aim at a screen point: move it up, so their own impact effects land there too.
+      const own = Object.getOwnPropertyDescriptor(spell, 'targetY'); const ownY = Object.getOwnPropertyDescriptor(spell, 'y');
+      if (own?.writable && Number.isFinite(spell.targetY) && ownY?.writable) { spell.targetY -= h; spell.y -= h; }
+      else spell.levelLift = h;
+    }
   }
 
   castSpellDef(caster, spellDef, gameWorld, quality = null, target = null) {
@@ -909,6 +929,7 @@ export class SpellSystem {
   renderSafely(ctx, spell) {
     try {
       ctx.save?.();
+      if (spell.levelLift) ctx.translate?.(0, -spell.levelLift);
       spell.render(ctx);
     } catch (error) {
       console.error(`Spell render failed (${spell.constructor?.name ?? 'spell'}) — effect removed`, error);

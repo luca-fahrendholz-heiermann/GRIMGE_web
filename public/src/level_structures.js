@@ -4,7 +4,8 @@
 //   gallery  an upper floor at one height; walked onto from the stairs at the same height, left by jumping down
 // Both are "levelWalk" surfaces (battlefield.js): entered only at the same height (no teleport up from the ground),
 // and the ground under them is blocked like a wall. They are drawn behind every actor (they stand in the far band).
-import { groundYForDepth } from './world.js';
+import { groundYForDepth, getGroundProjection, surfaceContains, surfaceHeight } from './world.js';
+const depthForGroundY = (y) => { const { farY, nearY } = getGroundProjection(); return (y - farY) / (nearY - farY); };
 
 // defs: [{ type: 'stairs', x0, x1, zMin, zMax, from, to } | { type: 'gallery', x0, x1, zMin, zMax, h }], x relative to left.
 // Furniture (below) is landing-only too, but never walked onto: you jump up. Foreground pieces have no surface.
@@ -112,4 +113,26 @@ export function renderForeground(ctx, defs = [], left = 0, camX = 0, player = nu
     }
     ctx.restore();
   }
+}
+
+// ── heights for aimed spells (user, 10 Nov 2026: a meteor aimed onto the stairs / gallery lands up there) ─────────
+// The level height at a ground point: the highest level surface (stairs, gallery, furniture) containing it, else 0.
+export function levelHeightAt(surfaces, x, z) {
+  let h = 0;
+  for (const S of surfaces ?? []) if (surfaceContains(S, x, z)) h = Math.max(h, surfaceHeight(S, x));
+  return h;
+}
+// The ground point under a screen point (world px): a tap on the top of a structure picks that top (its z then lies
+// inside the structure); a tap on its front wall resolves to the wall's foot. groundZ = the plain floor mapping.
+export function pickLevelPoint(surfaces, x, screenY, groundZ, nearZ = .94) {
+  let best = null;
+  for (const S of surfaces ?? []) {
+    const h = surfaceHeight(S, x); if (!(h > 2)) continue;
+    const z = depthForGroundY(screenY + h);
+    if (surfaceContains(S, x, z) && (!best || h > best.h)) best = { z, h };
+  }
+  if (best) return { x, z: best.z };
+  let z = groundZ;
+  for (const S of surfaces ?? []) if (surfaceHeight(S, x) > 14 && surfaceContains(S, x, z)) z = Math.min(nearZ, S.zMax + .01);
+  return { x, z };
 }

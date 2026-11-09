@@ -155,6 +155,7 @@ export class GameWorld {
     this.configureCanvas(this.runeCanvas, this.runeCtx);
 
     this.battlefield = new Battlefield();
+    environment.levelSurfaces = () => this.battlefield?.levelSurfaces; /* ground effects lie on stairs / galleries */
     this.player = new Player(ARENA_LAYOUT.spawns.blueCastle.x, ARENA_LAYOUT.spawns.blueCastle.z);
     this.enemyChampion = new EnemyChampion(ARENA_LAYOUT.spawns.redCastle.x, ARENA_LAYOUT.spawns.redCastle.z, 'warlord');
     this.battlefield.placeOnSurface(this.player);
@@ -3317,7 +3318,11 @@ export class GameWorld {
     this.renderArenaRuneCollectibles(ctx);
     this.renderArenaTransformationRelic(ctx);
 
-    if (this.modeState?.structures) renderStructures(ctx, this.modeState.structures.defs, this.modeState.structures.left);
+    if (this.modeState?.structures) {
+      renderStructures(ctx, this.modeState.structures.defs, this.modeState.structures.left);
+      // Ground effects lying on the structures (a meteor crater on the gallery) come after them.
+      if (environment.effects.some((e) => e.lift)) { renderPixelated(ctx, groundPixel, (layer) => environment.renderGround(layer, { lifted: true })); environment.renderGroundDetails(ctx, false, { lifted: true }); }
+    }
     sceneDev.hints = this.activeMode?.id === 'training' || !!this.debugVisible; // scene-object labels (dev phase)
     const actors = [...this.minions, ...environment.livingProps().map((prop) => ({ y: prop.y + (prop.sortBias ?? 0), render: (c) => renderProp(c, prop) })), ...environment.sceneFx.map((fx) => ({ y: fx.y, render: (c) => fx.render(c) })), ...this.armory.pickups.map((pickup) => ({ y: pickup.y, render: (c) => pickup.render(c) }))];
     if (this.enemyChampion.lifeState !== 'Dead') actors.push(this.enemyChampion);

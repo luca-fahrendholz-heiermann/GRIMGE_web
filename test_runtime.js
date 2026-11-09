@@ -5001,6 +5001,25 @@ game.running = false;
   assert(opaque > 3000 && unclaimed === 0 && diff === 0 && allBaked && feetOk && needed, 'Parts rig: every hero pixel has a part (' + unclaimed + ' unclaimed), the rest pose is the image (' + diff + ' px off), all base clips bake, walking keeps the feet on the ground (' + walkFeet.join(',') + ' vs ' + base + ')');
 }
 {
+  // Aimed spells on a level (user, 10 Nov 2026): a meteor aimed onto the gallery lands up there, the marker sits on it.
+  { game.returnToHub(); game.setMatchMode('dungeon'); game.startMatch(); if (!game.modeState.structures) game.spawnDungeonStage(1);
+    const L = game.modeState.structures.left; const P = game.player; const T = game.targeting;
+    const gx = L + 1000; const gz = .17; const top = groundYForDepth(gz) - 100;
+    const scr = T.worldToScreen(gx, gz); const tapTop = { x: scr.x, y: scr.y - (groundYForDepth(gz) - top) * game.cameraZoom() };
+    const hit = T.screenToWorld(tapTop); const markerY = T.levelY(hit);
+    const floorHit = T.screenToWorld(T.worldToScreen(gx, .6));
+    spells.clearRuntime(); P.mp = P.maxMp;
+    spells.cast(P, spells.resolveSpell([{ id: 'fulgur' }, { id: 'ignis' }]), game, 'B', { x: hit.x, z: hit.z });
+    const met = spells.activeSpells.find((s) => s.constructor.name === 'MeteorSpell');
+    spells.cast(P, spells.resolveSpell([{ id: 'fulgur' }, { id: 'ignis' }]), game, 'B', { x: gx, z: .6 });
+    const met0 = spells.activeSpells.filter((s) => s.constructor.name === 'MeteorSpell')[1];
+    assert(hit.z >= .06 && hit.z <= .28 && Math.abs(markerY - top) < 3 && Math.abs(T.levelY(floorHit) - groundYForDepth(.6)) < 3 && met && Math.abs(met.targetY - (groundYForDepth(met.targetZ) - 100)) < 1 && met0 && Math.abs(met0.targetY - groundYForDepth(.6)) < 1,
+      'Aiming at the gallery top picks the gallery (z ' + hit.z.toFixed(2) + ', marker ' + Math.round(markerY) + ' vs ' + Math.round(top) + '); the meteor lands up there; on the floor it stays on the floor');
+    const ENVm = (await import('./public/src/environment.js')).environment; const cr = ENVm.add('crater', hit.x, hit.z, { radius: 40 }); const fl = ENVm.add('crater', gx, .6, { radius: 40 });
+    assert(cr?.lift === 100 && !fl?.lift, 'Ground effects on the gallery lie up there (lift ' + cr?.lift + '), on the floor they stay flat');
+    spells.clearRuntime(); game.returnToHub(); }
+}
+{
   // Guard against code swallowed by a mid-line comment ("x = 1; // note y = 2;" — happened twice, 6 + 10 Nov 2026).
   const fsx = await import('node:fs'); const pathx = await import('node:path');
   const re = /[;)}]\s\/\/[^'"`]*?(\b[A-Za-z_$][\w$]*\.[A-Za-z_$][\w$]* = [^=]|\bconst [A-Za-z_$]+ =|\blet [A-Za-z_$]+ =|\bctx\.[A-Za-z]+\(|\breturn [A-Za-z_$(]|\bthis\.[A-Za-z_]+ = [^=])/;
