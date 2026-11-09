@@ -50,6 +50,17 @@ verifizieren.
 - Stadt als **Hub** (Gilde, Tempel, Shop, Taverne); nach jeder Stage Beute **schätzen** lassen, Wertung, Kochen.
 - **Sechs Klassen** mit klar verschiedenen Spielweisen — Vorbild für unsere Klassenwahl.
 
+**Aus dem Video (Castle Crashers, Burg-Abschnitt; analysiert 10. Nov 2026)**
+- **Treppen** verbinden das Bodenband mit einem **oberen Stockwerk**: eine diagonale Rampe im hinteren Tiefenbereich,
+  man läuft sie hoch (die Figur steigt mit der x-Position), oben geht es auf einer Galerie / zur nächsten Tür weiter.
+- **Die Kamera folgt auch nach oben**, wenn man die Treppe hochgeht (das Level wächst in die Höhe, nicht nur zur Seite).
+- **Möbel als Plattformen:** Etagenbetten, Fässer, Tische — man springt drauf und kämpft von oben.
+- **Vordergrund-Objekte** (Betten, Heu, Zielscheiben) stehen vor der Kampflinie und überdecken Figuren teilweise.
+- **Räume mit Türen:** ein Raum endet an einer Tür, Schnitt in den nächsten Raum; innen dicke Mauern, Kronleuchter,
+  Fackeln als lebendige Szenendetails.
+- **Szenen-Bewohner** mit Sprechblasen (Tutorial-Hinweise), Übungspuppen / Zielscheiben zum Ausprobieren.
+- Zwischen den Leveln: **Shop-Raum**, **Weltkarte** (gezeichnete Landkarte), **Lager**, **Arena** mit Publikum.
+
 **Was GRIMGE übernimmt (Feldzug / Dungeon)**
 1. **Weltkarte** mit Stationen (Level, Burg-Zwischenboss, Arena, Händler, Tempel); wiederspielbar, Neues Spiel+.
 2. **Level ≈ 4–8 min**, aus Abschnitten mit Kampfräumen (Kamera-Sperre), einer Szenen-Idee pro Abschnitt, Ebenen

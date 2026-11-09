@@ -2022,7 +2022,32 @@ export class GameWorld {
   }
 
   // ── follow camera with zoom ─────────────────────────────────────────
-  cameraZoom() { return FOLLOW_ZOOM[this.activeMode?.id] ?? 1; }
+  // Adaptive zoom (user, 10 Nov 2026: no free zoom button — the camera thinks along): close by default, it pulls back
+  // for crowds and bosses so the fight stays in view.
+  cameraZoom() { const base = FOLLOW_ZOOM[this.activeMode?.id] ?? 1; return base === 1 ? 1 : (this._zoomNow ?? base); }
+  updateCameraZoom(dt) {
+    const base = FOLLOW_ZOOM[this.activeMode?.id] ?? 1; if (base === 1) { this._zoomNow = 1; return; }
+    const near = this.getHostileTargets(this.player.team).filter((t) => !t.isProp && !t.isStoneWall && !t.isDead && t.lifeState !== 'Dead' && Math.abs(t.x - this.player.x) < 700).length;
+    const target = this.modeState?.bossActive ? Math.max(1, base - .2) : near >= 6 ? Math.max(1, base - .18) : near >= 4 ? base - .1 : base;
+    const now = this._zoomNow ?? base; this._zoomNow = now + (target - now) * Math.min(1, dt * 1.5);
+  }
+  // Foes outside the view: an arrow at the screen edge with the distance (red; gold for the boss).
+  renderOffscreenArrows(ctx) {
+    if ((FOLLOW_ZOOM[this.activeMode?.id] ?? 1) === 1 || !this.player) return;
+    const camX = this.modeState?.dungeonCameraX ?? 0; const W = this.renderWidth; const H = this.renderHeight;
+    const foes = this.getHostileTargets(this.player.team).filter((t) => !t.isProp && !t.isStoneWall && !t.isDead && t.lifeState !== 'Dead')
+      .map((t) => ({ t, d: Math.abs(t.x - this.player.x), s: this.zoomPoint({ x: t.x + (this.cameraOffsetX ?? 0) - camX, y: (t.y ?? 0) + (this.worldOffsetY ?? 0) - 40 }) }))
+      .filter((o) => o.s.x < -8 || o.s.x > W + 8).sort((a, b) => a.d - b.d).slice(0, 5);
+    ctx.save(); ctx.font = 'bold 12px monospace'; ctx.textAlign = 'center';
+    for (const { t, d, s } of foes) {
+      const side = s.x < 0 ? -1 : 1; const x = side < 0 ? 22 : W - 22; const k = 1.4; // readable on phones const y = Math.max(90, Math.min(H - 150, s.y));
+      const boss = t === this.enemyChampion || t.isBoss; const col = boss ? '#ffd740' : '#ff5252';
+      ctx.fillStyle = 'rgba(10,6,12,.75)'; ctx.beginPath(); ctx.moveTo(x + side * 12 * k, y); ctx.lineTo(x - side * 6 * k, y - 11 * k); ctx.lineTo(x - side * 6 * k, y + 11 * k); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(x + side * 9 * k, y); ctx.lineTo(x - side * 4 * k, y - 8 * k); ctx.lineTo(x - side * 4 * k, y + 8 * k); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#ffffff'; ctx.fillText(Math.round(d / 50) + 'm', x - side * 4, y + 28);
+    }
+    ctx.restore();
+  }
   zoomPivot() {
     const bounds = this.battlefield?.boundsOverride ?? ARENA_LAYOUT.playableBounds;
     return { x: this.renderWidth / 2, y: (this.worldOffsetY ?? 0) + groundYForDepth(bounds?.nearZ ?? .94) };
@@ -2346,6 +2371,7 @@ export class GameWorld {
     if (this.activeMode.id === 'dungeon') {
       const targetCamX = this.dungeonCameraTarget();
       state.dungeonCameraX += (targetCamX - state.dungeonCameraX) * Math.min(1, 3.5 * dt);
+      this.updateCameraZoom(dt);
       if (state.secret) { updateDungeonSecret(this); return; } // inside a secret room: no room / stage logic
       this.updateDungeonRescue();
       if (state.stage === 0) {
@@ -3314,6 +3340,7 @@ export class GameWorld {
     // Map weather (snow, rain, embers, leaves, dust, mana motes) in screen space.
     environment.renderWeather(ctx, viewW, viewH);
     this.renderDungeonExitArrow(ctx, viewW);
+    this.renderOffscreenArrows(ctx);
 
     // 3. Screen Space Rune Drawing
     if (this.drawing.active) {
