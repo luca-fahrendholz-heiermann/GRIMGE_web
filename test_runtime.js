@@ -5041,6 +5041,26 @@ game.running = false;
   assert(at(3) === 0 && at(4.5) === 1 && at(5.5) === 2 && at(30) === 2 && fits, 'Key-pose strikes: per-frame holds (wind-up 4 ticks → strike 1 → …), every strike fits its state time and has a smear frame');
 }
 {
+  // Character creation (AGENDA 2): the profile keeps name, base and look; a look recolours hair and armour, not skin,
+  // horns or saturated gems / flames; the created look is worn in play.
+  const { createRequire } = await import('node:module'); const { PNG } = createRequire(import.meta.url)('pngjs'); const fsr = await import('node:fs');
+  const LK = await import('./public/src/character_look.js'); const PR = await import('./public/src/progression.js');
+  const png = PNG.sync.read(fsr.readFileSync('public/assets/sprites/char_thesen.png')); const d = new Uint8ClampedArray(png.data);
+  LK.applyLook(d, png.width, png.height, { hair: 'frost', armour: 'royal' }, 'thesen');
+  const px = (a, x, y) => { const i = (y * png.width + x) * 4; return [a[i], a[i + 1], a[i + 2]]; }; let skinKept = true; let hairChanged = 0; let hornKept = true;
+  for (let y = 0; y < png.height; y++) for (let x = 0; x < png.width; x++) { const [r, g, b] = px(png.data, x, y); const a = png.data[(y * png.width + x) * 4 + 3]; if (a < 128) continue; const [r2, g2, b2] = px(d, x, y);
+    if (r > g && g > b && r - b > 38 && r > 80 && (r !== r2 || g !== g2 || b !== b2)) skinKept = false;
+    if (x >= 29 && x <= 56 && y <= 20 && (r !== r2 || b !== b2)) hairChanged++;
+    if (x < 14 && y < 30 && (.3 * r + .59 * g + .11 * b) / 255 > .5 && Math.abs(r - r2) > 60) hornKept = false; }
+  const prof = new PR.MageProfile({ character: { name: 'Kael', base: 'thesen', look: { hair: 'ember', armour: 'steel' }, created: true } });
+  const back = new PR.MageProfile(JSON.parse(JSON.stringify(prof.toJSON())));
+  game.profile.setCharacter({ name: 'Tester', base: 'thesen', look: { hair: 'ash', armour: 'shadow' } });
+  const prevHero = game.selectedHeroKey; game.selectedHeroKey = 'thesen'; game.returnToHub(); game.setMatchMode('training'); game.startMatch(); const worn = game.player.look; game.selectedHeroKey = prevHero;
+  assert(skinKept && hairChanged > 40 && hornKept && back.character.name === 'Kael' && back.character.look.hair === 'ember' && back.character.created && worn?.hair === 'ash' && LK.lookId(worn) === 'ash-shadow',
+    'Character creation: the profile keeps name / base / look, a look recolours hair (' + hairChanged + ' px) and armour but not skin or horns, the created look is worn in play (' + JSON.stringify(worn) + ' ' + back.character.name + ')');
+  game.profile.character = { name: '', base: 'thesen', look: { hair: 'natural', armour: 'natural' }, created: false }; game.returnToHub();
+}
+{
   // Guard against code swallowed by a mid-line comment ("x = 1; // note y = 2;" — happened twice, 6 + 10 Nov 2026).
   const fsx = await import('node:fs'); const pathx = await import('node:path');
   const re = /[;)}]\s\/\/[^'"`]*?(\b[A-Za-z_$][\w$]*\.[A-Za-z_$][\w$]* = [^=]|\bconst [A-Za-z_$]+ =|\blet [A-Za-z_$]+ =|\bctx\.[A-Za-z]+\(|\breturn [A-Za-z_$(]|\bthis\.[A-Za-z_]+ = [^=])/;

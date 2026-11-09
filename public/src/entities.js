@@ -2133,7 +2133,8 @@ export class Player extends GroundEntity {
 
   // The sprite to draw: during the Focus transformation a hero with a focus variant
   // (e.g. Thesen: cape and spear) shows it.
-  get renderKey() { return this.focusTransformTimer > 0 && sprites.sprites[this.heroKey + '_focus'] ? this.heroKey + '_focus' : this.heroKey; }
+  // The sprite in play: the Focus form when transformed, in the character's look (character_look.js) when one is set.
+  get renderKey() { const key = this.focusTransformTimer > 0 && sprites.sprites[this.heroKey + '_focus'] ? this.heroKey + '_focus' : this.heroKey; return this.look ? sprites.lookKey(key, this.look) : key; }
 
   render(ctx) {
     // Burrowed: only the travelling dirt mound (drawn by the spell) is visible.

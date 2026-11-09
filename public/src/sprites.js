@@ -3,6 +3,7 @@ import { ENTITY_VISUALS } from './world.js';
 import { ART_ASSETS } from './art_assets.js';
 import { RIGS, bakeClips } from './rig.js';
 import { BASE_CLIPS, CLIP_ALIASES } from './rig_clips.js';
+import { applyLook, isDefaultLook, lookId } from './character_look.js';
 
 const CLIP_TIMING = {
   idle: 15, walk: 8, run: 6, jump: 10, fall: 10,
@@ -76,7 +77,7 @@ export class SpriteManager {
     return Promise.all(srcs.map(load)).then((imgs) => {
       if (imgs.some((img) => !img)) return null;
       const frames = imgs.map((img) => this.preparedFrame(img));
-      const spr = { ...frames[0], pixel: true, procFull: true };
+      const spr = { ...frames[0], pixel: true, procFull: true, sourceImage: imgs[0] };
       if (frames.length > 1) { spr.frames = { idle: frames }; spr.hold = { idle: def.hold ?? 30 }; }
       // Parts rig (rig.js): the standing image is cut into parts and baked into the base animations.
       if (RIGS[key]) this.applyRig(spr, imgs[0], RIGS[key]);
@@ -84,6 +85,23 @@ export class SpriteManager {
       return spr;
     });
   }
+  // The sprite key of a hero in a character look (character_look.js): the standing image recoloured, then rigged and
+  // baked like the original (cached per look). The plain key when the look is the hero's own or cannot be built.
+  lookKey(key, look) {
+    if (!look || isDefaultLook(look)) return key;
+    const id = `${key}~${lookId(look)}`; if (this.sprites[id]) return id;
+    const base = this.sprites[key]; const img = base?.sourceImage; const doc = globalThis.document;
+    if (!img || typeof doc?.createElement !== 'function') return key;
+    const c = doc.createElement('canvas'); c.width = img.width; c.height = img.height; const x = c.getContext('2d', { willReadFrequently: true });
+    if (!x?.getImageData) return key;
+    x.drawImage(img, 0, 0); const data = x.getImageData(0, 0, img.width, img.height); if (!(data?.data?.length >= img.width * img.height * 4)) return key;
+    applyLook(data.data, img.width, img.height, look, key); x.putImageData(data, 0, 0);
+    const spr = { ...this.preparedFrame(c), pixel: true, procFull: true, sourceImage: c };
+    if (base.rig && RIGS[key]) this.applyRig(spr, c, RIGS[key]); else if (base.frames) { spr.frames = base.frames; spr.hold = base.hold; }
+    this.sprites[id] = spr;
+    return id;
+  }
+
   // Bake the rig clips into frames (padded canvases; baseHeight keeps the on-screen size of the standing image).
   applyRig(spr, img, rig) {
     const doc = globalThis.document; if (typeof doc?.createElement !== 'function') return;

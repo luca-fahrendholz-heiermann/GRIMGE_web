@@ -203,6 +203,9 @@ export class MageProfile {
     this.lateUnlocks = new Set((Array.isArray(source?.lateUnlocks) ? source.lateUnlocks : []).filter((id) => LATE_RUNE_IDS.includes(id) && id !== BANKAI_RUNE_ID));
     // The chosen class (= class weapon) and the classes whose Bankai is unlocked.
     this.classWeapon = typeof source?.classWeapon === 'string' ? source.classWeapon : null;
+    // Character creation (AGENDA 2): name, base figure and look; created = the first-run screen was completed.
+    const ch = source?.character;
+    this.character = { name: typeof ch?.name === 'string' ? ch.name.slice(0, 16) : '', base: typeof ch?.base === 'string' ? ch.base : 'thesen', look: { hair: ch?.look?.hair ?? 'natural', armour: ch?.look?.armour ?? 'natural' }, created: !!ch?.created };
     this.bankaiClasses = new Set(Array.isArray(source?.bankaiClasses) ? source.bankaiClasses : []);
     this.weaponXp = { ...(source?.weaponXp ?? {}) };
     this.discoveredSpells = new Set(source?.discoveredSpells ?? []);
@@ -243,7 +246,7 @@ export class MageProfile {
     return {
       level: this.level, xp: this.xp, skillPoints: this.skillPoints,
       unlockedSkills: [...this.unlockedSkills], masteries: [...this.masteries], runeXp: clone(this.runeXp),
-      lateUnlocks: [...this.lateUnlocks], weaponXp: clone(this.weaponXp), classWeapon: this.classWeapon, bankaiClasses: [...this.bankaiClasses],
+      lateUnlocks: [...this.lateUnlocks], weaponXp: clone(this.weaponXp), classWeapon: this.classWeapon, bankaiClasses: [...this.bankaiClasses], character: { ...this.character, look: { ...this.character.look } },
       discoveredSpells: [...this.discoveredSpells], unlockedRunes: [...this.unlockedRunes],
       matchDeck: [...this.matchDeck], progressionVersion: 3,
       favoriteRunes: [...this.favoriteRunes], deckPresets: this.deckPresets.map((preset) => ({ ...preset, deck: [...preset.deck], ...(preset.masteries ? { masteries: [...preset.masteries] } : {}) }))
@@ -257,6 +260,10 @@ export class MageProfile {
   weaponLevel(id) { return 1 + Math.floor((this.weaponXp[id] ?? 0) / WEAPON_XP_PER_LEVEL); }
   // Bankai is available when the chosen class has earned it (weapon level / boss drop).
   isBankaiUnlocked(classWeapon = this.classWeapon) { return !!classWeapon && (this.bankaiClasses.has(classWeapon) || this.weaponLevel(classWeapon) >= LATE_RUNE_LEVEL.bankai); }
+  setCharacter({ name, base, look } = {}) {
+    this.character = { name: String(name ?? this.character.name ?? '').trim().slice(0, 16), base: base ?? this.character.base, look: { hair: look?.hair ?? this.character.look.hair, armour: look?.armour ?? this.character.look.armour }, created: true };
+    this.save();
+  }
   // Choosing a class: a deck Bankai that this class has not earned leaves the deck.
   setClassWeapon(weaponId) {
     this.classWeapon = weaponId ?? null;

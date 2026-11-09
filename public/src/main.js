@@ -2745,6 +2745,8 @@ export class GameWorld {
     const spawn = this.battlefield.getSpawn('blue');
     this.player = new Player(spawn.x, spawn.z);
     this.player.heroKey = this.selectedHeroKey ?? ui.getSelectedHero?.() ?? 'thesen';
+    // The created character's look (character_look.js) when it plays its own base figure.
+    if (this.profile?.character?.created && this.profile.character.base === this.player.heroKey) this.player.look = this.profile.character.look;
     if (this.profile?.classWeapon) this.player.equipClassWeapon(this.profile.classWeapon);
     this.enemyChampion = new EnemyChampion(ARENA_LAYOUT.spawns.redCastle.x, ARENA_LAYOUT.spawns.redCastle.z, 'warlord');
     this.battlefield.placeOnSurface(this.player);

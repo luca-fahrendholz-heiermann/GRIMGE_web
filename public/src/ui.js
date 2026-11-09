@@ -7,6 +7,7 @@ import { spells } from './spells.js';
 import { MAGE_SKILL_TREE, SKILL_RUNE_UNLOCKS, RUNE_CATEGORIES, runeCategory, ALL_RUNE_IDS, runeUnlockLabel, isBuffRuneId, isSignatureRuneId, isDomainRuneId, maxRuneCopies, MAX_DECK_PRESETS, MATCH_DECK_SIZE, DECK_PRESET_NAME_MAX } from './progression.js';
 import { recognizer } from './recognizer.js';
 import { sprites } from './sprites.js';
+import { openCharacterCreation } from './character_creation.js';
 import { runeManaCost, SPELL_RECIPES, lookupRecipe, SOLO_RUNES, spellHowTo } from './spell_catalog.js';
 import { TRAINING_MAPS, trainingMapThumb } from './training_maps.js';
 
@@ -484,7 +485,10 @@ export class UIManager {
       this.setHubPage('deck'); this.toggleDeckBuilder(true); this.renderDeckBuilder(window.gameWorld?.profile);
     };
     this.hubBattleBtn?.addEventListener('pointerdown', (e) => {
-      e.preventDefault(); this.setHubPage('modes');
+      e.preventDefault();
+      // Before the first battle the character is created (AGENDA 2), then the mode choice opens.
+      if (!window.gameWorld?.profile?.character?.created && this.openCharacterScreen({ first: true, then: () => this.setHubPage('modes') })) return;
+      this.setHubPage('modes');
     });
     this.hubSiegeModeBtn?.addEventListener('pointerdown', (e) => {
       e.preventDefault();
@@ -532,7 +536,7 @@ export class UIManager {
       if (route === 'settings') return this.setHubPage('settings');
       if (route === 'mastery') return this.showAnnouncement('MASTERY IS A FUTURE CANONICAL SYSTEM', 2.2);
       if (route === 'transformations') return this.showAnnouncement('TRANSFORMATION PATHS ARE IN DEVELOPMENT', 2.2);
-      if (route === 'wardrobe') return this.showAnnouncement('WARDROBE & EQUIPMENT ARE IN DEVELOPMENT', 2.2);
+      if (route === 'wardrobe') return this.openCharacterScreen({ first: !window.gameWorld?.profile?.character?.created });
       if (route === 'messages') return this.showAnnouncement('MESSAGES ARE NOT AVAILABLE IN THE PROTOTYPE', 2.2);
       if (route === 'friends') return this.showAnnouncement('FRIENDS WILL ARRIVE WITH CO-OP', 2.2);
     }));
@@ -556,6 +560,16 @@ export class UIManager {
   }
 
   getSelectedHero() { return this.selectedHero || 'thesen'; }
+
+  // Character creation / wardrobe (character_creation.js): DONE plays the created figure and refreshes the hub.
+  openCharacterScreen({ first = false, then = null } = {}) {
+    const game = window.gameWorld;
+    return openCharacterCreation(game, { first, onDone: (ch) => {
+      if (ch?.base) this.setHubHero(ch.base);
+      if (ch?.name) this.showAnnouncement(`WELCOME, ${ch.name.toUpperCase()}`, 1.6);
+      then?.();
+    } });
+  }
 
   setHubPage(page) {
     const valid = ['character', 'deck', 'skills', 'modes', 'freeplay', 'settings'];
