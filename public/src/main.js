@@ -37,6 +37,7 @@ import { TransformationFx } from './transform_fx.js';
 // Free drawing (DRAW, no template) adds this to the recognition confidence before grading.
 export const FREE_DRAW_BONUS = .06;
 import { PrimalCompanion, normalizePrimalChoice, startPrimalBond, endPrimalBond, bondForm, PRIMAL_ARCHETYPES } from './primals.js';
+import { currentBuffForm } from './buff_forms.js'; // transformation and Arcane State exclude each other
 // Activated trap entries kept on top of the history during a match (back-navigation guard).
 const BACK_TRAPS = 2;
 // Every own shield recipe (Ward principle) shares one cooldown.
@@ -1464,6 +1465,7 @@ export class GameWorld {
       this.showAnnouncement(`TRANSFORMATION BEENDET — ${Math.round(this.player.focus)} FOKUS GESPART`, 1.6);
       return true;
     }
+    if (this.isMatchRunning() && this.player && currentBuffForm(this.player)) { this.showAnnouncement('ARCANE STATE AKTIV — KEINE TRANSFORMATION', 1.4); return false; }
     if (!this.isMatchRunning() || !this.player?.activateFocusTransformation?.()) {
       const p = this.player; const need = p?.maxFocus ?? 100;
       this.showAnnouncement(`FOKUS ${Math.round(p?.focus ?? 0)}/${need}`);
@@ -1695,6 +1697,7 @@ export class GameWorld {
     if (!this.isMatchRunning() || !p?.isAlive) return false;
     if (p.primalBond) return endPrimalBond(p, 'decouple');
     // Same rule as the Focus transformation: it lights at a full meter (a released bond saved the rest of it).
+    if (currentBuffForm(p)) { this.showAnnouncement('ARCANE STATE AKTIV — KEIN PRIMAL BOND', 1.4); return false; }
     if (!(p.canLightFocus?.() ?? p.focus >= p.maxFocus)) { this.showAnnouncement(`FOKUS ${Math.round(p.focus)}/${p.maxFocus}`); return false; }
     if (!p.grounded || p.freezeTimer > 0) { this.showAnnouncement('PRIMAL BOND NEEDS SOLID GROUND', 1); return false; }
     if (!primal.canBond(p)) { this.showAnnouncement(primal.isAlive ? `${primal.info.name} MUST BE CLOSE` : `${primal.info.name} IS DOWN`, 1.1); return false; }

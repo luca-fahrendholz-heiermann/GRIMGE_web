@@ -1651,7 +1651,7 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
   windowListeners.keyup?.({ code: 'KeyK', preventDefault() {} });
   assert(P.lastFormTechnique === 'LICHTSPALTER', 'Releasing K fires the full up technique (Lichtspalter)');
   // Transformations burn the Focus meter instead of running on a timer.
-  resetForm();
+  resetForm(); (await import('./public/src/buff_forms.js')).endBuffForm(P); // no Arcane State left over (it would block the transformation)
   const deckBefore = P.runeDeck.length + P.runeHand.length;
   P.focus = P.maxFocus;
   assert(game.activateFocusTransformation() && P.runeDeck.length + P.runeHand.length === deckBefore, 'Transforming adds no extra rune card to deck or hand');
@@ -1668,6 +1668,11 @@ assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive &
   { const wasPrimal = game.primal; game.primal = null; const tap = { x: P.x, y: P.y - 40 }; const tapped = game.tryTransformByTap(tap); const stillOn = P.focusTransformTimer > 0; P.focus = P.maxFocus * .6; const ended = game.activateFocusTransformation() && P.focusTransformTimer === 0 && P.focusSaved; const blocked = !game.activateFocusTransformation() && P.focusTransformTimer === 0; P.focus = P.maxFocus; const relit = blocked && game.activateFocusTransformation() && P.focusTransformTimer > 0; game.primal = wasPrimal;
     assert(!tapped && stillOn && ended && relit, 'Tapping the own Wizard does nothing (no accidental transform in a fight); the profile / button path ends the form, which lights again only at a full meter'); if (!(P.focusTransformTimer > 0)) { P.focusSaved = false; P.focus = P.maxFocus; P.activateFocusTransformation(); } P.focus = P.maxFocus; }
   { const f0 = P.focus; P.chargeDir = 'forward'; P.state = 'idle'; P.stateTimer = 0; const ok = P.releaseFormTechnique(true); assert(ok && Math.abs(f0 - P.focus - 16) < .01, 'A full technique in the Focus transformation costs 16 Focus (spells traded against form time) — ' + (f0 - P.focus)); P.focus = P.maxFocus; }
+  // Transformation and Arcane State exclude each other (user, 9 Nov 2026): both own the charged heavy attacks.
+  { const BF = await import('./public/src/buff_forms.js'); const wasT = P.focusTransformTimer > 0; const refused = !BF.activateBuffForm(P, 'T13', undefined, spellSystem) && !BF.currentBuffForm(P);
+    P.endFocusTransformation(); P.focus = P.maxFocus; P.mp = P.maxMp; BF.activateBuffForm(P, 'T13', undefined, spellSystem); const inBuff = !!BF.currentBuffForm(P); const blocked = !P.activateFocusTransformation() && !(P.focusTransformTimer > 0);
+    BF.endBuffForm(P); P.focusSaved = false; P.focus = P.maxFocus; P.activateFocusTransformation();
+    assert(wasT && refused && inBuff && blocked && P.focusTransformTimer > 0, 'Transformation and Arcane State exclude each other (no Arcane State while transformed, no transformation during an Arcane State)'); }
   P.focus = .02; P.update(1 / 60, neutralInput, game.battlefield, game);
   assert(P.focusTransformTimer === 0 && P.focus === 0, 'The transformation ends when the Focus meter is empty');
   resetForm();
@@ -2371,7 +2376,9 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   P.x = 400; P.z = .5; game.battlefield.placeOnSurface(P);
   P.focus = P.maxFocus; game.activateFocusTransformation();
   spells.cast(P, spells.resolveSpell([{ id: 'buff_T13' }]), game);
-  assert(P.buffForm?.id === 'T13' && P.focusTransformTimer > 0 && activeMoveset(P) === 'T13', 'A buff runs together with the Focus transformation and owns the charged heavy');
+  const refusedWhileT = !P.buffForm && P.focusTransformTimer > 0;
+  P.endFocusTransformation(); spells.cast(P, spells.resolveSpell([{ id: 'buff_T13' }]), game);
+  assert(refusedWhileT && P.buffForm?.id === 'T13' && activeMoveset(P) === 'T13', 'No Arcane State while transformed (both own the charged heavies); afterwards the buff owns the charged heavy');
   spells.cast(P, spells.resolveSpell([{ id: 'buff_T08' }]), game);
   assert(P.buffForm.id === 'T13', 'Only one buff transformation can be active at a time');
   // Render the manifestation in every pose.

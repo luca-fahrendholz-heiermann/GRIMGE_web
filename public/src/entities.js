@@ -2541,6 +2541,7 @@ export class Player extends GroundEntity {
 
   activateFocusTransformation() {
     if (!this.isAlive || !this.canLightFocus() || this.focusTransformTimer > 0 || this.activeClash) return false;
+    if (currentBuffForm(this)) return false; // an Arcane State is active (both would own the charged heavies)
     this.focusSaved = false;
     // No own timer: the transformation burns the Focus meter (faster the longer it lasts).
     this.focusTransformTimer = this.focus / focusDrainRate(0);

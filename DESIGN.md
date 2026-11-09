@@ -43,13 +43,18 @@ viral; Deckbau, Klassen und Masteries tragen den Langzeit-Fortschritt.
   Element-Runen, Kontern oder Spezialrunen aufgefüllt.
 
 ### Warum ein „starkes“ Deck nicht dauernd starke Karten spielt
-Starke Karten haben eine **eigene Sperre, unabhängig von der Rotation** — schnelle Rotation beschleunigt nur die
-günstigen Karten:
-- **Arcane State / Transformation:** nur mit vollem Fokus-Balken (100 %); im Arena-PvP einmal pro Runde.
-- **Sphäre:** einmal pro Runde (PvP), in PvE an einen eigenen Lade-Balken gebunden.
-- **Spezialrunen (EINFACH, Haltungen):** eigene Abklingzeit nach dem Wirken (Richtwert 12–20 s), egal wie schnell
-  die Karte wiederkommt.
-- **Mana bremst zusätzlich:** starke Karten 30–46 Mana, Element-Runen 10–18; Regeneration 5,5/s + Mana bei Treffern.
+Gebalanced wird **nur über zwei Ressourcen** (Entscheidung 9. Nov 2026) — keine Rundenlimits, keine Extra-Abklingzeiten:
+- **Mana** für alles, was gezeichnet wird: Runen, Spezialrunen, Sphären und Arcane States. Starke Karten kosten viel
+  (Sphäre / Arcane State 30–46+), Element-Runen 10–18; Regeneration 5,5/s + Mana bei Treffern. Wer das Mana für die
+  Sphäre aufbringt, darf sie wirken — so oft das Mana reicht. Das hält das Zeichnen planbar: eine Rune geht genau
+  dann, wenn ihr Mana da ist.
+- **Fokus** für Transformation und Beam-Clash: der Balken füllt sich durch Kampf; mit guten Combos lädt er schneller
+  — wer gut spielt, transformiert auch im PvP öfter. Techniken in der Transformation kosten Fokus (Spells gegen
+  Formzeit getauscht).
+- **Transformation und Arcane State schließen sich gegenseitig aus:** beide belegen die aufgeladenen schweren
+  Angriffe mit ihren Techniken; während eine aktiv ist, lässt sich die andere nicht starten (im Spiel umgesetzt).
+- Schnelle Rotation beschleunigt damit nur, *wie oft eine Karte auf die Hand kommt* — ob man sie wirken kann,
+  entscheidet das Mana.
 
 ### Der Ausgleich zwischen den Stilen
 - **Viele Element-Runen:** jede Hand ergibt etwas Brauchbares, weil zwei oder drei Runen zu Fusionen verschmelzen

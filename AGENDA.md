@@ -20,7 +20,7 @@ Erledigtes steht in der Git-Historie.
 
 ## 3. Deck-System nach Budget (DESIGN.md §2–3)
 - Punktebudget (≤ 20), Deckgröße 10–14 Karten, Zieh-Rotation wie Clash Royale.
-- Eigene Sperren für starke Karten (Fokus, einmal pro Runde, Abklingzeiten), Mana als Bremse.
+- Balance nur über Mana (alles Gezeichnete, starke Karten teuer) und Fokus (Transformation, Beam-Clash); Transformation und Arcane State schließen sich aus (umgesetzt).
 - Neue Kartentypen der Konter-Ebene: Schnellzauber, Fallen, Handfallen.
 
 ## 4. Feldzug (Hauptmodus)

@@ -214,6 +214,11 @@ export function activateBuffForm(player, id, quality = { duration: 1, power: 1, 
   const form = formFor(player, id);
   if (!form || !player) return false;
   setBuffSpellSink(spells);
+  // No Arcane State during a transformation (Focus form / Primal Bond) — both own the charged heavy attacks.
+  if (player.focusTransformTimer > 0 || player.primalBond) {
+    window.gameWorld?.showAnnouncement?.('TRANSFORMATION AKTIV — KEIN ARCANE STATE', 1.4);
+    return false;
+  }
   const active = currentBuffForm(player);
   if (active && active.id !== id) {
     window.gameWorld?.showAnnouncement?.(`${active.name.toUpperCase()} IS STILL ACTIVE — ONE ARCANE STATE AT A TIME`, 1.4);
