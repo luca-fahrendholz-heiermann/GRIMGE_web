@@ -4236,7 +4236,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
     H.i -= 1; game._trapDepth -= 1; active = false; game.armBackGuard(); const skipWithoutGesture = H.stack.length === 3 && game._trapDepth === 1; active = true; game.armBackGuard(); const refilled = game._trapDepth === 2;
     if (hadH) Object.defineProperty(w, 'history', hadH); else delete w.history; if (nav) { if (hadUA) Object.defineProperty(nav, 'userActivation', hadUA); else delete nav.userActivation; } game._trapDepth = 0;
     assert(two && noMore && skipWithoutGesture && refilled, 'Back guard keeps two activated trap entries and refills them only on a real interaction'); }
-  assert(Object.keys(BR.BREATH_STYLES).length === 18 && Object.keys(BR.BREATH_RUNES).length === 13 && ['ventus', 'terra', 'natura', 'lux', 'umbra', 'void', 'bestia', 'construct', 'ward'].length === 9, 'Every element has its breathing rune (12 base styles)');
+    assert(Object.keys(BR.BREATH_STYLES).length === 18 && Object.keys(BR.BREATH_RUNES).length === 13 && ['ventus', 'terra', 'natura', 'lux', 'umbra', 'void', 'bestia', 'construct', 'ward'].length === 9, 'Every element has its breathing rune (12 base styles)');
   const broken = [];
   const styles = Object.keys(BR.BREATH_STYLES);
   for (const style of styles) {
@@ -4951,5 +4951,26 @@ game.debugVisible = true;
 game.render();
 assert(typeof nextFrame === 'function', 'Complete 2.5D update/render frame schedules a successor');
 game.running = false;
+{
+  // Stairs up to a gallery (Castle Crashers DNA, user 10 Nov 2026): walked up at the foot, never from the side.
+  { game.returnToHub(); game.setMatchMode('dungeon'); game.startMatch(); if (!game.modeState.structures) game.spawnDungeonStage(1);
+    const P = game.player; const bf = game.battlefield; const L = game.modeState.structures?.left ?? 0;
+    P.x = L + 545; P.z = .17; bf.placeOnSurface(P); P.grounded = true; P.elevation = 0; P._structSafe = null;
+    let maxH = 0; for (let x = L + 545; x <= L + 1000; x += 5) { P.x = x; P.z = .17; bf.resolveEntityCollision(P); maxH = Math.max(maxH, P.surfaceHeight ?? 0); }
+    const onGallery = (P.surfaceHeight ?? 0) >= 99;
+    P.x = L + 1000; P.z = .6; bf.placeOnSurface(P); P.grounded = true; P.elevation = 0; P._structSafe = null; bf.resolveEntityCollision(P);
+    for (let z = .6; z >= .15; z -= .02) { P.z = z; bf.resolveEntityCollision(P); }
+    const blocked = P.z > .27 && (P.surfaceHeight ?? 0) === 0;
+    assert(onGallery && maxH >= 99 && blocked, 'Stairs lead up to the gallery (height ' + Math.round(maxH) + '); walking into it from the ground at the side is blocked (z ' + P.z.toFixed(2) + ')');
+    game.returnToHub(); }
+}
+{
+  // Guard against code swallowed by a mid-line comment ("x = 1; // note y = 2;" — happened twice, 6 + 10 Nov 2026).
+  const fsx = await import('node:fs'); const pathx = await import('node:path');
+  const re = /[;)}]\s\/\/[^'"`]*?(\b[A-Za-z_$][\w$]*\.[A-Za-z_$][\w$]* = [^=]|\bconst [A-Za-z_$]+ =|\blet [A-Za-z_$]+ =|\bctx\.[A-Za-z]+\(|\breturn [A-Za-z_$(]|\bthis\.[A-Za-z_]+ = [^=])/;
+  const dir = pathx.resolve('public/src'); const hidden = [];
+  for (const f of fsx.readdirSync(dir).filter((n) => n.endsWith('.js'))) fsx.readFileSync(pathx.join(dir, f), 'utf8').split(/\r?\n/).forEach((l, i) => { if (re.test(l)) hidden.push(f + ':' + (i + 1)); });
+  assert(!hidden.length, 'No code hidden behind a mid-line // comment' + (hidden.length ? ' — ' + hidden.slice(0, 5).join(', ') : ''));
+}
 console.log(`\nRuntime results: ${passed} passed, ${failed} failed.`);
 if (failed > 0) process.exit(1);

@@ -92,6 +92,7 @@ export class Battlefield {
     [this.blueTower, this.redTower, ...this.defenseTowers].forEach((tower) => this.placeOnSurface(tower));
     // The Siege beacon glows belong to arena_bg.jpg; other worlds paint their own scene.
     this.decorativeBeacons = mode?.world === 'training' ? [] : ARENA_LAYOUT.decorativeBeacons;
+    this.levelSurfaces = []; // stairs / galleries of the current level (level_structures.js)
     this.boundsOverride = (mode?.world === 'dungeon')
       ? { left: 104, right: 3200, farZ: 0.06, nearZ: 0.94 }
       : mode?.world === 'training' ? { ...TRAINING_BOUNDS } : null;
@@ -267,6 +268,14 @@ export class Battlefield {
         surface = this.getSurfaceAt(entity.x, entity.z, entity);
       }
     }
+    // Level structures: the ground under stairs / galleries is blocked like a wall (no walking into the flight from the side).
+    if (this.levelSurfaces?.length) {
+      const cur = previousSurfaceHeight + (entity.elevation ?? 0);
+      const wall = this.levelSurfaces.find((S) => surface !== S && surfaceContains(S, entity.x, entity.z) && surfaceHeight(S, entity.x) > cur + 14);
+      const safe = entity._structSafe;
+      if (wall && safe && !surfaceContains(wall, safe.x, safe.z)) { entity.x = safe.x; entity.z = safe.z; entity.vx = 0; entity.vz = 0; surface = this.getSurfaceAt(entity.x, entity.z, entity); }
+      else entity._structSafe = { x: entity.x, z: entity.z };
+    }
     if (!entity.isMinion && this.dynamicSurfaces?.length) surface = this.footholdAssist(entity, surface);
     if (surface.isCastleDeck) entity._deckSafe = { x: entity.x, z: entity.z };
     const nextSurfaceHeight = surfaceHeight(surface, entity.x);
@@ -335,13 +344,15 @@ export class Battlefield {
     // A landing-only Arena platform is never a walk-up ledge. A character
     // must be falling from at least its top height, or already stand on it.
     // Spell geometry (geometry.js: pillars, platforms, the world tree) is checked first.
-    const candidates = [...this.surfaces, ...(this.dynamicSurfaces ?? [])].reverse().filter((surface) => surfaceContains(surface, x, z));
+    const candidates = [...this.surfaces, ...(this.levelSurfaces ?? []), ...(this.dynamicSurfaces ?? [])].reverse().filter((surface) => surfaceContains(surface, x, z));
     for (const surface of candidates) {
       if (!surface.landingOnly || !entity) return surface;
       if (entity.surfaceId === surface.id) return surface;
       const currentHeight = (entity.surfaceHeight ?? 0) + (entity.elevation ?? 0);
       const canLand = !entity.grounded && entity.vElevation <= 0 && currentHeight >= surfaceHeight(surface, x) - 8;
-      if (canLand) return surface;
+      // Level structures (stairs / galleries) are walked onto at the same height (stairs foot, stairs → gallery).
+      const walksOn = surface.levelWalk && entity.grounded && Math.abs(currentHeight - surfaceHeight(surface, x)) <= 14;
+      if (canLand || walksOn) return surface;
     }
     return this.surfaces[0];
   }

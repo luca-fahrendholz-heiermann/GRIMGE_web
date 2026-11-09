@@ -38,6 +38,7 @@ import { TransformationFx } from './transform_fx.js';
 export const FREE_DRAW_BONUS = .06;
 import { PrimalCompanion, normalizePrimalChoice, startPrimalBond, endPrimalBond, bondForm, PRIMAL_ARCHETYPES } from './primals.js';
 import { currentBuffForm } from './buff_forms.js'; // transformation and Arcane State exclude each other
+import { structureSurfaces, renderStructures } from './level_structures.js'; // stairs / galleries (Castle Crashers DNA)
 // Activated trap entries kept on top of the history during a match (back-navigation guard).
 const BACK_TRAPS = 2;
 // Follow-camera zoom per mode (1 = the classic full stage). The zoom pivots on the near ground edge, so the near depth
@@ -55,7 +56,12 @@ const WARD_SPELL_IDS = new Set(['arcane_aegis', 'storm_ward', 'sacrifice_bulwark
 const DUNGEON_LEFT_EDGE = 104;
 const DUNGEON_ROOMS = Object.freeze([
   null,
-  Object.freeze({ width: 2200, encounters: [{ at: 0, count: 2 }, { at: 800, count: 2 }] }),
+  // Room 1 has a staircase up to a gallery and down again in the back band (Castle Crashers: levels grow upward too).
+  Object.freeze({ width: 2200, encounters: [{ at: 0, count: 2 }, { at: 800, count: 2 }], structures: Object.freeze([
+    Object.freeze({ type: 'stairs', x0: 560, x1: 820, zMin: .06, zMax: .28, from: 0, to: 100 }),
+    Object.freeze({ type: 'gallery', x0: 820, x1: 1300, zMin: .06, zMax: .28, h: 100 }),
+    Object.freeze({ type: 'stairs', x0: 1300, x1: 1560, zMin: .06, zMax: .28, from: 100, to: 0 })
+  ]) }),
   Object.freeze({ width: 2400, encounters: [{ at: 0, count: 2 }, { at: 750, count: 2 }, { at: 1450, count: 2 }], rescueAt: 1150 }),
   Object.freeze({ width: 2400, encounters: [{ at: 0, count: 2 }, { at: 750, count: 3 }, { at: 1450, count: 3 }], elite: true }),
   Object.freeze({ width: 1400, boss: true })
@@ -1997,6 +2003,9 @@ export class GameWorld {
     }
     // Dungeon secrets (dungeon_secrets.js): room 2 hides the withered grove.
     setupDungeonSecrets(this, stage, bounds);
+    // Stairs / galleries of the room (walkable heights, drawn behind the actors).
+    this.battlefield.levelSurfaces = structureSurfaces(config.structures ?? [], bounds.left);
+    state.structures = config.structures?.length ? { defs: config.structures, left: bounds.left } : null;
     state.dungeonRoom = {
       ...bounds, cleared: false,
       encounters: (config.encounters ?? []).map((encounter) => ({ ...encounter, spawned: false }))
@@ -2030,6 +2039,8 @@ export class GameWorld {
     const near = this.getHostileTargets(this.player.team).filter((t) => !t.isProp && !t.isStoneWall && !t.isDead && t.lifeState !== 'Dead' && Math.abs(t.x - this.player.x) < 700).length;
     const target = this.modeState?.bossActive ? Math.max(1, base - .2) : near >= 6 ? Math.max(1, base - .18) : near >= 4 ? base - .1 : base;
     const now = this._zoomNow ?? base; this._zoomNow = now + (target - now) * Math.min(1, dt * 1.5);
+    // On stairs / galleries the camera rises with the Wizard so the upper floor stays in view.
+    const lift = Math.max(0, (this.player.surfaceHeight ?? 0)) * .75; this._camY = (this._camY ?? 0) + (lift - (this._camY ?? 0)) * Math.min(1, dt * 2.5);
   }
   // Foes outside the view: an arrow at the screen edge with the distance (red; gold for the boss).
   renderOffscreenArrows(ctx) {
@@ -2038,9 +2049,10 @@ export class GameWorld {
     const foes = this.getHostileTargets(this.player.team).filter((t) => !t.isProp && !t.isStoneWall && !t.isDead && t.lifeState !== 'Dead')
       .map((t) => ({ t, d: Math.abs(t.x - this.player.x), s: this.zoomPoint({ x: t.x + (this.cameraOffsetX ?? 0) - camX, y: (t.y ?? 0) + (this.worldOffsetY ?? 0) - 40 }) }))
       .filter((o) => o.s.x < -8 || o.s.x > W + 8).sort((a, b) => a.d - b.d).slice(0, 5);
-    ctx.save(); ctx.font = 'bold 12px monospace'; ctx.textAlign = 'center';
+    ctx.save(); ctx.font = 'bold 12px monospace'; ctx.textAlign = 'center'; const used = { '-1': [], '1': [] };
     for (const { t, d, s } of foes) {
-      const side = s.x < 0 ? -1 : 1; const x = side < 0 ? 22 : W - 22; const k = 1.4; // readable on phones const y = Math.max(90, Math.min(H - 150, s.y));
+      const side = s.x < 0 ? -1 : 1; const x = side < 0 ? 22 : W - 22; const k = 1.4; /* readable on phones */ let y = Math.max(90, Math.min(H - 150, s.y));
+      while (used[side].some((u) => Math.abs(u - y) < 40)) y += 40; /* stacked, never on top of each other */ used[side].push(y);
       const boss = t === this.enemyChampion || t.isBoss; const col = boss ? '#ffd740' : '#ff5252';
       ctx.fillStyle = 'rgba(10,6,12,.75)'; ctx.beginPath(); ctx.moveTo(x + side * 12 * k, y); ctx.lineTo(x - side * 6 * k, y - 11 * k); ctx.lineTo(x - side * 6 * k, y + 11 * k); ctx.closePath(); ctx.fill();
       ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(x + side * 9 * k, y); ctx.lineTo(x - side * 4 * k, y - 8 * k); ctx.lineTo(x - side * 4 * k, y + 8 * k); ctx.closePath(); ctx.fill();
@@ -2052,12 +2064,12 @@ export class GameWorld {
     const bounds = this.battlefield?.boundsOverride ?? ARENA_LAYOUT.playableBounds;
     return { x: this.renderWidth / 2, y: (this.worldOffsetY ?? 0) + groundYForDepth(bounds?.nearZ ?? .94) };
   }
-  applyWorldZoom(ctx) { const z = this.cameraZoom(); if (z === 1) return; const p = this.zoomPivot(); ctx.translate(p.x, p.y); ctx.scale(z, z); ctx.translate(-p.x, -p.y); }
+  applyWorldZoom(ctx) { const z = this.cameraZoom(); if (z === 1) return; const p = this.zoomPivot(); ctx.translate(p.x, p.y); ctx.scale(z, z); ctx.translate(-p.x, -p.y + (this._camY ?? 0)); }
   // A screen point in world pixels (x along the battlefield, y on the world layer): for taps on actors.
   screenToWorldPx(pt) { const u = this.unzoomPoint(pt); return { ...u, x: u.x - (this.cameraOffsetX ?? 0) + (this.modeState?.dungeonCameraX ?? 0), y: u.y - (this.worldOffsetY ?? 0) }; }
   // Screen point → unzoomed screen point (and back): every screen↔world conversion goes through these.
-  unzoomPoint(pt) { const z = this.cameraZoom(); if (z === 1 || !pt) return pt; const p = this.zoomPivot(); return { ...pt, x: p.x + (pt.x - p.x) / z, y: p.y + (pt.y - p.y) / z }; }
-  zoomPoint(pt) { const z = this.cameraZoom(); if (z === 1 || !pt) return pt; const p = this.zoomPivot(); return { ...pt, x: p.x + (pt.x - p.x) * z, y: p.y + (pt.y - p.y) * z }; }
+  unzoomPoint(pt) { const z = this.cameraZoom(); if (z === 1 || !pt) return pt; const p = this.zoomPivot(); return { ...pt, x: p.x + (pt.x - p.x) / z, y: p.y + (pt.y - p.y) / z - (this._camY ?? 0) }; }
+  zoomPoint(pt) { const z = this.cameraZoom(); if (z === 1 || !pt) return pt; const p = this.zoomPivot(); const y = pt.y + (this._camY ?? 0); return { ...pt, x: p.x + (pt.x - p.x) * z, y: p.y + (y - p.y) * z }; }
   // The visible span in unzoomed screen x (0 … renderWidth without zoom).
   visibleSpanX() { const z = this.cameraZoom(); const px = this.renderWidth / 2; return z === 1 ? { left: 0, right: this.renderWidth } : { left: px - px / z, right: px + (this.renderWidth - px) / z }; }
 
@@ -3297,6 +3309,7 @@ export class GameWorld {
     this.renderArenaRuneCollectibles(ctx);
     this.renderArenaTransformationRelic(ctx);
 
+    if (this.modeState?.structures) renderStructures(ctx, this.modeState.structures.defs, this.modeState.structures.left);
     sceneDev.hints = this.activeMode?.id === 'training' || !!this.debugVisible; // scene-object labels (dev phase)
     const actors = [...this.minions, ...environment.livingProps().map((prop) => ({ y: prop.y + (prop.sortBias ?? 0), render: (c) => renderProp(c, prop) })), ...environment.sceneFx.map((fx) => ({ y: fx.y, render: (c) => fx.render(c) })), ...this.armory.pickups.map((pickup) => ({ y: pickup.y, render: (c) => pickup.render(c) }))];
     if (this.enemyChampion.lifeState !== 'Dead') actors.push(this.enemyChampion);
