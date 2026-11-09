@@ -92,12 +92,17 @@ export class SpriteManager {
     const id = `${key}~${lookId(look)}`; if (this.sprites[id]) return id;
     const base = this.sprites[key]; const img = base?.sourceImage; const doc = globalThis.document;
     if (!img || typeof doc?.createElement !== 'function') return key;
-    const c = doc.createElement('canvas'); c.width = img.width; c.height = img.height; const x = c.getContext('2d', { willReadFrequently: true });
-    if (!x?.getImageData) return key;
-    x.drawImage(img, 0, 0); const data = x.getImageData(0, 0, img.width, img.height); if (!(data?.data?.length >= img.width * img.height * 4)) return key;
-    applyLook(data.data, img.width, img.height, look, key); x.putImageData(data, 0, 0);
+    const recolor = (src) => {
+      const c = doc.createElement('canvas'); c.width = src.width; c.height = src.height; const x = c.getContext('2d', { willReadFrequently: true });
+      if (!x?.getImageData) return null;
+      x.drawImage(src, 0, 0); const data = x.getImageData(0, 0, src.width, src.height); if (!(data?.data?.length >= src.width * src.height * 4)) return null;
+      applyLook(data.data, src.width, src.height, look, key); x.putImageData(data, 0, 0); return c;
+    };
+    const c = recolor(img); if (!c) return key;
     const spr = { ...this.preparedFrame(c), pixel: true, procFull: true, sourceImage: c };
-    if (base.rig && RIGS[key]) this.applyRig(spr, c, RIGS[key]); else if (base.frames) { spr.frames = base.frames; spr.hold = base.hold; }
+    // Rig heroes re-bake every clip; frame-sheet heroes (Xame's idle frames) get each frame recoloured.
+    if (base.rig && RIGS[key]) this.applyRig(spr, c, RIGS[key]);
+    else if (base.frames) { spr.frames = Object.fromEntries(Object.entries(base.frames).map(([k, list]) => [k, list.map((f) => { const rc = recolor(f.canvas); return rc ? this.preparedFrame(rc) : f; })])); spr.hold = base.hold; }
     this.sprites[id] = spr;
     return id;
   }

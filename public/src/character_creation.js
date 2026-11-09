@@ -49,7 +49,7 @@ export function openCharacterCreation(game, { onDone = null, first = false } = {
       <div class="cc-sec"><h3>HAIR</h3><div class="cc-row" data-k="hair"></div></div>
       <div class="cc-sec"><h3>ARMOUR</h3><div class="cc-row" data-k="armour"></div></div>
       <div class="cc-sec"><h3>CLASS (CLASS WEAPON)</h3><div class="cc-row cc-classes" data-k="cls"></div></div>
-      <div class="cc-row"><button class="cc-done" type="button">DONE</button></div>
+      <div class="cc-row"><button class="cc-done" type="button">DONE</button>${first ? '' : '<button class="cc-cancel" type="button">CANCEL</button>'}</div>
     </div></div>`;
   doc.body.appendChild(root);
   const input = root.querySelector('input'); input.value = state.name;
@@ -79,6 +79,8 @@ export function openCharacterCreation(game, { onDone = null, first = false } = {
     open.raf = requestAnimationFrame(frame);
   };
   open = { root, raf: requestAnimationFrame(frame) };
+  // The wardrobe can be left unchanged; the first-run screen is completed with DONE.
+  root.querySelector('.cc-cancel')?.addEventListener('pointerdown', (e) => { e.preventDefault(); closeCharacterCreation(); });
   root.querySelector('.cc-done').addEventListener('pointerdown', (e) => {
     e.preventDefault();
     profile?.setCharacter?.({ name: state.name, base: state.base, look: state.look });
