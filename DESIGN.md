@@ -42,11 +42,11 @@ verifizieren.
 - ✔ **Knochen gefallener Abenteurer** im Dungeon aufsammeln → im Tempel **wiederbeleben** → optionale
   **KI-Gefährten**. ✔ Begrenzte Leben pro Quest, danach Wiederbeleben mit Gold; ✔ Gebete im Tempel geben Segen
   (Gold, Extra-Leben).
-- ✔ **Runen-Magie:** Runen in der Stadt kaufen, im Dungeon **Markierungen an Wänden** finden — zwei eigene Runen +
-  eine Rune der Umgebung ergeben ein Wort mit Effekt (Schatz, Segen, Geheimraum). Für GRIMGE ein Volltreffer:
+- ✔ **Runen-Magie:** Runen in der Stadt kaufen, im Dungeon **Markierungen an Wänden** finden. (Aus Spielkenntnis,
+  unbelegt: zwei eigene Runen + eine Rune der Umgebung ergeben ein Wort mit Effekt — Schatz, Segen, Geheimraum.) Für GRIMGE ein Volltreffer:
   **unsere Runen reagieren schon mit der Umgebung** (Wasser → Baum, Natura → Truhe).
-- ✔ **Rannie**, ein Dieb ohne Gruppenplatz, öffnet Truhen und Türen; Schätze im Hintergrund werden per Zeiger
-  (Touch!) entdeckt — perfekt fürs Handy.
+- ✔ **Rannie**, ein Dieb ohne Gruppenplatz. (Aus Spielkenntnis, unbelegt: er öffnet Truhen und Türen; Schätze im
+  Hintergrund werden per Zeiger entdeckt — perfekt für Touch.)
 - Stadt als **Hub** (Gilde, Tempel, Shop, Taverne); nach jeder Stage Beute **schätzen** lassen, Wertung, Kochen.
 - **Sechs Klassen** mit klar verschiedenen Spielweisen — Vorbild für unsere Klassenwahl.
 
