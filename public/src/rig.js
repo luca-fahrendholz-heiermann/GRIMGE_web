@@ -29,6 +29,30 @@ export const RIGS = Object.freeze({
     draw: Object.freeze(['armBL', 'armBU', 'legBL', 'legBU', 'legFL', 'legFU', 'pelvis', 'torso', 'head', 'armFU', 'armFL', 'padF']),
     hand: Object.freeze({ part: 'armFL', at: [60, 79] }),
     handBack: Object.freeze({ part: 'armBL', at: [21, 80] })
+  }),
+  // Thesen's Focus form (char_thesen_focus.png, same frame): the spear on the back rides with the torso, the cape is its
+  // own part behind everything (it claims every pixel no other part does) and trails behind the motion (clip.cape).
+  thesen_focus: Object.freeze({
+    w: 82, h: 123,
+    parts: Object.freeze({
+      cape: { parent: 'torso', pivot: [42, 48], poly: [[0, 0], [82, 0], [82, 123], [0, 123]] },
+      head: { parent: 'torso', pivot: [42, 44], poly: [[28, 4], [57, 4], [57, 27], [51, 33], [50, 46], [34, 46], [32, 33], [28, 27]] },
+      padF: { parent: 'torso', pivot: [52, 44], poly: [[49, 16], [70, 16], [70, 47], [56, 47], [49, 40]] },
+      torso: { parent: 'pelvis', pivot: [42, 64], poly: [[0, 0], [27, 0], [27, 16], [35, 16], [35, 40], [56, 40], [56, 47], [54, 47], [54, 64], [27, 64], [27, 50], [0, 50]] },
+      armFU: { parent: 'torso', pivot: [57, 51], poly: [[53.5, 46], [64, 46], [64, 64], [53.5, 64]] },
+      armFL: { parent: 'armFU', pivot: [59, 64], poly: [[55.5, 64], [65.5, 64], [65.5, 84], [55.5, 84]] },
+      armBU: { parent: 'torso', pivot: [24, 53], poly: [[13, 48], [27.5, 48], [27.5, 63], [13, 63]] },
+      armBL: { parent: 'armBU', pivot: [19, 63], poly: [[14, 63], [26.5, 63], [26.5, 84], [14, 84]] },
+      pelvis: { parent: null, pivot: [42, 80], poly: [[22, 60], [63, 60], [63, 85], [53, 85], [53, 90], [32, 90], [32, 85], [22, 85]] },
+      legBU: { parent: 'pelvis', pivot: [33, 86], poly: [[20, 82], [42.5, 82], [42.5, 101], [20, 101]] },
+      legBL: { parent: 'legBU', pivot: [31, 101], poly: [[20, 101], [42.5, 101], [42.5, 123], [16, 123], [16, 108], [20, 108]] },
+      legFU: { parent: 'pelvis', pivot: [51, 86], poly: [[42.5, 82], [62, 82], [62, 100], [42.5, 100]] },
+      legFL: { parent: 'legFU', pivot: [52, 100], poly: [[42.5, 100], [62, 100], [62, 123], [42.5, 123]] }
+    }),
+    claim: Object.freeze(['head', 'padF', 'armFU', 'armFL', 'armBU', 'armBL', 'torso', 'pelvis', 'legBU', 'legBL', 'legFU', 'legFL', 'cape']),
+    draw: Object.freeze(['cape', 'armBL', 'armBU', 'legBL', 'legBU', 'legFL', 'legFU', 'pelvis', 'torso', 'head', 'armFU', 'armFL', 'padF']),
+    hand: Object.freeze({ part: 'armFL', at: [60, 77] }),
+    handBack: Object.freeze({ part: 'armBL', at: [21, 78] })
   })
 });
 
@@ -123,7 +147,9 @@ export function bakeClips(src, rig, clips, pad = 24) {
   const floor = lowestRow(bakePose(src, rig, map, { a: {}, o: {} }, pad));
   for (const [name, clip] of Object.entries(clips)) {
     frames[name] = Array.from({ length: clip.frames }, (_, i) => {
-      const pose = sampleClip(clip, i); let f = bakePose(src, rig, map, pose, pad);
+      const pose = sampleClip(clip, i);
+      if (rig.parts.cape && pose.a.cape === undefined) pose.a.cape = (clip.cape ?? -2) + (clip.loop ? Math.sin(i / clip.frames * Math.PI * 2) * 2.5 : -i * .8);
+      let f = bakePose(src, rig, map, pose, pad);
       const d = clip.air ? 0 : floor - lowestRow(f);
       if (d) { const [ox, oy] = pose.o.pelvis ?? [0, 0]; pose.o.pelvis = [ox, oy + d]; f = bakePose(src, rig, map, pose, pad); }
       return f;

@@ -5020,6 +5020,18 @@ game.running = false;
     spells.clearRuntime(); game.returnToHub(); }
 }
 {
+  // Focus form rig (cape part): every pixel has a part, the rest pose is the image, the cape trails while sprinting.
+  const { createRequire } = await import('node:module'); const { PNG } = createRequire(import.meta.url)('pngjs'); const fsr = await import('node:fs');
+  const R = await import('./public/src/rig.js'); const C = await import('./public/src/rig_clips.js');
+  const png = PNG.sync.read(fsr.readFileSync('public/assets/sprites/char_thesen_focus.png')); const src = { w: png.width, h: png.height, data: png.data };
+  const rig = R.RIGS.thesen_focus; const map = R.claimMap(src, rig); let unclaimed = 0; for (let i = 0; i < src.w * src.h; i++) if (src.data[i * 4 + 3] >= 8 && map[i] < 0) unclaimed++;
+  const rest = R.bakePose(src, rig, map, { a: { cape: 0 }, o: {} }, 24); let diff = 0;
+  for (let y = 0; y < src.h; y++) for (let x = 0; x < src.w; x++) { const a = (y * src.w + x) * 4; const b = ((y + 24) * rest.w + x + 24) * 4; if (src.data[a + 3] >= 8 && rest.data[b] !== src.data[a]) diff++; }
+  const capePx = [...map].filter((k) => k === rig.claim.indexOf('cape')).length;
+  const { frames } = R.bakeClips(src, rig, { sprint: C.BASE_CLIPS.sprint });
+  assert(unclaimed === 0 && diff === 0 && capePx > 300 && frames.sprint.length === C.BASE_CLIPS.sprint.frames && C.BASE_CLIPS.sprint.cape < -10, 'Focus form rig: all pixels claimed, rest pose exact, a cape part (' + capePx + ' px) that trails while sprinting');
+}
+{
   // Guard against code swallowed by a mid-line comment ("x = 1; // note y = 2;" — happened twice, 6 + 10 Nov 2026).
   const fsx = await import('node:fs'); const pathx = await import('node:path');
   const re = /[;)}]\s\/\/[^'"`]*?(\b[A-Za-z_$][\w$]*\.[A-Za-z_$][\w$]* = [^=]|\bconst [A-Za-z_$]+ =|\blet [A-Za-z_$]+ =|\bctx\.[A-Za-z]+\(|\breturn [A-Za-z_$(]|\bthis\.[A-Za-z_]+ = [^=])/;
