@@ -2307,11 +2307,16 @@ export class Player extends GroundEntity {
       if (!armed) return; ctx.save();
       // Lying flat in the air: the weapon turns with the body (a bow then points straight down).
       if (aerial) { const f = this.facing || 1; ctx.translate(this.x + pOX, renderY + pOY); ctx.rotate(f * Math.PI / 2); ctx.translate(-this.x, -renderY); }
-      else if (body) ctx.translate(body.ox, body.oy);
+      else if (body && !this._rigHands) ctx.translate(body.ox, body.oy);
       drawHeldWeapon(ctx, this, renderY, layer); ctx.restore();
     };
     held('back');
-    sprites.renderEntity(ctx, this.renderKey, this.x, renderY, renderOpts);
+    // Rig heroes hold the weapon where the frame's hands are (the back layer uses the last frame's hands).
+    if (rigged) {
+      const f = this.facing || 1;
+      const toHand = (pl, h) => { if (!h) return null; const lx = h.x - pl.frame.anchorX; const ly = h.y - pl.frame.anchorY; const c = Math.cos(pl.rot); const s = Math.sin(pl.rot); const wx = pl.x + pl.kx * (lx * c - ly * s); const wy = pl.y + pl.ky * (lx * s + ly * c); return { x: (wx - this.x) * f, y: wy - renderY }; };
+      sprites.renderEntity(ctx, this.renderKey, this.x, renderY, { ...renderOpts, onPlace: (pl) => { const front = toHand(pl, pl.frame.hand); const rear = toHand(pl, pl.frame.handBack); this._rigHands = front && rear ? { front, rear } : null; } });
+    } else { this._rigHands = null; sprites.renderEntity(ctx, this.renderKey, this.x, renderY, renderOpts); }
     // A stance may turn the body itself into its element (breathing: ice, flame skin, rock …) — over the own sprite.
     if (this.isAlive && !rolled && this.signature?.impl?.stance?.bodyOverlay) this.signature.impl.stance.bodyOverlay(ctx, this, this.signature, renderY, (c, x, y) => sprites.renderEntity(c, this.renderKey, x, y, renderOpts));
     held('front');

@@ -431,10 +431,12 @@ export function drawHeldWeapon(ctx, player, renderY, layer = 'front') {
   for (const item of items) {
     const itemLayer = item.layerOverride ?? (item.hand === 'rear' ? 'back' : 'front');
     if (itemLayer !== layer) continue;
-    const hand = HANDS[item.hand];
+    // Rig heroes (rig.js): the hand point of the current animation frame; otherwise the fixed hand offsets.
+    const rigHand = player._rigHands?.[item.hand === 'rear' ? 'rear' : 'front'];
+    const hand = rigHand ?? HANDS[item.hand];
     const lift = item.active ? (pose?.lift ?? 0) : 0;
     ctx.save();
-    ctx.translate(player.x + f * hand.x, renderY + hand.y + hover - lift + (item.dy ?? 0));
+    ctx.translate(player.x + f * hand.x, renderY + hand.y + (rigHand ? 0 : hover) - lift + (item.dy ?? 0));
     ctx.scale(f, 1);
     if (item.active && pose && !item.static) {
       drawTrail(ctx, pose, shapeOf(item.piece).tip, hue, progress);

@@ -620,7 +620,7 @@ export class SpriteManager {
     return {
       canvas: (hitFlash > 0) ? (f.flashCanvas ?? f.canvas) : f.canvas,
       width: f.width, height: f.height,
-      anchorX: f.anchorX, anchorY: f.anchorY, baseHeight: f.baseHeight
+      anchorX: f.anchorX, anchorY: f.anchorY, baseHeight: f.baseHeight, hand: f.hand, handBack: f.handBack
     };
   }
 
@@ -735,6 +735,8 @@ export class SpriteManager {
       offsetY += procOffsetY;
     }
 
+    // Where the frame ends up (rig heroes: the weapon is held at the frame's hand point).
+    opt.onPlace?.({ x: x + offsetX, y: y + offsetY, kx: facing * renderScale * sx, ky: renderScale * sy, rot, frame });
     ctx.translate(x + offsetX, y + offsetY);
     ctx.scale(facing * renderScale * sx, renderScale * sy);
     ctx.rotate(rot);
