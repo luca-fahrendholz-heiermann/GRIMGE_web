@@ -93,7 +93,7 @@ Ketten-Gefühl — „ich sehe deine Rune und antworte“:
 3. **Sammeln:** Boss-Drops für späte Runen (Sphären, Arcane States), Geheimnisse, Truhen, Freischaltungen.
 
 - Späte, starke Karten kommen **spät im Fortschritt** und sind auch dann nicht übermächtig: in PvP über
-  Budget, Sperren und Mana gebalanced; in PvE wachsen Gegner und Bosse mit.
+  Deck-Budget, Mana- und Fokus-Kosten gebalanced; in PvE wachsen Gegner und Bosse mit.
 
 ## 6. Geheimnisse: Glück + Erfahrung
 
