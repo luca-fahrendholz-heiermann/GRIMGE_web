@@ -20,7 +20,11 @@ Erledigtes steht in der Git-Historie.
   Platzhalter: eigene / KI-Sheets ersetzen die Clips über den Clip-Namen. Erledigt: Waffe an der Hand, Focus-Form mit
   eigenem Umhang-Teil, Schläge als Schlüsselposen (Ausholen → Schlag mit eingebackener Schliere → Durchschwung →
   Halten → Zurück; Tipps aus Videos/GRIMGE/animation_tips.mp4), spitz zulaufende Waffenschliere, Staub bei Sprintstart
-  und Landung. Nächstes: Etappe 3 (Atemtechnik-Posen, Arcane States, Gegner-Champions an Animationen anschließen).
+  und Landung.
+- Stand Etappe 3 (erledigt): Bestien-Atmung mit Raubtier-Clips (Lauern / Springen), Schwebe-Clip für Levitation, alte
+  Ganzkörper-Kippungen bei Rig-Helden abgeschwächt, Champions mit Rig-Sprite bekommen Clip-Timing und Zeichen-Clip.
+  Offen: Xame braucht eigene Animationen (Speer quer über den Körper, kein Auto-Rig); Gegner-Champions nutzen noch alte
+  Platzhalterbilder.
 - Grund: Der Hauptheld ist ein einziges Standbild (82×123); alle Posen sind nur gedreht/gestaucht.
 - Grundsatz an Animationen: Stehen, Laufen, Sprint, Sprung / Fall, Angriff 1–3, Aufladen / Loslassen, **Zeichnen**
   (Platz für die Handzeichen), Blocken, Treffer, Ausweichen, Tod.
