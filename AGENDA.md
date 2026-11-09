@@ -3,7 +3,7 @@
 Reihenfolge, in der die offenen Punkte angegangen werden. Das Spielkonzept dahinter steht in [DESIGN.md](DESIGN.md);
 Erledigtes steht in der Git-Historie.
 
-## 1. Grundlage: Kamera, Maßstab, Animations-Pipeline  ← als Nächstes
+## 1. Grundlage: Kamera, Maßstab, Animations-Pipeline  ✔ (Etappen 1–3 erledigt)
 - **Seitenansicht in 2,5D** (Vorbild Castle Crashers / Dragon's Crown), keine freien Blickrichtungen.
 - **Kamera folgt der Figur** und zoomt näher; Figuren größer und detailreicher; Level länger als der Bildschirm, mit
   mehreren Höhenebenen und Vorder-/Hintergrund-Parallax (siehe DESIGN.md §1).
@@ -30,9 +30,13 @@ Erledigtes steht in der Git-Historie.
   (Platz für die Handzeichen), Blocken, Treffer, Ausweichen, Tod.
 - Die Pipeline muss die Charaktererstellung tragen (tauschbare Teile: Rüstung, Haare, Waffe).
 
-## 2. Charaktererstellung und Klassen
+## 2. Charaktererstellung und Klassen  ← als Nächstes
 - Aussehen (auf Basis von Punkt 1), Name, Startelement.
 - Klassenwahl am Anfang mit eigener Identität (Klassenwaffen und Bankai existieren schon).
+- Stand (erster Durchgang, Platzhalter-Bildschirm): Name, Grundfigur (Thesen, Xame), Haar- und Rüstungsfarbe (vor dem
+  Rig-Backen umgefärbt), Klasse = Klassenwaffe, laufende Vorschau; öffnet über WARDROBE und vor dem ersten Kampf.
+  Offen: Startelement, Klassen mit eigener Identität (Beschreibung, Spielstil, Startwerte), endgültiges Layout aus
+  /editor.html, weitere Grundfiguren (deine Sprites), Xame-Animationen.
 
 ## 3. Deck-System nach Budget (DESIGN.md §2–3)
 - Punktebudget (≤ 20), Deckgröße 10–14 Karten, Zieh-Rotation wie Clash Royale.
