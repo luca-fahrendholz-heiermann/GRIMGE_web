@@ -5084,6 +5084,21 @@ game.running = false;
   game.returnToHub();
 }
 {
+  // Classes = weapon families (user, 10 Nov 2026) and the start element ("nur Startrunen").
+  const CL = await import('./public/src/classes.js'); const PR = await import('./public/src/progression.js'); const W = (await import('./public/src/weapons.js')).WEAPONS;
+  const families = new Set(Object.values(W).map((w) => w.family).filter((f) => f && f !== 'Conjured'));
+  const covered = [...families].every((f) => CL.classById(f) && CL.classWeapons(f).length === 2);
+  const prof = new PR.MageProfile({});
+  const before = prof.unlockedRunes.has('lux');
+  prof.setCharacter({ name: 'A', base: 'thesen', classId: 'Ronin', startWeapon: 'katana', startElement: 'lux' });
+  const owned = prof.unlockedRunes.has('lux') && prof.getRuneCopies('lux') === 2 && prof.matchDeck.length <= PR.MATCH_DECK_SIZE;
+  const lockedSecond = !CL.classWeaponUnlocked(prof, 'odachi') && CL.classWeaponUnlocked(prof, 'katana');
+  prof.weaponXp.katana = 1e6; const unlockedSecond = CL.classWeaponUnlocked(prof, 'odachi') && !CL.classWeaponUnlocked(prof, 'spear');
+  const back = new PR.MageProfile(JSON.parse(JSON.stringify(prof.toJSON())));
+  assert(covered && !before && owned && lockedSecond && unlockedSecond && back.character.classId === 'Ronin' && back.character.startElement === 'lux' && back.character.startWeapon === 'katana',
+    'Classes: every weapon family is a class with two weapons; the start element is owned at once and sits twice in the deck; the family\'s second weapon unlocks at the start weapon\'s level ' + CL.CLASS_UNLOCK_LEVEL + '; the profile keeps class, start weapon and element');
+}
+{
   // Guard against code swallowed by a mid-line comment ("x = 1; // note y = 2;" — happened twice, 6 + 10 Nov 2026).
   const fsx = await import('node:fs'); const pathx = await import('node:path');
   const re = /[;)}]\s\/\/[^'"`]*?(\b[A-Za-z_$][\w$]*\.[A-Za-z_$][\w$]* = [^=]|\bconst [A-Za-z_$]+ =|\blet [A-Za-z_$]+ =|\bctx\.[A-Za-z]+\(|\breturn [A-Za-z_$(]|\bthis\.[A-Za-z_]+ = [^=])/;

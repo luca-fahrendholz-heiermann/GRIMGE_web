@@ -205,7 +205,9 @@ export class MageProfile {
     this.classWeapon = typeof source?.classWeapon === 'string' ? source.classWeapon : null;
     // Character creation (AGENDA 2): name, base figure and look; created = the first-run screen was completed.
     const ch = source?.character;
-    this.character = { name: typeof ch?.name === 'string' ? ch.name.slice(0, 16) : '', base: typeof ch?.base === 'string' ? ch.base : 'thesen', look: { hair: ch?.look?.hair ?? 'natural', armour: ch?.look?.armour ?? 'natural' }, created: !!ch?.created };
+    this.character = { name: typeof ch?.name === 'string' ? ch.name.slice(0, 16) : '', base: typeof ch?.base === 'string' ? ch.base : 'thesen', look: { hair: ch?.look?.hair ?? 'natural', armour: ch?.look?.armour ?? 'natural' }, created: !!ch?.created,
+      // Class (= weapon family, classes.js), its start weapon and the start element (an extra element rune owned at once).
+      classId: typeof ch?.classId === 'string' ? ch.classId : null, startWeapon: typeof ch?.startWeapon === 'string' ? ch.startWeapon : null, startElement: typeof ch?.startElement === 'string' ? ch.startElement : null };
     this.bankaiClasses = new Set(Array.isArray(source?.bankaiClasses) ? source.bankaiClasses : []);
     this.weaponXp = { ...(source?.weaponXp ?? {}) };
     this.discoveredSpells = new Set(source?.discoveredSpells ?? []);
@@ -260,8 +262,19 @@ export class MageProfile {
   weaponLevel(id) { return 1 + Math.floor((this.weaponXp[id] ?? 0) / WEAPON_XP_PER_LEVEL); }
   // Bankai is available when the chosen class has earned it (weapon level / boss drop).
   isBankaiUnlocked(classWeapon = this.classWeapon) { return !!classWeapon && (this.bankaiClasses.has(classWeapon) || this.weaponLevel(classWeapon) >= LATE_RUNE_LEVEL.bankai); }
-  setCharacter({ name, base, look } = {}) {
-    this.character = { name: String(name ?? this.character.name ?? '').trim().slice(0, 16), base: base ?? this.character.base, look: { hair: look?.hair ?? this.character.look.hair, armour: look?.armour ?? this.character.look.armour }, created: true };
+  setCharacter({ name, base, look, classId, startWeapon, startElement } = {}) {
+    const prev = this.character;
+    this.character = { name: String(name ?? prev.name ?? '').trim().slice(0, 16), base: base ?? prev.base, look: { hair: look?.hair ?? prev.look.hair, armour: look?.armour ?? prev.look.armour }, created: true,
+      classId: classId !== undefined ? classId : prev.classId ?? null, startWeapon: startWeapon !== undefined ? startWeapon : prev.startWeapon ?? null, startElement: startElement !== undefined ? startElement : prev.startElement ?? null };
+    // A newly chosen start element: owned at once and put into the deck twice (base runes make room if it is full).
+    const el = this.character.startElement;
+    if (el && el !== prev.startElement && ALL_RUNE_IDS.includes(el)) {
+      this.unlockedRunes.add(el);
+      for (let n = 0; n < 2 && this.getRuneCopies(el) < Math.min(2, maxRuneCopies(el)); n++) {
+        if (this.matchDeck.length >= MATCH_DECK_SIZE) { const i = this.matchDeck.findLastIndex((id) => STARTER_RUNES.includes(id) && this.getRuneCopies(id) > 1) ; const j = i >= 0 ? i : this.matchDeck.findLastIndex((id) => STARTER_RUNES.includes(id)); if (j < 0) break; this.matchDeck.splice(j, 1); }
+        this.matchDeck.push(el);
+      }
+    }
     this.save();
   }
   // Choosing a class: a deck Bankai that this class has not earned leaves the deck.
