@@ -22,7 +22,7 @@ bitte im Higgsfield-Konto selbst kontrollieren.
 
 ## Preise
 
-- Preise lassen sich vor jedem Auftrag in Credits abfragen (). Der Wert eines Credits in USD ist nicht
+- Preise lassen sich vor jedem Auftrag in Credits abfragen (Parameter `get_cost`). Der Wert eines Credits in USD ist nicht
   bestätigt; solange nur das vorhandene Guthaben verbraucht wird, entstehen keine zusätzlichen Kosten.
 - Der erste spielbare Meilenstein kam ohne Erzeugung aus.
 
