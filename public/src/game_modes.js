@@ -20,7 +20,8 @@ export const GAME_MODES = Object.freeze({
     objectives: false, autoWaves: false, respawn: 'none', enemyBehavior: 'disabled', world: 'dungeon', progression: 'run'
   }),
   arena: Object.freeze({
-    id: 'arena', label: 'ARENA DUEL', objective: 'DEFEAT THE ARENA CHAMPION',
+    // rules 'rift' (DESIGN.md §4a, arena_rift.js): Riss + Bannrand + Abgrund + 3 Seelenfunken; 'hp' = the old life-bar duel.
+    id: 'arena', label: 'ARENA DUEL', objective: 'THROW THE CHAMPION OUT — 3 SOUL SPARKS', rules: 'rift',
     objectives: false, autoWaves: false, respawn: 'none', enemyBehavior: 'duel', world: 'arena', progression: 'arenaCollect'
   }),
   training: Object.freeze({

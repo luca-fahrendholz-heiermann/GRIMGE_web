@@ -38,7 +38,8 @@ import { TransformationFx } from './transform_fx.js';
 export const FREE_DRAW_BONUS = .06;
 import { PrimalCompanion, normalizePrimalChoice, startPrimalBond, endPrimalBond, bondForm, PRIMAL_ARCHETYPES } from './primals.js';
 import { currentBuffForm } from './buff_forms.js'; // transformation and Arcane State exclude each other
-import { structureSurfaces, renderStructures, furnitureEntries, furnitureUnder, renderForeground } from './level_structures.js'; // stairs / galleries (Castle Crashers DNA)
+import { structureSurfaces, renderStructures, furnitureEntries, furnitureUnder, renderForeground } from './level_structures.js';
+import { setupRift, updateRift, renderRiftGround, renderRiftOverlay } from './arena_rift.js'; // arena "Riss + Leben" // stairs / galleries (Castle Crashers DNA)
 // Activated trap entries kept on top of the history during a match (back-navigation guard).
 const BACK_TRAPS = 2;
 // Follow-camera zoom per mode (1 = the classic full stage). The zoom pivots on the near ground edge, so the near depth
@@ -1674,6 +1675,8 @@ export class GameWorld {
         this.enemyChampion.setDeck([]); this.enemyChampion.arenaCasts = 0;
         this.modeState.relicTimer = 6;
         this.spawnArenaRuneCollectibles();
+        // Riss + Leben (DESIGN.md §4a): cracks instead of life, rim and chasm knock-outs, 3 soul sparks.
+        if (mode.rules === 'rift') setupRift(this);
       }
     }
   }
@@ -2407,7 +2410,7 @@ export class GameWorld {
       this.finishMode('blue', 'VICTORY — ARENA CHAMPION DEFEATED');
       return;
     }
-    if (this.activeMode.id === 'arena') this.updateArenaTransformationRelic(dt);
+    if (this.activeMode.id === 'arena') { this.updateArenaTransformationRelic(dt); updateRift(this, dt); }
     if (this.activeMode.id === 'training' && state.sparring && this.enemyChampion.lifeState === 'Dead') {
       // A practice opponent returns without rewards or a match-ending flow.
       this.enemyChampion.lifeState = 'Alive';
@@ -2601,6 +2604,7 @@ export class GameWorld {
     if (this.activeMode?.id === 'dungeon') return this.isRunChoicePending() ? 'CHOOSE A FOUND RUNE' : this.modeState?.stage === 4 ? 'DEFEAT THE VOID WARDEN' : this.modeState?.stage === 0 ? 'DEFEAT THE SCOUT WITH MELEE' : this.isDungeonExitOpen() ? `DUNGEON ROOM ${this.modeState.stage} CLEARED — GO RIGHT` : `DUNGEON ROOM ${this.modeState?.stage} — PUSH FORWARD`;
     if (this.activeMode?.id === 'arena') {
       if (this.modeState?.transformationRelic) return 'CLAIM THE TRANSFORMATION RELIC — DEFEAT THE CHAMPION';
+      if (this.modeState?.rift) return this.modeState?.runeCollectibles?.length ? 'COLLECT RUNE RELICS — THROW THE CHAMPION OUT' : 'THROW THE CHAMPION OUT — RIM OR CHASM';
       return this.modeState?.runeCollectibles?.length ? 'COLLECT RUNE RELICS — DEFEAT THE CHAMPION' : 'DEFEAT THE ARENA CHAMPION';
     }
     if (this.activeMode?.id === 'training') return 'PRACTICE — NO REWARDS';
@@ -3315,6 +3319,7 @@ export class GameWorld {
     // then ground decals such as Shadow Stomper tethers and graves.
     renderPixelated(ctx, groundPixel, (layer) => renderGroundShadows(layer, this.shadowCasters(), sky.shadowStyle()));
     spells.renderGroundDecals(ctx);
+    renderRiftGround(ctx, this);
     this.renderDungeonRescue(ctx);
     this.renderPotions(ctx);
     this.renderArenaRuneCollectibles(ctx);
@@ -3364,6 +3369,7 @@ export class GameWorld {
 
     // Combat VFX
     combat.render(ctx);
+    renderRiftOverlay(ctx, this);
     // Foreground pillars / chains in front of the battle line (parallax, see-through over the Wizard).
     if (this.modeState?.structures) renderForeground(ctx, this.modeState.structures.defs, this.modeState.structures.left, this.modeState?.dungeonCameraX ?? 0, this.player);
 

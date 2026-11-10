@@ -33,7 +33,8 @@ import { updateBuffForm, endBuffForm, isGenericBuff, currentBuffForm, renderBuff
 import { silkAirJump, silkSwingStep } from './arcane_fadenschlag.js'; // T13 Fadenschlag: air-jump swing on a silk wire
 import { isShellRolled } from './arcane_konstrukt.js'; // A10 Schalenrolle: the body is hidden inside the ball
 import { cloakFor, hairRecolor } from './form_recolors.js'; // armour aura colours; Aufstiegsstufen hair
-import { drawSpellSprite, spellSheetReady, SpriteBurst } from './spell_visuals.js'; // Aufstiegsstufen aura sheets
+import { drawSpellSprite, spellSheetReady, SpriteBurst } from './spell_visuals.js';
+import { riftAbsorb, riftAbsorbHazard } from './arena_rift.js'; // arena "Riss": hits crack the shield instead of taking life // Aufstiegsstufen aura sheets
 import { masteryOnShieldHit, masteryTickShield, masteryChargedRelease, masteryPerfectBlock, masteryTier, currentAttacker, masteryTick, masteryMoveMult, masteryIncoming } from './mastery.js';
 import { signatureBodyPose } from './signature_runes.js';
 import { updateSignatureStance, renderSignatureStance, signatureHover, signatureMoveMult, signatureEvent, signatureDamageTaken, setHitContext, signatureSprintVariant, signatureCharge, signatureSprintMove, signatureDive, signatureMeleeMult } from './signature_runes.js';
@@ -2015,7 +2016,10 @@ export class Player extends GroundEntity {
     // every incoming source shares the same final damage rule.
     amount *= this.buildModifiers?.damageTaken ?? 1;
     const receivedWhileGuarding = this.isGuarding && incomingFromFront;
-    this.hp = Math.max(0, this.hp - amount);
+    // Arena "Riss" (arena_rift.js): the shield cracks instead of life being lost; the crack scales the throw.
+    const rift = riftAbsorb(this, amount); if (rift?.ignored) return { ignored: true };
+    if (rift) { kx *= rift.mult; lift *= rift.mult; }
+    this.hp = Math.max(0, this.hp - (rift ? 0 : amount));
     if (!receivedWhileGuarding) onStatusHit(this, amount, hitKind);
     this.hitFlash = 0.15;
     this.kbVelX = kx;
@@ -2045,6 +2049,7 @@ export class Player extends GroundEntity {
   // stagger or invulnerability window, so standing in fire is a cost, not a stun.
   takeHazardDamage(amount) {
     if (!this.isAlive || this.burrowed || this.invulnerableTimer > 0 || !(amount > 0)) return;
+    if (riftAbsorbHazard(this, amount)) { this.hitFlash = Math.max(this.hitFlash, .06); return; }
     if (this.arcaneShield > 0) {
       const absorbed = Math.min(amount, this.arcaneShield);
       this.arcaneShield -= absorbed; amount -= absorbed;
@@ -3064,7 +3069,7 @@ export class EnemyChampion extends GroundEntity {
     return false;
   }
   executeAIAttack(target) { this.attackCooldown = 1.1; this.state = 'attack1'; this.stateTimer = .28; audio.playSlash(1.1); combat.spawnSlashArc(this.x + this.facing * 20, this.y - 28, this.facing, { radius: 42, color: '#f44336', glow: '#b71c1c' }); if (!(isUpperCastleBattlement(this) && isUpperCastleBattlement(target)) && Math.abs(target.z - this.z) <= .22 && Math.abs((target.worldHeight ?? 0) - this.worldHeight) <= 70) target.takeDamage(24, this.facing * 240, 100, .3); }
-  takeDamage(amount, kx = 0, lift = 0, stun = .35, isCrit = false, hitKind = 'melee') { if (!this.isAlive) return; if (this.arcaneShield > 0) { const absorbed = Math.min(amount, this.arcaneShield); this.arcaneShield -= absorbed; amount -= absorbed; if (amount <= 0) { combat.spawnElementalParticles(this.x, this.y - 35, 'fulgur', 5); return; } } this.passiveIdle = 0; if (this.aiDraw && amount >= 6) cancelAIDraw(this); this.hp = Math.max(this.passive ? 1 : 0, this.hp - amount); if (this.hp > 0) onStatusHit(this, amount, hitKind); this.hitFlash = .15; this.kbVelX = kx; this.vx = 0; this.vElevation = lift; this.state = 'hurt'; this.stateTimer = stun; combat.spawnDamageText(this.x, this.y - 45, amount, { isCrit, color: '#ff7043' }); if (!this.hp) { window.gameWorld?.recordWizardDeath?.(this.team); this.lifeState = 'Dying'; this.state = 'dead'; this.stateTimer = .45; combat.spawnShockwave(this.x, this.y - 30, 80, '#ff5252'); } }
+  takeDamage(amount, kx = 0, lift = 0, stun = .35, isCrit = false, hitKind = 'melee') { if (!this.isAlive) return; if (this.arcaneShield > 0) { const absorbed = Math.min(amount, this.arcaneShield); this.arcaneShield -= absorbed; amount -= absorbed; if (amount <= 0) { combat.spawnElementalParticles(this.x, this.y - 35, 'fulgur', 5); return; } } const rift = riftAbsorb(this, amount); if (rift?.ignored) return; if (rift) { kx *= rift.mult; lift *= rift.mult; } this.passiveIdle = 0; if (this.aiDraw && amount >= 6) cancelAIDraw(this); this.hp = Math.max(this.passive ? 1 : 0, this.hp - (rift ? 0 : amount)); if (this.hp > 0) onStatusHit(this, amount, hitKind); this.hitFlash = .15; this.kbVelX = kx; this.vx = 0; this.vElevation = lift; this.state = 'hurt'; this.stateTimer = stun; combat.spawnDamageText(this.x, this.y - 45, amount, { isCrit, color: '#ff7043' }); if (!this.hp) { window.gameWorld?.recordWizardDeath?.(this.team); this.lifeState = 'Dying'; this.state = 'dead'; this.stateTimer = .45; combat.spawnShockwave(this.x, this.y - 30, 80, '#ff5252'); } }
   takeHazardDamage(amount) {
     if (!this.isAlive || !(amount > 0)) return;
     if (this.arcaneShield > 0) { const absorbed = Math.min(amount, this.arcaneShield); this.arcaneShield -= absorbed; amount -= absorbed; if (amount <= 0) return; }
@@ -3075,7 +3080,7 @@ export class EnemyChampion extends GroundEntity {
   respawn(battlefield, gameWorld = null) { const spawn = gameWorld?.getEnemyHome?.(this.team, battlefield) ?? battlefield.getSpawn(this.team); this.x = spawn.x; this.z = spawn.z; this.elevation = 0; this.vx = this.vz = this.vElevation = 0; this.hp = this.maxHp; this.mp = this.maxMp; this.arcaneShield = 0; this.arcaneShieldTimer = 0; this.state = 'idle'; this.lifeState = 'Alive'; this.respawnTimer = 0; this.attackCooldown = 0; this.spellCooldown = 1; this.defensiveCooldown = 0; battlefield.resolveEntityCollision(this); combat.spawnShockwave(this.x, this.y - 28, 50, '#ff5252'); }
   freeze(duration) { this.freezeTimer = duration; } slow(duration, factor) { this.slowTimer = duration; this.slowFactor = factor; }
   // Damage over time (burn, poison, bleed, hazards): HP only — the AI keeps acting (no 'hurt' state every tick).
-  takeHazardDamage(amount) { if (!this.isAlive || !(amount > 0)) return; if (this.arcaneShield > 0) { const absorbed = Math.min(amount, this.arcaneShield); this.arcaneShield -= absorbed; amount -= absorbed; if (amount <= 0) return; } if (this.hp - amount <= 0 && !this.passive) { this.takeDamage(amount, 0, 0, 0, false, 'status'); return; } this.hp = Math.max(this.passive ? 1 : 0, this.hp - amount); this.passiveIdle = 0; this.hitFlash = Math.max(this.hitFlash, .06); combat.spawnDamageText(this.x, this.y - 45, Math.round(amount), { color: '#ff8a65' }); }
+  takeHazardDamage(amount) { if (!this.isAlive || !(amount > 0)) return; if (riftAbsorbHazard(this, amount)) { this.hitFlash = Math.max(this.hitFlash, .06); return; } if (this.arcaneShield > 0) { const absorbed = Math.min(amount, this.arcaneShield); this.arcaneShield -= absorbed; amount -= absorbed; if (amount <= 0) return; } if (this.hp - amount <= 0 && !this.passive) { this.takeDamage(amount, 0, 0, 0, false, 'status'); return; } this.hp = Math.max(this.passive ? 1 : 0, this.hp - amount); this.passiveIdle = 0; this.hitFlash = Math.max(this.hitFlash, .06); combat.spawnDamageText(this.x, this.y - 45, Math.round(amount), { color: '#ff8a65' }); }
   render(ctx) {
     // Rig heroes (rig.js) as champions: drawing a rune plays the draw clip, every clip starts at its own time.
     const rigged = !!sprites.sprites[this.heroKey]?.rig; let animState = this.state;

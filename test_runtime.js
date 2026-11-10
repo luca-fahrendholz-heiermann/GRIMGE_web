@@ -723,6 +723,8 @@ assert(game.player.surfaceId === 'mainArena', 'Arena platforms cannot be walked 
 game.player.elevation = arenaPlatform.baseHeight + 16; game.player.vElevation = -160; game.player.grounded = false;
 game.battlefield.resolveEntityCollision(game.player);
 assert(game.player.surfaceId === 'arenaCenterPlatform' && game.player.surfaceHeight === arenaPlatform.baseHeight, 'A falling fighter can land on a visible Arena intermediate platform');
+// The life-bar duel (rules 'hp') is still there for ranked duels: switch the rift off for these checks.
+const arenaRift = game.modeState.rift; game.modeState.rift = null;
 game.player.hp = game.player.maxHp;
 game.player.takeDamage(24, 120, 0, .2);
 assert(game.player.maxHp === 320 && game.player.hp === 296 && game.player.invulnerableTimer >= .18, 'Player durability supports brawler scrums with 320 HP and brief post-hit protection');
@@ -737,7 +739,8 @@ game.player.x = game.modeState.transformationRelic.x; game.player.z = game.modeS
 game.updateArenaTransformationRelic(0);
 assert(!game.modeState.transformationRelic && game.player.focusTransformTimer > 0, 'Claiming an Arena transformation relic activates the existing temporary transformation implementation');
 game.enemyChampion.hp = 1; game.enemyChampion.takeDamage(2); game.enemyChampion.update(0.5, game, game.battlefield); game.updateMode(0.1);
-assert(game.matchState === 'Ending' && game.winnerTeam === 'blue', 'Arena Champion defeat resolves through the normal ending path');
+assert(game.matchState === 'Ending' && game.winnerTeam === 'blue', 'Arena Champion defeat resolves through the normal ending path (life-bar rules)');
+void arenaRift;
 game.returnToHub();
 
 game.setMatchMode('training'); game.startMatch();
@@ -5059,6 +5062,26 @@ game.running = false;
   assert(skinKept && hairChanged > 40 && hornKept && back.character.name === 'Kael' && back.character.look.hair === 'ember' && back.character.created && worn?.hair === 'ash' && LK.lookId(worn) === 'ash-shadow',
     'Character creation: the profile keeps name / base / look, a look recolours hair (' + hairChanged + ' px) and armour but not skin or horns, the created look is worn in play (' + JSON.stringify(worn) + ' ' + back.character.name + ')');
   game.profile.character = { name: '', base: 'thesen', look: { hair: 'natural', armour: 'natural' }, created: false }; game.returnToHub();
+}
+{
+  // Arena "Riss + Leben" (DESIGN.md §4a): hits crack the shield instead of taking life and throw farther the more it is
+  // cracked; a hard throw into the rim or a thrown fall into the chasm costs a soul spark; walking into the chasm only
+  // pushes back; the last spark ends the duel.
+  const RF = await import('./public/src/arena_rift.js');
+  game.returnToHub(); game.setMatchMode('arena'); game.startMatch();
+  const P = game.player; const C = game.enemyChampion; const b = { left: 104, right: 920 };
+  const set = (f, x, z) => { f.x = x; f.z = z; f.elevation = 0; f.vElevation = 0; f.grounded = true; f.kbVelX = 0; f.state = 'idle'; f.stateTimer = 0; f.surfaceHeight = 0; f.riftGrace = 0; f.invulnerableTimer = 0; };
+  set(C, 700, .5); const hp0 = C.hp; C.takeDamage(30, 200, 0, .2); const kb1 = Math.abs(C.kbVelX); const crack1 = C.crack;
+  set(C, 700, .5); C.crack = 120; C.takeDamage(30, 200, 0, .2); const kb2 = Math.abs(C.kbVelX);
+  const cracksNotLife = game.modeState.rift && C.hp === hp0 && crack1 > 15 && kb2 > kb1 * 2.2;
+  set(C, b.right, .5); C.kbVelX = 600; RF.updateRift(game, 1 / 60); const rimKO = C.soulSparks === 2 && C.crack === 0 && C.elevation > 100 && C.riftGrace > 0;
+  set(C, b.right, .5); C.kbVelX = 200; RF.updateRift(game, 1 / 60); const softRim = C.soulSparks === 2;
+  set(P, 512, .5); RF.updateRift(game, 1 / 60); const walkedOut = P.soulSparks === 3 && !(P.x >= RF.RIFT.pit.x0 && P.x <= RF.RIFT.pit.x1 && P.z >= RF.RIFT.pit.z0 && P.z <= RF.RIFT.pit.z1);
+  set(P, 512, .5); P.state = 'hurt'; RF.updateRift(game, 1 / 60); const pitKO = P.soulSparks === 2;
+  set(C, b.left, .5); C.kbVelX = -600; RF.updateRift(game, 1 / 60); set(C, b.left, .5); C.kbVelX = -600; RF.updateRift(game, 1 / 60);
+  assert(cracksNotLife && rimKO && softRim && walkedOut && pitKO && game.matchState === 'Ending' && game.winnerTeam === 'blue',
+    'Arena rift: a hit cracks the shield (life stays, crack ' + Math.round(crack1) + ') and throws ×' + (kb2 / kb1).toFixed(1) + ' at high crack; a hard throw into the rim costs a soul spark and returns the fighter from above, a soft one does not; walking into the chasm pushes back, a thrown fall costs a spark; the last spark ends the duel');
+  game.returnToHub();
 }
 {
   // Guard against code swallowed by a mid-line comment ("x = 1; // note y = 2;" — happened twice, 6 + 10 Nov 2026).
