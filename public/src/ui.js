@@ -8,6 +8,7 @@ import { MAGE_SKILL_TREE, SKILL_RUNE_UNLOCKS, RUNE_CATEGORIES, runeCategory, ALL
 import { recognizer } from './recognizer.js';
 import { sprites } from './sprites.js';
 import { openCharacterCreation } from './character_creation.js';
+import { openCampaign } from './campaign.js';
 import { runeManaCost, SPELL_RECIPES, lookupRecipe, SOLO_RUNES, spellHowTo } from './spell_catalog.js';
 import { TRAINING_MAPS, trainingMapThumb } from './training_maps.js';
 
@@ -489,6 +490,13 @@ export class UIManager {
       // Before the first battle the character is created (AGENDA 2), then the mode choice opens.
       if (!window.gameWorld?.profile?.character?.created && this.openCharacterScreen({ first: true, then: () => this.setHubPage('modes') })) return;
       this.setHubPage('modes');
+    });
+    // Campaign (campaign.js): the chapter screen; the character is created first when that has not happened yet.
+    document.getElementById('hub-campaign-btn')?.addEventListener('pointerdown', (e) => {
+      e.preventDefault(); e.stopPropagation();
+      const game = window.gameWorld; if (!game) return;
+      if (!game.profile?.character?.created && this.openCharacterScreen({ first: true, then: () => openCampaign(game) })) return;
+      openCampaign(game);
     });
     this.hubSiegeModeBtn?.addEventListener('pointerdown', (e) => {
       e.preventDefault();

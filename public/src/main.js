@@ -39,7 +39,9 @@ export const FREE_DRAW_BONUS = .06;
 import { PrimalCompanion, normalizePrimalChoice, startPrimalBond, endPrimalBond, bondForm, PRIMAL_ARCHETYPES } from './primals.js';
 import { currentBuffForm } from './buff_forms.js'; // transformation and Arcane State exclude each other
 import { structureSurfaces, renderStructures, furnitureEntries, furnitureUnder, renderForeground } from './level_structures.js';
-import { setupRift, updateRift, renderRiftGround, renderRiftOverlay } from './arena_rift.js'; // arena "Riss + Leben" // stairs / galleries (Castle Crashers DNA)
+import { setupRift, updateRift, renderRiftGround, renderRiftOverlay } from './arena_rift.js'; // arena "Riss + Leben"
+import { finishRun, afterMatch } from './campaign.js'; // Campaign Alpha: missions reuse the modes with parameters
+import { missionById } from './campaign_data.js'; // stairs / galleries (Castle Crashers DNA)
 // Activated trap entries kept on top of the history during a match (back-navigation guard).
 const BACK_TRAPS = 2;
 // Follow-camera zoom per mode (1 = the classic full stage). The zoom pivots on the near ground edge, so the near depth
@@ -1547,6 +1549,9 @@ export class GameWorld {
     return this.mountCandidate;
   }
 
+  // Parameters of the campaign mission being played ({} outside the campaign) — see campaign_data.js.
+  campaignParams() { return (this.campaignRun && missionById(this.campaignRun.id)?.params) || {}; }
+
   setMatchMode(mode) {
     if (this.matchState === 'Running' || this.matchState === 'Ending') return false;
     this.matchMode = getGameMode(mode).id;
@@ -1676,6 +1681,8 @@ export class GameWorld {
         this.modeState.relicTimer = 6;
         this.spawnArenaRuneCollectibles();
         // Riss + Leben (DESIGN.md §4a): cracks instead of life, rim and chasm knock-outs, 3 soul sparks.
+        // Campaign duel: the rival takes the champion's place.
+        const rival = this.campaignParams().rival; if (rival && sprites.sprites[rival]) this.enemyChampion.heroKey = rival;
         if (mode.rules === 'rift') setupRift(this);
       }
     }
@@ -2005,6 +2012,8 @@ export class GameWorld {
     // Entering a room closes both walls around it. The previous room is gone
     // for good, including a prisoner the player did not free in time.
     Object.assign(this.battlefield.boundsOverride, bounds);
+    /* A campaign mission may start in a later room: the Wizard and the camera jump to its entrance. */
+    if (this.player.x < bounds.left - 200) { this.player.x = bounds.left + 40; state.dungeonCameraX = this.dungeonCameraTarget(); }
     const prisonerLost = !!(state.rescue && !state.rescue.rescued);
     state.rescue = config.rescueAt ? { x: bounds.left + config.rescueAt, z: 0.44, rescued: false } : null;
     // Every regular room hides a couple of crates and an oil barrel.
@@ -2137,6 +2146,9 @@ export class GameWorld {
     if (!room.cleared && !hostilesLeft && room.encounters.every((encounter) => encounter.spawned)) {
       room.cleared = true;
       // Open the right wall into the next room; the arrow marks the exit.
+      // Campaign: a mission may end with this room (params.endStage).
+      const endStage = this.campaignParams().endStage;
+      if (endStage && state.stage >= endStage) { this.finishMode('blue', 'MISSION GESCHAFFT — DIE HALLE IST GERÄUMT'); return; }
       this.battlefield.boundsOverride.right = dungeonRoomBounds(state.stage + 1).right;
       this.showAnnouncement('ROOM CLEARED — GO RIGHT', 1.6);
     }
@@ -2212,7 +2224,7 @@ export class GameWorld {
     this.input.gameplayBlocked = false;
     this.showAnnouncement(`${recognizer.runes.find((rune) => rune.id === id)?.name ?? id} ACQUIRED`, 1.1);
     if (this.activeMode.id === 'invasion' && this.modeState.wave === 0) this.spawnInvasionWave();
-    if (this.activeMode.id === 'dungeon' && this.modeState.stage === 0) this.spawnDungeonStage(1);
+    if (this.activeMode.id === 'dungeon' && this.modeState.stage === 0) this.spawnDungeonStage(this.campaignParams().startStage ?? 1);
     return true;
   }
 
@@ -2376,6 +2388,8 @@ export class GameWorld {
       if (state.bossActive) {
         if (this.enemyChampion.lifeState === 'Dead') {
           state.bossActive = false; state.level++; state.wave = 0; state.intermission = -3;
+          const maxLevel = this.campaignParams().maxLevel;
+          if (maxLevel && state.level > maxLevel) { state.bossActive = true; this.finishMode('blue', 'MISSION GESCHAFFT — DIE BURG HÄLT'); return; }
           const castle = this.battlefield.blueCastle; if (castle && !castle.isDestroyed) castle.hp = Math.min(castle.maxHp, castle.hp + castle.maxHp * .25);
           this.showAnnouncement(`BOSS BESIEGT — LEVEL ${state.level}: ${this.invasionLevel().name}`, 2.2);
         }
@@ -2400,7 +2414,7 @@ export class GameWorld {
       this.updateDungeonRescue();
       if (state.stage === 0) {
         // The opening scout shares room 1; its encounters start right away.
-        if (!this.minions.some((minion) => minion.team === 'red' && !minion.isDead)) this.spawnDungeonStage(1);
+        if (!this.minions.some((minion) => minion.team === 'red' && !minion.isDead)) this.spawnDungeonStage(this.campaignParams().startStage ?? 1);
       } else if (DUNGEON_ROOMS[state.stage]?.boss) {
         if (this.enemyChampion.lifeState === 'Dead') this.finishMode('blue', 'VICTORY — DUNGEON CLEARED');
       } else this.updateDungeonRoom();
@@ -2865,6 +2879,7 @@ export class GameWorld {
   completeResults() {
     if (this.matchState !== 'Ending') return;
     this.matchState = 'Results'; this.markMatchSession(false);
+    const campaignResult = finishRun(this, this.winnerTeam === 'blue'); // marks the mission done, pays its reward once
     this.projectiles = [];
     spells.clearRuntime(); environment.clear();
     // A compact match reward gives the tree a real play loop without making
@@ -2880,6 +2895,7 @@ export class GameWorld {
       const drop = this.profile.rollBossDrop();
       if (drop) progression = { ...(progression ?? {}), newlyUnlockedRunes: [...(progression?.newlyUnlockedRunes ?? []), { ...drop, title: `${drop.title} · ${recognizer.runes.find((r) => r.id === drop.runeId)?.name ?? drop.runeId}` }] };
     }
+    if (campaignResult?.first) { this.applyProfile(); const r = campaignResult.reward ?? {}; this.showAnnouncement(`MISSION GESCHAFFT${r.skillPoints ? ` · +${r.skillPoints} SKILLPUNKT${r.skillPoints > 1 ? 'E' : ''}` : ''}${r.xp ? ` · +${r.xp} XP` : ''}`, 2.6); }
     this.reportProfileProgress(progression);
     ui.showResults(true, { winner: this.winnerTeam, elapsed: this.matchDuration - this.matchTime, stats: this.stats });
   }
@@ -2983,6 +2999,7 @@ export class GameWorld {
     ui.showResults(false);
     ui.hideRunRuneChoice?.();
     ui.showHub(true);
+    afterMatch(this); // campaign: outro on a first win, then the chapter screen again
   }
 
   spawnMinionBolt(x, z, facing, team, damage, targetZ = z, height = 18) {

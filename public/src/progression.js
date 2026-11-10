@@ -203,6 +203,8 @@ export class MageProfile {
     this.lateUnlocks = new Set((Array.isArray(source?.lateUnlocks) ? source.lateUnlocks : []).filter((id) => LATE_RUNE_IDS.includes(id) && id !== BANKAI_RUNE_ID));
     // The chosen class (= class weapon) and the classes whose Bankai is unlocked.
     this.classWeapon = typeof source?.classWeapon === 'string' ? source.classWeapon : null;
+    // Campaign progress (campaign.js): ids of the missions done.
+    this.campaign = { done: Array.isArray(source?.campaign?.done) ? source.campaign.done.filter((id) => typeof id === 'string') : [] };
     // Character creation (AGENDA 2): name, base figure and look; created = the first-run screen was completed.
     const ch = source?.character;
     this.character = { name: typeof ch?.name === 'string' ? ch.name.slice(0, 16) : '', base: typeof ch?.base === 'string' ? ch.base : 'thesen', look: { hair: ch?.look?.hair ?? 'natural', armour: ch?.look?.armour ?? 'natural' }, created: !!ch?.created,
@@ -248,7 +250,7 @@ export class MageProfile {
     return {
       level: this.level, xp: this.xp, skillPoints: this.skillPoints,
       unlockedSkills: [...this.unlockedSkills], masteries: [...this.masteries], runeXp: clone(this.runeXp),
-      lateUnlocks: [...this.lateUnlocks], weaponXp: clone(this.weaponXp), classWeapon: this.classWeapon, bankaiClasses: [...this.bankaiClasses], character: { ...this.character, look: { ...this.character.look } },
+      lateUnlocks: [...this.lateUnlocks], weaponXp: clone(this.weaponXp), classWeapon: this.classWeapon, bankaiClasses: [...this.bankaiClasses], character: { ...this.character, look: { ...this.character.look } }, campaign: { done: [...this.campaign.done] },
       discoveredSpells: [...this.discoveredSpells], unlockedRunes: [...this.unlockedRunes],
       matchDeck: [...this.matchDeck], progressionVersion: 3,
       favoriteRunes: [...this.favoriteRunes], deckPresets: this.deckPresets.map((preset) => ({ ...preset, deck: [...preset.deck], ...(preset.masteries ? { masteries: [...preset.masteries] } : {}) }))

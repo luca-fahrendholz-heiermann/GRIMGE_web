@@ -5099,6 +5099,31 @@ game.running = false;
     'Classes: every weapon family is a class with two weapons; the start element is owned at once and sits twice in the deck; the family\'s second weapon unlocks at the start weapon\'s level ' + CL.CLASS_UNLOCK_LEVEL + '; the profile keeps class, start weapon and element');
 }
 {
+  // Campaign Alpha 0.1 (user directive, 11 Nov 2026): a data-driven chapter of five missions on the existing modes.
+  const CP = await import('./public/src/campaign.js'); const CD = await import('./public/src/campaign_data.js'); const PR = await import('./public/src/progression.js');
+  const ms = CD.allMissions(); const prof = new PR.MageProfile({}); const sp0 = prof.skillPoints;
+  const chain0 = CP.isMissionUnlocked(prof, ms[0].id) && !CP.isMissionUnlocked(prof, ms[1].id);
+  const r1 = CP.completeMission(prof, ms[0].id); const sp1 = prof.skillPoints; const r2 = CP.completeMission(prof, ms[0].id);
+  /* the mission XP may also level the profile up, which grants points of its own */
+  const paidOnce = r1.first && !r2.first && sp1 >= sp0 + ms[0].reward.skillPoints && prof.skillPoints === sp1 && CP.isMissionUnlocked(prof, ms[1].id) && CP.nextMission(prof).id === ms[1].id;
+  const kept = new PR.MageProfile(JSON.parse(JSON.stringify(prof.toJSON()))).campaign.done.includes(ms[0].id);
+  const wellFormed = ms.length === 5 && ms.every((m) => ['dungeon', 'invasion', 'arena', 'siege'].includes(m.mode) && m.intro.length && m.outro.length && m.briefing && m.goal && m.reward);
+  // Mission 1: the dungeon ends with its first room; the win marks the mission done through the normal results path.
+  const saved = game.profile.campaign; game.profile.campaign = { done: [] };
+  game.returnToHub(); CP.beginRun(game, 'c1m1'); game.setMatchMode('dungeon'); game.startMatch();
+  if (game.modeState.stage === 0) game.spawnDungeonStage(game.campaignParams().startStage ?? 1);
+  game.minions = game.minions.filter((m) => m.team !== 'red'); game.modeState.dungeonRoom.encounters.forEach((e) => { e.spawned = true; }); game.updateDungeonRoom();
+  const endsEarly = game.matchState === 'Ending' && game.winnerTeam === 'blue';
+  game.completeResults(); const marked = game.profile.campaign.done.includes('c1m1') && game.campaignRun?.result === 'won';
+  game.returnToHub(); const cleared = game.campaignRun === null;
+  // Mission 3: the rival stands in the arena; mission 5 starts in the third room.
+  CP.beginRun(game, 'c1m3'); const rivalParam = game.campaignParams().rival === 'xame'; game.campaignRun = null;
+  CP.beginRun(game, 'c1m5'); const lateStart = game.campaignParams().startStage === 3; game.campaignRun = null;
+  game.profile.campaign = saved;
+  assert(chain0 && paidOnce && kept && wellFormed && endsEarly && marked && cleared && rivalParam && lateStart && Object.keys(game.campaignParams()).length === 0,
+    'Campaign: five missions on the existing modes; a mission unlocks the next, its reward is paid once and the progress is saved; mission 1 ends with the first dungeon room and is marked done through the results; rival and start room come from the mission parameters');
+}
+{
   // Guard against code swallowed by a mid-line comment ("x = 1; // note y = 2;" — happened twice, 6 + 10 Nov 2026).
   const fsx = await import('node:fs'); const pathx = await import('node:path');
   const re = /[;)}]\s\/\/[^'"`]*?(\b[A-Za-z_$][\w$]*\.[A-Za-z_$][\w$]* = [^=]|\bconst [A-Za-z_$]+ =|\blet [A-Za-z_$]+ =|\bctx\.[A-Za-z]+\(|\breturn [A-Za-z_$(]|\bthis\.[A-Za-z_]+ = [^=])/;
