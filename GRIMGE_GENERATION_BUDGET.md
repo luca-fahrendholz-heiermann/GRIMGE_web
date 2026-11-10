@@ -11,7 +11,8 @@ bitte im Higgsfield-Konto selbst kontrollieren.
 | Bestätigte Ausgaben | **0,00 USD** |
 | Geschätzte offene Ausgaben | 0,00 USD |
 | Restbudget | **20,00 USD** |
-| Higgsfield-Guthaben (geprüft 11. Nov 2026) | 10 Credits (Registrierungs-Guthaben), Plan laut Konto: `ultra` |
+| Higgsfield-Guthaben (geprüft 11. Nov 2026, vor dem ersten Auftrag) | 10 Credits (Registrierungs-Guthaben), Plan laut Konto: `ultra` |
+| Verbrauchte Credits aus dem Guthaben | 2 (erster AutoSprite-Test, Ergebnis steht aus) |
 
 ## Was geprüft wurde
 
@@ -26,11 +27,11 @@ bitte im Higgsfield-Konto selbst kontrollieren.
   bestätigt; solange nur das vorhandene Guthaben verbraucht wird, entstehen keine zusätzlichen Kosten.
 - Der erste spielbare Meilenstein kam ohne Erzeugung aus.
 
-## Vorschlag für den ersten Einsatz (wartet auf Freigabe)
+## Plan für den Einsatz (erster Test vom Nutzer freigegeben am 11. Nov 2026: „kostenloses 3-Tage-Abo“)
 
 | Vorhaben | Nutzen | Kosten |
 |---|---|---|
-| 1 Test mit AutoSprite, Stufe `turbo`: Xame `idle` oder `walk`, 8–12 Bilder | zeigt, ob Stil und Figur erhalten bleiben, bevor mehr ausgegeben wird | unbekannt – erst Preis klären; die 10 vorhandenen Credits reichen möglicherweise |
+| 1 Test mit AutoSprite, Stufe `turbo`: Xame `idle` oder `walk`, 8–12 Bilder | zeigt, ob Stil und Figur erhalten bleiben, bevor mehr ausgegeben wird | läuft: Xame `walk`, 8 Bilder, 2 Credits |
 | danach, falls brauchbar: Xame `walk`, `attack`; ein Gegner-Champion | größte sichtbare Lücke im Spiel | nach dem Testergebnis schätzen |
 
 Nicht vorgesehen: Trailer, Werbevideos, Konzeptbilder für ungebaute Kapitel.
