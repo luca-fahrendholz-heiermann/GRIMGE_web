@@ -53,6 +53,9 @@ Erledigtes steht in der Git-Historie.
 - Arena mit der Konter-Ebene, später Ranked; Regeln: Riss + Leben in eigener Ausprägung (DESIGN.md §4a).
 - Castle Siege als Kommandanten-Modus: Beschwörung und Unterstützung von der Burg stärker, Buff-Zonen, gezieltes Absetzen.
 
+- Stand Arena (vorgezogen, 10. Nov 2026): Riss + Leben umgesetzt (arena_rift.js) — Riss-Schild statt HP, Bannrand-KO
+  an den Seiten, Abgrund unter der Mittelplattform, 3 Seelenfunken; HP-Duell bleibt als Regel 'hp'. Offen: HUD oben
+  zeigt noch HP-Balken (wird durch Schild/Funken ersetzt), Feinabstimmung der Riss-Werte im Playtest, PvP gegen Menschen.
 ## 6. Mastery
 - Grundsystem steht (Baum je Element, 24-Knoten-Fertigkeitenbaum, Skillpunkte).
 - Offen: die restlichen Zweige aus dem Konzeptdokument und eine richtige Baum-Oberfläche.

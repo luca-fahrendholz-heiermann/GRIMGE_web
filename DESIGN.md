@@ -172,6 +172,9 @@ ggf. konkrete Patente — vor kommerzieller Veröffentlichung rechtlich prüfen 
   fliegt sie. Anzeige als **Schild mit Rissen**, keine große Prozentzahl.
 - **Bannrand:** am Arenarand schließt sich ein Runenkreis; Abgründe zwischen Höhenebenen; 2,5D-Tiefe.
 - **Eigene Begriffe** (Leben z. B. „Seelenfunken“).
+- **Umgesetzt (10. Nov 2026, arena_rift.js):** Riss pro Schaden ×0,6, Wurfweite ×(1 + Riss/70), Bannrand bricht ab
+  380 px/s Rückstoß, Abgrund unter der Mittelplattform (nur geworfen fällt man), 3 Seelenfunken, 2 s Schutz nach der
+  Rückkehr. Startwerte, im Playtest feinjustieren.
 
 Ursprüngliche Empfehlung: **Prozent + Leben** als Standard der Arena (Smash-Prinzip, aber 2,5D: rausfliegen an den Seiten und in
 Abgründe zwischen den Ebenen), die HP-Variante als Option für Ranked-Duelle. Melee-Prinzip: der Prozentwert ändert
