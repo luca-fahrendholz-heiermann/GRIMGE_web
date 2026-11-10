@@ -20,11 +20,10 @@ bitte im Higgsfield-Konto selbst kontrollieren.
   Sprite-Sheet (Vorlagen `idle`, `walk`, `run`, `attack`, `jump` oder eigene; Stufen `turbo` / `pro` / `max`;
   Bildgröße 32–512 px; 2–64 Bilder). Außerdem Bildmodelle mit transparentem Hintergrund (z. B. Seedream 5.5).
 
-## Warum noch nichts erzeugt wurde
+## Preise
 
-- **Preise sind nicht bekannt.** Die Modell-Auskunft nennt keine Credit-Kosten pro Erzeugung, und der Wert eines
-  Credits in USD ist nicht bestätigt. Nach den Budgetregeln wird ohne geklärten Preis nichts Kostenpflichtiges
-  ausgeführt.
+- Preise lassen sich vor jedem Auftrag in Credits abfragen (). Der Wert eines Credits in USD ist nicht
+  bestätigt; solange nur das vorhandene Guthaben verbraucht wird, entstehen keine zusätzlichen Kosten.
 - Der erste spielbare Meilenstein kam ohne Erzeugung aus.
 
 ## Vorschlag für den ersten Einsatz (wartet auf Freigabe)
@@ -41,3 +40,5 @@ Nicht vorgesehen: Trailer, Werbevideos, Konzeptbilder für ungebaute Kapitel.
 | Datum | Vorgang | Geschätzt | Bestätigt | Rest |
 |---|---|---|---|---|
 | 11. Nov 2026 | Kontostand, Transaktionen und Modellliste abgefragt (kostenlos) | 0 | 0 | 20,00 USD |
+| 11. Nov 2026 | Preis abgefragt: AutoSprite, Xame „walk“, Stufe turbo, 8 Bilder à 256 px = **2 Credits** | 2 Credits | – | 20,00 USD |
+| 11. Nov 2026 | Auftrag gestartet (Job 6b691ed5…), bezahlt aus den 10 Registrierungs-Credits, kein zusätzliches Geld; Ergebnis steht noch aus (Warteschlange) | 2 Credits | 2 Credits (Abbuchung noch nicht im Konto nachgeprüft) | 20,00 USD |
