@@ -40,7 +40,8 @@ import { PrimalCompanion, normalizePrimalChoice, startPrimalBond, endPrimalBond,
 import { currentBuffForm } from './buff_forms.js'; // transformation and Arcane State exclude each other
 import { structureSurfaces, renderStructures, furnitureEntries, furnitureUnder, renderForeground } from './level_structures.js';
 import { setupRift, updateRift, renderRiftGround, renderRiftOverlay } from './arena_rift.js'; // arena "Riss + Leben"
-import { finishRun, afterMatch } from './campaign.js'; // Campaign Alpha: missions reuse the modes with parameters
+import { finishRun, afterMatch, isCampaignOpen } from './campaign.js';
+import { isCharacterCreationOpen } from './character_creation.js'; // Campaign Alpha: missions reuse the modes with parameters
 import { missionById } from './campaign_data.js'; // stairs / galleries (Castle Crashers DNA)
 // Activated trap entries kept on top of the history during a match (back-navigation guard).
 const BACK_TRAPS = 2;
@@ -450,6 +451,8 @@ export class GameWorld {
         return;
       }
       if (this.matchState === 'Menu') {
+        /* An open campaign / dialogue / creation screen owns the keys (Space advances a dialogue, it must not start a match). */
+        if (isCampaignOpen() || isCharacterCreationOpen()) return;
         if (e.code === 'Enter' || e.code === 'Space') this.startMatch();
         return;
       }
@@ -2753,6 +2756,8 @@ export class GameWorld {
   }
 
   resetMatch() {
+    /* A campaign mission retried from the results (or restarted) is open again: its next result counts. */
+    if (this.campaignRun) this.campaignRun.result = null;
     spells.clearRuntime(); environment.clear();
     combat.resetEffects();
     this.activeMode = getGameMode(this.matchMode);
