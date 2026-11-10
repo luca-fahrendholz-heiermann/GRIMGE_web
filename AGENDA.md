@@ -35,8 +35,10 @@ Erledigtes steht in der Git-Historie.
 - Klassenwahl am Anfang mit eigener Identität (Klassenwaffen und Bankai existieren schon).
 - Stand (erster Durchgang, Platzhalter-Bildschirm): Name, Grundfigur (Thesen, Xame), Haar- und Rüstungsfarbe (vor dem
   Rig-Backen umgefärbt), Klasse = Klassenwaffe, laufende Vorschau; öffnet über WARDROBE und vor dem ersten Kampf.
-  Offen: Startelement, Klassen mit eigener Identität (Beschreibung, Spielstil, Startwerte), endgültiges Layout aus
-  /editor.html, weitere Grundfiguren (deine Sprites), Xame-Animationen.
+  Zweiter Durchgang: Klassen = 18 Waffenfamilien (classes.js: Rolle, Reichweite, Spielstil, Startwaffe; die zweite
+  Waffe der Familie ab Waffenstufe 3), Startelement = eine zusätzliche Element-Rune (Bestia … Schutz), einmal bei der
+  Erstellung gewählt, doppelt im Deck. Offen: endgültiges Layout aus /editor.html, weitere Grundfiguren (deine Sprites),
+  Xame-Animationen; Training-Knopf CLASS wechselt weiterhin frei durch alle Waffen (zum Testen).
 
 ## 3. Deck-System nach Budget (DESIGN.md §2–3)
 - Punktebudget (≤ 20), Deckgröße 10–14 Karten, Zieh-Rotation wie Clash Royale.
