@@ -12,7 +12,7 @@ bitte im Higgsfield-Konto selbst kontrollieren.
 | Geschätzte offene Ausgaben | 0,00 USD |
 | Restbudget | **20,00 USD** |
 | Higgsfield-Guthaben (geprüft 11. Nov 2026, vor dem ersten Auftrag) | 10 Credits (Registrierungs-Guthaben), Plan laut Konto: `ultra` |
-| Verbrauchte Credits aus dem Guthaben | **2,0** (acht Bilder); Kontostand geprüft: 8,0 Credits |
+| Verbrauchte Credits aus dem Guthaben | **2,5** (zehn Bilder); Kontostand geprüft: 7,5 Credits |
 
 ## Was geprüft wurde
 
@@ -54,7 +54,10 @@ Nicht vorgesehen: Trailer, Werbevideos, Konzeptbilder für ungebaute Kapitel.
 | 11. Nov 2026 | Requisiten-Bogen „Kareth“ (6 Stück, transparent) | 0,25 Credits | 0,25 Credits | 20,00 USD |
 | 11. Nov 2026 | Requisiten-Bogen „Gluttiefe“ (6 Stück, transparent) | 0,25 Credits | 0,25 Credits | 20,00 USD |
 
-Alle Credits stammen aus dem Registrierungs-Guthaben; es ist kein zusätzliches Geld geflossen. Rest: 8,0 Credits (im Konto nachgeprüft).
+| 11. Nov 2026 | Xame „Gehen“ (6 Posen) mit `gpt_image_2_6` und seinem Sprite als Vorlage | 0,25 Credits | 0,25 Credits | 20,00 USD |
+| 11. Nov 2026 | Xame „Speerangriff“ (5 Posen), ebenso | 0,25 Credits | 0,25 Credits | 20,00 USD |
+
+Alle Credits stammen aus dem Registrierungs-Guthaben; es ist kein zusätzliches Geld geflossen. Rest: 7,5 Credits (im Konto nachgeprüft).
 
 ## Erzeugte Assets
 
@@ -69,5 +72,9 @@ Alle Credits stammen aus dem Registrierungs-Guthaben; es ist kein zusätzliches 
 | Requisiten Kareth | `art/generated/scenes/props_kareth_raw.png` | `public/assets/scenes/props/kareth_*.png` (6) | Dekoration an der Rückwand, Vordergrund-Säule |
 | Requisiten Gluttiefe | `art/generated/scenes/props_glut_raw.png` | `public/assets/scenes/props/glut_*.png` (6) | Dekoration an der Rückwand, Vordergrund-Säule |
 
+| Xame Gehen | `art/generated/characters/xame_walk_raw.png` | `public/assets/sprites/sheets/xame_walk.png` | Gehen / Laufen / Sprint |
+| Xame Angriff | `art/generated/characters/xame_attack_raw.png` | `public/assets/sprites/sheets/xame_attack.png` | alle Schläge |
+
+Figuren-Bögen werden mit `art/authoring/prep_frames.cjs` in Einzelbilder geschnitten und auf die Pixelgröße der Figur gebracht.
 Requisiten werden mit `art/authoring/prep_props.cjs` freigestellt (harter Alpha-Schnitt), getrennt und halbiert.
 Szenen-Aufbereitung: `art/authoring/prep_scene.cjs` (oben beschneiden, bis die Boden-Kante auf der Spiel-Bodenlinie liegt; Palette auf 56 Farben).

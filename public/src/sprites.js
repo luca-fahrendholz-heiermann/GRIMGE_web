@@ -21,7 +21,12 @@ export class SpriteManager {
       // one shared crop per character, so frames / variants swap without a jump.
       thesen: { name: 'Thesen', prepared: ['char_thesen.png'], weapon: 'Bone Spear', role: 'Horned Warrior / Focus Transformation' },
       thesen_focus: { name: 'Thesen (Focus)', prepared: ['char_thesen_focus.png'], weapon: 'Bone Spear', role: 'Focus form: cape and spear' },
-      xame: { name: 'Xame', prepared: ['char_xame_0.png', 'char_xame_1.png'], hold: 28, weapon: 'Void-Flame Spear', role: 'Skull Warlock / Void Flames' },
+      // clips: frame sheets cut by art/authoring/prep_frames.cjs from generated sheets (11 Nov 2026) — the sheet, its
+      // cell size and anchor, the states that play it and the ticks per frame (holds) or one hold for a loop.
+      xame: { name: 'Xame', prepared: ['char_xame_0.png', 'char_xame_1.png'], hold: 28, weapon: 'Void-Flame Spear', role: 'Skull Warlock / Void Flames', clips: [
+        { sheet: 'sheets/xame_walk.png', frames: 6, w: 90, h: 121, anchorX: 40, anchorY: 119, states: ['walk', 'run', 'sprint', 'dash'], hold: 7, loop: true },
+        { sheet: 'sheets/xame_attack.png', frames: 5, w: 150, h: 132, anchorX: 47, anchorY: 130, states: ['attack', 'attack1', 'attack2', 'attack3', 'uppercut', 'heavyStrike', 'dive'], holds: [4, 2, 3, 3, 3], loop: false }
+      ] },
       paladin: { name: 'Valerius the Vanguard', file: 'char_paladin.png', weapon: 'Greatsword & Shield', role: 'Balanced / Heavy Impact' },
       berserker: { name: 'Torin the Marauder', file: 'char_berserker.png', weapon: 'Dual Axes', role: 'Aggressive / High Speed' },
       mage: { name: 'Ignis the Archmage', file: 'char_mage.png', weapon: 'Grimoire of Runes', role: 'Spellcaster / High Mana' },
@@ -82,6 +87,7 @@ export class SpriteManager {
       // Parts rig (rig.js): the standing image is cut into parts and baked into the base animations.
       if (RIGS[key]) this.applyRig(spr, imgs[0], RIGS[key]);
       this.sprites[key] = spr;
+      if (def.clips?.length) return this.loadClipSheets(spr, def.clips, imgs[0].height).then(() => spr);
       return spr;
     });
   }
@@ -102,9 +108,33 @@ export class SpriteManager {
     const spr = { ...this.preparedFrame(c), pixel: true, procFull: true, sourceImage: c };
     // Rig heroes re-bake every clip; frame-sheet heroes (Xame's idle frames) get each frame recoloured.
     if (base.rig && RIGS[key]) this.applyRig(spr, c, RIGS[key]);
-    else if (base.frames) { spr.frames = Object.fromEntries(Object.entries(base.frames).map(([k, list]) => [k, list.map((f) => { const rc = recolor(f.canvas); return rc ? this.preparedFrame(rc) : f; })])); spr.hold = base.hold; }
+    else if (base.frames) {
+      /* Shared frame lists (one sheet for several states) are recoloured once; anchors and sizes stay the frame's own. */
+      const done = new Map(); const tint = (list) => { if (!done.has(list)) done.set(list, list.map((f) => { const rc = recolor(f.canvas); if (!rc) return f; const pf = this.preparedFrame(rc); return { ...f, canvas: pf.canvas, flashCanvas: pf.flashCanvas }; })); return done.get(list); };
+      spr.frames = Object.fromEntries(Object.entries(base.frames).map(([k, list]) => [k, tint(list)])); spr.hold = base.hold; spr.holdSeq = base.holdSeq; spr.loop = base.loop; spr.rig = base.rig; spr.procFull = base.procFull;
+    }
     this.sprites[id] = spr;
     return id;
+  }
+
+  // Frame sheets for a prepared hero (def.clips): each sheet is cut into equal cells and played for its states. The
+  // hero then counts as animated (spr.rig): clip time starts with the clip, whole-sprite tilts are toned down.
+  loadClipSheets(spr, clips, baseHeight) {
+    const doc = globalThis.document; if (typeof doc?.createElement !== 'function') return Promise.resolve();
+    const load = (src) => new Promise((resolve) => { const img = new Image(); img.onload = () => resolve(img); img.onerror = () => resolve(null); img.src = `assets/sprites/${src}`; });
+    return Promise.all(clips.map((c) => load(c.sheet))).then((imgs) => {
+      spr.frames ??= {}; spr.hold ??= {}; spr.holdSeq ??= {}; spr.loop ??= {};
+      clips.forEach((c, i) => {
+        const img = imgs[i]; if (!img) return;
+        const frames = Array.from({ length: c.frames }, (_, k) => {
+          const make = (fill) => { const cv = doc.createElement('canvas'); cv.width = c.w; cv.height = c.h; const g = cv.getContext('2d'); if (!g) return cv; g.imageSmoothingEnabled = false; g.drawImage(img, k * c.w, 0, c.w, c.h, 0, 0, c.w, c.h); if (fill) { g.globalCompositeOperation = 'source-in'; g.fillStyle = fill; g.fillRect(0, 0, c.w, c.h); } return cv; };
+          return { canvas: make(null), flashCanvas: make('#ffffff'), width: c.w, height: c.h, anchorX: c.anchorX, anchorY: c.anchorY, baseHeight };
+        });
+        for (const st of c.states) { spr.frames[st] = frames; spr.loop[st] = !!c.loop; if (c.holds) spr.holdSeq[st] = c.holds; else spr.hold[st] = c.hold ?? 8; }
+      });
+      if (spr.frames.idle) { spr.loop.idle = true; for (const st of ['jump', 'fall', 'land', 'guard', 'draw', 'charge', 'hurt', 'dead', 'hover']) { spr.frames[st] ??= spr.frames.idle; spr.loop[st] ??= true; spr.hold[st] ??= spr.hold.idle; } }
+      spr.rig = true; spr.procFull = false;
+    });
   }
 
   // Bake the rig clips into frames (padded canvases; baseHeight keeps the on-screen size of the standing image).

@@ -14,7 +14,7 @@ Legende: ✔ umgesetzt und geprüft · ◐ teilweise · ○ geplant
 | Kapitel-Bildschirm und Dialog-Bildschirm | ◐ | funktionieren, sind aber Platzhalter-Layouts |
 | Missionen auf vorhandenen Modi mit Parametern | ✔ | Dungeon-Start / -Ende, Invasions-Level, Arena-Rivale |
 | Kampagnen-Knopf im Hub | ✔ | |
-| Rivale Xame im Duell | ◐ | steht in der Arena (im Bild geprüft), ist aber nicht animiert |
+| Rivale Xame im Duell | ◐ | geht und greift mit eigenen Bildern an; Treffer, Sprung, Tod noch als Standbild |
 | Bosskampf Glutfürst | ◐ | nutzt den vorhandenen Dungeon-Boss; keine eigenen Phasen |
 | Automatischer Test + Durchlauf im Browser | ✔ | Mission 1 im Browser durchlaufen (Start → Dialog → Dungeon → Sieg per Testbefehl → Outro → Mission 2 offen); Missionen 2–5 im Browser gestartet und Modus / Parameter geprüft, aber nicht bis zum Ende gespielt |
 
@@ -27,7 +27,8 @@ Legende: ✔ umgesetzt und geprüft · ◐ teilweise · ○ geplant
 | Arena-HUD: Schild und Seelenfunken statt HP-Balken | ○ |
 | Missions-eigene Ziele im HUD („Räume die Halle“) und Sieg- / Niederlage-Bildschirm mit Missionsbezug | ○ |
 | Glutfürst mit eigenen Phasen und Ankündigungen (Telegraphs) | ○ |
-| Xame animiert (eigenes Sheet) | ○ – Kandidat für bezahlte Erzeugung |
+| Xame animiert (eigenes Sheet) | ◐ – Gehen und Angriff da |
+| Eigene Szene je Mission, Kapitel-Karte, Themen-Requisiten | ✔ |
 | Gegner-Champions als Pixel-Figuren | ○ – Kandidat für bezahlte Erzeugung |
 | Runen-Fund / Mastery als Missionsbelohnung | ○ |
 | Dungeon: Räume mit Türen, Fortschrittsleiste | ○ |
