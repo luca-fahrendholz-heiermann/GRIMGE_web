@@ -74,6 +74,12 @@ const ACTION_STATES = new Set(['attack1', 'attack2', 'attack3', 'uppercut', 'hea
 // times its authored time and deals STRIKE_PACE times its authored damage, so the damage per second stays the same.
 // The hit still lands on the press (input contract); the added time is follow-through.
 export const STRIKE_PACE = 1.6;
+// Press = impact (user, 11 Nov 2026: "ich will drücken = impact; wenn ich es nicht im Kombo-Takt schaffe, sind es halt
+// nur normale Schläge und die Kombo startet neu"). A tap during a swing that is not in the chain rhythm (the buffer
+// window at its end, or the finisher window) cuts the swing and strikes at once as attack 1 — the combo starts over.
+// The cut is possible once STRIKE_CUT of the running swing has passed (an earlier tap fires at that moment), and such a
+// strike deals its authored damage without the STRIKE_PACE bonus, so mashing does not beat a chain in rhythm.
+export const STRIKE_CUT = .5;
 export const MELEE_BASELINE = Object.freeze({
   normal: Object.freeze([
     Object.freeze({ state: 'attack1', time: .22, vx: 180, damage: 28, knockback: 220, lift: 100, radius: 40, color: '#fff', glow: '#ffd54f', hitstopTicks: 4, hitReaction: 'light' }),
@@ -545,6 +551,8 @@ export class Player extends GroundEntity {
     this.pullCooldown = Math.max(0, (this.pullCooldown ?? 0) - dt);
     if (this.slowTimer <= 0) this.slowFactor = 1;
     this.comboResetTimer = Math.max(0, this.comboResetTimer - dt);
+    // A tap kept before the cut point of a swing fires there (press = impact).
+    if (this._cutIn > 0 && (this._cutIn -= dt) <= 0) { this._cutIn = 0; if (this.isAlive && this.grounded && /^attack[123]$/.test(this.state) && this.stateTimer > 0) this.cutIntoStrike(); }
     // The breather after attack 3 without finisher: then the queued attack 1 fires.
     if (this._restartDelay > 0 && !ACTION_STATES.has(this.state) && (this._restartDelay -= dt) <= 0) {
       this._restartDelay = 0;
@@ -1417,8 +1425,11 @@ export class Player extends GroundEntity {
       if (canBuffer) {
         this.queuedAttack = 'normal';
         this.attackBufferTimer = MELEE_BASELINE.bufferWindow + .10;
+        return true;
       }
-      return canBuffer;
+      // Out of rhythm: the tap strikes at once (attack 1, the combo starts over).
+      if (attackKind === 'normal' && /^attack[123]$/.test(this.state) && this.stateTimer > 0 && this.grounded && !this._flurry) return this.cutIntoStrike(input);
+      return false;
     }
     this.canAttack = false;
     this.cancelSprint();
@@ -1511,7 +1522,8 @@ export class Player extends GroundEntity {
     if (this._pendingFinisher) { attack = this._pendingFinisher; this._pendingFinisher = null; this.comboStep = chain.steps.length + 1; }
     else { this.comboStep = (this.comboStep % chain.steps.length) + 1; attack = chain.steps[this.comboStep - 1]; }
     this.finisherChance = null;
-    attack = { ...attack, time: attack.time * STRIKE_PACE, damage: Math.round(attack.damage * STRIKE_PACE) };
+    const quick = !!this._quickStrike; this._quickStrike = false; this._cutIn = 0;
+    attack = { ...attack, time: attack.time * STRIKE_PACE, damage: Math.round(attack.damage * (quick ? 1 : STRIKE_PACE)) };
     // Unity: ground attacks root the Wizard — no forward lunge on a whiff.
     const swingTime = attack.time * weaponAttackSpeed(this); // Klingentanz: faster swings
     this.comboResetTimer = swingTime + .43; /* the chain window after the (longer) swing stays as wide as before */
@@ -1632,6 +1644,16 @@ export class Player extends GroundEntity {
     return true;
   }
 
+  // Press = impact: cut the running swing into a fresh attack 1 (see STRIKE_CUT). Before the cut point the tap is kept
+  // and fires exactly there (update counts _cutIn down).
+  cutIntoStrike(input = null) {
+    const swing = this._weaponSwingTime || .3; const wait = swing * STRIKE_CUT - (swing - this.stateTimer);
+    if (wait > 0) { this._cutIn = wait; return true; }
+    this._cutIn = 0; this.finisherChance = null; this.comboStep = 0; this.queuedAttack = null; this.attackBufferTimer = 0; this._restartDelay = 0;
+    this._quickStrike = true; this.state = 'idle'; this.stateTimer = 0; this.canAttack = true;
+    return this.executeAttack(input ?? { keys: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 } }, 'normal');
+  }
+
   // ── Finisher window (Unity ComboTimingGuide) ──
   openFinisherChance(swing) {
     const T = FINISHER_TIMING;
@@ -1641,13 +1663,12 @@ export class Player extends GroundEntity {
   pressFinisherWindow(input) {
     const ch = this.finisherChance; const g = finisherGrade(ch, this.finisherElapsed());
     const guide = finisherGuideShown();
-    // Missed timing (user, 23 Oct 2026): no finisher — the press flows into attack 1 as soon as this swing
-    // ends (never swallowed, so the chain does not stutter).
+    // Missed timing: no finisher — the press strikes at once as attack 1 and the combo starts over (user, 11 Nov 2026:
+    // press = impact; it used to wait for the swing's end plus a breather).
     if (g === 'early' || g === 'late') {
       if (guide) combat.spawnDamageText(this.x, this.y - 104, g === 'early' ? 'ZU FRÜH' : 'ZU SPÄT', { color: g === 'early' ? '#64b5f6' : '#ff5252' });
       this.finisherChance = null; this.comboStep = 0;
-      this.queuedAttack = 'normal'; this.attackBufferTimer = Math.max(0, this.stateTimer) + .32; this._restartDelay = .2; // a short breather before attack 1 again
-      return true;
+      return this.cutIntoStrike(input);
     }
     if (g === 'buffer') { ch.queued = 'good'; return true; } // remembered just before the window: fires when it opens
     return this.startComboFinisher(input, g);

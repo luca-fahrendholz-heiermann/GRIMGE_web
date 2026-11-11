@@ -2,6 +2,16 @@
 
 Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
+## 11. Nov 2026 – Drücken = Treffer (Wunsch des Nutzers)
+
+- Ein Druck außerhalb des Kombo-Takts bricht den laufenden Schlag ab und schlägt sofort als Schlag 1; die Kombo beginnt
+  neu. Vorher wurde ein verpasster Finisher bis zum Ende des Schlags geparkt und kam nach 0,2 s Pause, und Drücke
+  mitten im Schlag wurden verschluckt.
+- Im Takt bleibt alles wie gehabt: Druck im letzten Stück des Schlags führt zum nächsten Kombo-Schritt, Druck im
+  Finisher-Fenster zum Finisher.
+- Abbrechen geht ab der Hälfte des laufenden Schlags (`STRIKE_CUT`); ein früherer Druck feuert genau dort. Solche
+  Schläge machen den Grundschaden ohne den Tempo-Bonus, damit Dauerdrücken eine Kombo im Takt nicht schlägt.
+
 ## 11. Nov 2026 – Schlagtempo: langsamer, Schaden angepasst (Entscheidung des Nutzers)
 
 - Jeder Kombo-Schlag (Grund-Kombo und alle Waffen-Kombos) dauert das 1,6-Fache und macht das 1,6-Fache an Schaden;
