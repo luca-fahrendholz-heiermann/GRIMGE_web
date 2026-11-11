@@ -2840,8 +2840,9 @@ export class GameWorld {
     // Castle Siege / Invasion seemed broken): it is topped up with unlocked runes and the match starts.
     if (this.activeMode.progression === 'profile' && this.activeMode.id !== 'training' && !this.profile.isDeckReady()) this.repairDeckForMatch();
     if (this.activeMode.progression === 'profile' && this.activeMode.id !== 'training' && !this.profile.isDeckReady()) {
-      this.showAnnouncement(`DECK UNVOLLSTÄNDIG — BAUE EIN ${10}-KARTEN-DECK`, 2.5);
-      ui.showHub(true); ui.showAnnouncement?.(`DECK UNVOLLSTÄNDIG — BAUE EIN ${10}-KARTEN-DECK`, 3);
+      const why = this.profile.earned ? 'KEINE RUNE IM DECK — WÄHLE DEINE START-RUNE (WARDROBE)' : `DECK UNVOLLSTÄNDIG — BAUE EIN ${10}-KARTEN-DECK`; /* earned rules: an empty deck means no start rune yet */
+      this.showAnnouncement(why, 2.5);
+      ui.showHub(true); ui.showAnnouncement?.(why, 3);
       return;
     }
     this.resetMatch();

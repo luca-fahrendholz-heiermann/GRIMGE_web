@@ -11,7 +11,8 @@ Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 - **Seltenheiten:** gewöhnlich (Grundelemente) 1 SP / 50 Gold · selten (übrige Elemente) 1 SP / 150 Gold, ab Stufe 3 ·
   episch (Spezialrunen) 2 SP / 400 Gold, ab Stufe 6 · legendär (Sphären, Arcane States) 3 SP / 1000 Gold, ab Stufe 10.
 - **Gold** als neue Währung: aus Missionen (60–320) und jedem beendeten Match (30 Sieg / 10 Niederlage).
-- **Geltung:** alle Modi außer Training (Sandkasten) und Dungeon (eigene Lauf-Runen). Gegner-Decks unverändert.
+- **Geltung:** Castle Siege, Invasion und die Kampagnen-Missionen dieser Modi. Ausgenommen: Training (Sandkasten),
+  Dungeon (eigene Lauf-Runen) und das Arena-Duell (dort sammelt man wie bisher Runen-Relikte). Gegner-Decks unverändert.
 - **Spielstand:** alte Stände beginnen neu (Sicherung unter `grimge-mage-profile-v1-backup-v3`; Name, Aussehen und
   Klasse bleiben). Test-Schalter „Alles freischalten“ im Runen-Bildschirm, jederzeit zurückschaltbar.
 - **Noch offen aus der Vorgabe:** Mastery-Stufe als Vorbedingung, Transformation am Ende jedes Mastery-Baums und je
