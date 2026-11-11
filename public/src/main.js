@@ -42,7 +42,8 @@ import { structureSurfaces, renderStructures, furnitureEntries, furnitureUnder, 
 import { setupRift, updateRift, renderRiftGround, renderRiftOverlay } from './arena_rift.js'; // arena "Riss + Leben"
 import { finishRun, afterMatch, isCampaignOpen } from './campaign.js';
 import { isCharacterCreationOpen } from './character_creation.js'; // Campaign Alpha: missions reuse the modes with parameters
-import { missionById } from './campaign_data.js'; // stairs / galleries (Castle Crashers DNA)
+import { missionById } from './campaign_data.js';
+import { BASE_SCENE, baseBounds, renderBase, updateBase, baseTap, closeBasePrompt } from './base.js'; // the player's headquarters // stairs / galleries (Castle Crashers DNA)
 // Activated trap entries kept on top of the history during a match (back-navigation guard).
 const BACK_TRAPS = 2;
 // Follow-camera zoom per mode (1 = the classic full stage). The zoom pivots on the near ground edge, so the near depth
@@ -1468,6 +1469,7 @@ export class GameWorld {
     const p = this.player;
     if (!pt || !this.isMatchRunning() || !p?.isAlive || this.drawing.active || this.targeting.isActive) return false;
     pt = this.screenToWorldPx(pt); // taps on actors compare in world pixels (zoom + scrolling camera)
+    if (this.activeMode?.id === 'base') return baseTap(this, pt); /* a tap on a station or an armour stand */
     // Siege: a tap on the waiting Primal sends it to the lane alone.
     if (this.primal?.tryTapDeploy(pt, this)) return true;
     // A tap on an enemy marks it as the Primal's focus target (an armed
@@ -1603,6 +1605,7 @@ export class GameWorld {
     this.player.confineBounds = null;
     this.enemyChampion.confineBounds = null;
     this.uiLayer?.classList?.toggle?.('mode-training', mode.id === 'training');
+    this.uiLayer?.classList?.toggle?.('mode-base', mode.id === 'base');
     this.modeState = {
       id: mode.id, wave: 0, intermission: 0, stage: 0, announced: false,
       bossActive: false, scroll: 0, routeScroll: 0, dungeonCameraX: 0, dungeonRoom: null, bossHome: null, rescued: 0, rescue: null, runeCollectibles: [],
@@ -1625,6 +1628,12 @@ export class GameWorld {
       this.enemyChampion.lifeState = 'Dead';
       this.enemyChampion.respawnTimer = Infinity;
       this.spawnInvasionWave();
+      return;
+    }
+    if (mode.id === 'base') {
+      Object.assign(this.battlefield.boundsOverride, baseBounds());
+      this.player.x = 330; this.player.z = 0.55; this.battlefield.placeOnSurface(this.player);
+      this.enemyChampion.lifeState = 'Dead'; this.enemyChampion.respawnTimer = Infinity;
       return;
     }
     if (mode.id === 'dungeon') {
@@ -2381,6 +2390,13 @@ export class GameWorld {
     const state = this.modeState;
     if (!state || !this.isMatchRunning()) return;
     if (this.isRunChoicePending()) return;
+    if (this.activeMode.id === 'base') {
+      // No clock in the base; the camera follows through the hall; stations and the prompt (base.js).
+      this.matchTime = this.matchDuration;
+      state.dungeonCameraX += (this.dungeonCameraTarget() - state.dungeonCameraX) * Math.min(1, 3.5 * dt);
+      updateBase(this);
+      return;
+    }
     if (this.activeMode.id === 'invasion') {
       if (this.battlefield.blueCastle.isDestroyed) {
         this.finishMode('red', 'DEFEAT — YOUR CASTLE HAS FALLEN');
@@ -2625,6 +2641,7 @@ export class GameWorld {
       return this.modeState?.runeCollectibles?.length ? 'COLLECT RUNE RELICS — DEFEAT THE CHAMPION' : 'DEFEAT THE ARENA CHAMPION';
     }
     if (this.activeMode?.id === 'training') return 'PRACTICE — NO REWARDS';
+    if (this.activeMode?.id === 'base') return 'DEINE BASIS';
     const tower = this.battlefield.redTower;
     const castle = this.battlefield.redCastle;
     if (!tower.isDead) return `DESTROY ENEMY TOWER ${Math.ceil(tower.hp)}/${tower.maxHp}`;
@@ -2846,7 +2863,7 @@ export class GameWorld {
       return;
     }
     this.resetMatch();
-    this.battlefield.setScene?.(this.campaignParams().scene ?? null); /* a campaign mission's own scene */
+    this.battlefield.setScene?.(this.campaignParams().scene ?? (this.activeMode.id === 'base' ? BASE_SCENE : null)); /* a campaign mission's own scene */
     this.matchState = 'Running';
     this.markMatchSession(true);
     this.armBackGuard(); // started by a user click: the trap entry counts for the back button
@@ -2870,7 +2887,7 @@ export class GameWorld {
     if (this.activeMode.progression === 'profile' && this.activeMode.id !== 'training' && !this.profile.isDeckReady()) this.repairDeckForMatch();
     if (this.activeMode.progression === 'profile' && this.activeMode.id !== 'training' && !this.profile.isDeckReady()) return false;
     this.resetMatch();
-    this.battlefield.setScene?.(this.campaignParams().scene ?? null); /* a campaign mission's own scene */
+    this.battlefield.setScene?.(this.campaignParams().scene ?? (this.activeMode.id === 'base' ? BASE_SCENE : null)); /* a campaign mission's own scene */
     this.matchState = 'Running';
     this.syncOrientationState();
     ui.showHub(false);
@@ -2995,6 +3012,7 @@ export class GameWorld {
   }
 
   returnToHub(reason = 'menu') {
+    closeBasePrompt();
     this.markMatchSession(false);
     try { const log = JSON.parse(globalThis.localStorage?.getItem?.('grimge-hub-log') ?? '[]'); log.push({ reason, mode: this.activeMode?.id, at: new Date().toISOString(), stack: String(new Error().stack).split(String.fromCharCode(10)).slice(2, 6).join(' < ').slice(0, 400) }); globalThis.localStorage?.setItem?.('grimge-hub-log', JSON.stringify(log.slice(-10))); } catch { /* optional */ }
     this.matchState = 'Menu';
@@ -3338,7 +3356,7 @@ export class GameWorld {
     ctx.translate(this.cameraOffsetX + cam.shakeX - dungeonCamX, cam.shakeY + worldY);
 
     // Foreground Crystal Glows on Beacons
-    this.battlefield.renderForeground(ctx);
+    if (this.activeMode?.id !== 'base') this.battlefield.renderForeground(ctx); /* no tower beacons in the base hall */
     // Ground effects (ice, fire, lava, craters…) lie under every actor.
     const groundPixel = Math.max(1, Math.round(spells.pixelVfx * (ctx.getTransform?.()?.a || 1)));
     renderPixelated(ctx, groundPixel, (layer) => environment.renderGround(layer));
@@ -3353,6 +3371,7 @@ export class GameWorld {
     this.renderArenaRuneCollectibles(ctx);
     this.renderArenaTransformationRelic(ctx);
 
+    if (this.activeMode?.id === 'base') renderBase(ctx, this);
     // A campaign scene dresses the dungeon room with its own props along the back wall.
     if (this.activeMode?.id === 'dungeon' && hasSceneProps(this.battlefield.scene?.id) && this.battlefield.boundsOverride) renderSceneProps(ctx, this.battlefield.scene.id, this.battlefield.boundsOverride.left, this.battlefield.boundsOverride.right, this.modeState?.structures?.defs ?? []);
     if (this.modeState?.structures) {

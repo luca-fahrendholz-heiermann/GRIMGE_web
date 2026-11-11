@@ -49,6 +49,15 @@ Legende: ✔ umgesetzt und geprüft · ◐ teilweise · ○ geplant
 | Deck-Bildschirm (Grimoire) an die neuen Regeln anpassen und ohne Scrollen gestalten | ○ |
 | Findbare Begleiter / Reittiere in großen Leveln | ○ |
 
+## Meilenstein 2c – Die Basis
+
+| Punkt | Stand |
+|---|---|
+| Saal, Stationen für die Menüpunkte, Rüstkammer mit Klassen-Ständern und Stufen | ✔ |
+| Primals bewegen sich im Raum, antippbar | ○ |
+| Dekoration an Stellplätzen (Gold, Missions-Belohnungen), Trophäen | ○ |
+| Basis als Startpunkt statt des gemalten Hubs (Entscheidung offen) | ○ |
+
 ## Meilenstein 3 – Oberfläche
 
 | Punkt | Stand |

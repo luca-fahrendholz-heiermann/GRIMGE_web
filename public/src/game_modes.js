@@ -24,6 +24,12 @@ export const GAME_MODES = Object.freeze({
     id: 'arena', label: 'ARENA DUEL', objective: 'THROW THE CHAMPION OUT — 3 SOUL SPARKS', rules: 'rift',
     objectives: false, autoWaves: false, respawn: 'none', enemyBehavior: 'duel', world: 'arena', progression: 'arenaCollect'
   }),
+  // The base (base.js): the player's headquarters — a hall to walk through with the menu points as stations.
+  // No foes, no clock, no rewards; it shares the dungeon's scrolling world with its own low floor line.
+  base: Object.freeze({
+    id: 'base', label: 'BASIS', objective: 'DEINE BASIS — GEH ZU EINER STATION',
+    objectives: false, autoWaves: false, respawn: 'unlimited', enemyBehavior: 'disabled', world: 'dungeon', progression: 'none'
+  }),
   training: Object.freeze({
     // A castle-free practice yard: a stationary straw dummy in the centre and
     // an optional sparring partner toggled from the HUD.

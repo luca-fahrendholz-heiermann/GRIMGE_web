@@ -56,11 +56,12 @@ export function isCharacterCreationOpen() { return !!open; }
 // game: window.gameWorld (profile, classOptions, setClassWeapon); onDone(character) after DONE.
 // tabs: which pages the screen shows — creation: look, element, class; the wardrobe: look and element; the hub's
 // CLASSES button: only the class page (user, 11 Nov 2026: the class in use is equipped in its own hub screen).
-export function openCharacterCreation(game, { onDone = null, first = false, tabs = null } = {}) {
+export function openCharacterCreation(game, { onDone = null, first = false, tabs = null, focusClass = null } = {}) {
   tabs = tabs ?? (first ? ['look', 'element', 'class'] : ['look', 'element']);
   const doc = globalThis.document; if (open || typeof doc?.createElement !== 'function' || !doc.body) return false;
   const profile = game?.profile; const ch = profile?.character ?? {};
-  const startCls = classById(ch.classId) ?? classOfWeapon(profile?.classWeapon) ?? CLASSES[0];
+  // focusClass: the class page opens on this class (a tap on its armour stand in the base).
+  const startCls = classById(focusClass) ?? classById(ch.classId) ?? classOfWeapon(profile?.classWeapon) ?? CLASSES[0];
   const state = { name: ch.name || '', base: BASES.some((b) => b.id === ch.base) ? ch.base : 'thesen', look: normalizeLook(ch.look),
     classId: startCls.id, weapon: WEAPONS[profile?.classWeapon]?.family === startCls.id ? profile.classWeapon : classWeapons(startCls.id)[0],
     element: null };

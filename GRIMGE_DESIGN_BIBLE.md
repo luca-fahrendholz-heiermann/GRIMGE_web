@@ -64,6 +64,14 @@ Jede Mission hat Einleitung, Ziel, Abschluss und eine Belohnung (XP, Skillpunkte
 - Thesen spricht knapp und konkret; Xame spöttisch, aber ehrlich; der Erzähler sachlich.
 - Jede Szene liefert einen Grund für die nächste Mission.
 
+## Die Basis (Idee des Nutzers, 11. Nov 2026)
+
+- Das eigene Hauptquartier: ein großer, hoher Innenraum wie ein Castle-Crashers-Saal – erzählerisch die eigene Burg,
+  **ohne Kopplung an Castle Siege** (dort passt man später nur das Aussehen von Burg und Truppen an, wie Skins).
+- Die Menüpunkte stehen als Stationen im Raum (Deck, Runen, Kampagne, Garderobe, Training).
+- Rüstungs-Ständer für die Klassen, anklickbar zum Ausrüsten, mit Klassenstufe darüber.
+- Später: Objekte frei bzw. an Stellplätzen platzieren, freigeschaltete Primals bewegen sich im Raum.
+
 ## Fortschritt (Vorgabe des Nutzers, 11. Nov 2026)
 
 - Start mit **einer** Runenkarte (ein Grundelement nach Wahl).

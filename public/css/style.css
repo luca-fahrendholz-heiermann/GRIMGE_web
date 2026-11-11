@@ -1,3 +1,5 @@
+/* The base: no match HUD (bars, clock, rune hand) — only movement and the station prompt. */
+#ui-layer.mode-base #top-hud-bar, #ui-layer.mode-base #bottom-center-deck { display: none !important; }
 * {
   margin: 0;
   padding: 0;

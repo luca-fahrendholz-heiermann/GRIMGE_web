@@ -491,6 +491,14 @@ export class UIManager {
       if (!window.gameWorld?.profile?.character?.created && this.openCharacterScreen({ first: true, then: () => this.setHubPage('modes') })) return;
       this.setHubPage('modes');
     });
+    // The base (base.js): a button on the hub's first page walks into the headquarters.
+    const hubPage = document.querySelector?.('#hub-swipe-area .hub-page') ?? null;
+    if (hubPage && typeof hubPage.appendChild === 'function' && !document.getElementById('hub-base-btn')) {
+      const b = document.createElement('button'); b.id = 'hub-base-btn'; b.type = 'button'; b.textContent = '⌂ BASIS BETRETEN';
+      b.style.cssText = 'position:absolute;left:2%;bottom:5%;z-index:6;font-family:Cinzel,serif;font-size:clamp(12px,1.6vw,18px);letter-spacing:.08em;color:#fff3c8;background:#2a2234ee;border:2px solid #f0d890;padding:.6em 1.1em;min-height:44px;cursor:pointer';
+      b.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); const game = window.gameWorld; if (!game) return; if (!game.profile?.character?.created && this.openCharacterScreen({ first: true, then: () => { game.setMatchMode('base'); game.startMatch(); } })) return; game.setMatchMode('base'); game.startMatch(); });
+      hubPage.appendChild(b);
+    }
     // Campaign (campaign.js): the chapter screen; the character is created first when that has not happened yet.
     document.getElementById('hub-campaign-btn')?.addEventListener('pointerdown', (e) => {
       e.preventDefault(); e.stopPropagation();
@@ -571,9 +579,9 @@ export class UIManager {
   getSelectedHero() { return this.selectedHero || 'thesen'; }
 
   // Character creation / wardrobe (character_creation.js): DONE plays the created figure and refreshes the hub.
-  openCharacterScreen({ first = false, then = null, tabs = null } = {}) {
+  openCharacterScreen({ first = false, then = null, tabs = null, focusClass = null } = {}) {
     const game = window.gameWorld;
-    return openCharacterCreation(game, { first, tabs, onDone: (ch) => {
+    return openCharacterCreation(game, { first, tabs, focusClass, onDone: (ch) => {
       if (ch?.base) this.setHubHero(ch.base);
       if (ch?.name) this.showAnnouncement(`WELCOME, ${ch.name.toUpperCase()}`, 1.6);
       then?.();

@@ -2,6 +2,17 @@
 
 Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
+## 11. Nov 2026 – Die Basis, erste Version (Idee des Nutzers)
+
+- Ein hoher, breiter Saal als Hauptquartier, betretbar über „Basis betreten“ im Hub. Reine Kulisse zur Geschichte,
+  ohne Wirkung auf Castle Siege.
+- **Stationen statt Menüs:** Tor (zurück zum Hub), Garderobe, Deck, Runen-Altar, Kartentisch (Kampagne),
+  Trainings-Dummy. In Reichweite erscheint ein großer Knopf; Antippen der Station oder E / Enter geht auch.
+- **Rüstkammer:** ein Rüstungs-Ständer je Klasse (18) mit Klassenname und Stufe darüber, die getragene Klasse ist
+  markiert; ein Ständer öffnet „Klasse ausrüsten“ auf dieser Klasse.
+- Eigene tiefe Bodenlinie, damit die Halle über der Figur aufragt; kein Kampf-HUD, keine Uhr, keine Gegner.
+- Noch nicht: freies Platzieren, herumlaufende Primals, eigene Ständer-Bilder je Klasse (sechs Bilder für 18 Klassen).
+
 ## 11. Nov 2026 – Verdienter Fortschritt, erster Durchgang (Vorgabe des Nutzers)
 
 - **Start mit einer Runenkarte:** Bei der Charaktererstellung wählt man eines der sechs Grundelemente; das Deck besteht
