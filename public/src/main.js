@@ -43,6 +43,7 @@ import { setupRift, updateRift, renderRiftGround, renderRiftOverlay } from './ar
 import { finishRun, afterMatch, isCampaignOpen } from './campaign.js';
 import { isCharacterCreationOpen } from './character_creation.js'; // Campaign Alpha: missions reuse the modes with parameters
 import { missionById } from './campaign_data.js';
+import { startAppUpdates } from './app_update.js'; // a new deployed version reloads the game by itself (hub only)
 import { BASE_SCENE, baseBounds, renderBase, updateBase, baseTap, closeBasePrompt } from './base.js'; // the player's headquarters // stairs / galleries (Castle Crashers DNA)
 // Activated trap entries kept on top of the history during a match (back-navigation guard).
 const BACK_TRAPS = 2;
@@ -388,6 +389,7 @@ export class GameWorld {
     await Promise.all([sprites.loadAll(), loadFxSprites(), loadSpellSprites()]);
 
     window.gameWorld = this;
+    startAppUpdates();
     // Castle Siege runs the Unity platform ↔ lane match rules (siege_match.js).
     this.siegeDeployRules = true;
     ui.syncScreenFitLabel(this.screenFit);

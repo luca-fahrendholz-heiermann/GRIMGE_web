@@ -96,5 +96,16 @@ assert(
   'Asset-driven Hub keeps decorative art separate from all six explicit menu actions'
 );
 
+// Automatic updates: version stamp from the deployment, a network-first service worker, reload only in the hub.
+{
+  const upd = read('public/src/app_update.js'); const sw = read('public/sw.js'); const wf = read('.github/workflows/deploy.yml');
+  assert(exists('public/version.json') && wf.includes('public/version.json') && wf.includes('github.sha'), 'Deployment stamps the commit into version.json');
+  assert(sw.includes("cache: 'no-cache'") && sw.includes('skipWaiting') && sw.includes('clients.claim') && sw.includes('version.json'), 'Service worker asks the network first and never caches the version stamp');
+  assert(upd.includes("register?.('./sw.js')") && upd.includes('visibilitychange') && main.includes('startAppUpdates()'), 'Runtime registers the service worker and checks for a new version on start and on return to the app');
+  const api = new Function(`${upd.replace(/^export /gm, '')}; return { updateDue, canReloadNow };`)();
+  assert(api.updateDue('a', 'b') && !api.updateDue('a', 'a') && !api.updateDue(null, 'b') && !api.updateDue('a', 'b', 'b'), 'A reload is due only for a different version and never twice for the same one');
+  assert(api.canReloadNow({ matchState: 'Menu' }, { querySelector: () => null }) && !api.canReloadNow({ matchState: 'Running' }, { querySelector: () => null }) && !api.canReloadNow({ matchState: 'Menu' }, { querySelector: () => ({}) }), 'The automatic reload waits for the hub with no screen open, never during a match');
+}
+
 console.log(`\nPWA results: ${passed} passed, ${failed} failed.`);
 if (failed) process.exit(1);

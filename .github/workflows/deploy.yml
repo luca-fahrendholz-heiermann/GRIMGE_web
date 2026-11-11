@@ -22,6 +22,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
+      # The running game compares this stamp and reloads itself on a new version (public/src/app_update.js).
+      - name: Stamp version
+        run: echo "{\"v\":\"${{ github.sha }}\"}" > public/version.json
       - uses: actions/upload-pages-artifact@v3
         with:
           path: public

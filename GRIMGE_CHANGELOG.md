@@ -2,6 +2,14 @@
 
 Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
+## 11. Nov 2026 – Automatische Aktualisierung (Wunsch des Nutzers)
+
+- Das Spiel lädt eine neue Version von selbst: Die Veröffentlichung schreibt den Commit in `version.json`; das laufende
+  Spiel vergleicht beim Start, bei der Rückkehr in die App und alle fünf Minuten.
+- Neu geladen wird nur im Hub ohne offenen Bildschirm, nie in einem Match.
+- Ein Service Worker (`sw.js`) fragt jede Datei zuerst beim Server ab (kein veralteter Browser-Cache) und hält die
+  letzte Kopie für den Fall ohne Verbindung.
+
 ## 11. Nov 2026 – Hub-Figur: der eigene Charakter, ausgerüstet (Vorgabe des Nutzers)
 
 - Der Hub bleibt der Startpunkt. Statt des Standbilds läuft dort der eigene Charakter auf der Stelle: seine Figur,
