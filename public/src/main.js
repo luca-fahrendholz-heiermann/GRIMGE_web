@@ -2845,6 +2845,7 @@ export class GameWorld {
       return;
     }
     this.resetMatch();
+    this.battlefield.setScene?.(this.campaignParams().scene ?? null); /* a campaign mission's own scene */
     this.matchState = 'Running';
     this.markMatchSession(true);
     this.armBackGuard(); // started by a user click: the trap entry counts for the back button
@@ -2868,6 +2869,7 @@ export class GameWorld {
     if (this.activeMode.progression === 'profile' && this.activeMode.id !== 'training' && !this.profile.isDeckReady()) this.repairDeckForMatch();
     if (this.activeMode.progression === 'profile' && this.activeMode.id !== 'training' && !this.profile.isDeckReady()) return false;
     this.resetMatch();
+    this.battlefield.setScene?.(this.campaignParams().scene ?? null); /* a campaign mission's own scene */
     this.matchState = 'Running';
     this.syncOrientationState();
     ui.showHub(false);

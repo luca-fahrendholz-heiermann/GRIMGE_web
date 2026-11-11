@@ -432,10 +432,34 @@ export class Battlefield {
     this.drawModeBackdrop(ctx, w, h, this.mode?.world, modeState);
   }
 
+  // A campaign mission may bring its own scene (assets/scenes/campaign/<id>.png): one wide pixel-art image with the
+  // back wall in its upper part and an empty floor below. null = the mode's own backdrop.
+  setScene(id) {
+    if (!id) { this.scene = null; return; }
+    if (this.scene?.id === id) return;
+    const image = typeof Image === 'function' ? new Image() : null; const entry = { id, image, loaded: false }; this.scene = entry;
+    if (!image) return;
+    image.onload = () => { entry.loaded = true; }; image.onerror = () => { if (this.scene === entry) this.scene = null; };
+    image.src = `assets/scenes/campaign/${id}.png`;
+  }
+  // The scene fills the stage height and scrolls slower than the level (parallax .35); it is tiled mirrored, so its
+  // ends always meet without a seam.
+  drawScene(ctx, w, h, camX, centred = false) {
+    const img = this.scene.image; const iw = img.naturalWidth || img.width; const ih = img.naturalHeight || img.height; if (!iw || !ih) return false;
+    const dw = Math.round(iw * h / ih); const shift = centred ? (dw - w) / 2 : camX * .35; /* a fixed stage (arena) shows the middle of the scene */ const first = Math.floor(shift / dw);
+    ctx.save(); ctx.imageSmoothingEnabled = false;
+    for (let k = first; k * dw - shift < w; k++) {
+      const x = Math.round(k * dw - shift);
+      if (k % 2) { ctx.save(); ctx.translate(x + dw, 0); ctx.scale(-1, 1); ctx.drawImage(img, 0, 0, dw, h); ctx.restore(); } else ctx.drawImage(img, x, 0, dw, h);
+    }
+    ctx.restore(); return true;
+  }
+
   drawModeBackdrop(ctx, w, h, world, modeState) {
     const phase = world === 'dungeon'
       ? (modeState?.dungeonCameraX ?? 0) / 250
       : 0;
+    if (this.scene?.loaded && this.drawScene(ctx, w, h, modeState?.dungeonCameraX ?? 0, world !== 'dungeon')) return;
 
     if (world === 'dungeon' || world === 'invasion') this._paintInvasionScene(ctx, w, h, phase, world);
     else this._paintArenaScene(ctx, w, h, phase);

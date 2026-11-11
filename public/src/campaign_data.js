@@ -9,6 +9,7 @@
 //   invasion  maxLevel (win after the boss of this level)
 //   arena     rival (hero key of the champion), rivalName
 //   siege     —
+//   any mode  scene (id of a prepared scene image in assets/scenes/campaign/, see art/authoring/prep_scene.cjs)
 // speakers: a hero key shown as the portrait ('thesen', 'xame', 'boss_firelord') or 'narrator'.
 
 export const CAMPAIGN = Object.freeze([
@@ -17,7 +18,7 @@ export const CAMPAIGN = Object.freeze([
     summary: 'Der Bannrand, der den Abgrund seit Generationen verschließt, reißt. Aus den Rissen kriecht, was die Runen einst gebannt haben.',
     missions: Object.freeze([
       Object.freeze({
-        id: 'c1m1', title: 'ASCHE ÜBER KARETH', kind: 'DUNGEON', mode: 'dungeon', params: Object.freeze({ endStage: 1 }),
+        id: 'c1m1', title: 'ASCHE ÜBER KARETH', kind: 'DUNGEON', mode: 'dungeon', params: Object.freeze({ endStage: 1, scene: 'kareth' }),
         briefing: 'Die Wachfeste Kareth schweigt. Dring in die Ruinen ein, schlag dich durch die erste Halle und finde heraus, was den Bannrand gebrochen hat.',
         goal: 'Räume die erste Halle der Ruinen.',
         intro: [
@@ -47,7 +48,7 @@ export const CAMPAIGN = Object.freeze([
         reward: Object.freeze({ xp: 100, skillPoints: 1 })
       }),
       Object.freeze({
-        id: 'c1m3', title: 'DER SCHÄDELHEXER', kind: 'DUELL', mode: 'arena', params: Object.freeze({ rival: 'xame', rivalName: 'XAME' }),
+        id: 'c1m3', title: 'DER SCHÄDELHEXER', kind: 'DUELL', mode: 'arena', params: Object.freeze({ rival: 'xame', rivalName: 'XAME', scene: 'abyss' }),
         briefing: 'Der Beobachter stellt sich: Xame, der Schädelhexer. Er hält den zweiten Siegelsplitter. Wirf ihn aus dem Kreis, bevor er dich hinauswirft.',
         goal: 'Duell nach Riss-Regeln: Schleudere Xame dreimal aus der Arena.',
         intro: [
@@ -77,7 +78,7 @@ export const CAMPAIGN = Object.freeze([
         reward: Object.freeze({ xp: 140, skillPoints: 1 })
       }),
       Object.freeze({
-        id: 'c1m5', title: 'DER GLUTFÜRST', kind: 'BOSS', mode: 'dungeon', params: Object.freeze({ startStage: 3 }),
+        id: 'c1m5', title: 'DER GLUTFÜRST', kind: 'BOSS', mode: 'dungeon', params: Object.freeze({ startStage: 3, scene: 'glut' }),
         briefing: 'Unter der Aschenfeste wartet der Glutfürst, der den Bann gebrochen hat. Schlag dich durch seine Garde und stell ihn.',
         goal: 'Besiege die Garde und den Glutfürsten.',
         intro: [

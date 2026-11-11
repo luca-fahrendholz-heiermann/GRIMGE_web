@@ -2,6 +2,15 @@
 
 Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
+## 11. Nov 2026 – Erste erzeugte Szenen
+
+- Drei Kampagnen-Hintergründe mit Higgsfield erzeugt (0,75 Credits aus dem Registrierungs-Guthaben, 0 USD): Ruinenhalle
+  Kareth (Mission 1), Abgrund-Arena (Mission 3), Gluttiefe (Mission 5).
+- Missionen können eine eigene Szene angeben (`scene` in `campaign_data.js`); sie ersetzt den Standard-Hintergrund,
+  scrollt im Dungeon mit Parallax und steht in der Arena mittig.
+- Aufbereitung über `art/authoring/prep_scene.cjs`; Rohbilder liegen unverändert in `art/generated/scenes/`.
+- Der AutoSprite-Test für Xame schlug fehl (nichts abgebucht).
+
 ## 11. Nov 2026 – Campaign Alpha 0.1, erste spielbare Schleife
 
 - **Kampagne:** Kapitel 1 „Der gebrochene Bann“ mit fünf verbundenen Missionen (Dungeon-Halle, Burgverteidigung,
