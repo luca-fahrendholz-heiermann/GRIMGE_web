@@ -5040,7 +5040,7 @@ game.running = false;
   const spr = { frames: { attack1: [fr(0), fr(1), fr(2)] }, holdSeq: { attack1: [4, 1, 2] }, loop: { attack1: false } };
   const at = (ticks) => SM.resolveFrame(spr, 'attack1', ticks / 60, 0).canvas.i;
   const C = await import('./public/src/rig_clips.js');
-  const fits = [['attack1', 13], ['attack2', 14], ['attack3', 21], ['uppercut', 17], ['heavyStrike', 20]].every(([k, t]) => C.BASE_CLIPS[k].holds.reduce((a, b) => a + b, 0) <= t + 1 && C.BASE_CLIPS[k].smear?.length);
+  const fits = [['attack1', 21], ['attack2', 23], ['attack3', 34], ['uppercut', 27], ['heavyStrike', 33]].every(([k, t]) => C.BASE_CLIPS[k].holds.reduce((a, b) => a + b, 0) <= t + 1 && C.BASE_CLIPS[k].smear?.length);
   assert(at(3) === 0 && at(4.5) === 1 && at(5.5) === 2 && at(30) === 2 && fits, 'Key-pose strikes: per-frame holds (wind-up 4 ticks → strike 1 → …), every strike fits its state time and has a smear frame');
 }
 {

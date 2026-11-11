@@ -34,8 +34,9 @@ Bestehende Figuren werden nicht ohne Freigabe umgestaltet.
 
 - **Einzelbilder, kein Tweening im Spiel:** Clips werden zu festen Bildern gebacken (`rig.js`).
 - **Taktung:** 60-Hz-Ticks. Stehen 12 Ticks pro Bild, Gehen 6, Sprint 4.
-- **Schläge als Schlüsselposen:** Ausholen (4–6 Ticks) → Schlag (1 Tick, mit Schliere) → Durchschwung (2–3) → Halten
-  (3–5) → Zurück (3–6). Die Summe passt in die Angriffszeit (0,22–0,35 s).
+- **Schläge als Schlüsselposen:** kurzes Ausholen (3–5 Ticks, der Treffer fällt beim Tastendruck) → Schlag (2 Ticks,
+  mit Schliere) → Durchschwung (4–6) → Halten (6–10) → Zurück (6–11). Die Summe passt in die Angriffszeit
+  (0,35–0,56 s, Schlagtempo 1,6).
 - **Füße stehen auf einer festen Bodenzeile;** der Ankerpunkt liegt unten in der Mitte.
 - **Schlieren:** helle, flache Farbflächen, die dem Bogen der Hand oder Klinge folgen; Ende läuft dünn aus.
 - **Ersetzbar:** Jeder Clip hat einen festen Namen (`idle`, `walk`, `attack1` …); gezeichnete oder erzeugte Sheets

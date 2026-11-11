@@ -28,14 +28,14 @@ export class SpriteManager {
           { armed: true, states: ['walk', 'run'], hold: 6, loop: true, hands: [[59, 60, 15, 70], [57, 59, 14, 71], [36, 64, 20, 64], [57, 61, 10, 67], [55, 66, 15, 70], [60, 60, 16, 67]] },
           { armed: true, states: ['sprint'], hold: 4, loop: true, hands: [[59, 60, 15, 70], [57, 59, 14, 71], [36, 64, 20, 64], [57, 61, 10, 67], [55, 66, 15, 70], [60, 60, 16, 67]] }] },
         { sheet: 'sheets/thesen_armed.png', frames: 6, w: 81, h: 111, anchorX: 36, anchorY: 109, use: [
-          { armed: true, states: ['attack1'], idx: [1, 2, 2], holds: [4, 3, 6], hands: [[15, 24, 58, 67], [73, 47, 20, 54], [73, 47, 20, 54]] },
-          { armed: true, states: ['attack2'], idx: [0, 5, 5], holds: [2, 4, 8], hands: [[54, 67, 24, 59], [75, 47, 20, 67], [75, 47, 20, 67]] },
-          { armed: true, states: ['attack3', 'heavyStrike'], idx: [3, 4, 4], holds: [6, 4, 11], hands: [[29, 5, 58, 67], [51, 75, 48, 72], [51, 75, 48, 72]] },
-          { armed: true, states: ['uppercut'], idx: [4, 3, 3], holds: [4, 4, 9], hands: [[51, 75, 48, 72], [29, 5, 58, 67], [29, 5, 58, 67]] },
+          { armed: true, states: ['attack1'], idx: [1, 2, 2], holds: [4, 9, 8], hands: [[15, 24, 58, 67], [73, 47, 20, 54], [73, 47, 20, 54]] },
+          { armed: true, states: ['attack2'], idx: [0, 5, 5], holds: [3, 10, 10], hands: [[54, 67, 24, 59], [75, 47, 20, 67], [75, 47, 20, 67]] },
+          { armed: true, states: ['attack3', 'heavyStrike'], idx: [3, 4, 4], holds: [7, 13, 14], hands: [[29, 5, 58, 67], [51, 75, 48, 72], [51, 75, 48, 72]] },
+          { armed: true, states: ['uppercut'], idx: [4, 3, 3], holds: [5, 11, 11], hands: [[51, 75, 48, 72], [29, 5, 58, 67], [29, 5, 58, 67]] },
           { armed: true, states: ['dive'], idx: [4], hold: 8, loop: true, hands: [[51, 75, 48, 72]] }] },
         { sheet: 'sheets/thesen_attack.png', frames: 6, w: 68, h: 117, anchorX: 29, anchorY: 115, use: [
-          { states: ['attack1'], idx: [0, 1, 1], holds: [4, 3, 6] }, { states: ['attack2'], idx: [1, 2, 2], holds: [2, 4, 8] },
-          { states: ['attack3', 'heavyStrike'], idx: [3, 4, 4], holds: [6, 4, 11] }, { states: ['uppercut'], idx: [0, 5, 5], holds: [4, 4, 9] }, { states: ['dive'], idx: [4], hold: 8, loop: true }] },
+          { states: ['attack1'], idx: [0, 1, 1], holds: [4, 9, 8] }, { states: ['attack2'], idx: [1, 2, 2], holds: [3, 10, 10] },
+          { states: ['attack3', 'heavyStrike'], idx: [3, 4, 4], holds: [7, 13, 14] }, { states: ['uppercut'], idx: [0, 5, 5], holds: [5, 11, 11] }, { states: ['dive'], idx: [4], hold: 8, loop: true }] },
         { sheet: 'sheets/thesen_misc.png', frames: 6, w: 101, h: 102, anchorX: 35, anchorY: 100, use: [
           { states: ['dash'], idx: [0], hold: 8, loop: true }, { states: ['jump', 'fall'], idx: [1], hold: 8, loop: true }, { states: ['guard'], idx: [2], hold: 8, loop: true },
           { states: ['hurt'], idx: [3], hold: 8, loop: true }, { states: ['draw'], idx: [4], hold: 8, loop: true }, { states: ['dead'], idx: [5], hold: 8, loop: true },
@@ -50,10 +50,10 @@ export class SpriteManager {
           { states: ['walk', 'run'], hold: 6, loop: true }, { states: ['sprint'], hold: 4, loop: true },
           { armed: true, states: ['walk', 'run'], hold: 6, loop: true, hands: [[68, 65, 28, 73], [71, 71, 32, 73], [67, 72, 32, 73], [69, 65, 28, 72], [69, 71, 30, 73], [71, 66, 32, 73]] }, { armed: true, states: ['sprint'], hold: 4, loop: true, hands: [[68, 65, 28, 73], [71, 71, 32, 73], [67, 72, 32, 73], [69, 65, 28, 72], [69, 71, 30, 73], [71, 66, 32, 73]] }] },
         { sheet: 'sheets/focus_armed.png', frames: 6, w: 105, h: 123, anchorX: 49, anchorY: 121, use: [
-          { states: ['attack1'], idx: [1, 2, 2], holds: [4, 3, 6] }, { armed: true, states: ['attack1'], idx: [1, 2, 2], holds: [4, 3, 6], hands: [[12, 30, 75, 75], [95, 47, 23, 72], [95, 47, 23, 72]] },
-          { states: ['attack2'], idx: [0, 5, 5], holds: [2, 4, 8] }, { armed: true, states: ['attack2'], idx: [0, 5, 5], holds: [2, 4, 8], hands: [[70, 75, 31, 75], [102, 53, 25, 77], [102, 53, 25, 77]] },
-          { states: ['attack3', 'heavyStrike'], idx: [3, 4, 4], holds: [6, 4, 11] }, { armed: true, states: ['attack3', 'heavyStrike'], idx: [3, 4, 4], holds: [6, 4, 11], hands: [[42, 7, 72, 75], [68, 88, 66, 86], [68, 88, 66, 86]] },
-          { states: ['uppercut'], idx: [4, 3, 3], holds: [4, 4, 9] }, { armed: true, states: ['uppercut'], idx: [4, 3, 3], holds: [4, 4, 9], hands: [[68, 88, 66, 86], [42, 7, 72, 75], [42, 7, 72, 75]] },
+          { states: ['attack1'], idx: [1, 2, 2], holds: [4, 9, 8] }, { armed: true, states: ['attack1'], idx: [1, 2, 2], holds: [4, 9, 8], hands: [[12, 30, 75, 75], [95, 47, 23, 72], [95, 47, 23, 72]] },
+          { states: ['attack2'], idx: [0, 5, 5], holds: [3, 10, 10] }, { armed: true, states: ['attack2'], idx: [0, 5, 5], holds: [3, 10, 10], hands: [[70, 75, 31, 75], [102, 53, 25, 77], [102, 53, 25, 77]] },
+          { states: ['attack3', 'heavyStrike'], idx: [3, 4, 4], holds: [7, 13, 14] }, { armed: true, states: ['attack3', 'heavyStrike'], idx: [3, 4, 4], holds: [7, 13, 14], hands: [[42, 7, 72, 75], [68, 88, 66, 86], [68, 88, 66, 86]] },
+          { states: ['uppercut'], idx: [4, 3, 3], holds: [5, 11, 11] }, { armed: true, states: ['uppercut'], idx: [4, 3, 3], holds: [5, 11, 11], hands: [[68, 88, 66, 86], [42, 7, 72, 75], [42, 7, 72, 75]] },
           { states: ['dive'], idx: [4], hold: 8, loop: true }, { armed: true, states: ['dive'], idx: [4], hold: 8, loop: true, hands: [[68, 88, 66, 86]] },
         ] },
         { sheet: 'sheets/focus_misc.png', frames: 6, w: 141, h: 123, anchorX: 53, anchorY: 121, use: [
@@ -69,7 +69,7 @@ export class SpriteManager {
       // cell size and anchor, the states that play it and the ticks per frame (holds) or one hold for a loop.
       xame: { name: 'Xame', prepared: ['char_xame_0.png', 'char_xame_1.png'], hold: 28, weapon: 'Void-Flame Spear', role: 'Skull Warlock / Void Flames', clips: [
         { sheet: 'sheets/xame_walk.png', frames: 6, w: 90, h: 121, anchorX: 40, anchorY: 119, states: ['walk', 'run', 'sprint', 'dash'], hold: 7, loop: true },
-        { sheet: 'sheets/xame_attack.png', frames: 5, w: 150, h: 132, anchorX: 47, anchorY: 130, states: ['attack', 'attack1', 'attack2', 'attack3', 'uppercut', 'heavyStrike', 'dive'], holds: [4, 2, 3, 3, 3], loop: false },
+        { sheet: 'sheets/xame_attack.png', frames: 5, w: 150, h: 132, anchorX: 47, anchorY: 130, states: ['attack', 'attack1', 'attack2', 'attack3', 'uppercut', 'heavyStrike', 'dive'], holds: [3, 3, 5, 5, 5], loop: false },
         { sheet: 'sheets/xame_misc.png', frames: 5, w: 116, h: 183, anchorX: 49, anchorY: 181, use: [
           { states: ['jump', 'fall'], idx: [0], hold: 8, loop: true }, { states: ['guard'], idx: [1], hold: 8, loop: true }, { states: ['hurt'], idx: [2], hold: 8, loop: true },
           { states: ['draw', 'charge'], idx: [3], hold: 8, loop: true }, { states: ['dead'], idx: [4], hold: 8, loop: true }] }

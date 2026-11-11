@@ -69,6 +69,11 @@ const ACTION_STATES = new Set(['attack1', 'attack2', 'attack3', 'uppercut', 'hea
 // Deliberately the shared prototype baseline, not the future weapon system.
 // Every future weapon may replace this table, but must retain its timing and
 // input contract unless its own combo specification explicitly says otherwise.
+// Strike pace (user, 11 Nov 2026: "die Schläge sind noch zu schnell, man kann die Animation gar nicht genießen";
+// decision: really slower, damage adjusted). Every combo step — baseline and weapon combos alike — lasts STRIKE_PACE
+// times its authored time and deals STRIKE_PACE times its authored damage, so the damage per second stays the same.
+// The hit still lands on the press (input contract); the added time is follow-through.
+export const STRIKE_PACE = 1.6;
 export const MELEE_BASELINE = Object.freeze({
   normal: Object.freeze([
     Object.freeze({ state: 'attack1', time: .22, vx: 180, damage: 28, knockback: 220, lift: 100, radius: 40, color: '#fff', glow: '#ffd54f', hitstopTicks: 4, hitReaction: 'light' }),
@@ -76,8 +81,9 @@ export const MELEE_BASELINE = Object.freeze({
     Object.freeze({ state: 'attack3', time: .35, vx: 320, damage: 52, knockback: 480, lift: 320, radius: 54, color: '#ffd700', glow: '#ff3d00', finisher: true, hitstopTicks: 6, hitReaction: 'finisher' })
   ]),
   bufferWindow: .13,
-  uppercut: Object.freeze({ time: .28, damage: 40, knockback: 140, lift: 480, hitstopTicks: 5, hitReaction: 'strong' }),
-  heavy: Object.freeze({ time: .34, damage: 48, knockback: 620, lift: 170, hitstopTicks: 6, hitReaction: 'strong' }),
+  // Uppercut and heavy already carry the strike pace (see STRIKE_PACE): time and damage × 1.6 of the Unity baseline.
+  uppercut: Object.freeze({ time: .45, damage: 64, knockback: 140, lift: 480, hitstopTicks: 5, hitReaction: 'strong' }),
+  heavy: Object.freeze({ time: .54, damage: 77, knockback: 620, lift: 170, hitstopTicks: 6, hitReaction: 'strong' }),
   dive: Object.freeze({ time: .35, damage: 55, knockback: 200, lift: -300, hitstopTicks: 5, hitReaction: 'strong' })
 });
 // Combo chain + earned finisher (user, 23 Oct 2026, after the Unity ComboTimingGuide): every authored
@@ -1505,9 +1511,10 @@ export class Player extends GroundEntity {
     if (this._pendingFinisher) { attack = this._pendingFinisher; this._pendingFinisher = null; this.comboStep = chain.steps.length + 1; }
     else { this.comboStep = (this.comboStep % chain.steps.length) + 1; attack = chain.steps[this.comboStep - 1]; }
     this.finisherChance = null;
-    this.comboResetTimer = 0.65;
+    attack = { ...attack, time: attack.time * STRIKE_PACE, damage: Math.round(attack.damage * STRIKE_PACE) };
     // Unity: ground attacks root the Wizard — no forward lunge on a whiff.
     const swingTime = attack.time * weaponAttackSpeed(this); // Klingentanz: faster swings
+    this.comboResetTimer = swingTime + .43; /* the chain window after the (longer) swing stays as wide as before */
     this.state = attack.state; this.stateTimer = swingTime; this._weaponSwingTime = swingTime;
     // On the ground the swing roots the Wizard; in the air it keeps the jump momentum.
     const airborne = !this.grounded;

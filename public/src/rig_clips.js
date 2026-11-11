@@ -46,36 +46,37 @@ export const BASE_CLIPS = Object.freeze({
   ] },
   // Strikes are key poses with their own timing (animation tips: anticipation → a one-tick strike with a smear →
   // overshoot / follow-through → a held hit → settle). holds are 60 Hz ticks per frame and fit the state time
-  // (attack1 .22 s, attack2 .24 s, attack3 .35 s, uppercut .28 s, heavy .34 s); smear marks the frame with the arc.
-  attack1: { cape: -10, holds: [4, 1, 2, 3, 3], loop: false, smear: [1], seq: [
+  // at the strike pace (entities.js STRIKE_PACE 1.6: attack1 .35 s, attack2 .38 s, attack3 .56 s, uppercut .45 s,
+  // heavy .54 s): a short wind-up (the hit lands on the press), then strike, overshoot and a long held follow-through.
+  attack1: { cape: -10, holds: [3, 2, 4, 6, 6], loop: false, smear: [1], seq: [
     P({ torso: -8, head: -2, armFU: -48, armFL: 30, armBU: 14, legFU: 6, legBU: -8 }),
     P({ torso: 10, armFU: 92, armFL: 6, armBU: -26, legFU: 18, legFL: -6, legBU: -16 }, { pelvis: [2, 0] }),
     P({ torso: 13, head: 3, armFU: 104, armFL: 2, armBU: -30, legFU: 20, legFL: -6, legBU: -18 }, { pelvis: [3, 0] }),
     P({ torso: 10, armFU: 90, armFL: 6, armBU: -24, legFU: 18, legFL: -6, legBU: -16 }, { pelvis: [2, 0] }),
     P({ torso: 3, armFU: 36, armFL: 22, armBU: -6, legFU: 8, legBU: -6 })
   ] },
-  attack2: { cape: -10, holds: [4, 1, 2, 3, 4], loop: false, smear: [1], smearHand: 'handBack', seq: [
+  attack2: { cape: -10, holds: [3, 2, 4, 7, 7], loop: false, smear: [1], smearHand: 'handBack', seq: [
     P({ torso: -6, head: -2, armBU: -42, armBL: 35, armFU: 32, armFL: 40 }),
     P({ torso: 13, head: 3, armBU: 100, armBL: 4, armFU: -36, armFL: 30, legFU: 20, legFL: -8, legBU: -18 }, { pelvis: [2, 0] }),
     P({ torso: 16, head: 4, armBU: 112, armBL: 0, armFU: -40, armFL: 30, legFU: 22, legFL: -8, legBU: -20 }, { pelvis: [3, 0] }),
     P({ torso: 12, armBU: 96, armBL: 4, armFU: -34, armFL: 30, legFU: 20, legFL: -8, legBU: -18 }, { pelvis: [2, 0] }),
     P({ torso: 4, armBU: 30, armBL: 20, armFU: 0, legFU: 8, legBU: -6 })
   ] },
-  attack3: { cape: -6, holds: [6, 1, 3, 5, 6], loop: false, smear: [1], seq: [
+  attack3: { cape: -6, holds: [5, 2, 6, 10, 11], loop: false, smear: [1], seq: [
     P({ torso: -14, head: -5, armFU: 165, armFL: 18, armBU: 155, armBL: 18, legFU: 8, legBU: -8 }),
     P({ torso: 18, head: 5, armFU: 60, armFL: 8, armBU: 50, armBL: 8, ...crouch(.7) }, { pelvis: [2, 0] }),
     P({ torso: 22, head: 6, armFU: 42, armFL: 4, armBU: 34, armBL: 4, ...crouch(.85) }, { pelvis: [3, 0] }),
     P({ torso: 17, head: 4, armFU: 48, armFL: 8, armBU: 40, armBL: 8, ...crouch(.7) }, { pelvis: [2, 0] }),
     P({ torso: 6, armFU: 25, armFL: 15, armBU: 15, armBL: 10, ...crouch(.3) })
   ] },
-  uppercut: { cape: 8, holds: [5, 1, 3, 4, 4], loop: false, smear: [1], seq: [
+  uppercut: { cape: 8, holds: [4, 2, 5, 8, 8], loop: false, smear: [1], seq: [
     P({ torso: 10, head: 2, armFU: -45, armFL: 75, armBU: 22, ...crouch(.95) }),
     P({ torso: -8, head: -6, armFU: 170, armFL: 2, armBU: -30, legFU: 10, legBU: -20, legBL: -10 }),
     P({ torso: -12, head: -8, armFU: 182, armFL: -4, armBU: -36, legFU: 12, legBU: -22, legBL: -10 }),
     P({ torso: -8, head: -5, armFU: 168, armFL: 4, armBU: -28, legFU: 10, legBU: -18 }),
     P({ torso: -3, armFU: 120, armFL: 15, armBU: -12, legFU: 6, legBU: -8 })
   ] },
-  heavyStrike: { cape: -14, holds: [6, 1, 3, 5, 5], loop: false, smear: [1], seq: [
+  heavyStrike: { cape: -14, holds: [5, 2, 6, 10, 10], loop: false, smear: [1], seq: [
     P({ torso: -14, head: -4, armFU: -66, armFL: 38, armBU: -22, legFU: 10, legBU: -6 }),
     P({ torso: 17, head: 3, armFU: 94, armFL: 0, armBU: -42, armBL: 20, legFU: 36, legFL: -26, legBU: -36, legBL: 6 }, { pelvis: [3, 0] }),
     P({ torso: 21, head: 4, armFU: 104, armFL: -2, armBU: -46, armBL: 22, legFU: 38, legFL: -28, legBU: -38, legBL: 6 }, { pelvis: [4, 0] }),
