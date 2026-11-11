@@ -9,6 +9,7 @@ import { recognizer } from './recognizer.js';
 import { sprites } from './sprites.js';
 import { openCharacterCreation } from './character_creation.js';
 import { openCampaign } from './campaign.js';
+import { hubFigureOf, syncHubFigure } from './hub_figure.js';
 import { runeManaCost, SPELL_RECIPES, lookupRecipe, SOLO_RUNES, spellHowTo } from './spell_catalog.js';
 import { TRAINING_MAPS, trainingMapThumb } from './training_maps.js';
 
@@ -676,10 +677,13 @@ export class UIManager {
     // Pixel-art heroes (Thesen, Xame) are scaled up without smoothing in the hub too.
     const crisp = sprites.sprites[this.selectedHero]?.pixel ? 'pixelated' : '';
     for (const img of [this.hubHeroPreview, this.hubModesHeroPreview, this.hubArtProfilePortrait, this.hubModesProfilePortrait, this.hubFreePlayProfilePortrait]) if (img?.style) img.style.imageRendering = crisp;
-    if (this.hubHeroName) this.hubHeroName.textContent = details.name;
-    if (this.hubHeroClass) this.hubHeroClass.textContent = details.title;
-    if (this.hubArtHeroName) this.hubArtHeroName.textContent = details.name;
-    if (this.hubArtHeroClass) this.hubArtHeroClass.textContent = details.title;
+    // The hub figure (hub_figure.js): the player's own character, equipped and walking, instead of the still picture.
+    const who = hubFigureOf(profile, this.selectedHero);
+    syncHubFigure(profile, this.selectedHero, this.hubHeroPreview);
+    if (this.hubHeroName) this.hubHeroName.textContent = who.name ?? details.name;
+    if (this.hubHeroClass) this.hubHeroClass.textContent = who.className ?? details.title;
+    if (this.hubArtHeroName) this.hubArtHeroName.textContent = who.name ?? details.name;
+    if (this.hubArtHeroClass) this.hubArtHeroClass.textContent = who.className ?? details.title;
     if (this.hubArtProfilePortrait) {
       this.hubArtProfilePortrait.src = details.profilePortrait
         ? `assets/ui/ui_hub_start_screen_concept/${details.profilePortrait}`

@@ -2,6 +2,12 @@
 
 Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
+## 11. Nov 2026 – Hub-Figur: der eigene Charakter, ausgerüstet (Vorgabe des Nutzers)
+
+- Der Hub bleibt der Startpunkt. Statt des Standbilds läuft dort der eigene Charakter auf der Stelle: seine Figur,
+  sein Aussehen und die Waffe der ausgerüsteten Klasse in der Hand. Name und Klasse stehen darüber und im Profil-Schild.
+- Mit genau diesem Charakter betritt man die Basis („Basis betreten“).
+
 ## 11. Nov 2026 – Die Basis, erste Version (Idee des Nutzers)
 
 - Ein hoher, breiter Saal als Hauptquartier, betretbar über „Basis betreten“ im Hub. Reine Kulisse zur Geschichte,

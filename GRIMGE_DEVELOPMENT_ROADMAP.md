@@ -56,7 +56,7 @@ Legende: ✔ umgesetzt und geprüft · ◐ teilweise · ○ geplant
 | Saal, Stationen für die Menüpunkte, Rüstkammer mit Klassen-Ständern und Stufen | ✔ |
 | Primals bewegen sich im Raum, antippbar | ○ |
 | Dekoration an Stellplätzen (Gold, Missions-Belohnungen), Trophäen | ○ |
-| Basis als Startpunkt statt des gemalten Hubs (Entscheidung offen) | ○ |
+| Hub bleibt der Startpunkt (Entscheidung des Nutzers); er zeigt den eigenen Charakter ausgerüstet und laufend | ✔ |
 
 ## Meilenstein 3 – Oberfläche
 

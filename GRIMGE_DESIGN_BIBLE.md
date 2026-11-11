@@ -68,6 +68,7 @@ Jede Mission hat Einleitung, Ziel, Abschluss und eine Belohnung (XP, Skillpunkte
 
 - Das eigene Hauptquartier: ein großer, hoher Innenraum wie ein Castle-Crashers-Saal – erzählerisch die eigene Burg,
   **ohne Kopplung an Castle Siege** (dort passt man später nur das Aussehen von Burg und Truppen an, wie Skins).
+- **Der Hub bleibt der Startpunkt.** Dort sieht man den eigenen Charakter, wie er ausgerüstet läuft; mit ihm geht man in die Basis.
 - Die Menüpunkte stehen als Stationen im Raum (Deck, Runen, Kampagne, Garderobe, Training).
 - Rüstungs-Ständer für die Klassen, anklickbar zum Ausrüsten, mit Klassenstufe darüber.
 - Später: Objekte frei bzw. an Stellplätzen platzieren, freigeschaltete Primals bewegen sich im Raum.
