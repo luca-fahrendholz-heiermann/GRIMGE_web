@@ -2,6 +2,15 @@
 
 Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
+## 11. Nov 2026 – Fokus-Form und Waffen-Einzelposen auf erzeugten Bildern
+
+- Die Fokus-Form (Umhang, Speer auf dem Rücken) hat eigene Bögen für Gehen, Schläge und Einzelposen; sie gelten mit
+  und ohne Waffe, die Waffe sitzt an den hinterlegten Handpunkten.
+- Thesen mit Waffe nutzt jetzt auch für Sprung, Blocken, Treffer, Rückwärtssprung, Zeichnen und Niederlage die
+  erzeugten Bilder (Handpunkte ergänzt, keine neue Erzeugung).
+- Noch Gerüst-Animation: Stehen, Aufladen, Landen sowie die Atemtechnik- und Schwebe-Posen.
+- Kosten: 0,75 Credits (insgesamt 7,25 von 10), 0 USD.
+
 ## 11. Nov 2026 – Thesen mit Waffe auf erzeugten Bildern
 
 - Sechs Waffenschwung-Posen mit leerer Faust (Bereit, Ausholen, Hieb, Überkopf, Niederschlag, Stoß). Pro Bild ist die

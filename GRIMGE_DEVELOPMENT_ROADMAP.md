@@ -33,7 +33,8 @@ Legende: ✔ umgesetzt und geprüft · ◐ teilweise · ○ geplant
 | Verbündete und Invasions-Zusatzgegner als eigene Pixel-Figuren | ✔ |
 | Arena- / Invasions-Champions außerhalb der Kampagne (gemalte Bilder) ersetzen | ○ |
 | Thesen mit Waffe: erzeugte Posen mit Handpunkten für Gehen und Schläge | ✔ |
-| Thesen mit Waffe: Sprung, Blocken, Treffer, Aufladen, Zeichnen noch Gerüst-Animation | ○ |
+| Thesen mit Waffe und Fokus-Form: Sprung, Blocken, Treffer, Zeichnen auf erzeugten Bildern | ✔ |
+| Stehen, Aufladen, Landen, Atemtechnik- und Schwebe-Posen noch Gerüst-Animation | ○ |
 | Runen-Fund / Mastery als Missionsbelohnung | ○ |
 | Dungeon: Räume mit Türen, Fortschrittsleiste | ○ |
 

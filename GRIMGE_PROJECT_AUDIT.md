@@ -50,7 +50,7 @@ Was hier steht, ist am Code geprüft – Design-Dokumente allein zählen nicht a
 
 ## Größte Schwächen für das Spielgefühl
 
-1. Mit Waffe nutzt Thesen für Sprung, Blocken, Treffer und Aufladen noch Gerüst-Animationen; die Fokus-Form ist ganz Gerüst.
+1. Stehen, Aufladen, Landen und die Atemtechnik-Posen sind noch Gerüst-Animationen; viele Aktionen sind Einzelbilder.
 2. Champions außerhalb der Kampagne sind noch gemalte Bilder; Gegner und Verbündete sind inzwischen einheitlich.
 3. Kein roter Faden zwischen den Modi – das behebt die Kampagne.
 4. Arena-HUD und mehrere Menüs sind Platzhalter.

@@ -38,9 +38,33 @@ export class SpriteManager {
           { states: ['attack3', 'heavyStrike'], idx: [3, 4, 4], holds: [6, 4, 11] }, { states: ['uppercut'], idx: [0, 5, 5], holds: [4, 4, 9] }, { states: ['dive'], idx: [4], hold: 8, loop: true }] },
         { sheet: 'sheets/thesen_misc.png', frames: 6, w: 101, h: 102, anchorX: 35, anchorY: 100, use: [
           { states: ['dash'], idx: [0], hold: 8, loop: true }, { states: ['jump', 'fall'], idx: [1], hold: 8, loop: true }, { states: ['guard'], idx: [2], hold: 8, loop: true },
-          { states: ['hurt'], idx: [3], hold: 8, loop: true }, { states: ['draw'], idx: [4], hold: 8, loop: true }, { states: ['dead'], idx: [5], hold: 8, loop: true }] }
+          { states: ['hurt'], idx: [3], hold: 8, loop: true }, { states: ['draw'], idx: [4], hold: 8, loop: true }, { states: ['dead'], idx: [5], hold: 8, loop: true },
+          /* the same poses with a weapon: where it is held (while drawing, in the lowered hand) */
+          { armed: true, states: ['dash'], idx: [0], hold: 8, loop: true, hands: [[95, 45, 42, 52]] }, { armed: true, states: ['jump', 'fall'], idx: [1], hold: 8, loop: true, hands: [[64, 45, 21, 57]] },
+          { armed: true, states: ['guard'], idx: [2], hold: 8, loop: true, hands: [[51, 35, 46, 33]] }, { armed: true, states: ['hurt'], idx: [3], hold: 8, loop: true, hands: [[60, 52, 14, 58]] },
+          { armed: true, states: ['draw'], idx: [4], hold: 8, loop: true, hands: [[16, 60, 63, 23]] }, { armed: true, states: ['dead'], idx: [5], hold: 8, loop: true, hands: [[35, 90, 35, 90]] }] }
       ] },
-      thesen_focus: { name: 'Thesen (Focus)', prepared: ['char_thesen_focus.png'], weapon: 'Bone Spear', role: 'Focus form: cape and spear' },
+      // The Focus form on generated frames (11 Nov 2026): one set of poses, bare-handed and armed (hand points per frame).
+      thesen_focus: { name: 'Thesen (Focus)', prepared: ['char_thesen_focus.png'], weapon: 'Bone Spear', role: 'Focus form: cape and spear', clips: [
+        { sheet: 'sheets/focus_walk.png', frames: 6, w: 80, h: 123, anchorX: 46, anchorY: 121, use: [
+          { states: ['walk', 'run'], hold: 6, loop: true }, { states: ['sprint'], hold: 4, loop: true },
+          { armed: true, states: ['walk', 'run'], hold: 6, loop: true, hands: [[68, 65, 28, 73], [71, 71, 32, 73], [67, 72, 32, 73], [69, 65, 28, 72], [69, 71, 30, 73], [71, 66, 32, 73]] }, { armed: true, states: ['sprint'], hold: 4, loop: true, hands: [[68, 65, 28, 73], [71, 71, 32, 73], [67, 72, 32, 73], [69, 65, 28, 72], [69, 71, 30, 73], [71, 66, 32, 73]] }] },
+        { sheet: 'sheets/focus_armed.png', frames: 6, w: 105, h: 123, anchorX: 49, anchorY: 121, use: [
+          { states: ['attack1'], idx: [1, 2, 2], holds: [4, 3, 6] }, { armed: true, states: ['attack1'], idx: [1, 2, 2], holds: [4, 3, 6], hands: [[12, 30, 75, 75], [95, 47, 23, 72], [95, 47, 23, 72]] },
+          { states: ['attack2'], idx: [0, 5, 5], holds: [2, 4, 8] }, { armed: true, states: ['attack2'], idx: [0, 5, 5], holds: [2, 4, 8], hands: [[70, 75, 31, 75], [102, 53, 25, 77], [102, 53, 25, 77]] },
+          { states: ['attack3', 'heavyStrike'], idx: [3, 4, 4], holds: [6, 4, 11] }, { armed: true, states: ['attack3', 'heavyStrike'], idx: [3, 4, 4], holds: [6, 4, 11], hands: [[42, 7, 72, 75], [68, 88, 66, 86], [68, 88, 66, 86]] },
+          { states: ['uppercut'], idx: [4, 3, 3], holds: [4, 4, 9] }, { armed: true, states: ['uppercut'], idx: [4, 3, 3], holds: [4, 4, 9], hands: [[68, 88, 66, 86], [42, 7, 72, 75], [42, 7, 72, 75]] },
+          { states: ['dive'], idx: [4], hold: 8, loop: true }, { armed: true, states: ['dive'], idx: [4], hold: 8, loop: true, hands: [[68, 88, 66, 86]] },
+        ] },
+        { sheet: 'sheets/focus_misc.png', frames: 6, w: 141, h: 123, anchorX: 53, anchorY: 121, use: [
+          { states: ['dash'], idx: [0], hold: 8, loop: true }, { armed: true, states: ['dash'], idx: [0], hold: 8, loop: true, hands: [[132, 62, 67, 57]] },
+          { states: ['jump', 'fall'], idx: [1], hold: 8, loop: true }, { armed: true, states: ['jump', 'fall'], idx: [1], hold: 8, loop: true, hands: [[81, 60, 31, 70]] },
+          { states: ['guard'], idx: [2], hold: 8, loop: true }, { armed: true, states: ['guard'], idx: [2], hold: 8, loop: true, hands: [[68, 52, 63, 50]] },
+          { states: ['hurt'], idx: [3], hold: 8, loop: true }, { armed: true, states: ['hurt'], idx: [3], hold: 8, loop: true, hands: [[82, 62, 12, 70]] },
+          { states: ['draw'], idx: [4], hold: 8, loop: true }, { armed: true, states: ['draw'], idx: [4], hold: 8, loop: true, hands: [[33, 75, 86, 25]] },
+          { states: ['dead'], idx: [5], hold: 8, loop: true }, { armed: true, states: ['dead'], idx: [5], hold: 8, loop: true, hands: [[80, 112, 80, 112]] },
+        ] }
+      ] },
       // clips: frame sheets cut by art/authoring/prep_frames.cjs from generated sheets (11 Nov 2026) — the sheet, its
       // cell size and anchor, the states that play it and the ticks per frame (holds) or one hold for a loop.
       xame: { name: 'Xame', prepared: ['char_xame_0.png', 'char_xame_1.png'], hold: 28, weapon: 'Void-Flame Spear', role: 'Skull Warlock / Void Flames', clips: [

@@ -12,7 +12,7 @@ bitte im Higgsfield-Konto selbst kontrollieren.
 | Geschätzte offene Ausgaben | 0,00 USD |
 | Restbudget | **20,00 USD** |
 | Higgsfield-Guthaben (geprüft 11. Nov 2026, vor dem ersten Auftrag) | 10 Credits (Registrierungs-Guthaben), Plan laut Konto: `ultra` |
-| Verbrauchte Credits aus dem Guthaben | **6,5** (26 Bilder); Kontostand geprüft: 3,5 Credits |
+| Verbrauchte Credits aus dem Guthaben | **7,25** (29 Bilder); Kontostand geprüft: 2,75 Credits |
 
 ## Was geprüft wurde
 
@@ -65,7 +65,9 @@ Nicht vorgesehen: Trailer, Werbevideos, Konzeptbilder für ungebaute Kapitel.
 
 | 11. Nov 2026 | Thesen: sechs Waffenschwung-Posen mit leerer Faust (die Waffe setzt das Spiel an die Hand) | 0,25 Credits | 0,25 Credits | 20,00 USD |
 
-Alle Credits stammen aus dem Registrierungs-Guthaben; es ist kein zusätzliches Geld geflossen. Rest: 3,5 Credits (im Konto nachgeprüft).
+| 11. Nov 2026 | Fokus-Form: Gehen (6), Waffenschwung-Posen (6), Einzelposen (6) | 0,75 Credits | 0,75 Credits | 20,00 USD |
+
+Alle Credits stammen aus dem Registrierungs-Guthaben; es ist kein zusätzliches Geld geflossen. Rest: 2,75 Credits (im Konto nachgeprüft).
 
 ## Erzeugte Assets
 
@@ -91,6 +93,7 @@ Alle Credits stammen aus dem Registrierungs-Guthaben; es ist kein zusätzliches 
 | Xame Zusatzposen | `art/generated/characters/xame_misc_raw.png` | `public/assets/sprites/sheets/xame_misc.png` | Sprung, Blocken, Treffer, Zaubern, Niederlage |
 | Thesen (3 Bögen) | `art/generated/characters/thesen_{walk,attack,misc}_raw.png` | `public/assets/sprites/sheets/thesen_{walk,attack,misc}.png` | Bewegungen ohne Waffe |
 | Thesen Waffenposen | `art/generated/characters/thesen_armed_raw.png` | `public/assets/sprites/sheets/thesen_armed.png` | Schläge mit Waffe (alle Waffen) |
+| Fokus-Form (3 Bögen) | `art/generated/characters/focus_{walk,armed,misc}_raw.png` | `public/assets/sprites/sheets/focus_{walk,armed,misc}.png` | alle Bewegungen der Fokus-Form, mit und ohne Waffe |
 
 Figuren-Bögen werden mit `art/authoring/prep_frames.cjs` in Einzelbilder geschnitten und auf die Pixelgröße der Figur gebracht.
 Requisiten werden mit `art/authoring/prep_props.cjs` freigestellt (harter Alpha-Schnitt), getrennt und halbiert.
