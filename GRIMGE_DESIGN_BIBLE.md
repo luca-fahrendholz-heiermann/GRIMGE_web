@@ -68,4 +68,6 @@ Jede Mission hat Einleitung, Ziel, Abschluss und eine Belohnung (XP, Skillpunkte
 
 - Missionen schalten sich der Reihe nach frei und bleiben wiederholbar.
 - Belohnungen einmalig: XP und Skillpunkte; Boss-Drops für späte Runen laufen über das bestehende System.
+- **Sterne:** 1–3 pro Mission (geschafft · mindestens halbes Leben bzw. zwei Seelenfunken · in der Zielzeit); die beste
+  Wertung zählt; je 5 Sterne ein Bonus-Skillpunkt. Stufe und XP-Leiste stehen auf dem Kampagnen-Bildschirm.
 - Geplant: Runen-Funde und Mastery-Freischaltungen als Missionsbelohnung, Geheimnisse (siehe `DESIGN.md` §6).

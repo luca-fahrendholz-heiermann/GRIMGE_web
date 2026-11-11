@@ -2902,7 +2902,7 @@ export class GameWorld {
       const drop = this.profile.rollBossDrop();
       if (drop) progression = { ...(progression ?? {}), newlyUnlockedRunes: [...(progression?.newlyUnlockedRunes ?? []), { ...drop, title: `${drop.title} · ${recognizer.runes.find((r) => r.id === drop.runeId)?.name ?? drop.runeId}` }] };
     }
-    if (campaignResult?.first) { this.applyProfile(); const r = campaignResult.reward ?? {}; this.showAnnouncement(`MISSION GESCHAFFT${r.skillPoints ? ` · +${r.skillPoints} SKILLPUNKT${r.skillPoints > 1 ? 'E' : ''}` : ''}${r.xp ? ` · +${r.xp} XP` : ''}`, 2.6); }
+    if (campaignResult) { this.applyProfile(); const r = campaignResult.first ? campaignResult.reward ?? {} : {}; const sp = (r.skillPoints ?? 0) + (campaignResult.bonus ?? 0); this.showAnnouncement(`MISSION GESCHAFFT ${'★'.repeat(campaignResult.stars ?? 1)}${'☆'.repeat(3 - (campaignResult.stars ?? 1))}${sp ? ` · +${sp} SKILLPUNKT${sp > 1 ? 'E' : ''}` : ''}${r.xp ? ` · +${r.xp} XP` : ''}`, 2.8); }
     this.reportProfileProgress(progression);
     ui.showResults(true, { winner: this.winnerTeam, elapsed: this.matchDuration - this.matchTime, stats: this.stats });
   }

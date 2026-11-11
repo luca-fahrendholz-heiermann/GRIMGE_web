@@ -2,6 +2,18 @@
 
 Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
+## 11. Nov 2026 – Bildschirme ohne Scrollen, Sterne-Fortschritt, Klassen-Knopf (Wünsche des Nutzers)
+
+- **Kampagne:** ein Bildschirm ohne Scrollen – Titelleiste oben (Zurück, Kapitel, Stufe mit XP-Leiste, Sterne), die
+  Karte mit großen Missions-Pins und Namen in der Mitte, unten eine Missions-Karte mit einem großen START-Knopf.
+- **Charaktererstellung:** Vorschau links, rechts drei Reiter (Aussehen, Element, Klasse), Bestätigen-Knopf fest unten.
+  Texte auf Deutsch.
+- **Klassen-Knopf im Hub:** öffnet jetzt „Klasse ausrüsten“ (nur die Klassen-Seite) statt der Figurenauswahl. Die
+  Figur wählt man in der Garderobe bzw. bei der Erstellung; die Garderobe zeigt nur Aussehen und Element.
+- **Sterne:** jede gewonnene Mission bekommt 1–3 Sterne (geschafft / mindestens halbes Leben, in der Arena zwei
+  Seelenfunken / in der Zielzeit). Die beste Wertung bleibt, je 5 Sterne gibt es einmalig einen Bonus-Skillpunkt.
+  Sterne stehen an den Pins, die Bedingungen in der Missions-Karte, die Wertung in der Sieg-Meldung.
+
 ## 11. Nov 2026 – Drücken = Treffer (Wunsch des Nutzers)
 
 - Ein Druck außerhalb des Kombo-Takts bricht den laufenden Schlag ab und schlägt sofort als Schlag 1; die Kombo beginnt

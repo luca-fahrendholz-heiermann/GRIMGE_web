@@ -5131,6 +5131,19 @@ game.running = false;
     'Campaign: five missions on the existing modes; a mission unlocks the next, its reward is paid once and the progress is saved; mission 1 ends with the first dungeon room and is marked done through the results; rival and start room come from the mission parameters');
 }
 {
+  // Campaign stars (user, 11 Nov 2026: visible progression): rated per mission, the best rating is kept, every five
+  // stars pay one bonus skill point once, and the rating is saved.
+  const CP = await import('./public/src/campaign.js'); const PR = await import('./public/src/progression.js'); const CD = await import('./public/src/campaign_data.js');
+  const ms = CD.allMissions(); const prof = new PR.MageProfile({});
+  const fake = (hp, elapsed, sparks = null) => ({ player: { hp, maxHp: 100, soulSparks: sparks }, modeState: sparks === null ? {} : { rift: {} }, matchDuration: 400, matchTime: 400 - elapsed });
+  const r3 = CP.rateRun(fake(80, 60), ms[0]).stars; const r2 = CP.rateRun(fake(80, 9999), ms[0]).stars; const r1 = CP.rateRun(fake(10, 9999), ms[0]).stars; const rArena = CP.rateRun(fake(100, 60, 1), ms[2]).stars;
+  const sp0 = prof.skillPoints; CP.completeMission(prof, ms[0].id, 3); const spA = prof.skillPoints; CP.completeMission(prof, ms[0].id, 1); const kept = CP.starsOf(prof, ms[0].id) === 3;
+  const a = CP.completeMission(prof, ms[1].id, 2); const total5 = CP.totalStars(prof) === 5 && a.bonus === 1; const again = CP.completeMission(prof, ms[1].id, 2).bonus === 0;
+  const back = new PR.MageProfile(JSON.parse(JSON.stringify(prof.toJSON())));
+  assert(r3 === 3 && r2 === 2 && r1 === 1 && rArena === 2 && kept && total5 && again && spA >= sp0 && back.campaign.stars[ms[0].id] === 3 && back.campaign.starClaims === 1,
+    'Campaign stars: won / half life / par time give 1–3 stars (arena counts soul sparks), the best rating stays, five stars pay one bonus skill point once, the profile keeps the stars');
+}
+{
   // Guard against code swallowed by a mid-line comment ("x = 1; // note y = 2;" — happened twice, 6 + 10 Nov 2026).
   const fsx = await import('node:fs'); const pathx = await import('node:path');
   const re = /[;)}]\s\/\/[^'"`]*?(\b[A-Za-z_$][\w$]*\.[A-Za-z_$][\w$]* = [^=]|\bconst [A-Za-z_$]+ =|\blet [A-Za-z_$]+ =|\bctx\.[A-Za-z]+\(|\breturn [A-Za-z_$(]|\bthis\.[A-Za-z_]+ = [^=])/;

@@ -10,6 +10,7 @@
 //   arena     rival (hero key of the champion), rivalName
 //   siege     —
 //   any mode  scene (id of a prepared scene image in assets/scenes/campaign/, see art/authoring/prep_scene.cjs)
+// par: seconds for the third star (campaign.js rateRun).
 // speakers: a hero key shown as the portrait ('thesen', 'xame', 'boss_firelord') or 'narrator'.
 
 export const CAMPAIGN = Object.freeze([
@@ -20,7 +21,7 @@ export const CAMPAIGN = Object.freeze([
     summary: 'Der Bannrand, der den Abgrund seit Generationen verschließt, reißt. Aus den Rissen kriecht, was die Runen einst gebannt haben.',
     missions: Object.freeze([
       Object.freeze({
-        id: 'c1m1', title: 'ASCHE ÜBER KARETH', kind: 'DUNGEON', mode: 'dungeon', map: Object.freeze([7.5, 50]), params: Object.freeze({ endStage: 1, scene: 'kareth' }),
+        id: 'c1m1', title: 'ASCHE ÜBER KARETH', kind: 'DUNGEON', mode: 'dungeon', map: Object.freeze([7.5, 50]), par: 120, params: Object.freeze({ endStage: 1, scene: 'kareth' }),
         briefing: 'Die Wachfeste Kareth schweigt. Dring in die Ruinen ein, schlag dich durch die erste Halle und finde heraus, was den Bannrand gebrochen hat.',
         goal: 'Räume die erste Halle der Ruinen.',
         intro: [
@@ -35,7 +36,7 @@ export const CAMPAIGN = Object.freeze([
         reward: Object.freeze({ xp: 80, skillPoints: 1 })
       }),
       Object.freeze({
-        id: 'c1m2', title: 'DIE MAUER HÄLT', kind: 'VERTEIDIGUNG', mode: 'invasion', map: Object.freeze([30, 44]), params: Object.freeze({ maxLevel: 1, scene: 'halvar' }),
+        id: 'c1m2', title: 'DIE MAUER HÄLT', kind: 'VERTEIDIGUNG', mode: 'invasion', map: Object.freeze([30, 44]), par: 240, params: Object.freeze({ maxLevel: 1, scene: 'halvar' }),
         briefing: 'Die Flüchtlinge aus Kareth erreichen die Grenzburg. Hinter ihnen kommt die erste Welle. Halte die Burg, bis der Anführer fällt.',
         goal: 'Verteidige die Burg gegen die Wellen und besiege den Anführer.',
         intro: [
@@ -50,7 +51,7 @@ export const CAMPAIGN = Object.freeze([
         reward: Object.freeze({ xp: 100, skillPoints: 1 })
       }),
       Object.freeze({
-        id: 'c1m3', title: 'DER SCHÄDELHEXER', kind: 'DUELL', mode: 'arena', map: Object.freeze([50, 54]), params: Object.freeze({ rival: 'xame', rivalName: 'XAME', scene: 'abyss' }),
+        id: 'c1m3', title: 'DER SCHÄDELHEXER', kind: 'DUELL', mode: 'arena', map: Object.freeze([50, 54]), par: 150, params: Object.freeze({ rival: 'xame', rivalName: 'XAME', scene: 'abyss' }),
         briefing: 'Der Beobachter stellt sich: Xame, der Schädelhexer. Er hält den zweiten Siegelsplitter. Wirf ihn aus dem Kreis, bevor er dich hinauswirft.',
         goal: 'Duell nach Riss-Regeln: Schleudere Xame dreimal aus der Arena.',
         intro: [
@@ -66,7 +67,7 @@ export const CAMPAIGN = Object.freeze([
         reward: Object.freeze({ xp: 120, skillPoints: 1 })
       }),
       Object.freeze({
-        id: 'c1m4', title: 'STURM AUF DIE ASCHENFESTE', kind: 'BELAGERUNG', mode: 'siege', map: Object.freeze([71.5, 48]), params: Object.freeze({ scene: 'ash' }),
+        id: 'c1m4', title: 'STURM AUF DIE ASCHENFESTE', kind: 'BELAGERUNG', mode: 'siege', map: Object.freeze([71.5, 48]), par: 300, params: Object.freeze({ scene: 'ash' }),
         briefing: 'Die Aschenfeste bewacht den Weg zum Glutfürsten. Führe den Sturm: erst die Türme, dann die Burg.',
         goal: 'Castle Siege: Zerstöre die Türme und die feindliche Burg.',
         intro: [
@@ -80,7 +81,7 @@ export const CAMPAIGN = Object.freeze([
         reward: Object.freeze({ xp: 140, skillPoints: 1 })
       }),
       Object.freeze({
-        id: 'c1m5', title: 'DER GLUTFÜRST', kind: 'BOSS', mode: 'dungeon', map: Object.freeze([92.5, 47]), params: Object.freeze({ startStage: 3, scene: 'glut' }),
+        id: 'c1m5', title: 'DER GLUTFÜRST', kind: 'BOSS', mode: 'dungeon', map: Object.freeze([92.5, 47]), par: 240, params: Object.freeze({ startStage: 3, scene: 'glut' }),
         briefing: 'Unter der Aschenfeste wartet der Glutfürst, der den Bann gebrochen hat. Schlag dich durch seine Garde und stell ihn.',
         goal: 'Besiege die Garde und den Glutfürsten.',
         intro: [

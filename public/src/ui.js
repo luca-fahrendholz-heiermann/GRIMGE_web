@@ -537,7 +537,8 @@ export class UIManager {
       e.preventDefault();
       e.stopPropagation();
       const route = action.getAttribute('data-hub-action');
-      if (route === 'classes') return this.toggleHubSelection('heroes');
+      // CLASSES equips the class in use (its own screen); the figure is chosen in the wardrobe / at creation.
+      if (route === 'classes') return this.openCharacterScreen(window.gameWorld?.profile?.character?.created ? { tabs: ['class'] } : { first: true });
       if (route === 'primals') return this.toggleHubSelection('companions');
       if (route === 'grimoire') return this.setHubPage('deck');
       if (route === 'skills') return this.setHubPage('skills');
@@ -570,9 +571,9 @@ export class UIManager {
   getSelectedHero() { return this.selectedHero || 'thesen'; }
 
   // Character creation / wardrobe (character_creation.js): DONE plays the created figure and refreshes the hub.
-  openCharacterScreen({ first = false, then = null } = {}) {
+  openCharacterScreen({ first = false, then = null, tabs = null } = {}) {
     const game = window.gameWorld;
-    return openCharacterCreation(game, { first, onDone: (ch) => {
+    return openCharacterCreation(game, { first, tabs, onDone: (ch) => {
       if (ch?.base) this.setHubHero(ch.base);
       if (ch?.name) this.showAnnouncement(`WELCOME, ${ch.name.toUpperCase()}`, 1.6);
       then?.();

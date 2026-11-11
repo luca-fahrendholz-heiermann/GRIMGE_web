@@ -11,7 +11,7 @@ Legende: ✔ umgesetzt und geprüft · ◐ teilweise · ○ geplant
 |---|---|---|
 | Kapitel 1 als Daten (5 Missionen, Dialoge, Belohnungen) | ✔ | `campaign_data.js` |
 | Fortschritt speichern, Missionen der Reihe nach freischalten, wiederholbar | ✔ | im Profil |
-| Kapitel-Bildschirm und Dialog-Bildschirm | ◐ | funktionieren, sind aber Platzhalter-Layouts |
+| Kapitel-Bildschirm und Dialog-Bildschirm | ◐ | Kapitel-Bildschirm im Handyspiel-Aufbau ohne Scrollen (Karte, Pins, Missions-Karte, Sterne); Dialog noch schlicht |
 | Missionen auf vorhandenen Modi mit Parametern | ✔ | Dungeon-Start / -Ende, Invasions-Level, Arena-Rivale |
 | Kampagnen-Knopf im Hub | ✔ | |
 | Rivale Xame im Duell | ✔ | eigene Bilder für Gehen, Angriff, Sprung, Blocken, Treffer, Zaubern, Niederlage |
