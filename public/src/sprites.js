@@ -430,6 +430,9 @@ export class SpriteManager {
             const cctx = cell.getContext('2d', { willReadFrequently: true });
             cctx.imageSmoothingEnabled = false;
             cctx.drawImage(img, col * cellW, row * cellH, cellW, cellH, 0, 0, cellW, cellH);
+            /* Sheets cut by prep_frames.cjs (ent.anchor): equal cells with the feet on one line — the whole cell is the
+               frame, so a raised weapon neither shrinks the figure nor shifts it. Older sheets are cropped per frame. */
+            if (ent.anchor) { const tint = (fill) => { const cv = document.createElement('canvas'); cv.width = cellW; cv.height = cellH; const g = cv.getContext('2d'); g.drawImage(cell, 0, 0); g.globalCompositeOperation = 'source-in'; g.fillStyle = fill; g.fillRect(0, 0, cellW, cellH); return cv; }; return { canvas: cell, flashCanvas: tint('#ffffff'), hurtCanvas: tint('#ff2222'), width: cellW, height: cellH, anchorX: ent.anchor.x, anchorY: ent.anchor.y, baseHeight: ent.anchor.bodyH }; }
             return this.cropTransparent(cell);
           }).filter(f => f !== null);
         }
@@ -445,6 +448,7 @@ export class SpriteManager {
           anchorY: idle.anchorY,
           frames: frameMap
         };
+        if (ent.anchor) { sprite.pixel = true; if (ent.hold) sprite.hold = { ...ent.hold }; }
         this.sprites[ent.key] = sprite;
         console.log(`✦ ${ent.key} sheet sprite loaded (${Object.keys(frameMap).length} anims).`);
         resolve(true);

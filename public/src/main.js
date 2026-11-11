@@ -2051,7 +2051,7 @@ export class GameWorld {
     this.enemyChampion.respawnTimer = Infinity;
     this.battlefield.placeOnSurface(this.enemyChampion);
     state.bossActive = true;
-    this.showAnnouncement('DUNGEON BOSS — VOID WARDEN', 2.1);
+    this.showAnnouncement('DUNGEON BOSS — DER GLUTFÜRST', 2.1);
   }
 
   // ── follow camera with zoom ─────────────────────────────────────────
@@ -2618,7 +2618,7 @@ export class GameWorld {
   getObjectiveStatus() {
     if (this.matchState === 'Ending' || this.matchState === 'Results') return this.winnerTeam === 'blue' ? 'VICTORY' : 'DEFEAT';
     if (this.activeMode?.id === 'invasion') { const s = this.modeState; const L = this.invasionLevel(); return s?.army ? `LEVEL ${s.level} — HALTE DIE ARMEE AUF (${s.army.left} NOCH IM ANMARSCH)` : s?.bossActive ? `LEVEL ${s.level} — BESIEGE ${L.boss}` : `LEVEL ${s?.level ?? 1} · ${L.name} — WELLE ${s?.wave ?? 1}/${L.waves}`; }
-    if (this.activeMode?.id === 'dungeon') return this.isRunChoicePending() ? 'CHOOSE A FOUND RUNE' : this.modeState?.stage === 4 ? 'DEFEAT THE VOID WARDEN' : this.modeState?.stage === 0 ? 'DEFEAT THE SCOUT WITH MELEE' : this.isDungeonExitOpen() ? `DUNGEON ROOM ${this.modeState.stage} CLEARED — GO RIGHT` : `DUNGEON ROOM ${this.modeState?.stage} — PUSH FORWARD`;
+    if (this.activeMode?.id === 'dungeon') return this.isRunChoicePending() ? 'CHOOSE A FOUND RUNE' : this.modeState?.stage === 4 ? 'BESIEGE DEN GLUTFÜRSTEN' : this.modeState?.stage === 0 ? 'DEFEAT THE SCOUT WITH MELEE' : this.isDungeonExitOpen() ? `DUNGEON ROOM ${this.modeState.stage} CLEARED — GO RIGHT` : `DUNGEON ROOM ${this.modeState?.stage} — PUSH FORWARD`;
     if (this.activeMode?.id === 'arena') {
       if (this.modeState?.transformationRelic) return 'CLAIM THE TRANSFORMATION RELIC — DEFEAT THE CHAMPION';
       if (this.modeState?.rift) return this.modeState?.runeCollectibles?.length ? 'COLLECT RUNE RELICS — THROW THE CHAMPION OUT' : 'THROW THE CHAMPION OUT — RIM OR CHASM';

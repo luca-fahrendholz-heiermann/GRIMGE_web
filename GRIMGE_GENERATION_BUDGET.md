@@ -12,7 +12,7 @@ bitte im Higgsfield-Konto selbst kontrollieren.
 | Geschätzte offene Ausgaben | 0,00 USD |
 | Restbudget | **20,00 USD** |
 | Higgsfield-Guthaben (geprüft 11. Nov 2026, vor dem ersten Auftrag) | 10 Credits (Registrierungs-Guthaben), Plan laut Konto: `ultra` |
-| Verbrauchte Credits aus dem Guthaben | **2,5** (zehn Bilder); Kontostand geprüft: 7,5 Credits |
+| Verbrauchte Credits aus dem Guthaben | **3,5** (vierzehn Bilder); Kontostand geprüft: 6,5 Credits |
 
 ## Was geprüft wurde
 
@@ -57,7 +57,9 @@ Nicht vorgesehen: Trailer, Werbevideos, Konzeptbilder für ungebaute Kapitel.
 | 11. Nov 2026 | Xame „Gehen“ (6 Posen) mit `gpt_image_2_6` und seinem Sprite als Vorlage | 0,25 Credits | 0,25 Credits | 20,00 USD |
 | 11. Nov 2026 | Xame „Speerangriff“ (5 Posen), ebenso | 0,25 Credits | 0,25 Credits | 20,00 USD |
 
-Alle Credits stammen aus dem Registrierungs-Guthaben; es ist kein zusätzliches Geld geflossen. Rest: 7,5 Credits (im Konto nachgeprüft).
+| 11. Nov 2026 | Vier Gegner-Bögen (Leerenritter, Leerenräuber, Leerenhexer, Glutfürst), je 7 Posen, Thesen als Stilvorlage | 1,0 Credits | 1,0 Credits | 20,00 USD |
+
+Alle Credits stammen aus dem Registrierungs-Guthaben; es ist kein zusätzliches Geld geflossen. Rest: 6,5 Credits (im Konto nachgeprüft).
 
 ## Erzeugte Assets
 
@@ -74,6 +76,10 @@ Alle Credits stammen aus dem Registrierungs-Guthaben; es ist kein zusätzliches 
 
 | Xame Gehen | `art/generated/characters/xame_walk_raw.png` | `public/assets/sprites/sheets/xame_walk.png` | Gehen / Laufen / Sprint |
 | Xame Angriff | `art/generated/characters/xame_attack_raw.png` | `public/assets/sprites/sheets/xame_attack.png` | alle Schläge |
+| Leerenritter | `art/generated/characters/knight_raw.png` | `public/assets/sprites/sheets/void_knight.png` | Gegner (ersetzt den alten Ritter-Bogen) |
+| Leerenräuber | `art/generated/characters/raider_raw.png` | `public/assets/sprites/sheets/void_raider.png` | Gegner (ersetzt den alten Banditen-Bogen) |
+| Leerenhexer | `art/generated/characters/cultist_raw.png` | `public/assets/sprites/sheets/void_cultist.png` | Fernkampf-Gegner (ersetzt den alten Zauberer-Bogen) |
+| Glutfürst | `art/generated/characters/emberlord_raw.png` | `public/assets/sprites/sheets/ember_lord.png` | Boss (ersetzt den alten Boss-Bogen) |
 
 Figuren-Bögen werden mit `art/authoring/prep_frames.cjs` in Einzelbilder geschnitten und auf die Pixelgröße der Figur gebracht.
 Requisiten werden mit `art/authoring/prep_props.cjs` freigestellt (harter Alpha-Schnitt), getrennt und halbiert.

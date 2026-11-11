@@ -22,6 +22,10 @@ const STANDARD_ANIMS = Object.freeze({
   dead:   [[3,3], [4,3]]
 });
 
+// Generated enemy sheets (11 Nov 2026, own designs in the style of the heroes; art/generated/characters/*_raw.png cut by
+// art/authoring/prep_frames.cjs): one row of seven poses — idle, three walk steps, wind-up, strike, hurt.
+const GEN_ANIMS = Object.freeze({ idle: [[0,0]], walk: [[1,0], [2,0], [3,0], [2,0]], run: [[1,0], [2,0], [3,0], [2,0]], attack: [[4,0], [5,0], [5,0]], hurt: [[6,0]], dead: [[6,0]] });
+
 const HERO_ANIMS = Object.freeze({
   ...STANDARD_ANIMS,
   jump:     [[0,2], [1,2]],
@@ -73,36 +77,36 @@ export const ART_ASSETS = Object.freeze({
   sheetEntities: Object.freeze({
     enemy_knight: Object.freeze({
       key: 'enemy_knight',
-      sheets: ['assets/sprites/sheets/enemy_knight_0.png', 'assets/sprites/sheets/enemy_knight_1.png'],
-      // This sheet is laid out in 160×200 cells (taller than the others) — read with 160×160 the legs landed on top of
-      // the next frame (bug, 1 Nov 2026).
-      grid: Object.freeze({ w: 160, h: 200, cols: 10, rows: 5 }),
-      anims: STANDARD_ANIMS,
+      sheets: ['assets/sprites/sheets/void_knight.png'],
+      grid: Object.freeze({ w: 92, h: 94, cols: 7, rows: 1 }),
+      // Equal cells with the feet on one line (prep_frames.cjs): the anchor inside the cell and the standing body height.
+      anchor: Object.freeze({ x: 37, y: 92, bodyH: 83 }),
+      hold: Object.freeze({ idle: 20, walk: 9, run: 7, attack: 6 }),
+      anims: GEN_ANIMS,
       role: 'enemy',
-      label: 'Void Knight'
+      label: 'Leerenritter'
     }),
     enemy_bandit: Object.freeze({
       key: 'enemy_bandit',
-      sheets: ['assets/sprites/sheets/enemy_bandit_0.png'],
-      grid: CELL,
-      anims: STANDARD_ANIMS,
+      sheets: ['assets/sprites/sheets/void_raider.png'],
+      grid: Object.freeze({ w: 84, h: 78, cols: 7, rows: 1 }),
+      // Equal cells with the feet on one line (prep_frames.cjs): the anchor inside the cell and the standing body height.
+      anchor: Object.freeze({ x: 28, y: 76, bodyH: 72 }),
+      hold: Object.freeze({ idle: 20, walk: 9, run: 7, attack: 6 }),
+      anims: GEN_ANIMS,
       role: 'enemy',
-      label: 'Rift Bandit'
+      label: 'Leerenräuber'
     }),
     enemy_sorcerer: Object.freeze({
       key: 'enemy_sorcerer',
-      sheets: ['assets/sprites/sheets/enemy_sorcerer_0.png'],
-      grid: CELL,
-      anims: Object.freeze({
-        idle:   [[0,0], [1,0], [2,0], [3,0]],
-        walk:   [[4,0], [5,0], [6,0], [7,0]],
-        run:    [[0,1], [1,1], [2,1]],
-        attack: [[3,1], [4,1], [5,1]],
-        hurt:   [[0,3], [1,3]],
-        dead:   [[3,3], [4,3]]
-      }),
+      sheets: ['assets/sprites/sheets/void_cultist.png'],
+      grid: Object.freeze({ w: 107, h: 104, cols: 7, rows: 1 }),
+      // Equal cells with the feet on one line (prep_frames.cjs): the anchor inside the cell and the standing body height.
+      anchor: Object.freeze({ x: 31, y: 102, bodyH: 78 }),
+      hold: Object.freeze({ idle: 20, walk: 9, run: 7, attack: 6 }),
+      anims: GEN_ANIMS,
       role: 'enemy',
-      label: 'Void Sorcerer'
+      label: 'Leerenhexer'
     }),
     ally_fighter: Object.freeze({
       key: 'ally_fighter',
@@ -122,18 +126,14 @@ export const ART_ASSETS = Object.freeze({
     }),
     boss_firelord: Object.freeze({
       key: 'boss_firelord',
-      sheets: ['assets/sprites/sheets/boss_firelord_0.png', 'assets/sprites/sheets/boss_firelord_1.png'],
-      grid: CELL,
-      anims: Object.freeze({
-        idle:   [[0,0], [1,0], [2,0]],
-        walk:   [[3,0], [4,0], [5,0], [6,0], [7,0]],
-        run:    [[0,1], [1,1], [2,1]],
-        attack: [[3,1], [4,1], [5,1], [6,1], [7,1]],
-        hurt:   [[0,3], [1,3]],
-        dead:   [[3,3], [4,3]]
-      }),
+      sheets: ['assets/sprites/sheets/ember_lord.png'],
+      grid: Object.freeze({ w: 139, h: 161, cols: 7, rows: 1 }),
+      // Equal cells with the feet on one line (prep_frames.cjs): the anchor inside the cell and the standing body height.
+      anchor: Object.freeze({ x: 72, y: 159, bodyH: 105 }),
+      hold: Object.freeze({ idle: 20, walk: 9, run: 7, attack: 6 }),
+      anims: GEN_ANIMS,
       role: 'boss',
-      label: 'Flame Lord'
+      label: 'Der Glutfürst'
     }),
     hero_nyx: Object.freeze({
       key: 'nyx',

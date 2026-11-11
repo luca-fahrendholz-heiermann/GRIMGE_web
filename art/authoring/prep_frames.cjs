@@ -1,15 +1,18 @@
 // GRIMGE — turn a generated character sprite sheet (one row of poses) into game frames (Campaign Alpha, 11 Nov 2026).
-//   node art/authoring/prep_frames.cjs <raw.png> <out name> <frames> <target height | @scale> [alpha]
+//   node art/authoring/prep_frames.cjs <raw.png> <out name> <frames> <target height | @scale> [alpha] [cut=x1,x2]
+// cut=…  raw x positions where two poses touch (a bolt reaching the next pose): a 3 px gap is cleared there first.
 // The poses are found as connected shapes (so a lunge that reaches into the neighbour's space still belongs to its own
 // pose; small loose bits such as sparks join the nearest pose), alpha is cut hard, every pose is scaled with nearest
 // neighbour to the hero's own pixel size and placed in equal cells with the feet on one line and the feet's centre in
 // the middle. Writes public/assets/sprites/sheets/<name>.png and prints the cell size, anchor and scale for sprites.js.
 const fs = require('fs'); const path = require('path'); const { PNG } = require('pngjs');
-const [raw, name, framesArg, sizeArg, alphaArg] = process.argv.slice(2);
+const [raw, name, framesArg, sizeArg, ...rest] = process.argv.slice(2);
+const alphaArg = rest.find((a) => /^d+$/.test(a)); const cuts = (rest.find((a) => a.startsWith('cut=')) ?? 'cut=').slice(4).split(',').filter(Boolean).map(Number);
 if (!raw || !name || !framesArg || !sizeArg) { console.error('usage: prep_frames.cjs <raw.png> <name> <frames> <height|@scale> [alpha]'); process.exit(1); }
 const N = Number(framesArg); const ALPHA = Number(alphaArg) || 200;
 const src = PNG.sync.read(fs.readFileSync(raw)); const W = src.width; const H = src.height;
 const solid = new Uint8Array(W * H); for (let i = 0; i < W * H; i++) solid[i] = src.data[i * 4 + 3] >= ALPHA ? 1 : 0;
+for (const cx of cuts) for (let y = 0; y < H; y++) for (let x = cx - 1; x <= cx + 1; x++) if (x >= 0 && x < W) solid[y * W + x] = 0;
 // Connected components (8-neighbourhood).
 const label = new Int32Array(W * H).fill(-1); const comps = [];
 for (let s = 0; s < W * H; s++) {
@@ -21,7 +24,8 @@ for (let s = 0; s < W * H; s++) {
   }
   comps.push(c);
 }
-const bodies = comps.map((c, id) => ({ ...c, id })).sort((a, b) => b.n - a.n).slice(0, N).sort((a, b) => a.sx / a.n - b.sx / b.n);
+const tallest = Math.max(...comps.map((c) => c.y1 - c.y0));
+const bodies = comps.map((c, id) => ({ ...c, id })).filter((c) => c.y1 - c.y0 >= tallest * .4).sort((a, b) => b.n - a.n).slice(0, N).sort((a, b) => a.sx / a.n - b.sx / b.n);
 if (bodies.length !== N) { console.error(`found ${bodies.length} poses, wanted ${N}`); process.exit(1); }
 // Loose bits (≥ 6 px) join the nearest pose; dust smaller than that is dropped.
 const owner = new Int32Array(comps.length).fill(-1); bodies.forEach((b, k) => { owner[b.id] = k; });

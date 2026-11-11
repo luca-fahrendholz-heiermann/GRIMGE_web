@@ -29,7 +29,8 @@ Legende: ✔ umgesetzt und geprüft · ◐ teilweise · ○ geplant
 | Glutfürst mit eigenen Phasen und Ankündigungen (Telegraphs) | ○ |
 | Xame animiert (eigenes Sheet) | ◐ – Gehen und Angriff da |
 | Eigene Szene je Mission, Kapitel-Karte, Themen-Requisiten | ✔ |
-| Gegner-Champions als Pixel-Figuren | ○ – Kandidat für bezahlte Erzeugung |
+| Dungeon-Gegner und Glutfürst als eigene Pixel-Figuren | ✔ |
+| Verbündete, Invasions-Zusatzgegner und Arena-Champions als eigene Pixel-Figuren | ○ |
 | Runen-Fund / Mastery als Missionsbelohnung | ○ |
 | Dungeon: Räume mit Türen, Fortschrittsleiste | ○ |
 
