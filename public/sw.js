@@ -24,7 +24,8 @@ self.addEventListener('fetch', (event) => {
     } catch (err) {
       const hit = await caches.match(req, { ignoreSearch: req.mode === 'navigate' });
       if (hit) return hit;
-      throw err;
+      /* Last resort: the browser's own request, so a fault in here can never lock the game out. */
+      return fetch(req);
     }
   })());
 });
