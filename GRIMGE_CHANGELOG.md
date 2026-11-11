@@ -2,6 +2,21 @@
 
 Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
+## 11. Nov 2026 – Verdienter Fortschritt, erster Durchgang (Vorgabe des Nutzers)
+
+- **Start mit einer Runenkarte:** Bei der Charaktererstellung wählt man eines der sechs Grundelemente; das Deck besteht
+  anfangs nur aus dieser Karte. Decks dürfen kleiner als 10 Karten sein.
+- **Finden, dann freischalten:** Eine Rune muss zuerst als Fund fallen (Missionsbelohnung, Boss), danach schaltet man
+  sie im neuen Runen-Bildschirm mit Skillpunkten und Gold frei. Eine zweite Karte braucht einen zweiten Fund.
+- **Seltenheiten:** gewöhnlich (Grundelemente) 1 SP / 50 Gold · selten (übrige Elemente) 1 SP / 150 Gold, ab Stufe 3 ·
+  episch (Spezialrunen) 2 SP / 400 Gold, ab Stufe 6 · legendär (Sphären, Arcane States) 3 SP / 1000 Gold, ab Stufe 10.
+- **Gold** als neue Währung: aus Missionen (60–320) und jedem beendeten Match (30 Sieg / 10 Niederlage).
+- **Geltung:** alle Modi außer Training (Sandkasten) und Dungeon (eigene Lauf-Runen). Gegner-Decks unverändert.
+- **Spielstand:** alte Stände beginnen neu (Sicherung unter `grimge-mage-profile-v1-backup-v3`; Name, Aussehen und
+  Klasse bleiben). Test-Schalter „Alles freischalten“ im Runen-Bildschirm, jederzeit zurückschaltbar.
+- **Noch offen aus der Vorgabe:** Mastery-Stufe als Vorbedingung, Transformation am Ende jedes Mastery-Baums und je
+  Klasse mit drei Modi, gewichtete Runen-Auswahl im Dungeon, Funde aus Burgen und Geheimtruhen.
+
 ## 11. Nov 2026 – Bildschirme ohne Scrollen, Sterne-Fortschritt, Klassen-Knopf (Wünsche des Nutzers)
 
 - **Kampagne:** ein Bildschirm ohne Scrollen – Titelleiste oben (Zurück, Kapitel, Stufe mit XP-Leiste, Sterne), die

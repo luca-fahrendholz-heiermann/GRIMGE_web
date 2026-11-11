@@ -2894,15 +2894,18 @@ export class GameWorld {
     let progression = null;
     if (this.activeMode.progression === 'profile') {
       const reward = this.winnerTeam === 'blue' ? 60 : 25;
+      this.profile.gold = (this.profile.gold ?? 0) + (this.winnerTeam === 'blue' ? 30 : 10); /* gold for every finished match */
       progression = this.profile.awardXp(reward);
       this.applyProfile();
     }
     // A beaten boss drops a late rune (domain / Arcane State) — in every mode.
     if (this.winnerTeam === 'blue' && this.modeState?.bossActive && this.activeMode.id !== 'training') {
-      const drop = this.profile.rollBossDrop();
+      // Earned rules: a boss leaves a rune drop of at least rare quality (to be unlocked in the rune vault).
+      const found = this.profile.earned ? this.profile.rollRuneDrop({ minRarity: 'rare' }) : null;
+      const drop = this.profile.earned ? (found ? { runeId: found, title: 'BOSS-DROP: RUNE GEFUNDEN' } : null) : this.profile.rollBossDrop();
       if (drop) progression = { ...(progression ?? {}), newlyUnlockedRunes: [...(progression?.newlyUnlockedRunes ?? []), { ...drop, title: `${drop.title} · ${recognizer.runes.find((r) => r.id === drop.runeId)?.name ?? drop.runeId}` }] };
     }
-    if (campaignResult) { this.applyProfile(); const r = campaignResult.first ? campaignResult.reward ?? {} : {}; const sp = (r.skillPoints ?? 0) + (campaignResult.bonus ?? 0); this.showAnnouncement(`MISSION GESCHAFFT ${'★'.repeat(campaignResult.stars ?? 1)}${'☆'.repeat(3 - (campaignResult.stars ?? 1))}${sp ? ` · +${sp} SKILLPUNKT${sp > 1 ? 'E' : ''}` : ''}${r.xp ? ` · +${r.xp} XP` : ''}`, 2.8); }
+    if (campaignResult) { this.applyProfile(); const r = campaignResult.first ? campaignResult.reward ?? {} : {}; const sp = (r.skillPoints ?? 0) + (campaignResult.bonus ?? 0); this.showAnnouncement(`MISSION GESCHAFFT ${'★'.repeat(campaignResult.stars ?? 1)}${'☆'.repeat(3 - (campaignResult.stars ?? 1))}${sp ? ` · +${sp} SKILLPUNKT${sp > 1 ? 'E' : ''}` : ''}${r.xp ? ` · +${r.xp} XP` : ''}${r.gold ? ` · +${r.gold} GOLD` : ''}${campaignResult.drops?.length ? ` · RUNENFUND: ${campaignResult.drops.map((id) => recognizer.runes.find((q) => q.id === id)?.name ?? id).join(', ')}` : ''}`, 3.4); }
     this.reportProfileProgress(progression);
     ui.showResults(true, { winner: this.winnerTeam, elapsed: this.matchDuration - this.matchTime, stats: this.stats });
   }

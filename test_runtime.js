@@ -5144,6 +5144,27 @@ game.running = false;
     'Campaign stars: won / half life / par time give 1–3 stars (arena counts soul sparks), the best rating stays, five stars pay one bonus skill point once, the profile keeps the stars');
 }
 {
+  // Earned progression (user, 11 Nov 2026): one start rune card; a further card must drop first and is then unlocked
+  // with skill points and gold; a second copy needs a second drop; rarer runes need a higher level; the test switch.
+  const PR = await import('./public/src/progression.js'); const CP = await import('./public/src/campaign.js');
+  const p = new PR.MageProfile({ rules: 'earned' });
+  const empty = p.matchDeck.length === 0 && !p.isDeckReady() && !p.isRuneUnlocked('ignis');
+  p.setCharacter({ name: 'T', base: 'thesen', classId: 'Ronin', startWeapon: 'katana', startElement: 'ignis' });
+  const start = p.matchDeck.join() === 'ignis' && p.isDeckReady() && p.isRuneUnlocked('ignis') && !p.isRuneUnlocked('ventus') && p.addRuneToDeck('ignis').ok === false;
+  const noDrop = p.copyBlocker('ventus') === 'drop'; p.addRuneDrop('ventus');
+  p.skillPoints = 0; p.gold = 0; const noPoints = p.copyBlocker('ventus') === 'points'; p.skillPoints = 5; const noGold = p.copyBlocker('ventus') === 'gold'; p.gold = 2000;
+  const got = p.unlockCopy('ventus'); const paid = got && p.skillPoints === 4 && p.gold === 1950 && p.matchDeck.join() === 'ignis,ventus' && p.copyBlocker('ventus') === 'drop';
+  p.addRuneDrop('ventus'); p.unlockCopy('ventus'); const second = p.runeCopies.ventus === 2 && p.matchDeck.filter((x) => x === 'ventus').length === 2 && p.copyBlocker('ventus') === 'max';
+  p.addRuneDrop('umbra'); const rareGate = PR.runeRarity('umbra') === 'rare' && p.level < 3 && p.copyBlocker('umbra') === 'level' && PR.runeRarity('ignis') === 'common' && PR.RUNE_RARITIES.legendary.gold > PR.RUNE_RARITIES.epic.gold;
+  const oldBuy = p.runeBlocker('lux') !== null;
+  const back = new PR.MageProfile(JSON.parse(JSON.stringify(p.toJSON()))); const kept = back.rules === 'earned' && back.runeCopies.ventus === 2 && back.gold === p.gold && back.matchDeck.length === p.matchDeck.length;
+  p.setRules('open'); const open = p.isRuneUnlocked('terra') && p.matchDeck.length === PR.MATCH_DECK_SIZE; p.setRules('earned'); const closed = !p.isRuneUnlocked('terra') && p.matchDeck.every((x) => x === 'ignis' || x === 'ventus');
+  const q = new PR.MageProfile({ rules: 'earned' }); const r = CP.completeMission(q, 'c1m1', 1); const reward = q.gold === 60 && r.drops.length === 1 && PR.STARTER_RUNES.includes(r.drops[0]) && (q.runeDrops[r.drops[0]] ?? 0) === 1;
+  let rares = 0; for (let i = 0; i < 40; i++) { const id = new PR.MageProfile({ rules: 'earned' }).rollRuneDrop({ minRarity: 'rare' }); if (id && PR.runeRarity(id) !== 'common') rares++; }
+  assert(empty && start && noDrop && noPoints && noGold && paid && second && rareGate && oldBuy && kept && open && closed && reward && rares === 40,
+    'Earned progression: the deck starts with the one start rune; a card needs a drop, then skill points and gold; a second copy needs a second drop; rare runes need level 3; the old skill-tree rune purchase is closed; the profile keeps it; the test switch opens and closes full access; missions pay gold and a rune drop; boss rolls are rare or better');
+}
+{
   // Guard against code swallowed by a mid-line comment ("x = 1; // note y = 2;" — happened twice, 6 + 10 Nov 2026).
   const fsx = await import('node:fs'); const pathx = await import('node:path');
   const re = /[;)}]\s\/\/[^'"`]*?(\b[A-Za-z_$][\w$]*\.[A-Za-z_$][\w$]* = [^=]|\bconst [A-Za-z_$]+ =|\blet [A-Za-z_$]+ =|\bctx\.[A-Za-z]+\(|\breturn [A-Za-z_$(]|\bthis\.[A-Za-z_]+ = [^=])/;

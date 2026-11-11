@@ -64,6 +64,20 @@ Jede Mission hat Einleitung, Ziel, Abschluss und eine Belohnung (XP, Skillpunkte
 - Thesen spricht knapp und konkret; Xame spöttisch, aber ehrlich; der Erzähler sachlich.
 - Jede Szene liefert einen Grund für die nächste Mission.
 
+## Fortschritt (Vorgabe des Nutzers, 11. Nov 2026)
+
+- Start mit **einer** Runenkarte (ein Grundelement nach Wahl).
+- Weitere Karten: erst **finden** (Story-Belohnung, seltener Boss-Drop, später Burgen und Geheimtruhen), dann mit
+  **Skillpunkten und Gold** freischalten. Zweite Karte = zweiter Fund.
+- Skillpunkte fließen entweder in **passive Mastery** oder in **neue Runenkarten**.
+- **Seltenheiten** mit steigenden Kosten und Vorbedingungen (umgesetzt: Stufe; geplant: Mastery-Stufe des Elements).
+- Jeder Mastery-Baum endet in einer **Transformation**, jede Klasse hat eine; jede Transformation hat **drei Modi** mit
+  anderem Spielstil-Schwerpunkt (geplant).
+- **Dungeon:** man beginnt mit nichts und wählt beim Sammeln von Erfahrung aus zufälligen Runen; die Auswahl soll nach
+  Seltenheit gewichtet sein, stärkere Runen kommen aus Burgen, Bossen und Geheimtruhen (Gewichtung geplant).
+- **Begleiter im Level** (geplant): findbar wie interaktive Objekte, können sterben, bringen einen schneller durchs
+  Level; dafür größere Level. Primals sind ab Stufe 3 ohne Beschwörung reitbar.
+
 ## Fortschritt in der Kampagne
 
 - Missionen schalten sich der Reihe nach frei und bleiben wiederholbar.

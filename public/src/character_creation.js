@@ -8,6 +8,7 @@ import { LOOK_HAIR, LOOK_ARMOUR, normalizeLook } from './character_look.js';
 import { CLASSES, START_ELEMENTS, CLASS_UNLOCK_LEVEL, classById, classOfWeapon, classWeapons, classWeaponUnlocked } from './classes.js';
 import { WEAPONS } from './weapons.js';
 import { recognizer } from './recognizer.js';
+import { STARTER_RUNES } from './progression.js';
 
 const BASES = Object.freeze([
   { id: 'thesen', name: 'THESEN', title: 'HORNED WARRIOR' },
@@ -62,7 +63,10 @@ export function openCharacterCreation(game, { onDone = null, first = false, tabs
   const startCls = classById(ch.classId) ?? classOfWeapon(profile?.classWeapon) ?? CLASSES[0];
   const state = { name: ch.name || '', base: BASES.some((b) => b.id === ch.base) ? ch.base : 'thesen', look: normalizeLook(ch.look),
     classId: startCls.id, weapon: WEAPONS[profile?.classWeapon]?.family === startCls.id ? profile.classWeapon : classWeapons(startCls.id)[0],
-    element: START_ELEMENTS.includes(ch.startElement) ? ch.startElement : START_ELEMENTS[0] };
+    element: null };
+  // Earned rules: the start rune is one of the six base elements — the only card the deck holds at first.
+  const elements = profile?.earned ? STARTER_RUNES : START_ELEMENTS;
+  state.element = elements.includes(ch.startElement) ? ch.startElement : elements[0];
   // After creation the class stays changeable in the wardrobe; the second weapon of a family needs the start weapon's level.
   // The start element is chosen once, at creation (re-choosing would hand out every extra rune for free).
   const elementOpen = first || !ch.startElement;
@@ -85,7 +89,7 @@ export function openCharacterCreation(game, { onDone = null, first = false, tabs
       </div>
       <div class="cc-tab" data-t="element">
         <div class="cc-sec"><h3>STARTELEMENT</h3><div class="cc-row cc-big" data-k="element"></div>
-          <div class="cc-note">Eine zusätzliche Element-Rune, die du von Anfang an besitzt und doppelt im Deck hast. ${elementOpen ? 'Die Wahl gilt dauerhaft.' : 'Bereits gewählt.'}</div></div>
+          <div class="cc-note">${profile?.earned ? 'Deine erste Runenkarte – mit ihr allein beginnst du. Weitere Runen findest du in Missionen und bei Bossen und schaltest sie dann mit Skillpunkten und Gold frei.' : 'Eine zusätzliche Element-Rune, die du von Anfang an besitzt und doppelt im Deck hast.'} ${elementOpen ? 'Die Wahl gilt dauerhaft.' : 'Bereits gewählt.'}</div></div>
       </div>
       <div class="cc-tab" data-t="class">
         <div class="cc-grid" data-k="cls"></div><div class="cc-detail" data-k="detail"></div>
@@ -109,7 +113,7 @@ export function openCharacterCreation(game, { onDone = null, first = false, tabs
     row('hair').innerHTML = ''; for (const [id, o] of Object.entries(LOOK_HAIR)) button(row('hair'), o.label, state.look.hair === id, () => { state.look.hair = id; }, o.swatch);
     row('armour').innerHTML = ''; for (const [id, o] of Object.entries(LOOK_ARMOUR)) button(row('armour'), o.label, state.look.armour === id, () => { state.look.armour = id; }, o.swatch);
     row('element').innerHTML = '';
-    for (const id of START_ELEMENTS) { const r = recognizer.runes.find((x) => x.id === id); button(row('element'), r?.name ?? id.toUpperCase(), state.element === id, () => { if (elementOpen) state.element = id; }); const b = row('element').lastChild; if (r?.color) b.style.borderLeft = `6px solid ${r.color}`; if (!elementOpen && state.element !== id) b.classList.add('locked'); }
+    for (const id of elements) { const r = recognizer.runes.find((x) => x.id === id); button(row('element'), r?.name ?? id.toUpperCase(), state.element === id, () => { if (elementOpen) state.element = id; }); const b = row('element').lastChild; if (r?.color) b.style.borderLeft = `6px solid ${r.color}`; if (!elementOpen && state.element !== id) b.classList.add('locked'); }
     row('cls').innerHTML = '';
     for (const c of CLASSES) { button(row('cls'), c.name, state.classId === c.id, () => { state.classId = c.id; state.weapon = classWeapons(c.id)[0]; }); const b = row('cls').lastChild; const sm = doc.createElement('small'); sm.textContent = `${c.role} · ${c.range.toUpperCase()}`; b.appendChild(sm); }
     const c = classById(state.classId); const det = row('detail'); det.innerHTML = `<div><p><b>${c.name}</b> · ${c.text}</p><div class="cc-wdesc"></div></div>`;

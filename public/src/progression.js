@@ -129,6 +129,28 @@ export function signatureUnlockLevel(runeId) {
   const index = SIGNATURE_RUNE_IDS.indexOf(runeId);
   return index < 0 ? Infinity : 5 + Math.floor(index / 4);
 }
+// ── Earned progression (user, 11 Nov 2026: "Fortschritt ist halt null gebaut") ───────────────────────────────────────
+// profile.rules = 'earned': the player starts with ONE rune card (the start element chosen at creation). A further
+// card must first be FOUND (a rune drop: story reward, boss drop, chest) and can then be unlocked with skill points and
+// gold; a second copy needs a second drop. Rarer runes cost more and need a higher Mage level. The deck holds only owned
+// copies and may be smaller than MATCH_DECK_SIZE. profile.rules = 'open' is the test switch ("Alles freischalten"): the
+// earlier rules with every base rune and a full deck. Training stays a sandbox, the Dungeon keeps its own run runes.
+export const RUNE_RARITIES = Object.freeze({
+  common: Object.freeze({ label: 'GEWÖHNLICH', color: '#b8c0c8', skillPoints: 1, gold: 50, level: 1, weight: 60 }),
+  rare: Object.freeze({ label: 'SELTEN', color: '#5aa0ff', skillPoints: 1, gold: 150, level: 3, weight: 28 }),
+  epic: Object.freeze({ label: 'EPISCH', color: '#b46cff', skillPoints: 2, gold: 400, level: 6, weight: 10 }),
+  legendary: Object.freeze({ label: 'LEGENDÄR', color: '#ffb43a', skillPoints: 3, gold: 1000, level: 10, weight: 2 })
+});
+export function runeRarity(id) {
+  if (STARTER_RUNES.includes(id)) return 'common';
+  if (isBuffRuneId(id) || isDomainRuneId(id)) return 'legendary';
+  if (isSignatureRuneId(id) || id === 'doppel' || id === 'mortis') return 'epic';
+  return 'rare';
+}
+// Tests run under node without a stored profile: they keep the open rules unless a profile asks for 'earned'.
+const DEFAULT_RULES = typeof process !== 'undefined' && process.versions?.node ? 'open' : 'earned';
+export const PROFILE_VERSION = 4;
+
 // The first deck deliberately contains two copies of every starter rune.
 // It is a legal 10-card deck and guarantees a varied initial three-card hand.
 export const DEFAULT_MATCH_DECK = Object.freeze(['fulgur', 'terra', 'ignis', 'ventus', 'aqua', 'fulgur', 'terra', 'ignis', 'ventus', 'aqua']);
@@ -192,6 +214,11 @@ export class MageProfile {
   constructor(data = null) {
     const source = data ?? this.readLocal();
     this.classId = 'mage';
+    // Earned progression: the rules in force, gold, rune drops found and rune copies unlocked (see RUNE_RARITIES).
+    this.rules = source?.rules === 'open' || source?.rules === 'earned' ? source.rules : DEFAULT_RULES;
+    this.gold = Math.max(0, source?.gold | 0);
+    this.runeDrops = { ...(source?.runeDrops ?? {}) };
+    this.runeCopies = { ...(source?.runeCopies ?? {}) };
     this.level = Math.max(1, source?.level ?? 1);
     this.xp = Math.max(0, source?.xp ?? 0);
     this.skillPoints = Math.max(0, source?.skillPoints ?? 0);
@@ -239,7 +266,15 @@ export class MageProfile {
   readLocal() {
     try {
       const raw = globalThis.localStorage?.getItem?.('grimge-mage-profile-v1');
-      return raw ? JSON.parse(raw) : null;
+      const saved = raw ? JSON.parse(raw) : null;
+      // A save from before the earned progression starts over (user decision, 11 Nov 2026): the old save is kept as a
+      // backup, name / look / class stay, and the character screen asks for the start rune again.
+      if (saved && (saved.progressionVersion ?? 0) < PROFILE_VERSION) {
+        try { globalThis.localStorage?.setItem?.('grimge-mage-profile-v1-backup-v3', raw); } catch { /* optional */ }
+        const ch = saved.character ?? {};
+        return { rules: 'earned', progressionVersion: PROFILE_VERSION, classWeapon: saved.classWeapon ?? null, character: { name: ch.name, base: ch.base, look: ch.look, classId: ch.classId, startWeapon: ch.startWeapon, startElement: null, created: false } };
+      }
+      return saved;
     } catch { return null; }
   }
 
@@ -253,7 +288,8 @@ export class MageProfile {
       unlockedSkills: [...this.unlockedSkills], masteries: [...this.masteries], runeXp: clone(this.runeXp),
       lateUnlocks: [...this.lateUnlocks], weaponXp: clone(this.weaponXp), classWeapon: this.classWeapon, bankaiClasses: [...this.bankaiClasses], character: { ...this.character, look: { ...this.character.look } }, campaign: { done: [...this.campaign.done], stars: { ...this.campaign.stars }, starClaims: this.campaign.starClaims },
       discoveredSpells: [...this.discoveredSpells], unlockedRunes: [...this.unlockedRunes],
-      matchDeck: [...this.matchDeck], progressionVersion: 3,
+      matchDeck: [...this.matchDeck], progressionVersion: PROFILE_VERSION,
+      rules: this.rules, gold: this.gold, runeDrops: { ...this.runeDrops }, runeCopies: { ...this.runeCopies },
       favoriteRunes: [...this.favoriteRunes], deckPresets: this.deckPresets.map((preset) => ({ ...preset, deck: [...preset.deck], ...(preset.masteries ? { masteries: [...preset.masteries] } : {}) }))
     };
   }
@@ -261,7 +297,46 @@ export class MageProfile {
   xpToNextLevel() { return 70 + (this.level - 1) * 35; }
   runeLevel(id) { return 1 + Math.floor((this.runeXp[id] ?? 0) / 60); }
   runeXpIntoLevel(id) { return (this.runeXp[id] ?? 0) % 60; }
-  isRuneUnlocked(id) { return id === BANKAI_RUNE_ID ? this.isBankaiUnlocked() : isLateRuneId(id) ? this.lateUnlocks.has(id) || this.lateRouteMet(id) : isSignatureRuneId(id) ? this.level >= signatureUnlockLevel(id) : this.unlockedRunes.has(id); }
+  get earned() { return this.rules === 'earned'; }
+  // Copies of a rune the deck may hold: the unlocked copies under the earned rules, else the deck limit.
+  ownedCopies(id) { return this.earned ? Math.min(maxRuneCopies(id), this.runeCopies[id] ?? 0) : (this.isRuneUnlocked(id) ? maxRuneCopies(id) : 0); }
+  // A rune was found (story reward, boss drop, chest): it can now be unlocked.
+  addRuneDrop(id, n = 1) { if (!ALL_RUNE_IDS.includes(id)) return 0; this.runeDrops[id] = (this.runeDrops[id] ?? 0) + n; this.save(); return this.runeDrops[id]; }
+  // Why a further copy cannot be unlocked: 'max' | 'drop' | 'level' | 'points' | 'gold', or null = possible.
+  copyBlocker(id) {
+    const r = RUNE_RARITIES[runeRarity(id)]; const have = this.runeCopies[id] ?? 0;
+    if (have >= maxRuneCopies(id)) return 'max';
+    if ((this.runeDrops[id] ?? 0) <= have) return 'drop';
+    if (this.level < r.level) return 'level';
+    if (this.skillPoints < r.skillPoints) return 'points';
+    if (this.gold < r.gold) return 'gold';
+    return null;
+  }
+  unlockCopy(id) {
+    if (this.copyBlocker(id) !== null) return null;
+    const r = RUNE_RARITIES[runeRarity(id)];
+    this.skillPoints -= r.skillPoints; this.gold -= r.gold; this.runeCopies[id] = (this.runeCopies[id] ?? 0) + 1; this.unlockedRunes.add(id);
+    // A new card goes straight into the deck while there is room.
+    if (this.matchDeck.length < MATCH_DECK_SIZE && deckAccepts(this.matchDeck, id)) this.matchDeck.push(id);
+    this.save();
+    return { runeId: id, copies: this.runeCopies[id] };
+  }
+  // A weighted random drop (commons often, legendaries rarely); minRarity lifts the floor for bosses and chests.
+  rollRuneDrop({ minRarity = 'common', rng = Math.random } = {}) {
+    const order = ['common', 'rare', 'epic', 'legendary']; const floor = order.indexOf(minRarity);
+    const pool = ALL_RUNE_IDS.filter((id) => order.indexOf(runeRarity(id)) >= floor && (this.runeDrops[id] ?? 0) < maxRuneCopies(id) && id !== BANKAI_RUNE_ID);
+    if (!pool.length) return null;
+    const total = pool.reduce((n, id) => n + RUNE_RARITIES[runeRarity(id)].weight, 0); let roll = rng() * total;
+    for (const id of pool) { roll -= RUNE_RARITIES[runeRarity(id)].weight; if (roll <= 0) { this.addRuneDrop(id); return id; } }
+    const id = pool[pool.length - 1]; this.addRuneDrop(id); return id;
+  }
+  // The test switch: 'open' hands out the earlier full access, 'earned' goes back to what was really earned.
+  setRules(rules) {
+    this.rules = rules === 'open' ? 'open' : 'earned';
+    this.matchDeck = this.sanitizeDeck(this.matchDeck); if (!this.earned) { for (const id of STARTER_RUNES) this.unlockedRunes.add(id); this.matchDeck = this.topUpDeck(this.matchDeck); }
+    this.save();
+  }
+  isRuneUnlocked(id) { if (this.rules === 'earned') return (this.runeCopies[id] ?? 0) >= 1; return id === BANKAI_RUNE_ID ? this.isBankaiUnlocked() : isLateRuneId(id) ? this.lateUnlocks.has(id) || this.lateRouteMet(id) : isSignatureRuneId(id) ? this.level >= signatureUnlockLevel(id) : this.unlockedRunes.has(id); }
   weaponLevel(id) { return 1 + Math.floor((this.weaponXp[id] ?? 0) / WEAPON_XP_PER_LEVEL); }
   // Bankai is available when the chosen class has earned it (weapon level / boss drop).
   isBankaiUnlocked(classWeapon = this.classWeapon) { return !!classWeapon && (this.bankaiClasses.has(classWeapon) || this.weaponLevel(classWeapon) >= LATE_RUNE_LEVEL.bankai); }
@@ -271,7 +346,10 @@ export class MageProfile {
       classId: classId !== undefined ? classId : prev.classId ?? null, startWeapon: startWeapon !== undefined ? startWeapon : prev.startWeapon ?? null, startElement: startElement !== undefined ? startElement : prev.startElement ?? null };
     // A newly chosen start element: owned at once and put into the deck twice (base runes make room if it is full).
     const el = this.character.startElement;
-    if (el && el !== prev.startElement && ALL_RUNE_IDS.includes(el)) {
+    // Earned rules: the start element is the one rune card the player owns at first.
+    if (this.earned) {
+      if (el && STARTER_RUNES.includes(el) && !Object.keys(this.runeCopies).length) { this.runeCopies[el] = 1; this.runeDrops[el] = Math.max(1, this.runeDrops[el] ?? 0); this.unlockedRunes.add(el); this.matchDeck = [el]; }
+    } else if (el && el !== prev.startElement && ALL_RUNE_IDS.includes(el)) {
       this.unlockedRunes.add(el);
       for (let n = 0; n < 2 && this.getRuneCopies(el) < Math.min(2, maxRuneCopies(el)); n++) {
         if (this.matchDeck.length >= MATCH_DECK_SIZE) { const i = this.matchDeck.findLastIndex((id) => STARTER_RUNES.includes(id) && this.getRuneCopies(id) > 1) ; const j = i >= 0 ? i : this.matchDeck.findLastIndex((id) => STARTER_RUNES.includes(id)); if (j < 0) break; this.matchDeck.splice(j, 1); }
@@ -327,7 +405,7 @@ export class MageProfile {
     return ids.filter((id) => {
       if (!ALL_RUNE_IDS.includes(id) || !this.isRuneUnlocked(id)) return false;
       const count = copies.get(id) ?? 0;
-      if (count >= maxRuneCopies(id) || copies.size > ALL_RUNE_IDS.length) return false;
+      if (count >= this.ownedCopies(id) || copies.size > ALL_RUNE_IDS.length) return false;
       if (isBuffRuneId(id) && [...copies.keys()].some(isBuffRuneId)) return false;
       if (isDomainRuneId(id) && [...copies.keys()].some(isDomainRuneId)) return false;
       copies.set(id, count + 1);
@@ -338,7 +416,8 @@ export class MageProfile {
   // Fill a deck up to MATCH_DECK_SIZE with default / unlocked elemental runes (deck rules kept).
   topUpDeck(deck) {
     const out = [...deck];
-    for (const id of [...DEFAULT_MATCH_DECK, ...this.unlockedRunes]) {
+    const candidates = this.earned ? Object.keys(this.runeCopies).flatMap((id) => Array(this.ownedCopies(id)).fill(id)) : [...DEFAULT_MATCH_DECK, ...this.unlockedRunes];
+    for (const id of candidates) {
       if (out.length >= MATCH_DECK_SIZE) break;
       if (this.sanitizeDeck([...out, id]).length === out.length + 1) out.push(id);
     }
@@ -347,12 +426,12 @@ export class MageProfile {
 
   getMatchDeck() { return [...this.matchDeck]; }
   getRuneCopies(id) { return this.matchDeck.filter((entry) => entry === id).length; }
-  isDeckReady() { return this.matchDeck.length === MATCH_DECK_SIZE; }
+  isDeckReady() { return this.earned ? this.matchDeck.length >= 1 : this.matchDeck.length === MATCH_DECK_SIZE; }
 
   addRuneToDeck(id) {
     if (!this.isRuneUnlocked(id)) return { ok: false, reason: 'LOCKED' };
     if (this.matchDeck.length >= MATCH_DECK_SIZE) return { ok: false, reason: 'DECK FULL' };
-    if (this.getRuneCopies(id) >= maxRuneCopies(id)) return { ok: false, reason: 'COPY LIMIT' };
+    if (this.getRuneCopies(id) >= this.ownedCopies(id)) return { ok: false, reason: 'COPY LIMIT' };
     if (!deckAccepts(this.matchDeck, id)) return { ok: false, reason: isDomainRuneId(id) ? 'ONE DOMAIN PER DECK' : 'ONE ARCANE STATE PER DECK' };
     this.matchDeck.push(id); this.save();
     return { ok: true };
@@ -441,6 +520,7 @@ export class MageProfile {
 
   // Buying a rune with skill points: null = possible, else why not.
   runeBlocker(runeId) {
+    if (this.earned) return 'vault'; /* earned rules: runes are unlocked in the rune vault after a drop */
     const entry = skillRuneUnlock(runeId);
     if (!entry) return 'unknown';
     if (this.unlockedRunes.has(runeId)) return 'owned';

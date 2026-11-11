@@ -38,6 +38,17 @@ Legende: ✔ umgesetzt und geprüft · ◐ teilweise · ○ geplant
 | Runen-Fund / Mastery als Missionsbelohnung | ○ |
 | Dungeon: Räume mit Türen, Fortschrittsleiste | ○ |
 
+## Meilenstein 2b – Verdienter Fortschritt
+
+| Punkt | Stand |
+|---|---|
+| Start mit einer Rune, Funde, Freischalten mit Skillpunkten und Gold, Seltenheiten, Runen-Bildschirm, Test-Schalter | ✔ |
+| Mastery-Stufe als Vorbedingung für seltene Runen | ○ |
+| Transformation je Mastery-Baum und Klasse mit drei Modi | ○ |
+| Dungeon: nach Seltenheit gewichtete Runen-Auswahl; starke Runen aus Burgen, Bossen, Geheimtruhen | ○ |
+| Deck-Bildschirm (Grimoire) an die neuen Regeln anpassen und ohne Scrollen gestalten | ○ |
+| Findbare Begleiter / Reittiere in großen Leveln | ○ |
+
 ## Meilenstein 3 – Oberfläche
 
 | Punkt | Stand |

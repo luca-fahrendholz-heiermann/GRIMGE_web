@@ -6,6 +6,8 @@
 // The screens are plain placeholders in the style of the character creation screen until the user's UI layout exists.
 import { CAMPAIGN, allMissions, missionById } from './campaign_data.js';
 import { sprites } from './sprites.js';
+import { STARTER_RUNES, maxRuneCopies } from './progression.js';
+import { openRuneVault, readyRunes } from './rune_vault.js';
 
 export const isMissionDone = (profile, id) => !!profile?.campaign?.done?.includes(id);
 export function isMissionUnlocked(profile, id) {
@@ -35,14 +37,22 @@ export function completeMission(profile, id, stars = 1) {
   profile.campaign ??= { done: [] }; profile.campaign.stars ??= {}; profile.campaign.starClaims ??= 0;
   const best = Math.max(starsOf(profile, id), Math.max(1, Math.min(3, stars))); profile.campaign.stars[id] = best;
   let bonus = 0; while (Math.floor(totalStars(profile) / STAR_STEP) > profile.campaign.starClaims) { profile.campaign.starClaims++; profile.skillPoints += 1; bonus++; }
-  const first = !profile.campaign.done.includes(id);
+  const first = !profile.campaign.done.includes(id); const drops = [];
   if (first) {
     profile.campaign.done.push(id);
     if (m.reward?.skillPoints) profile.skillPoints += m.reward.skillPoints;
+    if (m.reward?.gold) profile.gold = (profile.gold ?? 0) + m.reward.gold;
+    for (const want of m.reward?.runes ?? []) {
+      let id = null;
+      if (want === 'base') { const pool = STARTER_RUNES.filter((r) => (profile.runeDrops?.[r] ?? 0) < maxRuneCopies(r)); const fresh = pool.filter((r) => !(profile.runeDrops?.[r] > 0)); const from = fresh.length ? fresh : pool; id = from[Math.floor(Math.random() * from.length)] ?? null; if (id) profile.addRuneDrop?.(id); }
+      else if (want === 'rare' || want === 'epic') id = profile.rollRuneDrop?.({ minRarity: want }) ?? null;
+      else if (profile.addRuneDrop?.(want)) id = want;
+      if (id) drops.push(id);
+    }
     if (m.reward?.xp) profile.awardXp?.(m.reward.xp, { save: false });
   }
   profile.save?.();
-  return { first, reward: m.reward ?? null, stars, best, bonus };
+  return { first, reward: m.reward ?? null, stars, best, bonus, drops };
 }
 
 // ── run state (the mission being played) ─────────────────────────────────────────────────────────────────────────
@@ -144,7 +154,7 @@ export function openCampaign(game, { focusId = null } = {}) {
   const tap = (el, fn) => el.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); fn(); });
   const render = () => {
     const ms = chapter.missions; const k = ms.indexOf(sel); const done = isMissionDone(profile, sel.id); const r = sel.reward ?? {};
-    const reward = [r.xp ? `${r.xp} XP` : '', r.skillPoints ? `${r.skillPoints} Skillpunkt${r.skillPoints > 1 ? 'e' : ''}` : ''].filter(Boolean).join(' · ');
+    const reward = [r.xp ? `${r.xp} XP` : '', r.skillPoints ? `${r.skillPoints} Skillpunkt${r.skillPoints > 1 ? 'e' : ''}` : '', r.gold ? `${r.gold} Gold` : '', r.runes?.length ? `${r.runes.length} Runenfund${r.runes.length > 1 ? 'e' : ''}` : ''].filter(Boolean).join(' · ');
     const star = (n) => `<span class="cp-st">${'★'.repeat(n)}<s>${'★'.repeat(3 - n)}</s></span>`;
     const got = starsOf(profile, sel.id); const total = totalStars(profile); const toNext = STAR_STEP - (total % STAR_STEP);
     const need = profile.xpToNextLevel?.() ?? 100; const xpPct = Math.max(0, Math.min(100, Math.round((profile.xp ?? 0) / need * 100)));
@@ -152,7 +162,7 @@ export function openCampaign(game, { focusId = null } = {}) {
     root.innerHTML = `<div class="cp-stage">
       ${chapter.map ? `<img src="assets/scenes/campaign/${chapter.map}.png" alt="">` : ''}</div>
       <div class="cp-top"><button class="cp-back" type="button">◀ ZURÜCK</button><h2>${chapter.title}</h2>
-        <div class="cp-prog"><div class="cp-lvl">STUFE ${profile.level ?? 1}<div class="cp-xp"><b style="width:${xpPct}%"></b></div></div>
+        <div class="cp-prog"><button class="cp-back cp-runes" type="button">RUNEN${readyRunes(profile) ? ` <b style="color:#ffd24a">●${readyRunes(profile)}</b>` : ''}</button><div class="cp-lvl">GOLD ${profile.gold ?? 0}</div><div class="cp-lvl">STUFE ${profile.level ?? 1}<div class="cp-xp"><b style="width:${xpPct}%"></b></div></div>
           <div class="cp-lvl"><span class="cp-st">★</span> ${total}/${ms.length * 3} · noch ${toNext} bis +1 Skillpunkt</div></div></div>
       <div class="cp-card"><div><small>MISSION ${k + 1} · ${sel.kind}</small><h3>${sel.title}</h3><p>${sel.briefing}</p>
         <div class="cp-rules">${STAR_RULES.map((t, i) => `<span class="${got > i ? 'ok' : ''}">${got > i ? '★' : '☆'} ${t}${i === 2 && par ? ` (${par})` : ''}</span>`).join('')}</div>
@@ -168,7 +178,8 @@ export function openCampaign(game, { focusId = null } = {}) {
       const tag = doc.createElement('div'); tag.className = `cp-tag${on ? ' on' : ''}`; tag.innerHTML = `${m.title}${isDone ? ` ${star(starsOf(profile, m.id))}` : ''}`; tag.style.left = `${m.map[0]}%`; tag.style.top = `${m.map[1]}%`; stage.appendChild(tag);
     });
     tap(root.querySelector('.cp-go'), () => startMission(game, sel.id));
-    tap(root.querySelector('.cp-back'), () => closeCampaign());
+    tap(root.querySelector('.cp-back:not(.cp-runes)'), () => closeCampaign());
+    tap(root.querySelector('.cp-runes'), () => openRuneVault(game, { onClose: render }));
   };
   render();
   return true;

@@ -11,6 +11,8 @@
 //   siege     —
 //   any mode  scene (id of a prepared scene image in assets/scenes/campaign/, see art/authoring/prep_scene.cjs)
 // par: seconds for the third star (campaign.js rateRun).
+// reward.runes: rune drops of the first win — 'base' = a base element still missing, 'rare' / 'epic' = a weighted roll
+// from that rarity upward, or a rune id (a story rune). A drop only makes the rune unlockable (progression.js).
 // speakers: a hero key shown as the portrait ('thesen', 'xame', 'boss_firelord') or 'narrator'.
 
 export const CAMPAIGN = Object.freeze([
@@ -33,7 +35,7 @@ export const CAMPAIGN = Object.freeze([
           { who: 'thesen', text: 'Leerenräuber. In den Hallen der Wächter. Die Runen an der Wand sind von innen gebrochen worden.' },
           { who: 'narrator', text: 'Zwischen den Trümmern liegt ein Siegelsplitter. Die Bruchkante ist frisch. Jemand hat den Bann geöffnet, nicht überrannt.' }
         ],
-        reward: Object.freeze({ xp: 80, skillPoints: 1 })
+        reward: Object.freeze({ xp: 80, skillPoints: 1, gold: 60, runes: Object.freeze(['base']) })
       }),
       Object.freeze({
         id: 'c1m2', title: 'DIE MAUER HÄLT', kind: 'VERTEIDIGUNG', mode: 'invasion', map: Object.freeze([30, 44]), par: 240, params: Object.freeze({ maxLevel: 1, scene: 'halvar' }),
@@ -48,7 +50,7 @@ export const CAMPAIGN = Object.freeze([
           { who: 'thesen', text: 'Die Mauer steht. Aber das war kein Schwarm. Das war ein Befehl. Jemand lenkt sie.' },
           { who: 'narrator', text: 'Am Rand des Schlachtfelds steht eine Gestalt mit einem Schädel am Gürtel und sieht zu. Dann ist sie fort.' }
         ],
-        reward: Object.freeze({ xp: 100, skillPoints: 1 })
+        reward: Object.freeze({ xp: 100, skillPoints: 1, gold: 90, runes: Object.freeze(['base']) })
       }),
       Object.freeze({
         id: 'c1m3', title: 'DER SCHÄDELHEXER', kind: 'DUELL', mode: 'arena', map: Object.freeze([50, 54]), par: 150, params: Object.freeze({ rival: 'xame', rivalName: 'XAME', scene: 'abyss' }),
@@ -64,7 +66,7 @@ export const CAMPAIGN = Object.freeze([
           { who: 'xame', text: 'Den Bann hat der Glutfürst gebrochen. Ich wollte nur sehen, was dahinter liegt. Seine Feste steht in der Aschenebene.' },
           { who: 'thesen', text: 'Dann ist das mein nächster Weg. Und du gehst mir aus dem Licht, Hexer.' }
         ],
-        reward: Object.freeze({ xp: 120, skillPoints: 1 })
+        reward: Object.freeze({ xp: 120, skillPoints: 1, gold: 130, runes: Object.freeze(['umbra']) })
       }),
       Object.freeze({
         id: 'c1m4', title: 'STURM AUF DIE ASCHENFESTE', kind: 'BELAGERUNG', mode: 'siege', map: Object.freeze([71.5, 48]), par: 300, params: Object.freeze({ scene: 'ash' }),
@@ -78,7 +80,7 @@ export const CAMPAIGN = Object.freeze([
           { who: 'thesen', text: 'Die Feste ist gefallen. Darunter führen Stufen in die Tiefe. Dort unten brennt etwas.' },
           { who: 'narrator', text: 'Der dritte Siegelsplitter glüht im Stein des Tores. Er zeigt nach unten.' }
         ],
-        reward: Object.freeze({ xp: 140, skillPoints: 1 })
+        reward: Object.freeze({ xp: 140, skillPoints: 1, gold: 160, runes: Object.freeze(['base', 'rare']) })
       }),
       Object.freeze({
         id: 'c1m5', title: 'DER GLUTFÜRST', kind: 'BOSS', mode: 'dungeon', map: Object.freeze([92.5, 47]), par: 240, params: Object.freeze({ startStage: 3, scene: 'glut' }),
@@ -93,7 +95,7 @@ export const CAMPAIGN = Object.freeze([
           { who: 'xame', text: 'Sieh nach unten, Gehörnter. Der Glutfürst war nicht der, der gerufen hat. Er war der, der geantwortet hat.' },
           { who: 'narrator', text: 'Tief im Abgrund öffnet sich ein Auge. — Ende von Kapitel 1.' }
         ],
-        reward: Object.freeze({ xp: 200, skillPoints: 2 })
+        reward: Object.freeze({ xp: 200, skillPoints: 2, gold: 320, runes: Object.freeze(['epic']) })
       })
     ])
   })
