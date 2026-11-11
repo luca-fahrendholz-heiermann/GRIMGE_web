@@ -19,13 +19,26 @@ export class SpriteManager {
     this.heroDefs = {
       // The user's pixel-art characters (21 Oct 2026), prepared by tools/prepare_pixel_characters.cjs:
       // one shared crop per character, so frames / variants swap without a jump.
-      thesen: { name: 'Thesen', prepared: ['char_thesen.png'], weapon: 'Bone Spear', role: 'Horned Warrior / Focus Transformation' },
+      // Generated frames (11 Nov 2026) play while Thesen is unarmed; with a weapon the parts-rig clips stay (the weapon
+      // follows the rig's hand point) — the rig clip of an overridden state is kept as 'rig:<state>'.
+      thesen: { name: 'Thesen', prepared: ['char_thesen.png'], weapon: 'Bone Spear', role: 'Horned Warrior / Focus Transformation', clips: [
+        { sheet: 'sheets/thesen_walk.png', frames: 6, w: 68, h: 119, anchorX: 34, anchorY: 117, use: [{ states: ['walk', 'run'], hold: 6, loop: true }, { states: ['sprint'], hold: 4, loop: true }] },
+        { sheet: 'sheets/thesen_attack.png', frames: 6, w: 68, h: 117, anchorX: 29, anchorY: 115, use: [
+          { states: ['attack1'], idx: [0, 1, 1], holds: [4, 3, 6] }, { states: ['attack2'], idx: [1, 2, 2], holds: [2, 4, 8] },
+          { states: ['attack3', 'heavyStrike'], idx: [3, 4, 4], holds: [6, 4, 11] }, { states: ['uppercut'], idx: [0, 5, 5], holds: [4, 4, 9] }, { states: ['dive'], idx: [4], hold: 8, loop: true }] },
+        { sheet: 'sheets/thesen_misc.png', frames: 6, w: 101, h: 102, anchorX: 35, anchorY: 100, use: [
+          { states: ['dash'], idx: [0], hold: 8, loop: true }, { states: ['jump', 'fall'], idx: [1], hold: 8, loop: true }, { states: ['guard'], idx: [2], hold: 8, loop: true },
+          { states: ['hurt'], idx: [3], hold: 8, loop: true }, { states: ['draw'], idx: [4], hold: 8, loop: true }, { states: ['dead'], idx: [5], hold: 8, loop: true }] }
+      ] },
       thesen_focus: { name: 'Thesen (Focus)', prepared: ['char_thesen_focus.png'], weapon: 'Bone Spear', role: 'Focus form: cape and spear' },
       // clips: frame sheets cut by art/authoring/prep_frames.cjs from generated sheets (11 Nov 2026) — the sheet, its
       // cell size and anchor, the states that play it and the ticks per frame (holds) or one hold for a loop.
       xame: { name: 'Xame', prepared: ['char_xame_0.png', 'char_xame_1.png'], hold: 28, weapon: 'Void-Flame Spear', role: 'Skull Warlock / Void Flames', clips: [
         { sheet: 'sheets/xame_walk.png', frames: 6, w: 90, h: 121, anchorX: 40, anchorY: 119, states: ['walk', 'run', 'sprint', 'dash'], hold: 7, loop: true },
-        { sheet: 'sheets/xame_attack.png', frames: 5, w: 150, h: 132, anchorX: 47, anchorY: 130, states: ['attack', 'attack1', 'attack2', 'attack3', 'uppercut', 'heavyStrike', 'dive'], holds: [4, 2, 3, 3, 3], loop: false }
+        { sheet: 'sheets/xame_attack.png', frames: 5, w: 150, h: 132, anchorX: 47, anchorY: 130, states: ['attack', 'attack1', 'attack2', 'attack3', 'uppercut', 'heavyStrike', 'dive'], holds: [4, 2, 3, 3, 3], loop: false },
+        { sheet: 'sheets/xame_misc.png', frames: 5, w: 116, h: 183, anchorX: 49, anchorY: 181, use: [
+          { states: ['jump', 'fall'], idx: [0], hold: 8, loop: true }, { states: ['guard'], idx: [1], hold: 8, loop: true }, { states: ['hurt'], idx: [2], hold: 8, loop: true },
+          { states: ['draw', 'charge'], idx: [3], hold: 8, loop: true }, { states: ['dead'], idx: [4], hold: 8, loop: true }] }
       ] },
       paladin: { name: 'Valerius the Vanguard', file: 'char_paladin.png', weapon: 'Greatsword & Shield', role: 'Balanced / Heavy Impact' },
       berserker: { name: 'Torin the Marauder', file: 'char_berserker.png', weapon: 'Dual Axes', role: 'Aggressive / High Speed' },
@@ -98,19 +111,24 @@ export class SpriteManager {
     const id = `${key}~${lookId(look)}`; if (this.sprites[id]) return id;
     const base = this.sprites[key]; const img = base?.sourceImage; const doc = globalThis.document;
     if (!img || typeof doc?.createElement !== 'function') return key;
-    const recolor = (src) => {
+    const recolor = (src, boxed = true) => {
       const c = doc.createElement('canvas'); c.width = src.width; c.height = src.height; const x = c.getContext('2d', { willReadFrequently: true });
       if (!x?.getImageData) return null;
       x.drawImage(src, 0, 0); const data = x.getImageData(0, 0, src.width, src.height); if (!(data?.data?.length >= src.width * src.height * 4)) return null;
-      applyLook(data.data, src.width, src.height, look, key); x.putImageData(data, 0, 0); return c;
+      applyLook(data.data, src.width, src.height, look, boxed ? key : null); /* the hair box fits the standing image only */ x.putImageData(data, 0, 0); return c;
     };
     const c = recolor(img); if (!c) return key;
     const spr = { ...this.preparedFrame(c), pixel: true, procFull: true, sourceImage: c };
     // Rig heroes re-bake every clip; frame-sheet heroes (Xame's idle frames) get each frame recoloured.
-    if (base.rig && RIGS[key]) this.applyRig(spr, c, RIGS[key]);
+    const done = new Map(); const tint = (list) => { if (!done.has(list)) done.set(list, list.map((f) => { const rc = recolor(f.canvas, false); if (!rc) return f; const pf = this.preparedFrame(rc); return { ...f, canvas: pf.canvas, flashCanvas: pf.flashCanvas }; })); return done.get(list); };
+    if (base.rigBaked && RIGS[key]) {
+      this.applyRig(spr, c, RIGS[key]);
+      /* Generated clips on top of the re-baked rig, as on the base sprite. */
+      for (const st of base.clipStates ?? []) { for (const m of ['frames', 'loop', 'hold', 'holdSeq']) if (spr[m]?.[st] !== undefined) spr[m][`rig:${st}`] = spr[m][st]; spr.frames[st] = tint(base.frames[st]); spr.loop[st] = base.loop[st]; spr.hold[st] = base.hold[st]; delete spr.holdSeq[st]; if (base.holdSeq[st]) spr.holdSeq[st] = base.holdSeq[st]; }
+    }
+    else if (base.rig && RIGS[key]) this.applyRig(spr, c, RIGS[key]);
     else if (base.frames) {
       /* Shared frame lists (one sheet for several states) are recoloured once; anchors and sizes stay the frame's own. */
-      const done = new Map(); const tint = (list) => { if (!done.has(list)) done.set(list, list.map((f) => { const rc = recolor(f.canvas); if (!rc) return f; const pf = this.preparedFrame(rc); return { ...f, canvas: pf.canvas, flashCanvas: pf.flashCanvas }; })); return done.get(list); };
       spr.frames = Object.fromEntries(Object.entries(base.frames).map(([k, list]) => [k, tint(list)])); spr.hold = base.hold; spr.holdSeq = base.holdSeq; spr.loop = base.loop; spr.rig = base.rig; spr.procFull = base.procFull;
     }
     this.sprites[id] = spr;
@@ -123,14 +141,22 @@ export class SpriteManager {
     const doc = globalThis.document; if (typeof doc?.createElement !== 'function') return Promise.resolve();
     const load = (src) => new Promise((resolve) => { const img = new Image(); img.onload = () => resolve(img); img.onerror = () => resolve(null); img.src = `assets/sprites/${src}`; });
     return Promise.all(clips.map((c) => load(c.sheet))).then((imgs) => {
-      spr.frames ??= {}; spr.hold ??= {}; spr.holdSeq ??= {}; spr.loop ??= {};
+      spr.frames ??= {}; spr.hold ??= {}; spr.holdSeq ??= {}; spr.loop ??= {}; spr.rigBaked = !!spr.rig;
       clips.forEach((c, i) => {
         const img = imgs[i]; if (!img) return;
         const frames = Array.from({ length: c.frames }, (_, k) => {
           const make = (fill) => { const cv = doc.createElement('canvas'); cv.width = c.w; cv.height = c.h; const g = cv.getContext('2d'); if (!g) return cv; g.imageSmoothingEnabled = false; g.drawImage(img, k * c.w, 0, c.w, c.h, 0, 0, c.w, c.h); if (fill) { g.globalCompositeOperation = 'source-in'; g.fillStyle = fill; g.fillRect(0, 0, c.w, c.h); } return cv; };
           return { canvas: make(null), flashCanvas: make('#ffffff'), width: c.w, height: c.h, anchorX: c.anchorX, anchorY: c.anchorY, baseHeight };
         });
-        for (const st of c.states) { spr.frames[st] = frames; spr.loop[st] = !!c.loop; if (c.holds) spr.holdSeq[st] = c.holds; else spr.hold[st] = c.hold ?? 8; }
+        // use: several state groups on one sheet, each with its own frame picks (idx) and timing.
+        for (const u of c.use ?? [c]) {
+          const list = u.idx ? u.idx.map((k) => frames[k]) : frames;
+          for (const st of u.states) {
+            if (spr.frames[st] && spr.rigBaked) { spr.frames[`rig:${st}`] = spr.frames[st]; spr.loop[`rig:${st}`] = spr.loop[st]; spr.hold[`rig:${st}`] = spr.hold[st]; if (spr.holdSeq[st]) spr.holdSeq[`rig:${st}`] = spr.holdSeq[st]; }
+            spr.frames[st] = list; spr.loop[st] = !!u.loop; delete spr.holdSeq[st]; if (u.holds) spr.holdSeq[st] = u.holds; else spr.hold[st] = u.hold ?? 8;
+            (spr.clipStates ??= new Set()).add(st);
+          }
+        }
       });
       if (spr.frames.idle) { spr.loop.idle = true; for (const st of ['jump', 'fall', 'land', 'guard', 'draw', 'charge', 'hurt', 'dead', 'hover']) { spr.frames[st] ??= spr.frames.idle; spr.loop[st] ??= true; spr.hold[st] ??= spr.hold.idle; } }
       spr.rig = true; spr.procFull = false;

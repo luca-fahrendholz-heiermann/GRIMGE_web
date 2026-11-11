@@ -92,9 +92,9 @@ function dungeonRoomBounds(stage) {
 const HUD_EDGE = 22;
 const INVASION_LEVELS = Object.freeze([
   { name: 'VORPOSTEN', waves: 3, base: 3, pool: ['enemy_knight', 'enemy_bandit', 'enemy_sorcerer'], boss: 'DER RISS-TYRANN' },
-  { name: 'GRENZWALL', waves: 4, base: 4, pool: ['enemy_knight', 'enemy_bandit', 'enemy_sorcerer', 'deep', 'henry'], boss: 'DER KLINGENFÜRST' },
-  { name: 'BRANDLAND', waves: 5, base: 5, pool: ['enemy_knight', 'enemy_bandit', 'enemy_sorcerer', 'deep', 'henry', 'firen', 'freeze', 'woody'], boss: 'DIE ASCHENKÖNIGIN' },
-  { name: 'LETZTE NACHT', waves: 2, base: 6, pool: ['enemy_knight', 'enemy_bandit', 'enemy_sorcerer', 'deep', 'henry', 'firen', 'freeze', 'woody'], army: 70 }
+  { name: 'GRENZWALL', waves: 4, base: 4, pool: ['enemy_knight', 'enemy_bandit', 'enemy_sorcerer', 'void_duelist', 'void_archer'], boss: 'DER KLINGENFÜRST' },
+  { name: 'BRANDLAND', waves: 5, base: 5, pool: ['enemy_knight', 'enemy_bandit', 'enemy_sorcerer', 'void_duelist', 'void_archer', 'ember_acolyte', 'frost_shaman', 'void_brute'], boss: 'DIE ASCHENKÖNIGIN' },
+  { name: 'LETZTE NACHT', waves: 2, base: 6, pool: ['enemy_knight', 'enemy_bandit', 'enemy_sorcerer', 'void_duelist', 'void_archer', 'ember_acolyte', 'frost_shaman', 'void_brute'], army: 70 }
 ]);
 const INVASION_BOSSES = Object.freeze(['boss_firelord', 'darklord', 'mage', 'warlord']);
 

@@ -29,7 +29,7 @@ Was hier steht, ist am Code geprüft – Design-Dokumente allein zählen nicht a
 | Gegner-KI (Champion: Pläne, Zeichnen, Ausweichen) | umgesetzt, funktioniert | |
 | Fortschritt (Level, Skillpunkte, Mastery, Runen-XP, Waffenstufen) | umgesetzt, unvollständig | Mastery-UI ist Platzhalter |
 | Charaktererstellung + Klassen | umgesetzt, unvollständig | Platzhalter-Bildschirm; nur Thesen ist animiert |
-| Animation (Teile-Gerüst, Clips, Schlüsselposen) | umgesetzt, unvollständig | Platzhalter-Animationen aus einem Standbild; Xame und Gegner-Champions nicht animiert |
+| Animation (Teile-Gerüst, Clips, erzeugte Bild-Bögen) | umgesetzt, unvollständig | Thesen unbewaffnet und Xame aus erzeugten Bögen; mit Waffe noch Gerüst-Animation; Champions außerhalb der Kampagne nicht animiert |
 | VFX (Zauber-Sheets, Treffer-Feedback, Hitstop, Wackeln) | umgesetzt, funktioniert | 363 Sheets; ältere Effekte teils geometrisch |
 | UI / HUD (Hub, Deck, Skill-Baum, Ergebnisse) | umgesetzt, unvollständig | Hub aus Konzeptbildern; mehrere Knöpfe ohne Funktion |
 | Kampagne | umgesetzt, unvollständig | **neu:** Kapitel 1 mit 5 Missionen (Campaign Alpha 0.1), Platzhalter-Bildschirme |
@@ -50,8 +50,8 @@ Was hier steht, ist am Code geprüft – Design-Dokumente allein zählen nicht a
 
 ## Größte Schwächen für das Spielgefühl
 
-1. Nur eine Figur ist animiert, und das aus einem einzigen Standbild.
-2. Gegner wirken stilistisch uneinheitlich (Pixel-Held gegen gemalte Champions).
+1. Mit Waffe nutzt Thesen noch die Gerüst-Animationen aus einem Standbild.
+2. Champions außerhalb der Kampagne sind noch gemalte Bilder; Gegner und Verbündete sind inzwischen einheitlich.
 3. Kein roter Faden zwischen den Modi – das behebt die Kampagne.
 4. Arena-HUD und mehrere Menüs sind Platzhalter.
 

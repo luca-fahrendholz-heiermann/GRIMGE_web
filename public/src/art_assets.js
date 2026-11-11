@@ -108,22 +108,14 @@ export const ART_ASSETS = Object.freeze({
       role: 'enemy',
       label: 'Leerenhexer'
     }),
-    ally_fighter: Object.freeze({
-      key: 'ally_fighter',
-      sheets: ['assets/sprites/sheets/ally_fighter_0.png', 'assets/sprites/sheets/ally_fighter_1.png'],
-      grid: CELL,
-      anims: STANDARD_ANIMS,
-      role: 'ally',
-      label: 'Dawn Fighter'
-    }),
-    ally_blade: Object.freeze({
-      key: 'ally_blade',
-      sheets: ['assets/sprites/sheets/ally_blade_0.png', 'assets/sprites/sheets/ally_blade_1.png'],
-      grid: CELL,
-      anims: STANDARD_ANIMS,
-      role: 'ally',
-      label: 'Dawn Blade'
-    }),
+    ally_fighter: Object.freeze({ key: 'ally_fighter', sheets: ['assets/sprites/sheets/watch_guard.png'], grid: Object.freeze({ w: 98, h: 97, cols: 7, rows: 1 }), anchor: Object.freeze({ x: 34, y: 95, bodyH: 92 }), hold: Object.freeze({ idle: 20, walk: 9, run: 7, attack: 6 }), anims: GEN_ANIMS, role: 'ally', label: 'Wächter von Kareth' }),
+    ally_blade: Object.freeze({ key: 'ally_blade', sheets: ['assets/sprites/sheets/watch_scout.png'], grid: Object.freeze({ w: 61, h: 82, cols: 7, rows: 1 }), anchor: Object.freeze({ x: 28, y: 80, bodyH: 78 }), hold: Object.freeze({ idle: 20, walk: 9, run: 7, attack: 6 }), anims: GEN_ANIMS, role: 'ally', label: 'Späherin von Kareth' }),
+    // Invasion enemies of the later levels (own designs, 11 Nov 2026).
+    void_duelist: Object.freeze({ key: 'void_duelist', sheets: ['assets/sprites/sheets/void_duelist.png'], grid: Object.freeze({ w: 79, h: 84, cols: 7, rows: 1 }), anchor: Object.freeze({ x: 36, y: 82, bodyH: 80 }), hold: Object.freeze({ idle: 20, walk: 9, run: 7, attack: 6 }), anims: GEN_ANIMS, role: 'enemy', label: 'Leerenfechter' }),
+    void_archer: Object.freeze({ key: 'void_archer', sheets: ['assets/sprites/sheets/void_archer.png'], grid: Object.freeze({ w: 69, h: 100, cols: 7, rows: 1 }), anchor: Object.freeze({ x: 32, y: 98, bodyH: 88 }), hold: Object.freeze({ idle: 20, walk: 9, run: 7, attack: 6 }), anims: GEN_ANIMS, role: 'enemy', label: 'Leerenschütze' }),
+    ember_acolyte: Object.freeze({ key: 'ember_acolyte', sheets: ['assets/sprites/sheets/ember_acolyte.png'], grid: Object.freeze({ w: 78, h: 84, cols: 7, rows: 1 }), anchor: Object.freeze({ x: 30, y: 82, bodyH: 80 }), hold: Object.freeze({ idle: 20, walk: 9, run: 7, attack: 6 }), anims: GEN_ANIMS, role: 'enemy', label: 'Glutakolyth' }),
+    frost_shaman: Object.freeze({ key: 'frost_shaman', sheets: ['assets/sprites/sheets/frost_shaman.png'], grid: Object.freeze({ w: 106, h: 99, cols: 7, rows: 1 }), anchor: Object.freeze({ x: 41, y: 97, bodyH: 80 }), hold: Object.freeze({ idle: 20, walk: 9, run: 7, attack: 6 }), anims: GEN_ANIMS, role: 'enemy', label: 'Frostschamane' }),
+    void_brute: Object.freeze({ key: 'void_brute', sheets: ['assets/sprites/sheets/void_brute.png'], grid: Object.freeze({ w: 131, h: 150, cols: 7, rows: 1 }), anchor: Object.freeze({ x: 79, y: 148, bodyH: 108 }), hold: Object.freeze({ idle: 20, walk: 9, run: 7, attack: 6 }), anims: GEN_ANIMS, role: 'enemy', label: 'Leerenkoloss' }),
     boss_firelord: Object.freeze({
       key: 'boss_firelord',
       sheets: ['assets/sprites/sheets/ember_lord.png'],
@@ -236,11 +228,11 @@ export const ART_ASSETS = Object.freeze({
     ally_fighter: Object.freeze({ hpMul: 1.1, dmgMul: 1.1, spdMul: 1.0, combatType: 'melee', specialCd: 4, special: 'combo_strike', color: '#42a5f5', renderHeight: 58 }),
     ally_blade: Object.freeze({ hpMul: 0.9, dmgMul: 1.4, spdMul: 1.15, combatType: 'melee', specialCd: 5, special: 'blade_dash', color: '#66bb6a', renderHeight: 56 }),
     // Invasion variety (user, 1 Nov 2026): phantom fighters join the enemy ranks in later levels.
-    deep: Object.freeze({ hpMul: 0.95, dmgMul: 1.5, spdMul: 1.25, combatType: 'melee', specialCd: 5, special: 'backstab', color: '#ef5350', renderHeight: 58 }),
-    henry: Object.freeze({ hpMul: 0.75, dmgMul: 1.15, spdMul: 1.0, combatType: 'ranged', specialCd: 8, special: null, color: '#8bc34a', renderHeight: 58 }),
-    firen: Object.freeze({ hpMul: 0.8, dmgMul: 1.4, spdMul: 0.95, combatType: 'ranged', specialCd: 6, special: 'arcane_burst', color: '#ff7043', renderHeight: 58 }),
-    freeze: Object.freeze({ hpMul: 0.85, dmgMul: 1.2, spdMul: 0.95, combatType: 'ranged', specialCd: 7, special: 'arcane_burst', color: '#4fc3f7', renderHeight: 58 }),
-    woody: Object.freeze({ hpMul: 2.3, dmgMul: 1.45, spdMul: 0.7, combatType: 'melee', specialCd: 6, special: 'shield_charge', color: '#a1887f', renderHeight: 64 }),
+    void_duelist: Object.freeze({ hpMul: 0.95, dmgMul: 1.5, spdMul: 1.25, combatType: 'melee', specialCd: 5, special: 'backstab', color: '#ef5350', renderHeight: 58 }),
+    void_archer: Object.freeze({ hpMul: 0.75, dmgMul: 1.15, spdMul: 1.0, combatType: 'ranged', specialCd: 8, special: null, color: '#8bc34a', renderHeight: 58 }),
+    ember_acolyte: Object.freeze({ hpMul: 0.8, dmgMul: 1.4, spdMul: 0.95, combatType: 'ranged', specialCd: 6, special: 'arcane_burst', color: '#ff7043', renderHeight: 58 }),
+    frost_shaman: Object.freeze({ hpMul: 0.85, dmgMul: 1.2, spdMul: 0.95, combatType: 'ranged', specialCd: 7, special: 'arcane_burst', color: '#4fc3f7', renderHeight: 58 }),
+    void_brute: Object.freeze({ hpMul: 2.3, dmgMul: 1.45, spdMul: 0.7, combatType: 'melee', specialCd: 6, special: 'shield_charge', color: '#a1887f', renderHeight: 80 }),
     boss_firelord: Object.freeze({ hpMul: 3.0, dmgMul: 1.8, spdMul: 0.8, combatType: 'melee', specialCd: 4, special: 'fire_dash', color: '#ff6d00', renderHeight: 72 })
   }),
 
