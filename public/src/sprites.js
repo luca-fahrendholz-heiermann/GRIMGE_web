@@ -19,10 +19,20 @@ export class SpriteManager {
     this.heroDefs = {
       // The user's pixel-art characters (21 Oct 2026), prepared by tools/prepare_pixel_characters.cjs:
       // one shared crop per character, so frames / variants swap without a jump.
-      // Generated frames (11 Nov 2026) play while Thesen is unarmed; with a weapon the parts-rig clips stay (the weapon
-      // follows the rig's hand point) — the rig clip of an overridden state is kept as 'rig:<state>'.
+      // Generated frames (11 Nov 2026). Unarmed: fist strikes. With a weapon: the 'armed' groups play (registered as
+      // 'arm:<state>') — weapon-swing poses with an empty fist; hands = [front x, y, rear x, y] per picked frame (cell
+      // pixels) is where the game's own weapon is held, so one set of poses serves every weapon. States without an armed
+      // group fall back to the parts-rig clip, kept as 'rig:<state>'.
       thesen: { name: 'Thesen', prepared: ['char_thesen.png'], weapon: 'Bone Spear', role: 'Horned Warrior / Focus Transformation', clips: [
-        { sheet: 'sheets/thesen_walk.png', frames: 6, w: 68, h: 119, anchorX: 34, anchorY: 117, use: [{ states: ['walk', 'run'], hold: 6, loop: true }, { states: ['sprint'], hold: 4, loop: true }] },
+        { sheet: 'sheets/thesen_walk.png', frames: 6, w: 68, h: 119, anchorX: 34, anchorY: 117, use: [{ states: ['walk', 'run'], hold: 6, loop: true }, { states: ['sprint'], hold: 4, loop: true },
+          { armed: true, states: ['walk', 'run'], hold: 6, loop: true, hands: [[59, 60, 15, 70], [57, 59, 14, 71], [36, 64, 20, 64], [57, 61, 10, 67], [55, 66, 15, 70], [60, 60, 16, 67]] },
+          { armed: true, states: ['sprint'], hold: 4, loop: true, hands: [[59, 60, 15, 70], [57, 59, 14, 71], [36, 64, 20, 64], [57, 61, 10, 67], [55, 66, 15, 70], [60, 60, 16, 67]] }] },
+        { sheet: 'sheets/thesen_armed.png', frames: 6, w: 81, h: 111, anchorX: 36, anchorY: 109, use: [
+          { armed: true, states: ['attack1'], idx: [1, 2, 2], holds: [4, 3, 6], hands: [[15, 24, 58, 67], [73, 47, 20, 54], [73, 47, 20, 54]] },
+          { armed: true, states: ['attack2'], idx: [0, 5, 5], holds: [2, 4, 8], hands: [[54, 67, 24, 59], [75, 47, 20, 67], [75, 47, 20, 67]] },
+          { armed: true, states: ['attack3', 'heavyStrike'], idx: [3, 4, 4], holds: [6, 4, 11], hands: [[29, 5, 58, 67], [51, 75, 48, 72], [51, 75, 48, 72]] },
+          { armed: true, states: ['uppercut'], idx: [4, 3, 3], holds: [4, 4, 9], hands: [[51, 75, 48, 72], [29, 5, 58, 67], [29, 5, 58, 67]] },
+          { armed: true, states: ['dive'], idx: [4], hold: 8, loop: true, hands: [[51, 75, 48, 72]] }] },
         { sheet: 'sheets/thesen_attack.png', frames: 6, w: 68, h: 117, anchorX: 29, anchorY: 115, use: [
           { states: ['attack1'], idx: [0, 1, 1], holds: [4, 3, 6] }, { states: ['attack2'], idx: [1, 2, 2], holds: [2, 4, 8] },
           { states: ['attack3', 'heavyStrike'], idx: [3, 4, 4], holds: [6, 4, 11] }, { states: ['uppercut'], idx: [0, 5, 5], holds: [4, 4, 9] }, { states: ['dive'], idx: [4], hold: 8, loop: true }] },
@@ -150,8 +160,10 @@ export class SpriteManager {
         });
         // use: several state groups on one sheet, each with its own frame picks (idx) and timing.
         for (const u of c.use ?? [c]) {
-          const list = u.idx ? u.idx.map((k) => frames[k]) : frames;
-          for (const st of u.states) {
+          let list = u.idx ? u.idx.map((k) => frames[k]) : frames;
+          if (u.hands) list = list.map((f, k) => { const h = u.hands[k]; return h ? { ...f, hand: { x: h[0], y: h[1] }, handBack: { x: h[2], y: h[3] } } : f; });
+          for (const name of u.states) {
+            const st = u.armed ? `arm:${name}` : name;
             if (spr.frames[st] && spr.rigBaked) { spr.frames[`rig:${st}`] = spr.frames[st]; spr.loop[`rig:${st}`] = spr.loop[st]; spr.hold[`rig:${st}`] = spr.hold[st]; if (spr.holdSeq[st]) spr.holdSeq[`rig:${st}`] = spr.holdSeq[st]; }
             spr.frames[st] = list; spr.loop[st] = !!u.loop; delete spr.holdSeq[st]; if (u.holds) spr.holdSeq[st] = u.holds; else spr.hold[st] = u.hold ?? 8;
             (spr.clipStates ??= new Set()).add(st);

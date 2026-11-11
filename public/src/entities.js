@@ -2290,8 +2290,8 @@ export class Player extends GroundEntity {
       else if (free && levitationOffset(this) > 2) animState = 'hover';
       else if (this.state === 'run' && this.sprintActive) animState = stanceClip ? 'prowlRun' : 'sprint';
     }
-    // With a weapon the rig's own clip plays (its hand point carries the weapon); generated frames are for bare hands.
-    if (rigged && (this.weapon || this.classWeapon) && sprites.sprites[this.renderKey]?.frames?.[`rig:${animState}`]) animState = `rig:${animState}`;
+    // With a weapon: the armed poses (their hand points carry the weapon), else the rig's own clip; bare hands play the fist frames.
+    if (rigged && (this.weapon || this.classWeapon)) { const fr = sprites.sprites[this.renderKey]?.frames; if (fr?.[`arm:${animState}`]) animState = `arm:${animState}`; else if (fr?.[`rig:${animState}`]) animState = `rig:${animState}`; }
     if (this._animState !== animState) { this._animState = animState; this._animStart = this.animTime; }
     const animTime = rigged ? this.animTime - (this._animStart ?? 0) : this.animTime;
     if (this.state === 'attack2' && !rigged) reverse = true;
