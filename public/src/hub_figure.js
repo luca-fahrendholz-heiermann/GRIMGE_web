@@ -12,7 +12,8 @@ let fig = null;
 // What the hub shows: the created character, otherwise the figure picked in the hub.
 export function hubFigureOf(profile, selectedHero) {
   const ch = profile?.character; const created = !!ch?.created;
-  const base = created && ch.base ? ch.base : selectedHero;
+  /* The figure that really plays: the one picked in the hub (creation sets it to the character's own figure). */
+  const base = selectedHero ?? ch?.base;
   const weapon = profile?.classWeapon ?? null;
   const cls = classById(ch?.classId) ?? classOfWeapon(weapon);
   return { base, look: created && ch.base === base ? ch.look : null, weapon, name: created && ch.name ? ch.name.toUpperCase() : null, className: created && cls ? cls.name.toUpperCase() : null };
