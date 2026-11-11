@@ -397,9 +397,10 @@ export class Battlefield {
     // The authored arena art fills the fixed 16:9 stage exactly.
     ctx.fillStyle = '#101925';
     ctx.fillRect(0, 0, renderWidth, viewH);
-    if (!this.bgLoaded) return;
+    // A campaign scene for these worlds is the same arena layout restyled (castles and walls in the same places).
+    const base = this.stageImage(); if (!base) return;
 
-    ctx.drawImage(this.bgImage, cameraOffsetX, 0, gameplayWidth, viewH);
+    ctx.drawImage(base, cameraOffsetX, 0, gameplayWidth, viewH);
     if (this.mode?.world === 'invasion') this._paintInvasionBridge(ctx, cameraOffsetX, gameplayWidth, viewH, renderWidth);
   }
 
@@ -407,16 +408,18 @@ export class Battlefield {
   // is replaced by the arena's own middle — the right-centre strip (floor, battlement, waterfalls, sky) mirrored at
   // the seam, so floor and wall run on seamlessly — and the side the enemy marches in from darkens to a dusk in
   // hard pixel steps (no soft gradient). Built once into an offscreen canvas.
+  stageImage() { return this.scene?.loaded ? this.scene.image : this.bgLoaded ? this.bgImage : null; }
+
   invasionBackdrop() {
-    if (this._invasionBg) return this._invasionBg;
-    const img = this.bgImage; const doc = globalThis.document; if (!img?.width || typeof doc?.createElement !== 'function') return null;
+    const img = this.stageImage();
+    if (this._invasionBg && this._invasionBgOf === img) return this._invasionBg; const doc = globalThis.document; if (!img?.width || typeof doc?.createElement !== 'function') return null;
     const W = img.width; const H = img.height; const c = doc.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d'); if (!g) return null;
     g.imageSmoothingEnabled = false; g.drawImage(img, 0, 0);
     const seam = Math.round(W * .76); const span = W - seam;
     g.save(); g.translate(seam * 2, 0); g.scale(-1, 1); g.drawImage(img, seam - span, 0, span, H, seam - span, 0, span, H); g.restore();
     const steps = 18; for (let i = 0; i < steps; i++) { const x0 = Math.round(W * (.6 + i * .4 / steps)); g.fillStyle = `rgba(28,10,22,${(.018).toFixed(3)})`; g.fillRect(x0, 0, W - x0, H); }
     for (let i = 0; i < 8; i++) { const y0 = Math.round(H * (i * .035)); g.fillStyle = `rgba(140,40,30,${(.016).toFixed(3)})`; g.fillRect(Math.round(W * (.72 + i * .02)), 0, W, y0 + Math.round(H * .035)); }
-    this._invasionBg = c; return c;
+    this._invasionBg = c; this._invasionBgOf = img; return c;
   }
 
   _paintInvasionBridge(ctx, cameraOffsetX, gameplayWidth, viewH) {

@@ -38,7 +38,7 @@ import { TransformationFx } from './transform_fx.js';
 export const FREE_DRAW_BONUS = .06;
 import { PrimalCompanion, normalizePrimalChoice, startPrimalBond, endPrimalBond, bondForm, PRIMAL_ARCHETYPES } from './primals.js';
 import { currentBuffForm } from './buff_forms.js'; // transformation and Arcane State exclude each other
-import { structureSurfaces, renderStructures, furnitureEntries, furnitureUnder, renderForeground } from './level_structures.js';
+import { structureSurfaces, renderStructures, furnitureEntries, furnitureUnder, renderForeground, renderSceneProps, hasSceneProps } from './level_structures.js';
 import { setupRift, updateRift, renderRiftGround, renderRiftOverlay } from './arena_rift.js'; // arena "Riss + Leben"
 import { finishRun, afterMatch, isCampaignOpen } from './campaign.js';
 import { isCharacterCreationOpen } from './character_creation.js'; // Campaign Alpha: missions reuse the modes with parameters
@@ -3349,6 +3349,8 @@ export class GameWorld {
     this.renderArenaRuneCollectibles(ctx);
     this.renderArenaTransformationRelic(ctx);
 
+    // A campaign scene dresses the dungeon room with its own props along the back wall.
+    if (this.activeMode?.id === 'dungeon' && hasSceneProps(this.battlefield.scene?.id) && this.battlefield.boundsOverride) renderSceneProps(ctx, this.battlefield.scene.id, this.battlefield.boundsOverride.left, this.battlefield.boundsOverride.right, this.modeState?.structures?.defs ?? []);
     if (this.modeState?.structures) {
       renderStructures(ctx, this.modeState.structures.defs, this.modeState.structures.left);
       // Ground effects lying on the structures (a meteor crater on the gallery) come after them.
@@ -3395,7 +3397,7 @@ export class GameWorld {
     combat.render(ctx);
     renderRiftOverlay(ctx, this);
     // Foreground pillars / chains in front of the battle line (parallax, see-through over the Wizard).
-    if (this.modeState?.structures) renderForeground(ctx, this.modeState.structures.defs, this.modeState.structures.left, this.modeState?.dungeonCameraX ?? 0, this.player);
+    if (this.modeState?.structures) renderForeground(ctx, this.modeState.structures.defs, this.modeState.structures.left, this.modeState?.dungeonCameraX ?? 0, this.player, this.battlefield.scene?.id ?? null);
 
     if (this.debugVisible) this.battlefield.renderDebug(ctx, this);
 

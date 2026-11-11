@@ -47,6 +47,12 @@ const css = `
 #cp-overlay h2{margin:0 0 4px;font-size:22px;letter-spacing:2px;color:#f0d890}
 #cp-overlay .cp-sum{margin:0 0 14px;font-size:13px;line-height:1.5;color:#b8ac98}
 #cp-overlay .cp-path{display:flex;gap:6px;align-items:stretch;margin-bottom:14px}
+#cp-overlay .cp-map{position:relative;margin-bottom:10px;border:2px solid #3a3048;line-height:0}
+#cp-overlay .cp-map img{width:100%;display:block;image-rendering:pixelated}
+#cp-overlay .cp-pin{position:absolute;transform:translate(-50%,-50%);width:34px;height:34px;border-radius:50%;font-family:inherit;font-size:15px;font-weight:700;color:#fff3c8;background:#2a2234;border:3px solid #6b5a3a;cursor:pointer;padding:0;line-height:1;box-shadow:0 0 0 2px #0a080e}
+#cp-overlay .cp-pin.done{background:#2c4a2c;border-color:#8fd08a}
+#cp-overlay .cp-pin.on{border-color:#f0d890;background:#6a4e1e;box-shadow:0 0 0 2px #0a080e,0 0 14px #f0d890}
+#cp-overlay .cp-pin.locked{opacity:.55;cursor:default;background:#17121e}
 #cp-overlay .cp-node{flex:1;text-align:left;font-family:inherit;color:#e8dcc4;background:#2a2234;border:2px solid #4a3e5a;padding:8px 9px;cursor:pointer;min-height:74px}
 #cp-overlay .cp-node small{display:block;font-size:10px;letter-spacing:1px;color:#9a8eaa;margin-bottom:3px}
 #cp-overlay .cp-node b{display:block;font-size:12px;line-height:1.25}
@@ -112,7 +118,7 @@ export function openCampaign(game, { focusId = null } = {}) {
   const render = () => {
     const doneN = chapter.missions.filter((m) => isMissionDone(profile, m.id)).length;
     root.innerHTML = `<div class="cp-box"><h2>${chapter.title}</h2><p class="cp-sum">${chapter.summary} · ${doneN}/${chapter.missions.length} Missionen geschafft</p>
-      <div class="cp-path"></div><div class="cp-detail"></div>
+      ${chapter.map ? `<div class="cp-map"><img src="assets/scenes/campaign/${chapter.map}.png" alt=""></div>` : ''}<div class="cp-path"></div><div class="cp-detail"></div>
       <div class="cp-row"><button class="cp-btn cp-go" type="button">MISSION STARTEN</button><button class="cp-btn cp-back" type="button">ZURÜCK</button></div>
       <div class="cp-note">Platzhalter-Bildschirm — das endgültige Layout kommt aus dem UI-Editor.</div></div>`;
     const path = root.querySelector('.cp-path');
@@ -121,6 +127,9 @@ export function openCampaign(game, { focusId = null } = {}) {
       const b = doc.createElement('button'); b.type = 'button'; b.className = `cp-node${open ? '' : ' locked'}${done ? ' done' : ''}${sel.id === m.id ? ' on' : ''}`;
       b.innerHTML = `<small>${k + 1} · ${m.kind}</small><b>${m.title}</b><i>${done ? '✔ GESCHAFFT' : open ? 'OFFEN' : 'GESPERRT'}</i>`;
       b.addEventListener('pointerdown', (e) => { e.preventDefault(); if (open) { sel = m; render(); } }); path.appendChild(b);
+      // The same mission as a pin on the chapter map.
+      const mapEl = root.querySelector('.cp-map');
+      if (mapEl && m.map) { const pin = doc.createElement('button'); pin.type = 'button'; pin.className = `cp-pin${open ? '' : ' locked'}${done ? ' done' : ''}${sel.id === m.id ? ' on' : ''}`; pin.textContent = done ? '✔' : String(k + 1); pin.title = m.title; pin.style.left = `${m.map[0]}%`; pin.style.top = `${m.map[1]}%`; pin.addEventListener('pointerdown', (e) => { e.preventDefault(); if (open) { sel = m; render(); } }); mapEl.appendChild(pin); }
     });
     const done = isMissionDone(profile, sel.id); const r = sel.reward ?? {};
     root.querySelector('.cp-detail').innerHTML = `<h3>${sel.title}</h3><p>${sel.briefing}</p><p class="cp-meta">ZIEL: ${sel.goal}</p>

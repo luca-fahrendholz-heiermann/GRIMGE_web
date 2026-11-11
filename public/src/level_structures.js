@@ -96,12 +96,17 @@ export function furnitureUnder(defs = [], left = 0, a) {
 
 // ── foreground (in front of the battle line, parallax 1.25; see-through where the Wizard is behind) ────────────
 // { type: 'fg_pillar' | 'fg_chain', x } — dark silhouettes framing the scene like Castle Crashers' beds and pillars.
-export function renderForeground(ctx, defs = [], left = 0, camX = 0, player = null) {
+export function renderForeground(ctx, defs = [], left = 0, camX = 0, player = null, theme = null) {
+  const themed = theme ? themedForegroundPillar(theme) : null;
   for (const d of defs) {
     if (d.type !== 'fg_pillar' && d.type !== 'fg_chain') continue;
     const x = left + d.x - camX * .25; const behind = player && Math.abs(player.x - x) < (d.type === 'fg_pillar' ? 44 : 16);
     ctx.save(); ctx.globalAlpha = behind ? .4 : .88;
-    if (d.type === 'fg_pillar') {
+    if (d.type === 'fg_pillar' && themed) {
+      /* The scene's own pillar, enlarged and darkened, standing in front of the battle line. */
+      const k = 1.7; const w = themed.width * k; const h = themed.height * k; ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(themed, Math.round(x - w / 2), Math.round(groundYForDepth(1) + 60 - h), Math.round(w), Math.round(h));
+    } else if (d.type === 'fg_pillar') {
       const top = groundYForDepth(.3) - 330; const bot = groundYForDepth(1) + 120;
       rect(ctx, x - 26, top, 52, bot - top, '#120e16'); rect(ctx, x - 26, top, 4, bot - top, '#2a2232'); rect(ctx, x + 18, top, 3, bot - top, '#0a080c');
       for (let y = top + 30; y < bot; y += 46) rect(ctx, x - 26, y, 52, 3, '#1e1824');
@@ -135,4 +140,43 @@ export function pickLevelPoint(surfaces, x, screenY, groundZ, nearZ = .94) {
   let z = groundZ;
   for (const S of surfaces ?? []) if (surfaceHeight(S, x) > 14 && surfaceContains(S, x, z)) z = Math.min(nearZ, S.zMax + .01);
   return { x, z };
+}
+
+// ── scene props (Campaign Alpha, 11 Nov 2026) ───────────────────────────────────────────────────────────────────────
+// A campaign scene with a theme ('kareth', 'glut') dresses a dungeon room with matching props (generated sheets cut by
+// art/authoring/prep_props.cjs → assets/scenes/props/<theme>_<name>.png): decoration along the back wall, no collision.
+const SCENE_PROPS = Object.freeze({
+  kareth: Object.freeze(['torch', 'pillar', 'rubble', 'banner', 'statue', 'fallen']),
+  glut: Object.freeze(['torch', 'pillar', 'rubble', 'cage', 'statue', 'chain'])
+});
+const propCache = {};
+function propImage(theme, name) {
+  const key = `${theme}_${name}`; let e = propCache[key];
+  if (!e) { e = propCache[key] = { image: typeof Image === 'function' ? new Image() : null, loaded: false, dark: null }; if (e.image) { e.image.onload = () => { e.loaded = true; }; e.image.src = `assets/scenes/props/${key}.png`; } }
+  return e.loaded ? e : null;
+}
+export const hasSceneProps = (theme) => !!SCENE_PROPS[theme];
+// Props stand on the far ground line every ~220 px through the room (a fixed pattern per room), never where a stair,
+// gallery or piece of furniture stands.
+export function renderSceneProps(ctx, theme, left, right, defs = []) {
+  const names = SCENE_PROPS[theme]; if (!names) return;
+  const y = groundYForDepth(.05); const blocked = defs.filter((d) => Number.isFinite(d.x0)).map((d) => [left + d.x0 - 40, left + d.x1 + 40]);
+  ctx.save(); ctx.imageSmoothingEnabled = false;
+  let k = 0;
+  for (let x = left + 90; x < right - 60; x += 190 + ((k * 73) % 90), k++) {
+    if (blocked.some(([a, b]) => x > a && x < b)) continue;
+    const e = propImage(theme, names[k % names.length]); if (!e) continue;
+    ctx.drawImage(e.image, Math.round(x - e.image.width / 2), Math.round(y - e.image.height + 4));
+  }
+  ctx.restore();
+}
+// The themed pillar as a dark foreground silhouette (replaces the plain black pillar); null until the image is there.
+export function themedForegroundPillar(theme) {
+  if (!SCENE_PROPS[theme]) return null;
+  const e = propImage(theme, 'pillar'); if (!e) return null;
+  if (!e.dark && typeof document?.createElement === 'function') {
+    const c = document.createElement('canvas'); c.width = e.image.width; c.height = e.image.height; const g = c.getContext('2d');
+    if (g) { g.drawImage(e.image, 0, 0); g.globalCompositeOperation = 'source-atop'; g.fillStyle = 'rgba(8,6,12,.72)'; g.fillRect(0, 0, c.width, c.height); e.dark = c; }
+  }
+  return e.dark;
 }

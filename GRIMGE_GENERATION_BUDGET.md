@@ -12,7 +12,7 @@ bitte im Higgsfield-Konto selbst kontrollieren.
 | Geschätzte offene Ausgaben | 0,00 USD |
 | Restbudget | **20,00 USD** |
 | Higgsfield-Guthaben (geprüft 11. Nov 2026, vor dem ersten Auftrag) | 10 Credits (Registrierungs-Guthaben), Plan laut Konto: `ultra` |
-| Verbrauchte Credits aus dem Guthaben | **0,75** (drei Szenen); Kontostand geprüft: 9,25 Credits |
+| Verbrauchte Credits aus dem Guthaben | **2,0** (acht Bilder); Kontostand geprüft: 8,0 Credits |
 
 ## Was geprüft wurde
 
@@ -48,7 +48,13 @@ Nicht vorgesehen: Trailer, Werbevideos, Konzeptbilder für ungebaute Kapitel.
 | 11. Nov 2026 | Szene „Abgrund-Arena“ (Mission 3), 1 Versuch | 0,25 Credits | 0,25 Credits | 20,00 USD |
 | 11. Nov 2026 | Szene „Gluttiefe“ (Mission 5), 1 Versuch | 0,25 Credits | 0,25 Credits | 20,00 USD |
 
-Alle Credits stammen aus dem Registrierungs-Guthaben; es ist kein zusätzliches Geld geflossen. Rest: 9,25 Credits.
+| 11. Nov 2026 | Szene „Aschenfeste“ (Mission 4) – das Burg-Bild umgestaltet, Aufbau erhalten | 0,25 Credits | 0,25 Credits | 20,00 USD |
+| 11. Nov 2026 | Szene „Halvar“ (Mission 2) – das Burg-Bild als Sturmnacht | 0,25 Credits | 0,25 Credits | 20,00 USD |
+| 11. Nov 2026 | Kapitel-Karte | 0,25 Credits | 0,25 Credits | 20,00 USD |
+| 11. Nov 2026 | Requisiten-Bogen „Kareth“ (6 Stück, transparent) | 0,25 Credits | 0,25 Credits | 20,00 USD |
+| 11. Nov 2026 | Requisiten-Bogen „Gluttiefe“ (6 Stück, transparent) | 0,25 Credits | 0,25 Credits | 20,00 USD |
+
+Alle Credits stammen aus dem Registrierungs-Guthaben; es ist kein zusätzliches Geld geflossen. Rest: 8,0 Credits (im Konto nachgeprüft).
 
 ## Erzeugte Assets
 
@@ -57,5 +63,11 @@ Alle Credits stammen aus dem Registrierungs-Guthaben; es ist kein zusätzliches 
 | Kareth | `art/generated/scenes/kareth_raw.png` | `public/assets/scenes/campaign/kareth.png` | Hintergrund Mission 1 |
 | Abgrund-Arena | `art/generated/scenes/abyss_raw.png` | `public/assets/scenes/campaign/abyss.png` | Hintergrund Mission 3 |
 | Gluttiefe | `art/generated/scenes/glut_raw.png` | `public/assets/scenes/campaign/glut.png` | Hintergrund Mission 5 |
+| Aschenfeste | `art/generated/scenes/ash_raw.png` | `public/assets/scenes/campaign/ash.png` | Hintergrund Mission 4 (ersetzt das Burg-Bild) |
+| Halvar | `art/generated/scenes/halvar_raw.png` | `public/assets/scenes/campaign/halvar.png` | Hintergrund Mission 2 (ersetzt das Burg-Bild) |
+| Kapitel-Karte | `art/generated/scenes/map_raw.png` | `public/assets/scenes/campaign/map_c1.png` | Kapitelbildschirm mit Missions-Pins |
+| Requisiten Kareth | `art/generated/scenes/props_kareth_raw.png` | `public/assets/scenes/props/kareth_*.png` (6) | Dekoration an der Rückwand, Vordergrund-Säule |
+| Requisiten Gluttiefe | `art/generated/scenes/props_glut_raw.png` | `public/assets/scenes/props/glut_*.png` (6) | Dekoration an der Rückwand, Vordergrund-Säule |
 
-Aufbereitung: `art/authoring/prep_scene.cjs` (oben beschneiden, bis die Boden-Kante auf der Spiel-Bodenlinie liegt; Palette auf 56 Farben).
+Requisiten werden mit `art/authoring/prep_props.cjs` freigestellt (harter Alpha-Schnitt), getrennt und halbiert.
+Szenen-Aufbereitung: `art/authoring/prep_scene.cjs` (oben beschneiden, bis die Boden-Kante auf der Spiel-Bodenlinie liegt; Palette auf 56 Farben).
