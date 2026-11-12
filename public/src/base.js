@@ -203,7 +203,7 @@ export function baseTap(game, pt) {
   return false;
 }
 
-// The prompt button at the bottom (works with touch, mouse and E / Enter) names the spot in reach; the view button
+// The small prompt button at the right edge (works with touch, mouse and E / Enter) names the spot in reach; the view button
 // at the top left switches between the close view and the whole room (also V).
 let prompt = null;
 export function closeBasePrompt() {
@@ -221,7 +221,8 @@ export function updateBase(game) {
   if (typeof doc?.createElement !== 'function' || typeof doc.body?.appendChild !== 'function') return;
   if (!prompt) {
     const el = doc.createElement('button'); el.type = 'button'; el.id = 'base-prompt';
-    el.style.cssText = 'position:fixed;left:50%;bottom:16vh;transform:translateX(-50%);z-index:60;font-family:Cinzel,serif;font-size:clamp(14px,2vw,22px);letter-spacing:.08em;color:#fff3c8;background:#6a4e1e;border:3px solid #f0d890;padding:.6em 1.4em;min-height:48px;box-shadow:0 3px 0 #2a1e0a;cursor:pointer;display:none';
+    /* A small button at the right edge (user, 12 Nov 2026: the big one in the middle was too bulky). */
+    el.style.cssText = 'position:fixed;right:max(1.5vw,env(safe-area-inset-right));top:40vh;z-index:60;max-width:26vw;font-family:Cinzel,serif;font-size:clamp(11px,1.3vw,15px);letter-spacing:.06em;color:#fff3c8;background:#6a4e1eee;border:2px solid #f0d890;border-radius:6px;padding:.45em .8em;min-height:40px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;display:none';
     const fire = (e) => { e?.preventDefault?.(); e?.stopPropagation?.(); if (prompt?.spot) activateSpot(game, prompt.spot); };
     el.addEventListener('pointerdown', fire);
     const viewEl = doc.createElement('button'); viewEl.type = 'button'; viewEl.id = 'base-view';
@@ -237,7 +238,7 @@ export function updateBase(game) {
   }
   const s = busy ? null : nearestSpot(game); prompt.spot = s;
   prompt.el.style.display = s ? 'block' : 'none';
-  if (s) prompt.el.textContent = s.kind === 'class' ? `▶ ${s.label} AUSRÜSTEN` : `▶ ${s.label}`;
+  if (s) prompt.el.textContent = `▶ ${s.label}`;
   prompt.viewEl.style.display = busy ? 'none' : 'block';
   prompt.viewEl.textContent = view === 'hall' ? '⌕ NAH' : '⛶ GANZER RAUM';
 }
