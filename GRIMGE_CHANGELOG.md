@@ -2,6 +2,19 @@
 
 Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
+## 12. Nov 2026 – Die Basis: Treppe in den nächsten Raum, näher heran, Sprung-Reihenfolge (Rückmeldung des Nutzers)
+
+- **Treppe und zweiter Raum:** Am Ende der Halle führt eine Treppe auf ein Podest mit Tür. Wer oben durch die Tür
+  geht, kommt in die **Rüstkammer** und steht dort wieder auf einem Podest mit Treppe nach unten; derselbe Weg führt
+  zurück. Ein Tipp auf die Tür wechselt den Raum sofort.
+- Die Halle hält jetzt nur die sechs Stationen, die Rüstkammer die 18 Klassen-Ständer in zwei Reihen mit mehr Abstand
+  und eigenem warmem Licht.
+- **Näher heran:** Nahsicht mit Zoom 1,45 statt 1,15; die Kamera folgt der Figur jetzt auch nach oben und unten
+  (Treppe, Rückwand) und ruckt bei Sprüngen nicht.
+- **Fehler behoben:** Im Sprung rutschte die Figur hinter Gegenstände, vor denen sie stand. Die Tiefen-Reihenfolge
+  richtet sich jetzt nach dem Boden unter der Figur, nicht nach ihrer Höhe in der Luft (gilt in allen Modi).
+- Noch einfach: Treppe und Tür sind gezeichnete Formen, kein eigenes Bild.
+
 ## 12. Nov 2026 – Die Basis: tiefer Saal und zwei Ansichten (Vorgabe des Nutzers)
 
 - **Mehr Tiefe, mehr Lauffläche:** neues Saalbild mit großem Boden; die Bodentiefe ist fast doppelt so groß

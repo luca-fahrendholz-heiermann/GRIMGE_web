@@ -44,7 +44,7 @@ import { finishRun, afterMatch, isCampaignOpen } from './campaign.js';
 import { isCharacterCreationOpen } from './character_creation.js'; // Campaign Alpha: missions reuse the modes with parameters
 import { missionById } from './campaign_data.js';
 import { startAppUpdates } from './app_update.js'; // a new deployed version reloads the game by itself (hub only)
-import { BASE_SCENE, baseBounds, renderBaseHall, baseActors, updateBase, updateBaseCamera, baseTap, closeBasePrompt } from './base.js'; // the player's headquarters // stairs / galleries (Castle Crashers DNA)
+import { BASE_SCENE, baseBounds, renderBaseHall, baseActors, updateBase, updateBaseCamera, baseTap, closeBasePrompt, setBaseRoom } from './base.js'; // the player's headquarters // stairs / galleries (Castle Crashers DNA)
 // Activated trap entries kept on top of the history during a match (back-navigation guard).
 const BACK_TRAPS = 2;
 // Follow-camera zoom per mode (1 = the classic full stage). The zoom pivots on the near ground edge, so the near depth
@@ -1634,7 +1634,7 @@ export class GameWorld {
     }
     if (mode.id === 'base') {
       Object.assign(this.battlefield.boundsOverride, baseBounds());
-      this.player.x = 330; this.player.z = 0.55; this.battlefield.placeOnSurface(this.player);
+      setBaseRoom(this, 'hall'); /* places the figure and makes the hall's stairs walkable */
       this.enemyChampion.lifeState = 'Dead'; this.enemyChampion.respawnTimer = Infinity;
       return;
     }
@@ -3397,7 +3397,11 @@ export class GameWorld {
       const key = new Map(actors.map((a) => { const on = Number.isFinite(a.z) ? furnitureUnder(st.defs, st.left, a) : null; return [a, on ? on.frontY + .02 : a.y + (Number.isFinite(a.elevation) && a.elevation > 0 && Number.isFinite(a.z) ? a.elevation : 0)]; }));
       for (const f of furn) { key.set(f, f.y); actors.push(f); }
       actors.sort((a, b) => key.get(a) - key.get(b));
-    } else actors.sort((a, b) => a.y - b.y);
+    } else {
+      // A jump keeps its place in the depth order: the ground under the jumper counts, not the height in the air (user, 12 Nov 2026).
+      const depthY = (a) => a.y + (Number.isFinite(a.elevation) && a.elevation > 0 && Number.isFinite(a.z) ? a.elevation : 0);
+      actors.sort((a, b) => depthY(a) - depthY(b));
+    }
     let spellBatch = [];
     for (const actor of actors) {
       if (actor.spell) { spellBatch.push(actor.spell); continue; }
