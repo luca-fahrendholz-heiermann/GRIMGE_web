@@ -111,7 +111,9 @@ export function baseCameraFor({ z, w, h, playerX, pivotY, worldY = 0, offX = 0 }
   const y = h / z >= HALL.h ? (h / 2 - pivotY) / z + pivotY - (top + HALL.h / 2) - worldY : (h - pivotY) / z + pivotY - HALL.bottom - worldY;
   return { x, y };
 }
+let camGame = null;
 export function updateBaseCamera(game, dt) {
+  camGame = game;
   const w = game.renderWidth; const h = game.renderHeight; const state = game.modeState;
   const target = view === 'hall' ? hallFitZoom(w, h) : BASE_VIEWS.near;
   const now = game._zoomNow ?? target; game._zoomNow = Math.abs(target - now) < .002 ? target : now + (target - now) * Math.min(1, dt * 4);
@@ -144,10 +146,12 @@ export function baseTap(game, pt) {
 // at the top right switches between the close view and the whole hall (also V).
 let prompt = null;
 export function closeBasePrompt() {
+  /* The base's zoom and vertical shift never leak into another mode — also when no prompt was ever built. */
+  if (camGame) { camGame._camY = 0; camGame._zoomNow = undefined; camGame = null; }
+  view = 'near';
   if (!prompt) return;
   prompt.el.remove(); prompt.viewEl.remove(); globalThis.document?.removeEventListener?.('keydown', prompt.key);
-  if (prompt.game) { prompt.game._camY = 0; prompt.game._zoomNow = undefined; }
-  prompt = null; view = 'near';
+  prompt = null;
 }
 export function updateBase(game) {
   const doc = globalThis.document; const busy = isRuneVaultOpen() || isCharacterCreationOpen() || isCampaignOpen();
@@ -167,7 +171,7 @@ export function updateBase(game) {
       if ((e.code === 'KeyE' || e.code === 'Enter') && prompt?.spot) fire(e);
       else if (e.code === 'KeyV') toggle(e);
     };
-    doc.addEventListener('keydown', key); doc.body.appendChild(el); doc.body.appendChild(viewEl); prompt = { el, viewEl, key, spot: null, game };
+    doc.addEventListener('keydown', key); doc.body.appendChild(el); doc.body.appendChild(viewEl); prompt = { el, viewEl, key, spot: null };
   }
   const s = busy ? null : nearestSpot(game); prompt.spot = s;
   prompt.el.style.display = s ? 'block' : 'none';
