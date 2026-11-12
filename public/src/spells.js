@@ -880,6 +880,8 @@ export class SpellSystem {
       if (spell.timeFrozen) continue;
       // Hits during this update roll the spell's status effects.
       const prevSource = setStatusSource(spell.statusElements ? spell : null);
+      // A sustained spell that streams from the caster (beam, breath) keeps the hands busy: no melee meanwhile (user, 12 Nov 2026).
+      if ((spell.isBeam || spell.channel) && !spell.isFinished && spell.caster) spell.caster.channelLock = .12;
       try { spell.update(dt, gameWorld); } finally { setStatusSource(prevSource); }
       this.updateTrail(spell, dt);
       if (spell.isFinished) {

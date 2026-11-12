@@ -546,6 +546,7 @@ export class Player extends GroundEntity {
     this.freezeTimer = Math.max(0, this.freezeTimer - dt);
     this.slowTimer = Math.max(0, this.slowTimer - dt);
     this.rootTimer = Math.max(0, (this.rootTimer ?? 0) - dt);
+    this.channelLock = Math.max(0, (this.channelLock ?? 0) - dt); /* refreshed by a running beam / breath (spells.js) */
     this.landingRecoveryTimer = Math.max(0, this.landingRecoveryTimer - dt);
     this.grabCooldown = Math.max(0, this.grabCooldown - dt);
     this.pullCooldown = Math.max(0, (this.pullCooldown ?? 0) - dt);
@@ -1382,6 +1383,8 @@ export class Player extends GroundEntity {
 
   executeAttack(input, attackKind = 'normal') {
     if (!this.isAlive || this.isGuarding || this.burrowed || !window.gameWorld?.isMatchRunning?.()) return false;
+    // Sustaining a beam or a breath: the press does nothing — no strike next to the stream, and nothing is queued.
+    if (this.channelLock > 0) { this.queuedAttack = null; this.attackBufferTimer = 0; return false; }
     if (this.isMounted && (attackKind === 'normal' || attackKind === 'heavy')) return this.mountAttack(attackKind);
     // A guided chain (guided_chains.js) owns every attack input while it runs: taps / swipes confirm its beats.
     if (this.guidedChain) return this.guidedChain.press(attackKind);

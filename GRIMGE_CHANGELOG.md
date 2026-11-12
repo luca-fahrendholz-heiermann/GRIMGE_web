@@ -2,6 +2,12 @@
 
 Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
+## 12. Nov 2026 – Kein Schlag während eines Dauerzaubers (Vorgabe des Nutzers)
+
+- Solange ein Zauber aus der Figur strömt (alle Strahlen samt Aufladen, der Kegel-Atem), löst ein Angriffsdruck
+  keinen Schlag aus und wird auch nicht vorgemerkt. Nach dem Ende des Zaubers schlägt man sofort wieder.
+- Allgemeine Regel über ein Merkmal am Zauber (`isBeam` / `channel`), weitere Dauerzauber lassen sich so kennzeichnen.
+
 ## 11. Nov 2026 – Automatische Aktualisierung (Wunsch des Nutzers)
 
 - Das Spiel lädt eine neue Version von selbst: Die Veröffentlichung schreibt den Commit in `version.json`; das laufende

@@ -5164,6 +5164,25 @@ game.running = false;
   assert(empty && start && noDrop && noPoints && noGold && paid && second && rareGate && oldBuy && kept && open && closed && reward && rares === 40,
     'Earned progression: the deck starts with the one start rune; a card needs a drop, then skill points and gold; a second copy needs a second drop; rare runes need level 3; the old skill-tree rune purchase is closed; the profile keeps it; the test switch opens and closes full access; missions pay gold and a rune drop; boss rolls are rare or better');
 }
+// Sustained spells keep the hands busy (user, 12 Nov 2026): no melee while a beam or a breath streams from the caster.
+{
+  const A = await import('./public/src/abilities.js');
+  game.returnToHub(); game.setMatchMode('training'); game.startMatch(); spells.clearRuntime();
+  const P = game.player; const neutral = { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false };
+  const tick = (n) => { for (let i = 0; i < n; i++) { spells.update(1 / 60, game); P.update(1 / 60, neutral, game.battlefield, game); } };
+  const idle = () => { P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.comboStep = 0; P.finisherChance = null; P.queuedAttack = null; };
+  const results = [];
+  for (const make of [() => new A.BeamSpell(P, 'inferno', 'inferno_beam'), () => new A.ConeBreathSpell(P)]) {
+    idle(); const spell = make(); spells.addSpell(spell); tick(3);
+    const blocked = P.executeAttack(neutral, 'normal') === false && P.state === 'idle' && !P.queuedAttack;
+    const heavy = P.executeAttack(neutral, 'heavy') === false && P.state === 'idle';
+    spell.isFinished = true; spells.clearRuntime(); tick(12); idle();
+    const after = P.executeAttack(neutral, 'normal') && P.state === 'attack1';
+    results.push(blocked && heavy && after);
+  }
+  assert(results.every(Boolean), 'While a beam or a breath runs an attack press strikes nothing and queues nothing; once it ends strikes work again (' + results.join(', ') + ')');
+  idle(); spells.clearRuntime();
+}
 {
   // Guard against code swallowed by a mid-line comment ("x = 1; // note y = 2;" — happened twice, 6 + 10 Nov 2026).
   const fsx = await import('node:fs'); const pathx = await import('node:path');

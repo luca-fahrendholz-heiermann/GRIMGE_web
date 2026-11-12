@@ -1002,6 +1002,7 @@ export class ConeBreathSpell {
     this.facing = caster.facing || 1;
     this.life = 1.2; this.tick = 0; this.damage = 9;
     this.length = 260; this.blobs = []; this.isFinished = false;
+    this.channel = true; /* sustained from the caster: no melee while it runs (spells.js) */
   }
   get z() { return this.caster.z; }
   get originX() { return this.caster.x + this.facing * 28; }
