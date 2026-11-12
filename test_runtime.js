@@ -5183,6 +5183,27 @@ game.running = false;
   assert(results.every(Boolean), 'While a beam or a breath runs an attack press strikes nothing and queues nothing; once it ends strikes work again (' + results.join(', ') + ')');
   idle(); spells.clearRuntime();
 }
+// The base hall (user, 12 Nov 2026): a deep floor, two rows in the armoury, a close view and a whole-hall view.
+{
+  const B = await import('./public/src/base.js'); const W = await import('./public/src/world.js');
+  game.returnToHub(); game.setMatchMode('base'); game.startMatch();
+  const P = game.player; const spots = B.baseSpots(game.profile); const stands = spots.filter((s) => s.kind === 'class');
+  const depth = W.groundYForDepth(.94) - W.groundYForDepth(.06);
+  const rows = new Set(stands.map((s) => s.z)); const inHall = spots.every((s) => s.x > 60 && s.x < B.HALL_W - 60);
+  assert(game.activeMode.id === 'base' && depth >= 220 && rows.size === 2 && stands.length === 18 && inHall, 'The base hall has a deep floor (' + Math.round(depth) + ' px of depth) and the armoury stands in two rows inside the hall');
+  const back = stands.find((s) => s.z < .2); const front = stands.find((s) => s.z > .4);
+  P.x = front.x; P.z = front.z + .05; const a = B.nearestSpot(game)?.id; P.x = back.x; P.z = back.z + .05; const b = B.nearestSpot(game)?.id; P.x = back.x; P.z = .95; const c = B.nearestSpot(game);
+  assert(a === front.id && b === back.id && !c, 'The spot in reach is the one in the figure\'s own depth lane; far in front of the back row nothing is in reach');
+  const fit = B.hallFitZoom(1024, 576); const far = B.baseCameraFor({ z: fit, w: 1024, h: 576, playerX: 300, pivotY: 550 });
+  const leftEdge = 512 - 512 / fit + far.x; const rightEdge = 512 + 512 / fit + far.x;
+  const near = B.baseCameraFor({ z: 1.15, w: 1024, h: 576, playerX: 1300, pivotY: 550 }); const edge = B.baseCameraFor({ z: 1.15, w: 1024, h: 576, playerX: 0, pivotY: 550 });
+  assert(fit < .5 && leftEdge <= 1 && rightEdge >= B.HALL_W - 1 && Math.abs(near.x + 512 - 1300) < 1 && Math.abs(512 - 512 / 1.15 + edge.x) < 1,
+    'Whole-hall view shows the hall from wall to wall; the close view centres the figure and stops at the hall\'s edge');
+  B.setBaseView('hall'); for (let i = 0; i < 240; i++) B.updateBaseCamera(game, 1 / 60); const zHall = game.cameraZoom();
+  B.setBaseView('near'); for (let i = 0; i < 240; i++) B.updateBaseCamera(game, 1 / 60); const zNear = game.cameraZoom();
+  assert(Math.abs(zHall - fit) < .01 && Math.abs(zNear - B.BASE_VIEWS.near) < .01, 'The view switch glides the zoom between the whole hall and the close view');
+  game.returnToHub();
+}
 {
   // Guard against code swallowed by a mid-line comment ("x = 1; // note y = 2;" — happened twice, 6 + 10 Nov 2026).
   const fsx = await import('node:fs'); const pathx = await import('node:path');

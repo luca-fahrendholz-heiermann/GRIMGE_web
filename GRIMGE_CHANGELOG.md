@@ -2,6 +2,16 @@
 
 Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
+## 12. Nov 2026 – Die Basis: tiefer Saal und zwei Ansichten (Vorgabe des Nutzers)
+
+- **Mehr Tiefe, mehr Lauffläche:** neues Saalbild mit großem Boden; die Bodentiefe ist fast doppelt so groß
+  (234 statt 118 Pixel begehbar). Die Stationen stehen an der Rückwand, die Rüstkammer in zwei versetzten Reihen
+  mit Gang dazwischen; Figur und Ständer verdecken sich nach Tiefe.
+- **Zwei Ansichten:** „Nah“ mit Kamera, die der Figur folgt, und „Ganzer Saal“ herausgezoomt von Wand zu Wand
+  (Knopf oben links oder Taste V, weicher Übergang). In der Gesamtansicht lassen sich Stationen direkt antippen.
+- In Reichweite ist nur, was in der eigenen Tiefen-Bahn steht. Kampf-Knöpfe (Zeichnen, Slots, Block) und das
+  Ziel-Banner sind in der Basis ausgeblendet.
+
 ## 12. Nov 2026 – Kein Schlag während eines Dauerzaubers (Vorgabe des Nutzers)
 
 - Solange ein Zauber aus der Figur strömt (alle Strahlen samt Aufladen, der Kegel-Atem), löst ein Angriffsdruck

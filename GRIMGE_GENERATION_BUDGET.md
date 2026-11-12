@@ -12,7 +12,7 @@ bitte im Higgsfield-Konto selbst kontrollieren.
 | Geschätzte offene Ausgaben | 0,00 USD |
 | Restbudget | **20,00 USD** |
 | Higgsfield-Guthaben (geprüft 11. Nov 2026, vor dem ersten Auftrag) | 10 Credits (Registrierungs-Guthaben), Plan laut Konto: `ultra` |
-| Verbrauchte Credits aus dem Guthaben | **8,0** (32 Bilder); Kontostand geprüft: 2,0 Credits |
+| Verbrauchte Credits aus dem Guthaben | **8,25** (33 Bilder); Kontostand geprüft: 1,75 Credits |
 
 ## Was geprüft wurde
 
@@ -68,8 +68,9 @@ Nicht vorgesehen: Trailer, Werbevideos, Konzeptbilder für ungebaute Kapitel.
 | 11. Nov 2026 | Fokus-Form: Gehen (6), Waffenschwung-Posen (6), Einzelposen (6) | 0,75 Credits | 0,75 Credits | 20,00 USD |
 
 | 11. Nov 2026 | Basis: hoher Saal, sechs Stationen (Dummy, Runen-Altar, Kartentisch, Spiegel, Lesepult, Tor), sechs Rüstungs-Ständer | 0,75 Credits | 0,75 Credits | 20,00 USD |
+| 12. Nov 2026 | Basis: neuer Saal mit tiefem Boden (ersetzt das erste Saalbild) | 0,25 Credits | 0,25 Credits | 20,00 USD |
 
-Alle Credits stammen aus dem Registrierungs-Guthaben; es ist kein zusätzliches Geld geflossen. Rest: 2,0 Credits (im Konto nachgeprüft).
+Alle Credits stammen aus dem Registrierungs-Guthaben; es ist kein zusätzliches Geld geflossen. Rest: 1,75 Credits (im Konto nachgeprüft).
 
 ## Erzeugte Assets
 
@@ -96,7 +97,7 @@ Alle Credits stammen aus dem Registrierungs-Guthaben; es ist kein zusätzliches 
 | Thesen (3 Bögen) | `art/generated/characters/thesen_{walk,attack,misc}_raw.png` | `public/assets/sprites/sheets/thesen_{walk,attack,misc}.png` | Bewegungen ohne Waffe |
 | Thesen Waffenposen | `art/generated/characters/thesen_armed_raw.png` | `public/assets/sprites/sheets/thesen_armed.png` | Schläge mit Waffe (alle Waffen) |
 | Fokus-Form (3 Bögen) | `art/generated/characters/focus_{walk,armed,misc}_raw.png` | `public/assets/sprites/sheets/focus_{walk,armed,misc}.png` | alle Bewegungen der Fokus-Form, mit und ohne Waffe |
-| Basis-Saal | `art/generated/scenes/base_hall_raw.png` | `public/assets/scenes/campaign/base_hall.png` | Hintergrund der Basis |
+| Basis-Saal (tiefer Boden, 12. Nov; das erste Bild `base_hall_raw.png` ist abgelöst) | `art/generated/scenes/base_hall2_raw.png` | `public/assets/scenes/campaign/base_hall.png` | Hintergrund der Basis |
 | Basis-Stationen | `art/generated/scenes/props_base_raw.png` | `public/assets/scenes/props/base_stations.png` (6 Zellen) | Stationen der Basis |
 | Rüstungs-Ständer | `art/generated/scenes/props_stands_raw.png` | `public/assets/scenes/props/stand_0…5.png` | Klassen-Ständer in der Basis |
 

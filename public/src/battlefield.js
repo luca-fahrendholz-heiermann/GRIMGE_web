@@ -11,8 +11,8 @@ import { renderCastles, preloadCastles, castleDeckAt, castleArenaSide, castleGat
 
 export class Battlefield {
   constructor(mode = null, options = {}) {
-    // The base hall is tall: its floor is a low band at the bottom (the scene's wall / floor edge sits at 72 %).
-    setGroundProjection(mode?.world === 'training' ? TRAINING_PROJECTION : mode?.id === 'base' ? { farY: 418, nearY: 552 } : null);
+    // The base hall has its own deep floor band (the hall picture is drawn in world pixels by base.js).
+    setGroundProjection(mode?.world === 'training' ? TRAINING_PROJECTION : mode?.id === 'base' ? { farY: 300, nearY: 566 } /* = BASE_PROJECTION (base.js) */ : null);
     this.trainingMap = mode?.world === 'training' ? getTrainingMap(options.trainingMapId) : null;
     if (this.trainingMap) preloadCastles(this.trainingMap.scene ?? this.trainingMap.id);
     this.width = ARENA_LAYOUT.width;

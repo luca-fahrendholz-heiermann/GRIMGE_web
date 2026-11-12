@@ -54,6 +54,7 @@ Legende: ✔ umgesetzt und geprüft · ◐ teilweise · ○ geplant
 | Punkt | Stand |
 |---|---|
 | Saal, Stationen für die Menüpunkte, Rüstkammer mit Klassen-Ständern und Stufen | ✔ |
+| Tiefer Saal mit mehr Lauffläche, Rüstkammer in zwei Reihen, Ansichten „Nah“ (Folgekamera) und „Ganzer Saal“ | ✔ |
 | Primals bewegen sich im Raum, antippbar | ○ |
 | Dekoration an Stellplätzen (Gold, Missions-Belohnungen), Trophäen | ○ |
 | Hub bleibt der Startpunkt (Entscheidung des Nutzers); er zeigt den eigenen Charakter ausgerüstet und laufend | ✔ |

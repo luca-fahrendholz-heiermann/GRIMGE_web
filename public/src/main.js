@@ -44,7 +44,7 @@ import { finishRun, afterMatch, isCampaignOpen } from './campaign.js';
 import { isCharacterCreationOpen } from './character_creation.js'; // Campaign Alpha: missions reuse the modes with parameters
 import { missionById } from './campaign_data.js';
 import { startAppUpdates } from './app_update.js'; // a new deployed version reloads the game by itself (hub only)
-import { BASE_SCENE, baseBounds, renderBase, updateBase, baseTap, closeBasePrompt } from './base.js'; // the player's headquarters // stairs / galleries (Castle Crashers DNA)
+import { BASE_SCENE, baseBounds, renderBaseHall, baseActors, updateBase, updateBaseCamera, baseTap, closeBasePrompt } from './base.js'; // the player's headquarters // stairs / galleries (Castle Crashers DNA)
 // Activated trap entries kept on top of the history during a match (back-navigation guard).
 const BACK_TRAPS = 2;
 // Follow-camera zoom per mode (1 = the classic full stage). The zoom pivots on the near ground edge, so the near depth
@@ -2068,7 +2068,7 @@ export class GameWorld {
   // ── follow camera with zoom ─────────────────────────────────────────
   // Adaptive zoom (user, 10 Nov 2026: no free zoom button — the camera thinks along): close by default, it pulls back
   // for crowds and bosses so the fight stays in view.
-  cameraZoom() { const base = FOLLOW_ZOOM[this.activeMode?.id] ?? 1; return base === 1 ? 1 : (this._zoomNow ?? base); }
+  cameraZoom() { if (this.activeMode?.id === 'base') return this._zoomNow ?? 1; /* the base has its own views (base.js) */ const base = FOLLOW_ZOOM[this.activeMode?.id] ?? 1; return base === 1 ? 1 : (this._zoomNow ?? base); }
   updateCameraZoom(dt) {
     const base = FOLLOW_ZOOM[this.activeMode?.id] ?? 1; if (base === 1) { this._zoomNow = 1; return; }
     const near = this.getHostileTargets(this.player.team).filter((t) => !t.isProp && !t.isStoneWall && !t.isDead && t.lifeState !== 'Dead' && Math.abs(t.x - this.player.x) < 700).length;
@@ -2395,7 +2395,7 @@ export class GameWorld {
     if (this.activeMode.id === 'base') {
       // No clock in the base; the camera follows through the hall; stations and the prompt (base.js).
       this.matchTime = this.matchDuration;
-      state.dungeonCameraX += (this.dungeonCameraTarget() - state.dungeonCameraX) * Math.min(1, 3.5 * dt);
+      updateBaseCamera(this, dt);
       updateBase(this);
       return;
     }
@@ -3347,7 +3347,8 @@ export class GameWorld {
     ctx.save();
     this.applyWorldZoom(ctx);
     ctx.translate(0, worldY);
-    this.battlefield.renderBackground(ctx, cam, this.logicalWidth, this.logicalHeight, viewW, this.cameraOffsetX, this.modeState);
+    /* The base draws its hall in world pixels (below), so it can be zoomed out as a whole. */
+    if (this.activeMode?.id !== 'base') this.battlefield.renderBackground(ctx, cam, this.logicalWidth, this.logicalHeight, viewW, this.cameraOffsetX, this.modeState);
     renderSecretTint(ctx, this); // a secret room has its own ambience
     ctx.restore();
 
@@ -3356,6 +3357,7 @@ export class GameWorld {
     ctx.save();
     this.applyWorldZoom(ctx);
     ctx.translate(this.cameraOffsetX + cam.shakeX - dungeonCamX, cam.shakeY + worldY);
+    if (this.activeMode?.id === 'base') renderBaseHall(ctx);
 
     // Foreground Crystal Glows on Beacons
     if (this.activeMode?.id !== 'base') this.battlefield.renderForeground(ctx); /* no tower beacons in the base hall */
@@ -3373,7 +3375,6 @@ export class GameWorld {
     this.renderArenaRuneCollectibles(ctx);
     this.renderArenaTransformationRelic(ctx);
 
-    if (this.activeMode?.id === 'base') renderBase(ctx, this);
     // A campaign scene dresses the dungeon room with its own props along the back wall.
     if (this.activeMode?.id === 'dungeon' && hasSceneProps(this.battlefield.scene?.id) && this.battlefield.boundsOverride) renderSceneProps(ctx, this.battlefield.scene.id, this.battlefield.boundsOverride.left, this.battlefield.boundsOverride.right, this.modeState?.structures?.defs ?? []);
     if (this.modeState?.structures) {
@@ -3386,6 +3387,7 @@ export class GameWorld {
     if (this.enemyChampion.lifeState !== 'Dead') actors.push(this.enemyChampion);
     if (this.player.lifeState !== 'Dead' && !this.player.isMounted) actors.push(this.player);
     if (this.primal?.isTargetable) actors.push(this.primal);
+    if (this.activeMode?.id === 'base') actors.push(...baseActors(this)); /* stations and stands share the depth order */
     // Spells with a ground position and summons share the painter's order
     // with the actors, so a spike behind the dummy is hidden by the dummy.
     actors.push(...spells.depthEntries());
