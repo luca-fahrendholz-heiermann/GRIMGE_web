@@ -2,6 +2,17 @@
 
 Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
+## 13. Nov 2026 – Die Basis: drei Fehler aus dem Spieltest (Rückmeldung des Nutzers)
+
+- **Ruckelnder Hintergrund beim Laufen und Sprinten:** Die Kamera rastete auf Bildschirm-Pixeln ein, die Figur auf
+  Welt-Pixeln – beide zitterten gegeneinander. Jetzt bewegt sich die Kamera in ganzen Welt-Pixeln wie die Figur und
+  zieht straffer nach. Das Hallenbild wird beim Scrollen gefiltert (kein Pixel-Kriechen bei krummem Zoom), nur
+  sichtbare Kacheln werden gezeichnet und das Licht der Rüstkammer ist einmalig eingerechnet statt pro Bild.
+- **Schatten auf beiden Ebenen:** Schatten werden je Ebene an der Stufe abgeschnitten.
+- **Unterkörper ganz vorne verdeckt:** Die Lauffläche endet etwas vor dem unteren Bildrand (Tiefe bis 0,84 statt
+  0,94), damit die Beine nicht unter den Bildschirmrand oder eine System-Leiste geraten. Am PC war die Verdeckung
+  nicht nachzustellen; die Ursache auf dem Handy ist nicht gesichert.
+
 ## 13. Nov 2026 – Die Basis: eine durchgehende Welt, Figur immer im Bild (Rückmeldung des Nutzers, Castle-Crashers-Video 1:37–1:42)
 
 - **Nahtloser Übergang statt Tür:** Halle und Rüstkammer sind eine zusammenhängende Welt. Die Treppe am Ende der

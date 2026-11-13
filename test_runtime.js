@@ -5227,8 +5227,10 @@ game.running = false;
     P.z = .9; for (let i = 0; i < 120; i++) B.updateBaseCamera(game, 1 / 60); const sameY = game._camY === y0;
     P.x = 1200 + B.BASE_VIEWS.deadZone - 6; for (let i = 0; i < 120; i++) B.updateBaseCamera(game, 1 / 60); const still = game.modeState.dungeonCameraX === x0;
     P.x = 1500; for (let i = 0; i < 400; i++) B.updateBaseCamera(game, 1 / 60); const moved = game.modeState.dungeonCameraX > x0 + 200; const zz = game.cameraZoom();
-    const grid = Math.abs(game.modeState.dungeonCameraX * zz - Math.round(game.modeState.dungeonCameraX * zz)) < 1e-6;
-    assert(sameY && still && moved && grid && B.calmFollowX(100, 120, 46) === 100 && B.calmFollowX(100, 200, 46) === 154, 'The close view stays calm: walking into the depth does not move it up or down, small steps stay inside a dead zone, and it rests on whole screen pixels'); }
+    const grid = Number.isInteger(game.modeState.dungeonCameraX) && Number.isInteger(game._camY) && zz > 1;
+    const groups = B.baseShadowGroups([{ x: B.HALL_W - 10, surfaceHeight: 0 }, { x: B.HALL_W + 10, surfaceHeight: B.RAISE }]);
+    const floors = groups[0].casters.length === 1 && groups[0].x1 === B.HALL_W && groups[1].casters.length === 1 && groups[1].x0 === B.HALL_W && B.baseBounds().nearZ < .9;
+    assert(sameY && still && moved && grid && floors && B.calmFollowX(100, 120, 46) === 100 && B.calmFollowX(100, 200, 46) === 154, 'The close view stays calm: walking into the depth does not move it up or down, small steps stay inside a dead zone, and it moves in whole world pixels like the sprites; shadows are split by floor at the step and the walkable floor ends before the bottom edge'); }
   game.returnToHub();
 }
 {

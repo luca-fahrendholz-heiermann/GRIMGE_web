@@ -51,7 +51,10 @@ let theGame = null;
 // The room the figure stands in.
 export const baseRoom = (game = theGame) => roomAt(game?.player?.x ?? 0);
 export const baseWidth = () => WORLD_W;
-export const baseBounds = () => ({ left: 90, right: WORLD_W - 90 });
+// nearZ: the walkable floor ends a little before the bottom of the picture, so the figure's legs are never under the
+// screen's edge or a phone's system bar (user, 13 Nov 2026: the lower body was covered at the very front).
+export const BASE_NEAR_Z = .84;
+export const baseBounds = () => ({ left: 90, right: WORLD_W - 90, nearZ: BASE_NEAR_Z });
 
 const images = {};
 function img(name, dir = 'props') {
@@ -98,27 +101,47 @@ export function setBaseRoom(game, id = 'hall') {
 
 const STONE = { face: '#2f2a3a', line: '#221e2b', edge: '#8d86a0', shade: 'rgba(8,6,14,.5)' };
 // One room's picture at its floor height, tinted in its own light.
-function drawRoom(ctx, im, R) {
+// A room's picture is prepared once per room: its tint is baked into a copy, so nothing is blended per frame.
+const roomPics = {};
+function roomPicture(im, R) {
+  if (!R.tint) return im;
+  let c = roomPics[R.id];
+  if (!c && typeof globalThis.document?.createElement === 'function') {
+    c = globalThis.document.createElement('canvas'); c.width = im.width; c.height = im.height; const x = c.getContext?.('2d');
+    if (!x) return im;
+    x.drawImage(im, 0, 0); x.globalCompositeOperation = 'multiply'; x.fillStyle = R.tint; x.fillRect(0, 0, c.width, c.height); roomPics[R.id] = c;
+  }
+  return c ?? im;
+}
+// The world span in view (from the canvas transform), so tiles outside it are skipped.
+function viewSpan(ctx) {
+  const t = ctx.getTransform?.(); const w = ctx.canvas?.width;
+  return t && t.a > 0 && w > 0 ? { left: -t.e / t.a, right: (w - t.e) / t.a } : { left: -Infinity, right: Infinity };
+}
+function drawRoom(ctx, im, R, span) {
   const top = HALL.bottom - HALL.h - R.raise;
   if (!im) { ctx.fillStyle = '#1c1826'; ctx.fillRect(R.x0, top, HALL_W, HALL.h); return; }
+  const pic = roomPicture(im, R);
   for (let k = 0; k < HALL.tiles; k++) {
-    const x = R.x0 + k * HALL.tileW;
-    if ((k + R.flip) % 2) { ctx.save(); ctx.translate(x + HALL.tileW, 0); ctx.scale(-1, 1); ctx.drawImage(im, 0, top, HALL.tileW, HALL.h); ctx.restore(); } else ctx.drawImage(im, x, top, HALL.tileW, HALL.h);
+    const x = R.x0 + k * HALL.tileW; if (x > span.right || x + HALL.tileW < span.left) continue;
+    if ((k + R.flip) % 2) { ctx.save(); ctx.translate(x + HALL.tileW, 0); ctx.scale(-1, 1); ctx.drawImage(pic, 0, top, HALL.tileW, HALL.h); ctx.restore(); } else ctx.drawImage(pic, x, top, HALL.tileW, HALL.h);
   }
-  if (R.tint) { ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = R.tint; ctx.fillRect(R.x0, top, HALL_W, HALL.h); ctx.globalCompositeOperation = 'source-over'; }
 }
 // The world behind everything, in world pixels (so it zooms as a whole): the hall, the raised armoury with the stone
 // face of its floor along the front, the step between them, the stairs.
 export function renderBaseHall(ctx) {
   const im = img(BASE_SCENE, 'campaign');
-  ctx.save(); ctx.imageSmoothingEnabled = false;
-  drawRoom(ctx, im, ROOMS.hall); drawRoom(ctx, im, ROOMS.armoury);
+  // The picture is filtered while it scrolls: unfiltered, its pixels crawl at a zoom that is not a whole number.
+  const span = viewSpan(ctx);
+  ctx.save(); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'low';
+  drawRoom(ctx, im, ROOMS.hall, span); drawRoom(ctx, im, ROOMS.armoury, span);
+  ctx.imageSmoothingEnabled = false;
   // The front face of the raised floor: stone blocks down to the bottom of the stage.
   const faceTop = HALL.bottom - RAISE;
   ctx.fillStyle = STONE.face; ctx.fillRect(HALL_W, faceTop, HALL_W, RAISE);
   ctx.fillStyle = STONE.line;
   for (let y = faceTop + 22; y < HALL.bottom; y += 22) ctx.fillRect(HALL_W, y, HALL_W, 2);
-  for (let row = 0, y = faceTop; y < HALL.bottom; y += 22, row++) for (let x = HALL_W + (row % 2 ? 32 : 0); x < WORLD_W; x += 64) ctx.fillRect(x, y, 2, 22);
+  for (let row = 0, y = faceTop; y < HALL.bottom; y += 22, row++) for (let x = HALL_W + (row % 2 ? 32 : 0) + Math.max(0, Math.floor((span.left - HALL_W) / 64)) * 64; x < Math.min(WORLD_W, span.right); x += 64) ctx.fillRect(x, y, 2, 22);
   ctx.fillStyle = STONE.edge; ctx.fillRect(HALL_W, faceTop, HALL_W, 3);
   // The step itself: the raised floor's side throws a shadow onto the hall floor.
   const stepTop = groundYForDepth(0) - RAISE; const g = ctx.createLinearGradient(HALL_W - 46, 0, HALL_W, 0); g.addColorStop(0, 'rgba(8,6,14,0)'); g.addColorStop(1, STONE.shade);
@@ -147,6 +170,12 @@ function drawSpot(ctx, s, on, t) {
   ctx.fillStyle = on ? '#fff3c8' : '#e8dcc4'; ctx.fillText(s.label, s.x, ty);
   if (s.sub) { ctx.font = '600 9px Cinzel, serif'; ctx.fillStyle = s.worn ? '#8fd08a' : '#b8a070'; ctx.fillText(s.worn ? `${s.sub} · AKTIV` : s.sub, s.x, ty + 12); }
   ctx.restore();
+}
+// Shadows stay on their own floor (user, 13 Nov 2026: at the foot of the raised floor the shadow lay on both levels):
+// the casters are split by floor, each group is drawn clipped to its floor's side of the step.
+export function baseShadowGroups(casters = []) {
+  const upper = (c) => (c.surfaceHeight ?? 0) >= RAISE - 1 && c.x >= HALL_W;
+  return [{ x0: -1e5, x1: HALL_W, casters: casters.filter((c) => !upper(c)) }, { x0: HALL_W, x1: 1e5, casters: casters.filter(upper) }];
 }
 // The spots as depth-sorted actors: the figure walks behind the front row and in front of the back row.
 export function baseActors(game) {
@@ -190,16 +219,17 @@ export function updateBaseCamera(game, dt) {
   const now = game._zoomNow ?? target; game._zoomNow = Math.abs(target - now) < .002 ? target : now + (target - now) * Math.min(1, dt * 4);
   // A calm camera (user, 13 Nov 2026: walking in the close view made one dizzy): it does not move up and down with
   // the depth walked (only with the height of the floor, never with a jump), it leaves the figure a dead zone before
-  // it follows along the room, and it rests on whole screen pixels so the pixel art does not shimmer.
+  // it follows along the room, and it moves in whole WORLD pixels — the grid the sprites are drawn on — so figure and
+  // background step together instead of jittering against each other.
   const z = game._zoomNow; const offX = game.cameraOffsetX ?? 0; const pivotY = game.zoomPivot().y; const worldY = game.worldOffsetY ?? 0;
   const floorH = p.surfaceHeight ?? 0; const R = ROOMS[roomAt(p.x)];
   const footY = groundYForDepth(.94) - floorH;
   const snap = !state || !Number.isFinite(state.dungeonCameraX);
   const mid = snap ? p.x : calmFollowX(camMidX ?? p.x, p.x, BASE_VIEWS.deadZone); camMidX = mid;
   const cam = baseCameraFor({ z, w, h, playerX: mid, pivotY, worldY, offX, footY, x0: R.x0, raise: R.raise, worldW: WORLD_W });
-  const onGrid = (v) => Math.round(v * z) / z;
+  const onGrid = (v) => Math.round(v);
   camYNow = snap || !Number.isFinite(camYNow) ? cam.y : camYNow + (cam.y - camYNow) * Math.min(1, 3 * dt);
-  camXNow = snap || !Number.isFinite(camXNow) ? cam.x : camXNow + (cam.x - camXNow) * Math.min(1, 4 * dt);
+  camXNow = snap || !Number.isFinite(camXNow) ? cam.x : camXNow + (cam.x - camXNow) * Math.min(1, 7 * dt);
   // Never out of the picture: head and feet stay inside, whatever the glide is doing (stairs, a jump, a fall).
   const feetY = groundYForDepth(p.z ?? .5) - floorH; const headY = feetY - Math.max(0, p.elevation ?? 0) - 104;
   if (h / z < HALL.h) camYNow = keepFigureInView(camYNow, { z, h, pivotY, worldY, feetY, headY });

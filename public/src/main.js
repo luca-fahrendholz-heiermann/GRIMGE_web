@@ -44,7 +44,7 @@ import { finishRun, afterMatch, isCampaignOpen } from './campaign.js';
 import { isCharacterCreationOpen } from './character_creation.js'; // Campaign Alpha: missions reuse the modes with parameters
 import { missionById } from './campaign_data.js';
 import { startAppUpdates } from './app_update.js'; // a new deployed version reloads the game by itself (hub only)
-import { BASE_SCENE, baseBounds, renderBaseHall, baseActors, updateBase, updateBaseCamera, baseTap, closeBasePrompt, setBaseRoom } from './base.js'; // the player's headquarters // stairs / galleries (Castle Crashers DNA)
+import { BASE_SCENE, baseBounds, renderBaseHall, baseActors, updateBase, updateBaseCamera, baseTap, closeBasePrompt, setBaseRoom, baseShadowGroups } from './base.js'; // the player's headquarters // stairs / galleries (Castle Crashers DNA)
 // Activated trap entries kept on top of the history during a match (back-navigation guard).
 const BACK_TRAPS = 2;
 // Follow-camera zoom per mode (1 = the classic full stage). The zoom pivots on the near ground edge, so the near depth
@@ -3367,7 +3367,11 @@ export class GameWorld {
     environment.renderGroundDetails(ctx, this.debugVisible);
     // Round ground shadows at every actor's real depth (smaller when high),
     // then ground decals such as Shadow Stomper tethers and graves.
-    renderPixelated(ctx, groundPixel, (layer) => renderGroundShadows(layer, this.shadowCasters(), sky.shadowStyle()));
+    renderPixelated(ctx, groundPixel, (layer) => {
+      if (this.activeMode?.id !== 'base') { renderGroundShadows(layer, this.shadowCasters(), sky.shadowStyle()); return; }
+      /* The base has two floors: a shadow never spills over the step onto the other one. */
+      for (const g of baseShadowGroups(this.shadowCasters())) { layer.save(); layer.beginPath(); layer.rect(g.x0, -1e5, g.x1 - g.x0, 2e5); layer.clip(); renderGroundShadows(layer, g.casters, sky.shadowStyle()); layer.restore(); }
+    });
     spells.renderGroundDecals(ctx);
     renderRiftGround(ctx, this);
     this.renderDungeonRescue(ctx);
