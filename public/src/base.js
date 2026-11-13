@@ -30,7 +30,23 @@ export const BASE_VIEWS = Object.freeze({ near: 1.28, deadZone: 46 });
 const BACK_Z = .05; const FRONT_Z = .52;
 const STAND_GAP = 220; const ARMOURY_X = HALL_W + 300;
 const STAIRS = Object.freeze({ type: 'stairs', x0: HALL_W - 270, x1: HALL_W, zMin: .04, zMax: .3, from: 0, to: RAISE });
-const STRUCTURES = Object.freeze([STAIRS, Object.freeze({ type: 'gallery', x0: HALL_W, x1: WORLD_W + 200, zMin: 0, zMax: 1, h: RAISE })]);
+// The step between the floors has a body-sized collision (user, 13 Nov 2026: the sprite overlapped the step from below
+// and a foot hung in the air from above). BODY: from the hall the figure stops this far before the step. EDGE: on the
+// raised floor it stands this far inside; past that it drops. The head of the stairs has a small landing across EDGE.
+export const STEP = Object.freeze({ body: 22, edge: 16 });
+const STRUCTURES = Object.freeze([STAIRS,
+  Object.freeze({ type: 'gallery', x0: HALL_W, x1: HALL_W + STEP.edge, zMin: STAIRS.zMin, zMax: STAIRS.zMax, h: RAISE }),
+  Object.freeze({ type: 'gallery', x0: HALL_W + STEP.edge, x1: WORLD_W + 200, zMin: 0, zMax: 1, h: RAISE })]);
+const RAISED_SURFACE = 2;
+// Below the raised floor's height the step is a wall for the whole body — on the ground, in a jump and while dropping
+// off the edge (then the figure slides clear of the wall instead of landing inside it).
+export function baseCollide(game) {
+  const p = game.player; if (!p) return false;
+  const height = (p.surfaceHeight ?? 0) + Math.max(0, p.elevation ?? 0); const limit = HALL_W - STEP.body;
+  if (p.x <= limit || p.x >= HALL_W + STEP.edge || height >= RAISE - 14) return false;
+  p.x = Math.max(limit, p.x - 6); if (p.vx > 0) p.vx = 0;
+  return true;
+}
 // Which of the six stand sprites a class wears.
 const STAND_OF = { Guardian: 0, Oracle: 0, Runeblade: 0, Berserker: 1, Beastborn: 1, Monk: 1, Ronin: 2, Bladedancer: 2, Lancer: 2, Spiritbound: 2, Ranger: 3, Trickster: 3, Resonant: 3, Arcanist: 4, Occultist: 4, Fateweaver: 4, Shadow: 5, Reaper: 5 };
 const STATIONS = Object.freeze([
@@ -51,10 +67,7 @@ let theGame = null;
 // The room the figure stands in.
 export const baseRoom = (game = theGame) => roomAt(game?.player?.x ?? 0);
 export const baseWidth = () => WORLD_W;
-// nearZ: the walkable floor ends a little before the bottom of the picture, so the figure's legs are never under the
-// screen's edge or a phone's system bar (user, 13 Nov 2026: the lower body was covered at the very front).
-export const BASE_NEAR_Z = .84;
-export const baseBounds = () => ({ left: 90, right: WORLD_W - 90, nearZ: BASE_NEAR_Z });
+export const baseBounds = () => ({ left: 90, right: WORLD_W - 90 });
 
 const images = {};
 function img(name, dir = 'props') {
@@ -93,7 +106,7 @@ export function setBaseRoom(game, id = 'hall') {
   if (game.modeState) { game.modeState.structures = null; game.modeState.dungeonCameraX = NaN; /* the camera snaps to the figure */ }
   if (p && bf) {
     p.x = R.x0 + 380; p.z = .55; p.vx = 0; p.vz = 0;
-    p.surfaceId = R.raise ? bf.levelSurfaces[1]?.id : null; p.surfaceHeight = R.raise;
+    p.surfaceId = R.raise ? bf.levelSurfaces[RAISED_SURFACE]?.id : null; p.surfaceHeight = R.raise;
     bf.placeOnSurface(p);
   }
   return R.id;
@@ -196,45 +209,53 @@ export const baseShiftFor = ({ z, pivotY, worldY = 0 }, screenY, line) => (scree
 // at the world's ends. Up and down: a room that fits is centred on its own floor height (raise); otherwise the front
 // edge of the floor under the figure (footY) sits just above the bottom of the picture, so the camera climbs the
 // stairs with the figure and the wall towers above — never below the stage, never above the highest ceiling.
-export function baseCameraFor({ z, w, h, playerX, pivotY, worldY = 0, offX = 0, footY = HALL.bottom, x0 = 0, raise = 0, worldW = HALL_W }) {
+// vTop / vBot: the rows of the stage that are on screen. On wide phones the FILL setting zooms the stage to the full
+// width and crops rows at the top and bottom — the camera frames the room inside what is left (user, 13 Nov 2026: the
+// lower body was under the bottom edge at the front of the hall).
+export function baseCameraFor({ z, w, h, playerX, pivotY, worldY = 0, offX = 0, footY = HALL.bottom, x0 = 0, raise = 0, worldW = HALL_W, vTop = 0, vBot = h }) {
   const span = w / z; const left = w / 2 - span / 2; const S = (screenY, line) => baseShiftFor({ z, pivotY, worldY }, screenY, line);
   const x = span >= HALL_W ? x0 + HALL_W / 2 + offX - w / 2 : Math.max(offX - left, Math.min(worldW + offX - (left + span), playerX + offX - w / 2));
   const top = HALL.bottom - HALL.h;
-  const y = h / z >= HALL.h ? S(h / 2, top + HALL.h / 2 - raise) : Math.max(S(h, HALL.bottom), Math.min(S(0, top - RAISE), S(h * .955, footY)));
+  const vh = vBot - vTop;
+  const y = vh / z >= HALL.h ? S(vTop + vh / 2, top + HALL.h / 2 - raise) : Math.max(S(vBot, HALL.bottom), Math.min(S(vTop, top - RAISE), S(vTop + vh * .955, footY)));
   return { x, y };
 }
 // The figure never leaves the picture (user, 13 Nov 2026): the vertical shift is held between the one that keeps the
 // head under the top edge and the one that keeps the feet above the bottom edge; the feet win when both cannot be.
-export function keepFigureInView(shift, { z, h, pivotY, worldY = 0, feetY, headY, marginTop = 22, marginBottom = 26 }) {
-  const lo = baseShiftFor({ z, pivotY, worldY }, marginTop, headY); const hi = baseShiftFor({ z, pivotY, worldY }, h - marginBottom, feetY);
+export function keepFigureInView(shift, { z, h, pivotY, worldY = 0, feetY, headY, marginTop = 22, marginBottom = 26, vTop = 0, vBot = h }) {
+  const lo = baseShiftFor({ z, pivotY, worldY }, vTop + marginTop, headY); const hi = baseShiftFor({ z, pivotY, worldY }, vBot - marginBottom, feetY);
   return lo > hi ? hi : Math.min(Math.max(shift, lo), hi);
 }
+// The close zoom for the rows on screen: never so close that the floor from back wall to front edge does not fit — else
+// the camera would have to bob up and down with every step into the depth.
+export const nearZoom = (visibleRows) => Math.max(.8, Math.min(BASE_VIEWS.near, visibleRows / 440));
 // The camera's aim along the room: it stays while the figure is inside the dead zone and is pushed by its edges.
 export const calmFollowX = (mid, playerX, dead) => Math.max(playerX - dead, Math.min(playerX + dead, mid));
 let camGame = null; let camMidX = null; let camXNow = NaN; let camYNow = NaN;
 export function updateBaseCamera(game, dt) {
   camGame = game; theGame = game;
   const w = game.renderWidth; const h = game.renderHeight; const state = game.modeState; const p = game.player;
-  const target = view === 'hall' ? hallFitZoom(w, h) : BASE_VIEWS.near;
+  const rows = game.visibleStageRows?.() ?? { top: 0, bottom: h }; const vTop = rows.top; const vBot = rows.bottom; const vh = vBot - vTop;
+  const target = view === 'hall' ? hallFitZoom(w, vh) : nearZoom(vh);
   const now = game._zoomNow ?? target; game._zoomNow = Math.abs(target - now) < .002 ? target : now + (target - now) * Math.min(1, dt * 4);
   // A calm camera (user, 13 Nov 2026: walking in the close view made one dizzy): it does not move up and down with
   // the depth walked (only with the height of the floor, never with a jump), it leaves the figure a dead zone before
-  // it follows along the room, and it moves in whole WORLD pixels — the grid the sprites are drawn on — so figure and
-  // background step together instead of jittering against each other.
+  // it follows along the room, and its glide is even (no pixel steps).
   const z = game._zoomNow; const offX = game.cameraOffsetX ?? 0; const pivotY = game.zoomPivot().y; const worldY = game.worldOffsetY ?? 0;
   const floorH = p.surfaceHeight ?? 0; const R = ROOMS[roomAt(p.x)];
   const footY = groundYForDepth(.94) - floorH;
   const snap = !state || !Number.isFinite(state.dungeonCameraX);
   const mid = snap ? p.x : calmFollowX(camMidX ?? p.x, p.x, BASE_VIEWS.deadZone); camMidX = mid;
-  const cam = baseCameraFor({ z, w, h, playerX: mid, pivotY, worldY, offX, footY, x0: R.x0, raise: R.raise, worldW: WORLD_W });
-  const onGrid = (v) => Math.round(v);
+  const cam = baseCameraFor({ z, w, h, playerX: mid, pivotY, worldY, offX, footY, x0: R.x0, raise: R.raise, worldW: WORLD_W, vTop, vBot });
   camYNow = snap || !Number.isFinite(camYNow) ? cam.y : camYNow + (cam.y - camYNow) * Math.min(1, 3 * dt);
   camXNow = snap || !Number.isFinite(camXNow) ? cam.x : camXNow + (cam.x - camXNow) * Math.min(1, 7 * dt);
   // Never out of the picture: head and feet stay inside, whatever the glide is doing (stairs, a jump, a fall).
   const feetY = groundYForDepth(p.z ?? .5) - floorH; const headY = feetY - Math.max(0, p.elevation ?? 0) - 104;
-  if (h / z < HALL.h) camYNow = keepFigureInView(camYNow, { z, h, pivotY, worldY, feetY, headY });
-  game._camY = view === 'hall' ? camYNow : onGrid(camYNow);
-  if (state) state.dungeonCameraX = view === 'hall' ? camXNow : onGrid(camXNow);
+  if (vh / z < HALL.h) camYNow = keepFigureInView(camYNow, { z, h, pivotY, worldY, feetY, headY, vTop, vBot });
+  // The camera glides without steps (the filtered hall picture scrolls evenly): stepping it in whole pixels made the
+  // whole screen judder at walking speed, which is what turned the stomach (user video, 13 Nov 2026).
+  game._camY = camYNow;
+  if (state) state.dungeonCameraX = camXNow;
 }
 
 // What a spot does. Screens that start a match leave the base first (a mode cannot change while one runs).
@@ -271,6 +292,7 @@ export function closeBasePrompt() {
 export function updateBase(game) {
   const doc = globalThis.document; const busy = isRuneVaultOpen() || isCharacterCreationOpen() || isCampaignOpen();
   if (game.input) game.input.gameplayBlocked = busy;
+  baseCollide(game);
   if (typeof doc?.createElement !== 'function' || typeof doc.body?.appendChild !== 'function') return;
   if (!prompt) {
     const el = doc.createElement('button'); el.type = 'button'; el.id = 'base-prompt';

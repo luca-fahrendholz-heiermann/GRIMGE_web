@@ -2068,6 +2068,13 @@ export class GameWorld {
   // ── follow camera with zoom ─────────────────────────────────────────
   // Adaptive zoom (user, 10 Nov 2026: no free zoom button — the camera thinks along): close by default, it pulls back
   // for crowds and bosses so the fight stays in view.
+  // The rows of the 16:9 stage that are on screen, in stage pixels: FILL zooms the stage to the full width on wide
+  // phones and crops rows at the top and bottom (updateViewport); everything else shows all of it.
+  visibleStageRows() {
+    const s = this.stage; const scr = this.screenSize; const H = this.logicalHeight;
+    if (!s || !scr || !(s.scale > 0)) return { top: 0, bottom: H };
+    return { top: Math.max(0, -s.top / s.scale), bottom: Math.min(H, (scr.height - s.top) / s.scale) };
+  }
   cameraZoom() { if (this.activeMode?.id === 'base') return this._zoomNow ?? 1; /* the base has its own views (base.js) */ const base = FOLLOW_ZOOM[this.activeMode?.id] ?? 1; return base === 1 ? 1 : (this._zoomNow ?? base); }
   updateCameraZoom(dt) {
     const base = FOLLOW_ZOOM[this.activeMode?.id] ?? 1; if (base === 1) { this._zoomNow = 1; return; }

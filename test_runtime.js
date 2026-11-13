@@ -5206,7 +5206,11 @@ game.running = false;
     { const left = { ...walk, move: { x: -1, z: 0 }, touchMove: { x: -1, z: 0 } }; B.setBaseRoom(game, 'armoury'); P.x = B.HALL_W + 60; P.z = .7; game.battlefield.placeOnSurface(P);
       for (let i = 0; i < 240 && !(P.x < B.HALL_W - 40 && P.grounded && (P.surfaceHeight ?? 0) < 2); i++) P.update(1 / 60, left, game.battlefield, game);
       const down = P.x < B.HALL_W - 40 && (P.surfaceHeight ?? 0) < 2 && P.grounded;
-      for (let i = 0; i < 180; i++) P.update(1 / 60, walk, game.battlefield, game);
+      for (let i = 0; i < 180; i++) { P.update(1 / 60, walk, game.battlefield, game); B.baseCollide(game); }
+      const below = P.x <= B.HALL_W - B.STEP.body + .5;
+      B.setBaseRoom(game, 'armoury'); P.z = .7; let hang = 0; for (let i = 0; i < 240 && P.grounded && (P.surfaceHeight ?? 0) > 50; i++) { P.update(1 / 60, left, game.battlefield, game); if ((P.surfaceHeight ?? 0) > 50 && P.grounded) hang = Math.max(hang, B.HALL_W + B.STEP.edge - P.x); }
+      assert(below && hang <= 3, 'The step has a body-sized collision: from the hall the figure stops a body width before it (x ' + Math.round(P.x) + '), on the raised floor it never stands past the edge (overhang ' + hang.toFixed(1) + ' px)');
+      P.x = B.HALL_W - 80; P.z = .7; P.surfaceId = null; P.surfaceHeight = 0; game.battlefield.placeOnSurface(P); for (let i = 0; i < 180; i++) { P.update(1 / 60, walk, game.battlefield, game); B.baseCollide(game); }
       assert(down && P.x <= B.HALL_W + 2 && (P.surfaceHeight ?? 0) < 2, 'From the raised floor one drops off the edge into the hall; walking back against it from below is blocked (x ' + Math.round(P.x) + ')'); }
     B.setBaseRoom(game, 'armoury'); }
   const back = stands.find((s) => s.z < .2); const front = stands.find((s) => s.z > .4);
@@ -5227,10 +5231,14 @@ game.running = false;
     P.z = .9; for (let i = 0; i < 120; i++) B.updateBaseCamera(game, 1 / 60); const sameY = game._camY === y0;
     P.x = 1200 + B.BASE_VIEWS.deadZone - 6; for (let i = 0; i < 120; i++) B.updateBaseCamera(game, 1 / 60); const still = game.modeState.dungeonCameraX === x0;
     P.x = 1500; for (let i = 0; i < 400; i++) B.updateBaseCamera(game, 1 / 60); const moved = game.modeState.dungeonCameraX > x0 + 200; const zz = game.cameraZoom();
-    const grid = Number.isInteger(game.modeState.dungeonCameraX) && Number.isInteger(game._camY) && zz > 1;
+    const grid = zz > 1;
+    // FILL on a wide phone crops the stage (rows 93 – 500 on screen): the feet at the very front stay above that edge.
+    { const zc = B.nearZoom(407); const cc = B.baseCameraFor({ z: zc, w: 1024, h: 576, playerX: 1200, pivotY: 550, footY: 550, vTop: 93, vBot: 500 }); const sy = (y) => 550 + (y + cc.y - 550) * zc;
+      const back = B.keepFigureInView(cc.y, { z: zc, h: 576, pivotY: 550, feetY: 313, headY: 209, vTop: 93, vBot: 500 });
+      assert(zc < B.BASE_VIEWS.near && sy(550) <= 500 && sy(550) > 440 && back === cc.y && B.nearZoom(576) === B.BASE_VIEWS.near, 'On a cropped (FILL) screen the camera frames the room inside the visible rows: the feet at the very front are above the bottom edge (' + Math.round(sy(550)) + ' of 500) and the back wall needs no camera bobbing'); }
     const groups = B.baseShadowGroups([{ x: B.HALL_W - 10, surfaceHeight: 0 }, { x: B.HALL_W + 10, surfaceHeight: B.RAISE }]);
-    const floors = groups[0].casters.length === 1 && groups[0].x1 === B.HALL_W && groups[1].casters.length === 1 && groups[1].x0 === B.HALL_W && B.baseBounds().nearZ < .9;
-    assert(sameY && still && moved && grid && floors && B.calmFollowX(100, 120, 46) === 100 && B.calmFollowX(100, 200, 46) === 154, 'The close view stays calm: walking into the depth does not move it up or down, small steps stay inside a dead zone, and it moves in whole world pixels like the sprites; shadows are split by floor at the step and the walkable floor ends before the bottom edge'); }
+    const floors = groups[0].casters.length === 1 && groups[0].x1 === B.HALL_W && groups[1].casters.length === 1 && groups[1].x0 === B.HALL_W;
+    assert(sameY && still && moved && grid && floors && B.calmFollowX(100, 120, 46) === 100 && B.calmFollowX(100, 200, 46) === 154, 'The close view stays calm: walking into the depth does not move it up or down, small steps stay inside a dead zone, and its glide is even; shadows are split by floor at the step'); }
   game.returnToHub();
 }
 {
