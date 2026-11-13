@@ -5212,6 +5212,13 @@ game.running = false;
   B.setBaseView('hall'); for (let i = 0; i < 240; i++) B.updateBaseCamera(game, 1 / 60); const zHall = game.cameraZoom();
   B.setBaseView('near'); for (let i = 0; i < 240; i++) B.updateBaseCamera(game, 1 / 60); const zNear = game.cameraZoom();
   assert(Math.abs(zHall - fit) < .01 && Math.abs(zNear - B.BASE_VIEWS.near) < .01, 'The view switch glides the zoom between the whole hall and the close view');
+  // A calm close view (user, 13 Nov 2026): no bobbing with the depth walked, a dead zone along the room, whole screen pixels.
+  { B.setBaseRoom(game, 'hall'); P.x = 1200; P.z = .1; for (let i = 0; i < 300; i++) B.updateBaseCamera(game, 1 / 60); const y0 = game._camY; const x0 = game.modeState.dungeonCameraX;
+    P.z = .9; for (let i = 0; i < 120; i++) B.updateBaseCamera(game, 1 / 60); const sameY = game._camY === y0;
+    P.x = 1200 + B.BASE_VIEWS.deadZone - 6; for (let i = 0; i < 120; i++) B.updateBaseCamera(game, 1 / 60); const still = game.modeState.dungeonCameraX === x0;
+    P.x = 1500; for (let i = 0; i < 400; i++) B.updateBaseCamera(game, 1 / 60); const moved = game.modeState.dungeonCameraX > x0 + 200; const zz = game.cameraZoom();
+    const grid = Math.abs(game.modeState.dungeonCameraX * zz - Math.round(game.modeState.dungeonCameraX * zz)) < 1e-6;
+    assert(sameY && still && moved && grid && B.calmFollowX(100, 120, 46) === 100 && B.calmFollowX(100, 200, 46) === 154, 'The close view stays calm: walking into the depth does not move it up or down, small steps stay inside a dead zone, and it rests on whole screen pixels'); }
   game.returnToHub();
 }
 {

@@ -21,7 +21,8 @@ export const HALL = Object.freeze({ tileW: 1280, h: 716, tiles: 2, bottom: 576 }
 export const HALL_W = HALL.tileW * HALL.tiles;
 // The floor band of the hall in stage pixels (battlefield.js sets it for the mode): more than twice the old depth.
 export const BASE_PROJECTION = Object.freeze({ farY: 300, nearY: 566 });
-export const BASE_VIEWS = Object.freeze({ near: 1.45 });
+// near: the close view. deadZone: the figure moves this far from the camera's middle before the camera follows.
+export const BASE_VIEWS = Object.freeze({ near: 1.28, deadZone: 46 });
 const BACK_Z = .05; const FRONT_Z = .52;
 const STAND_GAP = 220; const ARMOURY_X = 560;
 const LANDING_H = 110; const STAIR_Z = Object.freeze({ zMin: .04, zMax: .3 });
@@ -168,17 +169,27 @@ export function baseCameraFor({ z, w, h, playerX, pivotY, worldY = 0, offX = 0, 
   const y = h / z >= HALL.h ? shiftFor(h / 2, top + HALL.h / 2) : Math.max(shiftFor(h, HALL.bottom), Math.min(shiftFor(0, top), shiftFor(h * .72, footY)));
   return { x, y };
 }
-let camGame = null;
+// The camera's aim along the room: it stays while the figure is inside the dead zone and is pushed by its edges.
+export const calmFollowX = (mid, playerX, dead) => Math.max(playerX - dead, Math.min(playerX + dead, mid));
+let camGame = null; let camMidX = null; let camXNow = NaN; let camYNow = NaN;
 export function updateBaseCamera(game, dt) {
   camGame = game;
   const w = game.renderWidth; const h = game.renderHeight; const state = game.modeState; const p = game.player;
   const target = view === 'hall' ? hallFitZoom(w, h) : BASE_VIEWS.near;
   const now = game._zoomNow ?? target; game._zoomNow = Math.abs(target - now) < .002 ? target : now + (target - now) * Math.min(1, dt * 4);
-  const footY = groundYForDepth(p.z ?? .5) - (p.surfaceHeight ?? 0); /* the ground under the figure: a jump does not shake the camera */
-  const cam = baseCameraFor({ z: game._zoomNow, w, h, playerX: p.x, pivotY: game.zoomPivot().y, worldY: game.worldOffsetY ?? 0, offX: game.cameraOffsetX ?? 0, footY });
+  // A calm camera (user, 13 Nov 2026: walking in the close view made one dizzy): it does not move up and down with
+  // the depth walked (only with the stairs' height, never with a jump), it leaves the figure a dead zone before it
+  // follows along the room, and it rests on whole screen pixels so the pixel art does not shimmer.
+  const z = game._zoomNow; const offX = game.cameraOffsetX ?? 0;
+  const footY = groundYForDepth(.94) - (p.surfaceHeight ?? 0);
   const snap = view === 'hall' || !state || !Number.isFinite(state.dungeonCameraX);
-  game._camY = snap || !Number.isFinite(game._camY) ? cam.y : game._camY + (cam.y - game._camY) * Math.min(1, 5 * dt);
-  if (state) state.dungeonCameraX = snap ? cam.x : state.dungeonCameraX + (cam.x - state.dungeonCameraX) * Math.min(1, 6 * dt);
+  const mid = snap ? p.x : calmFollowX(camMidX ?? p.x, p.x, BASE_VIEWS.deadZone); camMidX = mid;
+  const cam = baseCameraFor({ z, w, h, playerX: mid, pivotY: game.zoomPivot().y, worldY: game.worldOffsetY ?? 0, offX, footY });
+  const onGrid = (v) => Math.round(v * z) / z;
+  camYNow = snap || !Number.isFinite(camYNow) ? cam.y : camYNow + (cam.y - camYNow) * Math.min(1, 3 * dt);
+  camXNow = snap || !Number.isFinite(camXNow) ? cam.x : camXNow + (cam.x - camXNow) * Math.min(1, 4 * dt);
+  game._camY = view === 'hall' ? camYNow : onGrid(camYNow);
+  if (state) state.dungeonCameraX = view === 'hall' ? camXNow : onGrid(camXNow);
 }
 
 // What a spot does. Screens that start a match leave the base first (a mode cannot change while one runs).
@@ -209,6 +220,7 @@ let prompt = null;
 export function closeBasePrompt() {
   /* The base's zoom, vertical shift and room never leak into another mode — also when no prompt was ever built. */
   if (camGame) { camGame._camY = 0; camGame._zoomNow = undefined; camGame = null; }
+  camMidX = null; camXNow = NaN; camYNow = NaN;
   view = 'near'; room = 'hall';
   if (!prompt) return;
   prompt.el.remove(); prompt.viewEl.remove(); globalThis.document?.removeEventListener?.('keydown', prompt.key);

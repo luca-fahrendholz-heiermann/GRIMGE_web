@@ -2,6 +2,13 @@
 
 Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
+## 13. Nov 2026 – Die Basis: ruhige Kamera (Rückmeldung des Nutzers: beim Laufen im Zoom wird einem schwummrig)
+
+- Die Nahsicht wippt nicht mehr mit, wenn man in die Tiefe läuft; sie hebt sich nur noch mit der Treppe.
+- Entlang des Raums hat die Figur einen Ruhebereich (46 Pixel nach jeder Seite), erst danach zieht die Kamera weich nach.
+- Die Kamera ruht auf ganzen Bildschirm-Pixeln, damit die Pixelgrafik beim Laufen nicht flimmert.
+- Zoom der Nahsicht 1,28 statt 1,45 (vorher 1,15); der kleine Stations-Knopf sitzt am rechten Rand.
+
 ## 12. Nov 2026 – Die Basis: Treppe in den nächsten Raum, näher heran, Sprung-Reihenfolge (Rückmeldung des Nutzers)
 
 - **Treppe und zweiter Raum:** Am Ende der Halle führt eine Treppe auf ein Podest mit Tür. Wer oben durch die Tür
