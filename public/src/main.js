@@ -337,7 +337,10 @@ export class GameWorld {
     // The backing buffer matches the physical pixels of the stage (crisp on
     // high-DPI phones, capped for performance on 4K screens).
     const dpr = globalThis.window?.devicePixelRatio || globalThis.devicePixelRatio || 1;
-    const nextDeviceScale = Math.max(1, Math.min(2.5, Math.round(fit * dpr * 100) / 100));
+    // Touch devices stop at 2: the two full-screen canvases are a third smaller there (memory on phones, and fewer
+    // pixels to fill every frame); pixel art gains nothing from more.
+    const coarse = !!globalThis.matchMedia?.('(pointer: coarse)')?.matches;
+    const nextDeviceScale = Math.max(1, Math.min(coarse ? 2 : 2.5, Math.round(fit * dpr * 100) / 100));
     const changed = this.renderWidth !== this.logicalWidth || this.renderHeight !== this.logicalHeight || nextDeviceScale !== this.deviceScale;
     this.renderWidth = this.logicalWidth;
     this.renderHeight = this.logicalHeight;

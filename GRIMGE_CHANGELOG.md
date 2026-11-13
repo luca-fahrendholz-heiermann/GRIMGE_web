@@ -2,6 +2,21 @@
 
 Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
+## 14. Nov 2026 – iPhone: Spiel wurde nach einiger Zeit in den Hub neu geladen (Diagnose des Nutzers)
+
+- **Ursache gemessen:** Das Spiel hielt schon im Hub 213 MB Grafikspeicher in 1562 Zeichenflächen (dazu zwei
+  bildschirmgroße). iPhone-Safari lädt eine Seite neu, wenn ihre Zeichenflächen zu viel Speicher belegen – das
+  erscheint als Navigation „back_forward“.
+- **Jetzt 56 MB:** Die weiße Treffer- und die rote Schadens-Kopie jedes Figurenbilds entstehen erst, wenn sie
+  gebraucht werden (vorher zwei Drittel des Speichers, meist nie gezeigt). Die Beschwörungs-Bilder lagen in
+  Quellgröße (rund 1200 Pixel) vor und werden auf 512 Pixel Höhe gehalten.
+- Auf Touch-Geräten ist die Auflösung der Zeichenfläche auf das Doppelte begrenzt (vorher 2,5-fach): ein Drittel
+  weniger Pixel je Bild.
+- **Basis:** In der Nahsicht reagiert auf Antippen nur noch die Station, an der die Figur steht. Vorher warf ein
+  Finger auf einer entfernten Station (etwa beim Steuern) den Spieler in den Hub. In „Ganzer Raum“ bleibt jede
+  Station antippbar.
+- Nicht auf einem iPhone geprüft; die Messung lief im Browser im iPhone-Format.
+
 ## 13. Nov 2026 – Die Basis: Stufe mit Kollision, Vollbild-Zuschnitt, gleichmäßige Kamera (Screenshots und Video des Nutzers)
 
 - **Unterkörper unter dem Rand – Ursache gefunden:** Auf breiten Handys zoomt die Einstellung „Vollbild“ die Bühne

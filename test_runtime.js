@@ -5232,6 +5232,11 @@ game.running = false;
     P.x = 1200 + B.BASE_VIEWS.deadZone - 6; for (let i = 0; i < 120; i++) B.updateBaseCamera(game, 1 / 60); const still = game.modeState.dungeonCameraX === x0;
     P.x = 1500; for (let i = 0; i < 400; i++) B.updateBaseCamera(game, 1 / 60); const moved = game.modeState.dungeonCameraX > x0 + 200; const zz = game.cameraZoom();
     const grid = zz > 1;
+    // A tap on a far station does nothing in the close view (it used to leave for the hub); in reach and on the map it works.
+    { B.setBaseRoom(game, 'hall'); B.setBaseView('near'); const gate = B.baseSpots(game.profile, 'hall').find((q) => q.id === 'gate'); const gy = W.groundYForDepth(gate.z) - 40;
+      P.x = gate.x + 600; P.z = .5; const far = B.baseTap(game, { x: gate.x, y: gy }); const stayed = game.activeMode.id === 'base' && game.isMatchRunning();
+      P.x = gate.x + 10; P.z = gate.z + .05; const nearHit = B.nearestSpot(game)?.id === 'gate';
+      assert(far === false && stayed && nearHit, 'In the close view a tap on a far station does nothing — only the spot the figure stands at reacts'); P.x = 1200; P.z = .5; }
     // FILL on a wide phone crops the stage (rows 93 – 500 on screen): the feet at the very front stay above that edge.
     { const zc = B.nearZoom(407); const cc = B.baseCameraFor({ z: zc, w: 1024, h: 576, playerX: 1200, pivotY: 550, footY: 550, vTop: 93, vBot: 500 }); const sy = (y) => 550 + (y + cc.y - 550) * zc;
       const back = B.keepFigureInView(cc.y, { z: zc, h: 576, pivotY: 550, feetY: 313, headY: 209, vTop: 93, vBot: 500 });

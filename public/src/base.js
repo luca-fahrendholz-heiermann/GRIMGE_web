@@ -273,8 +273,11 @@ export function activateSpot(game, s) {
 // A tap on a spot in the world (world pixels); the front row wins where pictures overlap. Works in both views, so
 // the whole-room view doubles as a map.
 export function baseTap(game, pt) {
+  // In the close view only the spot the figure stands at reacts (user report, 14 Nov 2026: a thumb steering over a
+  // far station threw the player out to the hub); the whole-room view is the map, there every spot can be tapped.
+  const reach = view === 'hall' ? null : nearestSpot(game);
   const spots = baseSpots(game.profile).sort((a, b) => b.z - a.z);
-  for (const s of spots) { const y = spotY(s); const { w, h } = sizeOf(s); if (Math.abs(pt.x - s.x) <= w / 2 + 8 && pt.y <= y + 10 && pt.y >= y - h - 34) return activateSpot(game, s); }
+  for (const s of spots) { const y = spotY(s); const { w, h } = sizeOf(s); if (Math.abs(pt.x - s.x) <= w / 2 + 8 && pt.y <= y + 10 && pt.y >= y - h - 34) return view === 'hall' || reach?.id === s.id ? activateSpot(game, s) : false; }
   return false;
 }
 

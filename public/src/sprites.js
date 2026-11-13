@@ -5,6 +5,21 @@ import { RIGS, bakeClips } from './rig.js';
 import { BASE_CLIPS, CLIP_ALIASES } from './rig_clips.js';
 import { applyLook, isDefaultLook, lookId } from './character_look.js';
 
+// The white hit-flash and red hurt copies of a frame are made on first use (user report, 14 Nov 2026: an iPhone kept
+// reloading the game into the hub — Safari drops a page whose canvases take too much memory). Every frame used to
+// carry both copies from the start: two thirds of all sprite memory for pictures that are mostly never shown.
+const tintCache = new WeakMap();
+export function lazyTint(src, fill) {
+  if (!src) return src;
+  let made = tintCache.get(src); if (!made) { made = {}; tintCache.set(src, made); }
+  if (made[fill]) return made[fill];
+  const doc = globalThis.document; if (typeof doc?.createElement !== 'function') return src;
+  const cv = doc.createElement('canvas'); cv.width = src.width; cv.height = src.height; const g = cv.getContext?.('2d');
+  if (!g) return src;
+  g.imageSmoothingEnabled = false; g.drawImage(src, 0, 0); g.globalCompositeOperation = 'source-in'; g.fillStyle = fill; g.fillRect(0, 0, cv.width, cv.height);
+  return (made[fill] = cv);
+}
+
 const CLIP_TIMING = {
   idle: 15, walk: 8, run: 6, jump: 10, fall: 10,
   attack: 5, uppercut: 5, dive: 5, hurt: 8, dead: 12,
@@ -180,7 +195,7 @@ export class SpriteManager {
         const img = imgs[i]; if (!img) return;
         const frames = Array.from({ length: c.frames }, (_, k) => {
           const make = (fill) => { const cv = doc.createElement('canvas'); cv.width = c.w; cv.height = c.h; const g = cv.getContext('2d'); if (!g) return cv; g.imageSmoothingEnabled = false; g.drawImage(img, k * c.w, 0, c.w, c.h, 0, 0, c.w, c.h); if (fill) { g.globalCompositeOperation = 'source-in'; g.fillStyle = fill; g.fillRect(0, 0, c.w, c.h); } return cv; };
-          return { canvas: make(null), flashCanvas: make('#ffffff'), width: c.w, height: c.h, anchorX: c.anchorX, anchorY: c.anchorY, baseHeight };
+          return { canvas: make(null), get flashCanvas() { return lazyTint(this.canvas, '#ffffff'); }, get hurtCanvas() { return lazyTint(this.canvas, '#ff2222'); }, width: c.w, height: c.h, anchorX: c.anchorX, anchorY: c.anchorY, baseHeight };
         });
         // use: several state groups on one sheet, each with its own frame picks (idx) and timing.
         for (const u of c.use ?? [c]) {
@@ -208,7 +223,7 @@ export class SpriteManager {
     const baked = bakeClips({ w: img.width, h: img.height, data: id.data }, rig, BASE_CLIPS);
     const toFrame = (f) => {
       const make = (fill) => { const cv = doc.createElement('canvas'); cv.width = f.w; cv.height = f.h; const g = cv.getContext('2d'); const im = g?.createImageData?.(f.w, f.h); if (im?.data?.length === f.data.length) { im.data.set(f.data); g.putImageData(im, 0, 0); } if (fill) { g.globalCompositeOperation = 'source-in'; g.fillStyle = fill; g.fillRect(0, 0, f.w, f.h); } return cv; };
-      return { canvas: make(null), flashCanvas: make('#ffffff'), width: f.w, height: f.h, anchorX: f.pad + img.width * .5, anchorY: f.pad + img.height - 2, baseHeight: img.height, hand: f.hand, handBack: f.handBack };
+      return { canvas: make(null), get flashCanvas() { return lazyTint(this.canvas, '#ffffff'); }, get hurtCanvas() { return lazyTint(this.canvas, '#ff2222'); }, width: f.w, height: f.h, anchorX: f.pad + img.width * .5, anchorY: f.pad + img.height - 2, baseHeight: img.height, hand: f.hand, handBack: f.handBack };
     };
     spr.frames = {}; spr.hold = { ...baked.hold }; spr.holdSeq = { ...baked.holdSeq }; spr.loop = {};
     for (const [name, list] of Object.entries(baked.frames)) { spr.frames[name] = list.map(toFrame); spr.loop[name] = !!BASE_CLIPS[name].loop; }
@@ -219,7 +234,7 @@ export class SpriteManager {
   preparedFrame(img) {
     const make = (fill) => { const c = document.createElement('canvas'); c.width = img.width; c.height = img.height; const x = c.getContext('2d'); x.imageSmoothingEnabled = false; x.drawImage(img, 0, 0); if (fill) { x.globalCompositeOperation = 'source-in'; x.fillStyle = fill; x.fillRect(0, 0, c.width, c.height); } return c; };
     const canvas = make(null);
-    return { canvas, flashCanvas: make('#ffffff'), hurtCanvas: make('#ff2222'), width: canvas.width, height: canvas.height, anchorX: canvas.width * .5, anchorY: canvas.height - 2 };
+    return { canvas, get flashCanvas() { return lazyTint(this.canvas, '#ffffff'); }, get hurtCanvas() { return lazyTint(this.canvas, '#ff2222'); }, width: canvas.width, height: canvas.height, anchorX: canvas.width * .5, anchorY: canvas.height - 2 };
   }
 
   loadAndProcessSprite(key, src) {
@@ -319,32 +334,9 @@ export class SpriteManager {
       pad, pad, cropW, cropH
     );
 
-    // Create White Hit-Flash Canvas
-    const flashCanvas = document.createElement('canvas');
-    flashCanvas.width = croppedCanvas.width;
-    flashCanvas.height = croppedCanvas.height;
-    const flashCtx = flashCanvas.getContext('2d');
-    flashCtx.imageSmoothingEnabled = false;
-    flashCtx.drawImage(croppedCanvas, 0, 0);
-    flashCtx.globalCompositeOperation = 'source-in';
-    flashCtx.fillStyle = '#ffffff';
-    flashCtx.fillRect(0, 0, flashCanvas.width, flashCanvas.height);
-
-    // Create Red Hurt Canvas
-    const hurtCanvas = document.createElement('canvas');
-    hurtCanvas.width = croppedCanvas.width;
-    hurtCanvas.height = croppedCanvas.height;
-    const hurtCtx = hurtCanvas.getContext('2d');
-    hurtCtx.imageSmoothingEnabled = false;
-    hurtCtx.drawImage(croppedCanvas, 0, 0);
-    hurtCtx.globalCompositeOperation = 'source-in';
-    hurtCtx.fillStyle = '#ff2222';
-    hurtCtx.fillRect(0, 0, hurtCanvas.width, hurtCanvas.height);
-
     return {
       canvas: croppedCanvas,
-      flashCanvas: flashCanvas,
-      hurtCanvas: hurtCanvas,
+      get flashCanvas() { return lazyTint(this.canvas, '#ffffff'); }, get hurtCanvas() { return lazyTint(this.canvas, '#ff2222'); },
       width: croppedCanvas.width,
       height: croppedCanvas.height,
       anchorX: croppedCanvas.width * 0.5,
@@ -388,7 +380,7 @@ export class SpriteManager {
     return new Promise((resolve) => {
       const img = new Image();
       img.onload = () => {
-        this.summonSprites[key] = { static: this.chromaKeyAndCrop(img) };
+        this.summonSprites[key] = { static: this.shrunkSprite(this.chromaKeyAndCrop(img), 512) };
         console.log(`✦ ${key} summon sprite processed & cached.`);
         resolve(true);
       };
@@ -494,7 +486,7 @@ export class SpriteManager {
             cctx.drawImage(img, col * cellW, row * cellH, cellW, cellH, 0, 0, cellW, cellH);
             /* Sheets cut by prep_frames.cjs (ent.anchor): equal cells with the feet on one line — the whole cell is the
                frame, so a raised weapon neither shrinks the figure nor shifts it. Older sheets are cropped per frame. */
-            if (ent.anchor) { const tint = (fill) => { const cv = document.createElement('canvas'); cv.width = cellW; cv.height = cellH; const g = cv.getContext('2d'); g.drawImage(cell, 0, 0); g.globalCompositeOperation = 'source-in'; g.fillStyle = fill; g.fillRect(0, 0, cellW, cellH); return cv; }; return { canvas: cell, flashCanvas: tint('#ffffff'), hurtCanvas: tint('#ff2222'), width: cellW, height: cellH, anchorX: ent.anchor.x, anchorY: ent.anchor.y, baseHeight: ent.anchor.bodyH }; }
+            if (ent.anchor) { const tint = (fill) => { const cv = document.createElement('canvas'); cv.width = cellW; cv.height = cellH; const g = cv.getContext('2d'); g.drawImage(cell, 0, 0); g.globalCompositeOperation = 'source-in'; g.fillStyle = fill; g.fillRect(0, 0, cellW, cellH); return cv; }; return { canvas: cell, get flashCanvas() { return lazyTint(this.canvas, '#ffffff'); }, get hurtCanvas() { return lazyTint(this.canvas, '#ff2222'); }, width: cellW, height: cellH, anchorX: ent.anchor.x, anchorY: ent.anchor.y, baseHeight: ent.anchor.bodyH }; }
             return this.cropTransparent(cell);
           }).filter(f => f !== null);
         }
@@ -502,8 +494,7 @@ export class SpriteManager {
         if (!idle) { resolve(false); return; }
         const sprite = {
           canvas: idle.canvas,
-          flashCanvas: idle.flashCanvas,
-          hurtCanvas: idle.hurtCanvas,
+          get flashCanvas() { return idle.flashCanvas; }, get hurtCanvas() { return idle.hurtCanvas; },
           width: idle.width,
           height: idle.height,
           anchorX: idle.anchorX,
@@ -549,24 +540,9 @@ export class SpriteManager {
     const cctx = cropped.getContext('2d');
     cctx.imageSmoothingEnabled = false;
     cctx.drawImage(cellCanvas, minX, minY, cropW, cropH, pad, pad, cropW, cropH);
-    const flash = document.createElement('canvas');
-    flash.width = cropped.width; flash.height = cropped.height;
-    const fctx = flash.getContext('2d');
-    fctx.drawImage(cropped, 0, 0);
-    fctx.globalCompositeOperation = 'source-in';
-    fctx.fillStyle = '#ffffff';
-    fctx.fillRect(0, 0, flash.width, flash.height);
-    const hurt = document.createElement('canvas');
-    hurt.width = cropped.width; hurt.height = cropped.height;
-    const hctx = hurt.getContext('2d');
-    hctx.drawImage(cropped, 0, 0);
-    hctx.globalCompositeOperation = 'source-in';
-    hctx.fillStyle = '#ff2222';
-    hctx.fillRect(0, 0, hurt.width, hurt.height);
     return {
       canvas: cropped,
-      flashCanvas: flash,
-      hurtCanvas: hurt,
+      get flashCanvas() { return lazyTint(this.canvas, '#ffffff'); }, get hurtCanvas() { return lazyTint(this.canvas, '#ff2222'); },
       width: cropped.width,
       height: cropped.height,
       anchorX: cropped.width * 0.5,
@@ -926,6 +902,17 @@ export class SpriteManager {
     c.fillRect(0, 0, canvas.width, canvas.height);
     byTint.set(tint, canvas);
     return canvas;
+  }
+
+  // A picture far larger than it is ever drawn is kept at a sensible size (summon art comes in at ~1200 px and is
+  // shown at a tenth of that): the same look on screen for a fraction of the memory.
+  shrunkSprite(sprite, maxHeight) {
+    if (!sprite?.canvas || !(sprite.height > maxHeight) || typeof document?.createElement !== 'function') return sprite;
+    const k = maxHeight / sprite.height; const canvas = document.createElement('canvas'); canvas.width = Math.max(1, Math.round(sprite.width * k)); canvas.height = maxHeight;
+    const g = canvas.getContext?.('2d'); if (!g) return sprite;
+    g.imageSmoothingEnabled = true; if ('imageSmoothingQuality' in g) g.imageSmoothingQuality = 'high';
+    g.drawImage(sprite.canvas, 0, 0, canvas.width, canvas.height);
+    return { canvas, get flashCanvas() { return lazyTint(this.canvas, '#ffffff'); }, get hurtCanvas() { return lazyTint(this.canvas, '#ff2222'); }, width: canvas.width, height: canvas.height, anchorX: sprite.anchorX * k, anchorY: sprite.anchorY * k };
   }
 
   renderSummon(ctx, summonKey, x, y, opt = {}) {
