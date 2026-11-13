@@ -5189,15 +5189,19 @@ game.running = false;
   game.returnToHub(); game.setMatchMode('base'); game.startMatch();
   const P = game.player; const stations = B.baseSpots(game.profile, 'hall'); const spots = [...stations, ...B.baseSpots(game.profile, 'armoury')]; const stands = spots.filter((s) => s.kind === 'class');
   const depth = W.groundYForDepth(.94) - W.groundYForDepth(.06);
-  const rows = new Set(stands.map((s) => s.z)); const inHall = spots.every((s) => s.x > 60 && s.x < B.HALL_W - 60);
+  const rows = new Set(stands.map((s) => s.z)); const inHall = spots.every((s) => s.x > 60 && s.x < B.WORLD_W - 60);
   assert(game.activeMode.id === 'base' && B.baseRoom() === 'hall' && depth >= 220 && rows.size === 2 && stands.length === 18 && stations.length === 6 && inHall, 'The base has a deep floor (' + Math.round(depth) + ' px of depth): six stations in the hall, the armoury with its stands in two rows as a room of its own');
-  // The staircase: walked up from its foot to the landing; through the door on the landing lies the armoury, and back.
+  // One continuous world (user, 13 Nov 2026, Castle Crashers): the stairs lead up onto the armoury's raised floor with no
+  // jump of the figure, and the close camera follows so that head and feet never leave the picture.
   { const walk = { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 1, z: 0 }, touchMove: { x: 1, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false };
-    P.x = 2100; P.z = .17; P.surfaceId = null; P.surfaceHeight = 0; game.battlefield.placeOnSurface(P); let top = 0; let changed = false;
-    for (let i = 0; i < 420 && !changed; i++) { P.update(1 / 60, walk, game.battlefield, game); top = Math.max(top, P.surfaceHeight ?? 0); changed = B.updateBaseRooms(game); }
-    const arrived = B.baseRoom() === 'armoury' && (P.surfaceHeight ?? 0) > 90 && P.x < 200;
-    const stay = !B.updateBaseRooms(game); P.x = 100; const back = B.updateBaseRooms(game) && B.baseRoom() === 'hall' && (P.surfaceHeight ?? 0) > 90 && P.x > 2380;
-    assert(top > 90 && changed && arrived && stay && back, 'The staircase of the hall is walked up to its landing (' + Math.round(top) + ' px); the door there leads to the armoury, where one arrives on the landing, and the same way back');
+    P.x = B.HALL_W - 330; P.z = .17; P.surfaceId = null; P.surfaceHeight = 0; game.battlefield.placeOnSurface(P); B.setBaseView('near'); let leap = 0; let worst = -99; let frames = 0;
+    for (; frames < 900 && P.x < B.HALL_W + 160; frames++) { const x = P.x; P.update(1 / 60, walk, game.battlefield, game); leap = Math.max(leap, Math.abs(P.x - x)); B.updateBaseCamera(game, 1 / 60);
+      const pv = game.zoomPivot().y; const wy = game.worldOffsetY ?? 0; const feet = W.groundYForDepth(P.z) - (P.surfaceHeight ?? 0); const sy = (y) => pv + (y + wy + game._camY - pv) * game.cameraZoom();
+      worst = Math.max(worst, 20 - sy(feet - 104), sy(feet) - (576 - 20)); }
+    const up = B.baseRoom(game) === 'armoury' && Math.abs((P.surfaceHeight ?? 0) - B.RAISE) < 2;
+    assert(up && leap < 20 && worst <= 1, 'The stairs lead from the hall up onto the armoury floor in one continuous walk (largest step ' + leap.toFixed(1) + ' px, ' + frames + ' frames), and the close camera keeps head and feet in the picture all the way (' + worst.toFixed(1) + ')');
+    const jumpHead = B.keepFigureInView(0, { z: 1.28, h: 576, pivotY: 550, feetY: 200, headY: -40 }); const sTop = 550 + (-40 + jumpHead - 550) * 1.28;
+    assert(sTop >= 21, 'A high jump on the raised floor pulls the camera up instead of cutting the head off');
     B.setBaseRoom(game, 'armoury'); }
   const back = stands.find((s) => s.z < .2); const front = stands.find((s) => s.z > .4);
   P.x = front.x; P.z = front.z + .05; const a = B.nearestSpot(game)?.id; P.x = back.x; P.z = back.z + .05; const b = B.nearestSpot(game)?.id; P.x = back.x; P.z = .95; const c = B.nearestSpot(game);

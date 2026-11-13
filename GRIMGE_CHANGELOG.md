@@ -2,6 +2,17 @@
 
 Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
+## 13. Nov 2026 – Die Basis: eine durchgehende Welt, Figur immer im Bild (Rückmeldung des Nutzers, Castle-Crashers-Video 1:37–1:42)
+
+- **Nahtloser Übergang statt Tür:** Halle und Rüstkammer sind eine zusammenhängende Welt. Die Treppe am Ende der
+  Halle führt auf eine erhöhte Ebene, und diese Ebene ist die Rüstkammer; die Kamera fährt einfach mit hoch und
+  weiter. Von der Kante kann man wieder in die Halle hinunterspringen. Der Tür-Sprung ist entfernt.
+- **Figur nie außerhalb des Bildes:** Die Kamera hält Kopf und Füße immer im Bild – auf der Treppe, auf der oberen
+  Ebene und im Sprung.
+- „Ganzer Raum“ zeigt den Raum, in dem die Figur steht, und schwenkt beim Wechsel.
+- Vorgaben zu Mastery durch Nutzung (Waffenbuff-Stufen, Atmung, Transformation, Bankai, PvP-Balance) in Design-Bibel
+  und Roadmap aufgenommen; noch nicht gebaut.
+
 ## 13. Nov 2026 – Die Basis: ruhige Kamera (Rückmeldung des Nutzers: beim Laufen im Zoom wird einem schwummrig)
 
 - Die Nahsicht wippt nicht mehr mit, wenn man in die Tiefe läuft; sie hebt sich nur noch mit der Treppe.

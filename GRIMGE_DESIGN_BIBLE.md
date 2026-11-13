@@ -87,6 +87,25 @@ Jede Mission hat Einleitung, Ziel, Abschluss und eine Belohnung (XP, Skillpunkte
 - **Begleiter im Level** (geplant): findbar wie interaktive Objekte, können sterben, bringen einen schneller durchs
   Level; dafür größere Level. Primals sind ab Stufe 3 ohne Beschwörung reitbar.
 
+## Mastery durch Nutzung: man wird zum Element (Vorgabe des Nutzers, 13. Nov 2026)
+
+- **Element-Mastery steigt durch Benutzen:** Wer Runen eines Elements einsetzt, levelt die Mastery dieses Elements.
+- **Passive haben zwei Aufgaben:** (1) direkte Wirkung im Spiel und auf Runen, (2) Vorbedingung, um neue Runen
+  überhaupt freischalten zu dürfen (erst das Passiv, dann die Rune mit Skillpunkten und Gold).
+- **Sichtbare Stufen am Beispiel Waffenbuff** (Konstruktions-Rune + Element-Rune), über drei Passiv-Stufen bzw. drei
+  aufeinander folgende Passive:
+  1. Anfang: die Waffe leuchtet im Element; leichte Wirkung auf Gegner (z. B. Feuerschaden, kleine Chance auf Verbrennen).
+  2. Später: die ganze Waffe besteht aus dem Element – gleiche Silhouette, aber z. B. nur noch brennendes Feuer.
+  3. Dazu tragen alle Nahkampf-Angriffe starke Element-Effekte, auch Sprint-Angriff und Uppercut.
+- **Kette je Element:** Waffenbuff-Passive → **Atmung** freischaltbar → danach **Transformation** freischaltbar
+  (man wird ganz zur Element-Gestalt, nicht nur die Angriffe sind belegt). Mit Erfahrung und Spezialisierung wird man
+  immer mehr zum Element.
+- **Waffen-Mastery:** die Vorstufe der Transformation ist der Arcane State **Bankai**; die nötigen Passive schalten
+  ihn erst als Rune frei.
+- **Balance:** Im gewerteten PvP hat jeder dieselben Fortschritte frei; dort zählen Deckbau und Spielstil. Wie das fair
+  mit dem eigenen Fortschritt zusammengeht, ist noch zu planen.
+- **Freischalten** gilt für PvE, Story und Koop: individuell, braucht Spielzeit und Erkunden der Welt.
+
 ## Fortschritt in der Kampagne
 
 - Missionen schalten sich der Reihe nach frei und bleiben wiederholbar.

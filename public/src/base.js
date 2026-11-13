@@ -4,28 +4,33 @@
 // hub), and an armoury shows one armour stand per class with the class level above it; tapping a stand opens the
 // class page for that class. First version: fixed stations, no free placing yet, no wandering Primals yet.
 // 12 Nov 2026 (user): a deeper hall with more floor to walk on and two views — close with a following camera, and the
-// whole room zoomed out. Then: a staircase at the end of the hall leads up to a door into the next room (Castle
-// Crashers), the armoury, where the stands have a room of their own in two rows one can walk between.
+// whole room zoomed out.
+// 13 Nov 2026 (user, Castle Crashers video 1:37 – 1:42): the rooms are ONE continuous world, no door that drops one
+// somewhere else. The hall's staircase leads up to a raised floor, and that floor is the armoury; the camera simply
+// follows the figure up and along — and never lets it leave the picture.
 import { groundYForDepth } from './world.js';
 import { CLASSES, classWeapons } from './classes.js';
 import { openRuneVault, isRuneVaultOpen } from './rune_vault.js';
 import { openCampaign, isCampaignOpen } from './campaign.js';
 import { isCharacterCreationOpen } from './character_creation.js';
-import { structureSurfaces } from './level_structures.js';
+import { structureSurfaces, renderStructures } from './level_structures.js';
 import { ui } from './ui.js';
 
 export const BASE_SCENE = 'base_hall';
-// The hall picture is the room itself: two tiles side by side (one mirrored), drawn in world pixels with its bottom
-// edge on the bottom of the stage. Its wall / floor edge sits at 60 % of the height.
+// The hall picture is a room: two tiles side by side (one mirrored), drawn in world pixels with its bottom edge on the
+// bottom of the stage. Its wall / floor edge sits at 60 % of the height.
 export const HALL = Object.freeze({ tileW: 1280, h: 716, tiles: 2, bottom: 576 });
 export const HALL_W = HALL.tileW * HALL.tiles;
+// Two rooms in a row: the hall on the ground, the armoury on a floor raised by RAISE, reached by the stairs.
+export const WORLD_W = HALL_W * 2; export const RAISE = 110;
 // The floor band of the hall in stage pixels (battlefield.js sets it for the mode): more than twice the old depth.
 export const BASE_PROJECTION = Object.freeze({ farY: 300, nearY: 566 });
 // near: the close view. deadZone: the figure moves this far from the camera's middle before the camera follows.
 export const BASE_VIEWS = Object.freeze({ near: 1.28, deadZone: 46 });
 const BACK_Z = .05; const FRONT_Z = .52;
-const STAND_GAP = 220; const ARMOURY_X = 560;
-const LANDING_H = 110; const STAIR_Z = Object.freeze({ zMin: .04, zMax: .3 });
+const STAND_GAP = 220; const ARMOURY_X = HALL_W + 300;
+const STAIRS = Object.freeze({ type: 'stairs', x0: HALL_W - 270, x1: HALL_W, zMin: .04, zMax: .3, from: 0, to: RAISE });
+const STRUCTURES = Object.freeze([STAIRS, Object.freeze({ type: 'gallery', x0: HALL_W, x1: WORLD_W + 200, zMin: 0, zMax: 1, h: RAISE })]);
 // Which of the six stand sprites a class wears.
 const STAND_OF = { Guardian: 0, Oracle: 0, Runeblade: 0, Berserker: 1, Beastborn: 1, Monk: 1, Ronin: 2, Bladedancer: 2, Lancer: 2, Spiritbound: 2, Ranger: 3, Trickster: 3, Resonant: 3, Arcanist: 4, Occultist: 4, Fateweaver: 4, Shadow: 5, Reaper: 5 };
 const STATIONS = Object.freeze([
@@ -37,22 +42,16 @@ const STATIONS = Object.freeze([
   { id: 'campaign', x: 1520, cell: 2, label: 'KAMPAGNE', scale: .8 },
   { id: 'training', x: 1840, cell: 0, label: 'TRAINING', scale: .8 }
 ]);
-// The rooms. Each has a staircase to a landing with a door in the wall; walking through the door on the landing leads
-// to the other room, where one arrives on that room's landing. structures: level_structures.js (walkable ramps).
 export const ROOMS = Object.freeze({
-  hall: Object.freeze({ id: 'hall', label: 'HALLE', to: 'armoury', doorX: 2462, landing: 1, arriveX: 2410, arriveFacing: -1, leaves: (x) => x > 2446, tint: null, flip: 0,
-    structures: Object.freeze([
-      Object.freeze({ type: 'stairs', x0: 2130, x1: 2400, ...STAIR_Z, from: 0, to: LANDING_H }),
-      Object.freeze({ type: 'gallery', x0: 2400, x1: 2530, ...STAIR_Z, h: LANDING_H })]) }),
-  armoury: Object.freeze({ id: 'armoury', label: 'RÜSTKAMMER', to: 'hall', doorX: 98, landing: 0, arriveX: 150, arriveFacing: 1, leaves: (x) => x < 114, tint: 'rgba(255,196,150,.82)', flip: 1,
-    structures: Object.freeze([
-      Object.freeze({ type: 'gallery', x0: 30, x1: 160, ...STAIR_Z, h: LANDING_H }),
-      Object.freeze({ type: 'stairs', x0: 160, x1: 430, ...STAIR_Z, from: LANDING_H, to: 0 })]) })
+  hall: Object.freeze({ id: 'hall', label: 'HALLE', x0: 0, raise: 0, flip: 0, tint: null }),
+  armoury: Object.freeze({ id: 'armoury', label: 'RÜSTKAMMER', x0: HALL_W, raise: RAISE, flip: 1, tint: 'rgba(255,196,150,.82)' })
 });
-let room = 'hall';
-export const baseRoom = () => room;
-export const baseWidth = () => HALL_W;
-export const baseBounds = () => ({ left: 90, right: HALL_W - 90 });
+export const roomAt = (x) => (x >= HALL_W ? 'armoury' : 'hall');
+let theGame = null;
+// The room the figure stands in.
+export const baseRoom = (game = theGame) => roomAt(game?.player?.x ?? 0);
+export const baseWidth = () => WORLD_W;
+export const baseBounds = () => ({ left: 90, right: WORLD_W - 90 });
 
 const images = {};
 function img(name, dir = 'props') {
@@ -60,75 +59,78 @@ function img(name, dir = 'props') {
   if (!e) { e = images[name] = { image: typeof Image === 'function' ? new Image() : null, loaded: false }; if (e.image) { e.image.onload = () => { e.loaded = true; }; e.image.src = `assets/scenes/${dir}/${name}.png`; } }
   return e.loaded ? e.image : null;
 }
-// Every thing one can walk up to in a room: the hall holds the stations along the back wall, the armoury one stand
-// per class in two staggered rows (back wall and mid floor) with a walkway between them.
-export function baseSpots(profile, inRoom = room) {
-  if (inRoom === 'hall') return STATIONS.map((s) => ({ ...s, z: BACK_Z, kind: 'station' }));
-  const spots = []; const perRow = Math.ceil(CLASSES.length / 2);
+// Every thing one can walk up to: the hall holds the stations along the back wall, the armoury one stand per class
+// in two staggered rows (back wall and mid floor) with a walkway between them. h = the height of the floor it stands on.
+export function baseSpots(profile, inRoom = null) {
+  const spots = STATIONS.map((s) => ({ ...s, z: BACK_Z, h: 0, room: 'hall', kind: 'station' }));
+  const perRow = Math.ceil(CLASSES.length / 2);
   CLASSES.forEach((c, i) => {
     const front = i >= perRow; const col = front ? i - perRow : i;
     const level = Math.max(1, ...classWeapons(c.id).map((w) => profile?.weaponLevel?.(w) ?? 1));
-    spots.push({ id: `class:${c.id}`, kind: 'class', classId: c.id, x: ARMOURY_X + col * STAND_GAP + (front ? STAND_GAP / 2 : 0), z: front ? FRONT_Z : BACK_Z, img: `stand_${STAND_OF[c.id] ?? 0}`, label: c.name, sub: `STUFE ${level}`, worn: profile?.character?.classId === c.id, scale: .75 });
+    spots.push({ id: `class:${c.id}`, kind: 'class', room: 'armoury', h: RAISE, classId: c.id, x: ARMOURY_X + col * STAND_GAP + (front ? STAND_GAP / 2 : 0), z: front ? FRONT_Z : BACK_Z, img: `stand_${STAND_OF[c.id] ?? 0}`, label: c.name, sub: `STUFE ${level}`, worn: profile?.character?.classId === c.id, scale: .75 });
   });
-  return spots;
+  return inRoom ? spots.filter((s) => s.room === inRoom) : spots;
 }
-const spotY = (s) => groundYForDepth(s.z);
+const spotY = (s) => groundYForDepth(s.z) - s.h;
 const CELL = { w: 153, h: 186 };
 const sizeOf = (s) => { if (s.cell != null) { const im = img('base_stations'); return { w: CELL.w * s.scale, h: CELL.h * s.scale, im, sx: s.cell * CELL.w }; } const im = img(s.img); return im ? { w: im.width * s.scale, h: im.height * s.scale, im } : { w: 70, h: 110, im: null }; };
-// The spot in reach: close along the room and in the same depth lane (a stand in the other row does not count).
+// The spot in reach: close along the room, on the same floor and in the same depth lane (a stand in the other row
+// does not count, nor anything while one is on the stairs).
 export function nearestSpot(game, range = 70) {
-  let best = null; let bd = Infinity; const p = game.player;
-  if ((p.surfaceHeight ?? 0) > 20) return null; /* up on the stairs nothing on the floor is in reach */
-  for (const s of baseSpots(game.profile)) { const dx = Math.abs(p.x - s.x); const dz = Math.abs((p.z ?? 0) - s.z); if (dx > range || dz > .3) continue; const d = dx + dz * 220; if (d < bd) { bd = d; best = s; } }
+  let best = null; let bd = Infinity; const p = game.player; const ph = p.surfaceHeight ?? 0;
+  for (const s of baseSpots(game.profile)) { const dx = Math.abs(p.x - s.x); const dz = Math.abs((p.z ?? 0) - s.z); if (dx > range || dz > .3 || Math.abs(ph - s.h) > 20) continue; const d = dx + dz * 220; if (d < bd) { bd = d; best = s; } }
   return best;
 }
 
-// Enter a room: its stairs become walkable, the figure is placed (on the landing when it came through the door).
-export function setBaseRoom(game, id, { throughDoor = false } = {}) {
-  const R = ROOMS[id] ?? ROOMS.hall; room = R.id;
+// Build the base's floors (stairs, the raised armoury floor) and place the figure in a room.
+export function setBaseRoom(game, id = 'hall') {
+  const R = ROOMS[id] ?? ROOMS.hall; theGame = game;
   const bf = game.battlefield; const p = game.player;
-  if (bf) bf.levelSurfaces = structureSurfaces(R.structures, 0);
-  if (game.modeState) { game.modeState.structures = { defs: R.structures, left: 0 }; game.modeState.dungeonCameraX = NaN; /* the camera snaps to the new room */ }
+  if (bf) bf.levelSurfaces = structureSurfaces(STRUCTURES, 0);
+  if (game.modeState) { game.modeState.structures = null; game.modeState.dungeonCameraX = NaN; /* the camera snaps to the figure */ }
   if (p && bf) {
-    if (throughDoor) { p.x = R.arriveX; p.z = (STAIR_Z.zMin + STAIR_Z.zMax) / 2; p.facing = R.arriveFacing; p.surfaceId = bf.levelSurfaces[R.landing]?.id; p.surfaceHeight = LANDING_H; }
-    else { p.x = 380; p.z = .55; p.surfaceId = null; p.surfaceHeight = 0; }
-    p.vx = 0; p.vz = 0; bf.placeOnSurface(p);
+    p.x = R.x0 + 380; p.z = .55; p.vx = 0; p.vz = 0;
+    p.surfaceId = R.raise ? bf.levelSurfaces[1]?.id : null; p.surfaceHeight = R.raise;
+    bf.placeOnSurface(p);
   }
-  if (throughDoor) game.showAnnouncement?.(R.label, 1.1);
-  return room;
-}
-// Through the door: on the landing, past the door's middle.
-export function updateBaseRooms(game) {
-  const R = ROOMS[room]; const p = game.player;
-  if (p && p.grounded !== false && (p.surfaceHeight ?? 0) > LANDING_H - 16 && R.leaves(p.x)) { setBaseRoom(game, R.to, { throughDoor: true }); return true; }
-  return false;
+  return R.id;
 }
 
-// The door in the wall above a landing: a dark arch with a warm light and the name of the room behind it.
-function drawDoor(ctx, R) {
-  const x = R.doorX; const foot = groundYForDepth(STAIR_Z.zMin) - LANDING_H; const w = 78; const h = 132; const top = foot - h;
-  ctx.fillStyle = '#c9a24a'; ctx.fillRect(x - w / 2 - 6, top + 26, w + 12, h - 26); ctx.beginPath(); ctx.arc(x, top + 32, w / 2 + 6, Math.PI, 0); ctx.fill();
-  ctx.fillStyle = '#5a5362'; ctx.fillRect(x - w / 2 - 2, top + 28, w + 4, h - 28); ctx.beginPath(); ctx.arc(x, top + 32, w / 2 + 2, Math.PI, 0); ctx.fill();
-  ctx.fillStyle = '#0d0a14'; ctx.fillRect(x - w / 2 + 4, top + 30, w - 8, h - 30); ctx.beginPath(); ctx.arc(x, top + 32, w / 2 - 4, Math.PI, 0); ctx.fill();
-  const g = ctx.createLinearGradient(0, foot - 70, 0, foot); g.addColorStop(0, 'rgba(255,170,80,0)'); g.addColorStop(1, 'rgba(255,170,80,.42)');
-  ctx.fillStyle = g; ctx.fillRect(x - w / 2 + 4, foot - 70, w - 8, 70);
-  const name = ROOMS[R.to].label; ctx.font = '700 11px Cinzel, serif'; ctx.textAlign = 'center'; const tw = ctx.measureText(name).width + 16;
-  ctx.fillStyle = 'rgba(12,9,18,.86)'; ctx.fillRect(Math.round(x - tw / 2), Math.round(top - 24), Math.round(tw), 17);
-  ctx.strokeStyle = '#f0d890'; ctx.lineWidth = 1; ctx.strokeRect(Math.round(x - tw / 2) + .5, Math.round(top - 24) + .5, Math.round(tw), 17);
-  ctx.fillStyle = '#fff3c8'; ctx.fillText(name, x, top - 11);
-}
-// The room behind everything: the picture in world pixels, so zooming out shows the whole room.
-export function renderBaseHall(ctx) {
-  const R = ROOMS[room]; const im = img(BASE_SCENE, 'campaign'); const top = HALL.bottom - HALL.h;
-  ctx.save(); ctx.imageSmoothingEnabled = false;
-  if (!im) { ctx.fillStyle = '#1c1826'; ctx.fillRect(0, top, HALL_W, HALL.h); }
-  else for (let k = 0; k < HALL.tiles; k++) {
-    const x = k * HALL.tileW;
+const STONE = { face: '#2f2a3a', line: '#221e2b', edge: '#8d86a0', shade: 'rgba(8,6,14,.5)' };
+// One room's picture at its floor height, tinted in its own light.
+function drawRoom(ctx, im, R) {
+  const top = HALL.bottom - HALL.h - R.raise;
+  if (!im) { ctx.fillStyle = '#1c1826'; ctx.fillRect(R.x0, top, HALL_W, HALL.h); return; }
+  for (let k = 0; k < HALL.tiles; k++) {
+    const x = R.x0 + k * HALL.tileW;
     if ((k + R.flip) % 2) { ctx.save(); ctx.translate(x + HALL.tileW, 0); ctx.scale(-1, 1); ctx.drawImage(im, 0, top, HALL.tileW, HALL.h); ctx.restore(); } else ctx.drawImage(im, x, top, HALL.tileW, HALL.h);
   }
-  // Another room, another light: the armoury glows warm.
-  if (R.tint) { ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = R.tint; ctx.fillRect(0, top, HALL_W, HALL.h); ctx.globalCompositeOperation = 'source-over'; }
-  drawDoor(ctx, R);
+  if (R.tint) { ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = R.tint; ctx.fillRect(R.x0, top, HALL_W, HALL.h); ctx.globalCompositeOperation = 'source-over'; }
+}
+// The world behind everything, in world pixels (so it zooms as a whole): the hall, the raised armoury with the stone
+// face of its floor along the front, the step between them, the stairs.
+export function renderBaseHall(ctx) {
+  const im = img(BASE_SCENE, 'campaign');
+  ctx.save(); ctx.imageSmoothingEnabled = false;
+  drawRoom(ctx, im, ROOMS.hall); drawRoom(ctx, im, ROOMS.armoury);
+  // The front face of the raised floor: stone blocks down to the bottom of the stage.
+  const faceTop = HALL.bottom - RAISE;
+  ctx.fillStyle = STONE.face; ctx.fillRect(HALL_W, faceTop, HALL_W, RAISE);
+  ctx.fillStyle = STONE.line;
+  for (let y = faceTop + 22; y < HALL.bottom; y += 22) ctx.fillRect(HALL_W, y, HALL_W, 2);
+  for (let row = 0, y = faceTop; y < HALL.bottom; y += 22, row++) for (let x = HALL_W + (row % 2 ? 32 : 0); x < WORLD_W; x += 64) ctx.fillRect(x, y, 2, 22);
+  ctx.fillStyle = STONE.edge; ctx.fillRect(HALL_W, faceTop, HALL_W, 3);
+  // The step itself: the raised floor's side throws a shadow onto the hall floor.
+  const stepTop = groundYForDepth(0) - RAISE; const g = ctx.createLinearGradient(HALL_W - 46, 0, HALL_W, 0); g.addColorStop(0, 'rgba(8,6,14,0)'); g.addColorStop(1, STONE.shade);
+  ctx.fillStyle = g; ctx.fillRect(HALL_W - 46, groundYForDepth(0), 46, HALL.bottom - groundYForDepth(0));
+  ctx.fillStyle = STONE.edge; ctx.fillRect(HALL_W - 2, stepTop, 3, HALL.bottom - stepTop);
+  renderStructures(ctx, [STAIRS], 0);
+  // A name plate over the head of the stairs.
+  const name = ROOMS.armoury.label; const px = HALL_W - 40; const py = groundYForDepth(STAIRS.zMin) - RAISE - 150;
+  ctx.font = '700 11px Cinzel, serif'; ctx.textAlign = 'center'; const tw = ctx.measureText(name).width + 16;
+  ctx.fillStyle = 'rgba(12,9,18,.86)'; ctx.fillRect(Math.round(px - tw / 2), py, Math.round(tw), 17);
+  ctx.strokeStyle = '#f0d890'; ctx.lineWidth = 1; ctx.strokeRect(Math.round(px - tw / 2) + .5, py + .5, Math.round(tw), 17);
+  ctx.fillStyle = '#fff3c8'; ctx.fillText(`${name} ▶`, px, py + 13);
   ctx.restore();
 }
 function drawSpot(ctx, s, on, t) {
@@ -152,42 +154,55 @@ export function baseActors(game) {
   return baseSpots(game.profile).map((s) => ({ y: spotY(s) - 4, render: (ctx) => drawSpot(ctx, s, near?.id === s.id, t) }));
 }
 
-// Views: 'near' follows the figure; 'hall' shows the whole room. The zoom glides between them.
+// Views: 'near' follows the figure; 'hall' shows the whole room the figure is in. The zoom glides between them.
 let view = 'near';
 export const baseView = () => view;
 export function setBaseView(v) { view = v === 'hall' ? 'hall' : 'near'; return view; }
-// Zoom that shows the whole room on this screen.
+// Zoom that shows a whole room on this screen.
 export const hallFitZoom = (w, h) => Math.min(w / HALL_W, h / HALL.h);
-// Pure camera rule (tested): zoom z on a w × h screen → the scroll x and the vertical shift that keep the room in
-// view. Along the room: centred when it fits, otherwise on the figure and clamped to the room's edges. Up and down:
-// centred when it fits, otherwise the figure's feet sit low in the picture (footY, so the wall towers above and the
-// camera climbs the stairs with the figure), clamped to floor and ceiling.
-export function baseCameraFor({ z, w, h, playerX, pivotY, worldY = 0, offX = 0, footY = HALL.bottom }) {
-  const span = w / z; const left = w / 2 - span / 2;
-  const x = span >= HALL_W ? HALL_W / 2 + offX - w / 2 : Math.max(offX - left, Math.min(HALL_W + offX - (left + span), playerX + offX - w / 2));
-  const top = HALL.bottom - HALL.h; const shiftFor = (screenY, worldLine) => (screenY - pivotY) / z + pivotY - worldLine - worldY;
-  const y = h / z >= HALL.h ? shiftFor(h / 2, top + HALL.h / 2) : Math.max(shiftFor(h, HALL.bottom), Math.min(shiftFor(0, top), shiftFor(h * .72, footY)));
+// The vertical camera shift that puts a world line on a screen row (larger = the world sits lower in the picture).
+export const baseShiftFor = ({ z, pivotY, worldY = 0 }, screenY, line) => (screenY - pivotY) / z + pivotY - line - worldY;
+// Pure camera rule (tested): zoom z on a w × h screen → the scroll x and the vertical shift.
+// Along the world: a room that fits is centred (x0 = its left edge); otherwise the camera is on the figure and stops
+// at the world's ends. Up and down: a room that fits is centred on its own floor height (raise); otherwise the front
+// edge of the floor under the figure (footY) sits just above the bottom of the picture, so the camera climbs the
+// stairs with the figure and the wall towers above — never below the stage, never above the highest ceiling.
+export function baseCameraFor({ z, w, h, playerX, pivotY, worldY = 0, offX = 0, footY = HALL.bottom, x0 = 0, raise = 0, worldW = HALL_W }) {
+  const span = w / z; const left = w / 2 - span / 2; const S = (screenY, line) => baseShiftFor({ z, pivotY, worldY }, screenY, line);
+  const x = span >= HALL_W ? x0 + HALL_W / 2 + offX - w / 2 : Math.max(offX - left, Math.min(worldW + offX - (left + span), playerX + offX - w / 2));
+  const top = HALL.bottom - HALL.h;
+  const y = h / z >= HALL.h ? S(h / 2, top + HALL.h / 2 - raise) : Math.max(S(h, HALL.bottom), Math.min(S(0, top - RAISE), S(h * .955, footY)));
   return { x, y };
+}
+// The figure never leaves the picture (user, 13 Nov 2026): the vertical shift is held between the one that keeps the
+// head under the top edge and the one that keeps the feet above the bottom edge; the feet win when both cannot be.
+export function keepFigureInView(shift, { z, h, pivotY, worldY = 0, feetY, headY, marginTop = 22, marginBottom = 26 }) {
+  const lo = baseShiftFor({ z, pivotY, worldY }, marginTop, headY); const hi = baseShiftFor({ z, pivotY, worldY }, h - marginBottom, feetY);
+  return lo > hi ? hi : Math.min(Math.max(shift, lo), hi);
 }
 // The camera's aim along the room: it stays while the figure is inside the dead zone and is pushed by its edges.
 export const calmFollowX = (mid, playerX, dead) => Math.max(playerX - dead, Math.min(playerX + dead, mid));
 let camGame = null; let camMidX = null; let camXNow = NaN; let camYNow = NaN;
 export function updateBaseCamera(game, dt) {
-  camGame = game;
+  camGame = game; theGame = game;
   const w = game.renderWidth; const h = game.renderHeight; const state = game.modeState; const p = game.player;
   const target = view === 'hall' ? hallFitZoom(w, h) : BASE_VIEWS.near;
   const now = game._zoomNow ?? target; game._zoomNow = Math.abs(target - now) < .002 ? target : now + (target - now) * Math.min(1, dt * 4);
   // A calm camera (user, 13 Nov 2026: walking in the close view made one dizzy): it does not move up and down with
-  // the depth walked (only with the stairs' height, never with a jump), it leaves the figure a dead zone before it
-  // follows along the room, and it rests on whole screen pixels so the pixel art does not shimmer.
-  const z = game._zoomNow; const offX = game.cameraOffsetX ?? 0;
-  const footY = groundYForDepth(.94) - (p.surfaceHeight ?? 0);
-  const snap = view === 'hall' || !state || !Number.isFinite(state.dungeonCameraX);
+  // the depth walked (only with the height of the floor, never with a jump), it leaves the figure a dead zone before
+  // it follows along the room, and it rests on whole screen pixels so the pixel art does not shimmer.
+  const z = game._zoomNow; const offX = game.cameraOffsetX ?? 0; const pivotY = game.zoomPivot().y; const worldY = game.worldOffsetY ?? 0;
+  const floorH = p.surfaceHeight ?? 0; const R = ROOMS[roomAt(p.x)];
+  const footY = groundYForDepth(.94) - floorH;
+  const snap = !state || !Number.isFinite(state.dungeonCameraX);
   const mid = snap ? p.x : calmFollowX(camMidX ?? p.x, p.x, BASE_VIEWS.deadZone); camMidX = mid;
-  const cam = baseCameraFor({ z, w, h, playerX: mid, pivotY: game.zoomPivot().y, worldY: game.worldOffsetY ?? 0, offX, footY });
+  const cam = baseCameraFor({ z, w, h, playerX: mid, pivotY, worldY, offX, footY, x0: R.x0, raise: R.raise, worldW: WORLD_W });
   const onGrid = (v) => Math.round(v * z) / z;
   camYNow = snap || !Number.isFinite(camYNow) ? cam.y : camYNow + (cam.y - camYNow) * Math.min(1, 3 * dt);
   camXNow = snap || !Number.isFinite(camXNow) ? cam.x : camXNow + (cam.x - camXNow) * Math.min(1, 4 * dt);
+  // Never out of the picture: head and feet stay inside, whatever the glide is doing (stairs, a jump, a fall).
+  const feetY = groundYForDepth(p.z ?? .5) - floorH; const headY = feetY - Math.max(0, p.elevation ?? 0) - 104;
+  if (h / z < HALL.h) camYNow = keepFigureInView(camYNow, { z, h, pivotY, worldY, feetY, headY });
   game._camY = view === 'hall' ? camYNow : onGrid(camYNow);
   if (state) state.dungeonCameraX = view === 'hall' ? camXNow : onGrid(camXNow);
 }
@@ -205,23 +220,20 @@ export function activateSpot(game, s) {
   return false;
 }
 // A tap on a spot in the world (world pixels); the front row wins where pictures overlap. Works in both views, so
-// the whole-room view doubles as a map. A tap on the door changes the room at once.
+// the whole-room view doubles as a map.
 export function baseTap(game, pt) {
   const spots = baseSpots(game.profile).sort((a, b) => b.z - a.z);
   for (const s of spots) { const y = spotY(s); const { w, h } = sizeOf(s); if (Math.abs(pt.x - s.x) <= w / 2 + 8 && pt.y <= y + 10 && pt.y >= y - h - 34) return activateSpot(game, s); }
-  const R = ROOMS[room]; const foot = groundYForDepth(STAIR_Z.zMin) - LANDING_H;
-  if (Math.abs(pt.x - R.doorX) <= 52 && pt.y <= foot + 8 && pt.y >= foot - 160) { setBaseRoom(game, R.to, { throughDoor: true }); return true; }
   return false;
 }
 
-// The small prompt button at the right edge (works with touch, mouse and E / Enter) names the spot in reach; the view button
-// at the top left switches between the close view and the whole room (also V).
+// The small prompt button at the right edge (works with touch, mouse and E / Enter) names the spot in reach; the view
+// button at the top left switches between the close view and the whole room (also V).
 let prompt = null;
 export function closeBasePrompt() {
-  /* The base's zoom, vertical shift and room never leak into another mode — also when no prompt was ever built. */
+  /* The base's zoom, vertical shift and floors never leak into another mode — also when no prompt was ever built. */
   if (camGame) { camGame._camY = 0; camGame._zoomNow = undefined; camGame = null; }
-  camMidX = null; camXNow = NaN; camYNow = NaN;
-  view = 'near'; room = 'hall';
+  camMidX = null; camXNow = NaN; camYNow = NaN; view = 'near'; theGame = null;
   if (!prompt) return;
   prompt.el.remove(); prompt.viewEl.remove(); globalThis.document?.removeEventListener?.('keydown', prompt.key);
   prompt = null;
@@ -229,7 +241,6 @@ export function closeBasePrompt() {
 export function updateBase(game) {
   const doc = globalThis.document; const busy = isRuneVaultOpen() || isCharacterCreationOpen() || isCampaignOpen();
   if (game.input) game.input.gameplayBlocked = busy;
-  if (!busy) updateBaseRooms(game);
   if (typeof doc?.createElement !== 'function' || typeof doc.body?.appendChild !== 'function') return;
   if (!prompt) {
     const el = doc.createElement('button'); el.type = 'button'; el.id = 'base-prompt';

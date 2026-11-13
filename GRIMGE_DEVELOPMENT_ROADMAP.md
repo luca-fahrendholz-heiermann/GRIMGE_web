@@ -49,13 +49,24 @@ Legende: ✔ umgesetzt und geprüft · ◐ teilweise · ○ geplant
 | Deck-Bildschirm (Grimoire) an die neuen Regeln anpassen und ohne Scrollen gestalten | ○ |
 | Findbare Begleiter / Reittiere in großen Leveln | ○ |
 
+## Meilenstein 2d – Mastery durch Nutzung (Vorgabe vom 13. Nov 2026, noch nicht gebaut)
+
+| Punkt | Stand |
+|---|---|
+| Element-Mastery steigt durch Einsatz der Runen des Elements | ○ |
+| Passive als Vorbedingung für Runen (Passiv → Rune mit Skillpunkten und Gold) | ○ |
+| Waffenbuff in drei sichtbaren Stufen (Leuchten → Waffe aus dem Element → alle Nahkampf-Angriffe mit Element-Effekten) | ○ |
+| Kette Waffenbuff → Atmung → Transformation je Element; Bankai als Vorstufe bei Waffen-Mastery | ○ |
+| Gewertetes PvP mit gleichem Fortschritt für alle (Regel noch zu planen) | ○ |
+
 ## Meilenstein 2c – Die Basis
 
 | Punkt | Stand |
 |---|---|
 | Saal, Stationen für die Menüpunkte, Rüstkammer mit Klassen-Ständern und Stufen | ✔ |
 | Tiefer Saal mit mehr Lauffläche, Rüstkammer in zwei Reihen, Ansichten „Nah“ (Folgekamera) und „Ganzer Saal“ | ✔ |
-| Treppe mit Tür in einen zweiten Raum (Rüstkammer) und zurück | ✔ |
+| Halle und Rüstkammer als eine durchgehende Welt: Treppe auf die erhöhte Ebene, Kamera fährt mit (keine Tür) | ✔ |
+| Kamera lässt die Figur nie aus dem Bild (Treppe, Sprung) | ✔ |
 | Treppe und Tür als eigenes Bild im Stil der Halle | ○ |
 | Primals bewegen sich im Raum, antippbar | ○ |
 | Dekoration an Stellplätzen (Gold, Missions-Belohnungen), Trophäen | ○ |
