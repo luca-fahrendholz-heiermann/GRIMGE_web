@@ -5202,6 +5202,12 @@ game.running = false;
     assert(up && leap < 20 && worst <= 1, 'The stairs lead from the hall up onto the armoury floor in one continuous walk (largest step ' + leap.toFixed(1) + ' px, ' + frames + ' frames), and the close camera keeps head and feet in the picture all the way (' + worst.toFixed(1) + ')');
     const jumpHead = B.keepFigureInView(0, { z: 1.28, h: 576, pivotY: 550, feetY: 200, headY: -40 }); const sTop = 550 + (-40 + jumpHead - 550) * 1.28;
     assert(sTop >= 21, 'A high jump on the raised floor pulls the camera up instead of cutting the head off');
+    // Back down: off the edge of the raised floor into the hall; from the hall floor the raised floor is a wall.
+    { const left = { ...walk, move: { x: -1, z: 0 }, touchMove: { x: -1, z: 0 } }; B.setBaseRoom(game, 'armoury'); P.x = B.HALL_W + 60; P.z = .7; game.battlefield.placeOnSurface(P);
+      for (let i = 0; i < 240 && !(P.x < B.HALL_W - 40 && P.grounded && (P.surfaceHeight ?? 0) < 2); i++) P.update(1 / 60, left, game.battlefield, game);
+      const down = P.x < B.HALL_W - 40 && (P.surfaceHeight ?? 0) < 2 && P.grounded;
+      for (let i = 0; i < 180; i++) P.update(1 / 60, walk, game.battlefield, game);
+      assert(down && P.x <= B.HALL_W + 2 && (P.surfaceHeight ?? 0) < 2, 'From the raised floor one drops off the edge into the hall; walking back against it from below is blocked (x ' + Math.round(P.x) + ')'); }
     B.setBaseRoom(game, 'armoury'); }
   const back = stands.find((s) => s.z < .2); const front = stands.find((s) => s.z > .4);
   P.x = front.x; P.z = front.z + .05; const a = B.nearestSpot(game)?.id; P.x = back.x; P.z = back.z + .05; const b = B.nearestSpot(game)?.id; P.x = back.x; P.z = .95; const c = B.nearestSpot(game);
