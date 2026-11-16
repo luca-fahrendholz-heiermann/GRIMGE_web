@@ -38,7 +38,7 @@ export function completeMission(profile, id, stars = 1) {
   profile.campaign ??= { done: [] }; profile.campaign.stars ??= {}; profile.campaign.starClaims ??= 0;
   const best = Math.max(starsOf(profile, id), Math.max(1, Math.min(3, stars))); profile.campaign.stars[id] = best;
   let bonus = 0; while (Math.floor(totalStars(profile) / STAR_STEP) > profile.campaign.starClaims) { profile.campaign.starClaims++; profile.skillPoints += 1; bonus++; }
-  const first = !profile.campaign.done.includes(id); const drops = [];
+  const first = !profile.campaign.done.includes(id); const drops = []; const classUnlocks = [];
   if (first) {
     profile.campaign.done.push(id);
     if (m.reward?.skillPoints) profile.skillPoints += m.reward.skillPoints;
@@ -50,10 +50,11 @@ export function completeMission(profile, id, stars = 1) {
       else if (profile.addRuneDrop?.(want)) id = want;
       if (id) drops.push(id);
     }
+    for (const cls of m.reward?.classes ?? []) if (profile.unlockClass?.(cls)) classUnlocks.push(cls); /* a boss or mission can open a class early */
     if (m.reward?.xp) profile.awardXp?.(m.reward.xp, { save: false });
   }
   profile.save?.();
-  return { first, reward: m.reward ?? null, stars, best, bonus, drops };
+  return { first, reward: m.reward ?? null, stars, best, bonus, drops, classUnlocks };
 }
 
 // ── run state (the mission being played) ─────────────────────────────────────────────────────────────────────────

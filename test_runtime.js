@@ -5097,12 +5097,12 @@ game.running = false;
   const covered = [...families].every((f) => CL.classById(f) && CL.classWeapons(f).length === 2);
   const prof = new PR.MageProfile({});
   const before = prof.unlockedRunes.has('lux');
-  prof.setCharacter({ name: 'A', base: 'thesen', classId: 'Ronin', startWeapon: 'katana', startElement: 'lux' });
+  prof.setCharacter({ name: 'A', base: 'thesen', classId: 'Bladedancer', startWeapon: 'dual_swords', startElement: 'lux' });
   const owned = prof.unlockedRunes.has('lux') && prof.getRuneCopies('lux') === 2 && prof.matchDeck.length <= PR.MATCH_DECK_SIZE;
-  const lockedSecond = !CL.classWeaponUnlocked(prof, 'odachi') && CL.classWeaponUnlocked(prof, 'katana');
-  prof.weaponXp.katana = 1e6; const unlockedSecond = CL.classWeaponUnlocked(prof, 'odachi') && !CL.classWeaponUnlocked(prof, 'spear');
+  const lockedSecond = !CL.classWeaponUnlocked(prof, 'twinblade') && CL.classWeaponUnlocked(prof, 'dual_swords');
+  prof.weaponXp.dual_swords = 1e6; const unlockedSecond = CL.classWeaponUnlocked(prof, 'twinblade') && !CL.classWeaponUnlocked(prof, 'spear');
   const back = new PR.MageProfile(JSON.parse(JSON.stringify(prof.toJSON())));
-  assert(covered && !before && owned && lockedSecond && unlockedSecond && back.character.classId === 'Ronin' && back.character.startElement === 'lux' && back.character.startWeapon === 'katana',
+  assert(covered && !before && owned && lockedSecond && unlockedSecond && back.character.classId === 'Bladedancer' && back.character.startElement === 'lux' && back.character.startWeapon === 'dual_swords',
     'Classes: every weapon family is a class with two weapons; the start element is owned at once and sits twice in the deck; the family\'s second weapon unlocks at the start weapon\'s level ' + CL.CLASS_UNLOCK_LEVEL + '; the profile keeps class, start weapon and element');
 }
 {
@@ -5248,6 +5248,22 @@ game.running = false;
     const floors = groups[0].casters.length === 1 && groups[0].x1 === B.HALL_W && groups[1].casters.length === 1 && groups[1].x0 === B.HALL_W;
     assert(sameY && still && moved && grid && floors && B.calmFollowX(100, 120, 46) === 100 && B.calmFollowX(100, 200, 46) === 154, 'The close view stays calm: walking into the depth does not move it up or down, small steps stay inside a dead zone, and its glide is even; shadows are split by floor at the step'); }
   game.returnToHub();
+}
+// Class unlocks in the game (user, 16 Nov 2026): the weapon table matches weapons.js, a mission can open a class early,
+// the creation screen shows locked classes, and the second weapon of a class stays tied to weapon level 3.
+{
+  const CU = await import('./public/src/class_unlocks.js'); const CL = await import('./public/src/classes.js'); const PR = await import('./public/src/progression.js'); const CP = await import('./public/src/campaign.js'); const WP = (await import('./public/src/weapons.js')).WEAPONS;
+  const tableOk = Object.entries(WP).filter(([, w]) => w.family && CU.ALL_CLASS_IDS.includes(w.family)).every(([id, w]) => CU.WEAPON_FAMILY_OF[id] === w.family) && Object.keys(CU.WEAPON_FAMILY_OF).every((id) => WP[id]?.family === CU.WEAPON_FAMILY_OF[id]);
+  const allClasses = CL.CLASSES.length === 18 && CL.CLASSES.every((c) => CU.ALL_CLASS_IDS.includes(c.id));
+  const p = new PR.MageProfile({ rules: 'earned' }); const before = CL.classUnlocked(p, 'Occultist'); p.skillPoints = 0;
+  const r = CP.completeMission(p, 'c1m3', 2); const after = CL.classUnlocked(p, 'Occultist') && r.classUnlocks.join() === 'Occultist';
+  const again = CP.completeMission(p, 'c1m3', 2).classUnlocks.length === 0;
+  const q = new PR.MageProfile({ rules: 'earned', classWeapon: 'bow', character: { created: true, classId: 'Ranger', startWeapon: 'bow', startElement: 'ignis' } });
+  const second = !CL.classWeaponUnlocked(q, 'crossbow'); q.weaponXp.bow = PR.WEAPON_XP_PER_LEVEL * (CL.CLASS_UNLOCK_LEVEL - 1); const secondOpen = CL.classWeaponUnlocked(q, 'crossbow');
+  game.profile.character.created = true; game.profile.character.classId = 'Guardian'; const savedProfile = game.profile.level; game.profile.level = 1;
+  const ui = (await import('./public/src/character_creation.js')); const doc = globalThis.document;
+  assert(tableOk && allClasses && !before && after && again && second && secondOpen, 'Class unlocks: the weapon-to-class table matches weapons.js, a mission reward opens a class early (once), the second class weapon needs weapon level 3');
+  game.profile.level = savedProfile;
 }
 {
   // Guard against code swallowed by a mid-line comment ("x = 1; // note y = 2;" — happened twice, 6 + 10 Nov 2026).

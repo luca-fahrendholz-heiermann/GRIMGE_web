@@ -3,6 +3,7 @@
 // the start weapon; the family's other weapon unlocks when the start weapon reaches CLASS_UNLOCK_LEVEL. The equipped
 // weapon is still profile.classWeapon (it decides the weapon kit and the Bankai), so every existing system keeps working.
 import { WEAPONS } from './weapons.js';
+export { STARTER_CLASSES, CLASS_UNLOCK_AT, classUnlocked, classRequirement } from './class_unlocks.js';
 
 export const CLASS_UNLOCK_LEVEL = 3;
 

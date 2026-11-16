@@ -5,7 +5,7 @@
 // Opens from the hub's WARDROBE button and before the first battle (profile.character.created).
 import { sprites } from './sprites.js';
 import { LOOK_HAIR, LOOK_ARMOUR, normalizeLook } from './character_look.js';
-import { CLASSES, START_ELEMENTS, CLASS_UNLOCK_LEVEL, classById, classOfWeapon, classWeapons, classWeaponUnlocked } from './classes.js';
+import { CLASSES, START_ELEMENTS, CLASS_UNLOCK_LEVEL, classById, classOfWeapon, classWeapons, classWeaponUnlocked, classUnlocked, classRequirement } from './classes.js';
 import { WEAPONS } from './weapons.js';
 import { recognizer } from './recognizer.js';
 import { STARTER_RUNES } from './progression.js';
@@ -116,7 +116,8 @@ export function openCharacterCreation(game, { onDone = null, first = false, tabs
     row('element').innerHTML = '';
     for (const id of elements) { const r = recognizer.runes.find((x) => x.id === id); button(row('element'), r?.name ?? id.toUpperCase(), state.element === id, () => { if (elementOpen) state.element = id; }); const b = row('element').lastChild; if (r?.color) b.style.borderLeft = `6px solid ${r.color}`; if (!elementOpen && state.element !== id) b.classList.add('locked'); }
     row('cls').innerHTML = '';
-    for (const c of CLASSES) { button(row('cls'), c.name, state.classId === c.id, () => { state.classId = c.id; state.weapon = classWeapons(c.id)[0]; }); const b = row('cls').lastChild; const sm = doc.createElement('small'); sm.textContent = `${c.role} · ${c.range.toUpperCase()}`; b.appendChild(sm); }
+    /* Five starter classes at first (user, 16 Nov 2026); a locked class shows its condition and cannot be chosen. */
+    for (const c of CLASSES) { const open = classUnlocked(profile, c.id); button(row('cls'), c.name, state.classId === c.id, () => { if (!open) return; state.classId = c.id; state.weapon = classWeapons(c.id)[0]; }); const b = row('cls').lastChild; const sm = doc.createElement('small'); sm.textContent = open ? `${c.role} · ${c.range.toUpperCase()}` : `🔒 ${classRequirement(c.id)}`; b.appendChild(sm); if (!open) b.classList.add('locked'); }
     const c = classById(state.classId); const det = row('detail'); det.innerHTML = `<div><p><b>${c.name}</b> · ${c.text}</p><div class="cc-wdesc"></div></div>`;
     const wrow = doc.createElement('div'); wrow.className = 'cc-row cc-big'; det.appendChild(wrow);
     for (const w of classWeapons(c.id)) {
@@ -143,6 +144,8 @@ export function openCharacterCreation(game, { onDone = null, first = false, tabs
   root.querySelector('.cc-cancel')?.addEventListener('pointerdown', (e) => { e.preventDefault(); closeCharacterCreation(); });
   root.querySelector('.cc-done').addEventListener('pointerdown', (e) => {
     e.preventDefault();
+    /* A locked class (opened by a tap on its stand) cannot be taken: the character keeps its own. */
+    if (!classUnlocked(profile, state.classId)) { state.classId = ch.classId ?? CLASSES[0].id; state.weapon = ch.startWeapon ?? classWeapons(state.classId)[0]; }
     const classChanged = state.classId !== ch.classId;
     profile?.setCharacter?.({ name: state.name, base: state.base, look: state.look, classId: state.classId, startWeapon: classChanged || !ch.startWeapon ? state.weapon : ch.startWeapon, startElement: state.element });
     game?.setClassWeapon?.(state.weapon);

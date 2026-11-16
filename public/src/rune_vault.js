@@ -59,7 +59,7 @@ export function openRuneVault(game, { onClose = null } = {}) {
       body.appendChild(card);
     }
     tap(root.querySelector('.rv-back'), () => closeRuneVault());
-    tap(root.querySelector('.rv-test'), () => { profile.setRules(profile.earned ? 'open' : 'earned'); game.applyProfile?.(); render(); });
+    tap(root.querySelector('.rv-test'), () => { profile.setRules(profile.earned ? 'open' : 'earned'); profile.debugAccess = !profile.earned; /* the test switch opens every class too */ game.applyProfile?.(); render(); });
   };
   render();
   return true;

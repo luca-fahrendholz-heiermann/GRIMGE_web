@@ -2,6 +2,7 @@
 // This deliberately stays data-driven: UI, casting and future save/profile
 // work consume the same skill definitions and aggregate modifiers.
 import { MASTERY_NODE_IDS, masteryRequirement } from './mastery_data.js';
+import { ALL_CLASS_IDS, WEAPON_FAMILY_OF, classUnlocked } from './class_unlocks.js';
 
 export const MAGE_SKILL_TREE = Object.freeze([
   { id: 'elemental_power', branch: 'ELEMENTAL', title: 'Elemental Power', desc: '+12% spell damage.', cost: 1, modifiers: { spellPower: 1.12 } },
@@ -239,6 +240,13 @@ export class MageProfile {
       // Class (= weapon family, classes.js), its start weapon and the start element (an extra element rune owned at once).
       classId: typeof ch?.classId === 'string' ? ch.classId : null, startWeapon: typeof ch?.startWeapon === 'string' ? ch.startWeapon : null, startElement: typeof ch?.startElement === 'string' ? ch.startElement : null };
     this.bankaiClasses = new Set(Array.isArray(source?.bankaiClasses) ? source.bankaiClasses : []);
+    // Classes opened early by a boss, secret or mission reward (the level thresholds live in class_unlocks.js). Migration:
+    // the class an old save had chosen stays open — by its character, or by the weapon family it was playing.
+    this.unlockedClasses = new Set((Array.isArray(source?.unlockedClasses) ? source.unlockedClasses : []).filter((id) => ALL_CLASS_IDS.includes(id)));
+    if (ALL_CLASS_IDS.includes(this.character.classId)) this.unlockedClasses.add(this.character.classId);
+    const weaponFamily = this.classWeapon ? WEAPON_FAMILY_OF[this.classWeapon] : null;
+    if (weaponFamily && ALL_CLASS_IDS.includes(weaponFamily)) this.unlockedClasses.add(weaponFamily);
+    this.debugAccess = false; /* runtime only: the vault's test switch opens every class */
     this.weaponXp = { ...(source?.weaponXp ?? {}) };
     this.discoveredSpells = new Set(source?.discoveredSpells ?? []);
     this.unlockedRunes = new Set(source?.unlockedRunes ?? STARTER_RUNES);
@@ -286,7 +294,7 @@ export class MageProfile {
     return {
       level: this.level, xp: this.xp, skillPoints: this.skillPoints,
       unlockedSkills: [...this.unlockedSkills], masteries: [...this.masteries], runeXp: clone(this.runeXp),
-      lateUnlocks: [...this.lateUnlocks], weaponXp: clone(this.weaponXp), classWeapon: this.classWeapon, bankaiClasses: [...this.bankaiClasses], character: { ...this.character, look: { ...this.character.look } }, campaign: { done: [...this.campaign.done], stars: { ...this.campaign.stars }, starClaims: this.campaign.starClaims },
+      lateUnlocks: [...this.lateUnlocks], weaponXp: clone(this.weaponXp), classWeapon: this.classWeapon, bankaiClasses: [...this.bankaiClasses], unlockedClasses: [...this.unlockedClasses], character: { ...this.character, look: { ...this.character.look } }, campaign: { done: [...this.campaign.done], stars: { ...this.campaign.stars }, starClaims: this.campaign.starClaims },
       discoveredSpells: [...this.discoveredSpells], unlockedRunes: [...this.unlockedRunes],
       matchDeck: [...this.matchDeck], progressionVersion: PROFILE_VERSION,
       rules: this.rules, gold: this.gold, runeDrops: { ...this.runeDrops }, runeCopies: { ...this.runeCopies },
@@ -340,8 +348,15 @@ export class MageProfile {
   weaponLevel(id) { return 1 + Math.floor((this.weaponXp[id] ?? 0) / WEAPON_XP_PER_LEVEL); }
   // Bankai is available when the chosen class has earned it (weapon level / boss drop).
   isBankaiUnlocked(classWeapon = this.classWeapon) { return !!classWeapon && (this.bankaiClasses.has(classWeapon) || this.weaponLevel(classWeapon) >= LATE_RUNE_LEVEL.bankai); }
+  // A boss, secret or mission reward opens a class early; true when it was new.
+  unlockClass(id) {
+    if (!ALL_CLASS_IDS.includes(id) || this.unlockedClasses.has(id)) return false;
+    this.unlockedClasses.add(id); this.save(); return true;
+  }
   setCharacter({ name, base, look, classId, startWeapon, startElement } = {}) {
     const prev = this.character;
+    // A locked class cannot be chosen: the character keeps its class (and start weapon).
+    if (classId && classId !== prev.classId && !classUnlocked(this, classId)) { classId = undefined; startWeapon = undefined; }
     this.character = { name: String(name ?? prev.name ?? '').trim().slice(0, 16), base: base ?? prev.base, look: { hair: look?.hair ?? prev.look.hair, armour: look?.armour ?? prev.look.armour }, created: true,
       classId: classId !== undefined ? classId : prev.classId ?? null, startWeapon: startWeapon !== undefined ? startWeapon : prev.startWeapon ?? null, startElement: startElement !== undefined ? startElement : prev.startElement ?? null };
     // A newly chosen start element: owned at once and put into the deck twice (base runes make room if it is full).

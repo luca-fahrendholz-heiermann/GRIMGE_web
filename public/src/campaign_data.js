@@ -66,7 +66,7 @@ export const CAMPAIGN = Object.freeze([
           { who: 'xame', text: 'Den Bann hat der Glutfürst gebrochen. Ich wollte nur sehen, was dahinter liegt. Seine Feste steht in der Aschenebene.' },
           { who: 'thesen', text: 'Dann ist das mein nächster Weg. Und du gehst mir aus dem Licht, Hexer.' }
         ],
-        reward: Object.freeze({ xp: 120, skillPoints: 1, gold: 130, runes: Object.freeze(['umbra']) })
+        reward: Object.freeze({ xp: 120, skillPoints: 1, gold: 130, runes: Object.freeze(['umbra']), classes: Object.freeze(['Occultist']) })
       }),
       Object.freeze({
         id: 'c1m4', title: 'STURM AUF DIE ASCHENFESTE', kind: 'BELAGERUNG', mode: 'siege', map: Object.freeze([71.5, 48]), par: 300, params: Object.freeze({ scene: 'ash' }),

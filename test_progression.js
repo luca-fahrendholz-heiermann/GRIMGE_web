@@ -216,4 +216,62 @@ test('Domains: only ONE domain per deck (like the Arcane States), all share one 
   assert.equal(profile.sanitizeDeck(['sig_S53', 'sig_S56', 'ignis']).join(), 'sig_S53,ignis');
 });
 
+
+// ── Class unlocks (user, 16 Nov 2026): five starter classes, the rest earned ──────────────────────────────────────
+import { STARTER_CLASSES, CLASS_UNLOCK_AT, ALL_CLASS_IDS, classUnlocked, classRequirement } from './public/src/class_unlocks.js';
+
+test('Only the five starter classes are selectable at the beginning', () => {
+  const profile = new MageProfile({});
+  assert.deepEqual([...STARTER_CLASSES], ['Guardian', 'Berserker', 'Bladedancer', 'Ranger', 'Arcanist']);
+  for (const id of STARTER_CLASSES) assert.equal(classUnlocked(profile, id), true, id);
+  assert.equal(ALL_CLASS_IDS.length, 18);
+  const locked = ALL_CLASS_IDS.filter((id) => !classUnlocked(profile, id));
+  assert.equal(locked.length, 13);
+  assert.ok(locked.includes('Lancer') && locked.includes('Fateweaver') && !locked.includes('Guardian'));
+});
+
+test('Level thresholds unlock the right classes', () => {
+  const expected = { Lancer: 2, Monk: 3, Ronin: 4, Shadow: 5, Reaper: 7, Runeblade: 8, Oracle: 9, Occultist: 10, Resonant: 12, Spiritbound: 14, Beastborn: 16, Trickster: 18, Fateweaver: 20 };
+  assert.deepEqual({ ...CLASS_UNLOCK_AT }, expected);
+  for (const [id, level] of Object.entries(expected)) {
+    assert.equal(classUnlocked(new MageProfile({ level: level - 1 }), id), false, id + ' below');
+    assert.equal(classUnlocked(new MageProfile({ level }), id), true, id + ' at');
+  }
+  assert.match(classRequirement('Ronin'), /4/);
+  assert.equal(classRequirement('Guardian'), null);
+});
+
+test('An explicit boss / secret / mission unlock opens a class early and survives save and load', () => {
+  const profile = new MageProfile({});
+  assert.equal(classUnlocked(profile, 'Occultist'), false);
+  assert.equal(profile.unlockClass('Occultist'), true);
+  assert.equal(profile.unlockClass('Occultist'), false, 'a second unlock changes nothing');
+  assert.equal(profile.unlockClass('NoSuchClass'), false);
+  assert.equal(classUnlocked(profile, 'Occultist'), true);
+  const back = new MageProfile(JSON.parse(JSON.stringify(profile.toJSON())));
+  assert.equal(classUnlocked(back, 'Occultist'), true);
+  assert.equal(classUnlocked(back, 'Shadow'), false);
+});
+
+test('Migration keeps the class an old save had chosen', () => {
+  const old = new MageProfile({ level: 1, classWeapon: 'katana', character: { created: true, classId: 'Ronin', startWeapon: 'katana' } });
+  assert.equal(classUnlocked(old, 'Ronin'), true);
+  assert.equal(classUnlocked(old, 'Shadow'), false);
+  const viaWeapon = new MageProfile({ level: 1, classWeapon: 'daggers' });
+  assert.equal(classUnlocked(viaWeapon, 'Shadow'), true, 'the class of the equipped weapon is kept');
+});
+
+test('The debug / test access opens every class', () => {
+  const profile = new MageProfile({});
+  profile.debugAccess = true;
+  assert.ok(ALL_CLASS_IDS.every((id) => classUnlocked(profile, id)));
+});
+
+test('Choosing a locked class is refused by the profile', () => {
+  const profile = new MageProfile({});
+  profile.setCharacter({ classId: 'Guardian', startWeapon: 'sword_shield' });
+  profile.setCharacter({ classId: 'Lancer', startWeapon: 'spear' });
+  assert.equal(profile.character.classId, 'Guardian');
+});
+
 console.log(`\nProgression results: ${passed} passed, ${process.exitCode ? 1 : 0} failed.`);
