@@ -23,9 +23,9 @@ export const CAMPAIGN = Object.freeze([
     summary: 'Der Bannrand, der den Abgrund seit Generationen verschließt, reißt. Aus den Rissen kriecht, was die Runen einst gebannt haben.',
     missions: Object.freeze([
       Object.freeze({
-        id: 'c1m1', title: 'ASCHE ÜBER KARETH', kind: 'DUNGEON', mode: 'dungeon', map: Object.freeze([7.5, 50]), par: 120, params: Object.freeze({ endStage: 1, scene: 'kareth' }),
-        briefing: 'Die Wachfeste Kareth schweigt. Dring in die Ruinen ein, schlag dich durch die erste Halle und finde heraus, was den Bannrand gebrochen hat.',
-        goal: 'Räume die erste Halle der Ruinen.',
+        id: 'c1m1', title: 'ASCHE ÜBER KARETH', kind: 'DUNGEON', mode: 'dungeon', map: Object.freeze([7.5, 50]), par: 420, params: Object.freeze({ endStage: 3, scene: 'kareth' }), /* user, 14 Nov 2026: much longer rounds — three halls instead of one */
+        briefing: 'Die Wachfeste Kareth schweigt. Dring in die Ruinen ein, schlag dich durch alle drei Hallen und finde heraus, was den Bannrand gebrochen hat.',
+        goal: 'Räume die drei Hallen der Ruinen.',
         intro: [
           { who: 'narrator', text: 'Seit dem Runenkrieg hält der Bannrand den Abgrund verschlossen. Heute Nacht erlosch sein Licht über Kareth.' },
           { who: 'thesen', text: 'Kein Horn, kein Feuer auf den Mauern. Kareth fällt nicht lautlos. Etwas hat die Wächter überrascht.' },
@@ -38,9 +38,9 @@ export const CAMPAIGN = Object.freeze([
         reward: Object.freeze({ xp: 80, skillPoints: 1, gold: 60, runes: Object.freeze(['base']) })
       }),
       Object.freeze({
-        id: 'c1m2', title: 'DIE MAUER HÄLT', kind: 'VERTEIDIGUNG', mode: 'invasion', map: Object.freeze([30, 44]), par: 240, params: Object.freeze({ maxLevel: 1, scene: 'halvar' }),
-        briefing: 'Die Flüchtlinge aus Kareth erreichen die Grenzburg. Hinter ihnen kommt die erste Welle. Halte die Burg, bis der Anführer fällt.',
-        goal: 'Verteidige die Burg gegen die Wellen und besiege den Anführer.',
+        id: 'c1m2', title: 'DIE MAUER HÄLT', kind: 'VERTEIDIGUNG', mode: 'invasion', map: Object.freeze([30, 44]), par: 720, params: Object.freeze({ maxLevel: 3, scene: 'halvar' }), /* three assaults, each with its waves and a leader */
+        briefing: 'Die Flüchtlinge aus Kareth erreichen die Grenzburg. Hinter ihnen kommen drei Angriffe, jeder mit eigenem Anführer. Halte die Burg, bis der letzte fällt.',
+        goal: 'Verteidige die Burg gegen drei Angriffe und besiege ihre Anführer.',
         intro: [
           { who: 'narrator', text: 'Die Grenzburg Halvar ist die letzte Mauer vor dem Tiefland. Ihre Türme sind alt, aber sie stehen.' },
           { who: 'thesen', text: 'Sie kommen über das offene Land. Gut. Dann sehe ich sie kommen.' },
@@ -83,7 +83,7 @@ export const CAMPAIGN = Object.freeze([
         reward: Object.freeze({ xp: 140, skillPoints: 1, gold: 160, runes: Object.freeze(['base', 'rare']) })
       }),
       Object.freeze({
-        id: 'c1m5', title: 'DER GLUTFÜRST', kind: 'BOSS', mode: 'dungeon', map: Object.freeze([92.5, 47]), par: 240, params: Object.freeze({ startStage: 3, scene: 'glut' }),
+        id: 'c1m5', title: 'DER GLUTFÜRST', kind: 'BOSS', mode: 'dungeon', map: Object.freeze([92.5, 47]), par: 480, params: Object.freeze({ startStage: 2, scene: 'glut' }), /* two halls of the guard before the boss */
         briefing: 'Unter der Aschenfeste wartet der Glutfürst, der den Bann gebrochen hat. Schlag dich durch seine Garde und stell ihn.',
         goal: 'Besiege die Garde und den Glutfürsten.',
         intro: [

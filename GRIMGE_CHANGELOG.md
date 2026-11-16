@@ -2,6 +2,15 @@
 
 Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
+## 14. Nov 2026 – Kampagne: viel längere Runden (Vorgabe des Nutzers)
+
+- **Mission 1 (Dungeon):** drei Hallen statt einer – Treppenhalle, Halle mit Gefangenem, Elite-Halle.
+- **Mission 2 (Verteidigung):** drei Angriffe statt einem (3, 4 und 5 Wellen, jeder mit eigenem Anführer); die Burg
+  erholt sich zwischen den Angriffen um ein Viertel.
+- **Mission 5 (Boss):** zwei Hallen der Garde vor dem Glutfürsten statt einer.
+- Zeitvorgaben für den dritten Stern angepasst (7, 12 und 8 Minuten). Belohnungen unverändert.
+- Nicht durchgespielt: Länge und Schwierigkeit der längeren Missionen sind ungeprüft.
+
 ## 14. Nov 2026 – iPhone: Spiel wurde nach einiger Zeit in den Hub neu geladen (Diagnose des Nutzers)
 
 - **Ursache gemessen:** Das Spiel hielt schon im Hub 213 MB Grafikspeicher in 1562 Zeichenflächen (dazu zwei

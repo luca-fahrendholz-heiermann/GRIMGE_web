@@ -5115,20 +5115,23 @@ game.running = false;
   const paidOnce = r1.first && !r2.first && sp1 >= sp0 + ms[0].reward.skillPoints && prof.skillPoints === sp1 && CP.isMissionUnlocked(prof, ms[1].id) && CP.nextMission(prof).id === ms[1].id;
   const kept = new PR.MageProfile(JSON.parse(JSON.stringify(prof.toJSON()))).campaign.done.includes(ms[0].id);
   const wellFormed = ms.length === 5 && ms.every((m) => ['dungeon', 'invasion', 'arena', 'siege'].includes(m.mode) && m.intro.length && m.outro.length && m.briefing && m.goal && m.reward);
-  // Mission 1: the dungeon ends with its first room; the win marks the mission done through the normal results path.
+  // Mission 1: the dungeon runs through three rooms (user, 14 Nov 2026: much longer rounds) and ends with the third; the win marks the mission done through the normal results path.
   const saved = game.profile.campaign; game.profile.campaign = { done: [] };
   game.returnToHub(); CP.beginRun(game, 'c1m1'); game.setMatchMode('dungeon'); game.startMatch();
   if (game.modeState.stage === 0) game.spawnDungeonStage(game.campaignParams().startStage ?? 1);
-  game.minions = game.minions.filter((m) => m.team !== 'red'); game.modeState.dungeonRoom.encounters.forEach((e) => { e.spawned = true; }); game.updateDungeonRoom();
-  const endsEarly = game.matchState === 'Ending' && game.winnerTeam === 'blue';
+  const clearRoom = () => { game.minions = game.minions.filter((m) => m.team !== 'red'); game.modeState.dungeonRoom.encounters.forEach((e) => { e.spawned = true; }); game.updateDungeonRoom(); };
+  clearRoom(); const goesOn = game.matchState === 'Running' && game.campaignParams().endStage === 3;
+  game.spawnDungeonStage(3); clearRoom();
+  const endsEarly = goesOn && game.matchState === 'Ending' && game.winnerTeam === 'blue';
   game.completeResults(); const marked = game.profile.campaign.done.includes('c1m1') && game.campaignRun?.result === 'won';
   game.returnToHub(); const cleared = game.campaignRun === null;
-  // Mission 3: the rival stands in the arena; mission 5 starts in the third room.
+  // Mission 3: the rival stands in the arena; mission 5 starts in the second room; mission 2 holds three assaults.
   CP.beginRun(game, 'c1m3'); const rivalParam = game.campaignParams().rival === 'xame'; game.campaignRun = null;
-  CP.beginRun(game, 'c1m5'); const lateStart = game.campaignParams().startStage === 3; game.campaignRun = null;
+  CP.beginRun(game, 'c1m5'); const lateStart = game.campaignParams().startStage === 2; game.campaignRun = null;
+  CP.beginRun(game, 'c1m2'); const longSiege = game.campaignParams().maxLevel === 3; game.campaignRun = null;
   game.profile.campaign = saved;
-  assert(chain0 && paidOnce && kept && wellFormed && endsEarly && marked && cleared && rivalParam && lateStart && Object.keys(game.campaignParams()).length === 0,
-    'Campaign: five missions on the existing modes; a mission unlocks the next, its reward is paid once and the progress is saved; mission 1 ends with the first dungeon room and is marked done through the results; rival and start room come from the mission parameters');
+  assert(chain0 && paidOnce && kept && wellFormed && endsEarly && marked && cleared && rivalParam && lateStart && longSiege && Object.keys(game.campaignParams()).length === 0,
+    'Campaign: five missions on the existing modes; a mission unlocks the next, its reward is paid once and the progress is saved; mission 1 runs through three dungeon rooms and is marked done through the results; the defence holds three assaults; rival and start room come from the mission parameters');
 }
 {
   // Campaign stars (user, 11 Nov 2026: visible progression): rated per mission, the best rating is kept, every five

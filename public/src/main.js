@@ -2809,7 +2809,7 @@ export class GameWorld {
     this.setObjectivePhase(this.activeMode.objectives ? 'LanePhase' : 'CombatPhase');
     this.winnerTeam = null;
     this.endingTimer = 0;
-    this.matchTime = this.matchDuration;
+    this.matchTime = this.matchDuration; this.matchElapsed = 0;
     this.menuPaused = false;
     this.stats = { wizardKills: { blue: 0, red: 0 }, playerDeaths: 0, towersDestroyed: { blue: false, red: false }, castlesDestroyed: { blue: false, red: false } };
     this.drawing.active = false;
@@ -2937,7 +2937,7 @@ export class GameWorld {
     }
     if (campaignResult) { this.applyProfile(); const r = campaignResult.first ? campaignResult.reward ?? {} : {}; const sp = (r.skillPoints ?? 0) + (campaignResult.bonus ?? 0); this.showAnnouncement(`MISSION GESCHAFFT ${'★'.repeat(campaignResult.stars ?? 1)}${'☆'.repeat(3 - (campaignResult.stars ?? 1))}${sp ? ` · +${sp} SKILLPUNKT${sp > 1 ? 'E' : ''}` : ''}${r.xp ? ` · +${r.xp} XP` : ''}${r.gold ? ` · +${r.gold} GOLD` : ''}${campaignResult.drops?.length ? ` · RUNENFUND: ${campaignResult.drops.map((id) => recognizer.runes.find((q) => q.id === id)?.name ?? id).join(', ')}` : ''}`, 3.4); }
     this.reportProfileProgress(progression);
-    ui.showResults(true, { winner: this.winnerTeam, elapsed: this.matchDuration - this.matchTime, stats: this.stats });
+    ui.showResults(true, { winner: this.winnerTeam, elapsed: Math.max(this.matchElapsed ?? 0, this.matchDuration - this.matchTime), stats: this.stats });
   }
 
   // Diagnosis (user, 1 Nov 2026): a running match is marked in sessionStorage; if the page comes back with the mark
@@ -3146,7 +3146,8 @@ export class GameWorld {
     }
 
     // 2. Match Timer — only active play contributes to the final result.
-    if (this.isMatchRunning()) this.matchTime = Math.max(0, this.matchTime - dt);
+    /* matchElapsed counts on past the clock's zero: long campaign missions are rated by their real time (campaign.js). */
+    if (this.isMatchRunning()) { this.matchTime = Math.max(0, this.matchTime - dt); this.matchElapsed = (this.matchElapsed ?? 0) + dt; }
 
     // 3. Combat Engine Update
     const normalFrame = combat.update(

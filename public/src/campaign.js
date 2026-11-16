@@ -26,7 +26,8 @@ export const totalStars = (profile) => allMissions().reduce((n, m) => n + starsO
 export function rateRun(game, m) {
   const P = game.player; const rift = !!game.modeState?.rift;
   const life = rift ? (P.soulSparks ?? 0) / 3 : (P.hp ?? 0) / (P.maxHp || 1);
-  const elapsed = (game.matchDuration ?? 0) - (game.matchTime ?? 0);
+  /* The real time played: the match clock stops at zero after 6:42, a long mission runs on. */
+  const elapsed = Math.max(game.matchElapsed ?? 0, (game.matchDuration ?? 0) - (game.matchTime ?? 0));
   const conds = [true, life >= .5, elapsed <= (m.par ?? 180)];
   return { stars: conds.filter(Boolean).length, conds, elapsed };
 }
