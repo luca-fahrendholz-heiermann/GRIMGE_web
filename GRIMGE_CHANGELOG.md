@@ -2,6 +2,11 @@
 
 Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
+## 17. Nov 2026 – Fehler „t.freeze is not a function“ im Siege-Modus (Diagnose-Anzeige des Nutzers)
+
+- Das Wasserfass merkte sich nach Frost-Einwirkung ein Flag mit dem Namen `freeze` (true). Jeder Eiszauber, der es danach traf, rief `t.freeze(...)` auf und warf einen Fehler
+  (die Anzeige „Menü-Sprung“ kam vom abgefangenen Frame-Fehler). Das Flag heißt jetzt `freezeNow`; ein Test sichert ab, dass kein Objekt ein Nicht-Funktions-`freeze` hat.
+
 ## 17. Nov 2026 – Training ist eine Spielwiese (Rückmeldung des Nutzers)
 
 - Der Klassen-Knopf im Training (und die Taste V) schrieb die ausprobierte Waffe **dauerhaft ins Profil** und überschrieb damit die im Hub gewählte Klasse: man hatte danach in

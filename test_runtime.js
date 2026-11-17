@@ -5512,6 +5512,16 @@ game.running = false;
   assert(startsWithClass && first !== undefined && changed && profileKept && nextMatch, 'Training starts with the class chosen in the hub; trying other weapons there changes only the session (the profile keeps its class, the next match wears it again)');
   game.returnToHub(); game.setClassWeapon(null);
 }
+// A scene object must never have a non-function 'freeze' (user diagnosis, 17 Nov 2026: 't.freeze is not a function' from the frost spell
+// in Siege): the water barrel kept a boolean of that name after frost exposure and every freezing spell then threw on it.
+{
+  const ENV = (await import('./public/src/environment.js')).environment; game.returnToHub(); game.setMatchMode('siege'); game.startMatch();
+  const barrel = ENV.addProp('water_barrel', 500, .5); barrel.feed('frost', 20); barrel.update(.1, game, ENV);
+  const noBool = ENV.props.every((o) => !('freeze' in o) || typeof o.freeze === 'function'); let threw = null;
+  try { for (const o of ENV.props) o.freeze?.(1.2); } catch (e) { threw = e.message; }
+  assert(noBool && !threw && barrel.freezeNow === false && ENV.effects.some((e) => e.type === 'ice'), 'A frosted water barrel turns the ground to ice without leaving a boolean freeze flag that makes freezing spells throw' + (threw ? ' — ' + threw : ''));
+  game.returnToHub();
+}
 {
   // Guard against code swallowed by a mid-line comment ("x = 1; // note y = 2;" — happened twice, 6 + 10 Nov 2026).
   const fsx = await import('node:fs'); const pathx = await import('node:path');

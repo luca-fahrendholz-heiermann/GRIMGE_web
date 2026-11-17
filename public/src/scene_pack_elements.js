@@ -245,9 +245,9 @@ class WaterBarrel extends SceneObject {
   constructor(x, z) { super('water_barrel', x, z, { hp: 50, half: 13, tol: 120, blocks: true, barColor: '#4fc3f7' }); this.leak = 0; this.spill = 0; this.throwable = true; this.heavy = true; }
   elementDamage(el) { return el === 'aqua' ? 0 : 1; }
   onHit(amount, kx, els) { if (!els.has('frost') && this.leak <= 0) this.leak = 6; }
-  react(el) { if (el === 'frost' && (this.exposure.frost ?? 0) >= 8) { this.exposure.frost = 0; this.freeze = true; } }
+  react(el) { if (el === 'frost' && (this.exposure.frost ?? 0) >= 8) { this.exposure.frost = 0; this.freezeNow = true; /* not 'freeze': every freezing spell calls target.freeze(...) — a boolean there made them throw */ } }
   update(dt, gw, env) {
-    if (this.freeze) { this.freeze = false; env.add('ice', this.x, this.z, { radius: 50 }); }
+    if (this.freezeNow) { this.freezeNow = false; env.add('ice', this.x, this.z, { radius: 50 }); }
     if (this.leak > 0) { this.leak -= dt; if ((this.spill -= dt) <= 0) { this.spill = .5; env.add('water', this.x + this.lastHitDir * 10, this.z, { radius: 22 + (6 - this.leak) * 6 }); } }
   }
   onBreak(gw, env) { env.add('water', this.x, this.z, { radius: 70 }); combat.spawnHitSparks(this.x, this.y - 16, 1, '#4fc3f7', 12); }
