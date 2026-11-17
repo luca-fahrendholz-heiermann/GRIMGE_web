@@ -2,6 +2,21 @@
 
 Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
+## 17. Nov 2026 – Bankai-Bodeneinschlag (Vorgabe des Nutzers)
+
+- Der voll geladene **Nach-unten-Zug** jedes Bankai wird zum großen Bodeneinschlag (`bankai_impact.js`); die anderen fünf Techniken bleiben.
+  Name: Klassen-Requisit · Element, z. B. „STABRAMME · FEUER“, „ERDBRECHER · ERDE“, „SCHILDRING · EIS“.
+- **Ablauf:** 0–0,35 s Waffe wird in den Boden getrieben (Figur gesperrt) · 0,35–0,65 s Material wird eingezogen · 0,65 s Haupteruption: ein
+  Haupttreffer und ein Haupt-Hitstop, gerichtetes Kamerabeben, tiefer Schlag · 0,95–1,35 s expandierender Ring (nur Status, kein Schaden) ·
+  bis 2,5 s elementare Nachwirkung (Tickzeiten ohne Hitstop).
+- **Klasse = Requisit:** Stab/Siegel (Stab senkrecht in den Boden), Speerkrone, Schildring, Axt/Hammer, Schwert + Klingenwirbel (auch Fallback),
+  Sternenpfeil, Fäuste, Siegel, Sense, Dolchfächer. **Element = Material:** Feuer (Säulen, Brandboden), Erde (Platten, Schleudern), Wasser (Wirbel,
+  Nässe), Eis (Kristalle, Einfrieren), Blitz (Bodenblitze, Leitung über Pfützen), Wind (Wirbel, starker Auftrieb), Natur (Wurzeln, Heilung),
+  Licht (Siegel, kurzer Schild), Schatten/Leere (Einsturz, dann Riss), Bestie (Klauen, Blutung), Konstrukt (Platten), sonst arkaner Stoß.
+- **Elementquelle:** die zuletzt während dieses Bankai gewirkte normale Elementrune, sonst das Startelement des Spielers, sonst arkan.
+- Kamera: gerichtetes Beben (neuer dritter Parameter an `shakeCamera`); ein Zoom-Impuls wurde nicht eingebaut, weil die Kamera dafür keine saubere
+  Schnittstelle hat.
+
 ## 17. Nov 2026 – Vier kinematische Zauber (Vorgabe des Nutzers)
 
 - Neue Spezialrunen S96–S99, jede mit eigener Aufladung, Einschlag und Nachwirkung; Stufe 3, episch, Arena-Wert 3 Punkte;

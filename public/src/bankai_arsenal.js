@@ -25,6 +25,7 @@ import { combat } from './combat.js';
 import { environment } from './environment.js';
 import { groundYForDepth } from './world.js';
 import { drawMusicNote } from './weapons_ext.js';
+import { makeBankaiImpact, impactName } from './bankai_impact.js'; // the DOWN / full technique: the ground impact (user spec 16 Nov 2026)
 
 const snap = Math.round;
 const mir = (a, f) => (f > 0 ? a : Math.PI - a);
@@ -383,12 +384,13 @@ export function installBankaiArsenal(set) {
   SLOTS.forEach(([dir, variant], i) => {
     const entry = set[dir]?.[variant]; if (!entry) return;
     const swarmMake = entry.make; const swarmName = entry.name;
-    entry.make = (p) => { const A = arsenalOf(p); if (!A) return swarmMake(p); const [, pattern, opts] = A.moves[i]; return pattern(ctxOf(A, p), p, opts); };
-    Object.defineProperty(entry, 'name', { configurable: true, enumerable: true, get: () => { const A = arsenalOf(globalThis.window?.gameWorld?.player); return A ? A.names[i] : swarmName; } });
+    // Slot 5 (down / full) is the Bankai ground impact for every class and element; the other five stay as they were.
+    entry.make = (p) => { if (i === 5) return makeBankaiImpact(p, ITEMS); const A = arsenalOf(p); if (!A) return swarmMake(p); const [, pattern, opts] = A.moves[i]; return pattern(ctxOf(A, p), p, opts); };
+    Object.defineProperty(entry, 'name', { configurable: true, enumerable: true, get: () => { const player = globalThis.window?.gameWorld?.player; if (i === 5) return impactName(player); const A = arsenalOf(player); return A ? A.names[i] : swarmName; } });
   });
 }
 // The technique names of a weapon's Bankai (Training guide, tests).
-export function bankaiMoveNames(weaponActor) { const A = arsenalOf(weaponActor); return A ? A.names : null; }
+export function bankaiMoveNames(weaponActor) { const A = arsenalOf(weaponActor); return A ? A.names.map((n, i) => (i === 5 ? impactName(weaponActor) : n)) : null; }
 
 // ── Formations (idle / attack lean / guard wall) ─────────────────────────
 function formation(ctx, s, pose, C, layer, kind) {

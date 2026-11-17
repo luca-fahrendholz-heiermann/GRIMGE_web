@@ -5370,6 +5370,52 @@ game.running = false;
     assert(table && none && arcane && Object.keys(CS.GATEWAY_SUMMONS).length === 8, 'Elemental Gateway: each element opens its own familiar (' + JSON.stringify(got) + '); a hit before it opens breaks the cast; without an element an arcane familiar comes'); void n; void noElement; }
   reset(); P.lastElementCast = null;
 }
+// Bankai ground impact (user spec 16 Nov 2026): the full DOWN technique plants the class weapon; the element decides the
+// material; one main hit and one hitstop; the other five techniques and the exclusivity rules stay.
+{
+  const BI = await import('./public/src/bankai_impact.js'); const AR = await import('./public/src/bankai_arsenal.js'); const { FORM_MOVESETS: FMS } = await import('./public/src/form_moves.js');
+  const SS = await import('./public/src/status_effects.js'); const ENV = (await import('./public/src/environment.js')).environment; const { combat: CB } = await import('./public/src/combat.js');
+  game.returnToHub(); game.setMatchMode('training'); game.startMatch(); game.selectTrainingMap('waterfalls');
+  const P = game.player; const dummy = game.trainingDummy; const buffMod = await import('./public/src/buff_forms.js');
+  const begin = (weapon) => { spells.clearRuntime(); buffMod.endBuffForm(P); ENV.effects.length = 0; P.equipClassWeapon(weapon); P.x = 300; P.z = .5; P.facing = 1; P.grounded = true; P.elevation = 0; P.lastElementCast = null; spells.cast(P, spells.resolveSpell([{ id: 'buff_A04' }]), game); dummy.homeX = dummy.x = 370; dummy.homeZ = dummy.z = .5; dummy.hp = dummy.maxHp; dummy.invulnerableTimer = 0; dummy.slow = null; };
+  const spy = () => { const calls = []; const orig = dummy.takeDamage.bind(dummy); dummy.takeDamage = (...args) => { calls.push(args); return orig(...args); }; return { calls, restore: () => { dummy.takeDamage = orig; } }; };
+  const impactOf = () => FMS.A04.down.full.make(P);
+  // 1. class props: staff / colossus / bulwark / swarm fallback each make an impact with their own prop
+  const props = {}; for (const [w, expect] of Object.entries({ arcane_staff: 'staff', great_axe: 'axe', sword_shield: 'shield', katana: 'blades', spear: 'spear', bow: 'arrow', gauntlets: 'fists', magic_cards: 'seal' })) { begin(w); const q = impactOf(); props[w] = q instanceof BI.BankaiImpact && q.prop === expect; }
+  assert(Object.values(props).every(Boolean) && FMS.A04.down.full.name.length > 5, 'Bankai ground impact: staff, colossus, bulwark, the swarm fallback and four more families each make an impact with their own prop (' + JSON.stringify(props) + ')');
+  // 2. element source: last element cast during the Bankai, else the start element, else the arcane fallback
+  begin('arcane_staff'); const now = performance.now() / 1000; P.lastElementCast = { id: 'ignis', at: now, form: P.buffForm }; const e1 = BI.impactElementFor(P, game);
+  P.lastElementCast = { id: 'aqua', at: now, form: { id: 'A04' } /* cast during an earlier Bankai */ }; game.profile.character.startElement = 'terra'; const e2 = BI.impactElementFor(P, game);
+  P.lastElementCast = null; game.profile.character.startElement = null; const e3 = BI.impactElementFor(P, game);
+  const groups = ['ignis', 'terra', 'aqua', 'frost', 'fulgur', 'ventus', 'natura', 'lux', 'umbra', 'void', 'bestia', 'construct', 'nothing'].map(BI.impactGroupOf);
+  assert(e1 === 'ignis' && e2 === 'terra' && e3 === null && groups.join() === 'fire,earth,water,ice,lightning,wind,nature,light,shadow,shadow,beast,construct,arcane' && BI.impactGroupOf(e3) === 'arcane', 'The impact element is the last element rune cast during the Bankai, else the start element, else the arcane fallback; every rune maps to its profile');
+  // 3. each element: one main hit, its status / ground, one hitstop, no extra damage from the ring or the aftermath
+  const lines = []; const expectStatus = { ignis: 'burn', aqua: 'wet', fulgur: 'paralysis', bestia: 'bleed' }; const expectEnv = { ignis: 'scorch', terra: 'rubble', aqua: 'water', frost: 'ice', umbra: 'crack', nothing: 'crack' };
+  let allGood = true;
+  for (const el of ['ignis', 'terra', 'aqua', 'frost', 'fulgur', 'ventus', 'natura', 'lux', 'umbra', 'bestia', 'construct', 'nothing']) {
+    begin('arcane_staff'); P.lastElementCast = { id: el, at: performance.now() / 1000, form: P.buffForm }; const sp = spy(); const slows = []; dummy.slow = (d, f) => slows.push([d, f]); let frozen = 0; const of = dummy.freeze; dummy.freeze = (d) => { frozen++; };
+    let hitstops = 0; const origHs = CB.triggerHitstop; let lateHitstop = 0; let seqRef = null; CB.triggerHitstop = (...args) => { hitstops++; if (seqRef && seqRef.t >= 1.0) lateHitstop++; return origHs.apply(CB, args); };
+    seqRef = impactOf(); spells.addSpell(seqRef, 'B'); let sawStatus = null;
+    for (let i = 0; i < 170 && !seqRef.isFinished; i++) { spells.update(1 / 60, game); ENV.update?.(1 / 60, game, spells.activeSummons); if (seqRef.t > .7 && expectStatus[el] && SS.hasStatus(dummy, expectStatus[el])) sawStatus = true; }
+    CB.triggerHitstop = origHs; dummy.freeze = of; sp.restore(); dummy.slow = null;
+    const main = sp.calls.filter((c) => c[0] >= 60); /* a barrel the eruption sets off bursts for 28 — a chain reaction, not the main hit */ const env = !expectEnv[el] || ENV.effects.some((e) => e.type === expectEnv[el]);
+    const status = (!expectStatus[el] || sawStatus) && (el !== 'frost' || frozen >= 1) && (el !== 'natura' || slows.some(([d, f]) => f <= .06));
+    const ok = main.length === 1 && env && status && seqRef.isFinished && seqRef.phase === 'aftermath' && lateHitstop === 0 && seqRef.hitstops === 1 && hitstops <= 2;
+    if (!ok) { allGood = false; lines.push(el + ':' + [main.length, env, status, seqRef.isFinished, lateHitstop, seqRef.hitstops, hitstops].join('/') + JSON.stringify(sp.calls.map((c) => [Math.round(c[0]), c[5]]))); }
+  }
+  assert(allGood, 'Every element: the Bankai impact lands exactly one main hit with its own status and ground, one hitstop, and the ring and aftermath add none (' + (lines.join(' | ') || 'all 12 ok') + ')');
+  // 4. the DOWN / full slot uses the impact; the other five techniques are untouched; the move name carries class and element
+  begin('arcane_staff'); P.lastElementCast = { id: 'frost', at: performance.now() / 1000, form: P.buffForm };
+  const names = AR.bankaiMoveNames(P); const others = [['forward', 'short'], ['forward', 'full'], ['up', 'short'], ['up', 'full'], ['down', 'short']].every(([d, v]) => !(FMS.A04[d][v].make(P) instanceof BI.BankaiImpact));
+  assert(impactOf() instanceof BI.BankaiImpact && others && names.length === 6 && /STABRAMME · EIS/.test(names[5]) && /STABRAMME · EIS/.test(FMS.A04.down.full.name), 'The full DOWN slot is the ground impact (name: ' + names[5] + '); the other five Bankai techniques are not');
+  // 5. an Arcane State and a transformation stay exclusive
+  buffMod.endBuffForm(P); P.focusTransformTimer = 5; const blocked = spells.cast(P, spells.resolveSpell([{ id: 'buff_A04' }]), game); const noForm = !buffMod.currentBuffForm?.(P) || P.buffForm == null;
+  P.focusTransformTimer = 0; buffMod.endBuffForm(P);
+  assert(noForm && !blocked, 'A transformation blocks the Arcane State (Bankai) — they stay exclusive');
+  // 6. a directional camera shake exists
+  { CB.resetEffects(); CB.shakeCamera(12, .3, 1); const dir = CB.camera.shakeDir; CB.shakeCamera(4, .2); const plain = CB.camera.shakeDir; CB.resetEffects(); assert(dir === 1 && plain === 0 && CB.camera.shakeDir === 0, 'The camera supports a directional shake (the Bankai impact kicks the way the caster faces)'); }
+  buffMod.endBuffForm(P); P.lastElementCast = null; spells.clearRuntime();
+}
 {
   // Guard against code swallowed by a mid-line comment ("x = 1; // note y = 2;" — happened twice, 6 + 10 Nov 2026).
   const fsx = await import('node:fs'); const pathx = await import('node:path');

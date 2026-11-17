@@ -37,12 +37,15 @@ export class CombatEngine {
     this.camera.trauma = 0;
     this.camera.shakeX = 0;
     this.camera.shakeY = 0;
+    this.camera.shakeDir = 0;
   }
 
   // Camera Shake
-  shakeCamera(intensity = 8, duration = 0.25) {
+  // dirX (-1 / 1): a directional shake, mostly along x (the Bankai ground impact kicks the way the caster faces); 0 = all around.
+  shakeCamera(intensity = 8, duration = 0.25, dirX = 0) {
     this.camera.trauma = Math.min(1.0, this.camera.trauma + intensity / 10);
     this.camera.shakeDuration = duration;
+    this.camera.shakeDir = Math.sign(dirX) || 0;
   }
 
   // Spawn Floating Combat Text
@@ -175,8 +178,14 @@ export class CombatEngine {
     // 3. Camera Shake Decay
     if (this.camera.trauma > 0) {
       const shakeAmt = Math.pow(this.camera.trauma, 2) * 22;
-      this.camera.shakeX = (Math.random() * 2 - 1) * shakeAmt;
-      this.camera.shakeY = (Math.random() * 2 - 1) * shakeAmt;
+      if (this.camera.shakeDir) {
+        this._shakeFlip = !this._shakeFlip;
+        this.camera.shakeX = (this._shakeFlip ? 1 : -.55) * this.camera.shakeDir * shakeAmt * (.7 + Math.random() * .3);
+        this.camera.shakeY = (Math.random() * 2 - 1) * shakeAmt * .3;
+      } else {
+        this.camera.shakeX = (Math.random() * 2 - 1) * shakeAmt;
+        this.camera.shakeY = (Math.random() * 2 - 1) * shakeAmt;
+      }
       this.camera.trauma = Math.max(0, this.camera.trauma - dt * 2.2);
     } else {
       this.camera.shakeX = 0;
