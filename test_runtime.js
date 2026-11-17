@@ -5321,6 +5321,8 @@ game.running = false;
   const second = !CL.classWeaponUnlocked(q, 'crossbow'); q.weaponXp.bow = PR.WEAPON_XP_PER_LEVEL * (CL.CLASS_UNLOCK_LEVEL - 1); const secondOpen = CL.classWeaponUnlocked(q, 'crossbow');
   game.profile.character.created = true; game.profile.character.classId = 'Guardian'; const savedProfile = game.profile.level; game.profile.level = 1;
   const ui = (await import('./public/src/character_creation.js')); const doc = globalThis.document;
+  { const CC = await import('./public/src/character_creation.js'); const earned = CC.startElementChoices({ earned: true }); const open = CC.startElementChoices({ earned: false });
+    assert(earned.join() === 'ignis,ventus,fulgur,terra,aqua,frost' && open.slice(0, 6).join() === earned.join() && open.length === 13 && new Set(open).size === 13, 'The start element list always offers fire, wind, lightning, earth, water and ice; the open rules add the other seven (' + open.length + ')'); }
   assert(tableOk && allClasses && !before && after && again && second && secondOpen, 'Class unlocks: the weapon-to-class table matches weapons.js, a mission reward opens a class early (once), the second class weapon needs weapon level 3');
   game.profile.level = savedProfile;
 }

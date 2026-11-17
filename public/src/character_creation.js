@@ -52,6 +52,9 @@ const css = `
 let open = null;
 
 export function isCharacterCreationOpen() { return !!open; }
+// The start elements one can pick (user, 17 Nov 2026: fire was missing): always the six base elements — fire, wind, lightning, earth, water, ice —
+// and, with the open rules (test switch), the further elements as well.
+export const startElementChoices = (profile) => (profile?.earned ? [...STARTER_RUNES] : [...STARTER_RUNES, ...START_ELEMENTS]);
 
 // game: window.gameWorld (profile, classOptions, setClassWeapon); onDone(character) after DONE.
 // tabs: which pages the screen shows — creation: look, element, class; the wardrobe: look and element; the hub's
@@ -66,7 +69,7 @@ export function openCharacterCreation(game, { onDone = null, first = false, tabs
     classId: startCls.id, weapon: WEAPONS[profile?.classWeapon]?.family === startCls.id ? profile.classWeapon : classWeapons(startCls.id)[0],
     element: null };
   // Earned rules: the start rune is one of the six base elements — the only card the deck holds at first.
-  const elements = profile?.earned ? STARTER_RUNES : START_ELEMENTS;
+  const elements = startElementChoices(profile);
   state.element = elements.includes(ch.startElement) ? ch.startElement : elements[0];
   // After creation the class stays changeable in the wardrobe; the second weapon of a family needs the start weapon's level.
   // The start element is chosen once, at creation (re-choosing would hand out every extra rune for free).
