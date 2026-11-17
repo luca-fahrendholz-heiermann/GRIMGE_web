@@ -15,7 +15,7 @@ export function classUnlocked(profile, id) {
 }
 // The condition of a locked class as a German line for the creation screen; null for a starter class.
 export function classRequirement(id) {
-  return id in CLASS_UNLOCK_AT ? `AB LEVEL ${CLASS_UNLOCK_AT[id]} · ODER ALS BELOHNUNG` : null;
+  return id in CLASS_UNLOCK_AT ? `AB STUFE ${CLASS_UNLOCK_AT[id]}` : null;
 }
 // The class (weapon family) of each class weapon, for the profile's save migration; weapons.js is the source (a runtime
 // test checks that this table matches it).
