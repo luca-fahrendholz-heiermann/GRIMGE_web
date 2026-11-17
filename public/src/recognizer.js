@@ -1,6 +1,6 @@
 // GRIMGE Prototype — Rune Gesture Recognition System (High-Tolerance Radial & Angular Engine)
 import { BUFF_FORM_DATA } from './buff_forms_data.js';
-import { SIGNATURE_RUNE_DATA } from './signature_runes_data.js';
+import { SIGNATURE_RUNE_DATA } from './signature_data.js';
 import { RUNE_GUIDES } from './rune_guides.js';
 import { cloudOf, glyphDistance } from './glyph_match.js';
 const guideIdOf = (id) => (String(id).startsWith('buff_') ? 'buff_sigil' : String(id));

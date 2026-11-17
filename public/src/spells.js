@@ -35,6 +35,8 @@ export const RUNE_GRADE_PROFILES = Object.freeze({
   S: Object.freeze({ grade: 'S', power: 1.25, area: 1.20, duration: 1.20, particles: 1.40 })
 });
 
+// The normal element runes (a special rune never counts as the caster's element).
+const ELEMENT_RUNE_IDS = new Set(['ignis', 'ventus', 'fulgur', 'terra', 'aqua', 'frost', 'bestia', 'construct', 'void', 'lux', 'umbra', 'natura', 'ward']);
 export const SUMMON_DEFINITIONS = Object.freeze({
   lesser_beast: Object.freeze({ id: 'lesser_beast', spriteKey: 'spirit_wolf', name: 'BEAST FAMILIAR', hp: 54, duration: 7, speed: 230, attackRange: 36, damage: 12, attackCooldown: .85, radius: 15, color: '#b388ff', role: 'hunter', particleElement: 'bestia', mountable: true, mountSpeed: 390, riderOffsetY: 36 }),
   // Roles are gameplay contracts, not visual skins. New rune families can
@@ -214,6 +216,8 @@ export class SpellSystem {
     return best >= 0 ? this.graves.splice(best, 1)[0] : null;
   }
 
+  // The base summon definitions by id (the Elemental Gateway derives its familiars from them).
+  summonDef(id) { return SUMMON_DEFINITIONS[id] ?? null; }
   summon(caster, definition, gameWorld, quality, options = {}) {
     // One summon per kind (role) and caster by default; Pack Leader adds
     // more (shadow doubles / revenants use their own Shadow passives).
@@ -252,6 +256,9 @@ export class SpellSystem {
   cast(caster, spellDef, gameWorld, quality = null, target = null) {
     if (!spellDef) return;
     const prev = this.castElements; this.castElements = statusElementsOf(spellDef);
+    // The last normal element rune a fighter cast (the Elemental Gateway and the Bankai impact take their element from it).
+    const castElement = this.castElements?.find((id) => ELEMENT_RUNE_IDS.has(id));
+    if (caster && castElement) caster.lastElementCast = { id: castElement, at: performance.now() / 1000 };
     const prevCaster = this.castCaster; this.castCaster = caster;
     // Damage dealt right during the cast (chain lightning, strikes) rolls statuses / combos too.
     const prevSource = setStatusSource(this.castElements ? { team: caster.team, statusElements: this.castElements, quality: this.normalizeQuality(quality), castBy: caster } : null);

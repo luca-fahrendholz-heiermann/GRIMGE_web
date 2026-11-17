@@ -2,6 +2,24 @@
 
 Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
+## 17. Nov 2026 – Vier kinematische Zauber (Vorgabe des Nutzers)
+
+- Neue Spezialrunen S96–S99, jede mit eigener Aufladung, Einschlag und Nachwirkung; Stufe 3, episch, Arena-Wert 3 Punkte;
+  Daten in `cinematic_spells_data.js`, Wirkung in `cinematic_spells.js`, Glyphen in `rune_guides.js`.
+  - **Infernoausbruch** (48 Mana): 0,5 s glühender, reißender Boden; weißer Kern bricht aus; ein Haupttreffer mit Rückstoß und
+    Brennen, ein Haupt-Hitstop, kreisförmige Feuerfront, danach Rauch, Glut und brennender Boden; Fässer und Kisten fangen Feuer.
+  - **Arkanstrudel** (46 Mana): schwebender violetter Kern, Ringe in verschiedenen Tempi, Blitze; zieht Gegner zur Mitte und hält sie
+    nahe dem Kern fast still; die Entladung schleudert nach außen (ein Treffer); Felsbrocken rollen über ihre eigene Reaktion weg.
+  - **Grünes Erwachen** (44 Mana): Energieadern, Wurzeln und Ranken (Gegner im Kreis werden verwurzelt, ein Treffer), grüner Puls mit
+    Blättern und Sporen, danach ein lebendes Feld: heilt Verbündete, verlangsamt Gegner, lässt Setzlinge wachsen.
+  - **Elementartor** (42 Mana): Ring, wandernde Zeichen, drehende Fläche, Lichtpuls — beschwört je nach Element: Wasser/Eis Geisterwolf,
+    Blitz/Wind Sturmwolf, Schatten/Leere Leerenspinne, Erde/Konstrukt Runengolem, Natur/Bestie Bestienfamiliar, Feuer Glut-Familiar,
+    Licht/Schutz Wächter, ohne Element ein Arkan-Familiar. Ein Treffer vor dem Öffnen bricht den Zauber ab. Kein Teleport.
+- Das Element des Zauberers ist die zuletzt gewirkte Elementrune (neu am Zauber-System gemerkt), sonst das Startelement des Spielers.
+- Testanpassung: 99 statt 95 Spezialrunen-Glyphen, Mana-Spanne bis 48.
+- Hinweis: Die KI-Tests „Schatten bindet den Zauberer“ und „zweite Stufe“ schlugen einmal in einem Lauf fehl und liefen sonst durch
+  (zeitabhängig, nicht durch diese Änderung verursacht, aber nicht untersucht).
+
 ## 16. Nov 2026 – Spezifikation „Fortschritt, Modi, Arena-Runen, Einschlag-Zauber“: Klassen und Arena (Vorgabe des Nutzers)
 
 - **Klassen:** Fünf Startklassen (Guardian, Berserker, Bladedancer, Ranger, Arcanist); die anderen 13 nach Profilstufe

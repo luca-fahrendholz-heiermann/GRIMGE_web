@@ -75,7 +75,7 @@ export const MAX_DECK_PRESETS = 8;
 export const DECK_PRESET_NAME_MAX = 20;
 export const MAX_RUNE_COPIES = 2;
 import { BUFF_FORM_DATA } from './buff_forms_data.js';
-import { SIGNATURE_RUNE_DATA } from './signature_runes_data.js';
+import { SIGNATURE_RUNE_DATA } from './signature_data.js';
 // Arcane States (buff transformation special runes): max. ONE per deck (atlas §1.9).
 export const BUFF_RUNE_IDS = Object.freeze(BUFF_FORM_DATA.map((form) => 'buff_' + form.id));
 export const MAX_BUFF_RUNES = 1;
@@ -153,7 +153,7 @@ export function runeRarity(id) {
 export function arenaRuneInfo(id) {
   if (!ALL_RUNE_IDS.includes(id)) return null;
   const category = runeCategory(id);
-  return { id, category, cost: arenaPointsOf(category), rarity: arenaRarityOf(category, STARTER_RUNES.includes(id)) };
+  return { id, category, cost: SIG_BY_ID.get(id)?.arenaCost ?? arenaPointsOf(category), rarity: arenaRarityOf(category, STARTER_RUNES.includes(id)) };
 }
 // Tests run under node without a stored profile: they keep the open rules unless a profile asks for 'earned'.
 const DEFAULT_RULES = typeof process !== 'undefined' && process.versions?.node ? 'open' : 'earned';

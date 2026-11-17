@@ -20,7 +20,7 @@
 import { plate, band, fallout, shard, mix, hashStr } from './buff_vfx.js';
 import { combat } from './combat.js';
 import { groundYForDepth } from './world.js';
-import { SIGNATURE_RUNE_DATA } from './signature_runes_data.js';
+import { SIGNATURE_RUNE_DATA } from './signature_data.js';
 
 export const TAU = Math.PI * 2;
 export const DEPTH = 150;

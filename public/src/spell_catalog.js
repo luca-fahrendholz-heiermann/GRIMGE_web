@@ -11,7 +11,7 @@
 // rules in main.js, never by inventing a random spell).
 
 import { BUFF_FORM_DATA } from './buff_forms_data.js';
-import { SIGNATURE_RUNE_DATA } from './signature_runes_data.js';
+import { SIGNATURE_RUNE_DATA } from './signature_data.js';
 
 export const DELIVERY = Object.freeze({
   PROJECTILE: 'projectile', SALVO: 'salvo', HOMING: 'homing', BEAM: 'beam', CONE: 'cone', BURROW: 'burrow',

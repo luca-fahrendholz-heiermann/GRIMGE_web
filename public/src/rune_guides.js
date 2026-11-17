@@ -79,6 +79,14 @@ export const SIGNATURE_GLYPHS = Object.freeze({
   S93: [L(-.8, -.4, .7, -.4), L(-.8, 0, .85, 0), L(-.8, .4, .7, .4), L(.85, 0, .55, -.25)],
   // S94 BLUTFINSTERNIS: an eclipse (a ring over a filled half) and a drop below.
   S94: [ring(0, -.25, .45), arc(0, -.25, .45, Math.PI * .1, Math.PI * .9), L(0, .35, 0, .8)],
+  // S96 INFERNOAUSBRUCH: a crater (V) with three flames rising out of it.
+  S96: [[[-.8, -.1], [0, .75], [.8, -.1]], L(-.4, -.15, -.4, -.85), L(0, .1, 0, -.95), L(.4, -.15, .4, -.85)],
+  // S97 ARKANSTRUDEL: a ring around an inward spiral.
+  S97: [ring(0, 0, .85), spiralIn(0, 0, .5, 1.7)],
+  // S98 GRÜNES ERWACHEN: a sprout — stem, two leaves and the ground line with roots.
+  S98: [L(0, .85, 0, -.1), poly([[0, .1], [-.5, -.15], [-.7, -.6], [-.2, -.4]]), poly([[0, -.1], [.5, -.35], [.75, -.8], [.25, -.6]]), L(-.55, .85, .55, .85)],
+  // S99 ELEMENTARTOR: a tall ring with a floor line and a mark at its heart.
+  S99: [ring(0, -.05, .5, .8), L(-.9, .9, .9, .9), L(0, -.25, 0, .15)],
   // S95 NULLKLINGE: a jagged blade (zigzag down), its crossguard and a cut across.
   S95: [[[0, -.9], [.2, -.6], [-.15, -.3], [.2, 0], [0, .45]], L(-.4, .45, .4, .45), L(-.75, -.2, .75, .2)],
   // S90 BLUTSCHIRM: an umbrella — the canopy arc, the shaft and the hook.

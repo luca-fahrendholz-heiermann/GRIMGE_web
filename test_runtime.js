@@ -2695,7 +2695,7 @@ assert(game.inputMode === 'desktop', 'Keyboard input switches a hybrid device ba
   const step = (n, dt = 1 / 60) => { for (let i = 0; i < n; i++) { P.update(dt, neutral, game.battlefield, game); game.updateProjectiles(dt); spells.update(dt, game); } };
   const cast = (id, target = null) => spells.cast(P, spells.resolveSpell([{ id: 'sig_' + id }]), game, null, target);
   const ids = Object.keys(core.SIGNATURES);
-  assert(ids.length === 95 && ids.every((id) => core.signatureImpl(id)?.cast) && sigMod.SIGNATURE_RUNE_IDS.every((id) => isSpecialRune(id) && runeManaCost(id) >= 28 && runeManaCost(id) <= 46), 'All 94 signature specials (atlas S01–S36 + S37–S94) are special runes with their own mechanic and bound mana');
+  assert(ids.length === 99 && ids.every((id) => core.signatureImpl(id)?.cast) && sigMod.SIGNATURE_RUNE_IDS.every((id) => isSpecialRune(id) && runeManaCost(id) >= 28 && runeManaCost(id) <= 48), 'All 99 signature specials (atlas S01–S36 + S37–S95 + the four cinematic S96–S99) are special runes with their own mechanic and bound mana');
   assert(ids.every((id) => spellHowTo('sig_' + id)?.effect?.length > 40) && !spells.resolveSpell([{ id: 'sig_S03' }, { id: 'ignis' }]), 'Signature specials explain themselves in the grimoire and never fuse');
   // Every special casts, runs and renders (strict canvas) without errors.
   const strict = new Proxy({}, { get: (t, k) => (k === 'ellipse' || k === 'arc') ? (x, y, rx, ry) => { if (rx < 0 || (k === 'ellipse' && ry < 0)) throw new Error('IndexSizeError ' + k); } : (k === 'canvas' ? undefined : () => {}), set: () => true });
@@ -5323,6 +5323,52 @@ game.running = false;
   const ui = (await import('./public/src/character_creation.js')); const doc = globalThis.document;
   assert(tableOk && allClasses && !before && after && again && second && secondOpen, 'Class unlocks: the weapon-to-class table matches weapons.js, a mission reward opens a class early (once), the second class weapon needs weapon level 3');
   game.profile.level = savedProfile;
+}
+// The four cinematic special runes (user spec 16 Nov 2026): explicit definitions, a full charge / impact / aftermath
+// lifecycle, one main hit, the intended status and environment effect, the Gateway's element table, no generative fusion.
+{
+  const CS = await import('./public/src/cinematic_spells.js'); const SC = await import('./public/src/spell_catalog.js'); const PR = await import('./public/src/progression.js');
+  const SS = await import('./public/src/status_effects.js'); const ENV = (await import('./public/src/environment.js')).environment;
+  game.returnToHub(); game.setMatchMode('training'); game.startMatch(); game.selectTrainingMap('waterfalls');
+  const P = game.player; const dummy = game.trainingDummy; const IDS = ['S96', 'S97', 'S98', 'S99'];
+  const neutral = { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 0, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false };
+  // 1. explicit definitions: tier 3, epic, the specified mana, no fusion with another rune
+  const defs = IDS.map((id) => spells.resolveSpell([{ id: 'sig_' + id }]));
+  const explicit = defs.every((d, i) => d && d.isSignature && d.tier === 3 && d.signatureId === IDS[i] && d.manaCost === [48, 46, 44, 42][i] && SC.runeManaCost('sig_' + IDS[i]) === d.manaCost)
+    && IDS.every((id) => PR.runeRarity('sig_' + id) === 'epic' && PR.ALL_RUNE_IDS.includes('sig_' + id) && !spells.resolveSpell([{ id: 'sig_' + id }, { id: 'ignis' }]) && PR.arenaRuneInfo('sig_' + id).cost === 3);
+  assert(explicit, 'The four cinematic runes (S96–S99) have explicit definitions: tier 3, epic, 48 / 46 / 44 / 42 mana, 3 Arena points, and never fuse (no generative fallback)');
+  const reset = () => { spells.clearRuntime(); P.x = 330; P.z = .5; P.facing = 1; P.hp = P.maxHp; P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; P.elevation = 0; P.grounded = true; game.battlefield.placeOnSurface(P); dummy.homeX = dummy.x = 470; dummy.homeZ = dummy.z = .5; dummy.slow = null; ENV.effects.length = 0; };
+  const spy = () => { const calls = []; const orig = dummy.takeDamage.bind(dummy); dummy.takeDamage = (...args) => { calls.push(args); return orig(...args); }; return { calls, restore: () => { dummy.takeDamage = orig; } }; };
+  const run = (Cls, seconds, onStep = null) => { const phases = []; let sp = null; const dt = 1 / 60;
+    for (let i = 0; i < Math.ceil(seconds / dt); i++) { game.updateProjectiles?.(dt); spells.update(dt, game); ENV.update?.(dt, game, spells.activeSummons); sp ??= spells.activeSpells.find((q) => q instanceof Cls); if (sp) { if (!phases.includes(sp.phase)) phases.push(sp.phase); onStep?.(sp, i * dt); if (sp.isFinished) break; } }
+    return { sp, phases }; };
+  const castAt = (i, target = null) => spells.cast(P, defs[i], game, null, target);
+  // 2. INFERNOAUSBRUCH: one hit, burn, burning ground, then it ends
+  { reset(); const s1 = spy(); castAt(0, { x: 470, z: .5 }); let burn = false; let scorch = false; const mainOf = (calls) => calls.filter((c) => c[0] >= 20);
+    const r = run(CS.InfernoEruption, 4, (sp, tt) => { if (tt > .65 && SS.hasStatus(dummy, 'burn')) burn = true; if (ENV.effects.some((e) => e.type === 'scorch' && Math.abs(e.x - 470) < 3)) scorch = true; }); const main1 = mainOf(s1.calls); s1.restore();
+    assert(r.phases.join() === 'charge,impact,aftermath' && r.sp.isFinished && main1.length === 1 && main1[0][1] !== 0 && burn && scorch && r.sp.hitstops === 1 && s1.calls.length > 1, 'Inferno Eruption: charge, impact and aftermath in order and it ends; exactly one main hit with knockback (the burn only ticks small damage), burning, burning ground and one hitstop (' + r.phases.join('/') + ', main hits ' + main1.length + ')'); }
+  // 3. ARKANSTRUDEL: the pull moves foes in, one discharge hit throws them out
+  { reset(); dummy.x = 410; const s1 = spy(); const d0 = Math.abs(dummy.x - 520); castAt(1, { x: 520, z: .5 }); let dPull = d0;
+    const r = run(CS.ArcaneVortex, 4, (sp, tt) => { if (tt < 1.8) dPull = Math.abs(dummy.x - 520); }); s1.restore();
+    assert(r.phases.join() === 'charge,impact,aftermath' && r.sp.isFinished && dPull < d0 - 25 && s1.calls.length === 1 && Math.abs(s1.calls[0][1]) >= 300, 'Arcane Vortex: the pull draws the foe toward the core (' + Math.round(d0) + ' → ' + Math.round(dPull) + ' px), then one discharge hit throws it outward'); }
+  // 4. GRÜNES ERWACHEN: roots on the eruption, one hit, allies heal in the living field, plants wake up
+  { reset(); const s1 = spy(); const slows = []; dummy.slow = (d, f) => slows.push([d, f]); const seed = ENV.addProp('seedling', 500, .5); const stage0 = seed.stage ?? 0; P.hp = P.maxHp - 60; const hp0 = P.hp;
+    castAt(2, { x: 400, z: .5 }); const r = run(CS.VerdantAwakening, 8); s1.restore(); dummy.slow = null;
+    assert(r.phases.join() === 'charge,impact,aftermath' && r.sp.isFinished && s1.calls.length === 1 && slows.some(([d, f]) => d >= 2 && f <= .06) && slows.some(([, f]) => f > .5 && f < .7) && P.hp > hp0 + 10 && (seed.stage ?? 0) > stage0,
+      'Verdant Awakening: roots foes on the eruption (one hit), slows them in the living field, heals allies (' + hp0 + ' → ' + Math.round(P.hp) + ') and wakes a seedling (stage ' + stage0 + ' → ' + (seed.stage ?? 0) + ')'); }
+  // 5. ELEMENTARTOR: the element decides what comes through; a hit before it opens breaks the cast
+  { const expected = { aqua: 'spirit_wolf', frost: 'spirit_wolf', fulgur: 'storm_wolf', ventus: 'storm_wolf', umbra: 'void_spider', void: 'void_spider', terra: 'rune_golem', construct: 'rune_golem', natura: 'lesser_beast', bestia: 'lesser_beast', ignis: 'ember_familiar', lux: 'ward_guardian', ward: 'ward_guardian' };
+    const got = {};
+    for (const el of Object.keys(expected)) {
+      reset(); P.lastElementCast = { id: el, at: 0 }; castAt(3); const r = run(CS.ElementalGateway, 3);
+      const sm = spells.activeSummons.find((q) => !q.isDead); got[el] = sm?.definition?.id; if (!(r.phases.join() === 'charge,impact,aftermath' && r.sp.isFinished && sm && sm.team === P.team)) got[el] = 'BAD:' + r.phases.join('/');
+    }
+    const table = Object.entries(expected).every(([el, id]) => got[el] === id);
+    reset(); P.lastElementCast = { id: 'aqua', at: 0 }; castAt(3); let n = 0; const dt = 1 / 60; for (let i = 0; i < 40; i++) { if (i === 20) P.state = 'hurt'; spells.update(dt, game); n++; } for (let i = 0; i < 150; i++) spells.update(dt, game);
+    const none = spells.activeSummons.filter((q) => !q.isDead).length === 0;
+    reset(); P.lastElementCast = null; castAt(3); const noElement = run(CS.ElementalGateway, 3); const arcane = spells.activeSummons.find((q) => !q.isDead)?.definition?.id === 'arcane_familiar';
+    assert(table && none && arcane && Object.keys(CS.GATEWAY_SUMMONS).length === 8, 'Elemental Gateway: each element opens its own familiar (' + JSON.stringify(got) + '); a hit before it opens breaks the cast; without an element an arcane familiar comes'); void n; void noElement; }
+  reset(); P.lastElementCast = null;
 }
 {
   // Guard against code swallowed by a mid-line comment ("x = 1; // note y = 2;" — happened twice, 6 + 10 Nov 2026).
