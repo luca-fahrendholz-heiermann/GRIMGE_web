@@ -9,6 +9,7 @@ import { recognizer } from './recognizer.js';
 import { sprites } from './sprites.js';
 import { openCharacterCreation } from './character_creation.js';
 import { openCampaign } from './campaign.js';
+import { openArenaPortfolio } from './arena_portfolio_ui.js';
 import { hubFigureOf, syncHubFigure } from './hub_figure.js';
 import { runeManaCost, SPELL_RECIPES, lookupRecipe, SOLO_RUNES, spellHowTo } from './spell_catalog.js';
 import { TRAINING_MAPS, trainingMapThumb } from './training_maps.js';
@@ -113,6 +114,8 @@ export class UIManager {
     this.deckBuilderSummary = document.getElementById('deck-builder-summary');
     this.closeDeckBuilderBtn = document.getElementById('close-deck-builder-btn');
     this.resetDeckBtn = document.getElementById('reset-deck-btn');
+    /* The Arena Rune Portfolio (arena_portfolio_ui.js): up to six runes, twelve points, chosen before a duel. */
+    document.getElementById('arena-portfolio-btn')?.addEventListener('click', () => { const game = window.gameWorld; if (game?.profile) openArenaPortfolio(game); });
     this.deckPresetsEl = document.getElementById('deck-presets');
     this.deckFilterEl = document.getElementById('deck-filter');
     this.deckFilter = 'all'; this.deckCategory = 'element'; this.pendingPresetAction = null; this.lastDeckSource = null;

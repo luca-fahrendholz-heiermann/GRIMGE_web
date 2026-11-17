@@ -73,6 +73,7 @@ export function updateRift(game, dt) {
 function knockOut(game, f, how, side) {
   const st = game.modeState.rift; const y = groundYForDepth(f.z) - (f.surfaceHeight ?? 0) - (f.elevation ?? 0);
   f.soulSparks -= 1;
+  game.arenaClearSlots?.(f); /* KO: every carried rune is cleared — no drop, nothing for the winner */
   combat.shakeCamera(16, .6); combat.triggerHitstop?.(8);
   combat.spawnShockwave(f.x, y - 30, 120, how === 'pit' ? '#7c4dff' : '#ffd740');
   combat.spawnHitSparks(f.x, y - 30, side || 1, '#fff3c8', 30);

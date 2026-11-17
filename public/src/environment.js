@@ -317,6 +317,7 @@ export class EnvironmentSystem {
   }
 
   breakProp(prop, gameWorld) {
+    gameWorld.arenaPropBroken?.(prop); /* Arena: a destroyed crate or barrel gives up a rune relic */
     combat.spawnHitSparks(prop.x, prop.y - 16, 1, prop.kind === 'barrel' ? '#ff9800' : '#a1887f', 14);
     combat.spawnDust(prop.x, prop.y, 8);
     audio.playImpact?.(true);

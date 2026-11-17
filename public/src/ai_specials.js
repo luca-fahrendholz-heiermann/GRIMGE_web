@@ -21,6 +21,7 @@ const sigId = (id) => (id.startsWith('sig_') ? id.slice(4) : id);
 export function aiSpecialIds(ai, gw) {
   const fromDeck = (ai.deckIds ?? []).filter((id) => id.startsWith('sig_'));
   if (fromDeck.length) return [...new Set(fromDeck)];
+  if (ai.arenaInv) return []; /* Arena: no kit of its own — only the special runes it carries */
   if (ai.aiSpecialIds) return ai.aiSpecialIds;
   // Training: only what the sparring partner's deck holds (set it in the deck editor).
   if (gw?.activeMode?.id === 'training') return [];
@@ -46,6 +47,7 @@ function release(ai, id, def, price, gw, spells, target) {
   ai.mp -= price;
   takeOfferedRecast(null);
   spells.cast(ai, def, gw, null, target);
+  ai.spendArenaCast?.([id]); /* Arena: the carried rune is spent */
   const offer = takeOfferedRecast(ai);
   // Traps go off on contact; the AI never detonates them by hand.
   if (offer && sigId(id) !== 'S47') ai.aiRecast = { ...offer, sig: sigId(id), left: offer.window, total: offer.window, next: firstDelay(offer, sigId(id)) };
@@ -74,7 +76,7 @@ export function tryAICounterDomain(ai, gw, spells) {
 // Pick a special that fits the moment.
 export function tryAISpecial(ai, player, distance, gw, spells) {
   if ((ai.specialCooldown ?? 0) > 0 || ai.aiRecast || !player?.isAlive) return false;
-  if (ai.arenaCasts !== undefined && ai.arenaCasts <= 0) return false; // arena: only collected runes
+  if (ai.arenaCastAllowed && !ai.arenaCastAllowed()) return false; // arena: only carried runes
   const ids = aiSpecialIds(ai, gw); if (!ids.length) return false;
   const sameLane = Math.abs((player.z ?? 0) - (ai.z ?? 0)) < .12;
   ai.facing = Math.sign(player.x - ai.x) || ai.facing;

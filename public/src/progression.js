@@ -3,6 +3,7 @@
 // work consume the same skill definitions and aggregate modifiers.
 import { MASTERY_NODE_IDS, masteryRequirement } from './mastery_data.js';
 import { ALL_CLASS_IDS, WEAPON_FAMILY_OF, classUnlocked } from './class_unlocks.js';
+import { ARENA_RULES, arenaPointsOf, arenaRarityOf, validatePortfolio, fitPortfolio } from './arena_runes.js';
 
 export const MAGE_SKILL_TREE = Object.freeze([
   { id: 'elemental_power', branch: 'ELEMENTAL', title: 'Elemental Power', desc: '+12% spell damage.', cost: 1, modifiers: { spellPower: 1.12 } },
@@ -148,6 +149,12 @@ export function runeRarity(id) {
   if (isSignatureRuneId(id) || id === 'doppel' || id === 'mortis') return 'epic';
   return 'rare';
 }
+// The Arena sees a rune through its category: portfolio points and spawn rarity (arena_runes.js). null = not a rune.
+export function arenaRuneInfo(id) {
+  if (!ALL_RUNE_IDS.includes(id)) return null;
+  const category = runeCategory(id);
+  return { id, category, cost: arenaPointsOf(category), rarity: arenaRarityOf(category, STARTER_RUNES.includes(id)) };
+}
 // Tests run under node without a stored profile: they keep the open rules unless a profile asks for 'earned'.
 const DEFAULT_RULES = typeof process !== 'undefined' && process.versions?.node ? 'open' : 'earned';
 export const PROFILE_VERSION = 4;
@@ -247,6 +254,8 @@ export class MageProfile {
     const weaponFamily = this.classWeapon ? WEAPON_FAMILY_OF[this.classWeapon] : null;
     if (weaponFamily && ALL_CLASS_IDS.includes(weaponFamily)) this.unlockedClasses.add(weaponFamily);
     this.debugAccess = false; /* runtime only: the vault's test switch opens every class */
+    // The Arena Rune Portfolio (arena_runes.js): up to six distinct runes within the point budget, kept in the profile.
+    this.arenaPortfolio = fitPortfolio(source?.arenaPortfolio, arenaRuneInfo);
     this.weaponXp = { ...(source?.weaponXp ?? {}) };
     this.discoveredSpells = new Set(source?.discoveredSpells ?? []);
     this.unlockedRunes = new Set(source?.unlockedRunes ?? STARTER_RUNES);
@@ -294,7 +303,7 @@ export class MageProfile {
     return {
       level: this.level, xp: this.xp, skillPoints: this.skillPoints,
       unlockedSkills: [...this.unlockedSkills], masteries: [...this.masteries], runeXp: clone(this.runeXp),
-      lateUnlocks: [...this.lateUnlocks], weaponXp: clone(this.weaponXp), classWeapon: this.classWeapon, bankaiClasses: [...this.bankaiClasses], unlockedClasses: [...this.unlockedClasses], character: { ...this.character, look: { ...this.character.look } }, campaign: { done: [...this.campaign.done], stars: { ...this.campaign.stars }, starClaims: this.campaign.starClaims },
+      lateUnlocks: [...this.lateUnlocks], weaponXp: clone(this.weaponXp), classWeapon: this.classWeapon, bankaiClasses: [...this.bankaiClasses], unlockedClasses: [...this.unlockedClasses], arenaPortfolio: [...this.arenaPortfolio], character: { ...this.character, look: { ...this.character.look } }, campaign: { done: [...this.campaign.done], stars: { ...this.campaign.stars }, starClaims: this.campaign.starClaims },
       discoveredSpells: [...this.discoveredSpells], unlockedRunes: [...this.unlockedRunes],
       matchDeck: [...this.matchDeck], progressionVersion: PROFILE_VERSION,
       rules: this.rules, gold: this.gold, runeDrops: { ...this.runeDrops }, runeCopies: { ...this.runeCopies },
@@ -348,6 +357,19 @@ export class MageProfile {
   weaponLevel(id) { return 1 + Math.floor((this.weaponXp[id] ?? 0) / WEAPON_XP_PER_LEVEL); }
   // Bankai is available when the chosen class has earned it (weapon level / boss drop).
   isBankaiUnlocked(classWeapon = this.classWeapon) { return !!classWeapon && (this.bankaiClasses.has(classWeapon) || this.weaponLevel(classWeapon) >= LATE_RUNE_LEVEL.bankai); }
+  // The portfolio the Arena uses: the saved one, otherwise the owned base elements (so a new character can start a duel).
+  effectiveArenaPortfolio() {
+    const owned = this.arenaPortfolio.filter((id) => this.isRuneUnlocked(id));
+    if (owned.length) return owned;
+    return fitPortfolio(STARTER_RUNES.filter((id) => this.isRuneUnlocked(id)), arenaRuneInfo);
+  }
+  // Saves a portfolio when it is valid; otherwise reports why not and changes nothing. Only owned runes may be chosen.
+  setArenaPortfolio(ids) {
+    const list = Array.isArray(ids) ? ids : []; const report = validatePortfolio(list, arenaRuneInfo, ARENA_RULES);
+    if (report.ok && !list.every((id) => this.isRuneUnlocked(id))) return { ...report, ok: false, reasons: [...report.reasons, 'NOT_OWNED'] };
+    if (report.ok) { this.arenaPortfolio = [...new Set(list)]; this.save(); }
+    return report;
+  }
   // A boss, secret or mission reward opens a class early; true when it was new.
   unlockClass(id) {
     if (!ALL_CLASS_IDS.includes(id) || this.unlockedClasses.has(id)) return false;

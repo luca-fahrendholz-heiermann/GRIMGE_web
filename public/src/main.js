@@ -43,6 +43,7 @@ import { setupRift, updateRift, renderRiftGround, renderRiftOverlay } from './ar
 import { finishRun, afterMatch, isCampaignOpen } from './campaign.js';
 import { isCharacterCreationOpen } from './character_creation.js'; // Campaign Alpha: missions reuse the modes with parameters
 import { missionById } from './campaign_data.js';
+import { setupArenaRunes, updateArenaRunes, renderArenaRelics, arenaClearSlots, arenaEjectRune, arenaPropBroken, syncArenaInventory } from './arena_play.js'; // the Arena's one-use runes
 import { startAppUpdates } from './app_update.js'; // a new deployed version reloads the game by itself (hub only)
 import { BASE_SCENE, baseBounds, renderBaseHall, baseActors, updateBase, updateBaseCamera, baseTap, closeBasePrompt, setBaseRoom, baseShadowGroups } from './base.js'; // the player's headquarters // stairs / galleries (Castle Crashers DNA)
 // Activated trap entries kept on top of the history during a match (back-navigation guard).
@@ -1348,6 +1349,8 @@ export class GameWorld {
     // The spell offered a second stage: the slot stays (paid, glowing, counting down).
     const offer = takeOfferedRecast(this.player);
     if (offer && consumeSelected) {
+      /* Arena: the rune is spent when the spell activates; only its second stage lingers in the slot. */
+      if (this.activeMode?.id === 'arena') this.player.arenaInv?.consume({ cardIds: slot.runes.map((r) => r.cardId) });
       slot.recast = { ...offer, left: offer.window, total: offer.window };
       slot.manaCost = 0;
       return true;
@@ -1372,6 +1375,7 @@ export class GameWorld {
     }
     this.player.selectedSpellIndex = Math.max(0, Math.min(this.player.selectedSpellIndex, slots.length - 1));
     this.player.preparedRunes = slots.flatMap((entry) => entry.runes);
+    if (this.activeMode?.id === 'arena') syncArenaInventory(this); /* a cast or lost fusion empties its slots */
   }
 
   // Tap on a triangle slot: fire exactly that prepared spell.
@@ -1694,9 +1698,7 @@ export class GameWorld {
         this.enemyChampion.respawnTimer = Infinity;
         this.modeState.bossActive = true;
         // Fair start (user, 1 Nov 2026): the champion begins empty and must collect the rune relics too.
-        this.enemyChampion.setDeck([]); this.enemyChampion.arenaCasts = 0;
-        this.modeState.relicTimer = 6;
-        this.spawnArenaRuneCollectibles();
+        setupArenaRunes(this); /* portfolios, shared pool, three slots each, spawn director (arena_play.js) */
         // Riss + Leben (DESIGN.md §4a): cracks instead of life, rim and chasm knock-outs, 3 soul sparks.
         // Campaign duel: the rival takes the champion's place.
         const rival = this.campaignParams().rival; if (rival && sprites.sprites[rival]) this.enemyChampion.heroKey = rival;
@@ -2198,14 +2200,11 @@ export class GameWorld {
     this.showAnnouncement('DUNGEON START — DEFEAT THE SCOUT', 1.8);
   }
 
-  spawnArenaRuneCollectibles() {
-    const state = this.modeState;
-    if (!state || this.activeMode.id !== 'arena') return;
-    const pool = recognizer.runes.filter((rune) => rune.id !== 'special');
-    const positions = [{ x: 438, z: .27 }, { x: 535, z: .80 }, { x: 625, z: .48 }];
-    state.runeCollectibles = positions.map((position, index) => ({ ...position, rune: pool[(index * 3 + 1) % pool.length] }));
-    this.showAnnouncement('ARENA — FIGHT FOR RUNE RELICS', 1.7);
-  }
+  // Arena runes (arena_play.js): relics, slots, ejection and KO reset follow arena_runes.js for player and AI alike.
+  spawnArenaRuneCollectibles() { if (this.activeMode.id === 'arena') setupArenaRunes(this); }
+  arenaEjectRune(victim, attacker = null) { return arenaEjectRune(this, victim, attacker); }
+  arenaClearSlots(fighter) { return arenaClearSlots(this, fighter); }
+  arenaPropBroken(prop) { return arenaPropBroken(this, prop); }
 
   beginModeBoss(label, hp = 760) {
     const state = this.modeState;
@@ -2325,36 +2324,7 @@ export class GameWorld {
     ctx.restore();
   }
 
-  updateArenaRuneCollectibles(dt = 0) {
-    const relics = this.modeState?.runeCollectibles;
-    if (this.activeMode?.id !== 'arena' || !relics) return;
-    // New relics keep appearing (up to 3 on the field), so both fighters can keep collecting.
-    if (relics.length < 3 && (this.modeState.relicTimer = (this.modeState.relicTimer ?? 6) - dt) <= 0) {
-      this.modeState.relicTimer = 7 + Math.random() * 4;
-      const pool = recognizer.runes.filter((rune) => rune.id !== 'special' && !String(rune.id).startsWith('transform_') && !!spells.resolveSpell([{ id: rune.id }]));
-      const spots = [{ x: 438, z: .27 }, { x: 535, z: .80 }, { x: 625, z: .48 }, { x: 330, z: .5 }, { x: 720, z: .35 }, { x: 512, z: .55 }].filter((p) => !relics.some((r) => Math.abs(r.x - p.x) < 40 && Math.abs(r.z - p.z) < .1));
-      const spot = spots[Math.floor(Math.random() * spots.length)];
-      if (spot && pool.length) { relics.push({ ...spot, rune: pool[Math.floor(Math.random() * pool.length)] }); this.showAnnouncement('NEUES RUNEN-RELIKT', 1); }
-    }
-    if (!relics.length) return;
-    for (let i = relics.length - 1; i >= 0; i--) {
-      const relic = relics[i];
-      if (this.player.isAlive && Math.hypot(this.player.x - relic.x, (this.player.z - relic.z) * 150) <= 42) {
-        this.player.runeDeck.push(this.player.makeRuneCard(relic.rune));
-        this.player.drawRunesToHand();
-        relics.splice(i, 1);
-        this.showAnnouncement(`${relic.rune.name} RUNE RELIC ACQUIRED`, 1.2);
-        continue;
-      }
-      if (this.enemyChampion.isAlive && Math.hypot(this.enemyChampion.x - relic.x, (this.enemyChampion.z - relic.z) * 150) <= 42) {
-        relics.splice(i, 1);
-        // The champion learns the rune (its deck) and gets 3 casts from it.
-        const E = this.enemyChampion; E.setDeck([...(E.deckIds ?? []), relic.rune.id]); E.arenaCasts = (E.arenaCasts ?? 0) + 3;
-        this.showAnnouncement(`GEGNER HOLT ${relic.rune.name} (+3 ZAUBER)`, 1.2);
-        E.spellCooldown = Math.min(E.spellCooldown, 0.5);
-      }
-    }
-  }
+  updateArenaRuneCollectibles(dt = 0) { updateArenaRunes(this, dt); }
 
   spawnArenaTransformationRelic() {
     const state = this.modeState;
@@ -3520,21 +3490,7 @@ export class GameWorld {
     ctx.restore();
   }
 
-  renderArenaRuneCollectibles(ctx) {
-    const relics = this.modeState?.runeCollectibles;
-    if (this.activeMode?.id !== 'arena' || !relics?.length) return;
-    const time = performance.now() * .005;
-    ctx.save();
-    ctx.textAlign = 'center';
-    for (const relic of relics) {
-      const y = groundYForDepth(relic.z) - 18 + Math.sin(time + relic.x) * 3;
-      ctx.fillStyle = relic.rune.color ?? '#8cf'; ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 14;
-      ctx.beginPath(); ctx.arc(relic.x, y, 13, 0, Math.PI * 2); ctx.fill();
-      ctx.shadowBlur = 0; ctx.fillStyle = '#07101c'; ctx.font = 'bold 14px sans-serif';
-      ctx.fillText(relic.rune.symbol ?? relic.rune.glyph ?? '✦', relic.x, y + 5);
-    }
-    ctx.restore();
-  }
+  renderArenaRuneCollectibles(ctx) { renderArenaRelics(ctx, this); }
 
   renderArenaTransformationRelic(ctx) {
     const relic = this.modeState?.transformationRelic;

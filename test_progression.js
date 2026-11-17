@@ -274,4 +274,113 @@ test('Choosing a locked class is refused by the profile', () => {
   assert.equal(profile.character.classId, 'Guardian');
 });
 
+
+// ── Arena runes (user spec 16 Nov 2026): portfolio, shared pool, three slots, one-use, ejection, KO ───────────────────
+import { ARENA_RULES, validatePortfolio, buildSpawnPool, pickFromPool, ArenaRuneSlots, makeRelic, tickRelics, relicCollectible, fitPortfolio } from './public/src/arena_runes.js';
+import { arenaRuneInfo } from './public/src/progression.js';
+
+const info = (id) => ({ ignis: { id, category: 'element', rarity: 'common' }, aqua: { id, category: 'element', rarity: 'common' }, frost: { id, category: 'element', rarity: 'common' },
+  trap: { id, category: 'multi', rarity: 'rare' }, wolf: { id, category: 'summon', rarity: 'epic' }, sphere: { id, category: 'domain', rarity: 'legendary' },
+  arcA: { id, category: 'arcane', rarity: 'legendary' }, arcB: { id, category: 'arcane', rarity: 'legendary' }, a: { id, category: 'element', rarity: 'common' }, b: { id, category: 'element', rarity: 'common' },
+  c: { id, category: 'element', rarity: 'common' }, d: { id, category: 'element', rarity: 'common' }, e: { id, category: 'element', rarity: 'common' }, f: { id, category: 'element', rarity: 'common' }, g: { id, category: 'element', rarity: 'common' } }[id] ?? null);
+
+test('Arena portfolio: costs by category, within six runes and twelve points', () => {
+  const ok = validatePortfolio(['ignis', 'aqua', 'trap', 'wolf', 'sphere'], info); // 1+1+2+3+4 = 11
+  assert.equal(ok.ok, true); assert.equal(ok.cost, 11); assert.equal(ok.count, 5);
+  assert.equal(validatePortfolio([], info).ok, true);
+});
+
+test('Arena portfolio: an over-budget selection is rejected', () => {
+  const exactly = validatePortfolio(['wolf', 'sphere', 'trap', 'ignis', 'aqua', 'frost'], info); // 3+4+2+1+1+1 = 12
+  assert.equal(exactly.ok, true); assert.equal(exactly.cost, 12);
+  const over = validatePortfolio(['sphere', 'wolf', 'trap', 'arcA'], info); // 4+3+2+5 = 14
+  assert.equal(over.ok, false); assert.deepEqual(over.reasons, ['OVER_BUDGET']);
+  const many = validatePortfolio(['a', 'b', 'c', 'd', 'e', 'f', 'g'], info); // seven cheap runes: too many, not over budget
+  assert.equal(many.ok, false); assert.deepEqual(many.reasons, ['TOO_MANY_RUNES']);
+});
+test('Arena portfolio: more than one Arcane State, duplicates and unknown runes are rejected', () => {
+  assert.ok(validatePortfolio(['arcA', 'arcB'], info).reasons.includes('TOO_MANY_ARCANE_STATES'));
+  assert.equal(validatePortfolio(['arcA'], info).ok, true);
+  assert.equal(validatePortfolio(['arcA'], info).cost, 5);
+  assert.ok(validatePortfolio(['ignis', 'ignis'], info).reasons.includes('DUPLICATE'));
+  assert.ok(validatePortfolio(['nope'], info).reasons.includes('UNKNOWN_RUNE'));
+  assert.deepEqual(fitPortfolio(['arcA', 'arcB', 'ignis'], info), ['arcA', 'ignis']);
+});
+
+test('Arena spawn pool: both portfolios contribute, a shared rune has two entries, rarity weights apply', () => {
+  const pool = buildSpawnPool([['ignis', 'wolf'], ['ignis', 'sphere']], info);
+  assert.equal(pool.length, 4);
+  assert.equal(pool.filter((e) => e.runeId === 'ignis').length, 2);
+  assert.equal(pool.find((e) => e.runeId === 'sphere').weight, ARENA_RULES.weights.legendary);
+  assert.deepEqual({ ...ARENA_RULES.weights }, { common: 1, uncommon: .7, rare: .4, epic: .22, legendary: .1 });
+  const counts = {}; let seed = 7; const rng = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  for (let i = 0; i < 6000; i++) { const e = pickFromPool(pool, rng); counts[e.runeId] = (counts[e.runeId] ?? 0) + 1; }
+  assert.ok(counts.ignis > counts.wolf * 3 && counts.wolf > counts.sphere * 1.5, JSON.stringify(counts));
+  assert.equal(pickFromPool(pool, rng, { minRarity: 'epic' }).rarity === 'common', false, 'an announced event leans on the high rarities');
+});
+
+test('Arena slots: exactly three, a full inventory never replaces silently', () => {
+  const s = new ArenaRuneSlots();
+  assert.equal(s.count, 0);
+  for (const id of ['ignis', 'aqua', 'frost']) assert.equal(s.collect(id, 'c_' + id).ok, true);
+  assert.equal(s.count, 3); assert.equal(s.full, true);
+  const r = s.collect('wolf', 'c_wolf'); assert.deepEqual([r.ok, r.reason], [false, 'full']);
+  assert.deepEqual(s.runeIds(), ['ignis', 'aqua', 'frost']);
+});
+
+test('Arena slots: holding replaces the highlighted slot (else the oldest) and returns the ejected rune', () => {
+  const s = new ArenaRuneSlots(); for (const id of ['ignis', 'aqua', 'frost']) s.collect(id, 'c_' + id);
+  assert.equal(s.holdOn(1, .2), false); assert.equal(s.holdOn(1, .1), false); assert.equal(s.holdOn(1, .1), true);
+  const a = s.replace('wolf', 'c_wolf', 'c_frost'); assert.equal(a.ejected.runeId, 'frost');
+  const b = s.replace('sphere', 'c_sphere', null); assert.equal(b.ejected.runeId, 'ignis', 'the oldest without a highlighted slot');
+  assert.deepEqual(s.runeIds().sort(), ['aqua', 'sphere', 'wolf']);
+  s.releaseHold(); assert.equal(s.holdProgress(), 0);
+});
+
+test('Arena slots: a committed cast empties its slot, a fusion every participating one', () => {
+  const s = new ArenaRuneSlots(); for (const id of ['ignis', 'aqua', 'frost']) s.collect(id, 'c_' + id);
+  assert.equal(s.consume({ cardIds: ['c_ignis'] }).length, 1); assert.equal(s.count, 2);
+  s.collect('terra', 'c_terra');
+  assert.equal(s.consume({ cardIds: ['c_aqua', 'c_frost', 'c_terra'] }).length, 3); assert.equal(s.count, 0);
+  s.collect('ignis'); s.collect('ignis'); assert.equal(s.consume({ runeIds: ['ignis'] }).length, 1); assert.equal(s.count, 1, 'by rune id one entry per id');
+});
+
+test('Arena slots: an interrupted cast keeps the rune; retain drops only cards that no longer exist', () => {
+  const s = new ArenaRuneSlots(); for (const id of ['ignis', 'aqua']) s.collect(id, 'c_' + id);
+  assert.equal(s.retain(new Set(['c_ignis', 'c_aqua'])).length, 0, 'nothing consumed, nothing lost');
+  assert.equal(s.retain(new Set(['c_aqua'])).length, 1); assert.deepEqual(s.runeIds(), ['aqua']);
+});
+
+test('Arena slots: a heavy ejects exactly one rune (selected, else the oldest) and a cooldown stops multi-hits', () => {
+  const s = new ArenaRuneSlots(); for (const id of ['ignis', 'aqua', 'frost']) s.collect(id, 'c_' + id);
+  const first = s.eject('c_aqua'); assert.equal(first.runeId, 'aqua'); assert.equal(s.count, 2);
+  assert.equal(s.eject(null), null, 'the second hit of the same heavy strips nothing');
+  s.tick(ARENA_RULES.ejectCooldown + .01);
+  assert.equal(s.eject(null).runeId, 'ignis', 'the oldest');
+  s.tick(2); assert.equal(s.eject(null).runeId, 'frost'); s.tick(2); assert.equal(s.eject(null), null, 'nothing left to eject');
+});
+
+test('Arena slots: a KO clears everything without dropping anything', () => {
+  const s = new ArenaRuneSlots(); for (const id of ['ignis', 'aqua', 'frost']) s.collect(id, 'c_' + id);
+  const gone = s.clear(); assert.equal(gone.length, 3); assert.equal(s.count, 0); assert.equal(s.collect('wolf').ok, true);
+});
+
+test('Arena relics: a new or ejected relic bounces for half a second before it can be collected', () => {
+  const r = makeRelic('ignis', 400, .5); assert.equal(relicCollectible(r), false);
+  tickRelics([r], .3); assert.equal(relicCollectible(r), false); tickRelics([r], .25); assert.equal(relicCollectible(r), true);
+});
+
+test('Arena portfolio in the profile: validated, saved and restored; owned runes only', () => {
+  const profile = new MageProfile({ rules: 'earned', runeCopies: { ignis: 1, aqua: 1, frost: 1 }, unlockedRunes: ['ignis', 'aqua', 'frost'] });
+  assert.equal(profile.setArenaPortfolio(['ignis', 'aqua']).ok, true);
+  assert.equal(profile.setArenaPortfolio(['ignis', 'terra']).ok, false, 'terra is not owned');
+  assert.deepEqual(profile.arenaPortfolio, ['ignis', 'aqua'], 'a refused portfolio changes nothing');
+  assert.deepEqual(profile.effectiveArenaPortfolio(), ['ignis', 'aqua']);
+  const back = new MageProfile(JSON.parse(JSON.stringify(profile.toJSON())));
+  assert.deepEqual(back.arenaPortfolio, ['ignis', 'aqua']);
+  const fresh = new MageProfile({ rules: 'earned', runeCopies: { ignis: 1 }, unlockedRunes: ['ignis'] });
+  assert.deepEqual(fresh.effectiveArenaPortfolio(), ['ignis'], 'without a saved portfolio the owned base elements are used');
+  assert.equal(arenaRuneInfo('ignis').rarity, 'common'); assert.equal(arenaRuneInfo('buff_A04').cost, 5); assert.equal(arenaRuneInfo('transform_x'), null);
+});
+
 console.log(`\nProgression results: ${passed} passed, ${process.exitCode ? 1 : 0} failed.`);

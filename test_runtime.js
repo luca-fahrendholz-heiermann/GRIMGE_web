@@ -715,7 +715,7 @@ assert(game.enemyChampion.isAlive && game.enemyChampion.heroKey === 'boss_firelo
 game.returnToHub();
 
 game.setMatchMode('arena'); game.startMatch();
-assert(game.activeMode.id === 'arena' && !game.battlefield.objectivesActive && game.minions.length === 0 && !game.canRespawn('blue') && game.enemyChampion.isAlive && game.modeState.runeCollectibles.length === 3 && game.player.runeHand.length === 0, 'Arena starts immediately as a melee duel with on-map Rune relics rather than a Rune-choice modal');
+assert(game.activeMode.id === 'arena' && !game.battlefield.objectivesActive && game.minions.length === 0 && !game.canRespawn('blue') && game.enemyChampion.isAlive && game.modeState.runeCollectibles.length === 0 && game.player.runeHand.length === 0 && game.player.arenaInv.count === 0 && game.enemyChampion.arenaInv.count === 0 && game.modeState.arena.pool.length > 0, 'Arena starts immediately as a melee duel: both fighters have empty slots, runes come from crates and events (no relics lying around, no Rune-choice modal)');
 const arenaPlatform = game.battlefield.surfaces.find((surface) => surface.id === 'arenaCenterPlatform');
 game.player.x = (arenaPlatform.xMin + arenaPlatform.xMax) * .5; game.player.z = (arenaPlatform.zMin + arenaPlatform.zMax) * .5; game.player.elevation = 0; game.player.vElevation = 0; game.player.grounded = true; game.player.surfaceId = 'mainArena'; game.player.surfaceHeight = 0;
 game.battlefield.resolveEntityCollision(game.player);
@@ -728,9 +728,65 @@ const arenaRift = game.modeState.rift; game.modeState.rift = null;
 game.player.hp = game.player.maxHp;
 game.player.takeDamage(24, 120, 0, .2);
 assert(game.player.maxHp === 320 && game.player.hp === 296 && game.player.invulnerableTimer >= .18, 'Player durability supports brawler scrums with 320 HP and brief post-hit protection');
-game.player.x = game.modeState.runeCollectibles[0].x; game.player.z = game.modeState.runeCollectibles[0].z;
-game.updateArenaRuneCollectibles();
-assert(game.player.runeHand.length === 1 && game.modeState.runeCollectibles.length === 2, 'Walking onto an Arena relic adds that Rune to the temporary Arena hand');
+{ const A = await import('./public/src/arena_play.js'); game.modeState.runeCollectibles.length = 0; const relic = A.spawnRelic(game, 'ignis', game.player.x, game.player.z);
+  game.updateArenaRuneCollectibles(0.01);
+  assert(game.modeState.runeCollectibles.length === 1 && game.player.arenaInv.count === 0, 'A new relic bounces for half a second before it can be collected');
+  relic.lock = 0; game.updateArenaRuneCollectibles(0.01);
+  assert(game.player.runeHand.length === 1 && game.modeState.runeCollectibles.length === 0 && game.player.arenaInv.count === 1, 'Walking onto an Arena relic adds that Rune to a free slot and the temporary Arena hand'); }
+{
+  // Arena rune loop (user spec 16 Nov 2026): shared pool, three slots, one-use, heavy ejection, KO, same rules for player and AI.
+  const A = await import('./public/src/arena_play.js'); const AR = await import('./public/src/arena_runes.js'); const E = game.enemyChampion; const P = game.player; const st = game.modeState;
+  const reset = () => { st.runeCollectibles.length = 0; A.arenaClearSlots(game, P); A.arenaClearSlots(game, E); P.arenaInv.ejectLock = 0; E.arenaInv.ejectLock = 0; P.arenaInv.releaseHold(); E.arenaInv.releaseHold(); };
+  const give = (f, ids) => { reset(); for (const id of ids) { const r = A.spawnRelic(game, id, f.x, f.z); r.lock = 0; game.updateArenaRuneCollectibles(0.01); } };
+  // pool: both portfolios
+  const ids = new Set(st.arena.pool.map((e) => e.runeId)); const ownPick = st.arena.portfolios[0]; const aiPick = st.arena.portfolios[1];
+  assert(st.arena.pool.length >= ownPick.length + aiPick.length - 4 && ownPick.every((id) => ids.has(id)) && aiPick.some((id) => ids.has(id)) && AR.ARENA_RULES.slots === 3, 'The Arena spawn pool is built from the player\'s and the champion\'s portfolios');
+  // both fighters can collect any rune, up to exactly three
+  give(P, ['ignis', 'aqua', 'frost']); const pThree = P.arenaInv.count === 3 && P.runeHand.length === 3;
+  const fourth = A.spawnRelic(game, 'terra', P.x, P.z); fourth.lock = 0; game.updateArenaRuneCollectibles(0.01); const noSilentReplace = P.arenaInv.count === 3 && st.runeCollectibles.length === 1 && P.arenaInv.runeIds().join() === 'ignis,aqua,frost';
+  give(E, ['terra', 'fulgur']); const eTwo = E.arenaInv.count === 2 && E.deckIds.join() === 'terra,fulgur';
+  assert(pThree && noSilentReplace && eTwo, 'Player and champion collect runes into exactly three slots each; a full inventory never replaces silently');
+  // holding on a relic replaces the highlighted slot; the replaced rune lands neutrally
+  give(P, ['ignis', 'aqua', 'frost']); const rep1 = A.spawnRelic(game, 'terra', P.x, P.z); rep1.lock = 0; for (let i = 0; i < 12; i++) game.updateArenaRuneCollectibles(0.05);
+  const replaced = P.arenaInv.runeIds().includes('terra') && P.arenaInv.count === 3 && st.runeCollectibles.some((r) => r.lock > 0 && ['ignis', 'aqua', 'frost'].includes(r.runeId));
+  assert(replaced, 'Holding the pickup for 0.35 s replaces a slot; the replaced rune becomes a neutral relic with its own bounce lock');
+  // a committed cast empties its slot, an interrupted one does not, a fusion empties all participants
+  give(P, ['ignis', 'aqua']);
+  const cardA = P.runeHand.find((c) => c.id === 'ignis'); const addedA = P.playRuneCard('ignis', cardA.cardId); P.runeDeck = P.runeDeck.filter((c) => c.cardId !== addedA.cardId); P.runeHand = P.runeHand.filter((c) => c.cardId !== addedA.cardId);
+  game.slotRuneSpell({ ...addedA, grade: 'B', quality: .8, manaCost: 0 });
+  game.updateArenaRuneCollectibles(0.01); const keptWhileSlotted = P.arenaInv.count === 2;
+  game.player.mp = game.player.maxMp; game.player.focus = game.player.focus ?? 0;
+  game.castSpellSlot(P.slottedSpells[0], true); game.updateArenaRuneCollectibles(0.01);
+  const spent = P.arenaInv.count === 1 && !P.arenaInv.runeIds().includes('ignis') && P.slottedSpells.length === 0;
+  assert(keptWhileSlotted && spent, 'A prepared rune keeps its slot until the cast commits; the committed cast empties exactly that slot');
+  give(P, ['terra', 'ventus']); const cA = P.runeHand.find((c) => c.id === 'terra'); const cB = P.runeHand.find((c) => c.id === 'ventus');
+  for (const c of [cA, cB]) { const added = P.playRuneCard(c.id, c.cardId); P.runeDeck = P.runeDeck.filter((q) => q.cardId !== added.cardId); P.runeHand = P.runeHand.filter((q) => q.cardId !== added.cardId); game.slotRuneSpell({ ...added, grade: 'B', quality: .8, manaCost: 0 }); }
+  const fused = game.fuseSlots([0, 1]); const comboOk = fused.ok && P.arenaInv.count === 2;
+  game.castSpellSlot(P.slottedSpells[0], true); game.updateArenaRuneCollectibles(0.01);
+  assert(comboOk && P.arenaInv.count === 0, 'A fusion keeps every participating rune until it is cast, then one cast empties all of them');
+  // heavy ejection: exactly one rune, neutral relic; light hits, DoT and spells never eject
+  give(P, ['ignis', 'aqua', 'frost']); const before = st.runeCollectibles.length;
+  const ejected = A.arenaEjectRune(game, P, E); const again = A.arenaEjectRune(game, P, E);
+  const one = ejected && !again && P.arenaInv.count === 2 && st.runeCollectibles.length === before + 1 && st.runeCollectibles.at(-1).lock > 0 && P.runeHand.length === 2;
+  P.arenaInv.ejectLock = 0; const hp0 = P.hp; P.takeDamage(10, 0, 0, .1, false, 'spell'); P.takeHazardDamage?.(3); const noLight = P.arenaInv.count === 2;
+  assert(one && noLight, 'A qualifying heavy ejects exactly one rune as a neutral relic (the second hit of the same heavy strips nothing); spells and damage over time do not eject');
+  // the real heavy path: a fully charged heavy in melee range knocks a rune out of the champion; a quick strike does not
+  give(E, ['ignis', 'aqua']); P.x = 400; P.z = .5; P.elevation = 0; P.vElevation = 0; P.grounded = true; P.surfaceId = 'mainArena'; P.surfaceHeight = 0; E.x = 440; E.z = .5; E.elevation = 0; E.surfaceHeight = 0; P.facing = 1; P.state = 'idle'; P.stateTimer = 0; P.canAttack = true; E.hp = E.maxHp; E.invulnerableTimer = 0; E.arenaInv.ejectLock = 0;
+  P.triggerMeleeHitbox(20, 100, 0, .3, false, {}); const lightKeeps = E.arenaInv.count === 2;
+  E.invulnerableTimer = 0; P.triggerMeleeHitbox(40, 200, 0, .5, true, { ejectsRune: true }); const heavyEjects = E.arenaInv.count === 1 && E.deckIds.length === 1;
+  assert(lightKeeps && heavyEjects, 'A light strike leaves the champion\'s runes alone; a heavy that connects knocks one out (same rule as against the player)');
+  // KO clears everything without a drop and the opponent keeps theirs
+  give(P, ['ignis', 'aqua']); E.arenaInv.clear(); E.arenaInv.collect('terra'); E.setDeck(['terra']); const relicsBefore = st.runeCollectibles.length;
+  const R = await import('./public/src/arena_rift.js'); st.rift = arenaRift; st.rift.spawns.set(P, { x: 355, z: .58 }); P.soulSparks = 3; P.x = 512; P.z = .5; P.elevation = 0; P.surfaceHeight = 0;
+  { const pit = R.RIFT.pit; P.x = (pit.x0 + pit.x1) / 2; P.z = (pit.z0 + pit.z1) / 2; P.state = 'hurt'; P.kbVelX = 300; R.updateRift(game, .016); }
+  st.rift = null;
+  assert(P.soulSparks === 2 && P.arenaInv.count === 0 && P.runeHand.length === 0 && st.runeCollectibles.length === relicsBefore && E.arenaInv.count === 1, 'A KO (lost soul spark) clears all of the fighter\'s runes with no drop and no gift to the winner; the opponent keeps their own');
+  // symmetric: the AI spends exactly the runes of its cast
+  give(E, ['ignis', 'aqua', 'terra']); E.spendArenaCast(['ignis']); const spendOne = E.arenaInv.count === 2 && !E.deckIds.includes('ignis');
+  E.spendArenaCast(['aqua', 'terra']); const spendFusion = E.arenaInv.count === 0 && !E.arenaCastAllowed();
+  assert(spendOne && spendFusion, 'The champion casts only what it carries and each cast spends exactly the runes it used (same one-use rule as the player)');
+  reset(); P.soulSparks = 3; E.soulSparks = 3;
+}
 game.modeState.transformationRelicTimer = 0;
 game.updateArenaTransformationRelic(0.01);
 assert(game.modeState.transformationRelic, 'Arena spawns a contested transformation relic instead of granting a permanent form from the profile');
@@ -742,6 +798,9 @@ game.enemyChampion.hp = 1; game.enemyChampion.takeDamage(2); game.enemyChampion.
 assert(game.matchState === 'Ending' && game.winnerTeam === 'blue', 'Arena Champion defeat resolves through the normal ending path (life-bar rules)');
 void arenaRift;
 game.returnToHub();
+
+// The other modes keep their own rune rules: Siege and Invasion load the profile Grimoire, no Arena inventory (user spec 16 Nov 2026).
+for (const id of ['siege', 'invasion']) { game.setMatchMode(id); game.startMatch(); assert(game.activeMode.id === id && !game.modeState.arena && !game.player.arenaInv && !game.enemyChampion.arenaInv && game.player.runeHand.length > 0 && game.player.runeDeck.length + game.player.runeHand.length >= game.profile.matchDeck.length - 1, id + ' still loads the profile Grimoire and has no Arena rune inventory'); game.returnToHub(); }
 
 game.setMatchMode('training'); game.startMatch();
 assert(game.activeMode.id === 'training' && !game.battlefield.objectivesActive && game.canRespawn('blue') && game.getObjectiveStatus() === 'PRACTICE — NO REWARDS', 'Training keeps combat live without Siege objectives or permanent defeat');

@@ -1167,7 +1167,7 @@ export class Player extends GroundEntity {
     const radius = 58 + chargeRatio * 20;
     combat.spawnSlashArc(this.x + this.facing * 28, this.y - 25, this.facing, { radius, angleStart: -0.9, angleEnd: 0.9, color: chargeRatio > 0.5 ? '#ff6d00' : '#ffd54f', glow: '#ff3d00', width: 7 + chargeRatio * 5 });
     if (chargeRatio > 0.6) combat.spawnShockwave(this.x + this.facing * 30, this.y - 25, 35, '#ffab00');
-    this.triggerMeleeHitbox(heavy.damage * dmgMult, this.facing * heavy.knockback * kbMult, heavy.lift * (1 + chargeRatio * 0.4), 0.48 + chargeRatio * 0.2, chargeRatio > 0.7, { guardBreak: 30 + chargeRatio * 70, hitstopTicks: Math.round(4 + chargeRatio * 4), hitReaction: chargeRatio > 0.7 ? 'finisher' : 'strong', isCharged: true, chargeRatio });
+    this.triggerMeleeHitbox(heavy.damage * dmgMult, this.facing * heavy.knockback * kbMult, heavy.lift * (1 + chargeRatio * 0.4), 0.48 + chargeRatio * 0.2, chargeRatio > 0.7, { ejectsRune: chargeRatio >= .95, guardBreak: 30 + chargeRatio * 70, hitstopTicks: Math.round(4 + chargeRatio * 4), hitReaction: chargeRatio > 0.7 ? 'finisher' : 'strong', isCharged: true, chargeRatio });
     return true;
   }
 
@@ -1510,7 +1510,7 @@ export class Player extends GroundEntity {
       if (heavy.shot) { for (const shot of makeWeaponShots(this, heavy.shot, this.weapon ?? this.classWeapon)) spells.addSpell(shot, 'B'); return true; }
       audio.playSlash(0.78);
       if (!weapon) combat.spawnSlashArc(this.x + this.facing * 28, this.y - 25, this.facing, { radius: 58, angleStart: -0.9, angleEnd: 0.9, color: '#ffd54f', glow: '#ff6d00', width: 7 });
-      this.triggerMeleeHitbox(heavy.damage, this.facing * heavy.knockback, heavy.lift, 0.48, true, { hitstopTicks: heavy.hitstopTicks, hitReaction: heavy.hitReaction, reach: heavy.reach, freeze: heavy.freeze });
+      this.triggerMeleeHitbox(heavy.damage, this.facing * heavy.knockback, heavy.lift, 0.48, true, { ejectsRune: true, hitstopTicks: heavy.hitstopTicks, hitReaction: heavy.hitReaction, reach: heavy.reach, freeze: heavy.freeze });
       return true;
     }
     // Air magnet: in the air, a launched foe close by pulls the swing to its height (no crossing past).
@@ -1879,7 +1879,10 @@ export class Player extends GroundEntity {
         // Hitstun decay (user, 23 Oct 2026: endless attack spam must be escapable): every further hit of
         // the same attacker within a second stuns shorter; from the 7th hit on the foe breaks free once.
         const stunNow = comboStunFor(this, target, stunDuration, isFinisher);
+        const guardBreakBefore = target.guardBreakTimer ?? 0;
         const outcome = target.takeDamage(targetDmg, kx, lift, stunNow, isFinisher, 'melee');
+        /* Arena: a heavy, a heavy counter or a guard break may knock out ONE carried rune (arena_play.js). */
+        if (target.arenaInv && !outcome?.ignored && !outcome?.intercepted && (hitMeta.ejectsRune ? !outcome?.blocked : (target.guardBreakTimer ?? 0) > 0 && guardBreakBefore <= 0)) window.gameWorld?.arenaEjectRune?.(target, this);
         { if (lift >= 250) target.launchFloatT = 1.3; else if (!this.grounded && (target.elevation ?? 0) > 0) { target.launchFloatT = Math.max(target.launchFloatT ?? 0, .45); target.vElevation = Math.max(target.vElevation ?? 0, 60); } }
         if (!outcome?.ignored) onWeaponMeleeHit(this, target, targetDmg, spells);
         sigHits.push({ target, damage: outcome?.ignored || outcome?.intercepted ? 0 : targetDmg, blocked: !!outcome?.blocked || (!!target.isGuarding && Math.sign(-kx) === (target.facing || 0)) });
@@ -2892,6 +2895,7 @@ export class EnemyChampion extends GroundEntity {
     this.specialCooldown = Math.max(0, (this.specialCooldown ?? 0) - dt); updateAIRecast(this, dt, gameWorld);
     this.attackCooldown -= dt; this.spellCooldown -= dt; this.defensiveCooldown -= dt; this.beamCooldown -= dt; this.mp = Math.min(this.maxMp, this.mp + dt * AI_MANA_REGEN * (this.manaRegenMult ?? 1)); this.arcaneShieldTimer = Math.max(0, this.arcaneShieldTimer - dt); if (this.arcaneShieldTimer <= 0) this.arcaneShield = 0; this.freezeTimer = Math.max(0, this.freezeTimer - dt); this.slowTimer = Math.max(0, this.slowTimer - dt); if (!this.slowTimer) this.slowFactor = 1;
     if (this.stateTimer > 0) { this.stateTimer -= dt; if (this.stateTimer <= 0) this.state = this.grounded ? 'idle' : 'fall'; }
+    if (this.aiHeavy) { this.aiHeavy.t -= dt; if (this.aiHeavy.t <= 0) { const heavyTarget = this.aiHeavy.target; this.aiHeavy = null; this.landAIHeavy(heavyTarget, gameWorld); } }
     // Deceived (S74 Trugbild): the AI Wizard goes for an illusion double instead of the real one.
     this.deceiveTimer = Math.max(0, (this.deceiveTimer ?? 0) - dt);
     const decoy = this.deceiveTimer > 0 && this.deceivedBy?.isAlive ? this.deceivedBy : null;
@@ -2999,9 +3003,11 @@ export class EnemyChampion extends GroundEntity {
   // (beam answers after the reaction time). onCast runs with the finished cast.
   tryAICast(id, gameWorld, manaCost, cooldown, { instant = false, onCast = null } = {}) {
     if (this.spellCooldown > 0 || this.aiDraw || this.mp < manaCost || !this.arenaCastAllowed()) return false;
+    /* Arena: only a spell the champion's carried runes make (no free beam or shield out of nothing). */
+    if (this.arenaInv && !this.deckSpells?.some((o) => o.def.id === id)) return false;
     const fire = (grade) => {
       if (this.mp < manaCost || !this.arenaCastAllowed()) return;
-      this.mp -= manaCost; this.spellCooldown = cooldown; this.spendArenaCast();
+      this.mp -= manaCost; this.spellCooldown = cooldown; this.spendArenaCast(null, id);
       if (this.seen && !instant) this.facing = Math.sign(this.seen.x - this.x) || this.facing;
       spells.cast(this, { id, tier: ['stone_wall', 'arcane_aegis', 'inferno_beam', 'glacial_ray', 'thunder_lance', 'null_ray'].includes(id) ? 2 : 1 }, gameWorld, grade);
       onCast?.();
@@ -3021,8 +3027,13 @@ export class EnemyChampion extends GroundEntity {
   }
   // Pick a spell from the deck that suits the moment and give it a target.
   // Arena: the champion may only cast what it collected (relics give 3 casts each).
-  arenaCastAllowed() { return this.arenaCasts === undefined || this.arenaCasts > 0; }
-  spendArenaCast() { if (this.arenaCasts !== undefined) this.arenaCasts = Math.max(0, this.arenaCasts - 1); }
+  // Arena (arena_runes.js): the champion casts only what it carries; a cast empties the slots of the runes it used.
+  arenaCastAllowed() { return !this.arenaInv || this.arenaInv.count > 0; }
+  spendArenaCast(runes = null, defId = null) {
+    const inv = this.arenaInv; if (!inv) return;
+    const ids = runes ?? this.deckSpells?.find((o) => o.def.id === defId)?.runes ?? [inv.entries[0]?.runeId].filter(Boolean);
+    inv.consume({ runeIds: ids }); this.setDeck(inv.runeIds());
+  }
   // A hostile wall within reach that stands between this fighter and its target (or closes it in).
   blockingWallToward(target) {
     if (!target) return null;
@@ -3051,7 +3062,7 @@ export class EnemyChampion extends GroundEntity {
       const target = def.targetingMode === 'ground' ? aimPoint(this, gameWorld) ?? { x: seen.x, z: seen.z }
         : def.targetingMode === 'placement' ? { x: this.x + this.facing * 80, z: this.z }
         : def.targetingMode === 'ally' ? { entity: this } : null;
-      this.mp -= cost; this.spellCooldown = 1.2 + Math.random() * .8; this.spendArenaCast();
+      this.mp -= cost; this.spellCooldown = 1.2 + Math.random() * .8; this.spendArenaCast(runes);
       spells.cast(this, def, gameWorld, grade, target);
     };
     return beginAIDraw(this, gameWorld, { runes, run: fire });
@@ -3101,7 +3112,24 @@ export class EnemyChampion extends GroundEntity {
     if (objectiveThreat && distance < 230 && this.mp >= 22 && this.spellCooldown <= 0) return this.tryAICast('stone_wall', gameWorld, 22, 5.0);
     return false;
   }
-  executeAIAttack(target) { this.attackCooldown = 1.1; this.state = 'attack1'; this.stateTimer = .28; audio.playSlash(1.1); combat.spawnSlashArc(this.x + this.facing * 20, this.y - 28, this.facing, { radius: 42, color: '#f44336', glow: '#b71c1c' }); if (!(isUpperCastleBattlement(this) && isUpperCastleBattlement(target)) && Math.abs(target.z - this.z) <= .22 && Math.abs((target.worldHeight ?? 0) - this.worldHeight) <= 70) target.takeDamage(24, this.facing * 240, 100, .3); }
+  // Arena: now and then a slow, telegraphed heavy — the same rule as the player's heavy: it can knock ONE carried rune out.
+  executeAIAttack(target) {
+    const gw = window.gameWorld;
+    if (gw?.activeMode?.id === 'arena' && target?.arenaInv?.count && !this.aiHeavy && Math.random() < .3) {
+      this.attackCooldown = 1.8; this.state = 'attack1'; this.stateTimer = .62; this.aiHeavy = { t: .5, target }; audio.playSlash(.7);
+      combat.spawnShockwave?.(this.x + this.facing * 20, this.y - 28, 28, '#ff9800');
+      return;
+    }
+    this.executeAIPlainAttack(target);
+  }
+  landAIHeavy(target, gw) {
+    if (!target?.isAlive || Math.abs(target.x - this.x) > 100 || Math.abs(target.z - this.z) > .22) return;
+    audio.playSlash(.6); combat.shakeCamera?.(5, .2);
+    combat.spawnSlashArc(this.x + this.facing * 24, this.y - 28, this.facing, { radius: 64, color: '#ff9800', glow: '#e65100', width: 9 });
+    const outcome = target.takeDamage(42, this.facing * 420, 160, .45, true);
+    if (!outcome?.blocked && !outcome?.ignored && !outcome?.intercepted) gw?.arenaEjectRune?.(target, this);
+  }
+  executeAIPlainAttack(target) { this.attackCooldown = 1.1; this.state = 'attack1'; this.stateTimer = .28; audio.playSlash(1.1); combat.spawnSlashArc(this.x + this.facing * 20, this.y - 28, this.facing, { radius: 42, color: '#f44336', glow: '#b71c1c' }); if (!(isUpperCastleBattlement(this) && isUpperCastleBattlement(target)) && Math.abs(target.z - this.z) <= .22 && Math.abs((target.worldHeight ?? 0) - this.worldHeight) <= 70) target.takeDamage(24, this.facing * 240, 100, .3); }
   takeDamage(amount, kx = 0, lift = 0, stun = .35, isCrit = false, hitKind = 'melee') { if (!this.isAlive) return; if (this.arcaneShield > 0) { const absorbed = Math.min(amount, this.arcaneShield); this.arcaneShield -= absorbed; amount -= absorbed; if (amount <= 0) { combat.spawnElementalParticles(this.x, this.y - 35, 'fulgur', 5); return; } } const rift = riftAbsorb(this, amount); if (rift?.ignored) return; if (rift) { kx *= rift.mult; lift *= rift.mult; } this.passiveIdle = 0; if (this.aiDraw && amount >= 6) cancelAIDraw(this); this.hp = Math.max(this.passive ? 1 : 0, this.hp - (rift ? 0 : amount)); if (this.hp > 0) onStatusHit(this, amount, hitKind); this.hitFlash = .15; this.kbVelX = kx; this.vx = 0; this.vElevation = lift; this.state = 'hurt'; this.stateTimer = stun; combat.spawnDamageText(this.x, this.y - 45, amount, { isCrit, color: '#ff7043' }); if (!this.hp) { window.gameWorld?.recordWizardDeath?.(this.team); this.lifeState = 'Dying'; this.state = 'dead'; this.stateTimer = .45; combat.spawnShockwave(this.x, this.y - 30, 80, '#ff5252'); } }
   takeHazardDamage(amount) {
     if (!this.isAlive || !(amount > 0)) return;

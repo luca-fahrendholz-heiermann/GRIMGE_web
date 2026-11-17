@@ -2,6 +2,31 @@
 
 Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
+## 16. Nov 2026 – Spezifikation „Fortschritt, Modi, Arena-Runen, Einschlag-Zauber“: Klassen und Arena (Vorgabe des Nutzers)
+
+- **Klassen:** Fünf Startklassen (Guardian, Berserker, Bladedancer, Ranger, Arcanist); die anderen 13 nach Profilstufe
+  (Lancer 2, Monk 3, Ronin 4, Shadow 5, Reaper 7, Runeblade 8, Oracle 9, Occultist 10, Resonant 12, Spiritbound 14,
+  Beastborn 16, Trickster 18, Fateweaver 20) oder früh über Boss-, Secret- und Missionsbelohnungen (Mission 3 öffnet den
+  Occultist). Das Profil speichert die frühen Freischaltungen; alte Spielstände behalten ihre gewählte Klasse. Gesperrte
+  Klassen zeigen ihre Bedingung und sind nicht wählbar; der Test-Schalter im Runen-Tresor öffnet alle.
+- **Arena-Runen nach neuen Regeln** (`arena_runes.js` rein, `arena_play.js` im Spiel):
+  - Portfolio je Spieler: höchstens 6 verschiedene Runen und 12 Punkte (Element 1, taktisch/Falle 2, Spezial/Beschwörung 3,
+    Sphäre 4, Arcane State 5; höchstens ein Arcane State). Auswahlbildschirm „ARENA-PORTFOLIO“ im Deck-Fenster, im Profil gespeichert.
+  - Beide Portfolios bilden einen gemeinsamen Spawn-Pool; wählen beide dieselbe Rune, hat sie zwei Einträge. Gewichte nach
+    Seltenheit (1,0 / 0,7 / 0,4 / 0,22 / 0,1).
+  - Runen erscheinen aus zerstörten Kisten und Fässern und aus angekündigten Ereignissen in der Mitte (bevorzugt seltene
+    Runen); bei zu langer Flaute kommt ein Ereignis früher. Beide Kämpfer können jede Rune aufnehmen.
+  - Drei Slots je Kämpfer, beide starten leer. Bei vollen Slots ersetzt 0,35 s Stehen auf dem Relikt den markierten Slot
+    (sonst den ältesten); die ersetzte Rune landet neutral. Neue und herausgeschlagene Relikte springen 0,5 s.
+  - Einmalverwendung: ein bestätigter Zauber leert seinen Slot, eine Fusion alle beteiligten Runen; ein unterbrochener
+    Zauber behält die Rune.
+  - Voll geladener Heavy, Heavy-Konter und Guard Break schlagen höchstens eine Rune heraus (nie Leichte Treffer, DoT, Zauber);
+    Sperre gegen Mehrfachtreffer. Der Gegner hat dafür einen angekündigten Heavy bekommen.
+  - KO (verlorener Seelenfunke) leert alle Slots ohne Drop und ohne Geschenk an den Gegner.
+  - Spieler und KI nutzen dieselben Regeln: kein Kartenbonus für den Spieler und keine drei Anwendungen für den Gegner mehr;
+    die KI wirkt nur, was sie trägt, und verbraucht genau die Runen ihres Zaubers.
+  - Zu Beginn liegen keine Relikte mehr herum.
+
 ## 14. Nov 2026 – Kampagne: viel längere Runden (Vorgabe des Nutzers)
 
 - **Mission 1 (Dungeon):** drei Hallen statt einer – Treppenhalle, Halle mit Gefangenem, Elite-Halle.
