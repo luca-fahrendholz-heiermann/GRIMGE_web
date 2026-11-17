@@ -5416,6 +5416,49 @@ game.running = false;
   { CB.resetEffects(); CB.shakeCamera(12, .3, 1); const dir = CB.camera.shakeDir; CB.shakeCamera(4, .2); const plain = CB.camera.shakeDir; CB.resetEffects(); assert(dir === 1 && plain === 0 && CB.camera.shakeDir === 0, 'The camera supports a directional shake (the Bankai impact kicks the way the caster faces)'); }
   buffMod.endBuffForm(P); P.lastElementCast = null; spells.clearRuntime();
 }
+// Optional dungeon branches (user spec 16 Nov 2026): data-driven secret rooms with a different variant per attempt; a
+// rescued teammate belongs to the current attempt only; the normal rooms and the boss stay as they are.
+{
+  const DS = await import('./public/src/dungeon_secrets.js'); const { environment: ENV } = await import('./public/src/environment.js');
+  const fresh = () => { game.returnToHub(); game.setMatchMode('dungeon'); game.startMatch(); game.spawnDungeonStage(1); game.minions = game.minions.filter((m) => m.team !== 'red'); };
+  fresh(); const P = game.player;
+  const floor = ENV.props.find((o) => o.kind === 'cracked_floor' && o.link === 'ember_vault');
+  assert(floor && DS.DUNGEON_BRANCHES.length >= 1 && DS.DUNGEON_BRANCHES.every((b) => DS.SECRET_ROOMS[b.id]) && DS.SECRET_ROOMS.ember_vault.variants.length === 2 && game.modeState.stage === 1, 'Room 1 hides an optional branch (a cracked floor) that links to the GLUTKAMMER; branches are data');
+  const variants = new Set(); for (const seed of [0, 1, 2, 3]) { game.modeState.secretSeed = seed; variants.add(DS.secretVariant(game, 'ember_vault')); }
+  // variant 1: a boss waits
+  const enterWith = (variant) => { fresh(); for (const seed of [0, 1]) { game.modeState.secretSeed = seed; if (DS.secretVariant(game, 'ember_vault') === variant) break; } DS.enterSecret(game, 'ember_vault', ENV.props.find((o) => o.link === 'ember_vault')); return game.modeState.secret; };
+  const b = enterWith('brute'); const boss = b?.content?.boss; const noExitYet = !b.exitOpen;
+  boss.hp = 0; boss.isDead = true; DS.updateDungeonSecret(game);
+  const bruteOk = b.id === 'ember_vault' && boss instanceof DS.VaultBrute && boss.isSecretBoss && noExitYet && b.bossDefeated && b.exitOpen && ENV.props.some((o) => o.kind === 'chest') && game.battlefield.boundsOverride.left === DS.secretBounds('ember_vault').left;
+  // variant 2: no fight — a prisoner (teammate for this attempt) and a chest at once
+  DS.leaveSecret(game); const c = enterWith('cache'); const cacheNoBoss = c.variant === 'cache' && !c.content.boss && c.bossDefeated && c.exitOpen && ENV.props.some((o) => o.kind === 'chest') && !!game.modeState.rescue;
+  game.player.x = game.modeState.rescue.x; game.player.z = game.modeState.rescue.z; DS.updateDungeonSecret(game); /* a fresh() restarts the match: the player object is a new one */
+  const mate = game.minions.find((m) => m.isRescuedCompanion && m.team === 'blue'); const freed = !!mate && game.modeState.rescued === 1;
+  DS.leaveSecret(game); const backOut = !game.modeState.secret && game.modeState.rescue == null;
+  assert(variants.size === 2 && bruteOk && cacheNoBoss && freed && backOut, 'The GLUTKAMMER brings a boss in one attempt and a prisoner with a chest in another; the freed companion joins; leaving restores the room (' + [variants.size, bruteOk, cacheNoBoss, freed, backOut].join('/') + ')');
+  // a new run starts without the teammate and with a new seed; the Dungeon still starts at level zero with two choices
+  game.returnToHub(); game.setMatchMode('dungeon'); game.startMatch();
+  assert(game.modeState.rescued === 0 && !game.minions.some((m) => m.isRescuedCompanion) && game.modeState.secretSeed == null && game.modeState.run.level === 0 && game.modeState.run.deck.length === 0 && game.modeState.secret == null, 'A new Dungeon run starts at level 0 without a deck, without the last attempt teammate and with a new secret seed');
+  game.returnToHub();
+}
+// No permadeath (user spec 16 Nov 2026): a defeat restarts the level; the character, classes, runes and masteries stay; the
+// mission is not marked done and can be tried again — and a won mission stays replayable for grinding.
+{
+  const CP = await import('./public/src/campaign.js'); const saved = game.profile.campaign; game.profile.campaign = { done: [], stars: {}, starClaims: 0 };
+  game.profile.unlockClass('Occultist'); const keep = JSON.stringify({ ch: game.profile.character, cls: [...game.profile.unlockedClasses], runes: [...game.profile.unlockedRunes], level: game.profile.level, masteries: [...game.profile.masteries] });
+  game.returnToHub(); CP.beginRun(game, 'c1m1'); game.setMatchMode('dungeon'); game.startMatch();
+  game.finishMode('red', 'DEFEAT — TEST'); game.completeResults();
+  const lost = game.campaignRun?.result === 'lost' && !game.profile.campaign.done.includes('c1m1');
+  const after = JSON.stringify({ ch: game.profile.character, cls: [...game.profile.unlockedClasses], runes: [...game.profile.unlockedRunes], level: game.profile.level, masteries: [...game.profile.masteries] });
+  // try again: the level restarts from its start with a clean state
+  game.returnToHub(); CP.beginRun(game, 'c1m1'); game.setMatchMode('dungeon'); game.startMatch();
+  const restarted = game.campaignRun.result === null && game.matchState === 'Running' && game.modeState.run.level === 0 && game.modeState.stage === 0 && !game.modeState.secret;
+  // win it, then play it again for resources
+  game.spawnDungeonStage(3); game.minions = game.minions.filter((m) => m.team !== 'red'); game.modeState.dungeonRoom.encounters.forEach((e) => { e.spawned = true; }); game.updateDungeonRoom(); game.completeResults();
+  const won = game.profile.campaign.done.includes('c1m1'); game.returnToHub(); CP.beginRun(game, 'c1m1'); const again = !!CP.beginRun(game, 'c1m1') && game.campaignRun.result === null;
+  assert(lost && keep === after && restarted && won && again, 'A defeat is no permadeath: the character, classes, runes and masteries stay, the mission is not done and restarts clean, and a won mission can be replayed (' + [lost, keep === after, restarted, won, again].join('/') + ')');
+  game.campaignRun = null; game.profile.campaign = saved; game.returnToHub();
+}
 {
   // Guard against code swallowed by a mid-line comment ("x = 1; // note y = 2;" — happened twice, 6 + 10 Nov 2026).
   const fsx = await import('node:fs'); const pathx = await import('node:path');

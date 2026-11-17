@@ -61,23 +61,50 @@ export const SECRET_ROOMS = {
     reward(gw, env, left) { env.addProp('chest', left + 1000, .5, { lock: 'natura', loot: 3 }); }
   }
 };
+// DIE GLUTKAMMER (user spec 16 Nov 2026: alternative rooms through secrets, different bosses or events per attempt): a
+// second, optional branch. Which VARIANT waits behind the floor depends on the run's secret seed, so another attempt can
+// bring another boss or event. The prisoner of the 'cache' variant is a teammate for THIS attempt only (a new run starts
+// without one); what stays is knowledge and permanent unlocks.
+SECRET_ROOMS.ember_vault = {
+  name: 'GLUTKAMMER', width: 1300, tint: 'rgba(90,30,10,.34)', color: '#ff8a50', variants: ['brute', 'cache'],
+  build(gw, env, left, variant) {
+    env.addProp('lantern', left + 250, .2); env.addProp('barrel', left + 560, .86); env.addProp('crate', left + 700, .2);
+    if (variant === 'brute') { const boss = new VaultBrute(left + 900, .55); gw.battlefield.placeOnSurface(boss); gw.minions.push(boss); return { variant, boss }; }
+    // The cache: a prisoner to free (a companion until it falls) and a chest — no fight.
+    gw.modeState.rescue = { x: left + 520, z: .5, rescued: false };
+    return { variant, event: 'cache', prisoner: true };
+  },
+  reward(gw, env, left, content) { env.addProp('chest', left + 1000, .5, { lock: content?.event ? 'terra' : 'ignis', loot: content?.event ? 2 : 3 }); }
+};
 export const SECRET_IDS = Object.freeze(Object.keys(SECRET_ROOMS));
-const roomIndex = (id) => Math.max(0, SECRET_IDS.indexOf(id));
+// The optional branches of the dungeon rooms as data: which room hides which secret and how it is entered. A branch is
+// an extra on top of the three rooms and the boss — nothing in the normal path depends on it.
+export const DUNGEON_BRANCHES = Object.freeze([
+  Object.freeze({ id: 'ember_vault', stage: 1, kind: 'cracked_floor', x: 1950, z: .74, hint: 'GEHEIMNIS: ein brüchiger Boden — mit einem Sturzflug durchbrechen → Glutkammer' })
+]);
+// The variant behind a secret for this attempt.
+export function secretVariant(gw, id) {
+  const def = SECRET_ROOMS[id]; if (!def?.variants?.length) return null;
+  const state = gw?.modeState; if (state && state.secretSeed == null) state.secretSeed = Math.floor(Math.random() * 1e6);
+  return def.variants[((state?.secretSeed ?? 0) + roomIndex(id)) % def.variants.length];
+}
+function roomIndex(id) { return Math.max(0, SECRET_IDS.indexOf(id)); }
 export const secretBounds = (id) => { const left = SECRET_BASE_X + roomIndex(id) * 4000; return { left, right: left + SECRET_ROOMS[id].width }; };
 export const isInSecret = (gw) => !!gw?.modeState?.secret;
 
 export function enterSecret(gw, id, from = null) {
   const def = SECRET_ROOMS[id]; const state = gw?.modeState; if (!def || !state || state.secret) return false;
   const P = gw.player; const bounds = secretBounds(id);
-  state.secret = { id, returnX: from?.x ?? P.x, returnZ: from?.z ?? P.z, returnBounds: { ...gw.battlefield.boundsOverride }, bossDefeated: false };
+  state.secret = { id, returnX: from?.x ?? P.x, returnZ: from?.z ?? P.z, returnBounds: { ...gw.battlefield.boundsOverride }, bossDefeated: false, savedRescue: state.rescue ?? null, variant: secretVariant(gw, id) };
   Object.assign(gw.battlefield.boundsOverride, bounds);
   P.x = bounds.left + 120; P.z = .58; P.elevation = 0; P.vElevation = 0; gw.battlefield.placeOnSurface(P);
   for (const m of gw.minions) if (m.followLeader === P) { m.x = P.x - 30; m.z = P.z; gw.battlefield.placeOnSurface(m); }
   if (!state.secretsVisited) state.secretsVisited = [];
   const fresh = !state.secretsVisited.includes(id);
-  if (fresh) { state.secretsVisited.push(id); state.secret.content = def.build(gw, environment, bounds.left) ?? {}; }
+  if (fresh) { state.secretsVisited.push(id); state.secret.content = def.build(gw, environment, bounds.left, state.secret.variant) ?? {}; }
   else state.secret.bossDefeated = true;
   if (!fresh || !state.secret.content?.boss) openSecretExit(gw);
+  if (fresh && state.secret.content?.event) { state.secret.bossDefeated = true; def.reward?.(gw, environment, bounds.left, state.secret.content); } /* an event room has nothing to defeat: its reward is there at once */
   state.dungeonCameraX = gw.dungeonCameraTarget?.() ?? state.dungeonCameraX;
   combat.spawnShockwave(P.x, P.y - 40, 70, def.color); audio.playImpact?.(true);
   gw.showAnnouncement?.(`GEHEIMNIS — ${def.name}`, 2.2);
@@ -93,13 +120,16 @@ export function leaveSecret(gw) {
   Object.assign(gw.battlefield.boundsOverride, s.returnBounds);
   const P = gw.player; P.x = s.returnX; P.z = s.returnZ; P.elevation = 0; P.vElevation = 0; gw.battlefield.placeOnSurface(P);
   for (const m of gw.minions) if (m.followLeader === P) { m.x = P.x - 30; m.z = P.z; gw.battlefield.placeOnSurface(m); }
+  if (s.content?.prisoner) state.rescue = s.savedRescue ?? null; /* the secret's own prisoner stays behind, the room's own returns */
   state.secret = null; state.dungeonCameraX = gw.dungeonCameraTarget?.() ?? state.dungeonCameraX;
   gw.showAnnouncement?.('ZURÜCK IM DUNGEON', 1.4);
   return true;
 }
 // Per frame while inside a secret room: the boss falls → late rune drop, reward, way back.
 export function updateDungeonSecret(gw) {
-  const s = gw?.modeState?.secret; if (!s || s.bossDefeated) return;
+  const s = gw?.modeState?.secret; if (!s) return;
+  if (s.content?.prisoner) gw.updateDungeonRescue?.(); /* the room's own rescue update does not run inside a secret */
+  if (s.bossDefeated) return;
   const boss = s.content?.boss; if (boss && !boss.isDead && boss.hp > 0) return;
   s.bossDefeated = true; const def = SECRET_ROOMS[s.id]; const b = secretBounds(s.id);
   let text = `${def.name} BEZWUNGEN`;
@@ -107,7 +137,7 @@ export function updateDungeonSecret(gw) {
     const drop = gw.profile.rollBossDrop();
     if (drop) { text += ` · ${drop.title}`; gw.modeState.secretDrops = [...(gw.modeState.secretDrops ?? []), drop]; gw.applyProfile?.(); }
   }
-  def.reward?.(gw, environment, b.left);
+  def.reward?.(gw, environment, b.left, s.content);
   openSecretExit(gw);
   gw.showAnnouncement?.(text, 3);
 }
@@ -132,6 +162,8 @@ puzzleHooks.enterLink = (link, obj, gw, how) => {
 export const WITHERED_GROVE = Object.freeze({ stage: 2, seedX: 1650, z: .26, shrineX: 1480, barrelX: 1560,
   branches: Object.freeze([[-28, 56, 42], [28, 112, 42], [-28, 168, 42], [5, 224, 40]]) });
 export function setupDungeonSecrets(gw, stage, bounds) {
+  // Optional branches (data): a prop that links to a secret room, e.g. a cracked floor to dive through.
+  for (const b of DUNGEON_BRANCHES) if (b.stage === stage) { const prop = environment.addProp(b.kind, bounds.left + b.x, b.z, { link: b.id }); prop.devHint = b.hint; prop.isSecretKey = true; }
   if (stage !== WITHERED_GROVE.stage) return null;
   const L = bounds.left; const g = WITHERED_GROVE;
   const seed = environment.addProp('withered_seedling', L + g.seedX, g.z, { branches: g.branches.map((b) => [...b]), giant: true });
@@ -212,5 +244,20 @@ export class ThornTreant extends Minion {
     // Boss bar.
     const w = 70; px(ctx, x - w / 2 - 1, y - 150, w + 2, 6, '#000000'); px(ctx, x - w / 2, y - 149, Math.round(w * this.hp / this.maxHp), 4, '#9be36a');
     ctx.save(); ctx.font = 'bold 8px monospace'; ctx.textAlign = 'center'; ctx.fillStyle = '#dce775'; ctx.fillText(this.name, x, y - 154); ctx.restore();
+  }
+}
+
+// ── the secret boss of the vault's 'brute' variant ───────────────────────────────────────────────────────────────────
+// A heavy fire brute: slow, hard-hitting, immune to burning; water hurts it (x1.5). Dropped late runes follow the normal secret rules.
+export class VaultBrute extends Minion {
+  constructor(x, z) {
+    super(x, z, 'red', 'melee', 1);
+    Object.assign(this, { isBoss: true, isSecretBoss: true, maxHp: 560, hp: 560, speed: 62, attackRange: 62, damage: 26, attackCooldown: 1.4, radius: 26, hitRadiusX: 26, hitHeightTolerance: 150, renderHeight: 104, spriteKey: 'void_brute' });
+    this.name = 'GLUT-BRUTE';
+  }
+  takeDamage(amount, kx = 0, lift = 0, stun = 0, crit = false, kind = 'melee') {
+    const els = getStatusSource()?.statusElements ?? [];
+    const mult = els.includes('aqua') ? 1.5 : els.includes('ignis') || kind === 'fire' ? .5 : 1;
+    return super.takeDamage(amount * mult, kx * .35, lift * .2, stun * .5, crit, kind);
   }
 }

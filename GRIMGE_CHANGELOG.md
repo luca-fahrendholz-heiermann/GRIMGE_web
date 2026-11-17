@@ -2,6 +2,17 @@
 
 Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
+## 17. Nov 2026 – Dungeon-Zweige, keine Permadeath (Vorgabe des Nutzers)
+
+- **Optionale Zweige als Daten** (`DUNGEON_BRANCHES` in `dungeon_secrets.js`): Raum 1 versteckt einen brüchigen Boden (Sturzflug), der in die neue
+  **Glutkammer** führt. Welche **Variante** dahinter wartet, entscheidet ein Seed pro Lauf — ein anderer Versuch kann einen anderen Boss oder ein
+  anderes Ereignis bringen: **Glut-Brute** (Boss, Feuer ×0,5, Wasser ×1,5, Truhe + später Runenfund) oder **Kammer** (kein Kampf: ein Gefangener
+  als Begleiter für diesen Versuch und eine Truhe). Der Weg durch drei Räume und den Boss ist unverändert.
+- Gerettete Mitstreiter gelten nur für den aktuellen Versuch: ein neuer Lauf beginnt auf Stufe 0 ohne Deck, ohne Begleiter und mit neuem Seed.
+- **Keine Permadeath belegt:** Nach einer Niederlage bleiben Charakter, Klassen, Runen und Masteries; die Mission zählt nicht als erledigt, startet
+  sauber neu, und gewonnene Missionen bleiben wiederholbar.
+- Noch nicht: weitere Zweige in Raum 2 und 3, mehrere Reittiere und scripted Verbündete in den Großschlachten, Schwierigkeit älterer Level.
+
 ## 17. Nov 2026 – Bankai-Bodeneinschlag (Vorgabe des Nutzers)
 
 - Der voll geladene **Nach-unten-Zug** jedes Bankai wird zum großen Bodeneinschlag (`bankai_impact.js`); die anderen fünf Techniken bleiben.
