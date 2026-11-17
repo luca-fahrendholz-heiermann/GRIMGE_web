@@ -2,6 +2,15 @@
 
 Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
+## 17. Nov 2026 – Elementartor: Element hineinschießen (Idee des Nutzers)
+
+- Das Tor **bleibt nach dem Öffnen etwa 2,8 s offen** und zeigt „ELEMENT HINEINSCHIESSEN“. Ein Elementzauber (Feuerball, Eisgeschoss …), der hindurchfliegt, wird
+  **geschluckt**, das Tor nimmt seine Farbe an, und wenn der Begleiter dieses Elements heraustritt, **verlässt der Zauber das Tor mit ihm wieder**
+  (etwas schneller und 25 % stärker). Schießt niemand etwas hinein, öffnet sich das Tor am Ende mit dem zuletzt gewirkten Element (die KI macht immer das).
+- **Auch ein Zauber des Gegners** lädt das offene Tor: das Wesen kommt in dem Element, das hineinflog, und der Zauber wird zum Zauber des Torbesitzers und fliegt
+  auf den Gegner zurück. Strahlen, Flächen und Wände zählen nicht, nur fliegende Elementgeschosse.
+- Bekannte Einschränkung: Der Glut-Familiar benutzt noch das Bild des Geisterwolfs (blau); nur Farbe und Partikel sind feuerfarben.
+
 ## 17. Nov 2026 – Dungeon-Zweige, keine Permadeath (Vorgabe des Nutzers)
 
 - **Optionale Zweige als Daten** (`DUNGEON_BRANCHES` in `dungeon_secrets.js`): Raum 1 versteckt einen brüchigen Boden (Sturzflug), der in die neue

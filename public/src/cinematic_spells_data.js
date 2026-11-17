@@ -57,7 +57,7 @@ export const CINEMATIC_RUNE_DATA = Object.freeze([
   {
     id: 'S99', name: 'Elementartor', group: 'Z · Kinematische Zauber', systemType: 'Beschwörung', duration: 14, targeting: 'self', mana: 42,
     palette: ['#101a2e', '#3d6fb5', '#cfe7ff', '#ffffff'],
-    howTo: 'Cast it and a gateway ring materialises in front of you, glyphs circle it, a spinning plane fills it — and it opens with a pulse of light. Out comes one familiar that fits your element: wolf of spirit or storm, void spider, rune golem, beast, an ember familiar or a ward guardian. A hit on you before it opens breaks the cast.',
+    howTo: 'Cast it and a gateway ring materialises in front of you, glyphs circle it, a spinning plane fills it — and it opens with a pulse of light and waits for about three seconds: shoot an element spell through it (a fireball, an ice shot …). The gate swallows it, takes its colour and sends out the familiar of that element — and the spell leaves with it, a little stronger. An enemy spell that strays into the open gate loads it too and is thrown back at the enemy. Shoot nothing and it opens with the element you cast last: wolf of spirit or storm, void spider, rune golem, beast, an ember familiar or a ward guardian. A hit on you before it opens breaks the cast.',
     roles: 'Alle Klassen.', inspiration: 'Eigene Umsetzung der beschriebenen Tor-Kategorie.',
     identity: 'Ein schlanker Ring aus Licht mit wandernden Zeichen und einer drehenden Fläche; die Farbe folgt dem Element.',
     anim: [

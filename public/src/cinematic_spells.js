@@ -287,42 +287,75 @@ class VerdantAwakening extends StagedSpell {
 }
 
 // ── S99 ELEMENTARTOR ──────────────────────────────────────────────────────────────────────────────────────────────────
+// The gate opens and WAITS (FEED_WINDOW): an element spell shot through it — one's own, or an enemy's that strays in — is swallowed, the gate takes its colour, and
+// when the companion of that element steps out, the spell is shot out again with it (a little stronger; an enemy's spell
+// comes out as the owner's and flies back at the enemy). Nothing shot in:
+// at the end of the window the gate opens with the caster's last element (the AI always does this).
+export const GATEWAY = Object.freeze({ feedWindow: 2.8, swallow: .45, boost: 1.25, outBoost: 1.2, closing: 1.2 });
 class ElementalGateway extends StagedSpell {
   constructor(sig, owner, quality, x, z, element, system) {
-    super(sig, owner, quality, x, z, CINEMATIC.S99); this.element = element; this.group = elementGroupOf(element); this.systemRef = system;
+    super(sig, owner, quality, x, z, { ...CINEMATIC.S99, end: 99 }); this.element = element; this.group = elementGroupOf(element); this.systemRef = system;
     this.color = GATEWAY_SUMMONS[this.group].color; this.fizzled = false; this.summoned = null; this.summonId = null;
+    this.fed = null; this.fedElement = null; this.released = false; this.releasedAt = null; this.swallowAt = null; this.openAt = CINEMATIC.S99.impactAt;
   }
-  // A hit before the gate opens breaks the cast: nothing comes through.
+  get phase() { if (this.t < this.T.impactAt) return 'charge'; if (!this.released || this.t < this.releasedAt + .4) return 'impact'; return 'aftermath'; }
+  // A hit before the gate opens breaks the cast: nothing comes through. Once it is open it waits for a shot.
   onTick(dt, gw) {
-    if (this.impacted || this.fizzled) return;
-    const o = this.owner; if (!alive(o) || o.isAlive === false || o.state === 'hurt') { this.fizzled = true; this.isFinished = true; combat.spawnShockwave?.(this.x, this.y - 40, 26, this.color); }
-  }
-  onImpact(gw) {
     if (this.fizzled) return;
-    const def = gatewayDefinition(this.element, (id) => this.systemRef.summonDef(id)); if (!def) return;
-    this.summonId = def.id; this.summoned = this.systemRef.summon(this.owner, def, gw, this.quality, { x: this.x, z: this.z }) ?? null;
+    const o = this.owner;
+    if (!this.impacted) { if (!alive(o) || o.isAlive === false || o.state === 'hurt') { this.fizzled = true; this.isFinished = true; combat.spawnShockwave?.(this.x, this.y - 40, 26, this.color); } return; }
+    if (this.released) return;
+    if (!this.fed) this.swallowShot();
+    if (this.fed && this.t >= this.swallowAt + GATEWAY.swallow) this.release(gw);
+    else if (!this.fed && this.t >= this.openAt + GATEWAY.feedWindow) this.release(gw);
+  }
+  // The gate opens: a pulse of light; from here it waits for a shot (onTick).
+  onImpact() { if (this.fizzled) return; combat.spawnShockwave?.(this.x, this.y - 44, 54, this.color); audio.playRuneChime?.(740); }
+  // Looks for an element projectile at the ring (either team's); it hangs in the gate until the companion comes out.
+  swallowShot() {
+    for (const s of this.systemRef?.activeSpells ?? []) {
+      if (s === this || s.isFinished || !s.isCapturableProjectile || !Number.isFinite(s.vx) || s.timeFrozen) continue;
+      const element = (s.statusElements ?? []).find((id) => ELEMENT_GROUP[id]); if (!element) continue;
+      if (Math.abs(s.x - this.x) > 26 || Math.abs(((s.z ?? this.z) - this.z) * DEPTH) > 30) continue;
+      this.fed = s; this.fedElement = element; this.swallowAt = this.t; this.group = elementGroupOf(element); this.color = GATEWAY_SUMMONS[this.group].color;
+      s.timeFrozen = true; s.x = this.x; s.z = this.z; audio.playRuneChime?.(660); combat.spawnShockwave?.(this.x, this.y - 44, 40, this.color); return;
+    }
+  }
+  release(gw) {
+    this.released = true; this.releasedAt = this.t; this.T.impactEnd = this.t + .4; this.T.end = this.t + GATEWAY.closing;
+    const element = this.fedElement ?? this.element; this.group = elementGroupOf(element); this.color = GATEWAY_SUMMONS[this.group].color;
+    const def = gatewayDefinition(element, (id) => this.systemRef.summonDef(id));
+    if (def) { this.summonId = def.id; this.summoned = this.systemRef.summon(this.owner, def, gw, this.quality, { x: this.x, z: this.z }) ?? null; }
+    // The swallowed spell leaves with the companion: out of the gate, in the caster's direction, a little stronger and faster.
+    const s = this.fed;
+    // An enemy's spell that was swallowed is turned around: it now fights for the gate's owner and flies at the enemy.
+    if (s && !s.isFinished) { s.timeFrozen = false; s.x = this.x + this.f * 30; const turned = s.team !== this.team; if (turned) { s.team = this.team; if (this.owner) s.castBy = this.owner; } const dir = turned ? this.f : (Math.sign(s.vx) || this.f); s.vx = dir * Math.max(Math.abs(s.vx), 320) * GATEWAY.outBoost; if (typeof s.damage === 'number') s.damage *= GATEWAY.boost; s.facing = dir; }
     combat.spawnShockwave?.(this.x, this.y - 44, 70, this.color); combat.shakeCamera?.(CINEMATIC.S99.shake, .25); audio.playRuneChime?.(880);
   }
+  onEnd() { if (this.fed?.timeFrozen) this.fed.timeFrozen = false; /* never leave a swallowed spell hanging */ }
   render(ctx) {
     if (this.fizzled) return;
     const { x, y, t } = this; const T = this.T; const cy = y - 46; const col = this.color; ctx.save();
-    const form = clamp01(t / .5); const closing = t > T.impactEnd ? clamp01((t - T.impactEnd) / (T.end - T.impactEnd)) : 0; const a = (1 - closing) * form; const sc = form * (1 - .4 * closing);
+    const form = clamp01(t / .5); const closing = this.released ? clamp01((t - this.releasedAt - .4) / Math.max(.1, T.end - this.releasedAt - .4)) : 0; const a = (1 - closing) * form; const sc = form * (1 - .4 * closing);
     const rx = Math.max(.6, 24 * sc); const ry = Math.max(1.2, 50 * sc); /* never a negative radius while the ring is still forming */
     ctx.globalAlpha = a;
-    // The ring: a thin double outline of light pixels.
-    ctx.strokeStyle = col; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(x, cy, rx, ry, 0, 0, TAU); ctx.stroke(); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(x, cy, Math.max(.3, rx - 3), Math.max(.3, ry - 3), 0, 0, TAU); ctx.stroke();
+    // The ring: a thin double outline of light pixels (it pulses while it waits for a shot).
+    const waiting = this.impacted && !this.released && !this.fed; const pulse = waiting ? 1 + .06 * Math.sin(t * 10) : 1;
+    ctx.strokeStyle = col; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(x, cy, rx * pulse, ry * pulse, 0, 0, TAU); ctx.stroke(); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(x, cy, Math.max(.3, rx - 3), Math.max(.3, ry - 3), 0, 0, TAU); ctx.stroke();
     // Glyphs travelling around it.
     for (let i = 0; i < 10; i++) { const ang = i / 10 * TAU + t * 1.4; const gx = x + Math.cos(ang) * (rx + 5); const gy = cy + Math.sin(ang) * (ry + 5); px(ctx, gx - 2, gy - 2, 4, 4, i % 3 ? '#ffffff' : col); px(ctx, gx - 1, gy - 5, 2, 2, col); }
-    // The rotating plane inside, forming from t = .5 and flaring on activation.
-    const plane = clamp01((t - .5) / .6);
+    // The rotating plane inside, forming from t = .5; it brightens while a spell is swallowed.
+    const plane = clamp01((t - .5) / .6); const feedK = this.fed && !this.released ? 1 : 0;
     if (plane > 0) {
       ctx.save(); ctx.beginPath(); ctx.ellipse(x, cy, Math.max(1, rx - 4), Math.max(1, ry - 4), 0, 0, TAU); ctx.clip();
-      ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = col; ctx.globalAlpha = a * .22 * plane; ctx.fillRect(x - rx, cy - ry, rx * 2, ry * 2);
+      ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = col; ctx.globalAlpha = a * (.22 + .3 * feedK) * plane; ctx.fillRect(x - rx, cy - ry, rx * 2, ry * 2);
       for (let r = 0; r < 9; r++) { const yy = cy - ry + (r + (t * 3) % 1) * ry * 2 / 9; const w = Math.sin(t * 4 + r * .9) * rx * .5 + rx * .6; ctx.globalAlpha = a * .5 * plane; px(ctx, x - w / 2, yy, w, 3, '#ffffff'); }
       ctx.restore();
     }
-    // Activation: a pulse of light.
-    if (t >= T.impactAt) { const td = t - T.impactAt; if (td < .4) { const k = td / .4; ctx.globalAlpha = 1 - k; ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.ellipse(x, cy, rx * (1 + k), ry * (1 + .4 * k), 0, 0, TAU); ctx.fill(); ctx.globalCompositeOperation = 'source-over'; } }
+    // The pulse of light on opening and on release.
+    for (const at of [T.impactAt, this.releasedAt]) { if (at == null || t < at) continue; const td = t - at; if (td < .4) { const k = td / .4; ctx.globalAlpha = 1 - k; ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.ellipse(x, cy, rx * (1 + k), ry * (1 + .4 * k), 0, 0, TAU); ctx.fill(); ctx.globalCompositeOperation = 'source-over'; } }
+    // The hint while the gate waits: which way to shoot.
+    if (waiting) { ctx.globalAlpha = .55 + .35 * Math.sin(t * 6); ctx.font = 'bold 9px monospace'; ctx.textAlign = 'center'; ctx.fillStyle = '#ffffff'; ctx.fillText('ELEMENT HINEINSCHIESSEN', x, cy - ry - 12); }
     ctx.restore();
   }
 }

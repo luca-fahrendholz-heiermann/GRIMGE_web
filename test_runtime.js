@@ -5360,14 +5360,28 @@ game.running = false;
   { const expected = { aqua: 'spirit_wolf', frost: 'spirit_wolf', fulgur: 'storm_wolf', ventus: 'storm_wolf', umbra: 'void_spider', void: 'void_spider', terra: 'rune_golem', construct: 'rune_golem', natura: 'lesser_beast', bestia: 'lesser_beast', ignis: 'ember_familiar', lux: 'ward_guardian', ward: 'ward_guardian' };
     const got = {};
     for (const el of Object.keys(expected)) {
-      reset(); P.lastElementCast = { id: el, at: 0 }; castAt(3); const r = run(CS.ElementalGateway, 3);
+      reset(); P.lastElementCast = { id: el, at: 0 }; castAt(3); const r = run(CS.ElementalGateway, 8); /* the open gate waits ~3 s for a shot, then opens with the caster's element */
       const sm = spells.activeSummons.find((q) => !q.isDead); got[el] = sm?.definition?.id; if (!(r.phases.join() === 'charge,impact,aftermath' && r.sp.isFinished && sm && sm.team === P.team)) got[el] = 'BAD:' + r.phases.join('/');
     }
     const table = Object.entries(expected).every(([el, id]) => got[el] === id);
     reset(); P.lastElementCast = { id: 'aqua', at: 0 }; castAt(3); let n = 0; const dt = 1 / 60; for (let i = 0; i < 40; i++) { if (i === 20) P.state = 'hurt'; spells.update(dt, game); n++; } for (let i = 0; i < 150; i++) spells.update(dt, game);
     const none = spells.activeSummons.filter((q) => !q.isDead).length === 0;
-    reset(); P.lastElementCast = null; castAt(3); const noElement = run(CS.ElementalGateway, 3); const arcane = spells.activeSummons.find((q) => !q.isDead)?.definition?.id === 'arcane_familiar';
+    reset(); P.lastElementCast = null; castAt(3); const noElement = run(CS.ElementalGateway, 8); const arcane = spells.activeSummons.find((q) => !q.isDead)?.definition?.id === 'arcane_familiar';
     assert(table && none && arcane && Object.keys(CS.GATEWAY_SUMMONS).length === 8, 'Elemental Gateway: each element opens its own familiar (' + JSON.stringify(got) + '); a hit before it opens breaks the cast; without an element an arcane familiar comes'); void n; void noElement; }
+  // 5b. a spell shot through the open gate is swallowed: the gate takes its element, the companion comes out and the spell leaves with it
+  { reset(); P.lastElementCast = { id: 'aqua', at: 0 }; castAt(3); const sh = { team: P.team, x: 0, z: 0, vx: 340, damage: 20, isCapturableProjectile: true, statusElements: ['ignis'], isFinished: false, update() {}, render() {} };
+    let gate = null; let held = false; let early = true; const dt = 1 / 60;
+    for (let i = 0; i < 480; i++) { spells.update(dt, game); gate ??= spells.activeSpells.find((q) => q instanceof CS.ElementalGateway);
+      if (gate && gate.impacted && !gate.fed && !sh.added) { sh.added = true; sh.x = gate.x - 6; sh.z = gate.z; spells.addSpell(sh, 'B'); }
+      if (gate?.fed && !gate.released) { held = held || sh.timeFrozen === true; early = early && spells.activeSummons.filter((q) => !q.isDead).length === 0; }
+      if (gate?.isFinished) break; }
+    const sm = spells.activeSummons.find((q) => !q.isDead);
+    assert(gate && held && early && gate.released && sm?.definition?.id === 'ember_familiar' && sh.timeFrozen === false && sh.x > gate.x + 20 && sh.vx > 340 && sh.damage > 20 && sh.damage <= 20 * 1.3, 'Elemental Gateway: a fireball shot through the open gate is swallowed, the gate turns to fire, the ember familiar steps out and the spell leaves with it, stronger (' + sm?.definition?.id + ', x ' + Math.round(sh.x - (gate?.x ?? 0)) + ', dmg ' + sh.damage + ')'); }
+  // 5c. an enemy's stray element spell loads the gate too and is turned back at the enemy
+  { reset(); P.lastElementCast = { id: 'ignis', at: 0 }; castAt(3); const sh = { team: 'red', x: 0, z: 0, vx: -300, damage: 20, isCapturableProjectile: true, statusElements: ['aqua'], isFinished: false, update() {}, render() {} };
+    let gate = null; for (let i = 0; i < 480; i++) { spells.update(1 / 60, game); gate ??= spells.activeSpells.find((q) => q instanceof CS.ElementalGateway); if (gate && gate.impacted && !gate.fed && !sh.added) { sh.added = true; sh.x = gate.x + 6; sh.z = gate.z; spells.addSpell(sh, 'B'); } if (gate?.isFinished) break; }
+    const sm = spells.activeSummons.find((q) => !q.isDead);
+    assert(gate?.released && sm?.definition?.id === 'spirit_wolf' && sh.team === P.team && Math.sign(sh.vx) === P.facing && sh.timeFrozen === false, 'Elemental Gateway: an enemy water spell that strays into the open gate loads it (spirit wolf, not the casters fire) and comes back out as the owners spell, flying at the enemy'); }
   reset(); P.lastElementCast = null;
 }
 // Bankai ground impact (user spec 16 Nov 2026): the full DOWN technique plants the class weapon; the element decides the
