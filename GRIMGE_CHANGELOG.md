@@ -2,6 +2,12 @@
 
 Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
+## 17. Nov 2026 – Training ist eine Spielwiese (Rückmeldung des Nutzers)
+
+- Der Klassen-Knopf im Training (und die Taste V) schrieb die ausprobierte Waffe **dauerhaft ins Profil** und überschrieb damit die im Hub gewählte Klasse: man hatte danach in
+  jedem Modus „das Setup vom Training“. Jetzt wechselt nur die Waffe der laufenden Sitzung; Training startet mit der Klasse aus dem Hub, und der nächste Match trägt sie wieder.
+- Geblieben: Die Klasse wird in der Charaktererstellung, in der Garderobe und auf der Klassenseite gewählt und gespeichert.
+
 ## 17. Nov 2026 – Rückmeldungen: Geheimraum-Pfeil, ruhigerer Fokus, Beschwörungszirkel (Nutzer)
 
 - **Geheimraum:** Im Geheimraum erscheint kein „GO“-Pfeil nach rechts mehr (dort ging es nicht weiter). Ist der Boss besiegt, zeigt ein Pfeil „AUS“ zum

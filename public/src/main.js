@@ -1813,8 +1813,10 @@ export class GameWorld {
     if (this.activeMode?.id !== 'training' || !this.isMatchRunning()) return null;
     const order = [null, ...Object.keys(WEAPONS).filter((id) => id !== 'ice_sword')];
     const next = order[(order.indexOf(this.player.classWeapon ?? null) + 1) % order.length];
-    this.setClassWeapon(next); // the class: decides the Bankai and is worn in every match
-    this.showAnnouncement(next ? `CLASS WEAPON: ${WEAPONS[next].name}` : 'CLASS WEAPON: NONE (BARE HANDS)', 1.2);
+    // A sandbox (user, 17 Nov 2026): trying weapons in Training must not overwrite the class chosen in the hub — only this
+    // session's weapon changes; the next match starts with the profile's own class again.
+    this.player.equipClassWeapon(next);
+    this.showAnnouncement(next ? `TRAINING: ${WEAPONS[next].name}` : 'TRAINING: BARE HANDS', 1.2);
     return next;
   }
 

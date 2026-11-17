@@ -5503,6 +5503,15 @@ game.running = false;
   assert(seal && wolf && Math.abs(seal.x - wolf.x) < 1 && P.summonPoseT > .5 && hasClip && seal.isFinished && !nan && seal.isGroundDecal, 'A summon puts a summoning seal under the creature (it fades out after ' + (phases / 60).toFixed(1) + ' s) and the caster has the kneeling clip' + (nan ? ' — ' + nan : ''));
   P.summonPoseT = 0; spells.clearRuntime(); game.returnToHub();
 }
+// Training is a sandbox (user, 17 Nov 2026): trying class weapons there must not overwrite the class chosen in the hub.
+{
+  game.returnToHub(); game.setClassWeapon('bow'); game.setMatchMode('training'); game.startMatch();
+  const startsWithClass = game.player.classWeapon === 'bow'; const first = game.cycleClassWeapon(); game.cycleClassWeapon();
+  const changed = game.player.classWeapon !== 'bow'; const profileKept = game.profile.classWeapon === 'bow';
+  game.returnToHub(); game.setMatchMode('arena'); game.startMatch(); const nextMatch = game.player.classWeapon === 'bow';
+  assert(startsWithClass && first !== undefined && changed && profileKept && nextMatch, 'Training starts with the class chosen in the hub; trying other weapons there changes only the session (the profile keeps its class, the next match wears it again)');
+  game.returnToHub(); game.setClassWeapon(null);
+}
 {
   // Guard against code swallowed by a mid-line comment ("x = 1; // note y = 2;" — happened twice, 6 + 10 Nov 2026).
   const fsx = await import('node:fs'); const pathx = await import('node:path');
