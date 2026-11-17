@@ -2,6 +2,11 @@
 
 Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
+## 17. Nov 2026 – Fokus nur aus Kämpfen gegen Gegner (Rückmeldung des Nutzers)
+
+- Nahkampftreffer auf Kisten, Fässer, Szenenobjekte und Wände füllen den Fokus nicht mehr; Treffer, Trefferstopp und Rückstoß bleiben. Nur ein Treffer auf einen lebenden Gegner
+  (auch Türme, Burg und der Trainingsdummy) bringt Fokus.
+
 ## 17. Nov 2026 – Fehler „t.freeze is not a function“ im Siege-Modus (Diagnose-Anzeige des Nutzers)
 
 - Das Wasserfass merkte sich nach Frost-Einwirkung ein Flag mit dem Namen `freeze` (true). Jeder Eiszauber, der es danach traf, rief `t.freeze(...)` auf und warf einen Fehler

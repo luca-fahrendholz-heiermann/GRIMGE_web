@@ -1848,7 +1848,7 @@ export class Player extends GroundEntity {
     if (kitMods.reach || kitMods.guardBreak || kitMods.crit) hitMeta = { ...hitMeta, reach: kitMods.reach ? (hitMeta.reach ?? 78) + kitMods.reach : hitMeta.reach, guardBreak: (hitMeta.guardBreak ?? 0) + kitMods.guardBreak };
     if (kitMods.crit) isFinisher = true;
     const targets = window.gameWorld?.getHostileTargets(this.team, true) ?? [];
-    let hitAny = false; let hitCount = 0; const sigHits = [];
+    let hitAny = false; let hitCount = 0; let focusHits = 0; const sigHits = [];
     setHitContext(this);
     const bladeLook = WEAPONS[this.weapon ?? this.classWeapon]?.look;
     // Every swing is a status source (blades bleed); castBy lets masteries react to it.
@@ -1892,6 +1892,8 @@ export class Player extends GroundEntity {
         if (hitMeta.freeze) target.freeze?.(hitMeta.freeze);
         if (hitMeta.guardBreak && target.isGuarding && Number.isFinite(target.guardStability)) target.guardStability = Math.max(0, target.guardStability - hitMeta.guardBreak);
         hitAny = true; hitCount++;
+        // Only a living opponent feeds Focus: crates, barrels, scene objects and walls do not (user, 17 Nov 2026).
+        if (!target.isProp && !target.isSceneObject && !target.isStoneWall) focusHits++;
       }
     }
     // Own walls (user, 4 Nov 2026: "sollen auch vom ersteller selbst zerstört werden können"): the creator's swings
@@ -1934,7 +1936,7 @@ export class Player extends GroundEntity {
       }
     }
     if (hitAny) {
-      this.gainFocus(Math.min(8, 3 + hitCount * (isFinisher ? 2 : 1)), isFinisher ? 'FINISHER' : 'MELEE'); /* about half as fast as before (user, 17 Nov 2026: Focus filled too quickly) */
+      if (focusHits > 0) this.gainFocus(Math.min(8, 3 + focusHits * (isFinisher ? 2 : 1)), isFinisher ? 'FINISHER' : 'MELEE'); /* about half as fast as before (user, 17 Nov 2026: Focus filled too quickly) */
       audio.playImpact(isFinisher);
       const hsFrames = hitMeta.hitstopTicks ?? (isFinisher ? 6 : 4);
       combat.triggerHitstop(hsFrames);

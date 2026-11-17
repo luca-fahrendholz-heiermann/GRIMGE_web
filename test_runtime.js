@@ -5522,6 +5522,17 @@ game.running = false;
   assert(noBool && !threw && barrel.freezeNow === false && ENV.effects.some((e) => e.type === 'ice'), 'A frosted water barrel turns the ground to ice without leaving a boolean freeze flag that makes freezing spells throw' + (threw ? ' — ' + threw : ''));
   game.returnToHub();
 }
+// Focus comes from fighting opponents only (user, 17 Nov 2026): hitting crates, barrels or scene objects gives none.
+{
+  const ENV = (await import('./public/src/environment.js')).environment; game.returnToHub(); game.setMatchMode('training'); game.startMatch(); game.selectTrainingMap('waterfalls');
+  const P = game.player; const dummy = game.trainingDummy; ENV.props.length = 0; spells.clearRuntime();
+  P.x = 400; P.z = .5; P.facing = 1; P.elevation = 0; P.grounded = true; P.focus = 0; dummy.homeX = dummy.x = 2000;
+  const crate = ENV.addProp('crate', 440, .5); crate.hp = crate.maxHp = 9999; const barrel = ENV.addProp('barrel', 430, .5); barrel.hp = barrel.maxHp = 9999;
+  const hitProps = P.triggerMeleeHitbox(20, 100, 0, .2, false, {}); const afterProps = P.focus;
+  ENV.props.length = 0; dummy.homeX = dummy.x = 440; dummy.homeZ = dummy.z = .5; dummy.invulnerableTimer = 0; P.triggerMeleeHitbox(20, 100, 0, .2, false, {}); const afterFoe = P.focus;
+  assert(hitProps && afterProps === 0 && afterFoe > 0, 'Hitting crates and barrels still counts as a hit but gives no Focus; hitting an opponent does (' + afterProps + ' → ' + afterFoe + ')');
+  game.returnToHub();
+}
 {
   // Guard against code swallowed by a mid-line comment ("x = 1; // note y = 2;" — happened twice, 6 + 10 Nov 2026).
   const fsx = await import('node:fs'); const pathx = await import('node:path');
