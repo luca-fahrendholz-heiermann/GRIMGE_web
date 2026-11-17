@@ -91,6 +91,8 @@ export function secretVariant(gw, id) {
 function roomIndex(id) { return Math.max(0, SECRET_IDS.indexOf(id)); }
 export const secretBounds = (id) => { const left = SECRET_BASE_X + roomIndex(id) * 4000; return { left, right: left + SECRET_ROOMS[id].width }; };
 export const isInSecret = (gw) => !!gw?.modeState?.secret;
+// Where the way out is: the x of the exit portal once the secret room's exit is open (null before: the boss still lives).
+export function secretExitX(gw) { const s = gw?.modeState?.secret; return s?.exitOpen ? secretBounds(s.id).left + 70 : null; }
 
 export function enterSecret(gw, id, from = null) {
   const def = SECRET_ROOMS[id]; const state = gw?.modeState; if (!def || !state || state.secret) return false;

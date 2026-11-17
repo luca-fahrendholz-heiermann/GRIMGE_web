@@ -270,6 +270,7 @@ export function endBuffForm(player) {
 export const isGenericBuff = (player) => !!(player.buffForm?.timer > 0 && player.buffForm.id !== 'B01' && player.buffForm.id !== 'B02');
 
 // ── Rendering hooks ─────────────────────────────────────────────────────
+const ARCANE_CALM = .72; // how strongly an Arcane State's aura and effects show (1 = as before)
 export function renderBuffManifestation(ctx, player, renderY, layer) {
   const form = currentBuffForm(player);
   if (!form) return false;
@@ -278,7 +279,7 @@ export function renderBuffManifestation(ctx, player, renderY, layer) {
   if (layer === 'back' && form.morphology === 'temporal_projection' && form.id !== 'T39' && !hasFormRenderer(form.id)) {
     for (const d of [10, 20]) { const past = player._timeTrail?.[d]; if (past) ghostOf(ctx, player, past.x, past.y, past.state, past.animTime, past.facing, .3 * buffFade(player), form.mat.edge); }
   }
-  renderManifestation(ctx, player, form, layer, renderY, buffFade(player), peakOf(player));
+  renderManifestation(ctx, player, form, layer, renderY, buffFade(player) * ARCANE_CALM, peakOf(player)); /* calmer: the aura and effects were a lot (user, 17 Nov 2026) */
   if (layer === 'front') renderBuffTimer(ctx, player, form, renderY);
   return true;
 }
@@ -326,8 +327,7 @@ function renderBuffTimer(ctx, player, form, renderY) {
   ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(x - 1, y - 1, 46, 5);
   ctx.fillStyle = form.mat.vein; ctx.fillRect(x, y, 44 * k, 3);
   ctx.fillStyle = form.mat.core; ctx.fillRect(x + 44 * k - 1, y, 1, 3);
-  ctx.font = 'bold 8px monospace'; ctx.textAlign = 'center'; ctx.fillStyle = form.mat.edge;
-  ctx.fillText(form.name.toUpperCase(), player.x, y - 3);
+  /* no name label: the form is announced once when it begins, the bar shows what is left */
   ctx.restore();
 }
 

@@ -2,6 +2,18 @@
 
 Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
+## 17. Nov 2026 – Rückmeldungen: Geheimraum-Pfeil, ruhigerer Fokus, Beschwörungszirkel (Nutzer)
+
+- **Geheimraum:** Im Geheimraum erscheint kein „GO“-Pfeil nach rechts mehr (dort ging es nicht weiter). Ist der Boss besiegt, zeigt ein Pfeil „AUS“ zum
+  Ausgangsportal (nach links, wenn man am hinteren Ende steht) und verschwindet neben dem Portal.
+- **Fokus:** Aus Nahkampftreffern füllt er sich etwa halb so schnell (höchstens 8 statt 16 je Treffer). Die Aura, der Ring und der Text „zum Verwandeln drücken“ sind weg:
+  ab 25 % heben sich nur ein paar Haarsträhnen vom Kopf, mehr und länger je voller; bei vollem Fokus nur noch die kurze Meldung „FOKUS VOLL“.
+- **Arcane State:** Aura und Effekte um 28 % zurückgenommen, das Namensschild über dem Kopf entfällt (die Leiste mit der Restzeit bleibt).
+- **Beschwörungen:** Unter jeder beschworenen Kreatur erscheint ein **Beschwörungszirkel** (dunkle Siegellinien laufen von der Hand des Zauberers über den Boden, schließen
+  sich zu Ring und Stern, weiße Funken springen an den Ecken auf, der Ring leuchtet in der Farbe des Wesens und verblasst nach etwa 2 s). Der Zauberer geht dabei in die
+  **Hocke und legt die Hand auf den Boden** (neuer Rig-Clip „summon“); wer sich bewegt oder handelt, beendet die Pose. Gilt auch für das Elementartor und die KI.
+- Grenze der Pose: Die Figur kann nicht tiefer sinken, die Hand erreicht den Boden nicht ganz; ein echter Hand-auf-Boden-Frame bräuchte eine gezeichnete Animation.
+
 ## 17. Nov 2026 – Elementartor: Element hineinschießen (Idee des Nutzers)
 
 - Das Tor **bleibt nach dem Öffnen etwa 2,8 s offen** und zeigt „ELEMENT HINEINSCHIESSEN“. Ein Elementzauber (Feuerball, Eisgeschoss …), der hindurchfliegt, wird

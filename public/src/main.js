@@ -7,7 +7,7 @@ import { spells, RUNE_GRADE_PROFILES } from './spells.js';
 import { Player, EnemyChampion, Minion, TrainingDummy } from './entities.js';
 import { isHidden } from './scene_objects.js';
 import { sceneDev } from './scene_systems.js';
-import { setupDungeonSecrets, updateDungeonSecret, renderSecretTint } from './dungeon_secrets.js';
+import { setupDungeonSecrets, updateDungeonSecret, renderSecretTint, secretExitX } from './dungeon_secrets.js';
 globalThis.__GrimgeMinion = Minion; // scene objects (a grave) raise minions without importing entities
 import { Battlefield } from './battlefield.js';
 import { ui } from './ui.js';
@@ -2183,7 +2183,14 @@ export class GameWorld {
 
   isDungeonExitOpen() {
     const state = this.modeState;
-    return this.activeMode?.id === 'dungeon' && state?.stage >= 1 && state.stage < DUNGEON_ROOMS.length - 1 && !!state.dungeonRoom?.cleared;
+    // Inside a secret room the room's own exit is not the way out (user, 17 Nov 2026): the portal is — see secretExitArrow().
+    return this.activeMode?.id === 'dungeon' && !state?.secret && state?.stage >= 1 && state.stage < DUNGEON_ROOMS.length - 1 && !!state.dungeonRoom?.cleared;
+  }
+  // In a secret room whose boss is down: the arrow points at the exit portal (direction -1 left / 1 right); hidden when near it.
+  secretExitArrow() {
+    if (this.activeMode?.id !== 'dungeon' || !this.modeState?.secret) return null;
+    const x = secretExitX(this); if (x == null || !this.player) return null;
+    const dx = x - this.player.x; return Math.abs(dx) < 110 ? null : { dir: Math.sign(dx) };
   }
 
   spawnDungeonStarter() {
@@ -3434,17 +3441,19 @@ export class GameWorld {
   }
 
   renderDungeonExitArrow(ctx, viewW) {
-    if (!this.isDungeonExitOpen()) return;
+    const secretArrow = this.secretExitArrow();
+    if (!secretArrow && !this.isDungeonExitOpen()) return;
+    const dir = secretArrow?.dir ?? 1; const label = secretArrow ? 'AUS' : 'GO';
     // Big pulsing LF2 "GO" arrow at the right screen edge: the room is
     // cleared and walking right enters the next room (no way back).
     const t = performance.now() * 0.001;
     const pulse = 0.5 + 0.5 * Math.sin(t * 6);
     const scale = 1 + pulse * 0.14;
-    const cx = viewW - 96 + pulse * 10;
+    const cx = dir > 0 ? viewW - 96 + pulse * 10 : 96 - pulse * 10;
     const cy = this.worldOffsetY + this.logicalHeight * 0.42;
     ctx.save();
     ctx.translate(cx, cy);
-    ctx.scale(scale, scale);
+    ctx.scale(scale * dir, scale);
     ctx.beginPath();
     ctx.moveTo(-58, -20); ctx.lineTo(4, -20); ctx.lineTo(4, -46);
     ctx.lineTo(58, 0);
@@ -3462,7 +3471,8 @@ export class GameWorld {
     ctx.font = 'bold 20px Georgia';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('GO', -14, 1);
+    ctx.scale(dir, 1); /* the label is never mirrored */
+    ctx.fillText(label, -14 * dir, 1);
     ctx.restore();
   }
 

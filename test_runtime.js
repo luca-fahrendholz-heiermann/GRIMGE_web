@@ -5473,6 +5473,34 @@ game.running = false;
   assert(lost && keep === after && restarted && won && again, 'A defeat is no permadeath: the character, classes, runes and masteries stay, the mission is not done and restarts clean, and a won mission can be replayed (' + [lost, keep === after, restarted, won, again].join('/') + ')');
   game.campaignRun = null; game.profile.campaign = saved; game.returnToHub();
 }
+// Feedback of 17 Nov 2026: the exit arrow of a secret room, a quieter Focus, the summoning seal and pose.
+{
+  const DS = await import('./public/src/dungeon_secrets.js'); const { environment: ENV } = await import('./public/src/environment.js'); const SE = await import('./public/src/summon_seal.js'); const SP = await import('./public/src/sprites.js');
+  const strict = new Proxy({}, { get: (tg, k) => (k === 'canvas' ? {} : k === 'measureText' ? () => ({ width: 8 }) : k === 'getTransform' ? () => ({ a: 1, e: 0 }) : (...a) => { if (a.some((v) => typeof v === 'number' && !Number.isFinite(v))) throw new Error('NaN in ' + String(k)); if ((k === 'ellipse' || k === 'arc') && (a[2] < 0 || (k === 'ellipse' && a[3] < 0))) throw new Error('negative radius'); }), set: () => true });
+  // 1. the way out of a secret room: no 'GO' to the right, an arrow to the portal once the boss is down
+  game.returnToHub(); game.setMatchMode('dungeon'); game.startMatch(); game.spawnDungeonStage(1); game.minions = game.minions.filter((m) => m.team !== 'red'); game.modeState.dungeonRoom.cleared = true;
+  const roomExit = game.isDungeonExitOpen(); game.modeState.secretSeed = 0; for (const sd of [0, 1]) { game.modeState.secretSeed = sd; if (DS.secretVariant(game, 'ember_vault') === 'brute') break; }
+  DS.enterSecret(game, 'ember_vault'); const sec = game.modeState.secret; const boss = sec.content.boss; game.player.x = DS.secretBounds('ember_vault').left + 900;
+  const noGoInSecret = !game.isDungeonExitOpen() && game.secretExitArrow() === null;
+  boss.hp = 0; boss.isDead = true; DS.updateDungeonSecret(game); const arrow = game.secretExitArrow();
+  game.player.x = DS.secretBounds('ember_vault').left + 100; const near = game.secretExitArrow(); game.player.x = DS.secretBounds('ember_vault').left + 900;
+  game.renderDungeonExitArrow(strict, 1024);
+  assert(roomExit && noGoInSecret && arrow?.dir === -1 && near === null, 'Inside a secret room the GO arrow is gone; after the boss an arrow points at the exit portal (left from the far end) and hides next to it (' + [roomExit, noGoInSecret, arrow?.dir, near].join('/') + ')');
+  DS.leaveSecret(game); game.returnToHub();
+  // 2. Focus: a light hair-lift only — no text, no aura; slower to fill
+  game.setMatchMode('training'); game.startMatch(); const P = game.player; const texts = []; const rects = [];
+  const probe = new Proxy({}, { get: (tg, k) => (k === 'fillText' || k === 'strokeText' ? (...a) => texts.push(a[0]) : k === 'fillRect' ? (...a) => rects.push(a) : (k === 'canvas' ? {} : () => {})), set: () => true });
+  P.focus = P.maxFocus; P.renderFocusCharge(probe, 300); const readyTexts = texts.length; const strands = rects.length; P.focus = P.maxFocus * .1; rects.length = 0; P.renderFocusCharge(probe, 300);
+  const dummy = game.trainingDummy; dummy.homeX = dummy.x = P.x + 40; dummy.homeZ = dummy.z = P.z; P.focus = 0; P.facing = 1; P.triggerMeleeHitbox(20, 100, 0, .2, false, {}); const oneHit = P.focus;
+  assert(readyTexts === 0 && strands > 0 && strands <= 120 && rects.length === 0 && oneHit > 0 && oneHit <= 5, 'Gathered Focus is only a few lifted hair strands (' + strands + ' at full, none under 25 %), no floating text, and a melee hit gives a little Focus (' + oneHit + ')');
+  // 3. summoning: a seal under the creature, the caster kneels (rig clip), the seal fades out
+  P.x = 330; P.z = .5; P.facing = 1; spells.clearRuntime(); spells.cast(P, spells.resolveSpell([{ id: 'bestia' }, { id: 'fulgur' }]), game);
+  const seal = spells.activeSpells.find((q) => q instanceof SE.SummonSeal); const wolf = spells.activeSummons.find((q) => !q.isDead);
+  const { BASE_CLIPS } = await import('./public/src/rig_clips.js'); const hasClip = BASE_CLIPS.summon?.seq?.length === 3 && BASE_CLIPS.summon.loop === false; void SP; let phases = 0; let nan = null;
+  for (let i = 0; i < 160 && seal && !seal.isFinished; i++) { spells.update(1 / 60, game); try { if (i % 8 === 0) seal.render(strict); } catch (e) { nan = e.message; } phases++; }
+  assert(seal && wolf && Math.abs(seal.x - wolf.x) < 1 && P.summonPoseT > .5 && hasClip && seal.isFinished && !nan && seal.isGroundDecal, 'A summon puts a summoning seal under the creature (it fades out after ' + (phases / 60).toFixed(1) + ' s) and the caster has the kneeling clip' + (nan ? ' — ' + nan : ''));
+  P.summonPoseT = 0; spells.clearRuntime(); game.returnToHub();
+}
 {
   // Guard against code swallowed by a mid-line comment ("x = 1; // note y = 2;" — happened twice, 6 + 10 Nov 2026).
   const fsx = await import('node:fs'); const pathx = await import('node:path');

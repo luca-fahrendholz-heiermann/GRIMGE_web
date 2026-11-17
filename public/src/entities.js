@@ -546,6 +546,7 @@ export class Player extends GroundEntity {
     this.freezeTimer = Math.max(0, this.freezeTimer - dt);
     this.slowTimer = Math.max(0, this.slowTimer - dt);
     this.rootTimer = Math.max(0, (this.rootTimer ?? 0) - dt);
+    this.summonPoseT = Math.max(0, (this.summonPoseT ?? 0) - dt);
     this.channelLock = Math.max(0, (this.channelLock ?? 0) - dt); /* refreshed by a running beam / breath (spells.js) */
     this.landingRecoveryTimer = Math.max(0, this.landingRecoveryTimer - dt);
     this.grabCooldown = Math.max(0, this.grabCooldown - dt);
@@ -1933,7 +1934,7 @@ export class Player extends GroundEntity {
       }
     }
     if (hitAny) {
-      this.gainFocus(Math.min(16, 5 + hitCount * (isFinisher ? 4 : 3)), isFinisher ? 'FINISHER' : 'MELEE');
+      this.gainFocus(Math.min(8, 3 + hitCount * (isFinisher ? 2 : 1)), isFinisher ? 'FINISHER' : 'MELEE'); /* about half as fast as before (user, 17 Nov 2026: Focus filled too quickly) */
       audio.playImpact(isFinisher);
       const hsFrames = hitMeta.hitstopTicks ?? (isFinisher ? 6 : 4);
       combat.triggerHitstop(hsFrames);
@@ -2314,7 +2315,8 @@ export class Player extends GroundEntity {
     if (rigged && this.isAlive) {
       const drawingNow = this === window.gameWorld?.player && window.gameWorld?.drawing?.active;
       const free = this.state === 'idle' || this.state === 'run' || this.state === 'jump' || this.state === 'fall';
-      if (drawingNow && free) animState = 'draw';
+      if (this.summonPoseT > 0 && this.grounded && !this.isGuarding && this.state === 'idle' && Math.abs(this.vx ?? 0) < 25 && !drawingNow) animState = 'summon';
+      else if (drawingNow && free) animState = 'draw';
       else if (this.isGuarding) animState = 'guard';
       else if (this.chargeTimer > 0) animState = 'charge';
       else if (this.backdashTimer > 0) animState = 'dash';
@@ -2453,18 +2455,24 @@ export class Player extends GroundEntity {
     if (layer === 'back') drawFocusAura(ctx, this.x, renderY, this.animTime, 1.3, { height: ENTITY_VISUALS.heroHeight });
   }
 
-  // Charging: from 25 % Focus a rising aura grows with the meter; at 100 %
-  // a ring and a hint show how to transform (tap the Wizard / the profile bar).
+  // Gathered Focus is only a LIGHT effect (user, 17 Nov 2026): from 25 % a few strands of hair lift off the head, more and
+  // longer as the meter fills — no aura, no ring, no floating text (the profile bar shows the rest).
   renderFocusCharge(ctx, renderY) {
     const ratio = this.focus / this.maxFocus;
     if (ratio < .25) return;
-    const ready = this.focus >= this.maxFocus;
-    const touch = globalThis.window?.gameWorld?.inputMode === 'touch';
-    drawFocusAura(ctx, this.x, renderY, this.animTime, (ratio - .25) / .75, {
-      height: ENTITY_VISUALS.heroHeight, ready, hint: ready ? (touch ? '✦ PROFIL OBEN LINKS ANTIPPEN' : '✦ T ZUM VERWANDELN') : ''
-    });
+    const k = Math.min(1, (ratio - .25) / .75); const f = this.facing || 1; const top = renderY - ENTITY_VISUALS.heroHeight * .88; const t = this.animTime ?? 0;
+    const strands = 3 + Math.round(k * 5);
+    ctx.save();
+    for (let i = 0; i < strands; i++) {
+      const bx = this.x - f * 2 + (i - (strands - 1) / 2) * 3.2; const len = 8 + 16 * k * (.6 + .4 * Math.abs(Math.sin(i * 2.3)));
+      for (let s = 0; s < len; s += 2) {
+        const u = s / len; const sway = Math.sin(t * 5 + i * 1.7 + s * .35) * (1 + 2.2 * u) * (.5 + k * .5);
+        ctx.globalAlpha = (.7 - .45 * u) * (.5 + .5 * k); ctx.fillStyle = u > .6 ? '#efe6ff' : '#cbb8ff';
+        ctx.fillRect(Math.round(bx + sway - f * u * 2), Math.round(top - s), 2, 2);
+      }
+    }
+    ctx.restore();
   }
-
   renderFormCharge(ctx, renderY) {
     const form = activeMoveset(this);
     if (!form) return;
@@ -2602,7 +2610,7 @@ export class Player extends GroundEntity {
       return this.focus > previous;
     }
     if (previous < this.maxFocus && this.focus >= this.maxFocus && !this.primalBond) {
-      window.gameWorld?.showAnnouncement?.('FOCUS FULL — TAP FOCUS OR PRESS T', 1.8);
+      window.gameWorld?.showAnnouncement?.('FOKUS VOLL', 1.2);
       combat.spawnShockwave(this.x, this.y - 34, 52, '#f0c8ff');
     }
     return this.focus > previous;
@@ -2892,7 +2900,7 @@ export class EnemyChampion extends GroundEntity {
     this.animTime += dt; this.hitFlash = Math.max(0, this.hitFlash - dt);
     if (this.lifeState === 'Dying') { this.stateTimer -= dt; if (this.stateTimer <= 0) { this.lifeState = 'Dead'; this.respawnTimer = gameWorld.canRespawn(this.team) ? this.respawnDuration : Infinity; if (!Number.isFinite(this.respawnTimer)) gameWorld.onFinalWizardDeath(this.team); } return; }
     if (this.lifeState === 'Dead') { this.respawnTimer -= dt; if (this.respawnTimer <= 0) this.respawn(battlefield, gameWorld); return; }
-    this.specialCooldown = Math.max(0, (this.specialCooldown ?? 0) - dt); updateAIRecast(this, dt, gameWorld);
+    this.specialCooldown = Math.max(0, (this.specialCooldown ?? 0) - dt); updateAIRecast(this, dt, gameWorld); this.summonPoseT = Math.max(0, (this.summonPoseT ?? 0) - dt);
     this.attackCooldown -= dt; this.spellCooldown -= dt; this.defensiveCooldown -= dt; this.beamCooldown -= dt; this.mp = Math.min(this.maxMp, this.mp + dt * AI_MANA_REGEN * (this.manaRegenMult ?? 1)); this.arcaneShieldTimer = Math.max(0, this.arcaneShieldTimer - dt); if (this.arcaneShieldTimer <= 0) this.arcaneShield = 0; this.freezeTimer = Math.max(0, this.freezeTimer - dt); this.slowTimer = Math.max(0, this.slowTimer - dt); if (!this.slowTimer) this.slowFactor = 1;
     if (this.stateTimer > 0) { this.stateTimer -= dt; if (this.stateTimer <= 0) this.state = this.grounded ? 'idle' : 'fall'; }
     if (this.aiHeavy) { this.aiHeavy.t -= dt; if (this.aiHeavy.t <= 0) { const heavyTarget = this.aiHeavy.target; this.aiHeavy = null; this.landAIHeavy(heavyTarget, gameWorld); } }
@@ -3146,6 +3154,7 @@ export class EnemyChampion extends GroundEntity {
     // Rig heroes (rig.js) as champions: drawing a rune plays the draw clip, every clip starts at its own time.
     const rigged = !!sprites.sprites[this.heroKey]?.rig; let animState = this.state;
     if (rigged && this.aiDraw && (this.state === 'idle' || this.state === 'run')) animState = 'draw';
+    if (rigged && this.summonPoseT > 0 && this.grounded && this.state === 'idle' && Math.abs(this.vx ?? 0) < 25) animState = 'summon';
     if (this._animState !== animState) { this._animState = animState; this._animStart = this.animTime; }
     sprites.renderEntity(ctx, this.heroKey, this.x, this.y, { facing: this.facing, state: animState, animTime: rigged ? this.animTime - (this._animStart ?? 0) : this.animTime, hitFlash: this.hitFlash > 0, alpha: this.lifeState === 'Dead' ? 0 : 1 }); if (this.lifeState === 'Alive') renderAIDraw(ctx, this); if (this.lifeState !== 'Dead') { const healthBarY = this.y - ENTITY_VISUALS.heroHeight - 8; ctx.fillStyle = 'rgba(0,0,0,.8)'; ctx.fillRect(this.x - 27, healthBarY, 54, 6); ctx.fillStyle = '#f44336'; ctx.fillRect(this.x - 27, healthBarY, 54 * this.hp / this.maxHp, 6); } }
 }

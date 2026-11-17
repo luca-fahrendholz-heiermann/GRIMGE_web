@@ -20,6 +20,7 @@ import { offerRecast } from './recast.js';
 import { statusElementsOf, setStatusSource, updateStatuses, statusDepthEntries, clearStatuses } from './status_effects.js';
 import { applyWard, setMasterySink } from './mastery.js';
 import { CastCircleFx, RayCrownFx } from './cast_circle.js';
+import { SummonSeal, beginSummonPose } from './summon_seal.js'; // the seal under a summoned creature and the kneeling pose of its caster
 import { BeamSpell, BeamClash, resolveBeamInteractions, MirrorWardSpell, GravityLiftSpell, TitanStompSpell, SoulSeekerBolt, SeismicSlamSpell, ConeBreathSpell, BurrowStrikeSpell, ShieldBubbleSpell, renderPixelated } from './abilities.js';
 
 export { BeamClash };
@@ -242,6 +243,9 @@ export class SpellSystem {
     // visibly drops rather than retaining a Castle-battlement height forever.
     if (!summon.isFlying) gameWorld.battlefield.resolveEntityCollision(summon);
     this.activeSummons.push(summon);
+    // A summoning seal on the floor under the creature, and the caster kneels with a palm on the ground (user, 17 Nov 2026).
+    this.addSpell(new SummonSeal(summon.x, summon.z, definition.color, caster, { radius: Math.max(34, Math.min(70, (definition.radius ?? 20) * 2 + 14)) }), 'B');
+    if (!options.noPose) beginSummonPose(caster);
     combat.spawnShockwave(summon.x, summon.y - 20, 42 * quality.area, definition.color);
     combat.spawnElementalParticles(summon.x, summon.y - 25, definition.particleElement ?? (definition.id === 'siege_golem' ? 'terra' : 'aqua'), Math.round(18 * quality.particles));
     return summon;
