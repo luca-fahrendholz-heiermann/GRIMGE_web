@@ -2,6 +2,12 @@
 
 Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
+## 18. Nov 2026 – Arena: längere Duelle, Transformation slotten, Gegner transformiert (Rückmeldung des Nutzers)
+
+- Duelle halten länger: der Runenschild reißt langsamer (0,38 statt 0,6 je Schaden), der Bannrand bricht erst bei härterem Wurf (430 statt 380 px/s), 4 statt 3 Seelenfunken.
+- Das Transformations-Relikt zündet nicht mehr sofort: der Spieler bekommt die Transformation als Runenkarte (RISSWILD oder ARKENGESTELL), slottet sie und aktiviert sie selbst. Über dem Relikt steht ihr Name.
+- Der Gegner darf sich verwandeln: holt er das Relikt, behält er es kurz und transformiert, sobald er nah am Spieler ist. Risswild: härtere Schläge, Arkengestell: Panzerung; die Form ist hinter ihm sichtbar (vorher bewirkte das Relikt beim Gegner praktisch nichts).
+
 ## 18. Nov 2026 – Beschwörung langsamer (Rückmeldung des Nutzers)
 
 - Die Kreatur steigt jetzt in ca. 1,7 s langsam aus dem Zauberzirkel (erst schließt sich der Ring, dann taucht sie auf, an der Bodenlinie abgeschnitten) und ist währenddessen unverwundbar.

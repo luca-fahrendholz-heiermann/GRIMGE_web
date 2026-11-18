@@ -22,7 +22,7 @@ export const GAME_MODES = Object.freeze({
   }),
   arena: Object.freeze({
     // rules 'rift' (DESIGN.md §4a, arena_rift.js): Riss + Bannrand + Abgrund + 3 Seelenfunken; 'hp' = the old life-bar duel.
-    id: 'arena', label: 'ARENA DUEL', objective: 'THROW THE CHAMPION OUT — 3 SOUL SPARKS', rules: 'rift', arenaRunes: ARENA_RULES, /* portfolio, slots and relic rules as data (arena_runes.js) */
+    id: 'arena', label: 'ARENA DUEL', objective: 'THROW THE CHAMPION OUT — 4 SOUL SPARKS', rules: 'rift', arenaRunes: ARENA_RULES, /* portfolio, slots and relic rules as data (arena_runes.js) */
     objectives: false, autoWaves: false, respawn: 'none', enemyBehavior: 'duel', world: 'arena', progression: 'arenaCollect'
   }),
   // The base (base.js): the player's headquarters — a hall to walk through with the menu points as stations.

@@ -13,10 +13,10 @@ import { ARENA_LAYOUT, groundYForDepth, ENTITY_VISUALS } from './world.js';
 import { combat } from './combat.js';
 
 export const RIFT = Object.freeze({
-  lives: 3,
-  crackPerDamage: .6,
+  lives: 4,                  // one more spark: duels last longer (user, 18 Nov 2026)
+  crackPerDamage: .38,       // the shield cracks slower (was .6): fighters endure more
   knockPerCrack: 1 / 70,
-  rimBreakSpeed: 380,        // px/s of knockback when touching the rim → it breaks
+  rimBreakSpeed: 430,        // px/s of knockback when touching the rim → it breaks
   respawnGrace: 2,           // s of invulnerability after a return
   pit: Object.freeze({ x0: 470, x1: 554, z0: .36, z1: .66 })
 });

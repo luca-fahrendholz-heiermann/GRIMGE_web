@@ -101,6 +101,9 @@ const INVASION_LEVELS = Object.freeze([
 ]);
 const INVASION_BOSSES = Object.freeze(['boss_firelord', 'darklord', 'mage', 'warlord']);
 
+// The forms a transformation relic in the Arena can hold (rune ids: the player slots and casts the card).
+const ARENA_TRANSFORMATION_RUNES = Object.freeze(['buff_B01', 'buff_B02']);
+
 export class GameWorld {
   constructor() {
     this.canvas = document.getElementById('game-canvas');
@@ -2340,8 +2343,8 @@ export class GameWorld {
     if (!state || this.activeMode?.id !== 'arena' || state.transformationRelic) return false;
     const positions = [{ x: 486, z: .45 }, { x: 570, z: .70 }, { x: 650, z: .31 }];
     const position = positions[Math.floor(Math.random() * positions.length)];
-    const forms = ['FOCUS ASCENDANT', 'EIDOLON MANTLE', 'NINEFOLD BEAST'];
-    state.transformationRelic = { ...position, form: forms[Math.floor(Math.random() * forms.length)] };
+    const forms = ARENA_TRANSFORMATION_RUNES; const runeId = forms[Math.floor(Math.random() * forms.length)];
+    state.transformationRelic = { ...position, runeId, form: recognizer.runes.find((r) => r.id === runeId)?.name ?? runeId };
     this.showAnnouncement('A TRANSFORMATION RELIC HAS APPEARED', 1.45);
     return true;
   }
@@ -2360,21 +2363,29 @@ export class GameWorld {
     }
     const playerDist = this.player.isAlive ? Math.hypot(this.player.x - relic.x, (this.player.z - relic.z) * 150) : Infinity;
     const enemyDist = this.enemyChampion.isAlive ? Math.hypot(this.enemyChampion.x - relic.x, (this.enemyChampion.z - relic.z) * 150) : Infinity;
+    // Collected, not fired (user, 18 Nov 2026): the player gets the transformation as a rune card — slot it, then cast it.
     if (playerDist <= 44) {
-      if (relic.form === 'EIDOLON MANTLE') spells.castEidolonMantle(this.player, RUNE_GRADE_PROFILES.A);
-      else if (relic.form === 'NINEFOLD BEAST') spells.castNinefoldBeast(this.player, RUNE_GRADE_PROFILES.A);
-      else { this.player.focus = this.player.maxFocus; this.player.activateFocusTransformation(); }
-      state.transformationRelic = null;
-      state.transformationRelicTimer = 17 + Math.random() * 7;
-      this.showAnnouncement(`${relic.form} RELIC CLAIMED`, 1.5);
+      const rune = recognizer.runes.find((r) => r.id === relic.runeId);
+      if (rune) { this.player.runeDeck.push(this.player.makeRuneCard(rune)); this.player.drawRunesToHand(); }
+      state.transformationRelic = null; state.transformationRelicTimer = 17 + Math.random() * 7;
+      this.showAnnouncement(`${relic.form} AUFGENOMMEN — SLOTTEN UND AKTIVIEREN`, 1.8);
     } else if (enemyDist <= 44) {
-      if (relic.form === 'EIDOLON MANTLE') spells.castEidolonMantle(this.enemyChampion, RUNE_GRADE_PROFILES.A);
-      else if (relic.form === 'NINEFOLD BEAST') spells.castNinefoldBeast(this.enemyChampion, RUNE_GRADE_PROFILES.A);
-      else { this.enemyChampion.hp = Math.min(this.enemyChampion.maxHp, this.enemyChampion.hp + 120); }
-      state.transformationRelic = null;
-      state.transformationRelicTimer = 17 + Math.random() * 7;
-      this.showAnnouncement(`ENEMY CLAIMED ${relic.form}!`, 1.5);
+      // The champion keeps it and transforms a moment later, once the fight is close (see updateEnemyHeldForm).
+      this.enemyChampion.heldForm = { runeId: relic.runeId, name: relic.form, wait: 1.2 + Math.random() };
+      state.transformationRelic = null; state.transformationRelicTimer = 17 + Math.random() * 7;
+      this.showAnnouncement(`GEGNER HOLT ${relic.form}`, 1.5);
     }
+  }
+
+  // The champion's carried transformation: after its short 'slotting' wait it fires when the player is near.
+  updateEnemyHeldForm(dt) {
+    const E = this.enemyChampion; const held = E?.heldForm; if (!held) return;
+    if (!E.isAlive) { E.heldForm = null; return; }
+    held.wait -= dt; const near = this.player?.isAlive && Math.abs(this.player.x - E.x) < 280;
+    if (held.wait > 0 || !near || E.state === 'hurt' || (E.ninefoldTimer ?? 0) > 0 || (E.eidolonTimer ?? 0) > 0) return;
+    E.heldForm = null;
+    if (held.runeId === 'buff_B02') spells.castEidolonMantle(E, RUNE_GRADE_PROFILES.A); else spells.castNinefoldBeast(E, RUNE_GRADE_PROFILES.A);
+    this.showAnnouncement(`GEGNER TRANSFORMIERT: ${held.name}`, 1.5);
   }
 
   updateMode(dt) {
@@ -2434,7 +2445,7 @@ export class GameWorld {
       this.finishMode('blue', 'VICTORY — ARENA CHAMPION DEFEATED');
       return;
     }
-    if (this.activeMode.id === 'arena') { this.updateArenaTransformationRelic(dt); updateRift(this, dt); }
+    if (this.activeMode.id === 'arena') { this.updateArenaTransformationRelic(dt); this.updateEnemyHeldForm(dt); updateRift(this, dt); }
     if (this.activeMode.id === 'training' && state.sparring && this.enemyChampion.lifeState === 'Dead') {
       // A practice opponent returns without rewards or a match-ending flow.
       this.enemyChampion.lifeState = 'Alive';
@@ -3516,7 +3527,7 @@ export class GameWorld {
     ctx.strokeStyle = '#fff0af'; ctx.lineWidth = 2; ctx.stroke();
     ctx.globalCompositeOperation = 'source-over'; ctx.shadowBlur = 0;
     ctx.fillStyle = '#170826'; ctx.font = 'bold 19px Georgia'; ctx.fillText('✦', relic.x, y + 7);
-    ctx.fillStyle = '#f2d6ff'; ctx.font = 'bold 9px Georgia'; ctx.fillText('TRANSFORM', relic.x, y - 27);
+    ctx.fillStyle = '#f2d6ff'; ctx.font = 'bold 9px Georgia'; ctx.fillText(relic.form ?? 'TRANSFORM', relic.x, y - 27);
     ctx.restore();
   }
 

@@ -795,10 +795,13 @@ assert(game.player.maxHp === 320 && game.player.hp === 296 && game.player.invuln
 game.modeState.transformationRelicTimer = 0;
 game.updateArenaTransformationRelic(0.01);
 assert(game.modeState.transformationRelic, 'Arena spawns a contested transformation relic instead of granting a permanent form from the profile');
-game.modeState.transformationRelic.form = 'FOCUS ASCENDANT';
+const relicRune = game.modeState.transformationRelic.runeId; const handBefore = game.player.runeHand.length + game.player.runeDeck.length;
 game.player.x = game.modeState.transformationRelic.x; game.player.z = game.modeState.transformationRelic.z;
 game.updateArenaTransformationRelic(0);
-assert(!game.modeState.transformationRelic && game.player.focusTransformTimer > 0, 'Claiming an Arena transformation relic activates the existing temporary transformation implementation');
+const gotCard = [...game.player.runeHand, ...game.player.runeDeck].some((c) => c.id === relicRune) && game.player.runeHand.length + game.player.runeDeck.length === handBefore + 1;
+assert(!game.modeState.transformationRelic && gotCard && !(game.player.ninefoldTimer > 0) && !(game.player.eidolonTimer > 0) && !(game.player.focusTransformTimer > 0), 'Claiming an Arena transformation relic gives its rune card (slot and cast it) instead of transforming at once (' + relicRune + ')');
+{ const E = game.enemyChampion; E.heldForm = { runeId: 'buff_B01', name: 'RISSWILD', wait: .5 }; E.x = game.player.x + 120; E.z = game.player.z; E.state = 'idle'; game.updateEnemyHeldForm(.2); const early = !(E.ninefoldTimer > 0); game.updateEnemyHeldForm(.4); const formed = E.ninefoldTimer > 0 && !E.heldForm && E.formDamageMult() > 1.2; E.ninefoldTimer = 0;
+  assert(early && formed, 'The champion keeps a collected transformation for a moment and then transforms near the player (harder blows)'); }
 game.enemyChampion.hp = 1; game.enemyChampion.takeDamage(2); game.enemyChampion.update(0.5, game, game.battlefield); game.updateMode(0.1);
 assert(game.matchState === 'Ending' && game.winnerTeam === 'blue', 'Arena Champion defeat resolves through the normal ending path (life-bar rules)');
 void arenaRift;
@@ -5144,12 +5147,12 @@ game.running = false;
   const set = (f, x, z) => { f.x = x; f.z = z; f.elevation = 0; f.vElevation = 0; f.grounded = true; f.kbVelX = 0; f.state = 'idle'; f.stateTimer = 0; f.surfaceHeight = 0; f.riftGrace = 0; f.invulnerableTimer = 0; };
   set(C, 700, .5); const hp0 = C.hp; C.takeDamage(30, 200, 0, .2); const kb1 = Math.abs(C.kbVelX); const crack1 = C.crack;
   set(C, 700, .5); C.crack = 120; C.takeDamage(30, 200, 0, .2); const kb2 = Math.abs(C.kbVelX);
-  const cracksNotLife = game.modeState.rift && C.hp === hp0 && crack1 > 15 && kb2 > kb1 * 2.2;
-  set(C, b.right, .5); C.kbVelX = 600; RF.updateRift(game, 1 / 60); const rimKO = C.soulSparks === 2 && C.crack === 0 && C.elevation > 100 && C.riftGrace > 0;
-  set(C, b.right, .5); C.kbVelX = 200; RF.updateRift(game, 1 / 60); const softRim = C.soulSparks === 2;
-  set(P, 512, .5); RF.updateRift(game, 1 / 60); const walkedOut = P.soulSparks === 3 && !(P.x >= RF.RIFT.pit.x0 && P.x <= RF.RIFT.pit.x1 && P.z >= RF.RIFT.pit.z0 && P.z <= RF.RIFT.pit.z1);
-  set(P, 512, .5); P.state = 'hurt'; RF.updateRift(game, 1 / 60); const pitKO = P.soulSparks === 2;
-  set(C, b.left, .5); C.kbVelX = -600; RF.updateRift(game, 1 / 60); set(C, b.left, .5); C.kbVelX = -600; RF.updateRift(game, 1 / 60);
+  const cracksNotLife = game.modeState.rift && C.hp === hp0 && crack1 > 8 && kb2 > kb1 * 2.2;
+  set(C, b.right, .5); C.kbVelX = 600; RF.updateRift(game, 1 / 60); const rimKO = C.soulSparks === RF.RIFT.lives - 1 && C.crack === 0 && C.elevation > 100 && C.riftGrace > 0;
+  set(C, b.right, .5); C.kbVelX = 200; RF.updateRift(game, 1 / 60); const softRim = C.soulSparks === RF.RIFT.lives - 1;
+  set(P, 512, .5); RF.updateRift(game, 1 / 60); const walkedOut = P.soulSparks === RF.RIFT.lives && !(P.x >= RF.RIFT.pit.x0 && P.x <= RF.RIFT.pit.x1 && P.z >= RF.RIFT.pit.z0 && P.z <= RF.RIFT.pit.z1);
+  set(P, 512, .5); P.state = 'hurt'; RF.updateRift(game, 1 / 60); const pitKO = P.soulSparks === RF.RIFT.lives - 1;
+  for (let k = 1; k < RF.RIFT.lives; k++) { set(C, b.left, .5); C.kbVelX = -600; RF.updateRift(game, 1 / 60); }
   assert(cracksNotLife && rimKO && softRim && walkedOut && pitKO && game.matchState === 'Ending' && game.winnerTeam === 'blue',
     'Arena rift: a hit cracks the shield (life stays, crack ' + Math.round(crack1) + ') and throws ×' + (kb2 / kb1).toFixed(1) + ' at high crack; a hard throw into the rim costs a soul spark and returns the fighter from above, a soft one does not; walking into the chasm pushes back, a thrown fall costs a spark; the last spark ends the duel');
   game.returnToHub();
