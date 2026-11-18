@@ -6,7 +6,7 @@ Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
 - Die Kreatur steigt jetzt in ca. 1,7 s langsam aus dem Zauberzirkel (erst schließt sich der Ring, dann taucht sie auf, an der Bodenlinie abgeschnitten) und ist währenddessen unverwundbar.
 - Der Beschwörer hält die Hand so lange am Boden, bis das Wesen heraufgestiegen ist (Pose 2 s, die Schlag-Pose wird gehalten statt nach einer halben Sekunde aufzustehen).
-- Pose korrigiert (Rückmeldung: der Körper ging nach hinten): im Rig neigt ein negativer Rumpfwinkel nach vorn, die Pose kippte also rückwärts. Jetzt beugt sich der Körper 34° nach vorn über den Zirkel, Kopf zum Zirkel, der vordere Arm greift nach unten vor die Knie, tiefe Hocke; im Browser gerendert geprüft.
+- Pose nach einer Kniestand-Referenz (drei Auflagepunkte) neu gebaut (Rückmeldung: der Körper ging nach hinten): hinteres Knie und Schienbein am Boden, vorderer Fuß steht, Oberkörper 34° nach vorn (in diesem Rig neigt ein negativer Rumpfwinkel nach vorn), Kopf zum Zirkel, der vordere Arm greift schräg nach vorn unten zum Boden; der Körper sinkt dadurch tiefer; im Browser gerendert geprüft.
 - Der Zirkel glüht entsprechend länger (2,8 s). Gilt für alle Beschwörungen, auch Elementartor und Gegner.
 
 ## 17. Nov 2026 – Fokus nur aus Kämpfen gegen Gegner (Rückmeldung des Nutzers)
