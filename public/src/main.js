@@ -1618,6 +1618,7 @@ export class GameWorld {
     this.player.confineBounds = null;
     this.enemyChampion.confineBounds = null;
     this.uiLayer?.classList?.toggle?.('mode-training', mode.id === 'training');
+    this.uiLayer?.classList?.toggle?.('mode-gallery', mode.id === 'gallery');
     this.uiLayer?.classList?.toggle?.('mode-base', mode.id === 'base');
     this.modeState = {
       id: mode.id, wave: 0, intermission: 0, stage: 0, announced: false,
@@ -1718,11 +1719,19 @@ export class GameWorld {
 
   // Switch the Training map; a running Training restarts on the new map
   // (decks are kept, the sparring partner starts switched off).
+  // Changes the mode of a running match in place (Training ⇄ Spell Gallery); from the menu it simply starts it.
+  switchRunningMode(id) {
+    this.setMenuPaused(false); this.matchMode = getGameMode(id).id; this.activeMode = getGameMode(this.matchMode);
+    if (this.matchState === 'Running' || this.matchState === 'Ending') return this.restartMatch();
+    this.startMatch(); return this.matchState === 'Running';
+  }
   selectTrainingMap(id) {
     // The Spell Gallery is its own mode (it scrolls); it is offered among the Training maps.
-    if (id === 'gallery') { this.setMenuPaused(false); this.setMatchMode('gallery'); this.startMatch(); this.showAnnouncement('SPELL-GALERIE', 1.4); return true; }
+    // (setMatchMode refuses while a match runs — and the map picker is opened from a running Training: switch directly.)
+    if (id === 'gallery') { this.switchRunningMode('gallery'); this.showAnnouncement('SPELL-GALERIE', 1.4); return true; }
     const map = TRAINING_MAPS.find((entry) => entry.id === id);
     if (!map) return false;
+    if (this.activeMode?.id === 'gallery') { this.trainingMapId = map.id; this.switchRunningMode('training'); this.showAnnouncement(`TRAINING MAP: ${map.name}`, 1.4); return true; }
     this.trainingMapId = map.id;
     try { globalThis.localStorage?.setItem?.('grimge-training-map', map.id); } catch { /* optional */ }
     if (this.activeMode?.id === 'training' && this.isMatchRunning()) {

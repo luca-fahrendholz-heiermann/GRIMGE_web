@@ -5545,13 +5545,15 @@ game.running = false;
 {
   // Spell Gallery (user, 19 Nov 2026): a station per distinct spell; only the stations near the player live; every spell casts.
   const GAL = await import('./public/src/spell_gallery.js'); const CAT = await import('./public/src/spell_catalog.js');
-  game.selectTrainingMap('gallery'); const st = game.modeState.gallery; const distinct = new Set(Object.values(CAT.SPELL_RECIPES)).size;
+  game.setMatchMode('training'); game.startMatch(); game.selectTrainingMap('gallery'); /* from a RUNNING Training, as the map picker does (bug: refused) */ const st = game.modeState.gallery; const distinct = new Set(Object.values(CAT.SPELL_RECIPES)).size;
   const P = game.player; P.x = GAL.GALLERY.startX; GAL.updateGallery(game, 1 / 60); const liveAtStart = st.stations.filter((s) => s.clone).length; const farDead = !st.stations[50].clone;
   const errors = []; let casts = 0;
   for (const s of st.stations) { P.x = s.x; GAL.updateGallery(game, 1 / 60); s.timer = 0; GAL.updateGallery(game, 1 / 60); casts++; for (let k = 0; k < 6; k++) { try { spells.update(1 / 30, game); } catch (e) { errors.push(s.id + ': ' + e.message); break; } } if (s.error) errors.push(s.id + ': ' + s.error); }
   const dummies = game.minions.filter((m) => m.isGalleryDummy).length;
   assert(game.activeMode.id === 'gallery' && st.stations.length >= distinct - 5 && liveAtStart > 0 && liveAtStart <= 6 && farDead && dummies <= 6 && !errors.length, 'Spell Gallery: one station per spell (' + st.stations.length + ' of ' + distinct + '), only the near ones live (' + liveAtStart + '), and every one of the ' + casts + ' spells casts without an error' + (errors.length ? ' — ' + errors.slice(0, 4).join('; ') : ''));
-  spells.clearRuntime(); game.returnToHub();
+  spells.clearRuntime(); const TM = await import('./public/src/training_maps.js'); game.selectTrainingMap(TM.TRAINING_MAPS[0].id); const backToTraining = game.activeMode.id === 'training' && game.matchState === 'Running' && !game.modeState.gallery;
+  assert(backToTraining, 'From the Spell Gallery a Training map brings the Training back');
+  game.returnToHub();
 }
 {
   // Guard against code swallowed by a mid-line comment ("x = 1; // note y = 2;" — happened twice, 6 + 10 Nov 2026).
