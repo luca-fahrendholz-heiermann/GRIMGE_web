@@ -2,6 +2,12 @@
 
 Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
+## 19. Nov 2026 – Spell-Galerie im Training (Wunsch des Nutzers)
+
+- Neue Karte SPELL-GALERIE in der Trainings-Kartenauswahl (erste Karte): eine lange, seitlich scrollende Reihe. Klone deiner Figur stehen hintereinander, jeder mit einem Dummy rechts daneben, abwechselnd in zwei Tiefen, und jeder Klon zaubert immer wieder einen Zauber des Spiels auf seinen Dummy.
+- 201 Stationen, eine je Zauber (Basisrunen, Kombinationen, Spezialrunen, Arcane States), über jedem Klon stehen Name, Nummer und Runen. Die Kamera folgt beim Entlanglaufen.
+- Nur die Stationen in deiner Nähe leben (Klon und Dummy entstehen beim Herankommen und verschwinden hinter dir), damit es flüssig bleibt. Kein Gegner, keine Uhr, keine Belohnungen; zurück über das Menü.
+
 ## 18. Nov 2026 – Arena: längere Duelle, Transformation slotten, Gegner transformiert (Rückmeldung des Nutzers)
 
 - Duelle halten länger: der Runenschild reißt langsamer (0,38 statt 0,6 je Schaden), der Bannrand bricht erst bei härterem Wurf (430 statt 380 px/s), 4 statt 3 Seelenfunken.

@@ -31,6 +31,12 @@ export const GAME_MODES = Object.freeze({
     id: 'base', label: 'BASIS', objective: 'DEINE BASIS — GEH ZU EINER STATION',
     objectives: false, autoWaves: false, respawn: 'unlimited', enemyBehavior: 'disabled', world: 'dungeon', progression: 'none'
   }),
+  // The Spell Gallery (spell_gallery.js): a Training map that runs on to the side — clones of the player cast every spell
+  // at their dummies. No foes, no clock, no rewards; it uses the scrolling dungeon world.
+  gallery: Object.freeze({
+    id: 'gallery', label: 'SPELL-GALERIE', objective: 'GEH DIE REIHE ENTLANG — JEDER KLON ZEIGT EINEN ZAUBER',
+    objectives: false, autoWaves: false, respawn: 'unlimited', enemyBehavior: 'disabled', world: 'dungeon', progression: 'none'
+  }),
   training: Object.freeze({
     // A castle-free practice yard: a stationary straw dummy in the centre and
     // an optional sparring partner toggled from the HUD.

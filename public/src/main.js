@@ -21,6 +21,7 @@ import { SpellTargeting, SlotChord, needsTarget } from './targeting.js';
 import { GamepadController } from './gamepad.js';
 import { environment, renderProp } from './environment.js';
 import { TRAINING_MAPS, getTrainingMap, zoneToWorld } from './training_maps.js';
+import { setupGallery, updateGallery, galleryActors, renderGalleryLabels } from './spell_gallery.js'; // the Training map where clones show every spell
 import { loadFxSprites } from './fx_sprites.js';
 import { loadSpellSprites } from './spell_visuals.js';
 import { renderPixelated } from './abilities.js';
@@ -50,7 +51,7 @@ import { BASE_SCENE, baseBounds, renderBaseHall, baseActors, updateBase, updateB
 const BACK_TRAPS = 2;
 // Follow-camera zoom per mode (1 = the classic full stage). The zoom pivots on the near ground edge, so the near depth
 // lane stays in view and the extra size grows upward (room for jumps).
-const FOLLOW_ZOOM = Object.freeze({ dungeon: 1.3 });
+const FOLLOW_ZOOM = Object.freeze({ dungeon: 1.3, gallery: 1.3 });
 // Every own shield recipe (Ward principle) shares one cooldown.
 const WARD_SPELL_IDS = new Set(['arcane_aegis', 'storm_ward', 'sacrifice_bulwark']);
 
@@ -1658,6 +1659,11 @@ export class GameWorld {
       this.spawnDungeonStarter();
       return;
     }
+    if (mode.id === 'gallery') {
+      setupGallery(this);
+      this.enemyChampion.lifeState = 'Dead'; this.enemyChampion.respawnTimer = Infinity;
+      return;
+    }
     if (mode.id === 'training') {
       // Practice yard: a stationary straw dummy in the centre. The sparring
       // partner (the Champion AI) starts switched off and is toggled from
@@ -1713,6 +1719,8 @@ export class GameWorld {
   // Switch the Training map; a running Training restarts on the new map
   // (decks are kept, the sparring partner starts switched off).
   selectTrainingMap(id) {
+    // The Spell Gallery is its own mode (it scrolls); it is offered among the Training maps.
+    if (id === 'gallery') { this.setMenuPaused(false); this.setMatchMode('gallery'); this.startMatch(); this.showAnnouncement('SPELL-GALERIE', 1.4); return true; }
     const map = TRAINING_MAPS.find((entry) => entry.id === id);
     if (!map) return false;
     this.trainingMapId = map.id;
@@ -2425,6 +2433,14 @@ export class GameWorld {
           if (state.intermission >= 2.1) { state.intermission = 0; this.spawnInvasionWave(); }
         }
       }
+      return;
+    }
+    if (this.activeMode.id === 'gallery') {
+      // No clock; the camera follows along the row; the stations near the player cast (spell_gallery.js).
+      this.matchTime = this.matchDuration;
+      state.dungeonCameraX += (this.dungeonCameraTarget() - state.dungeonCameraX) * Math.min(1, 3.5 * dt);
+      this.updateCameraZoom(dt);
+      updateGallery(this, dt);
       return;
     }
     if (this.activeMode.id === 'dungeon') {
@@ -3379,6 +3395,7 @@ export class GameWorld {
     this.renderPotions(ctx);
     this.renderArenaRuneCollectibles(ctx);
     this.renderArenaTransformationRelic(ctx);
+    if (this.activeMode?.id === 'gallery') renderGalleryLabels(ctx, this);
 
     // A campaign scene dresses the dungeon room with its own props along the back wall.
     if (this.activeMode?.id === 'dungeon' && hasSceneProps(this.battlefield.scene?.id) && this.battlefield.boundsOverride) renderSceneProps(ctx, this.battlefield.scene.id, this.battlefield.boundsOverride.left, this.battlefield.boundsOverride.right, this.modeState?.structures?.defs ?? []);
@@ -3393,6 +3410,7 @@ export class GameWorld {
     if (this.player.lifeState !== 'Dead' && !this.player.isMounted) actors.push(this.player);
     if (this.primal?.isTargetable) actors.push(this.primal);
     if (this.activeMode?.id === 'base') actors.push(...baseActors(this)); /* stations and stands share the depth order */
+    if (this.activeMode?.id === 'gallery') actors.push(...galleryActors(this)); /* the casting clones of the Spell Gallery */
     // Spells with a ground position and summons share the painter's order
     // with the actors, so a spike behind the dummy is hidden by the dummy.
     actors.push(...spells.depthEntries());

@@ -780,7 +780,7 @@ export class UIManager {
     window.gameWorld?.setMenuPaused?.(!!open);
     if (!open || !this.trainingMapGrid) return;
     const current = window.gameWorld?.trainingMapId;
-    this.trainingMapGrid.innerHTML = TRAINING_MAPS.map((map) => `<button type="button" class="training-map-card ${map.id === current ? 'active' : ''}" data-map-id="${map.id}"><img src="${trainingMapThumb(map)}" alt="${map.name}" loading="lazy"><b>${map.name}</b><span>${map.desc}</span></button>`).join('');
+    this.trainingMapGrid.innerHTML = '<button type="button" class="training-map-card gallery-card" data-map-id="gallery"><b>SPELL-GALERIE</b><span>Klone deiner Figur zaubern jeden Zauber auf Dummys. Geh die Reihe entlang und schau zu.</span></button>' + TRAINING_MAPS.map((map) => `<button type="button" class="training-map-card ${map.id === current ? 'active' : ''}" data-map-id="${map.id}"><img src="${trainingMapThumb(map)}" alt="${map.name}" loading="lazy"><b>${map.name}</b><span>${map.desc}</span></button>`).join('');
   }
 
   toggleIngameMenu(forceState = true) {
