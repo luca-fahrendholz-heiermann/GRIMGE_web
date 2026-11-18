@@ -2,6 +2,12 @@
 
 Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
+## 18. Nov 2026 – Beschwörung langsamer (Rückmeldung des Nutzers)
+
+- Die Kreatur steigt jetzt in ca. 1,7 s langsam aus dem Zauberzirkel (erst schließt sich der Ring, dann taucht sie auf, an der Bodenlinie abgeschnitten) und ist währenddessen unverwundbar.
+- Der Beschwörer hält die Hand so lange am Boden, bis das Wesen heraufgestiegen ist (Pose 2 s, die Schlag-Pose wird gehalten statt nach einer halben Sekunde aufzustehen).
+- Der Zirkel glüht entsprechend länger (2,8 s). Gilt für alle Beschwörungen, auch Elementartor und Gegner.
+
 ## 17. Nov 2026 – Fokus nur aus Kämpfen gegen Gegner (Rückmeldung des Nutzers)
 
 - Nahkampftreffer auf Kisten, Fässer, Szenenobjekte und Wände füllen den Fokus nicht mehr; Treffer, Trefferstopp und Rückstoß bleiben. Nur ein Treffer auf einen lebenden Gegner

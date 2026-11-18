@@ -123,7 +123,7 @@ export const BASE_CLIPS = Object.freeze({
   ] },
   // Summoning (user, 17 Nov 2026): the caster kneels and presses one palm flat on the ground — the arm raised back first, then
   // the slam with the body low and leaning in, held while the seal spreads, then up again. Frames: wind-up · hold · rise.
-  summon: { cape: -3, holds: [5, 34, 8], loop: false, seq: [
+  summon: { cape: -3, holds: [8, 400, 8], loop: false, seq: [ /* the slam frame is held until the pose ends (the palm stays down while the creature rises) */
     P({ ...crouch(.9), torso: 8, head: -2, armFU: -50, armFL: 34, armBU: -26, armBL: 30 }, { pelvis: [0, 3] }),
     P({ ...crouch(2.1), torso: 52, head: -22, armFU: -40, armFL: 10, armBU: -48, armBL: 36 }, { pelvis: [0, 11] }),
     P({ ...crouch(.6), torso: 12, head: -3, armFU: 24, armFL: 10, armBU: -10, armBL: 20 }, { pelvis: [0, 3] })

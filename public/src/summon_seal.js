@@ -8,7 +8,9 @@ import { groundYForDepth } from './world.js';
 
 const TAU = Math.PI * 2;
 const SQUASH = .32; // the ground ellipse of the 2.5D floor
-export const SEAL = Object.freeze({ spread: .45, ring: .9, glow: 1.7, end: 2.3, radius: 46, pose: .8 });
+// rise: how long the creature takes to climb out of the seal (its first 30 % it waits while the ring closes); pose: the caster keeps
+// the palm down for the whole rise plus a short moment (user, 18 Nov 2026: hold the hand down until the monster has spawned).
+export const SEAL = Object.freeze({ spread: .45, ring: .9, glow: 2.1, end: 2.8, radius: 46, rise: 1.7, riseWait: .3, pose: 2.0 });
 const clamp01 = (v) => Math.max(0, Math.min(1, v));
 const rnd = (seed, n) => { const s = Math.sin(seed * 12.9898 + n * 78.233) * 43758.5453; return s - Math.floor(s); };
 
@@ -56,3 +58,5 @@ export class SummonSeal {
 // The caster kneels with a palm on the ground: the rig clip 'summon' while summonPoseT runs. Purely visual — nothing locks the
 // caster; as soon as it walks or acts the pose gives way (entities.js plays it only for a standing figure).
 export function beginSummonPose(caster) { if (caster) caster.summonPoseT = SEAL.pose; }
+// 0..1 how far a creature has climbed out of its seal (eased, after the short wait while the ring closes).
+export function riseProgress(timer, duration) { if (!(duration > 0)) return 1; const p = 1 - timer / duration; const k = clamp01((p - SEAL.riseWait) / (1 - SEAL.riseWait)); return k * k * (3 - 2 * k); }

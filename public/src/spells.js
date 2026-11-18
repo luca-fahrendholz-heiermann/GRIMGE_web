@@ -20,7 +20,7 @@ import { offerRecast } from './recast.js';
 import { statusElementsOf, setStatusSource, updateStatuses, statusDepthEntries, clearStatuses } from './status_effects.js';
 import { applyWard, setMasterySink } from './mastery.js';
 import { CastCircleFx, RayCrownFx } from './cast_circle.js';
-import { SummonSeal, beginSummonPose } from './summon_seal.js'; // the seal under a summoned creature and the kneeling pose of its caster
+import { SummonSeal, beginSummonPose, riseProgress, SEAL } from './summon_seal.js'; // the seal under a summoned creature and the kneeling pose of its caster
 import { BeamSpell, BeamClash, resolveBeamInteractions, MirrorWardSpell, GravityLiftSpell, TitanStompSpell, SoulSeekerBolt, SeismicSlamSpell, ConeBreathSpell, BurrowStrikeSpell, ShieldBubbleSpell, renderPixelated } from './abilities.js';
 
 export { BeamClash };
@@ -234,7 +234,8 @@ export class SpellSystem {
     if (options.bodyKey) { summon.bodyKey = options.bodyKey; summon.bodyHeight = options.bodyHeight ?? ENTITY_VISUALS.minionHeight; }
     if (options.maxHp) summon.maxHp = options.maxHp;
     if (options.damageScale) summon.damage *= options.damageScale;
-    if (definition.rise) summon.riseTimer = summon.riseDuration = definition.rise;
+    /* every creature climbs slowly out of its seal (user, 18 Nov 2026); a definition may set its own, longer rise */
+    summon.riseTimer = summon.riseDuration = definition.rise ?? SEAL.rise;
     summon.maxHp = Math.round(summon.maxHp * (mods.summonHp ?? 1));
     summon.hp = summon.maxHp;
     summon.damage *= mods.summonDamage ?? 1;
@@ -2345,6 +2346,7 @@ class SummonedCreature extends GroundEntity {
   }
 
   takeDamage(amount) {
+    if (this.riseTimer > 0) return; /* still rising out of the seal: nothing can hurt it yet */
     if (this.arcaneShield > 0) {
       const absorbed = Math.min(amount, this.arcaneShield);
       this.arcaneShield -= absorbed; amount -= absorbed;
@@ -2366,7 +2368,7 @@ class SummonedCreature extends GroundEntity {
     const manager = this.spriteManager;
     if (!key || !manager?.renderEntity || !manager.sprites?.[key]) return false;
     const height = this.mimicKey ? ENTITY_VISUALS.heroHeight : (this.bodyHeight ?? ENTITY_VISUALS.minionHeight);
-    const rise = this.riseDuration > 0 ? 1 - this.riseTimer / this.riseDuration : 1;
+    const rise = riseProgress(this.riseTimer, this.riseDuration);
     const state = this.state === 'attack' ? 'attack1' : this.state;
     ctx.save();
     if (rise < 1) {
@@ -2386,7 +2388,16 @@ class SummonedCreature extends GroundEntity {
     return true;
   }
 
+  // Rising out of the seal: the body is drawn sunk into the floor and clipped at the ground line, so it climbs out slowly.
   render(ctx) {
+    if (this.riseTimer > 0 && !(this.mimicKey ?? this.bodyKey)) {
+      const k = riseProgress(this.riseTimer, this.riseDuration);
+      ctx.save(); ctx.beginPath(); ctx.rect(this.x - 140, this.y - 400, 280, 400); ctx.clip();
+      ctx.translate(0, (1 - k) * 90); this.renderBody(ctx); ctx.restore(); return;
+    }
+    this.renderBody(ctx);
+  }
+  renderBody(ctx) {
     if (this.renderBorrowedBody(ctx)) return;
     const color = this.definition.color;
     const spriteKey = this.definition.spriteKey ?? this.definition.id;

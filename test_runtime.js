@@ -372,7 +372,7 @@ spells.clearRuntime();
 game.player.x = 470; game.player.z = .52; game.player.facing = 1; game.battlefield.placeOnSurface(game.player);
 game.enemyChampion.isDead = false; game.enemyChampion.hp = game.enemyChampion.maxHp; game.enemyChampion.x = 510; game.enemyChampion.z = .52; game.battlefield.placeOnSurface(game.enemyChampion);
 const wolfRunes = ['aqua', 'terra', 'ventus'].map((id) => recognizer.runes.find((rune) => rune.id === id));
-spells.cast(game.player, spells.resolveSpell(wolfRunes), game);
+spells.cast(game.player, spells.resolveSpell(wolfRunes), game); spells.getSummons('blue').forEach((m) => { m.riseTimer = 0; }); /* these tests are about the creature's behaviour, not its rise out of the seal */
 assert(spells.getSummons('blue').length === 1 && spells.getSummons('blue')[0].definition.id === 'spirit_wolf', 'Rune combination creates a real active Spirit Wolf summon');
 const wolfTargetHp = game.enemyChampion.hp;
 spells.update(1, game);
@@ -382,7 +382,8 @@ spells.clearRuntime();
 // movement mode: proximity toggles the rider, input moves the summon, and a
 // dead mount automatically returns control to the Wizard.
 game.player.state = 'idle'; game.player.canAttack = true; game.player.vx = game.player.vz = 0;
-spells.cast(game.player, spells.resolveSpell(wolfRunes), game);
+spells.cast(game.player, spells.resolveSpell(wolfRunes), game); spells.getSummons('blue').forEach((m) => { m.riseTimer = 0; }); /* these tests are about the creature's behaviour, not its rise out of the seal */
+spells.getSummons('blue').forEach((m) => { m.riseTimer = 0; }); /* these tests are about the creature's behaviour, not its rise out of the seal */
 const rideWolf = spells.getSummons('blue')[0];
 assert(game.updateMountCandidate() === rideWolf, 'Mount candidate selects the nearest valid own mount before exposing the action');
 game.player.x += 200;
@@ -406,6 +407,7 @@ const construct = recognizer.runes.find((rune) => rune.id === 'construct');
 game.enemyChampion.isDead = false; game.enemyChampion.x = game.player.x + 85; game.enemyChampion.z = game.player.z;
 const stormWolfRunes = [bestia, recognizer.runes.find((rune) => rune.id === 'fulgur')];
 spells.cast(game.player, spells.resolveSpell(stormWolfRunes), game);
+spells.getSummons('blue').forEach((m) => { m.riseTimer = 0; }); /* these tests are about the creature's behaviour, not its rise out of the seal */
 const stormWolf = spells.getSummons('blue')[0];
 spells.update(.1, game);
 assert(stormWolf?.definition.id === 'storm_wolf' && stormWolf.definition.spriteKey === 'storm_wolf' && stormWolf.target === game.enemyChampion, 'Storm Wolf Hunter uses its dedicated sprite and prioritizes the hostile Wizard over the minion line');
@@ -413,6 +415,7 @@ spells.clearRuntime();
 const voidRune = recognizer.runes.find((rune) => rune.id === 'void');
 game.enemyChampion.slowTimer = 0; game.enemyChampion.x = game.player.x + 72; game.enemyChampion.z = game.player.z;
 spells.cast(game.player, spells.resolveSpell([bestia, voidRune]), game);
+spells.getSummons('blue').forEach((m) => { m.riseTimer = 0; }); /* these tests are about the creature's behaviour, not its rise out of the seal */
 const voidSpider = spells.getSummons('blue')[0];
 voidSpider.attackTimer = 0;
 spells.update(.4, game);
@@ -426,6 +429,7 @@ game.enemyChampion.elevation = 0; game.enemyChampion.vElevation = 0;
 game.enemyChampion.x = game.player.x + 44; game.enemyChampion.z = game.player.z;
 const snakeRunes = [bestia, recognizer.runes.find((rune) => rune.id === 'terra'), recognizer.runes.find((rune) => rune.id === 'ventus')];
 spells.cast(game.player, spells.resolveSpell(snakeRunes), game);
+spells.getSummons('blue').forEach((m) => { m.riseTimer = 0; }); /* these tests are about the creature's behaviour, not its rise out of the seal */
 const runeSnake = spells.getSummons('blue')[0];
 runeSnake.attackTimer = 0;
 spells.update(.2, game);
@@ -440,6 +444,7 @@ game.minions.forEach((minion) => { minion.isDead = true; });
 game.enemyChampion.x = game.player.x + 300; game.enemyChampion.z = game.player.z;
 game.battlefield.redTower.isDead = false; game.battlefield.redTower.hp = game.battlefield.redTower.maxHp;
 spells.cast(game.player, spells.resolveSpell([construct, recognizer.runes.find((rune) => rune.id === 'terra')]), game);
+spells.getSummons('blue').forEach((m) => { m.riseTimer = 0; }); /* these tests are about the creature's behaviour, not its rise out of the seal */
 const runeGolem = spells.getSummons('blue')[0];
 spells.update(.1, game);
 assert(runeGolem?.definition.id === 'rune_golem' && runeGolem.target === game.battlefield.redTower, 'Rune Golem Vanguard naturally progresses onto the enemy Tower');
@@ -5499,8 +5504,9 @@ game.running = false;
   P.x = 330; P.z = .5; P.facing = 1; spells.clearRuntime(); spells.cast(P, spells.resolveSpell([{ id: 'bestia' }, { id: 'fulgur' }]), game);
   const seal = spells.activeSpells.find((q) => q instanceof SE.SummonSeal); const wolf = spells.activeSummons.find((q) => !q.isDead);
   const { BASE_CLIPS } = await import('./public/src/rig_clips.js'); const hasClip = BASE_CLIPS.summon?.seq?.length === 3 && BASE_CLIPS.summon.loop === false; void SP; let phases = 0; let nan = null;
-  for (let i = 0; i < 160 && seal && !seal.isFinished; i++) { spells.update(1 / 60, game); try { if (i % 8 === 0) seal.render(strict); } catch (e) { nan = e.message; } phases++; }
-  assert(seal && wolf && Math.abs(seal.x - wolf.x) < 1 && P.summonPoseT > .5 && hasClip && seal.isFinished && !nan && seal.isGroundDecal, 'A summon puts a summoning seal under the creature (it fades out after ' + (phases / 60).toFixed(1) + ' s) and the caster has the kneeling clip' + (nan ? ' — ' + nan : ''));
+  const poseAtCast = P.summonPoseT; const hp0 = wolf?.hp; wolf?.takeDamage(50); const unhurt = wolf?.hp === hp0; let poseHeld = true; let risenAt = null;
+  for (let i = 0; i < 260 && seal && !seal.isFinished; i++) { spells.update(1 / 60, game); if (wolf.riseTimer > 0 && P.summonPoseT <= 0) poseHeld = false; if (risenAt == null && wolf.riseTimer <= 0) risenAt = i / 60; try { if (i % 8 === 0) { seal.render(strict); wolf.render(strict); } } catch (e) { nan = e.message; } phases++; }
+  assert(seal && wolf && Math.abs(seal.x - wolf.x) < 1 && poseAtCast > 1.5 && poseHeld && unhurt && risenAt > 1.2 && risenAt < poseAtCast && hasClip && seal.isFinished && !nan && seal.isGroundDecal, 'A summon rises slowly out of its seal (risen after ' + risenAt?.toFixed(1) + ' s, hurt-proof meanwhile) while the caster keeps the palm down (' + poseAtCast + ' s), and the seal ring lies under it (it fades out after ' + (phases / 60).toFixed(1) + ' s) and the caster has the kneeling clip' + (nan ? ' — ' + nan : ''));
   P.summonPoseT = 0; spells.clearRuntime(); game.returnToHub();
 }
 // Training is a sandbox (user, 17 Nov 2026): trying class weapons there must not overwrite the class chosen in the hub.
