@@ -383,8 +383,8 @@ spells.clearRuntime();
 // dead mount automatically returns control to the Wizard.
 game.player.state = 'idle'; game.player.canAttack = true; game.player.vx = game.player.vz = 0;
 spells.cast(game.player, spells.resolveSpell(wolfRunes), game); spells.getSummons('blue').forEach((m) => { m.riseTimer = 0; }); /* these tests are about the creature's behaviour, not its rise out of the seal */
-spells.getSummons('blue').forEach((m) => { m.riseTimer = 0; }); /* these tests are about the creature's behaviour, not its rise out of the seal */
 const rideWolf = spells.getSummons('blue')[0];
+game.player.x = rideWolf.x - 40; /* the creature now stands a seal radius ahead; walk up to it */
 assert(game.updateMountCandidate() === rideWolf, 'Mount candidate selects the nearest valid own mount before exposing the action');
 game.player.x += 200;
 assert(game.updateMountCandidate() === null, 'Mount candidate clears immediately outside interaction range');
@@ -452,7 +452,7 @@ spells.clearRuntime();
 game.minions.forEach((minion) => { minion.isDead = false; });
 const dragonRunes = ['ignis', 'terra', 'fulgur'].map((id) => recognizer.runes.find((rune) => rune.id === id));
 const dragonTargetHp = game.enemyChampion.hp = game.enemyChampion.maxHp;
-game.enemyChampion.x = game.player.x + 175; game.enemyChampion.z = game.player.z;
+game.player.facing = 1; game.enemyChampion.x = game.player.x + 175; game.enemyChampion.z = game.player.z;
 spells.cast(game.player, spells.resolveSpell(dragonRunes), game);
 spells.update(.7, game);
 assert(game.enemyChampion.hp < dragonTargetHp, 'Dragon Invocation resolves a strong temporary battlefield strike through normal spell targets');

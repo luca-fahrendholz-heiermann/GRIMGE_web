@@ -228,7 +228,9 @@ export class SpellSystem {
     const limit = 1 + Math.max(0, extra);
     const sameKind = this.activeSummons.filter((summon) => !summon.isDead && summon.team === caster.team && summon.definition.role === definition.role);
     while (sameKind.length >= limit) sameKind.shift().dismiss();
-    const summon = new SummonedCreature(options.x ?? caster.x + caster.facing * 34, options.z ?? caster.z, caster.team, caster.surfaceHeight ?? 0, definition, quality, gameWorld.sprites);
+    /* the seal must lie in front of the caster, not under it (user, 18 Nov 2026): spawn one seal radius plus a gap ahead */
+    const sealRadius = Math.max(34, Math.min(70, (definition.radius ?? 20) * 2 + 14));
+    const summon = new SummonedCreature(options.x ?? caster.x + (caster.facing || 1) * (sealRadius + 30), options.z ?? caster.z, caster.team, caster.surfaceHeight ?? 0, definition, quality, gameWorld.sprites);
     summon.owner = caster;
     if (options.mimicKey) summon.mimicKey = options.mimicKey;
     if (options.bodyKey) { summon.bodyKey = options.bodyKey; summon.bodyHeight = options.bodyHeight ?? ENTITY_VISUALS.minionHeight; }
@@ -245,7 +247,7 @@ export class SpellSystem {
     if (!summon.isFlying) gameWorld.battlefield.resolveEntityCollision(summon);
     this.activeSummons.push(summon);
     // A summoning seal on the floor under the creature, and the caster kneels with a palm on the ground (user, 17 Nov 2026).
-    this.addSpell(new SummonSeal(summon.x, summon.z, definition.color, caster, { radius: Math.max(34, Math.min(70, (definition.radius ?? 20) * 2 + 14)) }), 'B');
+    this.addSpell(new SummonSeal(summon.x, summon.z, definition.color, caster, { radius: sealRadius }), 'B');
     if (!options.noPose) beginSummonPose(caster);
     combat.spawnShockwave(summon.x, summon.y - 20, 42 * quality.area, definition.color);
     combat.spawnElementalParticles(summon.x, summon.y - 25, definition.particleElement ?? (definition.id === 'siege_golem' ? 'terra' : 'aqua'), Math.round(18 * quality.particles));
