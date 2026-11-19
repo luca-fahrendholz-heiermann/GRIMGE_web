@@ -189,13 +189,14 @@ Vor dem Start wählt man nur die **Klasse**. Den Weg zur großen Form wählt man
 | Moment | Wahl | Danach |
 |---|---|---|
 | **Stufe 8** | **Klasse** (Bankai) **oder ein Element** (dessen Arcane State) | Eine **Prüfung** erscheint auf der Karte (Waffenhalle bzw. Elementschrein). Wer ihren Wächter besiegt, bekommt die Karte. |
-| **Stufe 10** | **Klasse** (Klassen-Transformation) **oder ein Element** (Element-Transformation) | Eine zweite, schwerere **Prüfung**. Ihr Sieg schaltet die Fokus-Transformation frei. |
+| **Stufe 10** | **Klasse** (Klassen-Transformation), **ein Element** (Element-Transformation) **oder der Primal** (Primal-Transformation, §4d) | Eine zweite, schwerere **Prüfung**. Ihr Sieg schaltet die Fokus-Transformation frei. |
 
 - **Mischungen sind erlaubt:** Bankai auf Stufe 8 und Feuer-Perfektion auf 10, Eis-Arcane-State und
   Klassen-Perfektion, oder zweimal dasselbe Element für die reine Linie. Man muss kein Glück beim Finden haben, um
   flexibel zu sein.
-- **Welche Elemente zur Wahl stehen:** die Elemente, die man in dieser Runde **wirklich benutzt** hat (die drei mit
-  den meisten gewirkten Zaubern, wie die Meisterung durch Benutzung). Die Klasse steht immer zur Wahl. So belohnt
+- **Welche Elemente zur Wahl stehen** (entschieden, Nutzer 19. Nov 2026): die Elemente, die man in dieser Runde
+  **wirklich benutzt** hat (die drei mit den meisten gewirkten Zaubern, wie die Meisterung durch Benutzung). Die
+  Klasse steht immer zur Wahl, auf Stufe 10 zusätzlich der Primal. So belohnt
   die Krönung den eigenen Spielstil, und die Wahl ist nie beliebig.
 - **Verdienen statt geschenkt:** Die Prüfung ist ein Kampf gegen einen Wächter am Prüfungsort. Jeder bekommt eine,
   sie ist immer erreichbar, es zählt nur Können. Sie ist für alle auf der Karte sichtbar, und Gegner können dort
@@ -211,22 +212,19 @@ Vor dem Start wählt man nur die **Klasse**. Den Weg zur großen Form wählt man
   Fahne an der Burg). Bis dahin verrät nur der Spielstil, wohin jemand geht. Wer sieht, dass sein Nachbar zum
   Feuerschrein zieht, baut Aqua in die Mauern ein (§6.5).
 
-### 4d. Primals im Kronenkrieg (Empfehlung)
-Der Kanon führt drei getrennte Quellen für Transformationen: Klasse, Primal und Meisterung. Im Kronenkrieg ist der
-Krönung über die Prüfungen (§4c) die Transformation. Ein zusätzlicher Primal von Anfang an würde den Start „nur mit Klasse“ aufweichen
-und eine dritte Machtquelle neben Armee und Weg stapeln.
-
-**Empfehlung: Der Primal kommt mit, aber klein, und wächst in der Runde. Eine Primal-Transformation gibt es im
-Kronenkrieg nicht.**
-- Jeder startet mit seinem Primal als **kleinem Begleiter** (Jungtier, kämpft schwach mit, hilft beim Finden,
-  z. B. wittert Goldadern). Das passt zur Richtung „Primals brauchen einen Weg von klein nach groß“.
-- Mit der Rundenstufe wächst er sichtbar: Jungtier (1) → ausgewachsen (5, **reitbar**) → mächtig (8, fliegende
-  Primals **fliegen**). Damit ist er das garantierte Reittier und ergänzt Pferde und gezähmte Kreaturen.
-- Er bleibt ein Begleiter, keine Verwandlung des Helden. Die Transformation kommt allein aus dem Weg. So gibt es
-  pro Spieler genau **eine** Krönung und keine Stapel.
-- Stirbt er, kehrt er nach einer Abklingzeit zurück (wie Reittiere). Er kann nicht gestohlen oder gezähmt werden.
-- Alternative, falls das zu viel ist: Primals ganz weglassen und nur gezähmte Kreaturen und Eier nutzen. Das ist
-  reiner, aber die eigene Identität (mein Wolf, mein Drache) fehlt dann.
+### 4d. Der Primal: immer dabei, wächst mit (entschieden, Nutzer 19. Nov 2026)
+- **Immer dabei:** Jeder startet mit seinem Primal als **kleinem Begleiter** (Jungtier, kämpft schwach mit, hilft
+  beim Finden, z. B. wittert Goldadern). Das passt zur Richtung „Primals brauchen einen Weg von klein nach groß“.
+- **Wächst mit der Rundenstufe** sichtbar: Jungtier (1) → ausgewachsen (5, **reitbar**) → mächtig (8, fliegende
+  Primals **fliegen**). Damit ist er das garantierte Reittier neben Pferden und gezähmten Kreaturen.
+- **Er kann sterben.** Dann ist er weg, bis man ihn **in der eigenen Hauptburg wiederbelebt** (hingehen, kurzes
+  Ritual). Wer ihn mitten im Krieg verliert, steht ohne Reittier da und muss entscheiden: zurück zur Burg oder zu Fuß
+  weiter. Fällt die Hauptburg, ist keine Wiederbelebung mehr möglich. Gestohlen oder gezähmt werden kann er nicht.
+- **Primal-Transformation als dritte Krönung:** Auf Stufe 10 steht neben Klasse und Element auch der **Primal** zur
+  Wahl (§4c). Die Prüfung dafür (ein Urquell-Wächter) kann nur bestehen, wer seinen Primal **lebend** dabei hat.
+  Der Sieg schaltet die Primal-Transformation als Fokus-Transformation frei (Kanon: Manifestation → Hybrid → Fusion;
+  im Kronenkrieg die volle Form).
+- **Eine Krönung pro Spieler:** Auf Stufe 10 wählt man genau eine der drei Transformationen. Es gibt keine Stapel.
 
 ---
 
@@ -397,7 +395,7 @@ Der Kern-Moment des Modus. Er soll **entdeckt** werden, nicht erklärt.
   Ausgleich: Im Flug kann man keine Burg erobern, kein Ei tragen und nicht zeichnen. Fernkämpfer und Blitze holen
   einen herunter. Eine Flug-Ausdauer zwingt zur Landung.
 - Reittiere kämpfen mit, wenn man absteigt, und sterben nicht endgültig, solange der Held lebt (Rückkehr nach
-  Abklingzeit).
+  Abklingzeit). **Ausnahme Primal:** Er muss in der Hauptburg wiederbelebt werden (§4d).
 
 ---
 
@@ -494,7 +492,7 @@ Die Karte gehört zu Beginn **niemandem**. Neben den vier Spielern (Menschen ode
 | Wie viele Einheiten gleichzeitig? | Trupp anfangs 6, maximal 20; insgesamt ≈ 120 Einheiten auf der Karte (Leistung am Handy prüfen) |
 | Deckgröße der Runde? | 4 Karten zu Beginn, mit der Rundenstufe bis 8; beim Tod fällt alles |
 | Wie schwer sind die Prüfungen? | Stufe 8: ein Wächter etwa so stark wie eine Zwischenburg-Besatzung; Stufe 10: ein Wächter wie eine epische Kreatur. Der eigene Trupp darf helfen |
-| Primal von Anfang an? | ja, als kleiner Begleiter, der mit der Rundenstufe wächst (reitbar ab 5, Flug ab 8); keine Primal-Transformation im Kronenkrieg (§4d) |
+| Primal von Anfang an? | entschieden: ja, als kleiner Begleiter, wächst mit (reitbar ab 5, Flug ab 8), stirbt er, Wiederbelebung nur in der Hauptburg; Primal-Transformation als dritte Wahl auf Stufe 10 (§4d) |
 | Gilt die Stufen-Sperre auch in anderen Modi? | Vorerst nur im Kronenkrieg. In Arena und Siege regeln Deck-Budget und Seltenheit die Macht, im Feldzug die Fortschritts-Freischaltungen. Ein ähnliches Muster kann später in den Dungeon (Stufe pro Raum) |
 | Wie viel kostet ein Kämpfer? | einfache Einheit ≈ 20 Gold, starke 60 Gold + Stahl; ein Banditentrupp bringt ≈ 40–80 Gold |
 | Wie oft wird die Karte neu gebaut? | bei jedem Rundenstart; der Startwert (Seed) wird angezeigt, damit man eine gute Karte teilen und erneut spielen kann |
