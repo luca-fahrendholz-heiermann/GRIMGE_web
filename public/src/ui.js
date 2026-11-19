@@ -495,6 +495,15 @@ export class UIManager {
       if (!window.gameWorld?.profile?.character?.created && this.openCharacterScreen({ first: true, then: () => this.setHubPage('modes') })) return;
       this.setHubPage('modes');
     });
+    // Kronenkrieg (kk_world.js): a card on the game-type page.
+    const typeCards = document.querySelector?.('.hub-game-types-cards') ?? null;
+    if (typeCards && typeof typeCards.appendChild === 'function' && !document.getElementById('hub-kronenkrieg-btn')) {
+      const k = document.createElement('button'); k.id = 'hub-kronenkrieg-btn'; k.type = 'button'; k.className = 'hub-game-type-card hub-kk-card'; k.setAttribute('aria-label', 'Kronenkrieg');
+      k.innerHTML = '<b>♛ KRONENKRIEG</b><small>Krieg &amp; Survival · 4 Kronen · Bots</small>';
+      k.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.3em;font-family:Cinzel,serif;color:#fff3c8;background:linear-gradient(160deg,#2a1838,#11202e);border:2px solid #f0d890;min-height:64px;cursor:pointer;font-size:clamp(12px,1.5vw,18px)';
+      k.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); const game = window.gameWorld; if (!game) return; game.setMatchMode('kronenkrieg'); game.startMatch(); });
+      typeCards.appendChild(k);
+    }
     // The base (base.js): a button on the hub's first page walks into the headquarters.
     const hubPage = document.querySelector?.('#hub-swipe-area .hub-page') ?? null;
     if (hubPage && typeof hubPage.appendChild === 'function' && !document.getElementById('hub-base-btn')) {

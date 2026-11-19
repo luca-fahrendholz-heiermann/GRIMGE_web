@@ -2,6 +2,14 @@
 
 Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
+## 19. Nov 2026 – Kronenkrieg, Meilenstein 1: die Karte (Konzept GRIMGE_KRONENKRIEG.md)
+
+- Neuer Modus KRONENKRIEG (Karte auf der Spielmodus-Seite im Hub).
+- Jede Runde eine neue Karte aus Bausteinen: 4 Hauptburgen, 12 Zwischenburgen (je eine Kämpferklasse), Gebäude, Goldadern, Gefangenenlager, 14 Quellen (eine reine in der Mitte), Kreaturen-Reviere, Banditenlager, Ställe, Wegschreine; 13 Element-Gebiete. Fairness-Prüfung für jede Hauptburg, nichts Gutes geballt an einem Start (60 Karten im Test).
+- Die Welt besteht aus breiten Streifen (je eine 2,5D-Bühne): gegen den hinteren oder vorderen Rand laufen führt in den Nachbarstreifen, die Kamera gleitet hinterher. Die Nachbarstreifen sind als gleicher Boden zu sehen, kein gemalter Hintergrund.
+- Übersichtskarte oben rechts mit Nebel, der sich beim Erkunden aufdeckt.
+- Noch Platzhalter-Grafik für Burgen und Orte; Beute, Armee, Bots folgen.
+
 ## 19. Nov 2026 – Spell-Galerie im Training (Wunsch des Nutzers)
 
 - Neue Karte SPELL-GALERIE in der Trainings-Kartenauswahl (erste Karte): eine lange, seitlich scrollende Reihe. Klone deiner Figur stehen hintereinander, jeder mit einem Dummy rechts daneben, abwechselnd in zwei Tiefen, und jeder Klon zaubert immer wieder einen Zauber des Spiels auf seinen Dummy.

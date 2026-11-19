@@ -21,7 +21,8 @@ import { SpellTargeting, SlotChord, needsTarget } from './targeting.js';
 import { GamepadController } from './gamepad.js';
 import { environment, renderProp } from './environment.js';
 import { TRAINING_MAPS, getTrainingMap, zoneToWorld } from './training_maps.js';
-import { setupGallery, updateGallery, galleryActors, renderGalleryLabels } from './spell_gallery.js'; // the Training map where clones show every spell
+import { setupGallery, updateGallery, galleryActors, renderGalleryLabels } from './spell_gallery.js';
+import { setupKronenkrieg, updateKronenkrieg, renderKKGround, kkActors, renderKKMinimap, kkPanY } from './kk_world.js'; // Kronenkrieg: the banded open map // the Training map where clones show every spell
 import { loadFxSprites } from './fx_sprites.js';
 import { loadSpellSprites } from './spell_visuals.js';
 import { renderPixelated } from './abilities.js';
@@ -51,7 +52,7 @@ import { BASE_SCENE, baseBounds, renderBaseHall, baseActors, updateBase, updateB
 const BACK_TRAPS = 2;
 // Follow-camera zoom per mode (1 = the classic full stage). The zoom pivots on the near ground edge, so the near depth
 // lane stays in view and the extra size grows upward (room for jumps).
-const FOLLOW_ZOOM = Object.freeze({ dungeon: 1.3, gallery: 1.3 });
+const FOLLOW_ZOOM = Object.freeze({ dungeon: 1.3, gallery: 1.3, kronenkrieg: 1.12 });
 // Every own shield recipe (Ward principle) shares one cooldown.
 const WARD_SPELL_IDS = new Set(['arcane_aegis', 'storm_ward', 'sacrifice_bulwark']);
 
@@ -1660,6 +1661,12 @@ export class GameWorld {
       this.spawnDungeonStarter();
       return;
     }
+    if (mode.id === 'kronenkrieg') {
+      setupKronenkrieg(this);
+      this.player.configureRuneDeck?.([]); /* the class only: runes are found in the round */
+      this.enemyChampion.lifeState = 'Dead'; this.enemyChampion.respawnTimer = Infinity;
+      return;
+    }
     if (mode.id === 'gallery') {
       setupGallery(this);
       this.enemyChampion.lifeState = 'Dead'; this.enemyChampion.respawnTimer = Infinity;
@@ -2442,6 +2449,14 @@ export class GameWorld {
           if (state.intermission >= 2.1) { state.intermission = 0; this.spawnInvasionWave(); }
         }
       }
+      return;
+    }
+    if (this.activeMode.id === 'kronenkrieg') {
+      // Its own end rules (Grimmflut) instead of the clock; the camera follows along the band.
+      this.matchTime = this.matchDuration;
+      state.dungeonCameraX += (this.dungeonCameraTarget() - state.dungeonCameraX) * Math.min(1, 3.5 * dt);
+      this.updateCameraZoom(dt);
+      updateKronenkrieg(this, dt);
       return;
     }
     if (this.activeMode.id === 'gallery') {
@@ -3374,7 +3389,8 @@ export class GameWorld {
     this.applyWorldZoom(ctx);
     ctx.translate(0, worldY);
     /* The base draws its hall in world pixels (below), so it can be zoomed out as a whole. */
-    if (this.activeMode?.id !== 'base') this.battlefield.renderBackground(ctx, cam, this.logicalWidth, this.logicalHeight, viewW, this.cameraOffsetX, this.modeState);
+    if (this.activeMode?.id === 'kronenkrieg') { ctx.fillStyle = '#05060b'; ctx.fillRect(0, 0, viewW, viewH); } /* no painted background: the ground is the world */
+    else if (this.activeMode?.id !== 'base') this.battlefield.renderBackground(ctx, cam, this.logicalWidth, this.logicalHeight, viewW, this.cameraOffsetX, this.modeState);
     renderSecretTint(ctx, this); // a secret room has its own ambience
     ctx.restore();
 
@@ -3382,11 +3398,12 @@ export class GameWorld {
     const dungeonCamX = this.modeState?.dungeonCameraX ?? 0;
     ctx.save();
     this.applyWorldZoom(ctx);
-    ctx.translate(this.cameraOffsetX + cam.shakeX - dungeonCamX, cam.shakeY + worldY);
+    ctx.translate(this.cameraOffsetX + cam.shakeX - dungeonCamX, cam.shakeY + worldY + kkPanY(this));
     if (this.activeMode?.id === 'base') renderBaseHall(ctx);
+    if (this.activeMode?.id === 'kronenkrieg') { const z = this.cameraZoom() || 1; const span = this.logicalWidth / z; renderKKGround(ctx, this, dungeonCamX - span * .5 - 200, dungeonCamX + span * 1.5 + 200); }
 
     // Foreground Crystal Glows on Beacons
-    if (this.activeMode?.id !== 'base') this.battlefield.renderForeground(ctx); /* no tower beacons in the base hall */
+    if (this.activeMode?.id !== 'base' && this.activeMode?.id !== 'kronenkrieg') this.battlefield.renderForeground(ctx); /* no tower beacons in the base hall */
     // Ground effects (ice, fire, lava, craters…) lie under every actor.
     const groundPixel = Math.max(1, Math.round(spells.pixelVfx * (ctx.getTransform?.()?.a || 1)));
     renderPixelated(ctx, groundPixel, (layer) => environment.renderGround(layer));
@@ -3420,6 +3437,7 @@ export class GameWorld {
     if (this.primal?.isTargetable) actors.push(this.primal);
     if (this.activeMode?.id === 'base') actors.push(...baseActors(this)); /* stations and stands share the depth order */
     if (this.activeMode?.id === 'gallery') actors.push(...galleryActors(this)); /* the casting clones of the Spell Gallery */
+    if (this.activeMode?.id === 'kronenkrieg') actors.push(...kkActors(this)); /* castles, buildings and camps of the current band */
     // Spells with a ground position and summons share the painter's order
     // with the actors, so a spike behind the dummy is hidden by the dummy.
     actors.push(...spells.depthEntries());
@@ -3471,6 +3489,7 @@ export class GameWorld {
     // Map weather (snow, rain, embers, leaves, dust, mana motes) in screen space.
     environment.renderWeather(ctx, viewW, viewH);
     this.renderDungeonExitArrow(ctx, viewW);
+    if (this.activeMode?.id === 'kronenkrieg') renderKKMinimap(ctx, this, viewW);
     this.renderOffscreenArrows(ctx);
 
     // 3. Screen Space Rune Drawing

@@ -31,6 +31,12 @@ export const GAME_MODES = Object.freeze({
     id: 'base', label: 'BASIS', objective: 'DEINE BASIS — GEH ZU EINER STATION',
     objectives: false, autoWaves: false, respawn: 'unlimited', enemyBehavior: 'disabled', world: 'dungeon', progression: 'none'
   }),
+  // Kronenkrieg (GRIMGE_KRONENKRIEG.md, kk_*.js): war / survival on a generated map of wide bands — four main castles,
+  // mid castles, loot, armies. Starts with the class only (no deck); its own rules replace the clock and the waves.
+  kronenkrieg: Object.freeze({
+    id: 'kronenkrieg', label: 'KRONENKRIEG', objective: 'ERKUNDE, ERRICHTE DEINE ARMEE, BEHALTE DEINE KRONE',
+    objectives: false, autoWaves: false, respawn: 'unlimited', enemyBehavior: 'disabled', world: 'dungeon', progression: 'none'
+  }),
   // The Spell Gallery (spell_gallery.js): a Training map that runs on to the side — clones of the player cast every spell
   // at their dummies. No foes, no clock, no rewards; it uses the scrolling dungeon world.
   gallery: Object.freeze({

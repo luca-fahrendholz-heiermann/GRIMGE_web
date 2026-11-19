@@ -5556,6 +5556,23 @@ game.running = false;
   game.returnToHub();
 }
 {
+  // Kronenkrieg map (kk_map.js): a new map per seed, deterministic, fair, nothing clustered at a main castle.
+  const KM = await import('./public/src/kk_map.js'); let bad = 0; let worst = 0;
+  for (let seed = 1; seed <= 60; seed++) { const m = KM.generateKKMap(seed); const near = m.hqs.map((h) => KM.valueNear(m, h)); const c = {}; m.sites.forEach((x) => { c[x.kind] = (c[x.kind] ?? 0) + 1; }); worst = Math.max(worst, m.fairRatio);
+    const bigNearHQ = m.sites.some((x) => KM.SITE_KINDS[x.kind].big && m.hqs.some((h) => h.row === x.row && Math.abs(h.x - x.x) < KM.KK.hqKeepOut));
+    if (m.fairRatio > KM.KK.fairRatio || Math.max(...near) > KM.KK.hqValueCap || Math.max(...near) - Math.min(...near) > KM.KK.nearSpread || c.castle !== 12 || c.source !== 14 || bigNearHQ || new Set(m.hqs.map((h) => h.seat)).size !== 4) bad++; }
+  const same = JSON.stringify(KM.generateKKMap(7)) === JSON.stringify(KM.generateKKMap(7)); const differs = JSON.stringify(KM.generateKKMap(7)) !== JSON.stringify(KM.generateKKMap(8));
+  assert(!bad && same && differs, 'Kronenkrieg map: 60 seeds all fair (worst ' + worst + '), capped and unclustered around every main castle, every one with 12 mid castles and 14 sources; same seed = same map, other seed = other map');
+  // the mode: start at the own main castle, walk against the band edge to enter the next band
+  const KW = await import('./public/src/kk_world.js'); game.setMatchMode('kronenkrieg'); game.startMatch(); const kk = game.modeState.kk; const P = game.player; const hq = kk.map.hqs.find((h) => h.seat === 0);
+  const startOk = game.activeMode.id === 'kronenkrieg' && kk.row === hq.row && Math.abs(P.x - hq.x) < 400 && P.runeDeck.length + P.runeHand.length === 0;
+  const dir = kk.row === 0 ? 1 : -1; const b = game.battlefield.boundsOverride; P.z = dir < 0 ? b.farZ : b.nearZ; P.grounded = true; game.input.move = { x: 0, z: dir }; const row0 = kk.row;
+  for (let i = 0; i < 20; i++) KW.updateKronenkrieg(game, 1 / 60); const switched = kk.row === row0 + dir && kk.pan !== 0; game.input.move = { x: 0, z: 0 };
+  for (let i = 0; i < 90; i++) KW.updateKronenkrieg(game, 1 / 60); const settled = kk.pan === 0 && KW.isRevealed(kk, kk.row, P.x);
+  assert(startOk && switched && settled, 'Kronenkrieg: starts at the own main castle with the class only, pressing against the band edge enters the next band (the camera glides after) and the map reveals around the figure');
+  game.returnToHub();
+}
+{
   // Guard against code swallowed by a mid-line comment ("x = 1; // note y = 2;" — happened twice, 6 + 10 Nov 2026).
   const fsx = await import('node:fs'); const pathx = await import('node:path');
   const re = /[;)}]\s\/\/[^'"`]*?(\b[A-Za-z_$][\w$]*\.[A-Za-z_$][\w$]* = [^=]|\bconst [A-Za-z_$]+ =|\blet [A-Za-z_$]+ =|\bctx\.[A-Za-z]+\(|\breturn [A-Za-z_$(]|\bthis\.[A-Za-z_]+ = [^=])/;
