@@ -2,6 +2,14 @@
 
 Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
+## 19. Nov 2026 – Kronenkrieg: Häuser, ruhiger Start, einzigartige Runen (Rückmeldung des Nutzers)
+
+- Häuser sind feste Dinge der Welt: niemand läuft mehr durch sie hindurch (Spieler, Einheiten, Rivalen gleiten an den Wänden entlang); hinein geht es nur durch die Tür.
+- Innen deutlich breiter und höher als von außen; die Treppe steht frei von der Wand (mit Geländer) und lässt sich hinauflaufen.
+- Im Haus ist man geschützt: Gegner kommen nicht mehr von der Seite herein, sie müssen zur Tür (Einheiten und Rivalen-Champions laufen sie gezielt an) und stehen dann mit im Haus; der eigene Trupp in der Nähe kommt mit hinein.
+- Ruhiger Start: Einheiten greifen nur noch in der Nähe ihres Postens, ihres Weges oder ihres Anführers an (vorher stürmte jede Wache im Umkreis auf dich los); Banditen-Patrouillen meiden die Hauptburgen.
+- Spezialrunen gibt es nur einmal im Deck, Element-Runen höchstens zweimal; eine Truhe gibt statt einer Rune, die du schon hast, eine andere ihrer Art oder Gold.
+
 ## 19. Nov 2026 – Kronenkrieg: Abgleich mit simulierten Runden
 
 - Ganze Runden simuliert und ausgewertet. Gefunden und behoben: Rivalen blieben auf der großen Hauptebene ab Minute 1–5 an Gefangenenlagern und Burgen hängen (sie warteten auf einen echten Kampf, den ihr Champion nie führt) — Kämpfe um Burgen und Lager werden jetzt immer aufgelöst, ein Trupp in der Nähe kämpft zusätzlich echt; vorbeiziehende Rivalen-Trupps „belagerten“ die eigene Hauptburg nach 2 Minuten — als Belagerer zählen nur der eigene Trupp und Rivalen, deren Auftrag genau diese Burg ist.

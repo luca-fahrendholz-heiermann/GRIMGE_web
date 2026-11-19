@@ -42,6 +42,9 @@ const runePool = (category) => recognizer.runes.filter((r) => r.id !== 'buff_A04
 export function giveRune(game, rune) {
   const kk = kkState(game); const P = game.player; if (!rune) return null;
   if (deckCount(game) >= deckSlots(kk.level)) return 'full';
+  // the deck rules: a special rune only once, an element rune at most twice (user, 19 Nov 2026)
+  const copies = [...P.runeDeck, ...P.runeHand, ...P.slottedSpells.flatMap((s) => s.runes), ...kk.sealed].filter((c) => c.id === rune.id).length;
+  if (copies >= (runeCategory(rune.id) === 'element' ? 2 : 1)) return 'double';
   if (runeCategory(rune.id) === 'arcane' && !rune.soulBound && [...P.runeDeck, ...P.runeHand, ...P.slottedSpells.flatMap((s) => s.runes), ...kk.sealed].some((c) => runeCategory(c.id) === 'arcane')) { say(game, 'NUR EIN ARCANE STATE ODER BANKAI IM DECK', 1.6); return 'full'; }
   const gate = gateFor(runeCategory(rune.id));
   if (gate > kk.level) { kk.sealed.push({ ...rune, gate }); say(game, `${rune.name} — VERSIEGELT BIS STUFE ${gate}`, 1.8); return 'sealed'; }
@@ -80,7 +83,7 @@ export function dropPile(game, x, z, contents) {
 function takePile(game, item) {
   const kk = kkState(game);
   addBundle(game, { gold: item.gold, materials: item.materials, stones: item.stones, weapons: item.weapons, potions: item.potions }, { quiet: true });
-  const left = []; for (const r of item.runes ?? []) { if (giveRune(game, r) === 'full') left.push(r); }
+  const left = []; for (const r of item.runes ?? []) { const got = giveRune(game, r); if (got === 'full' || got === 'double') left.push(r); }
   if (left.length) { item.runes = left; item.gold = 0; item.materials = {}; item.stones = {}; item.weapons = []; item.potions = {}; say(game, 'DECK VOLL — RUNEN BLEIBEN LIEGEN'); return false; }
   say(game, 'BEUTE AUFGEHOBEN', 1.2); audio.playRuneChime?.(700); return true;
 }
@@ -97,7 +100,14 @@ export function openChest(game, site, floor = 0) {
   const weapons = CASTLE_CLASSES.map((c) => c.weapon);
   const c = rollChest(kk.seed * 31 + site.x * 7 + floor * 131, tier, { biomeElement: biome, weapons });
   addBundle(game, { gold: c.gold, materials: c.materials, stones: c.stones, weapons: c.weapons, potions: c.potions });
-  if (c.runeCategory) { const pool = runePool(c.runeCategory); const r = pool.length ? pool[Math.floor(((kk.seed + site.x + floor * 17) % 997) / 997 * pool.length)] : null; if (r && giveRune(game, r) === 'full') dropPile(game, site.x, site.z + .05, { gold: 0, materials: {}, stones: {}, weapons: [], runes: [r] }); }
+  if (c.runeCategory) {
+    const P = game.player; const held = new Set([...P.runeDeck, ...P.runeHand, ...P.slottedSpells.flatMap((s) => s.runes), ...kk.sealed].map((x) => x.id));
+    const pool = runePool(c.runeCategory).filter((x) => c.runeCategory === 'element' || !held.has(x.id)); /* a special rune one holds does not come twice */
+    const r = pool.length ? pool[Math.floor(((kk.seed + site.x + floor * 17) % 997) / 997 * pool.length)] : null;
+    const got = r ? giveRune(game, r) : null;
+    if (got === 'full') dropPile(game, site.x, site.z + .05, { gold: 0, materials: {}, stones: {}, weapons: [], runes: [r] });
+    else if (got === 'double' || !r) { kk.gold += 15; say(game, '+15 GOLD (RUNE SCHON IM DECK)', 1.2); }
+  }
   if (!site.searchedOnce) { site.searchedOnce = true; gainXp(game, XP.search); }
   return c;
 }

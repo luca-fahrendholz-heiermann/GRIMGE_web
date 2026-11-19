@@ -77,6 +77,23 @@ export class KKUnit extends Minion {
   }
 }
 
+// ── targets on a leash (user, 19 Nov 2026: at the start far too many foes ran at the player) ──────────────────────
+// A unit only takes on foes near its post (guards / garrisons), its road (patrols) or its leader (squads); without one
+// it walks back. A player inside a house is reached only through the door (kk_interior.js doorProxy).
+const LEASH = Object.freeze({ guard: 380, garrison: 380, patrol: 460, squad: 440 });
+export function kkFindTarget(game, unit) {
+  const kk = kkState(game); const rec = unit.rec ?? {}; const anchor = unit.followLeader ?? unit; const leash = LEASH[rec.role] ?? 420;
+  let best = null; let bestD = Infinity;
+  for (const t of game.getHostileTargets(unit.team)) {
+    if (!t || t.isDead || t.isAlive === false || t.isProp || t.isStoneWall || t.isWorldProp || t.lifeState === 'Dead') continue;
+    const fromPost = Math.hypot(t.x - anchor.x, ((t.z ?? 0) - (anchor.z ?? 0)) * 150); const d = Math.hypot(t.x - unit.x, ((t.z ?? 0) - unit.z) * 150);
+    if (fromPost > leash || d > leash + 200) continue;
+    if (d < bestD) { best = t; bestD = d; }
+  }
+  if (best && best === game.player && kk.inside && unit.kkInHouse !== kk.inside.id) { const door = kk.doorProxy?.(unit) ?? null; unit.target = door; return door; }
+  unit.target = best; return best;
+}
+
 // ── records ────────────────────────────────────────────────────────────────────────────────────────────────────────
 export function initArmy(game) {
   const kk = kkState(game); const rng = mulberry32(kk.seed ^ 0x5eed);
@@ -152,6 +169,7 @@ function updatePatrols(game, dt) {
     if (rec.role !== 'patrol') continue;
     const a = rec._anchor ?? (rec._anchor = { isAlive: true, x: rec.x, z: .5 });
     if (!rec.live) { rec.x += rec.dir * 50 * dt; a.x = rec.x; }
+    else if (kk.map.hqs.some((h) => h.row === rec.row && Math.abs(h.x - a.x) < 1300)) { rec.dir = Math.sign(a.x - kk.map.hqs.filter((h) => h.row === rec.row).sort((p, q) => Math.abs(p.x - a.x) - Math.abs(q.x - a.x))[0].x) || -rec.dir; a.x += rec.dir * 55 * dt; } /* renegades keep away from the main castles: a calm start */
     else if (kk.carry && Math.abs(game.player.x - a.x) < 1500) { a.x += Math.sign(game.player.x - a.x) * 70 * dt; a.z = game.player.z; } /* bandits smell an egg carrier */
     else { a.x += rec.dir * 55 * dt; a.z = .5 + Math.sin((a.x + rec.id * 40) * .002) * .12; }
     if ((rec.dir > 0 && a.x >= rec.legEnd) || (rec.dir < 0 && a.x <= rec.legEnd)) { rec.dir *= -1; const camp = siteById(kk, rec.siteId); rec.legEnd = camp ? camp.x : rec.x; }
