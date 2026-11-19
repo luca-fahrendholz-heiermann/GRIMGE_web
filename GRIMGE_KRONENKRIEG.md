@@ -175,8 +175,8 @@ in §4a).
   Element- und einfache Spezialrunen. Atmung, Sphären und Arcane States liegen in den gefährlichen Gebieten (Mitte,
   Kreaturen-Reviere, Banditenlager) und werden mit der Spielzeit häufiger. Glück verschiebt also *wann* man etwas
   bekommt, nicht *ob* man es zu früh nutzen kann.
-- **Je Deck höchstens ein Arcane State** und eine Sphäre (wie die Budgetregeln der Arena), damit sich auch spät
-  nicht alles stapelt.
+- **Je Deck höchstens ein Arcane State oder ein Bankai** (Nutzer, 19. Nov 2026: das Bankai ist im Spiel selbst ein
+  Arcane State) und höchstens eine Sphäre, wie die Budgetregeln der Arena. So stapelt sich auch spät nichts.
 - **Fokus-Transformation und Bankai** brauchen zusätzlich die gewohnten Bedingungen (Fokus voll, Klassenwaffe).
   Die Stufe gibt sie nur frei. Beide kommen aus dem gewählten Weg (§4c) und müssen nicht gefunden werden.
 - **Transformations-Relikte** (wie in der Arena) gibt es im Kronenkrieg erst ab Minute 12 und nur in der Mitte.
@@ -191,8 +191,11 @@ Vor dem Start wählt jeder zwei Dinge:
      **Klassen-Transformation**.
 
 - **Beide Wege sind gleichwertig:** Ihre Stufe-8-Form und ihre Fokus-Transformation sind garantiert. Gefundene
-  Runen geben zusätzliche Möglichkeiten (Atmungen, Sphären, auch fremde Arcane States, höchstens einer im Deck),
-  aber die Krönung hängt nie vom Glück ab.
+  Runen geben zusätzliche Möglichkeiten (Atmungen, Sphären), aber die Krönung hängt nie vom Glück ab.
+- **Ein Platz für die große Form:** Im Deck steht immer nur **eine** davon, ein Arcane State **oder** das Bankai.
+  Die Form des eigenen Wegs belegt diesen Platz. Wer einen gefundenen Arcane State lieber spielt, tauscht: Der
+  gefundene ersetzt die Wegform, und diese kehrt zurück, sobald man den gefundenen wieder ablegt (an der eigenen
+  Hauptburg). Die Fokus-Transformation auf Stufe 10 bleibt immer die des gewählten Wegs.
 - **Lesbarkeit für Gegner:** Der Weg ist in der Lobby und an der Burgfahne zu sehen. Wer Feuer gewählt hat, gegen
   den lohnt es sich, Aqua in die Mauern einzubauen. Das verbindet die Wahl mit den Burg-Resistenzen (§6.5).
 - **Element-Weg und gefundene Runen:** Runen des eigenen Elements tauchen in Truhen etwas häufiger auf, damit sich
