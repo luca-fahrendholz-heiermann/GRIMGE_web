@@ -28,10 +28,10 @@ export const TRAIN = Object.freeze({ gold: 20, time: 6, spinGold: 10, mergeCount
 // The team of a seat: the player and his ally are 'blue'; in 2v2 both rivals are 'rivals', otherwise every rival alone.
 export const teamOfSeat = (seat, kk = null) => (seat === 0 || kk?.allies?.includes(seat) ? 'blue' : kk?.teamMode === '2v2' ? 'rivals' : 'seat' + seat);
 export const sameTeam = (kk, a, b) => a != null && b != null && teamOfSeat(a, kk) === teamOfSeat(b, kk);
-const mine = (u) => u.seat === 0; // the player's own fighters (an ally's share the team, not the owner)
+const mine = (u) => u.seat === 0; /* the player's own fighters (an ally's share the team, not the owner) */
 const BONUS_LABEL = Object.freeze({ veteran: 'VETERAN', double: 'DOPPELELEMENT', elite: 'ELITE' });
 
-let attackingElement = null; // the element of the unit striking right now (main castle resistances, kk_war.js)
+let attackingElement = null; /* the element of the unit striking right now (main castle resistances, kk_war.js) */
 // A live unit: a minion that carries its class and element (its hits roll the element's statuses).
 export class KKUnit extends Minion {
   constructor(rec) {
