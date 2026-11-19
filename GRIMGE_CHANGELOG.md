@@ -2,6 +2,12 @@
 
 Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
+## 19. Nov 2026 – Kronenkrieg: Abgleich mit simulierten Runden
+
+- Ganze Runden simuliert und ausgewertet. Gefunden und behoben: Rivalen blieben auf der großen Hauptebene ab Minute 1–5 an Gefangenenlagern und Burgen hängen (sie warteten auf einen echten Kampf, den ihr Champion nie führt) — Kämpfe um Burgen und Lager werden jetzt immer aufgelöst, ein Trupp in der Nähe kämpft zusätzlich echt; vorbeiziehende Rivalen-Trupps „belagerten“ die eigene Hauptburg nach 2 Minuten — als Belagerer zählen nur der eigene Trupp und Rivalen, deren Auftrag genau diese Burg ist.
+- Rivalen wachsen langsamer (Erfahrung ×0,55, Kampfkraft je Stufe kleiner): Stufe 8–10 um Minute 15 statt Stufe 10 nach 5 Minuten.
+- Ohne Spieler-Eingriff hält eine Runde jetzt bis zur Grimmflut (Hauptburgen fallen ab Minute 19 in der Flut).
+
 ## 19. Nov 2026 – Kronenkrieg: Transformationen je Weg
 
 - Die Fokus-Transformation aus Krönung II folgt jetzt dem gewählten Weg: ELEMENT — Übergang und Aura in den Farben des Elements, dazu für die ganze Dauer die Klinge des Elements (Feuer: Flammenklinge, Eis/Wasser: Frostklinge, Blitz/Wind: Sturmklinge, Natur/Schatten: Giftklinge …); KLASSE — goldene Erweckung der Klassenwaffe mit 30 % mehr Kraft; PRIMAL — die Verschmelzung mit dem eigenen Primal (seine Bindungsform je Stufe).

@@ -568,4 +568,4 @@ Die Karte gehört zu Beginn **niemandem**. Neben den vier Spielern (Menschen ode
 - Element-, Klassen- und Primal-Transformation haben eigene Wirkung und Farben (Element-Klinge, Klassen-Kraft, Primal-Bindung); eigens gezeichnete Körperformen je Weg fehlen noch (brauchen Grafik).
 - Rivalen jagen Ei-Träger und Spieler in Prüfungen; bis zu drei Rivalen kämpfen gleichzeitig als echte Gegner; ein Verbündeter im eigenen Streifen ist nur durch seinen Trupp zu sehen.
 - 2-gegen-2 mit einem Bot-Partner ist gebaut; Online-PvP fehlt (braucht einen Server und Netzcode).
-- Werte (Kosten, Stärken, Zeiten) sind Startwerte für den Playtest.
+- Werte mit simulierten Runden abgeglichen (Rivalen-Tempo, Belagerung); Feinabstimmung braucht echte Spieltests.

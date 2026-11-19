@@ -103,24 +103,27 @@ function moveBot(kk, bot, target, dt) {
   const dx = target.x - bot.x; if (Math.abs(dx) < 90) return true;
   bot.x += Math.sign(dx) * Math.min(Math.abs(dx), BOT_SPEED * dt); return false;
 }
-function botGain(kk, bot, xp) { bot.xp += xp; bot.level = levelForXp(bot.xp); }
+function botGain(kk, bot, xp) { bot.xp += xp * .55; bot.level = levelForXp(bot.xp); } /* bots grow a little slower than an active player */
 // Abstract fight at a site (outside the player's band): both sides lose units in proportion to the other's strength.
-function abstractBattle(kk, bot, foes, dt) {
-  const mine = botSquad(kk, bot); const sMine = strength(mine) + bot.level * .8; const sFoe = strength(foes);
+// a fallen record leaves the game too, also when it happens to be a live unit near the player
+const removeRecord = (kk, game, v) => { kk.units.splice(kk.units.indexOf(v), 1); if (v.live) { const i = game.minions.indexOf(v.live); if (i >= 0) game.minions.splice(i, 1); v.live = null; } };
+function abstractBattle(kk, bot, foes, dt, game = globalThis.window?.gameWorld) {
+  const mine = botSquad(kk, bot); const sMine = strength(mine) + bot.level * .45; const sFoe = strength(foes);
   if (!foes.length) return true;
-  if (kk.rng() < dt * sMine * .12) { const v = foes[Math.floor(kk.rng() * foes.length)]; kk.units.splice(kk.units.indexOf(v), 1); bot.gold += 8; botGain(kk, bot, XP.kill); }
-  if (mine.length && kk.rng() < dt * sFoe * .08) { const v = mine[Math.floor(kk.rng() * mine.length)]; kk.units.splice(kk.units.indexOf(v), 1); }
+  if (kk.rng() < dt * sMine * .12) { const v = foes[Math.floor(kk.rng() * foes.length)]; removeRecord(kk, game, v); bot.gold += 8; botGain(kk, bot, XP.kill * .5); }
+  if (mine.length && kk.rng() < dt * sFoe * .08) { const v = mine[Math.floor(kk.rng() * mine.length)]; removeRecord(kk, game, v); }
   if (!mine.length && sFoe > bot.level * 1.5 && kk.rng() < dt * .05) bot.hpFrac -= .2;
   return false;
 }
 function actBot(game, bot, dt) {
   const kk = kkState(game); const t = bot.task; const site = t && siteById(kk, t.id); if (!site) { bot.task = null; return; }
-  const inBand = bot.row === kk.row;
+  // 'in band' = fought out live: the bot is the champion near the player; farther away the fight is simulated
+  const inBand = bot.row === kk.row && (bot === kk.championBot || kk.extraBots?.has(bot) || Math.abs(bot.x - game.player.x) < 1100);
   if (t.kind === 'loot') {
     if (site.kind === 'building' && !site.looted) { site.looted = true; const c = rollChest(kk.seed * 13 + site.x, lootTier({ time: kk.time, middleBand: site.row === 1 }), { biomeElement: biomeAt(kk.map, site.row, site.x).element, weapons: CASTLE_CLASSES.map((x) => x.weapon) }); bot.gold += c.gold; for (const [e, n] of Object.entries(c.stones)) bot.stones[e] = (bot.stones[e] ?? 0) + n; for (const w of c.weapons) bot.weapons[w] = (bot.weapons[w] ?? 0) + 1; botGain(kk, bot, XP.search); }
     else if (site.kind === 'goldvein' && !(site.cd > 0)) { site.cd = 25; bot.gold += 20; botGain(kk, bot, XP.mine); }
     else if (site.kind === 'prison' && !site.freed) {
-      const guards = kk.units.filter((u) => u.siteId === site.id && u.role === 'guard'); if (!inBand && !abstractBattle(kk, bot, guards, dt)) return; if (guards.length) return;
+      const guards = kk.units.filter((u) => u.siteId === site.id && u.role === 'guard'); if (!abstractBattle(kk, bot, guards, dt, game)) return; /* always resolved (a live squad nearby fights on top) */
       site.freed = true; for (const p of site.prisoners ?? []) addRecord(kk, { team: bot.team, seat: bot.seat, cls: p.cls, element: null, tier: 1, row: site.row, x: site.x, z: site.z, role: 'squad' }); botGain(kk, bot, XP.free);
     }
     bot.task = null;
@@ -129,7 +132,7 @@ function actBot(game, bot, dt) {
     bot.task = null;
   } else if (t.kind === 'capture') {
     const foes = kk.units.filter((u) => u.siteId === site.id && (u.role === 'guard' || u.role === 'garrison') && u.team !== bot.team);
-    if (!inBand && !abstractBattle(kk, bot, foes, dt)) return; if (foes.length) return;
+    if (!abstractBattle(kk, bot, foes, dt, game)) return;
     const was = site.owner; site.owner = bot.seat; botGain(kk, bot, XP.capture);
     for (const u of botSquad(kk, bot).slice(0, 2)) { u.role = 'garrison'; u.siteId = site.id; }
     if (was === 0) game.showAnnouncement?.(`${SEAT_NAMES[bot.seat]} HAT DEINE ${site.label}BURG EROBERT!`, 2.2);
@@ -138,7 +141,7 @@ function actBot(game, bot, dt) {
   } else if (t.kind === 'siege' || t.kind === 'defend') {
     if (site.seat === bot.seat || sameTeam(kk, site.seat, bot.seat)) { bot.task = null; return; }
     const defenders = kk.units.filter((u) => u.role === 'garrison' && u.siteId === site.id && u.team !== bot.team);
-    if (!inBand && !abstractBattle(kk, bot, defenders, dt)) { site.siegeT = 3; return; }
+    if (!inBand && !abstractBattle(kk, bot, defenders, dt, game)) { site.siegeT = 3; return; }
     if (defenders.length) { site.siegeT = 3; return; }
     if (!inBand) { site.siegeT = 3; site.hp -= (strength(botSquad(kk, bot)) * 6 + bot.level * 4) * dt * (site.level >= 4 ? .7 : 1); if (site.hp <= 0) fallHQ(game, site, bot.seat); }
     if (!botSquad(kk, bot).length) bot.task = null;
@@ -213,7 +216,9 @@ function updateSieges(game, dt) {
     hq.siegeT = Math.max(0, (hq.siegeT ?? 0) - dt); if (hq.fallen || hq.row !== kk.row) continue;
     const myTeam = teamOfSeat(hq.seat, kk);
     // only rivals besiege a main castle (renegades and creatures fight what they meet, they do not take crowns)
-    const attackers = game.minions.filter((m) => m.isKKUnit && !m.isDead && m.team !== myTeam && m.team !== 'red' && m.team !== 'beast' && Math.abs(m.x - hq.x) < 220);
+    // only a deliberate siege counts: the players own squad, or a rival whose task is to besiege THIS main castle
+    const sieging = (m) => m.rec?.seat === 0 || kk.bots.some((b) => b.seat === m.rec?.seat && b.task?.kind === 'siege' && b.task.id === hq.id);
+    const attackers = game.minions.filter((m) => m.isKKUnit && !m.isDead && m.team !== myTeam && m.team !== 'red' && m.team !== 'beast' && Math.abs(m.x - hq.x) < 220 && sieging(m));
     const defenders = game.minions.filter((m) => m.isKKUnit && !m.isDead && m.team === myTeam && m.rec?.role === 'garrison' && m.rec.siteId === hq.id);
     if (attackers.length) hq.siegeT = 3;
     if (attackers.length && !defenders.length) { hq.hp -= attackers.length * 7 * dt * (hq.level >= 4 ? .7 : 1); if (hq.hp <= 0) fallHQ(game, hq, attackers[0].rec?.seat); }
