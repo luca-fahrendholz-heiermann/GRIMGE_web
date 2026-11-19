@@ -2534,6 +2534,7 @@ export class GameWorld {
     if ((myTeam === 'red' || (this.activeMode?.id === 'kronenkrieg' && myTeam !== this.player.team)) && this.player.isAlive) targets.push(this.player);
     if (this.primal && myTeam !== this.primal.team && this.primal.isTargetable && (!this.siegeMatch || this.primal.onLane)) targets.push(this.primal);
     if (myTeam === 'blue' && this.enemyChampion.isAlive) targets.push(this.enemyChampion);
+    for (const foe of this.activeMode?.id === 'kronenkrieg' ? (this.kkExtraFoes ?? []) : []) if (foe.isAlive && foe.team !== myTeam) targets.push(foe); /* further rival champions (kk_war.js) */
 
     if (this.activeMode?.objectives !== false || this.battlefield.trainingTowersOn) {
       const enemyTeam = myTeam === 'blue' ? 'red' : 'blue';
@@ -2571,6 +2572,7 @@ export class GameWorld {
     if ((myTeam === 'red' || (this.activeMode?.id === 'kronenkrieg' && myTeam !== this.player.team)) && this.player.isAlive && this.player.isMobileCombatant && !sheltered(this.player)) targets.push(this.player);
     if (this.primal && myTeam !== this.primal.team && this.primal.isTargetable && (!this.siegeMatch || this.primal.onLane)) targets.push(this.primal);
     if (myTeam === 'blue' && this.enemyChampion.isAlive && this.enemyChampion.isMobileCombatant && !sheltered(this.enemyChampion)) targets.push(this.enemyChampion);
+    for (const foe of this.activeMode?.id === 'kronenkrieg' ? (this.kkExtraFoes ?? []) : []) if (foe.isAlive && foe.team !== myTeam) targets.push(foe);
     return targets;
   }
 
@@ -3078,6 +3080,7 @@ export class GameWorld {
   }
 
   returnToHub(reason = 'menu') {
+    this.kkExtraFoes = [];
     closeBasePrompt(); closeKKPanel(); closeCrownPanel(); closePotionButtons();
     this.markMatchSession(false);
     try { const log = JSON.parse(globalThis.localStorage?.getItem?.('grimge-hub-log') ?? '[]'); log.push({ reason, mode: this.activeMode?.id, at: new Date().toISOString(), stack: String(new Error().stack).split(String.fromCharCode(10)).slice(2, 6).join(' < ').slice(0, 400) }); globalThis.localStorage?.setItem?.('grimge-hub-log', JSON.stringify(log.slice(-10))); } catch { /* optional */ }

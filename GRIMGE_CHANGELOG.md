@@ -2,6 +2,10 @@
 
 Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
+## 19. Nov 2026 – Kronenkrieg: mehrere Rivalen gleichzeitig
+
+- Stehen mehrere Rivalen in deiner Nähe, kämpfen bis zu drei gleichzeitig als echte Gegner (je eine eigene Champion-KI); alle sind für dich und deine Einheiten Ziele, ihre Trupps folgen ihnen, jeder Sieg zählt.
+
 ## 19. Nov 2026 – Kronenkrieg: begehbare Häuser, Tränke von Hand
 
 - Häuser sind von außen geschlossen (jetzt groß genug zum Hineingehen). An der Tür nach hinten laufen führt hinein: die Vorderwand fällt für die Sicht weg, man sieht Rückwand, Dielen, Laterne, und ab zwei Etagen eine Holztreppe zu einer Galerie (die Treppen- und Galerie-Flächen des Spiels). Jede Etage hat eine Truhe (davor stehen öffnet sie); manche Häuser verbergen Banditen. Nach vorn hinauslaufen verlässt das Haus; ein Haus davor wird solange durchsichtig.

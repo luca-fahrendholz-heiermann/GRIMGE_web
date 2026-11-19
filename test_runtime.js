@@ -5672,6 +5672,13 @@ game.running = false;
   const stable = k9.map.sites.find((x) => x.kind === 'stable'); k9.row = stable.row; P9.x = stable.x; P9.z = stable.z; KC.updateCreatures(game, 1 / 60); const horse = k9.horse && k9.horse.definition.mountable && typeof k9.horse.definition.customRender === 'function';
   assert(lowLevel && cand && rode && rodeForward && horse, 'Kronenkrieg riding: an own creature is not a mount below level 5, from level 5 the hero mounts it and rides it; the stable gives a mountable horse with its own drawing (' + [lowLevel, cand, rode, rodeForward, !!horse].join('/') + ')');
   spells.clearRuntime(); game.returnToHub();
+  // two rivals in the players band: both fight as real champions, the second one is hittable and its defeat counts
+  game.setMatchMode('kronenkrieg'); game.startMatch(); const kA = game.modeState.kk; const PA = game.player; const [rvA, rvB, rvC] = kA.bots; rvC.alive = false; rvC.respawnT = 999;
+  for (const [b, dx] of [[rvA, 300], [rvB, -350]]) { b.row = kA.row; b.x = PA.x + dx; b.travel = 0; b.task = { kind: 'idle', id: kA.map.hqs.find((h) => h.seat === b.seat).id }; b.think = 99; }
+  KWR.updateWar(game, 1 / 60); KWR.updateWar(game, 1 / 60); const extra = game.kkExtraFoes?.[0]; const both = game.enemyChampion.lifeState === 'Alive' && !!extra && extra.lifeState === 'Alive' && extra.team !== game.enemyChampion.team;
+  const hittable = !!extra && game.getHostileTargets(PA.team).includes(extra); const xpA = kA.xp; const bot2 = extra?.kkBot; if (extra) extra.lifeState = 'Dying'; KWR.updateWar(game, 1 / 60); const counted = !!bot2 && !bot2.alive && kA.xp > xpA && !(game.kkExtraFoes ?? []).includes(extra);
+  assert(both && hittable && counted, 'Kronenkrieg: two rivals near the player both fight as champions, the second one is a target for the player and beating it counts (' + [both, hittable, counted].join('/') + ')');
+  game.returnToHub();
   // BÄNDIGUNG outside Kronenkrieg: an enemy summon under half its life changes sides
   game.setMatchMode('training'); game.startMatch(); spells.clearRuntime(); const E5 = game.enemyChampion; E5.lifeState = 'Alive'; E5.isDead = false; const foeWolf = spells.summon(E5, (await import('./public/src/spells.js')).SUMMON_DEFINITIONS.spirit_wolf, game, spells.qualityForRunes([]), { x: game.player.x + 90, z: game.player.z, noPose: true }); foeWolf.riseTimer = 0;
   const tameDef = spells.resolveSpell([{ id: 'bestia' }, { id: 'bestia' }]); foeWolf.hp = foeWolf.maxHp; spells.cast(game.player, tameDef, game, null, { x: foeWolf.x, z: foeWolf.z }); const tooStrong = foeWolf.team !== game.player.team; foeWolf.hp = foeWolf.maxHp * .4; spells.cast(game.player, tameDef, game, null, { x: foeWolf.x, z: foeWolf.z });

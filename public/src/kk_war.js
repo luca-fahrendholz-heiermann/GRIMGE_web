@@ -12,6 +12,7 @@ import { rollChest, levelForXp, lootTier, XP, heroKillXp } from './kk_progress.j
 import { kkState, kkOn, SEAT_COLORS, SEAT_NAMES, elementColor } from './kk_world.js';
 import { gainXp, dropPile } from './kk_loot.js';
 import { addRecord, teamOfSeat, sameTeam } from './kk_army.js';
+import { EnemyChampion } from './entities.js';
 
 export const HQ_TIERS = Object.freeze([
   null, { mat: 'wood', cost: 30, name: 'HOLZBURG' }, { mat: 'stone', cost: 40, name: 'STEINBURG' }, { mat: 'steel', cost: 30, name: 'STAHLBURG' }, { mat: 'obsidian', cost: 20, name: 'OBSIDIANBURG' }
@@ -35,7 +36,7 @@ export function initWar(game) {
   // hooks for kk_army.js (it may not import this module: kk_war imports kk_army)
   kk.resistFn = (rec, el) => resistMul(kk, rec, el);
   kk.hqHooks = { extras: () => hqPanelExtras(game), upgrade: () => upgradeHQ(game), resist: (el) => addResistance(game, el) };
-  kk.botLeader = (seat) => { const bot = kk.bots.find((b) => b.seat === seat); if (!bot) return null; if (kk.championBot === bot) return game.enemyChampion; return bot.anchor ?? (bot.anchor = { isBotAnchor: true, isAlive: true, x: bot.x, z: bot.z }); };
+  kk.botLeader = (seat) => { const bot = kk.bots.find((b) => b.seat === seat); if (!bot) return null; if (kk.championBot === bot) return game.enemyChampion; if (kk.extraBots?.has(bot)) return kk.extraBots.get(bot); return bot.anchor ?? (bot.anchor = { isBotAnchor: true, isAlive: true, x: bot.x, z: bot.z }); };
   game.enemyChampion.lifeState = 'Dead'; game.enemyChampion.respawnTimer = Infinity; kk.championBot = null;
   return kk;
 }
@@ -148,7 +149,7 @@ function updateBots(game, dt) {
   for (const bot of kk.bots) {
     const hq = hqOfSeat(kk, bot.seat);
     if (!bot.alive) { if (hq.fallen) continue; bot.respawnT -= dt; if (bot.respawnT <= 0 && kk.time < FLOOD.noReturn) { bot.alive = true; bot.hpFrac = 1; bot.row = hq.row; bot.x = hq.x + 160; } continue; }
-    if (bot === kk.championBot) continue; /* the live champion moves by itself */
+    if (bot === kk.championBot || kk.extraBots?.has(bot)) continue; /* a live champion moves by itself */
     bot.think -= dt; if (!bot.task || bot.think <= 0) { bot.think = THINK * 3; if (!bot.task) bot.task = pickTask(kk, bot); }
     if (bot.task?.kind === 'hunt') { const P = game.player; if (!(kk.carry || kk.crown?.trial) || !P.isAlive) { bot.task = null; continue; } moveBot(kk, bot, { row: kk.row, x: P.x }, dt); for (const u of botSquad(kk, bot)) if (!u.live) { u.row = bot.row; u.x += (bot.x - u.x) * Math.min(1, dt * 2); } continue; }
     const site = bot.task && siteById(kk, bot.task.id); if (!site) { bot.task = null; continue; }
@@ -175,11 +176,28 @@ function updateChampion(game, dt) {
     if (cb.row !== kk.row) { kk.championBot = null; E.lifeState = 'Dead'; E.respawnTimer = Infinity; }
     return;
   }
-  const bot = kk.bots.filter((b) => b.alive && !b.ally && b.row === kk.row && b.travel <= 0) /* an ally never becomes the enemy champion */.sort((a, b) => Math.abs(a.x - P.x) - Math.abs(b.x - P.x))[0];
+  const bot = kk.bots.filter((b) => b.alive && !b.ally && b.row === kk.row && b.travel <= 0 && !kk.extraBots?.has(b)) /* an ally never becomes the enemy champion */.sort((a, b) => Math.abs(a.x - P.x) - Math.abs(b.x - P.x))[0];
   if (!bot || Math.abs(bot.x - P.x) > 1100) return;
   kk.championBot = bot; E.team = bot.team; E.heroKey = bot.heroKey; E.maxHp = 600 + bot.level * 60; E.hp = Math.max(1, E.maxHp * bot.hpFrac);
   E.x = bot.x; E.z = bot.z; E.lifeState = 'Alive'; E.respawnTimer = Infinity; E.isDead = false; E.state = 'idle'; game.battlefield.placeOnSurface?.(E);
   for (const u of botSquad(kk, bot)) if (u.live) u.live.followLeader = E;
+}
+// Further rivals in the player's band fight too: each gets its own champion (the same duel AI); they are hittable
+// through game.kkExtraFoes (main.js target lists).
+function updateExtraChampions(game, dt) {
+  const kk = kkState(game); const P = game.player; kk.extraBots ??= new Map(); game.kkExtraFoes = [...kk.extraBots.values()];
+  for (const [bot, ent] of [...kk.extraBots]) {
+    if (ent.lifeState !== 'Alive' || !bot.alive) { if (ent.lifeState !== 'Alive' && bot.alive) killBot(game, bot, 'player'); kk.extraBots.delete(bot); continue; }
+    ent.update(dt, game, game.battlefield); bot.x = ent.x; bot.z = ent.z; bot.hpFrac = ent.hp / ent.maxHp;
+    if (bot.row !== kk.row || Math.abs(ent.x - P.x) > 1500) kk.extraBots.delete(bot);
+  }
+  if (!kk.championBot) return; /* the first one is the main champion */
+  for (const bot of kk.bots) {
+    if (!bot.alive || bot.ally || bot === kk.championBot || kk.extraBots.has(bot) || bot.row !== kk.row || bot.travel > 0 || Math.abs(bot.x - P.x) > 1100 || kk.extraBots.size >= 2) continue;
+    const ent = new EnemyChampion(bot.x, bot.z, bot.heroKey); ent.team = bot.team; ent.maxHp = 600 + bot.level * 60; ent.hp = Math.max(1, ent.maxHp * bot.hpFrac); ent.isKKExtra = true; ent.kkBot = bot;
+    game.battlefield.placeOnSurface?.(ent); kk.extraBots.set(bot, ent); for (const u of botSquad(kk, bot)) if (u.live) u.live.followLeader = ent;
+  }
+  game.kkExtraFoes = [...kk.extraBots.values()];
 }
 export function kkEnemyHome(game) { const kk = kkState(game); const cb = kk?.championBot; if (!cb) return null; const site = cb.task && siteById(kk, cb.task.id); return site && site.row === kk.row ? { x: site.x, z: site.z } : { x: cb.x, z: cb.z }; }
 
@@ -236,13 +254,14 @@ function checkEnd(game) {
 
 export function updateWar(game, dt) {
   if (!kkOn(game)) return; const kk = kkState(game); if (!kk.bots) return;
-  updateBots(game, dt); updateChampion(game, dt); updateSieges(game, dt); updateFlood(game, dt);
+  updateBots(game, dt); updateChampion(game, dt); updateExtraChampions(game, dt); updateSieges(game, dt); updateFlood(game, dt);
   if (Math.floor(kk.time) !== kk._endTick) { kk._endTick = Math.floor(kk.time); checkEnd(game); }
 }
 
 // ── drawing ────────────────────────────────────────────────────────────────────────────────────────────────────────
 export function warActors(game) {
   const kk = kkState(game); if (!kk?.bots) return []; const out = [];
+  for (const ent of kk.extraBots?.values() ?? []) out.push(ent); /* further rival champions take part in the depth order */
   // an ally in the players band walks there as a figure (it plays by the strategy, its squad fights beside you)
   for (const b of kk.bots) {
     if (!b.ally || !b.alive || b.row !== kk.row || b.travel > 0 || Math.abs(b.x - game.player.x) > 1400) continue;

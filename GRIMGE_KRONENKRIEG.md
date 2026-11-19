@@ -566,6 +566,6 @@ Die Karte gehört zu Beginn **niemandem**. Neben den vier Spielern (Menschen ode
 **Noch offen / vereinfacht:**
 - Grafik: Burgen, Requisiten, Pixel-Sprites und Landschaft sind eingebaut (kk_art.js); eigene neue Bilder brauchen Generierungs-Guthaben.
 - Element-, Klassen- und Primal-Transformation nutzen vorerst die vorhandene Fokus-Transformation; eigene Formen je Weg fehlen.
-- Rivalen jagen Ei-Träger und Spieler in Prüfungen; nur ein Rivale gleichzeitig kämpft im eigenen Streifen als echter Gegner (weitere laufen dort als Simulation); ein Verbündeter im eigenen Streifen ist nur durch seinen Trupp zu sehen.
+- Rivalen jagen Ei-Träger und Spieler in Prüfungen; bis zu drei Rivalen kämpfen gleichzeitig als echte Gegner; ein Verbündeter im eigenen Streifen ist nur durch seinen Trupp zu sehen.
 - 2-gegen-2 mit einem Bot-Partner ist gebaut; Online-PvP fehlt (braucht einen Server und Netzcode).
 - Werte (Kosten, Stärken, Zeiten) sind Startwerte für den Playtest.
