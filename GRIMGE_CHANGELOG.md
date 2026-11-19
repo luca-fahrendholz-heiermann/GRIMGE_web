@@ -2,6 +2,13 @@
 
 Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
+## 19. Nov 2026 – Kronenkrieg, Meilenstein 4: Rivalen, Hauptburgen, Grimmflut, Sieg
+
+- Drei Bot-Rivalen spielen dieselbe Karte: sie plündern, befreien Gefangene, bilden in ihren Burgen aus, erobern Zwischenburgen (auch deine) und belagern spät die schwächste Hauptburg. Steht ein Rivale in deinem Streifen, kämpft er als echter Gegner (die Champion-KI) mit seinem Trupp; besiegt lässt er Gold und Beute fallen und kehrt später an seiner Hauptburg zurück. Außerhalb deines Streifens laufen Kämpfe als Simulation.
+- Hauptburg: vier Stufen (Holz 30, Stein 40, Stahl 30, Obsidian 20) mit mehr Leben; ab Stein schießt ein Turm auf Angreifer; Obsidian hält der Grimmflut länger stand. Element-Resistenzen aus Elementsteinen (3 / 6 / 10 / 15, höchstens eine Stufe je Burgstufe) senken den Schaden von Einheiten dieses Elements an der Besatzung. Belagerung: ohne Verteidiger verliert die Burg Leben, bei 0 fällt sie — dann keine Rückkehr mehr.
+- Grimmflut ab Minute 16 von den Rändern zur Mitte (Schaden für alles darin, Burgen verfallen); ab Minute 20 keine Rückkehr; spätestens bei Minute 25 gewinnt die größte Armee. Sonst gewinnt die letzte Seite mit lebendem Helden oder stehender Hauptburg.
+- Rivalen erscheinen auf der Übersichtskarte, wo sie aufgedeckt ist.
+
 ## 19. Nov 2026 – Kronenkrieg, Meilenstein 3: Armee
 
 - Einheiten aus Klasse und Element (8 Klassen der Zwischenburgen × 13 Elemente): eigene Werte je Klasse, ihre Treffer lösen die Statuseffekte ihres Elements aus; Wimpel in der Farbe der Seite, Edelstein fürs Element, Sterne für die Stufe.

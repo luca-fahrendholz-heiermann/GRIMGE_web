@@ -28,6 +28,7 @@ export const TRAIN = Object.freeze({ gold: 20, time: 6, spinGold: 10, mergeCount
 export const teamOfSeat = (seat) => (seat === 0 ? 'blue' : 'seat' + seat);
 const BONUS_LABEL = Object.freeze({ veteran: 'VETERAN', double: 'DOPPELELEMENT', elite: 'ELITE' });
 
+let attackingElement = null; // the element of the unit striking right now (main castle resistances, kk_war.js)
 // A live unit: a minion that carries its class and element (its hits roll the element's statuses).
 export class KKUnit extends Minion {
   constructor(rec) {
@@ -42,8 +43,12 @@ export class KKUnit extends Minion {
   }
   performAttack(target, gameWorld) {
     if (!this.statusElements) return super.performAttack(target, gameWorld);
-    const prev = setStatusSource({ team: this.team, statusElements: this.statusElements, castBy: this });
-    try { return super.performAttack(target, gameWorld); } finally { setStatusSource(prev); }
+    const prev = setStatusSource({ team: this.team, statusElements: this.statusElements, castBy: this }); attackingElement = this.rec.element;
+    try { return super.performAttack(target, gameWorld); } finally { setStatusSource(prev); attackingElement = null; }
+  }
+  takeDamage(amount, ...rest) {
+    const kk = kkState(globalThis.window?.gameWorld); if (attackingElement && kk?.resistFn) amount *= kk.resistFn(this.rec, attackingElement);
+    return super.takeDamage(amount, ...rest);
   }
   render(ctx) {
     super.render(ctx);
@@ -85,7 +90,7 @@ function anchorFor(kk, rec) {
 }
 function spawnLive(game, rec) {
   const kk = kkState(game); const u = new KKUnit(rec); rec.live = u; u.x = rec.x; u.z = rec.z;
-  u.followLeader = rec.role === 'squad' ? game.player : anchorFor(kk, rec);
+  u.followLeader = rec.role === 'squad' ? (rec.team === 'blue' ? game.player : (kk.botLeader?.(rec.team) ?? anchorFor(kk, rec))) : anchorFor(kk, rec);
   game.battlefield.placeOnSurface?.(u); game.minions.push(u); return u;
 }
 function syncLive(game) {
@@ -95,9 +100,9 @@ function syncLive(game) {
     if (u) {
       if (u.isDead || !game.minions.includes(u)) { onUnitDeath(game, rec); continue; }
       rec.x = u.x; rec.z = u.z; rec.hp = u.hp;
-      if (rec.role === 'squad') rec.row = kk.row;
-      if (rec.row !== kk.row) { despawn(game, rec); }
-    } else if (rec.row === kk.row && rec.role !== 'prisoner') spawnLive(game, rec);
+      if (rec.role === 'squad' && rec.team === 'blue') rec.row = kk.row;
+      if (rec.row !== kk.row || (rec.role !== 'squad' && Math.abs(rec.x - game.player.x) > 3000)) { despawn(game, rec); }
+    } else if (rec.row === kk.row && rec.role !== 'prisoner' && Math.abs(rec.x - game.player.x) < 2600) spawnLive(game, rec); /* far parts of the band stay records too */
   }
 }
 function despawn(game, rec) { const u = rec.live; if (!u) return; const i = game.minions.indexOf(u); if (i >= 0) game.minions.splice(i, 1); rec.live = null; }
@@ -243,6 +248,8 @@ function onPanelAction(game, act, arg) {
   let res = true;
   if (act === 'train') { const r = trainUnit(game, site, arg || null, { spin: panel.spin }); res = r.ok; panel.msg = r.ok ? (r.reels ? `WALZEN: ${r.reels.grid.map((g) => REEL_SYMBOLS[g]).join('')} ${r.reels.bonus.length ? '→ ' + r.reels.bonus.map((b) => BONUS_LABEL[b]).join(' + ') : '→ kein Bonus'}` : 'IN AUSBILDUNG') : r.why; }
   else if (act === 'spin') panel.spin = !panel.spin;
+  else if (act === 'upgrade' && kk.hqHooks) { const r = kk.hqHooks.upgrade(); res = r.ok; panel.msg = r.ok ? '' : r.why; }
+  else if (act === 'resist' && kk.hqHooks) { const r = kk.hqHooks.resist(arg); res = r.ok; panel.msg = r.ok ? '' : r.why; }
   else if (act === 'up') res = station(game, site, arg); else if (act === 'down') res = takeAlong(game, site, arg); else if (act === 'merge') res = mergeUnits(game, site, arg);
   if (!res) audio.playRuneFail?.(); else audio.playRuneChime?.(640);
   panel.html = ''; refreshPanel(game, site);
@@ -260,6 +267,12 @@ function refreshPanel(game, site) {
     for (const e of els) h += btn('train', e, `${unitName({ cls: site.cls, element: e, tier: 1 })}`, hasW > 0);
     h += `<div>${btn('spin', '', panel.spin ? `WALZEN AN (+${TRAIN.spinGold}◉)` : 'WALZEN AUS')} ${kk.lastGrade && kk.time - kk.lastGradeAt < 90 ? 'Zeichennote ' + kk.lastGrade : 'zeichne eine Rune für bessere Walzen'}</div>`;
     const q = kk.castleQueue[site.id] ?? []; if (q.length) h += `<div style="color:#9fd">Warteschlange: ${q.length} · nächste in ${Math.ceil(q[0].t)} s</div>`;
+  }
+  if (isHQ && kk.hqHooks) {
+    const x = kk.hqHooks.extras();
+    h += `<div style="margin:4px 0;color:#cbb8ff">${['UNBEFESTIGT', 'HOLZBURG', 'STEINBURG', 'STAHLBURG', 'OBSIDIANBURG'][x.hq.level ?? 0]} · Leben ${Math.max(0, Math.round(x.hq.hp))}</div>`;
+    if (x.next) h += btn('upgrade', '', `AUFRÜSTEN → ${x.next.name} (${x.next.cost} ${x.matName}, du hast ${x.have})`, x.have >= x.next.cost);
+    for (const e of x.stones) { const c = x.resCost(e); h += btn('resist', e, `RESISTENZ ${e.toUpperCase()} ${x.hq.res?.[e] ?? 0}${c ? ' (+' + c + ' Steine)' : ''}`, !!c && (x.hq.res?.[e] ?? 0) < (x.hq.level ?? 0)); }
   }
   h += `<div style="margin-top:6px;color:#ffe9a8">STATIONIERT (${garrison.reduce((s, g) => s + g.units.length, 0)}/${TRAIN.garrisonCap})</div>`;
   for (const g of garrison) h += `<div>${g.units.length}× ${unitName(g.sample)} ${btn('down', g.key, '▼ mitnehmen')} ${g.units.length >= TRAIN.mergeCount && g.sample.tier < TRAIN.maxTier ? btn('merge', g.key, '✦ verschmelzen') : ''}</div>`;

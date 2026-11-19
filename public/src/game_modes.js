@@ -35,7 +35,7 @@ export const GAME_MODES = Object.freeze({
   // mid castles, loot, armies. Starts with the class only (no deck); its own rules replace the clock and the waves.
   kronenkrieg: Object.freeze({
     id: 'kronenkrieg', label: 'KRONENKRIEG', objective: 'ERKUNDE, ERRICHTE DEINE ARMEE, BEHALTE DEINE KRONE',
-    objectives: false, autoWaves: false, respawn: 'unlimited', enemyBehavior: 'disabled', world: 'dungeon', progression: 'none'
+    objectives: false, autoWaves: false, respawn: 'unlimited', enemyBehavior: 'duel', world: 'dungeon', progression: 'none' /* duel: a rival bot in the player's band fights as the champion */
   }),
   // The Spell Gallery (spell_gallery.js): a Training map that runs on to the side — clones of the player cast every spell
   // at their dummies. No foes, no clock, no rewards; it uses the scrolling dungeon world.

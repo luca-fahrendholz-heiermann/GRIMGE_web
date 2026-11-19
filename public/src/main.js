@@ -24,7 +24,8 @@ import { TRAINING_MAPS, getTrainingMap, zoneToWorld } from './training_maps.js';
 import { setupGallery, updateGallery, galleryActors, renderGalleryLabels } from './spell_gallery.js';
 import { setupKronenkrieg, updateKronenkrieg, renderKKGround, kkActors, renderKKMinimap, kkPanY } from './kk_world.js'; // Kronenkrieg: the banded open map
 import { initLoot, updateLoot, lootActors, renderLootHud, kkFuseAllowed, respawnDelay } from './kk_loot.js'; // Kronenkrieg: loot and the round level
-import { initArmy, updateArmy, armyActors, closeKKPanel, recordGrade } from './kk_army.js'; // Kronenkrieg: armies, castles, garrisons // the Training map where clones show every spell
+import { initArmy, updateArmy, armyActors, closeKKPanel, recordGrade } from './kk_army.js'; // Kronenkrieg: armies, castles, garrisons
+import { initWar, updateWar, warActors, renderFlood, warMinimapDots, kkEnemyHome, kkCanRespawn } from './kk_war.js'; // Kronenkrieg: bots, main castles, Grimmflut, the end // the Training map where clones show every spell
 import { loadFxSprites } from './fx_sprites.js';
 import { loadSpellSprites } from './spell_visuals.js';
 import { renderPixelated } from './abilities.js';
@@ -1583,6 +1584,7 @@ export class GameWorld {
   }
 
   getEnemyHome(team, battlefield = this.battlefield) {
+    if (this.activeMode?.id === 'kronenkrieg') { const h = kkEnemyHome(this); if (h) return h; }
     if (team !== 'red') return battlefield.getSpawn(team);
     if (this.modeState?.bossHome) return this.modeState.bossHome;
     if (this.activeMode?.enemyBehavior === 'duel' || this.modeState?.bossActive) return { x: 690, z: 0.58 };
@@ -1666,7 +1668,7 @@ export class GameWorld {
       return;
     }
     if (mode.id === 'kronenkrieg') {
-      initLoot(setupKronenkrieg(this)); initArmy(this);
+      initLoot(setupKronenkrieg(this)); initArmy(this); initWar(this);
       this.player.configureRuneDeck?.([]); /* the class only: runes are found in the round */
       this.enemyChampion.lifeState = 'Dead'; this.enemyChampion.respawnTimer = Infinity;
       return;
@@ -2463,6 +2465,7 @@ export class GameWorld {
       updateKronenkrieg(this, dt);
       updateLoot(this, dt);
       updateArmy(this, dt);
+      updateWar(this, dt);
       return;
     }
     if (this.activeMode.id === 'gallery') {
@@ -2634,6 +2637,7 @@ export class GameWorld {
 
   canRespawn(team) {
     if (!this.isMatchRunning()) return false;
+    if (this.activeMode?.id === 'kronenkrieg') return team === this.player.team ? kkCanRespawn(this) : false; /* rival bots return by their own rules (kk_war.js) */
     if (this.activeMode?.respawn === 'unlimited') return true;
     if (this.activeMode?.respawn === 'none') return false;
     return !this.battlefield.getCastle(team).isDestroyed;
@@ -2658,6 +2662,7 @@ export class GameWorld {
 
   onFinalWizardDeath(team) {
     if (!this.isMatchRunning()) return;
+    if (this.activeMode?.id === 'kronenkrieg') return; /* its own end rules decide (kk_war.js checkEnd) */
     if (this.activeMode?.id === 'training') return;
     if (this.activeMode?.id === 'dungeon' && team === 'red') return;
     if (this.activeMode?.id === 'invasion') {
@@ -3407,7 +3412,7 @@ export class GameWorld {
     this.applyWorldZoom(ctx);
     ctx.translate(this.cameraOffsetX + cam.shakeX - dungeonCamX, cam.shakeY + worldY + kkPanY(this));
     if (this.activeMode?.id === 'base') renderBaseHall(ctx);
-    if (this.activeMode?.id === 'kronenkrieg') { const z = this.cameraZoom() || 1; const span = this.logicalWidth / z; renderKKGround(ctx, this, dungeonCamX - span * .5 - 200, dungeonCamX + span * 1.5 + 200); }
+    if (this.activeMode?.id === 'kronenkrieg') { const z = this.cameraZoom() || 1; const span = this.logicalWidth / z; renderKKGround(ctx, this, dungeonCamX - span * .5 - 200, dungeonCamX + span * 1.5 + 200); renderFlood(ctx, this, dungeonCamX - span * .5 - 200, dungeonCamX + span * 1.5 + 200, -300, 1000); }
 
     // Foreground Crystal Glows on Beacons
     if (this.activeMode?.id !== 'base' && this.activeMode?.id !== 'kronenkrieg') this.battlefield.renderForeground(ctx); /* no tower beacons in the base hall */
@@ -3444,7 +3449,7 @@ export class GameWorld {
     if (this.primal?.isTargetable) actors.push(this.primal);
     if (this.activeMode?.id === 'base') actors.push(...baseActors(this)); /* stations and stands share the depth order */
     if (this.activeMode?.id === 'gallery') actors.push(...galleryActors(this)); /* the casting clones of the Spell Gallery */
-    if (this.activeMode?.id === 'kronenkrieg') actors.push(...kkActors(this), ...lootActors(this), ...armyActors(this)); /* castles, buildings, camps and loot of the current band */
+    if (this.activeMode?.id === 'kronenkrieg') actors.push(...kkActors(this), ...lootActors(this), ...armyActors(this), ...warActors(this)); /* castles, buildings, camps and loot of the current band */
     // Spells with a ground position and summons share the painter's order
     // with the actors, so a spike behind the dummy is hidden by the dummy.
     actors.push(...spells.depthEntries());
@@ -3496,7 +3501,7 @@ export class GameWorld {
     // Map weather (snow, rain, embers, leaves, dust, mana motes) in screen space.
     environment.renderWeather(ctx, viewW, viewH);
     this.renderDungeonExitArrow(ctx, viewW);
-    if (this.activeMode?.id === 'kronenkrieg') { renderKKMinimap(ctx, this, viewW); renderLootHud(ctx, this, viewW); }
+    if (this.activeMode?.id === 'kronenkrieg') { renderKKMinimap(ctx, this, viewW, { dots: warMinimapDots(this) }); renderLootHud(ctx, this, viewW); }
     this.renderOffscreenArrows(ctx);
 
     // 3. Screen Space Rune Drawing
