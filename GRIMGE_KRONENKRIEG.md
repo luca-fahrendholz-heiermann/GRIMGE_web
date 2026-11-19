@@ -140,11 +140,16 @@ bei 1 beginnt. Das trägt die Säule „vom Nichts zur Armee“ und gibt laufend
 | 5 | **gezähmte und geschlüpfte Kreaturen reiten** | **Mehrfach-Runen** (Spezialrunen mit zweiter Aktivierung: nochmal tippen oder halten & loslassen) |
 | 6 | +1 Deckplatz | **Sphären / Domänen**, Fusion von drei Runen (die großen Dreier-Kombinationen) |
 | 7 | Trupp +2, zweiter Trankplatz | — |
-| 8 | **fliegen** mit fliegenden Kreaturen | **Arcane State** |
-| 9 | +1 Deckplatz (8 Karten) | **Fokus-Transformation** |
-| 10 | **Kronenstufe** | **Bankai** (die eigene Klasse erwacht) |
+| 8 | **fliegen** mit fliegenden Kreaturen | **Arcane State** (Element-Weg) **oder Bankai** (Klassen-Weg) — gleichwertig, §4c |
+| 9 | +1 Deckplatz (8 Karten) | — |
+| 10 | **Kronenstufe** | **Fokus-Transformation**: die Perfektion des gewählten Wegs |
 
 - **Werte** wachsen nur leicht (etwas Leben und Mana pro Stufe), damit Können wichtiger bleibt als Stufe.
+- **Die Reihenfolge erzählt eine Meisterung** (Nutzer, 19. Nov 2026), am Beispiel eines Elements:
+  **Atmung** (die harte Kampftechnik des Elements) → **Sphäre** (die Technik gemeistert, eine höhere Ebene) →
+  **Arcane State** (Verkörperung, Einswerden mit dem Element) → **Fokus-Transformation** (die Perfektion).
+  Für den Klassen-Weg steht **Bankai** auf derselben Stufe wie der Arcane State: die Erweckung der Klassenwaffe,
+  ohne Element.
 - **Tempo (Vorschlag):** Stufe 4 um Minute 5, Stufe 6 um Minute 9, Stufe 8 um Minute 13, Stufe 10 erst in der
   Endphase (≈ Minute 17) und nur für aktive Spieler. Die großen Momente fallen damit in die Kriegs- und Endphase.
 - **Gegen Davonziehen:** Wer einen Spieler höherer Stufe besiegt, bekommt deutlich mehr Erfahrung (Kopfgeld auf den
@@ -173,8 +178,42 @@ in §4a).
 - **Je Deck höchstens ein Arcane State** und eine Sphäre (wie die Budgetregeln der Arena), damit sich auch spät
   nicht alles stapelt.
 - **Fokus-Transformation und Bankai** brauchen zusätzlich die gewohnten Bedingungen (Fokus voll, Klassenwaffe).
-  Die Stufe gibt sie nur frei.
+  Die Stufe gibt sie nur frei. Beide kommen aus dem gewählten Weg (§4c) und müssen nicht gefunden werden.
 - **Transformations-Relikte** (wie in der Arena) gibt es im Kronenkrieg erst ab Minute 12 und nur in der Mitte.
+
+### 4c. Vor der Runde: Klasse und Weg wählen
+Vor dem Start wählt jeder zwei Dinge:
+1. **Klasse** (mit Klassenwaffe): wie man kämpft.
+2. **Weg**: worin man in dieser Runde zur Perfektion kommt.
+   - **Element-Weg** (ein Element, z. B. Feuer): auf Stufe 8 entsiegelt sich der **Arcane State dieses Elements**
+     von selbst, auf Stufe 10 wartet die **Element-Transformation** (die Meisterungs-Transformation des Kanons).
+   - **Klassen-Weg**: auf Stufe 8 erwacht das **Bankai** der Klassenwaffe, auf Stufe 10 die
+     **Klassen-Transformation**.
+
+- **Beide Wege sind gleichwertig:** Ihre Stufe-8-Form und ihre Fokus-Transformation sind garantiert. Gefundene
+  Runen geben zusätzliche Möglichkeiten (Atmungen, Sphären, auch fremde Arcane States, höchstens einer im Deck),
+  aber die Krönung hängt nie vom Glück ab.
+- **Lesbarkeit für Gegner:** Der Weg ist in der Lobby und an der Burgfahne zu sehen. Wer Feuer gewählt hat, gegen
+  den lohnt es sich, Aqua in die Mauern einzubauen. Das verbindet die Wahl mit den Burg-Resistenzen (§6.5).
+- **Element-Weg und gefundene Runen:** Runen des eigenen Elements tauchen in Truhen etwas häufiger auf, damit sich
+  die Wahl beim Sammeln anfühlt. Andere Elemente bleiben voll nutzbar.
+
+### 4d. Primals im Kronenkrieg (Empfehlung)
+Der Kanon führt drei getrennte Quellen für Transformationen: Klasse, Primal und Meisterung. Im Kronenkrieg ist der
+Weg (§4c) die Transformation. Ein zusätzlicher Primal von Anfang an würde den Start „nur mit Klasse“ aufweichen
+und eine dritte Machtquelle neben Armee und Weg stapeln.
+
+**Empfehlung: Der Primal kommt mit, aber klein, und wächst in der Runde. Eine Primal-Transformation gibt es im
+Kronenkrieg nicht.**
+- Jeder startet mit seinem Primal als **kleinem Begleiter** (Jungtier, kämpft schwach mit, hilft beim Finden,
+  z. B. wittert Goldadern). Das passt zur Richtung „Primals brauchen einen Weg von klein nach groß“.
+- Mit der Rundenstufe wächst er sichtbar: Jungtier (1) → ausgewachsen (5, **reitbar**) → mächtig (8, fliegende
+  Primals **fliegen**). Damit ist er das garantierte Reittier und ergänzt Pferde und gezähmte Kreaturen.
+- Er bleibt ein Begleiter, keine Verwandlung des Helden. Die Transformation kommt allein aus dem Weg. So gibt es
+  pro Spieler genau **eine** Krönung und keine Stapel.
+- Stirbt er, kehrt er nach einer Abklingzeit zurück (wie Reittiere). Er kann nicht gestohlen oder gezähmt werden.
+- Alternative, falls das zu viel ist: Primals ganz weglassen und nur gezähmte Kreaturen und Eier nutzen. Das ist
+  reiner, aber die eigene Identität (mein Wolf, mein Drache) fehlt dann.
 
 ---
 
@@ -441,6 +480,7 @@ Die Karte gehört zu Beginn **niemandem**. Neben den vier Spielern (Menschen ode
 | Wie groß ist die Karte? | Start mit ca. 4 × 4 Bildschirmbreiten pro Sektor (gesamt ≈ 8 × 8), im Playtest anpassen |
 | Wie viele Einheiten gleichzeitig? | Trupp anfangs 6, maximal 20; insgesamt ≈ 120 Einheiten auf der Karte (Leistung am Handy prüfen) |
 | Deckgröße der Runde? | 4 Karten zu Beginn, mit der Rundenstufe bis 8; beim Tod fällt alles |
+| Primal von Anfang an? | ja, als kleiner Begleiter, der mit der Rundenstufe wächst (reitbar ab 5, Flug ab 8); keine Primal-Transformation im Kronenkrieg (§4d) |
 | Gilt die Stufen-Sperre auch in anderen Modi? | Vorerst nur im Kronenkrieg. In Arena und Siege regeln Deck-Budget und Seltenheit die Macht, im Feldzug die Fortschritts-Freischaltungen. Ein ähnliches Muster kann später in den Dungeon (Stufe pro Raum) |
 | Wie viel kostet ein Kämpfer? | einfache Einheit ≈ 20 Gold, starke 60 Gold + Stahl; ein Banditentrupp bringt ≈ 40–80 Gold |
 | Wie oft wird die Karte neu gebaut? | bei jedem Rundenstart; der Startwert (Seed) wird angezeigt, damit man eine gute Karte teilen und erneut spielen kann |
