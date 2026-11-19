@@ -140,15 +140,16 @@ bei 1 beginnt. Das trägt die Säule „vom Nichts zur Armee“ und gibt laufend
 | 5 | **gezähmte und geschlüpfte Kreaturen reiten** | **Mehrfach-Runen** (Spezialrunen mit zweiter Aktivierung: nochmal tippen oder halten & loslassen) |
 | 6 | +1 Deckplatz | **Sphären / Domänen**, Fusion von drei Runen (die großen Dreier-Kombinationen) |
 | 7 | Trupp +2, zweiter Trankplatz | — |
-| 8 | **fliegen** mit fliegenden Kreaturen | **Arcane State** (Element-Weg) **oder Bankai** (Klassen-Weg) — gleichwertig, §4c |
+| 8 | **fliegen** mit fliegenden Kreaturen | **Arcane State oder Bankai**: Wahl und Prüfung (§4c) |
 | 9 | +1 Deckplatz (8 Karten) | — |
-| 10 | **Kronenstufe** | **Fokus-Transformation**: die Perfektion des gewählten Wegs |
+| 10 | **Kronenstufe** | **Fokus-Transformation**: zweite Wahl und schwerere Prüfung (§4c) |
 
 - **Werte** wachsen nur leicht (etwas Leben und Mana pro Stufe), damit Können wichtiger bleibt als Stufe.
-- **Die Reihenfolge erzählt eine Meisterung** (Nutzer, 19. Nov 2026), am Beispiel eines Elements:
+- **Die Reihenfolge erzählt eine Meisterung** (Nutzer, 19. Nov 2026), am Beispiel eines Elements (auf Stufe 8 und
+  10 wählt man in der Runde, §4c):
   **Atmung** (die harte Kampftechnik des Elements) → **Sphäre** (die Technik gemeistert, eine höhere Ebene) →
   **Arcane State** (Verkörperung, Einswerden mit dem Element) → **Fokus-Transformation** (die Perfektion).
-  Für den Klassen-Weg steht **Bankai** auf derselben Stufe wie der Arcane State: die Erweckung der Klassenwaffe,
+  Wählt man die Klasse, steht **Bankai** auf derselben Stufe wie der Arcane State: die Erweckung der Klassenwaffe,
   ohne Element.
 - **Tempo (Vorschlag):** Stufe 4 um Minute 5, Stufe 6 um Minute 9, Stufe 8 um Minute 13, Stufe 10 erst in der
   Endphase (≈ Minute 17) und nur für aktive Spieler. Die großen Momente fallen damit in die Kriegs- und Endphase.
@@ -178,36 +179,41 @@ in §4a).
 - **Je Deck höchstens ein Arcane State oder ein Bankai** (Nutzer, 19. Nov 2026: das Bankai ist im Spiel selbst ein
   Arcane State) und höchstens eine Sphäre, wie die Budgetregeln der Arena. So stapelt sich auch spät nichts.
 - **Fokus-Transformation und Bankai** brauchen zusätzlich die gewohnten Bedingungen (Fokus voll, Klassenwaffe).
-  Die Stufe gibt sie nur frei. Beide kommen aus dem gewählten Weg (§4c) und müssen nicht gefunden werden.
+  Die Stufe macht sie nur möglich: freigeschaltet werden sie durch die Prüfungen (§4c), nicht durch Finden.
 - **Transformations-Relikte** (wie in der Arena) gibt es im Kronenkrieg erst ab Minute 12 und nur in der Mitte.
 
-### 4c. Vor der Runde: Klasse und Weg wählen
-Vor dem Start wählt jeder zwei Dinge:
-1. **Klasse** (mit Klassenwaffe): wie man kämpft.
-2. **Weg**: worin man in dieser Runde zur Perfektion kommt.
-   - **Element-Weg** (ein Element, z. B. Feuer): auf Stufe 8 entsiegelt sich der **Arcane State dieses Elements**
-     von selbst, auf Stufe 10 wartet die **Element-Transformation** (die Meisterungs-Transformation des Kanons).
-   - **Klassen-Weg**: auf Stufe 8 erwacht das **Bankai** der Klassenwaffe, auf Stufe 10 die
-     **Klassen-Transformation**.
+### 4c. Krönung: zwei Wahlen in der Runde, zwei Prüfungen
+Vor dem Start wählt man nur die **Klasse**. Den Weg zur großen Form wählt man **erst in der Runde**, und zwar
+**zweimal unabhängig voneinander** (Nutzer, 19. Nov 2026: flexibel bleiben, Mischungen erlauben):
 
-- **Beide Wege sind gleichwertig:** Ihre Stufe-8-Form und ihre Fokus-Transformation sind garantiert. Gefundene
-  Runen geben zusätzliche Möglichkeiten (Atmungen, Sphären), aber die Krönung hängt nie vom Glück ab.
-- **Arcane States sind normale Runen:** Man findet sie, sammelt sie (versiegelt bis Stufe 8), tauscht sie aus und
-  verliert sie beim Tod, genau wie jede andere Rune. Im Deck steht davon immer nur **eine**: ein Arcane State
-  **oder** das Bankai.
-- **Einzige Ausnahme, die Karte des eigenen Wegs:** Sie ist **seelengebunden**. Man bekommt sie auf Stufe 8
-  geschenkt, sie fällt beim Tod nicht und kann nicht gestohlen werden. Man kann sie jederzeit gegen einen
-  gefundenen Arcane State austauschen. Sie wartet dann in der Reserve und lässt sich außerhalb des Kampfes wieder
-  zurücktauschen. So ist die Krönung sicher, ohne dass Arcane States eine Sonderbehandlung brauchen.
-- Die Fokus-Transformation auf Stufe 10 ist immer die des gewählten Wegs.
-- **Lesbarkeit für Gegner:** Der Weg ist in der Lobby und an der Burgfahne zu sehen. Wer Feuer gewählt hat, gegen
-  den lohnt es sich, Aqua in die Mauern einzubauen. Das verbindet die Wahl mit den Burg-Resistenzen (§6.5).
-- **Element-Weg und gefundene Runen:** Runen des eigenen Elements tauchen in Truhen etwas häufiger auf, damit sich
-  die Wahl beim Sammeln anfühlt. Andere Elemente bleiben voll nutzbar.
+| Moment | Wahl | Danach |
+|---|---|---|
+| **Stufe 8** | **Klasse** (Bankai) **oder ein Element** (dessen Arcane State) | Eine **Prüfung** erscheint auf der Karte (Waffenhalle bzw. Elementschrein). Wer ihren Wächter besiegt, bekommt die Karte. |
+| **Stufe 10** | **Klasse** (Klassen-Transformation) **oder ein Element** (Element-Transformation) | Eine zweite, schwerere **Prüfung**. Ihr Sieg schaltet die Fokus-Transformation frei. |
+
+- **Mischungen sind erlaubt:** Bankai auf Stufe 8 und Feuer-Perfektion auf 10, Eis-Arcane-State und
+  Klassen-Perfektion, oder zweimal dasselbe Element für die reine Linie. Man muss kein Glück beim Finden haben, um
+  flexibel zu sein.
+- **Welche Elemente zur Wahl stehen:** die Elemente, die man in dieser Runde **wirklich benutzt** hat (die drei mit
+  den meisten gewirkten Zaubern, wie die Meisterung durch Benutzung). Die Klasse steht immer zur Wahl. So belohnt
+  die Krönung den eigenen Spielstil, und die Wahl ist nie beliebig.
+- **Verdienen statt geschenkt:** Die Prüfung ist ein Kampf gegen einen Wächter am Prüfungsort. Jeder bekommt eine,
+  sie ist immer erreichbar, es zählt nur Können. Sie ist für alle auf der Karte sichtbar, und Gegner können dort
+  stören oder abfangen. Wie beim Ei-Lauf ist der große Moment auch ein Risiko.
+- **Gefundene Arcane States sind eine Abkürzung:** Sie sind normale Runen (sammeln, versiegelt bis Stufe 8,
+  tauschen, beim Tod verlieren). Wer schon einen trägt, kann auf Stufe 8 auf die Prüfung verzichten und eine
+  andere Belohnung nehmen (z. B. eine Sphäre seines Elements). Im Deck steht immer nur **eine** große Form: ein
+  Arcane State **oder** das Bankai.
+- **Erkämpfte Karten sind seelengebunden:** Was man in einer Prüfung gewinnt, fällt beim Tod nicht und kann nicht
+  gestohlen werden. Gegen einen gefundenen Arcane State lässt es sich jederzeit austauschen (es wartet in der
+  Reserve und kommt außerhalb des Kampfes zurück).
+- **Lesbarkeit für Gegner:** Die Wahl wird sichtbar, sobald die Prüfung erscheint (Schrein in der Elementfarbe,
+  Fahne an der Burg). Bis dahin verrät nur der Spielstil, wohin jemand geht. Wer sieht, dass sein Nachbar zum
+  Feuerschrein zieht, baut Aqua in die Mauern ein (§6.5).
 
 ### 4d. Primals im Kronenkrieg (Empfehlung)
 Der Kanon führt drei getrennte Quellen für Transformationen: Klasse, Primal und Meisterung. Im Kronenkrieg ist der
-Weg (§4c) die Transformation. Ein zusätzlicher Primal von Anfang an würde den Start „nur mit Klasse“ aufweichen
+Krönung über die Prüfungen (§4c) die Transformation. Ein zusätzlicher Primal von Anfang an würde den Start „nur mit Klasse“ aufweichen
 und eine dritte Machtquelle neben Armee und Weg stapeln.
 
 **Empfehlung: Der Primal kommt mit, aber klein, und wächst in der Runde. Eine Primal-Transformation gibt es im
@@ -467,7 +473,7 @@ Die Karte gehört zu Beginn **niemandem**. Neben den vier Spielern (Menschen ode
 
 1. **Weite Fläche:** ein Kartengenerator aus Bausteinen mit Fairness-Prüfung, eine große Testkarte, auf der die Kamera in alle Richtungen folgt. Dazu Bodenobjekte, Straßen
    und die Übersichtskarte mit Aufdeckung. *Ziel: Erkunden fühlt sich gut an.*
-2. **Beute:** Gebäude mit Ebenen und Truhen, Gold und Goldadern, Tränke, Rundendeck und Rucksack, Rundenstufe
+2. **Beute:** Prüfungsorte mit Wächtern (Krönung, §4c), Gebäude mit Ebenen und Truhen, Gold und Goldadern, Tränke, Rundendeck und Rucksack, Rundenstufe
    mit Freischaltungen und versiegelten Runen, Tod mit Beutehaufen, Banditen-Patrouillen. *Ziel: der
    eigene Aufbau beim Spielen.*
 3. **Armee:** Gefangenenlager, Trupp-Befehle, Zwischenburgen erobern, Ausbildung aus Waffe + Stein,
@@ -487,6 +493,7 @@ Die Karte gehört zu Beginn **niemandem**. Neben den vier Spielern (Menschen ode
 | Wie groß ist die Karte? | Start mit ca. 4 × 4 Bildschirmbreiten pro Sektor (gesamt ≈ 8 × 8), im Playtest anpassen |
 | Wie viele Einheiten gleichzeitig? | Trupp anfangs 6, maximal 20; insgesamt ≈ 120 Einheiten auf der Karte (Leistung am Handy prüfen) |
 | Deckgröße der Runde? | 4 Karten zu Beginn, mit der Rundenstufe bis 8; beim Tod fällt alles |
+| Wie schwer sind die Prüfungen? | Stufe 8: ein Wächter etwa so stark wie eine Zwischenburg-Besatzung; Stufe 10: ein Wächter wie eine epische Kreatur. Der eigene Trupp darf helfen |
 | Primal von Anfang an? | ja, als kleiner Begleiter, der mit der Rundenstufe wächst (reitbar ab 5, Flug ab 8); keine Primal-Transformation im Kronenkrieg (§4d) |
 | Gilt die Stufen-Sperre auch in anderen Modi? | Vorerst nur im Kronenkrieg. In Arena und Siege regeln Deck-Budget und Seltenheit die Macht, im Feldzug die Fortschritts-Freischaltungen. Ein ähnliches Muster kann später in den Dungeon (Stufe pro Raum) |
 | Wie viel kostet ein Kämpfer? | einfache Einheit ≈ 20 Gold, starke 60 Gold + Stahl; ein Banditentrupp bringt ≈ 40–80 Gold |
