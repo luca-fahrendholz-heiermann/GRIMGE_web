@@ -131,23 +131,48 @@ bei 1 beginnt. Das trägt die Säule „vom Nichts zur Armee“ und gibt laufend
   ein geschlüpftes Ei. Erkunden zählt also genauso wie Kämpfen.
 - **Jede Stufe schaltet etwas frei** statt nur Werte zu erhöhen (Vorschlag):
 
-| Stufe | Freischaltung |
-|---|---|
-| 2 | +1 Deckplatz (4 → 5 Karten) |
-| 3 | **einfache Pferde reiten** (aus Ställen) |
-| 4 | +1 Deckplatz, Trupp +2 |
-| 5 | **gezähmte und geschlüpfte Kreaturen reiten** |
-| 6 | +1 Deckplatz, Fusion von drei Runen |
-| 7 | Trupp +2, zweiter Trankplatz |
-| 8 | **fliegen** mit fliegenden Kreaturen |
-| 9 | +1 Deckplatz (8 Karten) |
-| 10 | **Kronenstufe:** die eigene Klasse erwacht (Bankai / Transformation für die Runde verfügbar) |
+| Stufe | Freischaltung | Runenmacht (ab hier nutzbar, §4b) |
+|---|---|---|
+| 1 | Start: Klasse, 4 Deckplätze | Element-Runen, einfache Spezialrunen |
+| 2 | +1 Deckplatz | Fusion von zwei Runen |
+| 3 | **einfache Pferde reiten** (aus Ställen) | Beschwörungen, Haltungen |
+| 4 | +1 Deckplatz, Trupp +2 | **Atmung** |
+| 5 | **gezähmte und geschlüpfte Kreaturen reiten** | Mehrfachzauber (große Kombinationen) |
+| 6 | +1 Deckplatz | **Sphären / Domänen**, Fusion von drei Runen |
+| 7 | Trupp +2, zweiter Trankplatz | — |
+| 8 | **fliegen** mit fliegenden Kreaturen | **Arcane State** |
+| 9 | +1 Deckplatz (8 Karten) | **Fokus-Transformation** |
+| 10 | **Kronenstufe** | **Bankai** (die eigene Klasse erwacht) |
 
 - **Werte** wachsen nur leicht (etwas Leben und Mana pro Stufe), damit Können wichtiger bleibt als Stufe.
+- **Tempo (Vorschlag):** Stufe 4 um Minute 5, Stufe 6 um Minute 9, Stufe 8 um Minute 13, Stufe 10 erst in der
+  Endphase (≈ Minute 17) und nur für aktive Spieler. Die großen Momente fallen damit in die Kriegs- und Endphase.
 - **Gegen Davonziehen:** Wer einen Spieler höherer Stufe besiegt, bekommt deutlich mehr Erfahrung (Kopfgeld auf den
   Führenden). Zurückliegende holen schneller auf.
 - **Beim Tod** verliert man keine Stufe (die Runen und Ressourcen fallen ja schon), aber die Rückkehrzeit wächst
   mit der Stufe.
+
+### 4b. Runenmacht nach Stufe: kein Glückstreffer entscheidet früh
+Ziel (Nutzer, 19. Nov 2026): **Niemand soll durch Zufall früh eine Transformation bekommen und damit alle
+weghauen.** Deshalb gilt wie beim Mastery-Baum: Jede Machtstufe der Runen hat eine **Mindest-Rundenstufe** (Tabelle
+in §4a).
+
+- **Versiegelte Runen:** Findet man eine Rune, deren Stufe man noch nicht hat, wird sie trotzdem eingesammelt,
+  aber **versiegelt**. Sie liegt mit Schloss und Zahl („ab Stufe 8“) im Deck, lässt sich nicht slotten oder wirken
+  und zählt nicht gegen die freien Deckplätze. Sobald man die Stufe erreicht, bricht das Siegel. Ein kurzer
+  Moment mit Ansage: „ARCANE STATE ENTSIEGELT“.
+- So bleibt der Fund spannend (man weiß, was kommt, und hat ein Ziel), ohne das frühe Spiel zu zerstören.
+- **Beim Tod** fallen auch versiegelte Runen. Ein Spieler, der schon die passende Stufe hat, kann sie sofort nutzen.
+  Das macht Jagd auf Träger starker Runen reizvoll, ist aber erst spät wirklich gefährlich.
+- **Beute folgt der Zeit und dem Ort:** Truhen nahe den Hauptburgen und in den ersten Minuten enthalten fast nur
+  Element- und einfache Spezialrunen. Atmung, Sphären und Arcane States liegen in den gefährlichen Gebieten (Mitte,
+  Kreaturen-Reviere, Banditenlager) und werden mit der Spielzeit häufiger. Glück verschiebt also *wann* man etwas
+  bekommt, nicht *ob* man es zu früh nutzen kann.
+- **Je Deck höchstens ein Arcane State** und eine Sphäre (wie die Budgetregeln der Arena), damit sich auch spät
+  nicht alles stapelt.
+- **Fokus-Transformation und Bankai** brauchen zusätzlich die gewohnten Bedingungen (Fokus voll, Klassenwaffe).
+  Die Stufe gibt sie nur frei.
+- **Transformations-Relikte** (wie in der Arena) gibt es im Kronenkrieg erst ab Minute 12 und nur in der Mitte.
 
 ---
 
@@ -395,7 +420,7 @@ Die Karte gehört zu Beginn **niemandem**. Neben den vier Spielern (Menschen ode
 1. **Weite Fläche:** ein Kartengenerator aus Bausteinen mit Fairness-Prüfung, eine große Testkarte, auf der die Kamera in alle Richtungen folgt. Dazu Bodenobjekte, Straßen
    und die Übersichtskarte mit Aufdeckung. *Ziel: Erkunden fühlt sich gut an.*
 2. **Beute:** Gebäude mit Ebenen und Truhen, Gold und Goldadern, Tränke, Rundendeck und Rucksack, Rundenstufe
-   mit Freischaltungen, Tod mit Beutehaufen, Banditen-Patrouillen. *Ziel: der
+   mit Freischaltungen und versiegelten Runen, Tod mit Beutehaufen, Banditen-Patrouillen. *Ziel: der
    eigene Aufbau beim Spielen.*
 3. **Armee:** Gefangenenlager, Trupp-Befehle, Zwischenburgen erobern, Ausbildung aus Waffe + Stein,
    Stationieren mit Pfeilen, Hauptburg-Stufen und Element-Resistenzen. *Ziel: vom Helden zum Kommandanten.*
@@ -414,6 +439,7 @@ Die Karte gehört zu Beginn **niemandem**. Neben den vier Spielern (Menschen ode
 | Wie groß ist die Karte? | Start mit ca. 4 × 4 Bildschirmbreiten pro Sektor (gesamt ≈ 8 × 8), im Playtest anpassen |
 | Wie viele Einheiten gleichzeitig? | Trupp anfangs 6, maximal 20; insgesamt ≈ 120 Einheiten auf der Karte (Leistung am Handy prüfen) |
 | Deckgröße der Runde? | 4 Karten zu Beginn, mit der Rundenstufe bis 8; beim Tod fällt alles |
+| Gilt die Stufen-Sperre auch in anderen Modi? | Vorerst nur im Kronenkrieg. In Arena und Siege regeln Deck-Budget und Seltenheit die Macht, im Feldzug die Fortschritts-Freischaltungen. Ein ähnliches Muster kann später in den Dungeon (Stufe pro Raum) |
 | Wie viel kostet ein Kämpfer? | einfache Einheit ≈ 20 Gold, starke 60 Gold + Stahl; ein Banditentrupp bringt ≈ 40–80 Gold |
 | Wie oft wird die Karte neu gebaut? | bei jedem Rundenstart; der Startwert (Seed) wird angezeigt, damit man eine gute Karte teilen und erneut spielen kann |
 | Wie viel kostet eine Burgstufe? | Stufe 1: 30 Holz · 2: 40 Stein · 3: 30 Stahl · 4: 20 Obsidian; so ist Stufe 4 in einer guten Runde um Minute 15–18 erreichbar |
