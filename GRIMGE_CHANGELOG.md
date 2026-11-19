@@ -2,6 +2,11 @@
 
 Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
+## 19. Nov 2026 – Kronenkrieg: Kreaturen reiten, Pferd
+
+- Gezähmte und geschlüpfte Kreaturen tragen ihren Helden ab Rundenstufe 5 (Aufsteigen wie bei anderen Reittieren, Reitangriffe je nach Art; flinke Kreaturen sind schneller, ein Glutkoloss langsamer).
+- Der Stall gibt jetzt ein echtes Pferd (eigenes Pixel-Pferd mit Sattel und Trab) statt der geliehenen Reitbestie, ohne Beschwörungszirkel.
+
 ## 19. Nov 2026 – Kronenkrieg: Grafik
 
 - Haupt- und Zwischenburgen sind jetzt die gemalten Burgtürme aus Castle Siege, je nach Gebiet im passenden Stil (Vulkan, Gletscher, Wasserfall, Sturm, Canyon, Ruinen, Arkan, Regen), blau für die eigene Seite und Verbündete, rot sonst, verbunden durch eine gezeichnete Mauer mit Tor; die Hauptburg-Mauer zeigt ihre Stufe (Holz, Stein, Stahl, Obsidian).

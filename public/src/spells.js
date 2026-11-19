@@ -247,7 +247,7 @@ export class SpellSystem {
     if (!summon.isFlying) gameWorld.battlefield.resolveEntityCollision(summon);
     this.activeSummons.push(summon);
     // A summoning seal on the floor under the creature, and the caster kneels with a palm on the ground (user, 17 Nov 2026).
-    this.addSpell(new SummonSeal(summon.x, summon.z, definition.color, caster, { radius: sealRadius }), 'B');
+    if (!options.noSeal) this.addSpell(new SummonSeal(summon.x, summon.z, definition.color, caster, { radius: sealRadius }), 'B'); /* noSeal: a creature that is not summoned (a stable horse) */
     if (!options.noPose) beginSummonPose(caster);
     combat.spawnShockwave(summon.x, summon.y - 20, 42 * quality.area, definition.color);
     combat.spawnElementalParticles(summon.x, summon.y - 25, definition.particleElement ?? (definition.id === 'siege_golem' ? 'terra' : 'aqua'), Math.round(18 * quality.particles));
@@ -2405,6 +2405,7 @@ class SummonedCreature extends GroundEntity {
 
   // Rising out of the seal: the body is drawn sunk into the floor and clipped at the ground line, so it climbs out slowly.
   render(ctx) {
+    if (this.definition.customRender) { this.definition.customRender(ctx, this); return; } /* a body drawn by its owner (Kronenkrieg horse) */
     if (this.riseTimer > 0 && !(this.mimicKey ?? this.bodyKey)) {
       const k = riseProgress(this.riseTimer, this.riseDuration);
       ctx.save(); ctx.beginPath(); ctx.rect(this.x - 140, this.y - 400, 280, 400); ctx.clip();

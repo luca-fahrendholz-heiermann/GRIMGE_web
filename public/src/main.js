@@ -1568,7 +1568,8 @@ export class GameWorld {
     if (this.isValidMountCandidate(this.mountCandidate, 84)) return this.mountCandidate;
     // Rideable summons and the own Primal (the Dragon from stage 1, the others from stage 2).
     const own = this.primal && this.primal.team === this.player.team && !this.primal.isDead ? [this.primal] : [];
-    const candidates = [...spells.getSummons(this.player.team), ...own]
+    const kkMounts = this.activeMode?.id === 'kronenkrieg' ? this.minions.filter((m) => m.isKKCreature && !m.isDead && m.team === this.player.team) : []; /* own Kronenkrieg creatures */
+    const candidates = [...spells.getSummons(this.player.team), ...own, ...kkMounts]
       .filter((summon) => this.isValidMountCandidate(summon));
     candidates.sort((a, b) => groundDistance(this.player, a) - groundDistance(this.player, b));
     this.mountCandidate = candidates[0] ?? null;

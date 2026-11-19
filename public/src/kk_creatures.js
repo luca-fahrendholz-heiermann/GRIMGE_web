@@ -14,6 +14,7 @@ import { kkState, kkOn, elementColor, SEAT_COLORS } from './kk_world.js';
 import { gainXp, dropPile } from './kk_loot.js';
 import { KKUnit, addRecord, squadCap } from './kk_army.js';
 import { XP } from './kk_progress.js';
+import { drawHorse } from './kk_art.js';
 
 export const CREATURE_OF = Object.freeze({ ignis: 'siege_golem', terra: 'siege_golem', ventus: 'storm_wolf', fulgur: 'storm_wolf', aqua: 'rune_snake', frost: 'spirit_wolf' });
 const CREATURE_NAME = Object.freeze({ siege_golem: 'GLUTKOLOSS', storm_wolf: 'STURMWOLF', rune_snake: 'FLUTSCHLANGE', spirit_wolf: 'FROSTWOLF' });
@@ -30,6 +31,16 @@ export class KKCreature extends KKUnit {
     this.maxHp = Math.round((700 + 260 * size) * grown * (rec.temper === 'ZÄH' ? 1.3 : 1)); this.hp = Math.min(this.maxHp, rec.hp ?? this.maxHp);
     this.damage = Math.round((26 + 8 * size) * (rec.temper === 'WILD' ? 1.3 : 1)); this.speed = 70 * (rec.temper === 'FLINK' ? 1.35 : 1); this.attackRange = 54; this.renderHeight = 90 + size * 14;
     this.statusElements = [rec.element, ...(rec.extra ? [rec.extra] : [])].filter(Boolean);
+  }
+  // Riding (§10): the own creatures carry their hero from round level 5 — the game's mount interface (Wizard.mount).
+  get definition() {
+    const kk = kkState(globalThis.window?.gameWorld); const k = this.rec.kind;
+    return { id: k, name: CREATURE_NAME[k] ?? 'KREATUR', color: elementColor(this.rec.element), mountable: this.rec.seat === 0 && this.rec.team === 'blue' && (kk?.level ?? 1) >= 5,
+      mountSpeed: (k === 'siege_golem' ? 260 : k === 'rune_snake' ? 300 : 400) * (this.rec.temper === 'FLINK' ? 1.15 : 1), riderOffsetY: k === 'siege_golem' ? 44 : k === 'rune_snake' ? 30 : 28, flying: false };
+  }
+  update(dt, gameWorld, battlefield) {
+    if (this.rider?.isAlive) { this.animTime += dt; this.hitFlash = Math.max(0, this.hitFlash - dt); this.target = null; this.vx = 0; this.vz = 0; return; } /* the rider owns the movement */
+    return super.update(dt, gameWorld, battlefield);
   }
   render(ctx) {
     const mgr = globalThis.window?.gameWorld?.sprites; const key = this.rec.kind;
@@ -127,7 +138,7 @@ function updateMounts(game, dt) {
   for (const s of kk.map.sites) {
     if (s.kind !== 'stable' || s.row !== kk.row || Math.abs(s.x - P.x) > 80 || Math.abs(s.z - P.z) > .2) continue;
     if ((kk.level ?? 1) < 3) { if (!s.hinted) { s.hinted = true; game.showAnnouncement?.('STALL — REITEN AB STUFE 3', 1.4); } continue; }
-    if (!kk.horse || kk.horse.isDead) { kk.horse = spells.summon(P, { ...SUMMON_DEFINITIONS.lesser_beast, id: 'kk_horse', name: 'REITTIER', duration: 1e6, rise: .01 }, game, spells.qualityForRunes([]), { x: s.x + 60, z: s.z, noPose: true }) ?? null; if (kk.horse) game.showAnnouncement?.('REITTIER AUS DEM STALL — AUFSTEIGEN MIT DER REIT-TASTE', 1.8); }
+    if (!kk.horse || kk.horse.isDead) { kk.horse = spells.summon(P, { ...SUMMON_DEFINITIONS.lesser_beast, id: 'kk_horse', name: 'PFERD', color: '#8d6e63', duration: 1e6, rise: .01, mountSpeed: 430, riderOffsetY: 30, customRender: drawHorse }, game, spells.qualityForRunes([]), { x: s.x + 60, z: s.z, noPose: true, noSeal: true }) ?? null; if (kk.horse) game.showAnnouncement?.('PFERD AUS DEM STALL — AUFSTEIGEN MIT DER REIT-TASTE', 1.8); }
   }
   // the Primal grows with the level; once down it waits for the main castle
   if (pr) {

@@ -174,4 +174,23 @@ export function drawKKSite(ctx, site, y, t, opts = {}) {
     default: return false;
   }
 }
+// The stable horse: a brown pixel horse with mane, saddle and a two-frame trot (drawn for the summon, see kk_creatures).
+function horseSprite(frame) {
+  return sprite('horse' + frame, 50, 36, (p) => {
+    const leg = (x, lift) => { p(x, 24 - lift, 3, 11, '#4a2e1a'); p(x, 34 - lift, 3, 2, '#1d140e'); };
+    if (frame) { leg(10, 2); leg(16, 0); leg(32, 0); leg(38, 2); } else { leg(10, 0); leg(16, 2); leg(32, 2); leg(38, 0); }
+    p(8, 12, 34, 14, '#2a1a10'); p(9, 13, 32, 12, '#8d5a34'); p(9, 13, 32, 3, '#a8703f'); p(9, 22, 32, 2, '#6b4428');
+    p(38, 4, 8, 14, '#2a1a10'); p(39, 5, 6, 12, '#8d5a34'); p(43, 2, 6, 7, '#2a1a10'); p(44, 3, 5, 5, '#8d5a34'); p(47, 5, 2, 1, '#1d140e');
+    for (let i = 0; i < 6; i++) p(36 - i % 2, 4 + i * 2, 3, 2, '#2a1610'); p(40, 1, 2, 3, '#2a1610');
+    p(4, 13, 5, 2, '#2a1610'); p(2, 15, 4, 8, '#2a1610');
+    p(18, 10, 12, 5, '#5a1f1f'); p(18, 10, 12, 1, '#8a3030'); p(22, 15, 4, 5, '#3a1a10');
+  });
+}
+export function drawHorse(ctx, s) {
+  const running = s.state === 'run' || (s.rider && Math.abs(s.vx ?? 0) > 5); const fr = running ? Math.floor((s.animTime ?? 0) * 8) % 2 : 0; const im = horseSprite(fr);
+  ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.beginPath(); ctx.ellipse(s.x, s.y + 1, 44, 7, 0, 0, Math.PI * 2); ctx.fill();
+  if (!im) { ctx.fillStyle = '#8d5a34'; ctx.fillRect(s.x - 40, s.y - 50, 80, 30); return; }
+  ctx.save(); ctx.imageSmoothingEnabled = false; if ((s.facing || 1) < 0) { ctx.translate(s.x, 0); ctx.scale(-1, 1); ctx.translate(-s.x, 0); }
+  ctx.drawImage(im, Math.round(s.x - im.width * S / 2), Math.round(s.y - im.height * S + (running ? -fr : 0)), im.width * S, im.height * S); ctx.restore();
+}
 export const biomeColor = (el) => BIOME_OF[el]?.ground;
