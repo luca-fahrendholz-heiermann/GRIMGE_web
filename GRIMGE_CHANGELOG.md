@@ -2,6 +2,15 @@
 
 Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
+## 19. Nov 2026 – Kronenkrieg: Grafik
+
+- Haupt- und Zwischenburgen sind jetzt die gemalten Burgtürme aus Castle Siege, je nach Gebiet im passenden Stil (Vulkan, Gletscher, Wasserfall, Sturm, Canyon, Ruinen, Arkan, Regen), blau für die eigene Seite und Verbündete, rot sonst, verbunden durch eine gezeichnete Mauer mit Tor; die Hauptburg-Mauer zeigt ihre Stufe (Holz, Stein, Stahl, Obsidian).
+- Gefangenenlager (Käfige, Fackeln), Banditenlager (Zelte, Feuerschale, Banner), Wegschrein (Runensäule), Prüfung (Ritterstatue mit Lichtring) und Kreaturen-Höhle (Felsbogen, Dämonenstatue, Trümmer) nutzen die gemalten Requisiten.
+- Fachwerkhaus (1–3 Etagen), Stall, Zelte, Goldader und Quellbecken (in der Farbe des Elements) sind neue Pixel-Sprites mit Umriss, Schatten und Lichtkante.
+- Jedes Gebiet hat seine Landschaft (Kiefern, verschneite Kiefern, Eichen, tote Bäume, Felsen, Kristalle, Schilf, Grasbüschel, Lavapfützen); der Boden hat weiche Flecken und Sprenkel, die Gebiete gehen gerastert ineinander über.
+- Einheiten tragen die gemalten Figuren: eigene und verbündete die Wache, Banditen Ritter / Räuber / Hexer, Rivalen die Leere-Krieger; Bogenschützen und Magier je nach Klasse.
+- Neue Bilder per KI waren nicht möglich: das Gratis-Guthaben (1,75 Credits) reicht im kostenlosen Plan für kein Modell mehr; es wurde nichts gekauft.
+
 ## 19. Nov 2026 – Kronenkrieg: Dauertest einer ganzen Runde
 
 - Neuer Test: eine ganze Runde im echten Spiel-Loop bis zum Ende ohne Fehler (rund 20 Minuten Spielzeit).

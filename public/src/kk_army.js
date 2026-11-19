@@ -5,6 +5,7 @@
 // train units from gold + weapon + element stone (with an optional reel spin), and every castle keeps a garrison
 // that is stationed or taken along with ▲ / ▼. Three equal units merge into one of the next tier.
 import { Minion } from './entities.js';
+import { ART_ASSETS } from './art_assets.js';
 import { setStatusSource } from './status_effects.js';
 import { combat } from './combat.js';
 import { audio } from './audio.js';
@@ -31,6 +32,17 @@ export const sameTeam = (kk, a, b) => a != null && b != null && teamOfSeat(a, kk
 const mine = (u) => u.seat === 0; /* the player's own fighters (an ally's share the team, not the owner) */
 const BONUS_LABEL = Object.freeze({ veteran: 'VETERAN', double: 'DOPPELELEMENT', elite: 'ELITE' });
 
+// Which painted fighter sheet a unit wears: own side and allies the watch, renegades knights / bandits / hexers, rivals the void.
+const LOOK = Object.freeze({
+  blue: { Guardian: 'ally_fighter', Berserker: 'ally_fighter', Lancer: 'ally_fighter', Monk: 'ally_blade', Beastborn: 'ally_blade', Shadow: 'ally_blade', Ranger: 'void_archer', Arcanist: 'frost_shaman' },
+  red: { Guardian: 'enemy_knight', Berserker: 'enemy_bandit', Lancer: 'enemy_knight', Monk: 'enemy_bandit', Beastborn: 'enemy_bandit', Shadow: 'enemy_bandit', Ranger: 'void_archer', Arcanist: 'enemy_sorcerer' },
+  rival: { Guardian: 'void_brute', Berserker: 'void_duelist', Lancer: 'void_duelist', Monk: 'void_duelist', Beastborn: 'void_duelist', Shadow: 'void_duelist', Ranger: 'void_archer', Arcanist: 'enemy_sorcerer' }
+});
+export function unitLook(rec) {
+  const side = rec.team === 'blue' ? 'blue' : rec.bandit || rec.team === 'red' ? 'red' : 'rival';
+  if (rec.cls === 'Arcanist' && rec.element === 'ignis') return 'ember_acolyte';
+  return LOOK[side][rec.cls] ?? (side === 'blue' ? 'ally_fighter' : 'enemy_knight');
+}
 let attackingElement = null; /* the element of the unit striking right now (main castle resistances, kk_war.js) */
 // A live unit: a minion that carries its class and element (its hits roll the element's statuses).
 export class KKUnit extends Minion {
@@ -41,6 +53,7 @@ export class KKUnit extends Minion {
     const tierMul = 1 + (rec.tier - 1) * .55; const vet = rec.bonus?.includes('veteran') ? 1.25 : 1; const elite = rec.bonus?.includes('elite') ? 1.3 : 1;
     this.maxHp = Math.round(this.maxHp * stats.hp * tierMul * vet * (rec.bandit ? .9 : 1)); this.hp = Math.min(this.maxHp, rec.hp ?? this.maxHp);
     this.damage = Math.round(this.damage * stats.dmg * tierMul * elite); this.speed *= stats.spd; this.renderHeight = 54 + (rec.tier - 1) * 6;
+    { const key = unitLook(rec); const arch = ART_ASSETS.archetypes?.[key]; if (ART_ASSETS.entities?.[key] || arch) { this.spriteKey = key; this.renderHeight = (arch?.renderHeight ?? 56) * (key === 'void_brute' ? .8 : 1) + (rec.tier - 1) * 6; } } /* painted sheets instead of the plain minions */
     this.statusElements = rec.element ? (rec.bonus?.includes('double') ? [rec.element, rec.element === 'frost' ? 'aqua' : 'ignis'] : [rec.element]) : null;
     this.runXpValue = 0;
   }

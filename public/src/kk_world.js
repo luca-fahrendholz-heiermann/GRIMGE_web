@@ -2,7 +2,8 @@
 // wide bands; the figure walks one band at a time (a normal 2.5D stage), the bands above and below are drawn as the
 // same endless ground, and walking off the back or front edge glides the camera into the neighbouring band. The map
 // reveals itself while exploring (fog on the minimap). No painted background: the ground itself is the world.
-import { generateKKMap, BIOME_OF } from './kk_map.js';
+import { generateKKMap, BIOME_OF, biomeAt } from './kk_map.js';
+import { drawKKSite, buildDecor, drawDecor } from './kk_art.js'; // the places and the landscape in the game's pixel style
 import { groundYForDepth, getGroundProjection, setGroundProjection } from './world.js';
 
 export const KK_PROJECTION = Object.freeze({ farY: 236, nearY: 496 }); // a deeper floor than the arena (like Training)
@@ -24,7 +25,8 @@ export function setupKronenkrieg(game, seed = null, teamMode = game.kkTeamMode ?
   const map = generateKKMap(s);
   const hq = map.hqs.find((h) => h.seat === 0);
   const ally = teamMode === '2v2' ? map.hqs.find((h) => h.seat !== 0 && h.row === hq.row)?.seat ?? null : null;
-  const kk = { map, seed: s, row: hq.row, pan: 0, switchHold: 0, reveal: new Set(), time: 0, teamMode: ally != null ? '2v2' : 'ffa', allies: ally != null ? [0, ally] : [0] };
+  map.seed = s;
+  const kk = { decor: buildDecor(map), map, seed: s, row: hq.row, pan: 0, switchHold: 0, reveal: new Set(), time: 0, teamMode: ally != null ? '2v2' : 'ffa', allies: ally != null ? [0, ally] : [0] };
   game.modeState.kk = kk;
   Object.assign(game.battlefield.boundsOverride, { left: 60, right: map.width - 60, farZ: .03, nearZ: .97 });
   const P = game.player; P.x = hq.x + 190; P.z = .6; game.battlefield.placeOnSurface(P);
@@ -74,11 +76,19 @@ function drawBandGround(ctx, kk, row, off, x0, x1) {
     if (bio.row !== row || bio.x1 < x0 || bio.x0 > x1) continue;
     const b = BIOME_OF[bio.element]; const a = Math.max(bio.x0, x0); const e = Math.min(bio.x1, x1);
     ctx.fillStyle = b.ground; ctx.fillRect(Math.floor(a), Math.floor(top), Math.ceil(e - a) + 1, Math.ceil(H) + 1);
-    // crisp pixel speckle (deterministic per 24 px tile)
-    for (let tx = Math.floor(a / 24) * 24; tx < e; tx += 24) for (let ty = 0; ty < H; ty += 20) {
-      const h = hash(tx + row * 9973, ty); if (h < .55) continue;
-      ctx.fillStyle = h > .92 ? b.accent : 'rgba(0,0,0,.18)'; ctx.fillRect(tx + Math.floor(hash(ty, tx) * 18), Math.floor(top + ty + hash(tx, ty + 3) * 14), h > .92 ? 3 : 4, 2);
+    // soft patches (darker and lighter blotches, 64 px tiles), then crisp pixel speckle and the biome accent (16 px tiles)
+    for (let tx = Math.floor(a / 64) * 64; tx < e; tx += 64) for (let ty = 0; ty < H; ty += 40) {
+      const h = hash(tx * .7 + row * 31, ty * 1.3); if (h < .45) continue;
+      ctx.fillStyle = h > .8 ? 'rgba(255,255,255,.04)' : 'rgba(0,0,0,.07)'; const bw = 30 + h * 34; const bx = tx + hash(ty, tx) * 30; const by = top + ty + hash(tx, ty) * 20;
+      /* a soft pixel blob: a few stacked rows, widest in the middle */ for (let k = -3; k <= 3; k++) { const ww = bw * (1 - Math.abs(k) / 4); ctx.fillRect(Math.floor(bx + (bw - ww) / 2), Math.floor(by + k * 3), Math.floor(ww), 3); }
     }
+    for (let tx = Math.floor(a / 16) * 16; tx < e; tx += 16) for (let ty = 0; ty < H; ty += 14) {
+      const h = hash(tx + row * 9973, ty); if (h < .5) continue;
+      ctx.fillStyle = h > .95 ? b.accent : h > .8 ? 'rgba(255,255,255,.08)' : 'rgba(0,0,0,.16)'; ctx.fillRect(tx + Math.floor(hash(ty, tx) * 12), Math.floor(top + ty + hash(tx, ty + 3) * 10), h > .95 ? 2 : 3, 2);
+    }
+    // a dithered seam into the previous biome instead of a hard edge
+    const prev = kk.map.biomes.find((o) => o.row === row && o.x1 === bio.x0);
+    if (prev && bio.x0 >= x0 - 40 && bio.x0 <= x1 + 40) { ctx.fillStyle = BIOME_OF[prev.element].ground; for (let dx = 0; dx < 28; dx += 4) for (let ty = 0; ty < H; ty += 4) if (hash(bio.x0 + dx, ty) < (1 - dx / 28) * .8) ctx.fillRect(bio.x0 + dx, Math.floor(top + ty), 4, 4); }
   }
   // the road along the band (a little wavy), stones at its edges
   ctx.fillStyle = 'rgba(176,150,108,.55)';
@@ -89,6 +99,7 @@ function drawBandGround(ctx, kk, row, off, x0, x1) {
 
 // Static look of every site kind (drawn on the ground at its depth; neighbour bands dimmed).
 export function drawSite(ctx, site, y, t = 0, opts = {}) {
+  if (drawKKSite(ctx, site, y, t, opts)) return; /* painted castles, props and pixel sprites (kk_art.js); the plain shapes below are the fallback */
   const x = site.x; const own = opts.ownerColor ?? null; ctx.save();
   const px = (X, Y, W, Hh, c) => { ctx.fillStyle = c; ctx.fillRect(Math.round(X), Math.round(Y), Math.round(W), Math.round(Hh)); };
   const shadow = (w) => { ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.beginPath(); ctx.ellipse(x, y + 2, w, w * .18, 0, 0, Math.PI * 2); ctx.fill(); };
@@ -169,6 +180,8 @@ export function siteOpts(kk, site) {
   if (site.kind === 'hq') o.ownerColor = SEAT_COLORS[site.seat];
   if (site.kind === 'castle' && site.owner != null) o.ownerColor = SEAT_COLORS[site.owner];
   if (site.element) o.elementColor = elementColor(site.element);
+  o.biome = biomeAt(kk.map, site.row, site.x).element;
+  o.friendly = site.kind === 'hq' ? kk.allies?.includes(site.seat) : site.owner != null && kk.allies?.includes(site.owner);
   if (site.looted) o.looted = true; if (site.freed) o.freed = true;
   return o;
 }
@@ -181,7 +194,9 @@ export function renderKKGround(ctx, game, x0, x1) {
     drawBandGround(ctx, kk, row, off, x0, x1);
     if (dr !== 0) {
       // the neighbour band's places stand there too (drawn statically), then the band is dimmed a little
-      for (const s of [...kk.map.hqs, ...kk.map.sites]) if (s.row === row && s.x > x0 - 200 && s.x < x1 + 200) drawSite(ctx, s, groundYForDepth(s.z) + off, t, siteOpts(kk, s));
+      const items = [...kk.map.hqs, ...kk.map.sites].filter((s) => s.row === row && s.x > x0 - 300 && s.x < x1 + 300).map((s) => ({ z: s.z, draw: () => drawSite(ctx, s, groundYForDepth(s.z) + off, t, siteOpts(kk, s)) }));
+      for (const d of kk.decor ?? []) if (d.row === row && d.x > x0 - 60 && d.x < x1 + 60) items.push({ z: d.z, draw: () => drawDecor(ctx, d, groundYForDepth(d.z) + off) });
+      items.sort((a, b) => a.z - b.z).forEach((it) => it.draw());
       const p = getGroundProjection(); ctx.fillStyle = 'rgba(8,10,20,.38)'; ctx.fillRect(Math.floor(x0), Math.floor(p.farY + off), Math.ceil(x1 - x0), Math.ceil(H) + 1);
     }
   }
@@ -193,7 +208,9 @@ export function renderKKGround(ctx, game, x0, x1) {
 // The places of the current band take part in the depth order (a figure behind a castle is hidden by it).
 export function kkActors(game) {
   const kk = kkState(game); if (!kk) return [];
-  return [...kk.map.hqs, ...kk.map.sites].filter((s) => s.row === kk.row).map((s) => ({ y: groundYForDepth(s.z), render: (ctx) => drawSite(ctx, s, groundYForDepth(s.z), kk.time, siteOpts(kk, s)) }));
+  const out = [...kk.map.hqs, ...kk.map.sites].filter((s) => s.row === kk.row).map((s) => ({ y: groundYForDepth(s.z), render: (ctx) => drawSite(ctx, s, groundYForDepth(s.z), kk.time, siteOpts(kk, s)) }));
+  const P = game.player; for (const d of kk.decor ?? []) if (d.row === kk.row && Math.abs(d.x - P.x) < 1400) out.push({ y: groundYForDepth(d.z), render: (ctx) => drawDecor(ctx, d, groundYForDepth(d.z)) });
+  return out;
 }
 
 // ── minimap (screen space, top right) ──────────────────────────────────────────────────────────────────────────────

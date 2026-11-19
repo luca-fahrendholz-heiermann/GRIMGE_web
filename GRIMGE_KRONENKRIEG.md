@@ -563,7 +563,7 @@ Die Karte gehört zu Beginn **niemandem**. Neben den vier Spielern (Menschen ode
 - Jeder gegen jeden oder 2 gegen 2 (Verbündeter = der Rivale im eigenen Streifen).
 
 **Noch offen / vereinfacht:**
-- Grafik: Burgen, Gebäude und Orte sind gezeichnete Platzhalter; das Reittier aus dem Stall ist vorerst die vorhandene Reitbestie, kein Pferd.
+- Grafik: Burgen, Requisiten, Pixel-Sprites und Landschaft sind eingebaut (kk_art.js); das Reittier aus dem Stall ist vorerst die vorhandene Reitbestie, kein Pferd; eigene neue Bilder brauchen Generierungs-Guthaben.
 - Gebäude haben noch keine begehbaren Innenräume (Durchsuchen an der Tür).
 - Gezähmte und geschlüpfte Kreaturen kämpfen mit, sind aber noch nicht reitbar (reiten: Primal und Stall-Reittier).
 - Element-, Klassen- und Primal-Transformation nutzen vorerst die vorhandene Fokus-Transformation; eigene Formen je Weg fehlen.
