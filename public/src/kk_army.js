@@ -63,7 +63,8 @@ export class KKUnit extends Minion {
     try { return super.performAttack(target, gameWorld); } finally { setStatusSource(prev); attackingElement = null; }
   }
   takeDamage(amount, ...rest) {
-    const kk = kkState(globalThis.window?.gameWorld); if (attackingElement && kk?.resistFn) amount *= kk.resistFn(this.rec, attackingElement);
+    const gw = globalThis.window?.gameWorld; const kk = kkState(gw); if (attackingElement && kk?.resistFn) amount *= kk.resistFn(this.rec, attackingElement);
+    if (!this.kkEngaged && gw?.player && this.team !== gw.player.team && Math.hypot(gw.player.x - this.x, (gw.player.z - this.z) * 150) < 700) this.kkEngaged = gw.player; /* struck: it notices the player */
     return super.takeDamage(amount, ...rest);
   }
   render(ctx) {
@@ -81,14 +82,30 @@ export class KKUnit extends Minion {
 // A unit only takes on foes near its post (guards / garrisons), its road (patrols) or its leader (squads); without one
 // it walks back. A player inside a house is reached only through the door (kk_interior.js doorProxy).
 const LEASH = Object.freeze({ guard: 380, garrison: 380, patrol: 460, squad: 440 });
+// Foes of the player's side patrol and only attack when one comes too close (user, 19 Nov 2026): a unit NOTICES a foe
+// within AGGRO of itself (or when it is hit), alerts its comrades of the same post, chases at most LEASH away from its
+// post and then walks back. The own squad simply fights near its leader.
+export const AGGRO = Object.freeze({ guard: 230, garrison: 260, patrol: 260 });
+const CHASE = Object.freeze({ guard: 520, garrison: 520, patrol: 560 });
+const live = (t) => t && !t.isDead && t.isAlive !== false && t.lifeState !== 'Dead' && !t.isProp && !t.isStoneWall && !t.isWorldProp;
+const gap = (a, b) => Math.hypot(a.x - b.x, ((a.z ?? 0) - (b.z ?? 0)) * 150);
 export function kkFindTarget(game, unit) {
-  const kk = kkState(game); const rec = unit.rec ?? {}; const anchor = unit.followLeader ?? unit; const leash = LEASH[rec.role] ?? 420;
-  let best = null; let bestD = Infinity;
-  for (const t of game.getHostileTargets(unit.team)) {
-    if (!t || t.isDead || t.isAlive === false || t.isProp || t.isStoneWall || t.isWorldProp || t.lifeState === 'Dead') continue;
-    const fromPost = Math.hypot(t.x - anchor.x, ((t.z ?? 0) - (anchor.z ?? 0)) * 150); const d = Math.hypot(t.x - unit.x, ((t.z ?? 0) - unit.z) * 150);
-    if (fromPost > leash || d > leash + 200) continue;
-    if (d < bestD) { best = t; bestD = d; }
+  const kk = kkState(game); const rec = unit.rec ?? {}; const anchor = unit.followLeader ?? unit;
+  let best = null;
+  if (rec.role === 'squad' || unit.team === game.player.team) {
+    // the own side: foes near the leader / the post
+    const leash = LEASH[rec.role] ?? 420; let bestD = Infinity;
+    for (const t of game.getHostileTargets(unit.team)) { if (!live(t)) continue; const d = gap(t, unit); if (gap(t, anchor) > leash || d > leash + 200) continue; if (d < bestD) { best = t; bestD = d; } }
+  } else {
+    // renegades, creatures, rivals: notice, alert, chase on a leash, return
+    let eng = unit.kkEngaged;
+    if (eng && (!live(eng) || gap(eng, anchor) > (CHASE[rec.role] ?? 520) || gap(eng, unit) > 720)) eng = null;
+    if (!eng) {
+      const aggro = AGGRO[rec.role] ?? 240; let bestD = aggro;
+      for (const t of game.getHostileTargets(unit.team)) { if (!live(t)) continue; const d = gap(t, unit); if (d < bestD) { eng = t; bestD = d; } }
+      if (eng) for (const m of game.minions) if (m !== unit && m.isKKUnit && !m.isDead && m.team === unit.team && !m.kkEngaged && m.rec?.siteId != null && m.rec.siteId === rec.siteId && gap(m, unit) < 360) m.kkEngaged = eng; /* the post is alerted */
+    }
+    unit.kkEngaged = eng; best = eng;
   }
   if (best && best === game.player && kk.inside && unit.kkInHouse !== kk.inside.id) { const door = kk.doorProxy?.(unit) ?? null; unit.target = door; return door; }
   unit.target = best; return best;
@@ -118,7 +135,10 @@ const siteById = (kk, id) => kk.map.sites.find((s) => s.id === id) ?? kk.map.hqs
 function anchorFor(kk, rec) {
   if (rec.role === 'squad') return null;
   const site = siteById(kk, rec.siteId); const a = rec._anchor ?? (rec._anchor = { isAlive: true, x: rec.x, z: rec.z });
-  if (site && rec.role !== 'patrol') { a.x = site.x + ((rec.id * 53) % 160) - 80; a.z = Math.max(.08, Math.min(.92, site.z + (((rec.id * 31) % 30) - 15) / 100)); }
+  if (site && rec.role !== 'patrol') {
+    const t = kk.time ?? 0; const ph = rec.id * 1.7; const walk = rec.role === 'guard' ? 1 : .4; /* guards patrol around their post, garrisons stay closer */
+    a.x = site.x + ((rec.id * 53) % 160) - 80 + Math.sin(t * .45 + ph) * 130 * walk; a.z = Math.max(.08, Math.min(.92, site.z + (((rec.id * 31) % 30) - 15) / 100 + Math.sin(t * .3 + ph * 2) * .12 * walk));
+  }
   return a;
 }
 function spawnLive(game, rec) {
@@ -334,7 +354,8 @@ export function updateArmy(game, dt) {
   if (!kkOn(game)) return;
   const kk = kkState(game); if (!kk.units) return;
   if (!kk._switchHooked) { (kk.switchHooks ??= []).push(() => onBandSwitch(game)); kk._switchHooked = true; }
-  updatePatrols(game, dt); syncLive(game); updateSites(game, dt); updateQueues(game, dt); updatePanel(game);
+  updatePatrols(game, dt); syncLive(game);
+  for (const rec of kk.units) if (rec.live && (rec.role === 'guard' || rec.role === 'garrison')) anchorFor(kk, rec); /* the round of the guards moves on */ updateSites(game, dt); updateQueues(game, dt); updatePanel(game);
 }
 // Capture rings over a castle being taken.
 export function armyActors(game) {

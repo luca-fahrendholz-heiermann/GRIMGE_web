@@ -2,6 +2,10 @@
 
 Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
+## 19. Nov 2026 – Kronenkrieg: Banditen patrouillieren und greifen erst aus der Nähe an (Rückmeldung des Nutzers)
+
+- Wachen an Burgen, Lagern und Gefangenenlagern gehen langsam ihre Runde um den Posten, Patrouillen ziehen ihre Wege. Sie bemerken dich erst aus der Nähe (etwa 230–260 px) oder wenn du sie triffst, alarmieren dann ihre Kameraden am selben Posten, verfolgen dich nur bis gut 500 px vom Posten und kehren dann zurück. Das gilt auch für Kreaturen und die Besatzungen der Rivalen; dein eigener Trupp kämpft weiter in deiner Nähe.
+
 ## 19. Nov 2026 – Kronenkrieg: Häuser, ruhiger Start, einzigartige Runen (Rückmeldung des Nutzers)
 
 - Häuser sind feste Dinge der Welt: niemand läuft mehr durch sie hindurch (Spieler, Einheiten, Rivalen gleiten an den Wänden entlang); hinein geht es nur durch die Tür.
