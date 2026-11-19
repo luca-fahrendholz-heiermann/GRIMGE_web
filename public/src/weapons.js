@@ -98,10 +98,10 @@ const ASTRAL_HUES = Object.freeze({ ...EXT_HUES,
 export const astralHue = (weapon) => ASTRAL_HUES[weapon] ?? WEAPONS[weapon]?.accent ?? '#7fd8ff';
 
 // Per weapon: idle pose, hand layout and the motion of every attack.
-// hands: 'single' (one weapon, front hand), 'shield' (sword rear + shield
-// front), 'pair' (one piece per hand; the lead hand alternates per strike).
+// hands: 'single' (one weapon, front hand), 'shield' (sword front + shield
+// rear), 'pair' (one piece per hand; the lead hand alternates per strike).
 export const WEAPON_MOTIONS = Object.freeze({ ...EXT_MOTIONS,
-  sword_shield: { hands: 'shield', idle: -2.05, combo: ['slash', 'backhand', 'overhead'], heavy: 'bash', uppercut: 'rising' },
+  sword_shield: { hands: 'shield', idle: -.55, /* the sword rests forward-up in the front hand (user, 19 Nov 2026) */ combo: ['slash', 'backhand', 'overhead'], heavy: 'bash', uppercut: 'rising' },
   great_axe: { hands: 'single', idle: .95, combo: ['cleave', 'overhead'], heavy: 'whirl', uppercut: 'rising' },
   great_hammer: { hands: 'single', idle: -2.35, combo: ['overhead', 'slam'], heavy: 'slam', uppercut: 'rising' },
   dual_swords: { hands: 'pair', idle: -.55, idleRear: -.95, combo: ['slash', 'backhand', 'slash', 'backhand', 'cross'], heavy: 'cross', uppercut: 'rising' },
@@ -417,12 +417,12 @@ export function drawHeldWeapon(ctx, player, renderY, layer = 'front') {
   const leadFront = cfg.hands !== 'pair' || (player._weaponLead ?? 'front') === 'front';
   const items = [];
   if (cfg.hands === 'shield') {
-    // Shield in the front hand, sword in the rear hand.
+    // Sword in the FRONT hand, drawn in front of the body and pointing forward; the shield on the rear arm behind the
+    // body (user, 19 Nov 2026: the sword pointed backwards and hid behind the body). Guarding or a bash brings the
+    // shield in front.
     const bashing = pose?.shieldReach;
-    // The shield hangs BEHIND the body so the arm holding it is drawn in front of it (user, 26 Oct 2026: realism);
-    // only a shield bash brings it in front.
-    items.push({ hand: 'front', piece: 'shield', angle: guarding ? -.15 : -.35, reach: bashing ?? (guarding ? 6 : 0), dy: 6, active: !!bashing || guarding, static: true, layerOverride: bashing ? 'front' : 'back' });
-    items.push({ hand: 'rear', piece: pieces.main, angle: pose && !pose.shieldReach ? pose.angle : cfg.idle, reach: 0, active: !!pose && !pose.shieldReach, layerOverride: pose && !pose.shieldReach ? 'front' : null });
+    items.push({ hand: 'rear', piece: 'shield', angle: guarding ? -.15 : -.35, reach: bashing ?? (guarding ? 10 : 0), dy: 6, active: !!bashing || guarding, static: true, layerOverride: bashing || guarding ? 'front' : 'back' });
+    items.push({ hand: 'front', piece: pieces.main, angle: pose && !pose.shieldReach ? pose.angle : cfg.idle, reach: 0, active: !!pose && !pose.shieldReach, layerOverride: 'front' });
   } else if (cfg.hands === 'pair') {
     const both = !!pose?.both;
     const leadPose = pose ? { angle: pose.angle, reach: pose.reach ?? 0 } : null;

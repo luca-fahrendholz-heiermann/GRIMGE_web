@@ -107,7 +107,7 @@ export const EXT_HUES = {
 
 // hands: 'single', 'shield' (main rear + shield front), 'pair' (one piece per hand).
 export const EXT_MOTIONS = {
-  mace_shield: { hands: 'shield', idle: -2.1, combo: ['overhead', 'slam'], heavy: 'bash', uppercut: 'rising' },
+  mace_shield: { hands: 'shield', idle: -.6, /* forward-up in the front hand, like sword & shield */ combo: ['overhead', 'slam'], heavy: 'bash', uppercut: 'rising' },
   twinblade: { hands: 'single', idle: -.3, combo: ['spin', 'spin', 'slash', 'whirl'], heavy: 'whirl', uppercut: 'rising' },
   odachi: { hands: 'single', idle: 2.9, combo: ['iaido', 'cleave'], heavy: 'iaido', uppercut: 'rising' },
   glaive: { hands: 'single', idle: -.4, combo: ['reap', 'backhand', 'cleave'], heavy: 'whirl', uppercut: 'rising' },

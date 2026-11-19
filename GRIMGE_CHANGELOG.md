@@ -2,6 +2,10 @@
 
 Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
+## 19. Nov 2026 – Schwert & Schild: Schwert vorne in der Hand (Rückmeldung des Nutzers)
+
+- Das Schwert zeigte nach hinten und lag hinter dem Körper. Jetzt hält die vordere Hand das Schwert, vor dem Körper gezeichnet und schräg nach vorn oben; der Schild sitzt am hinteren Arm hinter dem Körper und kommt beim Blocken und beim Schildstoß nach vorn. Gilt auch für Streitkolben & Schild. Im Browser in beiden Blickrichtungen und beim Blocken geprüft.
+
 ## 19. Nov 2026 – Kronenkrieg, Meilenstein 2: Beute und Rundenstufe
 
 - Gebäude durchsuchen (an der Tür stehen, Ring füllt sich): je Etage eine Truhe mit Gold, Baustoffen (Holz, Stein, Stahl, Obsidian), Elementsteinen des Gebiets, Waffen, Tränken und manchmal einer Rune. Was eine Truhe enthalten kann, hängt von Spielzeit und Ort ab (Mitte und weit weg von den Hauptburgen = besser).
