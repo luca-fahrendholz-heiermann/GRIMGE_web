@@ -26,7 +26,8 @@ import { setupKronenkrieg, updateKronenkrieg, renderKKGround, kkActors, renderKK
 import { initLoot, updateLoot, lootActors, renderLootHud, kkFuseAllowed, respawnDelay } from './kk_loot.js'; // Kronenkrieg: loot and the round level
 import { initArmy, updateArmy, armyActors, closeKKPanel, recordGrade } from './kk_army.js'; // Kronenkrieg: armies, castles, garrisons
 import { initWar, updateWar, warActors, renderFlood, warMinimapDots, kkEnemyHome, kkCanRespawn } from './kk_war.js'; // Kronenkrieg: bots, main castles, Grimmflut, the end
-import { initCreatures, updateCreatures, creatureActors, creatureMinimapDots, tameAt, kkMountGate } from './kk_creatures.js'; // Kronenkrieg: creatures, eggs, mounts // the Training map where clones show every spell
+import { initCreatures, updateCreatures, creatureActors, creatureMinimapDots, tameAt, kkMountGate } from './kk_creatures.js'; // Kronenkrieg: creatures, eggs, mounts
+import { initCrown, updateCrown, closeCrownPanel, kkFocusLocked } from './kk_crown.js'; // Kronenkrieg: the crowning trials // the Training map where clones show every spell
 import { loadFxSprites } from './fx_sprites.js';
 import { loadSpellSprites } from './spell_visuals.js';
 import { renderPixelated } from './abilities.js';
@@ -1187,7 +1188,7 @@ export class GameWorld {
         const bonusGrade = recognizer.gradeForConfidence(result.confidence);
         const grade = GRADES[Math.max(GRADES.indexOf(baseGrade), freeDraw ? GRADES.indexOf(bonusGrade) : -1)];
         const runeProgress = this.profile.awardRuneUse(added.id, grade);
-        if (this.activeMode?.id === 'kronenkrieg') recordGrade(this, grade); /* the last drawing grade shifts the reel odds (kk_army.js) */
+        if (this.activeMode?.id === 'kronenkrieg') recordGrade(this, grade, added.id); /* the last drawing grade shifts the reel odds; element use counts for the crowning */
         const prepared = { ...added, grade, quality: result.confidence, runeLevel: this.profile.runeLevel(added.id), manaCost: runeManaCost(added) };
         // A recognized rune only goes into a spell slot in every mode; it is
         // released later by tapping its slot (or E), never fired automatically.
@@ -1669,7 +1670,7 @@ export class GameWorld {
       return;
     }
     if (mode.id === 'kronenkrieg') {
-      initLoot(setupKronenkrieg(this)); initArmy(this); initWar(this); initCreatures(this);
+      initLoot(setupKronenkrieg(this)); initArmy(this); initWar(this); initCreatures(this); initCrown(this);
       if (this.primal) this.primal.stage = 1; /* the Primal starts small and grows with the round level */
       this.player.configureRuneDeck?.([]); /* the class only: runes are found in the round */
       this.enemyChampion.lifeState = 'Dead'; this.enemyChampion.respawnTimer = Infinity;
@@ -2469,6 +2470,7 @@ export class GameWorld {
       updateArmy(this, dt);
       updateWar(this, dt);
       updateCreatures(this, dt);
+      updateCrown(this, dt);
       return;
     }
     if (this.activeMode.id === 'gallery') {
@@ -2878,6 +2880,7 @@ export class GameWorld {
   // Kronenkrieg hooks for modules that cannot import the game (spells.js, primals.js).
   kkTame(caster, x, z) { return this.activeMode?.id === 'kronenkrieg' ? tameAt(this, caster, x, z) : false; }
   kkMountGate() { return this.activeMode?.id === 'kronenkrieg' ? kkMountGate(this) : null; }
+  kkFocusLocked() { return this.activeMode?.id === 'kronenkrieg' && kkFocusLocked(this); }
   // The Wizard's Primal joins Siege, Invasion, Training and Kronenkrieg.
   spawnPrimal() {
     if (this.player?.primalBond) this.player.primalBond = null;
@@ -3072,7 +3075,7 @@ export class GameWorld {
   }
 
   returnToHub(reason = 'menu') {
-    closeBasePrompt(); closeKKPanel();
+    closeBasePrompt(); closeKKPanel(); closeCrownPanel();
     this.markMatchSession(false);
     try { const log = JSON.parse(globalThis.localStorage?.getItem?.('grimge-hub-log') ?? '[]'); log.push({ reason, mode: this.activeMode?.id, at: new Date().toISOString(), stack: String(new Error().stack).split(String.fromCharCode(10)).slice(2, 6).join(' < ').slice(0, 400) }); globalThis.localStorage?.setItem?.('grimge-hub-log', JSON.stringify(log.slice(-10))); } catch { /* optional */ }
     this.matchState = 'Menu';

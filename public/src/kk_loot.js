@@ -41,6 +41,7 @@ const runePool = (category) => recognizer.runes.filter((r) => r.id !== 'buff_A04
 export function giveRune(game, rune) {
   const kk = kkState(game); const P = game.player; if (!rune) return null;
   if (deckCount(game) >= deckSlots(kk.level)) return 'full';
+  if (runeCategory(rune.id) === 'arcane' && !rune.soulBound && [...P.runeDeck, ...P.runeHand, ...P.slottedSpells.flatMap((s) => s.runes), ...kk.sealed].some((c) => runeCategory(c.id) === 'arcane')) { say(game, 'NUR EIN ARCANE STATE ODER BANKAI IM DECK', 1.6); return 'full'; }
   const gate = gateFor(runeCategory(rune.id));
   if (gate > kk.level) { kk.sealed.push({ ...rune, gate }); say(game, `${rune.name} — VERSIEGELT BIS STUFE ${gate}`, 1.8); return 'sealed'; }
   P.runeDeck.push(P.makeRuneCard(rune)); P.drawRunesToHand(); say(game, `RUNE: ${rune.name}`, 1.4); return 'deck';
@@ -136,9 +137,11 @@ function updateLife(game, dt) {
   if (kk.alive && !P.isAlive) {
     kk.alive = false;
     // everything carried falls: gold, the backpack and every rune of the round (sealed ones too)
-    const runes = [...P.runeDeck, ...P.runeHand, ...P.slottedSpells.flatMap((s) => s.runes)].map(({ cardId, grade, quality, runeLevel, manaCost, ...r }) => r).concat(kk.sealed.map(({ gate, ...r }) => r));
+    const all = [...P.runeDeck, ...P.runeHand, ...P.slottedSpells.flatMap((s) => s.runes)].map(({ cardId, grade, quality, runeLevel, manaCost, ...r }) => r);
+    const bound = all.filter((r) => r.soulBound); /* won in a trial: never dropped */
+    const runes = all.filter((r) => !r.soulBound).concat(kk.sealed.map(({ gate, ...r }) => r));
     const inv = kk.inv; dropPile(game, P.x, P.z, { gold: kk.gold, materials: { wood: inv.wood, stone: inv.stone, steel: inv.steel, obsidian: inv.obsidian }, stones: { ...inv.stones }, weapons: Object.entries(inv.weapons).flatMap(([w, n]) => Array(n).fill(w)), potions: { ...inv.potions }, runes, lock: 1.2 });
-    kk.gold = 0; kk.inv = emptyInv(); kk.sealed = []; P.configureRuneDeck([]); kk.deathRow = kk.row;
+    kk.gold = 0; kk.inv = emptyInv(); kk.sealed = []; P.configureRuneDeck(bound); kk.deathRow = kk.row;
     say(game, 'GEFALLEN — DEINE BEUTE LIEGT AM BODEN', 2);
   } else if (!kk.alive && P.isAlive) {
     kk.alive = true; const hq = hqOf(kk); const dir = hq.row - kk.row;

@@ -182,7 +182,7 @@ export function spinReels(rng, { weapons = 1, stones = 1, grade = null } = {}) {
   const bonus = [...new Set(wins.map((w) => (w === 'weapon' ? 'veteran' : w === 'element' ? 'double' : 'elite')))].slice(0, 2);
   return { grid, wins, bonus };
 }
-export function recordGrade(game, grade) { const kk = kkState(game); if (kk) { kk.lastGrade = grade; kk.lastGradeAt = kk.time; } }
+export function recordGrade(game, grade, runeId = null) { const kk = kkState(game); if (kk) { kk.lastGrade = grade; kk.lastGradeAt = kk.time; if (runeId) kk.onRuneDrawn?.(runeId); } }
 
 export function trainUnit(game, site, element, { spin = false } = {}) {
   const kk = kkState(game); const inv = kk.inv; const weapon = site.weapon;
@@ -252,6 +252,7 @@ function onPanelAction(game, act, arg) {
   else if (act === 'upgrade' && kk.hqHooks) { const r = kk.hqHooks.upgrade(); res = r.ok; panel.msg = r.ok ? '' : r.why; }
   else if (act === 'resist' && kk.hqHooks) { const r = kk.hqHooks.resist(arg); res = r.ok; panel.msg = r.ok ? '' : r.why; }
   else if (act === 'egg' && kk.eggHooks) res = kk.eggHooks.take(site);
+  else if (act === 'swap' && kk.crownHooks) res = kk.crownHooks.swap();
   else if (act === 'up') res = station(game, site, arg); else if (act === 'down') res = takeAlong(game, site, arg); else if (act === 'merge') res = mergeUnits(game, site, arg);
   if (!res) audio.playRuneFail?.(); else audio.playRuneChime?.(640);
   panel.html = ''; refreshPanel(game, site);
@@ -273,6 +274,7 @@ function refreshPanel(game, site) {
   if (isHQ && kk.hqHooks) {
     const x = kk.hqHooks.extras();
     h += `<div style="margin:4px 0;color:#cbb8ff">${['UNBEFESTIGT', 'HOLZBURG', 'STEINBURG', 'STAHLBURG', 'OBSIDIANBURG'][x.hq.level ?? 0]} · Leben ${Math.max(0, Math.round(x.hq.hp))}</div>`;
+    if (kk.reserve && kk.crownHooks) h += btn('swap', '', `RESERVE: ${kk.reserve.name} ⇄ DECK`);
     if (x.next) h += btn('upgrade', '', `AUFRÜSTEN → ${x.next.name} (${x.next.cost} ${x.matName}, du hast ${x.have})`, x.have >= x.next.cost);
     for (const e of x.stones) { const c = x.resCost(e); h += btn('resist', e, `RESISTENZ ${e.toUpperCase()} ${x.hq.res?.[e] ?? 0}${c ? ' (+' + c + ' Steine)' : ''}`, !!c && (x.hq.res?.[e] ?? 0) < (x.hq.level ?? 0)); }
   }

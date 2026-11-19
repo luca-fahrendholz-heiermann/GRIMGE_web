@@ -2,6 +2,12 @@
 
 Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
+## 19. Nov 2026 – Kronenkrieg, Meilenstein 6: Krönung
+
+- Auf Stufe 8 fragt das Spiel: Klasse (Bankai) oder eines der drei Elemente, die du in der Runde am meisten gezeichnet hast (dessen Arcane State). Auf Stufe 10 noch einmal: Klasse, Element oder Primal (Fokus-Transformation). „Später wählen“ ist möglich.
+- Die Wahl lässt eine Prüfung auf der Karte erscheinen (Obelisk mit Wächter, für alle sichtbar). Der Sieg gibt die Karte seelengebunden (fällt beim Tod nicht) bzw. schaltet die Fokus-Transformation frei; vorher ist sie im Kronenkrieg gesperrt.
+- Im Deck steht nur ein Arcane State oder Bankai; ein erkämpfter kommt sonst in die Reserve und lässt sich im Hauptburg-Menü tauschen.
+
 ## 19. Nov 2026 – Kronenkrieg, Meilenstein 5: Kreaturen, Eier, Reittiere
 
 - Epische Kreaturen in ihren Revieren (Glutkoloss, Sturmwolf, Flutschlange, Frostwolf je nach Element). Besiegt lassen sie genau eines fallen: reiche Beute, eine seltene Rune oder ihr Ei.

@@ -52,7 +52,8 @@ export function initCreatures(game) {
 
 // Called by kk_army when a creature record dies: it drops exactly ONE thing.
 export function creatureDrop(game, rec) {
-  const kk = kkState(game); const r = kk.rng(); const at = { x: rec.x, z: rec.z };
+  const kk = kkState(game);
+  if (rec.trialGuardian) { kk.onTrialWon?.(rec); return; } /* a trial's guardian gives the crowning, not loot (kk_crown.js) */ const r = kk.rng(); const at = { x: rec.x, z: rec.z };
   gainXp(game, XP.kill * 4);
   if (r < .4) { dropPile(game, at.x, at.z, { gold: 40, materials: { steel: 4, obsidian: 2 }, stones: { [rec.element]: 6 }, weapons: [], runes: [] }); game.showAnnouncement?.(`${CREATURE_NAME[rec.kind]} BESIEGT — REICHE BEUTE`, 1.8); }
   else if (r < .7) {

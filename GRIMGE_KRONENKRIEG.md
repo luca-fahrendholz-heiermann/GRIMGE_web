@@ -548,3 +548,24 @@ Die Karte gehört zu Beginn **niemandem**. Neben den vier Spielern (Menschen ode
 | Wie viel kostet eine Burgstufe? | Stufe 1: 30 Holz · 2: 40 Stein · 3: 30 Stahl · 4: 20 Obsidian; so ist Stufe 4 in einer guten Runde um Minute 15–18 erreichbar |
 | Bändigung in Arena / Siege? | ja, teuer und nur auf Beschwörungen unter halbem Leben |
 | Name des Modus? | **Kronenkrieg** (vier Kronen = vier Hauptburgen); Alternativen: Reichsfall, Vier Thronen |
+
+---
+
+## 17. Umsetzungsstand (19. Nov 2026)
+
+**Gebaut und getestet** (kk_map.js, kk_world.js, kk_progress.js, kk_loot.js, kk_army.js, kk_war.js, kk_creatures.js, kk_crown.js):
+- Karte aus Bausteinen je Runde mit Fairness-Prüfung; Welt aus 3 breiten 2,5D-Streifen mit Streifenwechsel; Übersichtskarte mit Nebel.
+- Beute, Gold, Baustoffe, Elementsteine, Waffen, Tränke (werden selbst getrunken), Rucksack und Lager; Rundenstufe 1–10 mit Deckplätzen, Runen-Stufen, versiegelten Runen, Fusions-Stufen; Beutehaufen beim Tod.
+- Armee: Einheiten aus Klasse + Element, Abtrünnige (Besatzungen, Lager, Patrouillen), Gefangene, Zwischenburgen erobern, Ausbildung mit Walzen, Stationieren ▲ ▼, Verschmelzen.
+- Drei Bot-Rivalen (abstrakt + als Champion im eigenen Streifen), Hauptburg-Stufen und Resistenzen, Belagerung, Grimmflut, Siegbedingung.
+- Kreaturen mit Beute, Rune BÄNDIGUNG, Eier mit Quellen und Brut-Walzen, Reittier aus dem Stall, mitwachsender Primal.
+- Krönung mit Prüfungen auf Stufe 8 und 10.
+
+**Noch offen / vereinfacht:**
+- Grafik: Burgen, Gebäude und Orte sind gezeichnete Platzhalter; das Reittier aus dem Stall ist vorerst die vorhandene Reitbestie, kein Pferd.
+- Gebäude haben noch keine begehbaren Innenräume (Durchsuchen an der Tür).
+- Gezähmte und geschlüpfte Kreaturen kämpfen mit, sind aber noch nicht reitbar (reiten: Primal und Stall-Reittier).
+- Element-, Klassen- und Primal-Transformation nutzen vorerst die vorhandene Fokus-Transformation; eigene Formen je Weg fehlen.
+- Bots greifen Ei-Träger und Prüfungen noch nicht gezielt an; nur ein Rivale gleichzeitig kämpft im eigenen Streifen als echter Gegner.
+- 2-gegen-2 und Online-PvP fehlen (Teams brauchen verbündetes Zielen, Online einen Server).
+- Werte (Kosten, Stärken, Zeiten) sind Startwerte für den Playtest.

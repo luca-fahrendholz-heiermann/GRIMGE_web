@@ -144,6 +144,13 @@ export function drawSite(ctx, site, y, t = 0, opts = {}) {
       for (let i = 0; i < 4; i++) px(x - 62 + i * 34, y - 20, 4, 20, '#4a3020'); px(x - 64, y - 22, 128, 4, '#4a3020');
       break;
     }
+    case 'trial': {
+      // a crowning trial: a dark obelisk with a ring of light in the colour of the chosen path
+      const c = opts.elementColor ?? '#ffe9a8'; shadow(70); px(x - 18, y - 120, 36, 120, '#2b2235'); px(x - 24, y - 126, 48, 8, '#3d3150');
+      ctx.globalAlpha = site.won ? .25 : .55 + .35 * Math.sin(t * 3); ctx.strokeStyle = c; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(x, y, 70, 16, 0, 0, Math.PI * 2); ctx.stroke(); px(x - 4, y - 110, 8, 90, c); ctx.globalAlpha = 1;
+      ctx.font = 'bold 10px monospace'; ctx.textAlign = 'center'; ctx.fillStyle = '#fff3c8'; ctx.fillText(site.won ? 'PRÜFUNG BESTANDEN' : `PRÜFUNG ${site.stage === 8 ? 'I' : 'II'}`, x, y - 134);
+      break;
+    }
     case 'shrine': {
       shadow(24); px(x - 10, y - 70, 20, 70, '#9a9a9a'); px(x - 14, y - 74, 28, 6, '#bdbdbd'); ctx.globalAlpha = .5 + .4 * Math.sin(t * 2.5 + x); px(x - 4, y - 66, 8, 8, '#bfe6ff'); ctx.globalAlpha = 1;
       break;
@@ -187,7 +194,7 @@ export function kkActors(game) {
 }
 
 // ── minimap (screen space, top right) ──────────────────────────────────────────────────────────────────────────────
-const KIND_ICON = Object.freeze({ castle: '♜', lair: '☠', camp: '⚑', building: '⌂', goldvein: '◆', prison: '⛓', source: '◉', stable: '♞', shrine: '✧' });
+const KIND_ICON = Object.freeze({ castle: '♜', lair: '☠', camp: '⚑', building: '⌂', goldvein: '◆', prison: '⛓', source: '◉', stable: '♞', shrine: '✧', trial: '✪' });
 export function renderKKMinimap(ctx, game, viewW, opts = {}) {
   const kk = kkState(game); if (!kk) return;
   const W = opts.w ?? 300; const rowH = opts.rowH ?? 22; const x0 = opts.x ?? viewW - W - 14; const y0 = opts.y ?? 14; const map = kk.map; const sx = W / map.width;
