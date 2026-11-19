@@ -411,7 +411,6 @@ Der Kern-Moment des Modus. Er soll **entdeckt** werden, nicht erklärt.
     alle, und beim nächsten Mal ist es Wissen statt Glück.
 - **Sichtbarkeit:** Ein getragenes Ei ist für **alle** auf der Karte als Leuchtpunkt zu sehen. Jeder Ei-Lauf wird
   so zum Ereignis.
-
 - **Was schlüpft, ist nicht garantiert** (Nutzer, 19. Nov 2026): Beim Schlüpfen drehen drei **Brut-Walzen** die
   Eigenschaften der Kreatur aus: **Größe** (Kümmerling · normal · prächtig), **Wesen** (z. B. flink, zäh, wild) und
   ein mögliches **Zusatzelement**. Die Art steht fest (ein Feuerei bleibt ein Feuerdrache), aber nicht, wie stark
