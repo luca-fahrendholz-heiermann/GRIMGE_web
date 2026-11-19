@@ -139,6 +139,7 @@ function updatePatrols(game, dt) {
     if (rec.role !== 'patrol') continue;
     const a = rec._anchor ?? (rec._anchor = { isAlive: true, x: rec.x, z: .5 });
     if (!rec.live) { rec.x += rec.dir * 50 * dt; a.x = rec.x; }
+    else if (kk.carry && Math.abs(game.player.x - a.x) < 1500) { a.x += Math.sign(game.player.x - a.x) * 70 * dt; a.z = game.player.z; } /* bandits smell an egg carrier */
     else { a.x += rec.dir * 55 * dt; a.z = .5 + Math.sin((a.x + rec.id * 40) * .002) * .12; }
     if ((rec.dir > 0 && a.x >= rec.legEnd) || (rec.dir < 0 && a.x <= rec.legEnd)) { rec.dir *= -1; const camp = siteById(kk, rec.siteId); rec.legEnd = camp ? camp.x : rec.x; }
     a.x = Math.max(80, Math.min(kk.map.width - 80, a.x));

@@ -2,6 +2,10 @@
 
 Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
+## 19. Nov 2026 – Kronenkrieg: Jagd auf Ei-Träger
+
+- Ein starker Rivale lässt seinen Plan fallen und jagt dich, solange du ein Ei trägst oder eine Krönungs-Prüfung bestreitest; Banditen-Patrouillen in der Nähe wenden sich gegen einen Ei-Träger. Der Ei-Lauf ist damit wirklich gefährlich.
+
 ## 19. Nov 2026 – Kronenkrieg: 2 gegen 2
 
 - Auf der Kronenkrieg-Karte im Hub: JEDER GEGEN JEDEN oder 2 GEGEN 2. Im 2 gegen 2 ist der Rivale, dessen Hauptburg im selben Streifen liegt, dein Verbündeter (gleiches Team: eure Einheiten kämpfen nie gegeneinander), die beiden anderen sind ein Team.

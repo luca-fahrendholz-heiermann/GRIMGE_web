@@ -5645,6 +5645,12 @@ game.running = false;
   for (const b of rivals) k6.map.hqs.find((h) => h.seat === b.seat).fallen = true; k6._endTick = -1; k6.time += 1; KWR.updateWar(game, 1 / 60); const teamWin = k6.over && game.winnerTeam === 'blue';
   assert(teamsOk && notTaken && neverChampion && teamWin, 'Kronenkrieg 2 vs 2: the ally shares the players band and team, both rivals form one team, an ally castle is not taken, the ally never becomes the enemy champion and the team wins together (' + [teamsOk, notTaken, neverChampion, teamWin].join('/') + ')');
   game.returnToHub();
+  // the egg carrier is hunted: a strong rival drops its plan and heads for the player
+  game.setMatchMode('kronenkrieg'); game.startMatch(); const k7 = game.modeState.kk; const hunter = k7.bots[0]; for (let i = 0; i < 4; i++) KA.addRecord(k7, { team: hunter.team, seat: hunter.seat, cls: 'Guardian', element: null, tier: 1, row: hunter.row, x: hunter.x, z: .5, role: 'squad' });
+  k7.carry = { element: 'ignis', creature: 'siege_golem' }; hunter.task = null; hunter.think = 0; const keep7 = k7.rng; k7.rng = () => .1; KWR.updateWar(game, .1); k7.rng = keep7; const hunting = hunter.task?.kind === 'hunt';
+  const d0 = KM.kkDistance(hunter, { row: k7.row, x: game.player.x }); for (let i = 0; i < 40; i++) { k7.time += .25; KWR.updateWar(game, .25); } const closer = KM.kkDistance(hunter, { row: k7.row, x: game.player.x }) < d0;
+  assert(hunting && closer, 'Kronenkrieg: a strong rival hunts the visible egg carrier (' + [hunting, closer].join('/') + ')');
+  k7.carry = null; game.returnToHub();
   // BÄNDIGUNG outside Kronenkrieg: an enemy summon under half its life changes sides
   game.setMatchMode('training'); game.startMatch(); spells.clearRuntime(); const E5 = game.enemyChampion; E5.lifeState = 'Alive'; E5.isDead = false; const foeWolf = spells.summon(E5, (await import('./public/src/spells.js')).SUMMON_DEFINITIONS.spirit_wolf, game, spells.qualityForRunes([]), { x: game.player.x + 90, z: game.player.z, noPose: true }); foeWolf.riseTimer = 0;
   const tameDef = spells.resolveSpell([{ id: 'bestia' }, { id: 'bestia' }]); foeWolf.hp = foeWolf.maxHp; spells.cast(game.player, tameDef, game, null, { x: foeWolf.x, z: foeWolf.z }); const tooStrong = foeWolf.team !== game.player.team; foeWolf.hp = foeWolf.maxHp * .4; spells.cast(game.player, tameDef, game, null, { x: foeWolf.x, z: foeWolf.z });

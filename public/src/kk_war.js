@@ -71,6 +71,8 @@ export function resistMul(kk, rec, element) {
 function pickTask(kk, bot) {
   const hq = hqOfSeat(kk, bot.seat); const mine = botSquad(kk, bot); const str = strength(mine);
   if (hq.siegeT > 0 && !hq.fallen) return { kind: 'defend', id: hq.id };
+  // the big prize: a visible egg carrier or a player fighting a crowning trial is hunted by a strong rival (§9.1)
+  if (!bot.ally && (kk.carry || kk.crown?.trial) && str >= 3 && kk.rng() < .6) return { kind: 'hunt', id: null };
   const owned = kk.map.sites.filter((s) => s.kind === 'castle' && s.owner === bot.seat);
   if (owned.length && bot.gold >= 25 && mine.length < 6) return { kind: 'train', id: owned.sort((a, b) => kkDistance(bot, a) - kkDistance(bot, b))[0].id };
   const guardStr = (s) => strength(kk.units.filter((u) => (u.siteId === s.id && u.role === 'guard' && u.team !== bot.team) || (u.siteId === s.id && u.role === 'garrison' && u.team !== bot.team)));
@@ -135,6 +137,7 @@ function updateBots(game, dt) {
     if (!bot.alive) { if (hq.fallen) continue; bot.respawnT -= dt; if (bot.respawnT <= 0 && kk.time < FLOOD.noReturn) { bot.alive = true; bot.hpFrac = 1; bot.row = hq.row; bot.x = hq.x + 160; } continue; }
     if (bot === kk.championBot) continue; /* the live champion moves by itself */
     bot.think -= dt; if (!bot.task || bot.think <= 0) { bot.think = THINK * 3; if (!bot.task) bot.task = pickTask(kk, bot); }
+    if (bot.task?.kind === 'hunt') { const P = game.player; if (!(kk.carry || kk.crown?.trial) || !P.isAlive) { bot.task = null; continue; } moveBot(kk, bot, { row: kk.row, x: P.x }, dt); for (const u of botSquad(kk, bot)) if (!u.live) { u.row = bot.row; u.x += (bot.x - u.x) * Math.min(1, dt * 2); } continue; }
     const site = bot.task && siteById(kk, bot.task.id); if (!site) { bot.task = null; continue; }
     if (moveBot(kk, bot, site, dt)) actBot(game, bot, dt);
     if (bot.hpFrac <= 0) killBot(game, bot, null);
