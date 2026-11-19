@@ -63,10 +63,29 @@ Jede Runde soll so eine Geschichte erzeugen. Daran wird jede Regel gemessen.
 - **Nebel und Kartenaufdeckung:** Die Übersichtskarte (Minimap und Vollbild) zeigt nur, was man gesehen hat.
   Eroberte Burgen leuchten in der eigenen Farbe und decken ihre Umgebung dauerhaft auf.
 
-### 3.2 Aufbau (prozedural, aber fair)
-- **4 Hauptburgen**, bei jeder Runde zufällig platziert, aber gleich weit voneinander entfernt. Die Karte wird in
-  vier gleichwertige Sektoren geteilt (gedreht, nicht gespiegelt, damit es nicht künstlich wirkt). Jeder Sektor
-  hat die gleiche Zahl von Zwischenburgen, Gebäuden und Quellen in vergleichbarer Entfernung.
+### 3.2 Aufbau: jede Runde eine neue Karte aus Bausteinen (fair, nie geballt)
+Die Karte ist **nie zweimal gleich**: Anordnung und Aufbau entstehen bei jedem Rundenstart neu aus **modularen
+Bausteinen**, die nach festen Regeln platziert werden.
+
+- **Bausteine:** jeder Ort ist ein fertiges Modul mit Größe, Wert und Regeln, z. B. *Zwischenburg (Bogen)*,
+  *Turmruine, 3 Ebenen*, *Gehöft*, *Krypta*, *Gefangenenlager*, *Goldader*, *Feuerquelle*, *Wald*, *Fluss mit Brücke*,
+  *Banditenlager*, *Revier einer epischen Kreatur*. Neue Module erweitern das Spiel, ohne dass eine Karte von Hand
+  gebaut werden muss.
+- **Platzierung in Schritten:**
+  1. **4 Hauptburgen** zufällig, aber mit gleichem Abstand zueinander und zum Rand (gleichmäßige Streuung, auf
+     einen Kreis um die Mitte gelegt und leicht verschoben). Keine Spiegelung, damit es nicht künstlich wirkt.
+  2. **Biome** als große Flächen (Element-Gebiete), zufällig verteilt, aber jedes Element mindestens einmal und für
+     jede Hauptburg in erreichbarer Entfernung.
+  3. **Wichtige Orte** (Zwischenburgen, Quellen, Kreaturen-Reviere) mit Mindestabständen zueinander.
+  4. **Füllung** (Gebäude, Goldadern, Lager, Wälder, Wege) nach Dichte-Regeln, verbunden durch Straßen.
+- **Fairness-Prüfung:** Für jede Hauptburg wird der **Wert ihrer Umgebung** berechnet (was in 1, 2 und 3
+  Minuten Laufweg erreichbar ist: Gold, Baustoffe, Waffen, Steine, Burgen, Quellen). Weichen die vier Werte zu
+  stark voneinander ab, wird nachgebessert (Module verschieben oder tauschen) oder neu erzeugt.
+- **Nie geballt:** Rund um eine Hauptburg gibt es eine **Obergrenze** an Wert und eine Mindestentfernung zu
+  Zwischenburgen. So steht nie alles Gute neben einem Startplatz. Die reichsten Orte liegen zwischen den Spielern
+  und in der Mitte, wo man sich trifft.
+- **Wiedererkennen statt Auswendiglernen:** Die Bausteine bleiben gleich (eine Bogenburg sieht immer wie eine
+  Bogenburg aus), nur ihre Lage ändert sich. Erfahrung hilft beim Lesen der Karte, ersetzt aber nie das Erkunden.
 - **Mitte:** das reichste Gebiet mit epischen Kreaturen, seltenen Quellen und den letzten sicheren Flächen der
   Grimmflut. Hier treffen sich alle.
 - **Biome folgen den Elementen:** Vulkanfeld (Ignis), Sturmklippen (Ventus), Gewitterheide (Fulgur), Felsland
@@ -84,6 +103,9 @@ Jede Runde soll so eine Geschichte erzeugen. Daran wird jede Regel gemessen.
 | **Quellen** (≈ 1–2 je Element) | Feuerquelle, Wasserquelle, … | Eier ausbrüten, Elementsteine verdichten |
 | **Lager epischer Kreaturen** | Bossgegner, wandern im Revier | seltene Drops, Eier, Zähmen |
 | **Wegschreine** | Aussichtspunkte | decken einen großen Kartenbereich auf |
+| **Goldadern** (versteckt) | Gold über Zeit, solange man sie hält | Gold für Kämpfer |
+| **Banditenlager und Patrouillen** | abtrünnige Armeen ohne Herrn (§12a) | Gold, Waffen, Kampferfahrung |
+| **Ställe** | einfache Pferde | erstes Reittier (§10) |
 
 ---
 
@@ -92,14 +114,40 @@ Jede Runde soll so eine Geschichte erzeugen. Daran wird jede Regel gemessen.
 - **Start:** nur Klasse und Klassenwaffe (das vorhandene Klassen- und Waffensystem: Guardian, Ranger, Arcanist …).
   Keine Runen, kein Deck. Die Klasse prägt den ganzen Spielstil, von Anfang an.
 - **Runen im Spiel sammeln:** Truhen, Kreaturen und eroberte Burgen geben Runenkarten. Sie bilden das **Deck dieser
-  Runde**, mit begrenzter Größe (Vorschlag: 8 Karten, Fusion wie gewohnt). So entsteht der eigene Aufbau beim Spielen.
+  Runde**. Die Zahl der Deckplätze wächst mit der Rundenstufe (4 → 8 Karten, §4a; Fusion wie gewohnt). So entsteht der eigene Aufbau beim Spielen.
 - **Tränke:** Leben, Mana und kurze Stärkungen (Geschwindigkeit, Rüstung), als Gürtel mit wenigen Plätzen.
-- **Tod:** Das gesammelte Deck und alle getragenen Ressourcen fallen als Beutehaufen an den Todesort. Wer den
+- **Tod:** Das gesammelte Deck, das getragene Gold und alle getragenen Ressourcen fallen als Beutehaufen an den Todesort. Wer den
   Mörder verfolgt oder den Haufen zuerst erreicht, holt sie sich. Die Rückkehr geschieht an der Hauptburg nach
   einer Wartezeit, die mit der Spielzeit wächst (z. B. 8 s → 25 s). Ist die Hauptburg gefallen, gibt es keine
   Rückkehr mehr.
 - **Klasse und Armee passen zusammen:** Der Held führt die Armee als Kommandant (§6.4). Seine Kampfkraft bleibt
   der Kern: Ein guter Zeichner mit wenigen Truppen schlägt einen schlechten mit vielen — aber nicht beliebig viele.
+
+### 4a. Stufenaufstieg in der Runde (Empfehlung: ja)
+Die Frage war, ob es Level wie in MOBAs geben soll. **Empfehlung: ja, als Rundenstufe 1–10**, die jede Runde wieder
+bei 1 beginnt. Das trägt die Säule „vom Nichts zur Armee“ und gibt laufend kleine Belohnungen.
+
+- **Erfahrung** gibt es für Kämpfe (Gegner, Monster, Spieler), Eroberungen, befreite Gefangene, entdeckte Orte und
+  ein geschlüpftes Ei. Erkunden zählt also genauso wie Kämpfen.
+- **Jede Stufe schaltet etwas frei** statt nur Werte zu erhöhen (Vorschlag):
+
+| Stufe | Freischaltung |
+|---|---|
+| 2 | +1 Deckplatz (4 → 5 Karten) |
+| 3 | **einfache Pferde reiten** (aus Ställen) |
+| 4 | +1 Deckplatz, Trupp +2 |
+| 5 | **gezähmte und geschlüpfte Kreaturen reiten** |
+| 6 | +1 Deckplatz, Fusion von drei Runen |
+| 7 | Trupp +2, zweiter Trankplatz |
+| 8 | **fliegen** mit fliegenden Kreaturen |
+| 9 | +1 Deckplatz (8 Karten) |
+| 10 | **Kronenstufe:** die eigene Klasse erwacht (Bankai / Transformation für die Runde verfügbar) |
+
+- **Werte** wachsen nur leicht (etwas Leben und Mana pro Stufe), damit Können wichtiger bleibt als Stufe.
+- **Gegen Davonziehen:** Wer einen Spieler höherer Stufe besiegt, bekommt deutlich mehr Erfahrung (Kopfgeld auf den
+  Führenden). Zurückliegende holen schneller auf.
+- **Beim Tod** verliert man keine Stufe (die Runen und Ressourcen fallen ja schon), aber die Rückkehrzeit wächst
+  mit der Stufe.
 
 ---
 
@@ -107,12 +155,17 @@ Jede Runde soll so eine Geschichte erzeugen. Daran wird jede Regel gemessen.
 
 | Ressource | Woher | Wofür |
 |---|---|---|
+| **Gold** | besiegte Gegner und Monster, gegnerische Spieler (ein Teil ihres Goldes), Truhen, **versteckte Goldadern** | **jede Ausbildung von Kämpfern**, Söldner, Tränke beim Händler |
 | **Waffen** (die vorhandenen Waffen-Kits: Bogen, Schwert & Schild, Speer, Zauberstab, Klauen …) | Truhen, Gebäude, besiegte Armeen, Waffenkisten | bestimmen die **Klasse** einer Einheit |
 | **Elementsteine** (13, je Element-Rune einer: Ignis, Ventus, Fulgur, Terra, Aqua, Glacies, Bestia, Konstrukt, Void, Lux, Natura, Schutz, Umbra) | Biome, Quellen, Kreaturen, Truhen | bestimmen das **Element** einer Einheit, öffnen Eier |
 | **Baustoffe: Holz, Stein, Stahl, Obsidian** (von häufig nach selten) | Holz: Wälder, Höfe · Stein: Felsland, Ruinen · Stahl: Schmieden in Gebäuden, besiegte Armeen · Obsidian: Vulkanfeld, epische Kreaturen, Mitte der Karte | Ausbildung (einfache Einheiten Holz / Stein, starke Stahl), Burg-Ausbau, **Aufrüstung der Hauptburg** (§6.5) |
 
-- Ein allgemeines Geld gibt es nicht: die vier Baustoffe sind die Währung. Je wertvoller der Baustoff, desto weiter
-  muss man für ihn ziehen — Obsidian lockt in die gefährliche Mitte.
+- **Gold ist die Währung für Kämpfer:** jede Einheit kostet Gold (dazu Waffe, Elementstein und je nach Stärke
+  Baustoffe). Gold kommt vor allem aus **Kämpfen**: Wer kämpft, rekrutiert. Wer nur baut, muss Goldadern finden.
+- **Goldadern** sind versteckt (hinter Felsen, in Höhlen unter Gebäuden, im Wald). Einmal gefunden, bringen sie
+  über Zeit Gold, solange man sie hält. Bewachte Adern sind ein beliebtes Ziel für Überfälle.
+- Die vier Baustoffe bauen **Burgen**, nicht Armeen. Je wertvoller der Baustoff, desto weiter muss man für ihn
+  ziehen — Obsidian lockt in die gefährliche Mitte.
 - Waffen, Steine und Baustoffe trägt der Held im Rucksack mit **begrenzten Plätzen**. Die Hauptburg ist das sichere Lager.
   Wer mit vollem Rucksack stirbt, verliert viel. Das schafft eine Entscheidung: zurück zum Lager oder weiter
   ziehen.
@@ -152,7 +205,7 @@ Eine Einheit hat **Klasse (aus der Waffe)** und **Element (aus dem Stein)**. Bei
   Schützen aus. Welches **Element** sie bekommen, entscheidet der Stein, den der Besitzer investiert.
 - **Erobern:** Verteidiger besiegen, danach den Burgstein in der Mitte halten (Kanalisieren mit Fortschrittsring,
   ein Treffer bricht ab). Wer eine Burg hält, sieht ihre Umgebung.
-- **Ausbilden:** Waffe + Elementstein + Baustoffe in die Warteschlange legen, die Einheiten entstehen nach Zeit. Ausbau
+- **Ausbilden:** Gold + Waffe + Elementstein (+ Baustoffe für starke Einheiten) in die Warteschlange legen, die Einheiten entstehen nach Zeit. Ausbau
   in drei Stufen: mehr gleichzeitige Ausbildung, stärkere Einheiten, Mauern.
 - **Verlieren:** Andere Spieler können sie wegnehmen. Stationierte Truppen verteidigen sie. Die laufende
   Warteschlange geht an den neuen Besitzer, das ist der Anreiz für Überfälle.
@@ -163,7 +216,7 @@ Eine Einheit hat **Klasse (aus der Waffe)** und **Element (aus dem Stein)**. Bei
 - Frühe Lager sind leicht, späte stark bewacht. So bekommt man schon vor der ersten Burg eine kleine Armee.
 
 ### 6.4 Trupp, Stationieren und die Karte
-- **Der Trupp** folgt dem Helden, mit einer Obergrenze (Kommandostufe, wächst mit eroberten Burgen). Einfache
+- **Der Trupp** folgt dem Helden, mit einer Obergrenze (Kommandostufe, wächst mit eroberten Burgen und der Rundenstufe, §4a). Einfache
   Befehle: *folgen*, *halten*, *angreifen* (Ziel antippen).
 - **Stationieren:** An jeder Haupt- und Zwischenburg öffnet sich ein Feld mit den **Profilbildern der Kämpfertypen**.
   Mit **Pfeil hoch** stationiert man eine Einheit dort, mit **Pfeil runter** nimmt man sie wieder in den Trupp. Jede
@@ -257,8 +310,10 @@ Der Kern-Moment des Modus. Er soll **entdeckt** werden, nicht erklärt.
 
 ## 10. Reiten und Fliegen
 
-- Gezähmte und geschlüpfte Kreaturen sind **Reittiere**. Reiten gibt es in GRIMGE schon (Geisterwolf,
-  Runenschlange).
+- **Einfache Pferde** stehen in Ställen auf der Karte. Sie sind das erste Reittier ab Rundenstufe 3: schneller
+  unterwegs, aber sie kämpfen nicht und scheuen vor epischen Kreaturen.
+- Gezähmte und geschlüpfte Kreaturen sind **Reittiere** ab Stufe 5, **fliegen** ab Stufe 8 (§4a). Reiten gibt es
+  in GRIMGE schon (Geisterwolf, Runenschlange).
 - **Fliegende Kreaturen** (Drache, Sturmvogel …) überqueren Flüsse und Klippen und sind die schnellste Reise.
   Ausgleich: Im Flug kann man keine Burg erobern, kein Ei tragen und nicht zeichnen. Fernkämpfer und Blitze holen
   einen herunter. Eine Flug-Ausdauer zwingt zur Landung.
@@ -287,10 +342,24 @@ Damit jede Runde ein Ende findet und nicht in Verstecken versandet:
   - *Räuber:* jagt Ei-Träger und überfällt Burgen.
   - *Jäger:* zähmt Kreaturen und fliegt früh.
   Drei Schwierigkeitsstufen.
+- **Neben den Bots** gibt es immer neutrale Armeen (§12a), auch im PvP.
 - **Online-PvP:** jeder gegen jeden oder 2 gegen 2. Im Team teilt man Sicht und Karte, kann sich Ressourcen geben
   und gemeinsam Ei-Läufe machen.
 - **Fairness:** Alle starten gleich, nur mit Klasse. Fortschritt außerhalb der Runde schaltet **Auswahl** frei
   (Kosmetik, Start-Klassen, Burgfahnen), keine Stärke.
+
+### 12a. Abtrünnige: Armeen ohne Herrn
+Die Karte gehört zu Beginn **niemandem**. Neben den vier Spielern (Menschen oder Bots) leben dort neutrale Kräfte:
+- **Burgbesatzungen:** Jede Zwischenburg wird zu Beginn von Abtrünnigen gehalten. Wer sie erobern will, muss sie
+  erst schlagen.
+- **Patrouillen:** Banditen-Armeen ziehen auf festen Runden über Straßen und durch Biome. Sie greifen jeden an, der
+  zu schwach aussieht, und jagen Ei-Träger. Wer sie schlägt, bekommt Gold, Waffen und Erfahrung.
+- **Banditenlager:** feste Lager (Bausteine der Karte), aus denen neue Patrouillen kommen, bis man das Lager
+  zerstört.
+- **Wachsen mit der Zeit:** Abtrünnige werden zur Mitte und mit der Spielzeit stärker. Die frühe Karte ist
+  gefährlich genug, um nicht sinnlos herumzulaufen, und die späte bleibt gefährlich, auch wenn die Spieler schon
+  stark sind.
+- **Nutzen für die Spieler:** Wer eine Patrouille geschickt zu einem Gegner lockt, hat einen Verbündeten auf Zeit.
 
 ---
 
@@ -323,9 +392,10 @@ Damit jede Runde ein Ende findet und nicht in Verstecken versandet:
 
 ## 15. Bau-Reihenfolge (jeder Schritt spielbar)
 
-1. **Weite Fläche:** eine große Testkarte, auf der die Kamera in alle Richtungen folgt. Dazu Bodenobjekte, Straßen
+1. **Weite Fläche:** ein Kartengenerator aus Bausteinen mit Fairness-Prüfung, eine große Testkarte, auf der die Kamera in alle Richtungen folgt. Dazu Bodenobjekte, Straßen
    und die Übersichtskarte mit Aufdeckung. *Ziel: Erkunden fühlt sich gut an.*
-2. **Beute:** Gebäude mit Ebenen und Truhen, Tränke, Rundendeck und Rucksack, Tod mit Beutehaufen. *Ziel: der
+2. **Beute:** Gebäude mit Ebenen und Truhen, Gold und Goldadern, Tränke, Rundendeck und Rucksack, Rundenstufe
+   mit Freischaltungen, Tod mit Beutehaufen, Banditen-Patrouillen. *Ziel: der
    eigene Aufbau beim Spielen.*
 3. **Armee:** Gefangenenlager, Trupp-Befehle, Zwischenburgen erobern, Ausbildung aus Waffe + Stein,
    Stationieren mit Pfeilen, Hauptburg-Stufen und Element-Resistenzen. *Ziel: vom Helden zum Kommandanten.*
@@ -343,7 +413,9 @@ Damit jede Runde ein Ende findet und nicht in Verstecken versandet:
 |---|---|
 | Wie groß ist die Karte? | Start mit ca. 4 × 4 Bildschirmbreiten pro Sektor (gesamt ≈ 8 × 8), im Playtest anpassen |
 | Wie viele Einheiten gleichzeitig? | Trupp anfangs 6, maximal 20; insgesamt ≈ 120 Einheiten auf der Karte (Leistung am Handy prüfen) |
-| Deckgröße der Runde? | 8 Karten, Fusion erlaubt; beim Tod fällt alles |
+| Deckgröße der Runde? | 4 Karten zu Beginn, mit der Rundenstufe bis 8; beim Tod fällt alles |
+| Wie viel kostet ein Kämpfer? | einfache Einheit ≈ 20 Gold, starke 60 Gold + Stahl; ein Banditentrupp bringt ≈ 40–80 Gold |
+| Wie oft wird die Karte neu gebaut? | bei jedem Rundenstart; der Startwert (Seed) wird angezeigt, damit man eine gute Karte teilen und erneut spielen kann |
 | Wie viel kostet eine Burgstufe? | Stufe 1: 30 Holz · 2: 40 Stein · 3: 30 Stahl · 4: 20 Obsidian; so ist Stufe 4 in einer guten Runde um Minute 15–18 erreichbar |
 | Bändigung in Arena / Siege? | ja, teuer und nur auf Beschwörungen unter halbem Leben |
 | Name des Modus? | **Kronenkrieg** (vier Kronen = vier Hauptburgen); Alternativen: Reichsfall, Vier Thronen |
