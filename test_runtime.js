@@ -5651,6 +5651,12 @@ game.running = false;
   const d0 = KM.kkDistance(hunter, { row: k7.row, x: game.player.x }); for (let i = 0; i < 40; i++) { k7.time += .25; KWR.updateWar(game, .25); } const closer = KM.kkDistance(hunter, { row: k7.row, x: game.player.x }) < d0;
   assert(hunting && closer, 'Kronenkrieg: a strong rival hunts the visible egg carrier (' + [hunting, closer].join('/') + ')');
   k7.carry = null; game.returnToHub();
+  // a whole round in the real game loop: 26 minutes (bots, sieges, flood) without an error, and it ends
+  game.setMatchMode('kronenkrieg'); game.startMatch(); const k8 = game.modeState.kk; let loopErr = null; const t0 = Date.now(); const wasRunning = game.running; game.running = true; game.scheduleFrame = () => {}; /* the test drives the loop */ const crashes = []; const rc = game.reportCrash.bind(game); game.reportCrash = (e) => { crashes.push(String(e?.message) + ' @ ' + String(e?.stack ?? '').split(String.fromCharCode(10))[1]); rc(e); };
+  try { for (let i = 0; i < 16000 && game.matchState === 'Running'; i++) { game.loop(game.lastFrameTime + 100); if (i % 50 === 0) k8.time += 4.9; } } catch (e) { loopErr = e.message + ' @ ' + (e.stack ?? '').split(String.fromCharCode(10))[1]; }
+  game.running = wasRunning; delete game.scheduleFrame; game.reportCrash = rc; if (!loopErr && crashes.length) loopErr = crashes[0];
+  assert(!loopErr && k8.over && game.matchState !== 'Running', 'Kronenkrieg: a whole round runs in the real game loop until its end without an error (' + (loopErr ?? (Math.round(k8.time) + ' s, ' + game.matchState + ', ' + (Date.now() - t0) + ' ms')) + ')');
+  game.returnToHub();
   // BÄNDIGUNG outside Kronenkrieg: an enemy summon under half its life changes sides
   game.setMatchMode('training'); game.startMatch(); spells.clearRuntime(); const E5 = game.enemyChampion; E5.lifeState = 'Alive'; E5.isDead = false; const foeWolf = spells.summon(E5, (await import('./public/src/spells.js')).SUMMON_DEFINITIONS.spirit_wolf, game, spells.qualityForRunes([]), { x: game.player.x + 90, z: game.player.z, noPose: true }); foeWolf.riseTimer = 0;
   const tameDef = spells.resolveSpell([{ id: 'bestia' }, { id: 'bestia' }]); foeWolf.hp = foeWolf.maxHp; spells.cast(game.player, tameDef, game, null, { x: foeWolf.x, z: foeWolf.z }); const tooStrong = foeWolf.team !== game.player.team; foeWolf.hp = foeWolf.maxHp * .4; spells.cast(game.player, tameDef, game, null, { x: foeWolf.x, z: foeWolf.z });

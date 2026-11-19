@@ -181,7 +181,8 @@ function updateSieges(game, dt) {
   for (const hq of kk.map.hqs) {
     hq.siegeT = Math.max(0, (hq.siegeT ?? 0) - dt); if (hq.fallen || hq.row !== kk.row) continue;
     const myTeam = teamOfSeat(hq.seat, kk);
-    const attackers = game.minions.filter((m) => m.isKKUnit && !m.isDead && m.team !== myTeam && Math.abs(m.x - hq.x) < 220);
+    // only rivals besiege a main castle (renegades and creatures fight what they meet, they do not take crowns)
+    const attackers = game.minions.filter((m) => m.isKKUnit && !m.isDead && m.team !== myTeam && m.team !== 'red' && m.team !== 'beast' && Math.abs(m.x - hq.x) < 220);
     const defenders = game.minions.filter((m) => m.isKKUnit && !m.isDead && m.team === myTeam && m.rec?.role === 'garrison' && m.rec.siteId === hq.id);
     if (attackers.length) hq.siegeT = 3;
     if (attackers.length && !defenders.length) { hq.hp -= attackers.length * 7 * dt * (hq.level >= 4 ? .7 : 1); if (hq.hp <= 0) fallHQ(game, hq, attackers[0].rec?.seat); }

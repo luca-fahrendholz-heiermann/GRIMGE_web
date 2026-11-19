@@ -2,6 +2,11 @@
 
 Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
+## 19. Nov 2026 – Kronenkrieg: Dauertest einer ganzen Runde
+
+- Neuer Test: eine ganze Runde im echten Spiel-Loop bis zum Ende ohne Fehler (rund 20 Minuten Spielzeit).
+- Fix (durch den Dauertest gefunden): Banditen und Kreaturen „belagerten“ Hauptburgen schon in den ersten Sekunden (Wachen eines nahen Gefangenenlagers, vorbeiziehende Patrouillen). Jetzt belagern nur Rivalen; bewachte Gefangenenlager halten Abstand zu den Startplätzen.
+
 ## 19. Nov 2026 – Kronenkrieg: Jagd auf Ei-Träger
 
 - Ein starker Rivale lässt seinen Plan fallen und jagt dich, solange du ein Ei trägst oder eine Krönungs-Prüfung bestreitest; Banditen-Patrouillen in der Nähe wenden sich gegen einen Ei-Träger. Der Ei-Lauf ist damit wirklich gefährlich.

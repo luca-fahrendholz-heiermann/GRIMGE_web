@@ -79,7 +79,7 @@ function attempt(rng) {
     const def = SITE_KINDS[kind];
     for (let n = 0; n < 140; n++) {
       const row = pick?.row ?? Math.floor(rng() * rows); const x = pick?.x0 != null ? pick.x0 + rng() * (pick.x1 - pick.x0) : KK.edgeX + rng() * (W - 2 * KK.edgeX);
-      if (def.big && nearHQ(row, x)) continue;
+      if ((def.big || kind === 'prison') && nearHQ(row, x)) continue; /* guarded places keep away from a start too */
       if (!free(row, x, def.w, def.big)) continue;
       const z = def.big ? .42 + rng() * .16 : .22 + rng() * .56;
       const site = { id: kind + sites.length, kind, row, x: Math.round(x), z: +z.toFixed(3), ...props };
