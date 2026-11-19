@@ -27,7 +27,7 @@ import { drawWeaponGuard } from './weapon_guard.js';
 import { weaponBodyPose } from './weapon_body.js';
 import { drawWardShell } from './ward_shell.js';
 import { hasWeaponDown, castWeaponDown, weaponUp, weaponHasUpSkill, weaponDive, updateWeaponKit, weaponMoveMult, weaponAttackSpeed, meleeBuffMods, targetDamageMult, onWeaponMeleeHit, afterWeaponSwing, weaponIncoming } from './weapon_kits.js';
-import { updatePrimalBond, bondMoveMultiplier, bondGainMultiplier, bondDisplacement, bondOnBlock, primalSprintVariant, renderPrimalBond, endPrimalBond, bondMelee, primalQuake } from './primals.js';
+import { updatePrimalBond, bondMoveMultiplier, bondGainMultiplier, bondDisplacement, bondOnBlock, primalSprintVariant, renderPrimalBond, endPrimalBond, bondMelee, primalQuake, startPrimalBond } from './primals.js';
 import { createSegments, damageSegments, updateSegments, renderSegments } from './castle_segments.js';
 import { updateBuffForm, endBuffForm, isGenericBuff, currentBuffForm, renderBuffManifestation, buffVeinPainter, buffCloakColor, renderBuffGuard, levitationOffset, renderBuffCharge } from './buff_forms.js';
 import { silkAirJump, silkSwingStep } from './arcane_fadenschlag.js'; // T13 Fadenschlag: air-jump swing on a silk wire
@@ -2633,12 +2633,16 @@ export class Player extends GroundEntity {
     if (this === window.gameWorld?.player && window.gameWorld?.kkFocusLocked?.()) { window.gameWorld.showAnnouncement?.('FOKUS-TRANSFORMATION: ERST NACH KRÖNUNG II', 1.4); return false; } /* Kronenkrieg: won in the level-10 trial */
     if (currentBuffForm(this)) return false; // an Arcane State is active (both would own the charged heavies)
     this.focusSaved = false;
+    // Kronenkrieg: the Focus transformation of the crowned path (kk_crown.js kkFocusStyle) — element, class or Primal.
+    const kkStyle = this === window.gameWorld?.player ? window.gameWorld?.kkFocusStyle?.() : null;
+    if (kkStyle?.primal) { startPrimalBond(this, window.gameWorld.primal); this.focus = 0; window.gameWorld.showAnnouncement?.('PRIMAL-TRANSFORMATION', 1.4); return true; }
     // No own timer: the transformation burns the Focus meter (faster the longer it lasts).
     this.focusTransformTimer = this.focus / focusDrainRate(0);
-    this.focusTransformPower = 1;
-    combat.spawnShockwave(this.x, this.y - 38, 92, '#f0a6ff');
-    // Transition (charge → flash → pillar) in the Ascendant colours.
-    spells.addSpell(new TransformationFx(this, { core: '#ffffff', main: '#f0a6ff', rim: '#b388ff', dark: '#3a1060', particle: 'shard', label: 'ASCENDANT' }), 'B');
+    this.focusTransformPower = kkStyle?.power ?? 1;
+    if (kkStyle?.infusion) this.weaponInfusion = { ...kkStyle.infusion, t: this.focusTransformTimer, hits: 0 }; /* the element's edge for the whole form */
+    combat.spawnShockwave(this.x, this.y - 38, 92, kkStyle?.main ?? '#f0a6ff');
+    // Transition (charge → flash → pillar) in the Ascendant colours (or those of the crowned path).
+    spells.addSpell(new TransformationFx(this, kkStyle ? { core: kkStyle.core, main: kkStyle.main, rim: kkStyle.rim, dark: kkStyle.dark, particle: kkStyle.particle, label: kkStyle.label } : { core: '#ffffff', main: '#f0a6ff', rim: '#b388ff', dark: '#3a1060', particle: 'shard', label: 'ASCENDANT' }), 'B');
     audio.playSpell('focus_ascendant');
     return true;
   }

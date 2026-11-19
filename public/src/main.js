@@ -27,7 +27,7 @@ import { initLoot, updateLoot, lootActors, renderLootHud, kkFuseAllowed, respawn
 import { initArmy, updateArmy, armyActors, closeKKPanel, recordGrade } from './kk_army.js'; // Kronenkrieg: armies, castles, garrisons
 import { initWar, updateWar, warActors, renderFlood, warMinimapDots, kkEnemyHome, kkCanRespawn } from './kk_war.js'; // Kronenkrieg: bots, main castles, Grimmflut, the end
 import { initCreatures, updateCreatures, creatureActors, creatureMinimapDots, tameAt, kkMountGate } from './kk_creatures.js'; // Kronenkrieg: creatures, eggs, mounts
-import { initCrown, updateCrown, closeCrownPanel, kkFocusLocked } from './kk_crown.js'; // Kronenkrieg: the crowning trials
+import { initCrown, updateCrown, closeCrownPanel, kkFocusLocked, kkFocusStyle } from './kk_crown.js'; // Kronenkrieg: the crowning trials
 import { updateInterior, interiorActors } from './kk_interior.js'; // Kronenkrieg: houses you walk into (cut-away) // the Training map where clones show every spell
 import { loadFxSprites } from './fx_sprites.js';
 import { loadSpellSprites } from './spell_visuals.js';
@@ -2886,6 +2886,7 @@ export class GameWorld {
   kkTame(caster, x, z) { return this.activeMode?.id === 'kronenkrieg' ? tameAt(this, caster, x, z) : false; }
   kkMountGate() { return this.activeMode?.id === 'kronenkrieg' ? kkMountGate(this) : null; }
   kkFocusLocked() { return this.activeMode?.id === 'kronenkrieg' && kkFocusLocked(this); }
+  kkFocusStyle() { return this.activeMode?.id === 'kronenkrieg' ? kkFocusStyle(this) : null; }
   // The Wizard's Primal joins Siege, Invasion, Training and Kronenkrieg.
   spawnPrimal() {
     if (this.player?.primalBond) this.player.primalBond = null;

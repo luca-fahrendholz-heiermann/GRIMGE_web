@@ -13,6 +13,7 @@ import { kkState, kkOn, elementColor } from './kk_world.js';
 import { giveRune, gainXp } from './kk_loot.js';
 import { addRecord } from './kk_army.js';
 import { CREATURE_OF } from './kk_creatures.js';
+import { INFUSION_SPELLS } from './nature_spells.js';
 import { XP } from './kk_progress.js';
 
 // The Arcane State an element's crowning gives (one per element).
@@ -80,6 +81,16 @@ export function swapReserve(game) {
   const next = kk.reserve; kk.reserve = null;
   if (inDeck) { P.runeDeck = P.runeDeck.filter((c) => c !== inDeck); P.runeHand = P.runeHand.filter((c) => c !== inDeck); const { cardId, ...rest } = inDeck; kk.reserve = rest; }
   P.runeDeck.push(P.makeRuneCard(next)); P.drawRunesToHand(); game.showAnnouncement?.(`${next.name} IM DECK`, 1.4); return true;
+}
+// The Focus transformation of the path won in crowning II: an element (its colours + its weapon edge for the whole
+// form), the class (a golden awakening of the class weapon, +30 % power) or the Primal (the bond with it).
+const EDGE_OF = Object.freeze({ ignis: 'flame_edge', frost: 'frost_edge', aqua: 'frost_edge', fulgur: 'storm_edge', ventus: 'storm_edge', natura: 'venom_edge', umbra: 'venom_edge', void: 'blood_edge', bestia: 'rending_edge', terra: 'rending_edge', construct: 'rending_edge', lux: 'storm_edge', ward: 'frost_edge' });
+export function kkFocusStyle(game) {
+  const kk = kkState(game); const path = kk?.crown?.focusUnlocked; if (!kkOn(game) || !path) return null;
+  if (path === 'primal') return game.primal && game.primal.hp > 0 ? { primal: true } : null;
+  if (path === 'class') return { label: 'KLASSE', core: '#ffffff', main: '#ffd24a', rim: '#ffb300', dark: '#5a3a00', particle: 'shard', power: 1.3 };
+  const el = path.slice(8); const c = elementColor(el); const edge = EDGE_OF[el];
+  return { label: el.toUpperCase(), core: '#ffffff', main: c, rim: c, dark: '#1a1424', particle: 'shard', infusion: edge ? { ...INFUSION_SPELLS[edge], id: edge } : null };
 }
 export function kkFocusLocked(game) { const kk = kkState(game); return kkOn(game) && !kk.crown?.focusUnlocked; }
 

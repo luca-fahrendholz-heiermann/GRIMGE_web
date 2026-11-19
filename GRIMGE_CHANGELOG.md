@@ -2,6 +2,10 @@
 
 Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
+## 19. Nov 2026 – Kronenkrieg: Transformationen je Weg
+
+- Die Fokus-Transformation aus Krönung II folgt jetzt dem gewählten Weg: ELEMENT — Übergang und Aura in den Farben des Elements, dazu für die ganze Dauer die Klinge des Elements (Feuer: Flammenklinge, Eis/Wasser: Frostklinge, Blitz/Wind: Sturmklinge, Natur/Schatten: Giftklinge …); KLASSE — goldene Erweckung der Klassenwaffe mit 30 % mehr Kraft; PRIMAL — die Verschmelzung mit dem eigenen Primal (seine Bindungsform je Stufe).
+
 ## 19. Nov 2026 – Kronenkrieg: mehrere Rivalen gleichzeitig
 
 - Stehen mehrere Rivalen in deiner Nähe, kämpfen bis zu drei gleichzeitig als echte Gegner (je eine eigene Champion-KI); alle sind für dich und deine Einheiten Ziele, ihre Trupps folgen ihnen, jeder Sieg zählt.
