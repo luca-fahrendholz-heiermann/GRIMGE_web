@@ -69,14 +69,14 @@ export function updateKronenkrieg(game, dt) {
   const kk = kkState(game); if (!kk) return;
   kk.time += dt;
   const P = game.player;
-  if (P.isAlive && !P.isMounted) {
+  if (P.isAlive) { /* a rider steps off at a shaft or lift (the mount follows if it is part of the squad) */
     // a shaft: walking into the hole drops one level down, beside the lift that leads back up
     const shaft = connectorsOf(kk, kk.row).find((s) => s.kind === 'shaft' && Math.abs(P.x - s.x) < SHAFT_R && Math.abs(P.z - s.z) < .12 && P.grounded !== false);
-    if (shaft) { switchLevel(game, shaft.to, shaft.x + 80, .6); game.showAnnouncement?.(`HINAB — ${LEVEL_NAMES[shaft.to]}`, 1.2); kk.liftT = 0; }
+    if (shaft) { P.dismount?.(); switchLevel(game, shaft.to, shaft.x + 80, .6); game.showAnnouncement?.(`HINAB — ${LEVEL_NAMES[shaft.to]}`, 1.2); kk.liftT = 0; }
     // a lift: standing on its platform for a moment rises one level up, beside the shaft
     const lift = connectorsOf(kk, kk.row).find((s) => s.kind === 'lift' && Math.abs(P.x - s.x) < 46 && Math.abs(P.z - s.z) < .14);
     kk.liftT = lift ? kk.liftT + dt : 0; kk.liftAt = lift?.id ?? null;
-    if (lift && kk.liftT >= LIFT_TIME) { kk.liftT = 0; switchLevel(game, lift.to, lift.x + 110, .66); game.showAnnouncement?.(`HINAUF — ${LEVEL_NAMES[lift.to]}`, 1.2); }
+    if (lift && kk.liftT >= LIFT_TIME) { kk.liftT = 0; P.dismount?.(); switchLevel(game, lift.to, lift.x + 110, .66); game.showAnnouncement?.(`HINAUF — ${LEVEL_NAMES[lift.to]}`, 1.2); }
   } else kk.liftT = 0;
   kk.pan += (0 - kk.pan) * Math.min(1, dt * PAN_SPEED); if (Math.abs(kk.pan) < .5) kk.pan = 0;
   revealAround(kk, P);
