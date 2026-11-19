@@ -192,10 +192,14 @@ Vor dem Start wählt jeder zwei Dinge:
 
 - **Beide Wege sind gleichwertig:** Ihre Stufe-8-Form und ihre Fokus-Transformation sind garantiert. Gefundene
   Runen geben zusätzliche Möglichkeiten (Atmungen, Sphären), aber die Krönung hängt nie vom Glück ab.
-- **Ein Platz für die große Form:** Im Deck steht immer nur **eine** davon, ein Arcane State **oder** das Bankai.
-  Die Form des eigenen Wegs belegt diesen Platz. Wer einen gefundenen Arcane State lieber spielt, tauscht: Der
-  gefundene ersetzt die Wegform, und diese kehrt zurück, sobald man den gefundenen wieder ablegt (an der eigenen
-  Hauptburg). Die Fokus-Transformation auf Stufe 10 bleibt immer die des gewählten Wegs.
+- **Arcane States sind normale Runen:** Man findet sie, sammelt sie (versiegelt bis Stufe 8), tauscht sie aus und
+  verliert sie beim Tod, genau wie jede andere Rune. Im Deck steht davon immer nur **eine**: ein Arcane State
+  **oder** das Bankai.
+- **Einzige Ausnahme, die Karte des eigenen Wegs:** Sie ist **seelengebunden**. Man bekommt sie auf Stufe 8
+  geschenkt, sie fällt beim Tod nicht und kann nicht gestohlen werden. Man kann sie jederzeit gegen einen
+  gefundenen Arcane State austauschen. Sie wartet dann in der Reserve und lässt sich außerhalb des Kampfes wieder
+  zurücktauschen. So ist die Krönung sicher, ohne dass Arcane States eine Sonderbehandlung brauchen.
+- Die Fokus-Transformation auf Stufe 10 ist immer die des gewählten Wegs.
 - **Lesbarkeit für Gegner:** Der Weg ist in der Lobby und an der Burgfahne zu sehen. Wer Feuer gewählt hat, gegen
   den lohnt es sich, Aqua in die Mauern einzubauen. Das verbindet die Wahl mit den Burg-Resistenzen (§6.5).
 - **Element-Weg und gefundene Runen:** Runen des eigenen Elements tauchen in Truhen etwas häufiger auf, damit sich
