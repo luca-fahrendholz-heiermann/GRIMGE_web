@@ -23,11 +23,12 @@ import { environment, renderProp } from './environment.js';
 import { TRAINING_MAPS, getTrainingMap, zoneToWorld } from './training_maps.js';
 import { setupGallery, updateGallery, galleryActors, renderGalleryLabels } from './spell_gallery.js';
 import { setupKronenkrieg, updateKronenkrieg, renderKKGround, kkActors, renderKKMinimap, kkPanY } from './kk_world.js'; // Kronenkrieg: the banded open map
-import { initLoot, updateLoot, lootActors, renderLootHud, kkFuseAllowed, respawnDelay } from './kk_loot.js'; // Kronenkrieg: loot and the round level
+import { initLoot, updateLoot, lootActors, renderLootHud, kkFuseAllowed, respawnDelay, closePotionButtons } from './kk_loot.js'; // Kronenkrieg: loot and the round level
 import { initArmy, updateArmy, armyActors, closeKKPanel, recordGrade } from './kk_army.js'; // Kronenkrieg: armies, castles, garrisons
 import { initWar, updateWar, warActors, renderFlood, warMinimapDots, kkEnemyHome, kkCanRespawn } from './kk_war.js'; // Kronenkrieg: bots, main castles, Grimmflut, the end
 import { initCreatures, updateCreatures, creatureActors, creatureMinimapDots, tameAt, kkMountGate } from './kk_creatures.js'; // Kronenkrieg: creatures, eggs, mounts
-import { initCrown, updateCrown, closeCrownPanel, kkFocusLocked } from './kk_crown.js'; // Kronenkrieg: the crowning trials // the Training map where clones show every spell
+import { initCrown, updateCrown, closeCrownPanel, kkFocusLocked } from './kk_crown.js'; // Kronenkrieg: the crowning trials
+import { updateInterior, interiorActors } from './kk_interior.js'; // Kronenkrieg: houses you walk into (cut-away) // the Training map where clones show every spell
 import { loadFxSprites } from './fx_sprites.js';
 import { loadSpellSprites } from './spell_visuals.js';
 import { renderPixelated } from './abilities.js';
@@ -2467,6 +2468,7 @@ export class GameWorld {
       state.dungeonCameraX += (this.dungeonCameraTarget() - state.dungeonCameraX) * Math.min(1, 3.5 * dt);
       this.updateCameraZoom(dt);
       updateKronenkrieg(this, dt);
+      updateInterior(this, dt);
       updateLoot(this, dt);
       updateArmy(this, dt);
       updateWar(this, dt);
@@ -3076,7 +3078,7 @@ export class GameWorld {
   }
 
   returnToHub(reason = 'menu') {
-    closeBasePrompt(); closeKKPanel(); closeCrownPanel();
+    closeBasePrompt(); closeKKPanel(); closeCrownPanel(); closePotionButtons();
     this.markMatchSession(false);
     try { const log = JSON.parse(globalThis.localStorage?.getItem?.('grimge-hub-log') ?? '[]'); log.push({ reason, mode: this.activeMode?.id, at: new Date().toISOString(), stack: String(new Error().stack).split(String.fromCharCode(10)).slice(2, 6).join(' < ').slice(0, 400) }); globalThis.localStorage?.setItem?.('grimge-hub-log', JSON.stringify(log.slice(-10))); } catch { /* optional */ }
     this.matchState = 'Menu';
@@ -3459,7 +3461,7 @@ export class GameWorld {
     if (this.primal?.isTargetable) actors.push(this.primal);
     if (this.activeMode?.id === 'base') actors.push(...baseActors(this)); /* stations and stands share the depth order */
     if (this.activeMode?.id === 'gallery') actors.push(...galleryActors(this)); /* the casting clones of the Spell Gallery */
-    if (this.activeMode?.id === 'kronenkrieg') actors.push(...kkActors(this), ...lootActors(this), ...armyActors(this), ...warActors(this), ...creatureActors(this)); /* castles, buildings, camps and loot of the current band */
+    if (this.activeMode?.id === 'kronenkrieg') actors.push(...kkActors(this), ...lootActors(this), ...armyActors(this), ...warActors(this), ...creatureActors(this), ...interiorActors(this)); /* castles, buildings, camps and loot of the current band */
     // Spells with a ground position and summons share the painter's order
     // with the actors, so a spike behind the dummy is hidden by the dummy.
     actors.push(...spells.depthEntries());

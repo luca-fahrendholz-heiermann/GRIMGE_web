@@ -198,6 +198,7 @@ export function siteOpts(kk, site) {
   o.biome = biomeAt(kk.map, site.row, site.x).element;
   o.friendly = site.kind === 'hq' ? kk.allies?.includes(site.seat) : site.owner != null && kk.allies?.includes(site.owner);
   if (site.looted) o.looted = true; if (site.freed) o.freed = true;
+  if (site.kind === 'building') { o.inside = kk.inside === site; o.fadeFront = !!kk.inside && !o.inside && site.z > kk.inside.z && Math.abs(site.x - kk.inside.x) < 220; } /* a house in front of the one you are in turns see-through */
   if (site.kind === 'lift') o.liftK = kk.liftAt === site.id ? Math.min(1, kk.liftT / LIFT_TIME) : 0;
   return o;
 }

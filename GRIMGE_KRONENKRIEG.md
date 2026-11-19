@@ -555,16 +555,16 @@ Die Karte gehört zu Beginn **niemandem**. Neben den vier Spielern (Menschen ode
 
 **Gebaut und getestet** (kk_map.js, kk_world.js, kk_progress.js, kk_loot.js, kk_army.js, kk_war.js, kk_creatures.js, kk_crown.js):
 - Karte aus Bausteinen je Runde mit Fairness-Prüfung; eine riesige 2,5D-Hauptebene plus Sektionen oben (Hochebenen) und unten (Tiefen), verbunden durch Schächte und Aufzüge (Nutzer, 19. Nov 2026); Übersichtskarte mit Nebel.
-- Beute, Gold, Baustoffe, Elementsteine, Waffen, Tränke (werden selbst getrunken), Rucksack und Lager; Rundenstufe 1–10 mit Deckplätzen, Runen-Stufen, versiegelten Runen, Fusions-Stufen; Beutehaufen beim Tod.
+- Beute, Gold, Baustoffe, Elementsteine, Waffen, Tränke (von Hand oder AUTO), Rucksack und Lager; Rundenstufe 1–10 mit Deckplätzen, Runen-Stufen, versiegelten Runen, Fusions-Stufen; Beutehaufen beim Tod.
 - Armee: Einheiten aus Klasse + Element, Abtrünnige (Besatzungen, Lager, Patrouillen), Gefangene, Zwischenburgen erobern, Ausbildung mit Walzen, Stationieren ▲ ▼, Verschmelzen.
 - Drei Bot-Rivalen (abstrakt + als Champion im eigenen Streifen), Hauptburg-Stufen und Resistenzen, Belagerung, Grimmflut, Siegbedingung.
+- Begehbare Häuser im Querschnitt mit Treppe, Galerie und Truhen je Etage.
 - Kreaturen mit Beute, Rune BÄNDIGUNG, Eier mit Quellen und Brut-Walzen, Reittier aus dem Stall, mitwachsender Primal.
 - Krönung mit Prüfungen auf Stufe 8 und 10.
 - Jeder gegen jeden oder 2 gegen 2 (Verbündeter = der Nachbar auf der Hauptebene).
 
 **Noch offen / vereinfacht:**
 - Grafik: Burgen, Requisiten, Pixel-Sprites und Landschaft sind eingebaut (kk_art.js); eigene neue Bilder brauchen Generierungs-Guthaben.
-- Gebäude haben noch keine begehbaren Innenräume (Durchsuchen an der Tür).
 - Element-, Klassen- und Primal-Transformation nutzen vorerst die vorhandene Fokus-Transformation; eigene Formen je Weg fehlen.
 - Rivalen jagen Ei-Träger und Spieler in Prüfungen; nur ein Rivale gleichzeitig kämpft im eigenen Streifen als echter Gegner (weitere laufen dort als Simulation); ein Verbündeter im eigenen Streifen ist nur durch seinen Trupp zu sehen.
 - 2-gegen-2 mit einem Bot-Partner ist gebaut; Online-PvP fehlt (braucht einen Server und Netzcode).

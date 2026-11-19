@@ -2,6 +2,11 @@
 
 Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
+## 19. Nov 2026 – Kronenkrieg: begehbare Häuser, Tränke von Hand
+
+- Häuser sind von außen geschlossen (jetzt groß genug zum Hineingehen). An der Tür nach hinten laufen führt hinein: die Vorderwand fällt für die Sicht weg, man sieht Rückwand, Dielen, Laterne, und ab zwei Etagen eine Holztreppe zu einer Galerie (die Treppen- und Galerie-Flächen des Spiels). Jede Etage hat eine Truhe (davor stehen öffnet sie); manche Häuser verbergen Banditen. Nach vorn hinauslaufen verlässt das Haus; ein Haus davor wird solange durchsichtig.
+- Tränke werden jetzt von Hand getrunken: Knöpfe ♥ / ✦ am rechten Rand oder Tasten 1 / 2; AUTO schaltet das selbständige Trinken bei wenig Leben / Mana ein.
+
 ## 19. Nov 2026 – Kronenkrieg: eine riesige Ebene mit Sektionen, Schächte und Aufzüge (Rückmeldung des Nutzers)
 
 - Statt drei gleich breiter Streifen, zwischen denen man am Rand einfach wechselte, gibt es jetzt EINE riesige 2,5D-Hauptebene (doppelt so breit, tiefer im Bild), auf der die vier Hauptburgen und der Großteil der Orte verteilt sind. Am Rand ist eine feste Grenze.

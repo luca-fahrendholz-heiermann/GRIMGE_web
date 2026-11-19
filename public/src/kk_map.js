@@ -38,7 +38,7 @@ export const BIOME_OF = Object.freeze({
 // The modular sites: width (x px they occupy), value (for fairness), big (keeps out of a main castle's surroundings).
 export const SITE_KINDS = Object.freeze({
   castle: { w: 300, value: 6, big: true }, lair: { w: 260, value: 5, big: true }, camp: { w: 200, value: 2, big: true },
-  building: { w: 170, value: 1 }, goldvein: { w: 90, value: 3 }, prison: { w: 170, value: 3 }, source: { w: 120, value: 2 },
+  building: { w: 200, value: 1 }, goldvein: { w: 90, value: 3 }, prison: { w: 170, value: 3 }, source: { w: 120, value: 2 },
   stable: { w: 150, value: 1 }, shrine: { w: 60, value: 1 },
   shaft: { w: 140, value: 0 }, lift: { w: 140, value: 0 }
 });

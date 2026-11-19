@@ -154,7 +154,7 @@ export function drawKKSite(ctx, site, y, t, opts = {}) {
       if (site.label) { ctx.font = 'bold 10px monospace'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(Math.round(x - 26), Math.round(y - (big ? 214 : 164)), 52, 13); ctx.fillStyle = '#fff3c8'; ctx.fillText(site.label, x, y - (big ? 204 : 154)); }
       return true;
     }
-    case 'building': { const s = houseSprite(Math.max(1, Math.min(3, site.floors ?? 1))); if (!s) return false; shadow(ctx, x, y, 70); blit(ctx, s, x, y + 2, S); if (opts.looted) { ctx.fillStyle = 'rgba(10,8,6,.35)'; ctx.fillRect(Math.round(x - 64), Math.round(y - s.height * S), 128, s.height * S); } return true; }
+    case 'building': { if (opts.inside) return true; /* drawn cut away from inside (kk_interior.js) */ const s = houseSprite(Math.max(1, Math.min(3, site.floors ?? 1))); if (!s) return false; const hs = 2.9; /* houses are big enough to walk into */ shadow(ctx, x, y, 100); if (opts.fadeFront) ctx.globalAlpha = .3; blit(ctx, s, x, y + 2, hs); ctx.globalAlpha = 1; if (opts.looted) { ctx.fillStyle = 'rgba(10,8,6,.3)'; ctx.fillRect(Math.round(x - 93), Math.round(y - s.height * hs), 186, s.height * hs); } return true; }
     case 'stable': { const s = stableSprite(); if (!s) return false; shadow(ctx, x, y, 76); blit(ctx, s, x, y + 2, S); return true; }
     case 'goldvein': { const s = goldSprite(); if (!s) return false; shadow(ctx, x, y, 48); blit(ctx, s, x, y + 2, S); for (let i = 0; i < 3; i++) { const k = (t * .8 + i * .33) % 1; ctx.globalAlpha = 1 - k; ctx.fillStyle = '#fff6c2'; ctx.fillRect(Math.round(x - 20 + i * 18), Math.round(y - 30 - k * 20), 2, 2); } ctx.globalAlpha = 1; return true; }
     case 'source': {

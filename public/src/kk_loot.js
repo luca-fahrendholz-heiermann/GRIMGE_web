@@ -13,7 +13,7 @@ import { kkState, kkOn, revealAround, isRevealed, elementColor, applyBounds } fr
 import { KK } from './kk_map.js';
 
 export const BACKPACK = 40;             // units of materials + stones + weapons one carries
-const SEARCH_TIME = 1.4; const MINE_TIME = 2.2; const VEIN_COOLDOWN = 25; const PICK_RANGE = 44;
+const MINE_TIME = 2.2; const VEIN_COOLDOWN = 25; const PICK_RANGE = 44;
 const MAT_NAME = Object.freeze({ wood: 'HOLZ', stone: 'STEIN', steel: 'STAHL', obsidian: 'OBSIDIAN' });
 const MAT_COLOR = Object.freeze({ wood: '#b07a45', stone: '#9e9e9e', steel: '#b8d0e0', obsidian: '#7a4fb0' });
 const emptyInv = () => ({ wood: 0, stone: 0, steel: 0, obsidian: 0, stones: {}, weapons: {}, potions: { hp: 0, mp: 0 } });
@@ -91,18 +91,15 @@ const hqOf = (kk, seat = 0) => kk.map.hqs.find((h) => h.seat === seat);
 function tierAt(kk, site) {
   const hq = hqOf(kk); return lootTier({ time: kk.time, middleBand: site.row !== KK.main /* the sections above and below are the rich places */, hqDistance: kkDistance(hq, site) });
 }
-function searchBuilding(game, site) {
-  const kk = kkState(game); site.looted = true; const floors = site.floors ?? 1; const tier = tierAt(kk, site); const biome = biomeAt(kk.map, site.row, site.x).element;
-  const weapons = CASTLE_CLASSES.map((c) => c.weapon); const merged = { gold: 0, materials: {}, stones: {}, weapons: [], potions: {} }; const runes = [];
-  for (let f = 0; f < floors; f++) {
-    const c = rollChest(kk.seed * 31 + site.x * 7 + f * 131, tier, { biomeElement: biome, weapons });
-    merged.gold += c.gold; for (const [m, n] of Object.entries(c.materials)) merged.materials[m] = (merged.materials[m] ?? 0) + n;
-    for (const [e, n] of Object.entries(c.stones)) merged.stones[e] = (merged.stones[e] ?? 0) + n; merged.weapons.push(...c.weapons);
-    for (const [k, n] of Object.entries(c.potions)) merged.potions[k] = (merged.potions[k] ?? 0) + n;
-    if (c.runeCategory) { const pool = runePool(c.runeCategory); if (pool.length) runes.push(pool[Math.floor(((kk.seed + site.x + f * 17) % 997) / 997 * pool.length)]); }
-  }
-  addBundle(game, merged); for (const r of runes) if (giveRune(game, r) === 'full') dropPile(game, site.x, site.z + .05, { gold: 0, materials: {}, stones: {}, weapons: [], runes: [r] });
-  gainXp(game, XP.search); combat.spawnShockwave?.(site.x, groundYForDepth(site.z) - 30, 50, '#f2c46a'); audio.playRuneChime?.(600);
+// One chest of a house (the walk-in interior, kk_interior.js): the loot of one floor; the first chest of a house gives XP.
+export function openChest(game, site, floor = 0) {
+  const kk = kkState(game); const tier = tierAt(kk, site); const biome = biomeAt(kk.map, site.row, site.x).element;
+  const weapons = CASTLE_CLASSES.map((c) => c.weapon);
+  const c = rollChest(kk.seed * 31 + site.x * 7 + floor * 131, tier, { biomeElement: biome, weapons });
+  addBundle(game, { gold: c.gold, materials: c.materials, stones: c.stones, weapons: c.weapons, potions: c.potions });
+  if (c.runeCategory) { const pool = runePool(c.runeCategory); const r = pool.length ? pool[Math.floor(((kk.seed + site.x + floor * 17) % 997) / 997 * pool.length)] : null; if (r && giveRune(game, r) === 'full') dropPile(game, site.x, site.z + .05, { gold: 0, materials: {}, stones: {}, weapons: [], runes: [r] }); }
+  if (!site.searchedOnce) { site.searchedOnce = true; gainXp(game, XP.search); }
+  return c;
 }
 function updatePlaces(game, dt) {
   const kk = kkState(game); const P = game.player; if (!P.isAlive) return;
@@ -110,10 +107,7 @@ function updatePlaces(game, dt) {
     if (s.row !== kk.row) continue;
     // discovering a place gives a little XP
     if (!kk.discovered.has(s.id) && isRevealed(kk, s.row, s.x) && Math.abs(P.x - s.x) < 700) { kk.discovered.add(s.id); gainXp(game, XP.discover); }
-    if (s.kind === 'building' && !s.looted) {
-      const at = near(P, { x: s.x, z: s.z + .04 }, 70, .1); kk.progress[s.id] = at ? (kk.progress[s.id] ?? 0) + dt : 0;
-      if (kk.progress[s.id] >= SEARCH_TIME) { kk.progress[s.id] = 0; searchBuilding(game, s); }
-    } else if (s.kind === 'goldvein') {
+    if (s.kind === 'goldvein') { /* houses are walked into (kk_interior.js) */
       s.cd = Math.max(0, (s.cd ?? 0) - dt); const at = s.cd <= 0 && near(P, s, 64, .13); kk.progress[s.id] = at ? (kk.progress[s.id] ?? 0) + dt : 0;
       if (kk.progress[s.id] >= MINE_TIME) { kk.progress[s.id] = 0; s.cd = VEIN_COOLDOWN; const g = 15 + Math.floor(Math.random() * 16); kk.gold += g; say(game, `+${g} GOLD`, 1.1); gainXp(game, XP.mine); audio.playRuneChime?.(820); }
     } else if (s.kind === 'shrine' && !s.used && near(P, s, 50, .14)) {
@@ -150,9 +144,9 @@ function updateLife(game, dt) {
     game.modeState.dungeonCameraX = game.dungeonCameraTarget?.() ?? game.modeState.dungeonCameraX; revealAround(kk, P);
     say(game, 'ZURÜCK IN DER HAUPTBURG', 1.4);
   }
-  // potions: drunk by themselves at low life / mana (a short cooldown between two)
-  kk.potionCd = Math.max(0, kk.potionCd - dt);
-  if (P.isAlive && kk.potionCd <= 0) {
+  // potions: drunk by hand (buttons, keys 1 / 2); AUTO drinks at low life / mana (a short cooldown between two)
+  kk.potionCd = Math.max(0, kk.potionCd - dt); updatePotionButtons(game);
+  if (P.isAlive && kk.potionCd <= 0 && kk.autoPotion) {
     if (P.hp < P.maxHp * .3 && kk.inv.potions.hp > 0) { kk.inv.potions.hp--; P.hp = Math.min(P.maxHp, P.hp + P.maxHp * .45); kk.potionCd = 6; say(game, 'HEILTRANK', .9); combat.spawnShockwave?.(P.x, P.y - 30, 40, '#ff6b8a'); }
     else if (P.mp < P.maxMp * .2 && kk.inv.potions.mp > 0) { kk.inv.potions.mp--; P.mp = Math.min(P.maxMp, P.mp + P.maxMp * .5); kk.potionCd = 6; say(game, 'MANATRANK', .9); }
   }
@@ -164,6 +158,32 @@ function updateItems(game, dt) {
     if (it.row !== kk.row || it.lock > 0 || !P.isAlive) continue;
     if (Math.abs(P.x - it.x) < PICK_RANGE && Math.abs(P.z - it.z) * 150 < 30) { if (takePile(game, it)) kk.items.splice(kk.items.indexOf(it), 1); else it.lock = 3; }
   }
+}
+
+// Drinking a potion by hand: heal 45 % life or 50 % mana; 6 s between two.
+export function drinkPotion(game, kind) {
+  const kk = kkState(game); const P = game.player; if (!kk || !P.isAlive) return false;
+  if (kk.potionCd > 0) { say(game, `TRANK IN ${Math.ceil(kk.potionCd)} S`, .8); return false; }
+  if (!(kk.inv.potions[kind] > 0)) { say(game, kind === 'hp' ? 'KEIN HEILTRANK' : 'KEIN MANATRANK', .9); audio.playRuneFail?.(); return false; }
+  kk.inv.potions[kind]--; kk.potionCd = 6;
+  if (kind === 'hp') { P.hp = Math.min(P.maxHp, P.hp + P.maxHp * .45); combat.spawnShockwave?.(P.x, P.y - 30, 40, '#ff6b8a'); } else { P.mp = Math.min(P.maxMp, P.mp + P.maxMp * .5); combat.spawnShockwave?.(P.x, P.y - 30, 40, '#6bb8ff'); }
+  audio.playRuneChime?.(kind === 'hp' ? 560 : 720); return true;
+}
+let potionUi = null;
+export function closePotionButtons() { if (potionUi?.el) potionUi.el.style.display = 'none'; }
+function updatePotionButtons(game) {
+  const doc = globalThis.document; if (typeof doc?.createElement !== 'function' || typeof doc.body?.appendChild !== 'function') return;
+  const kk = kkState(game);
+  if (!potionUi) {
+    const el = doc.createElement('div'); el.id = 'kk-potions';
+    el.style.cssText = 'position:fixed;right:max(1vw,env(safe-area-inset-right));top:22vh;z-index:60;display:flex;gap:6px;font-family:monospace';
+    el.addEventListener('pointerdown', (e) => { const b = e.target?.closest?.('[data-potion]'); if (!b) return; e.preventDefault(); e.stopPropagation(); const k = b.getAttribute('data-potion'); const g = globalThis.window?.gameWorld; if (k === 'auto') { const st = kkState(g); if (st) st.autoPotion = !st.autoPotion; } else drinkPotion(g, k); });
+    doc.addEventListener('keydown', (e) => { const g = globalThis.window?.gameWorld; if (!kkOn(g) || e.target?.closest?.('input')) return; if (e.code === 'Digit1') drinkPotion(g, 'hp'); else if (e.code === 'Digit2') drinkPotion(g, 'mp'); });
+    doc.body.appendChild(el); potionUi = { el, html: '' };
+  }
+  const btn = (k, label, col) => `<button data-potion="${k}" style="min-width:52px;min-height:40px;font:inherit;font-size:13px;color:#fff3c8;background:${col};border:2px solid #c9a95a">${label}</button>`;
+  const h = btn('hp', `♥ ${kk.inv.potions.hp}`, '#5a1f2e') + btn('mp', `✦ ${kk.inv.potions.mp}`, '#1f2e5a') + btn('auto', kk.autoPotion ? 'AUTO AN' : 'AUTO AUS', '#2a2234');
+  if (h !== potionUi.html) { potionUi.el.innerHTML = h; potionUi.html = h; } potionUi.el.style.display = 'flex';
 }
 
 export function updateLoot(game, dt) {
@@ -180,7 +200,7 @@ export function lootActors(game) {
     out.push({ y, render: (ctx) => { const bob = Math.sin(t * 4 + it.x) * 2; ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.beginPath(); ctx.ellipse(it.x, y, 16, 4, 0, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#6b4a2a'; ctx.fillRect(it.x - 12, y - 14 + bob, 24, 12); ctx.fillStyle = (it.runes?.length ? '#b388ff' : '#ffcf3a'); ctx.fillRect(it.x - 8, y - 20 + bob, 16, 7); if (it.runes?.length) { ctx.font = 'bold 9px monospace'; ctx.textAlign = 'center'; ctx.fillStyle = '#e8dcff'; ctx.fillText(`${it.runes.length} RUNEN`, it.x, y - 26 + bob); } } });
   }
   // progress rings over a door being searched / a vein being mined
-  for (const s of kk.map.sites) { const k = kk.progress[s.id]; if (s.row !== kk.row || !(k > 0)) continue; const full = s.kind === 'building' ? SEARCH_TIME : MINE_TIME; const y = groundYForDepth(s.z) - (s.kind === 'building' ? 110 : 70); out.push({ y: groundYForDepth(s.z) + .5, render: (ctx) => ring(ctx, s.x, y, Math.min(1, k / full), s.kind === 'goldvein' ? '#ffcf3a' : '#ffe9a8') }); }
+  for (const s of kk.map.sites) { const k = kk.progress[s.id]; if (s.row !== kk.row || !(k > 0) || s.kind !== 'goldvein') continue; const full = MINE_TIME; const y = groundYForDepth(s.z) - 70; out.push({ y: groundYForDepth(s.z) + .5, render: (ctx) => ring(ctx, s.x, y, Math.min(1, k / full), s.kind === 'goldvein' ? '#ffcf3a' : '#ffe9a8') }); }
   return out;
 }
 // The round panel (screen space, under the minimap): level, gold, materials, stones, deck slots and the sealed runes.
