@@ -2,6 +2,11 @@
 
 Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
+## 19. Nov 2026 – Kronenkrieg: 2 gegen 2
+
+- Auf der Kronenkrieg-Karte im Hub: JEDER GEGEN JEDEN oder 2 GEGEN 2. Im 2 gegen 2 ist der Rivale, dessen Hauptburg im selben Streifen liegt, dein Verbündeter (gleiches Team: eure Einheiten kämpfen nie gegeneinander), die beiden anderen sind ein Team.
+- Verbündete erobern keine Burgen voneinander, belagern nur gegnerische Hauptburgen, sehen sich immer auf der Übersichtskarte; dein Verbündeter wird nie zum gegnerischen Champion. Ihr gewinnt gemeinsam, wenn das andere Team keine Krone mehr hat.
+
 ## 19. Nov 2026 – Kronenkrieg, Meilenstein 6: Krönung
 
 - Auf Stufe 8 fragt das Spiel: Klasse (Bankai) oder eines der drei Elemente, die du in der Runde am meisten gezeichnet hast (dessen Arcane State). Auf Stufe 10 noch einmal: Klasse, Element oder Primal (Fokus-Transformation). „Später wählen“ ist möglich.

@@ -499,9 +499,9 @@ export class UIManager {
     const typeCards = document.querySelector?.('.hub-game-types-cards') ?? null;
     if (typeCards && typeof typeCards.appendChild === 'function' && !document.getElementById('hub-kronenkrieg-btn')) {
       const k = document.createElement('button'); k.id = 'hub-kronenkrieg-btn'; k.type = 'button'; k.className = 'hub-game-type-card hub-kk-card'; k.setAttribute('aria-label', 'Kronenkrieg');
-      k.innerHTML = '<b>♛ KRONENKRIEG</b><small>Krieg &amp; Survival · 4 Kronen · Bots</small>';
+      k.innerHTML = '<b>♛ KRONENKRIEG</b><small>Krieg &amp; Survival · 4 Kronen · Bots</small><span style="display:flex;gap:.4em"><i data-kkmode="ffa" style="font-style:normal;padding:.2em .5em;border:1px solid #f0d890">JEDER GEGEN JEDEN</i><i data-kkmode="2v2" style="font-style:normal;padding:.2em .5em;border:1px solid #f0d890">2 GEGEN 2</i></span>';
       k.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.3em;font-family:Cinzel,serif;color:#fff3c8;background:linear-gradient(160deg,#2a1838,#11202e);border:2px solid #f0d890;min-height:64px;cursor:pointer;font-size:clamp(12px,1.5vw,18px)';
-      k.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); const game = window.gameWorld; if (!game) return; game.setMatchMode('kronenkrieg'); game.startMatch(); });
+      k.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); const game = window.gameWorld; if (!game) return; game.kkTeamMode = e.target?.closest?.('[data-kkmode]')?.getAttribute?.('data-kkmode') ?? 'ffa'; game.setMatchMode('kronenkrieg'); game.startMatch(); });
       typeCards.appendChild(k);
     }
     // The base (base.js): a button on the hub's first page walks into the headquarters.

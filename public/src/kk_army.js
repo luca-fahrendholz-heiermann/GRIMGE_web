@@ -25,7 +25,10 @@ const CLASS_LABEL = Object.fromEntries(CASTLE_CLASSES.map((c) => [c.cls, c.label
 const ELEMENT_LABEL = Object.freeze({ ignis: 'BRAND', ventus: 'STURM', fulgur: 'BLITZ', terra: 'STEIN', aqua: 'FLUT', frost: 'FROST', bestia: 'WILD', construct: 'RUNEN', void: 'LEERE', lux: 'LICHT', natura: 'RANKEN', ward: 'SCHILD', umbra: 'SCHATTEN' });
 export const unitName = (u) => `${u.element ? ELEMENT_LABEL[u.element] + '-' : ''}${CLASS_LABEL[u.cls] ?? u.cls}${u.tier > 1 ? ' ' + '★'.repeat(u.tier - 1) : ''}`;
 export const TRAIN = Object.freeze({ gold: 20, time: 6, spinGold: 10, mergeCount: 3, maxTier: 3, garrisonCap: 12, squadBase: 6 });
-export const teamOfSeat = (seat) => (seat === 0 ? 'blue' : 'seat' + seat);
+// The team of a seat: the player and his ally are 'blue'; in 2v2 both rivals are 'rivals', otherwise every rival alone.
+export const teamOfSeat = (seat, kk = null) => (seat === 0 || kk?.allies?.includes(seat) ? 'blue' : kk?.teamMode === '2v2' ? 'rivals' : 'seat' + seat);
+export const sameTeam = (kk, a, b) => a != null && b != null && teamOfSeat(a, kk) === teamOfSeat(b, kk);
+const mine = (u) => u.seat === 0; // the player's own fighters (an ally's share the team, not the owner)
 const BONUS_LABEL = Object.freeze({ veteran: 'VETERAN', double: 'DOPPELELEMENT', elite: 'ELITE' });
 
 let attackingElement = null; // the element of the unit striking right now (main castle resistances, kk_war.js)
@@ -75,7 +78,7 @@ export function initArmy(game) {
   return kk;
 }
 export function addRecord(kk, rec) { const r = { id: kk.nextUnit++, hp: null, bonus: [], seat: rec.team === 'blue' ? 0 : rec.seat, ...rec }; kk.units.push(r); return r; }
-const squadRecords = (kk) => kk.units.filter((u) => u.role === 'squad' && u.team === 'blue');
+const squadRecords = (kk) => kk.units.filter((u) => u.role === 'squad' && mine(u));
 export const squadCap = (kk) => TRAIN.squadBase + squadBonus(kk.level ?? 1) + kk.map.sites.filter((s) => s.kind === 'castle' && s.owner === 0).length;
 const garrisonOf = (kk, siteId) => kk.units.filter((u) => u.role === 'garrison' && u.siteId === siteId);
 const hostileGuards = (kk, site) => kk.units.filter((u) => u.siteId === site.id && u.role === 'guard' && u.team !== 'blue');
@@ -90,7 +93,7 @@ function anchorFor(kk, rec) {
 }
 function spawnLive(game, rec) {
   const kk = kkState(game); const u = rec.creature && kk.creatureClass ? new kk.creatureClass(rec) : new KKUnit(rec); rec.live = u; /* creatures: kk_creatures.js */ u.x = rec.x; u.z = rec.z;
-  u.followLeader = rec.role === 'squad' ? (rec.team === 'blue' ? game.player : (kk.botLeader?.(rec.team) ?? anchorFor(kk, rec))) : anchorFor(kk, rec);
+  u.followLeader = rec.role === 'squad' ? (mine(rec) ? game.player : (kk.botLeader?.(rec.seat) ?? anchorFor(kk, rec))) : anchorFor(kk, rec);
   game.battlefield.placeOnSurface?.(u); game.minions.push(u); return u;
 }
 function syncLive(game) {
@@ -100,7 +103,7 @@ function syncLive(game) {
     if (u) {
       if (u.isDead || !game.minions.includes(u)) { onUnitDeath(game, rec); continue; }
       rec.x = u.x; rec.z = u.z; rec.hp = u.hp;
-      if (rec.role === 'squad' && rec.team === 'blue') rec.row = kk.row;
+      if (rec.role === 'squad' && mine(rec)) rec.row = kk.row;
       if (rec.row !== kk.row || (rec.role !== 'squad' && Math.abs(rec.x - game.player.x) > 3000)) { despawn(game, rec); }
     } else if (rec.row === kk.row && rec.role !== 'prisoner' && Math.abs(rec.x - game.player.x) < 2600) spawnLive(game, rec); /* far parts of the band stay records too */
   }
@@ -110,7 +113,7 @@ function onUnitDeath(game, rec) {
   const kk = kkState(game); kk.units.splice(kk.units.indexOf(rec), 1); rec.live = null;
   if (rec.creature && rec.team !== 'blue') { kk.onCreatureDeath?.(rec); return; }
   if (rec.team !== 'blue') { const g = 6 + Math.floor(Math.random() * 7); kk.gold += g; gainXp(game, XP.kill); combat.spawnDamageText?.(rec.x, groundYForDepth(rec.z) - 60, `+${g}◉`, { color: '#ffcf3a' }); }
-  if (rec.role === 'garrison' && rec.team === 'blue') { kk.alerts[rec.siteId] = 4; }
+  if (rec.role === 'garrison' && mine(rec)) { kk.alerts[rec.siteId] = 4; }
 }
 // The squad crosses into the next band with the player (kk_world switch hook).
 function onBandSwitch(game) {
@@ -149,7 +152,7 @@ function updateSites(game, dt) {
   for (const s of kk.map.sites) {
     if (s.row !== kk.row) continue;
     const close = Math.abs(P.x - s.x) < 120 && Math.abs(P.z - s.z) < .2;
-    if (s.kind === 'castle' && s.owner !== 0) {
+    if (s.kind === 'castle' && s.owner !== 0 && !sameTeam(kk, s.owner, 0)) { /* an ally's castle is not taken */
       const guards = hostileGuards(kk, s).length + kk.units.filter((u) => u.role === 'garrison' && u.siteId === s.id && u.team !== 'blue').length;
       kk.progress[s.id] = close && !guards ? (kk.progress[s.id] ?? 0) + dt : 0;
       if (close && guards && Math.floor(kk.time * 2) % 6 === 0) s.blockedHint = true;
@@ -207,7 +210,7 @@ function updateQueues(game, dt) {
     if (site.row === kk.row) game.showAnnouncement?.(`AUSGEBILDET: ${unitName({ cls: job.cls, element: job.element, tier: 1 })}${job.bonus.length ? ' · ' + job.bonus.map((b) => BONUS_LABEL[b]).join(' + ') : ''}`, 1.4);
   }
   // garrison counts for the map (and a short alert when one shrinks)
-  for (const s of [...kk.map.sites, ...kk.map.hqs]) { if (s.kind === 'castle' && s.owner !== 0) continue; s.garrison = garrisonOf(kk, s.id).filter((u) => u.team === 'blue').length; }
+  for (const s of [...kk.map.sites, ...kk.map.hqs]) { if (s.kind === 'castle' && s.owner !== 0) continue; s.garrison = garrisonOf(kk, s.id).filter((u) => mine(u) || u.team === 'blue').length; }
   for (const k of Object.keys(kk.alerts)) { kk.alerts[k] -= dt; if (kk.alerts[k] <= 0) delete kk.alerts[k]; }
 }
 const typeKey = (u) => `${u.cls}|${u.element ?? ''}|${u.tier}`;
@@ -219,13 +222,13 @@ export function station(game, site, key) {
   rec.role = 'garrison'; rec.siteId = site.id; if (rec.live) rec.live.followLeader = anchorFor(kk, rec); return true;
 }
 export function takeAlong(game, site, key) {
-  const kk = kkState(game); const rec = garrisonOf(kk, site.id).find((u) => typeKey(u) === key && u.team === 'blue'); if (!rec) return false;
+  const kk = kkState(game); const rec = garrisonOf(kk, site.id).find((u) => typeKey(u) === key && mine(u)); if (!rec) return false;
   if (squadRecords(kk).length >= squadCap(kk)) { game.showAnnouncement?.(`TRUPP VOLL (${squadCap(kk)})`); return false; }
   rec.role = 'squad'; rec.siteId = null; if (rec.live) rec.live.followLeader = game.player; return true;
 }
 // Three equal units (garrison of this castle) merge into one of the next tier; a reel bonus of any of them is kept.
 export function mergeUnits(game, site, key) {
-  const kk = kkState(game); const same = garrisonOf(kk, site.id).filter((u) => typeKey(u) === key && u.team === 'blue');
+  const kk = kkState(game); const same = garrisonOf(kk, site.id).filter((u) => typeKey(u) === key && mine(u));
   if (same.length < TRAIN.mergeCount || same[0].tier >= TRAIN.maxTier) return false;
   const used = same.slice(0, TRAIN.mergeCount); const bonus = [...new Set(used.flatMap((u) => u.bonus ?? []))].slice(0, 2);
   for (const u of used) { despawn(game, u); kk.units.splice(kk.units.indexOf(u), 1); }
@@ -259,7 +262,7 @@ function onPanelAction(game, act, arg) {
 }
 function refreshPanel(game, site) {
   const kk = kkState(game); const p = ensurePanel(game); if (!p) return;
-  const isHQ = site.kind === 'hq'; const garrison = groupTypes(garrisonOf(kk, site.id).filter((u) => u.team === 'blue')); const squad = groupTypes(squadRecords(kk));
+  const isHQ = site.kind === 'hq'; const garrison = groupTypes(garrisonOf(kk, site.id).filter((u) => mine(u))); const squad = groupTypes(squadRecords(kk));
   const btn = (act, arg, label, on = true) => `<button data-kk="${act}" data-arg="${arg ?? ''}" ${on ? '' : 'disabled'} style="margin:2px;padding:4px 7px;min-height:30px;font:inherit;color:#fff3c8;background:${on ? '#3a2a4e' : '#2a2430'};border:1px solid #c9a95a">${label}</button>`;
   let h = `<b style="color:#ffe9a8">${isHQ ? 'HAUPTBURG' : site.label + 'BURG'}</b>`;
   if (!isHQ) {

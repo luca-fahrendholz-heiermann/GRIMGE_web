@@ -560,6 +560,7 @@ Die Karte gehört zu Beginn **niemandem**. Neben den vier Spielern (Menschen ode
 - Drei Bot-Rivalen (abstrakt + als Champion im eigenen Streifen), Hauptburg-Stufen und Resistenzen, Belagerung, Grimmflut, Siegbedingung.
 - Kreaturen mit Beute, Rune BÄNDIGUNG, Eier mit Quellen und Brut-Walzen, Reittier aus dem Stall, mitwachsender Primal.
 - Krönung mit Prüfungen auf Stufe 8 und 10.
+- Jeder gegen jeden oder 2 gegen 2 (Verbündeter = der Rivale im eigenen Streifen).
 
 **Noch offen / vereinfacht:**
 - Grafik: Burgen, Gebäude und Orte sind gezeichnete Platzhalter; das Reittier aus dem Stall ist vorerst die vorhandene Reitbestie, kein Pferd.
@@ -567,5 +568,5 @@ Die Karte gehört zu Beginn **niemandem**. Neben den vier Spielern (Menschen ode
 - Gezähmte und geschlüpfte Kreaturen kämpfen mit, sind aber noch nicht reitbar (reiten: Primal und Stall-Reittier).
 - Element-, Klassen- und Primal-Transformation nutzen vorerst die vorhandene Fokus-Transformation; eigene Formen je Weg fehlen.
 - Bots greifen Ei-Träger und Prüfungen noch nicht gezielt an; nur ein Rivale gleichzeitig kämpft im eigenen Streifen als echter Gegner.
-- 2-gegen-2 und Online-PvP fehlen (Teams brauchen verbündetes Zielen, Online einen Server).
+- 2-gegen-2 mit einem Bot-Partner ist gebaut; Online-PvP fehlt (braucht einen Server und Netzcode).
 - Werte (Kosten, Stärken, Zeiten) sind Startwerte für den Playtest.

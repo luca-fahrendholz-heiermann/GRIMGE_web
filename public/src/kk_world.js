@@ -16,12 +16,15 @@ export const kkOn = (game) => game?.activeMode?.id === 'kronenkrieg' && !!game?.
 export const kkState = (game) => game?.modeState?.kk ?? null;
 const bandH = () => { const p = getGroundProjection(); return p.nearY - p.farY; };
 
-export function setupKronenkrieg(game, seed = null) {
+// Teams: 'ffa' (every one for himself) or '2v2' (the player and the rival whose main castle shares the player's band
+// against the other two). Allies share the team name, so the game treats them as friends everywhere.
+export function setupKronenkrieg(game, seed = null, teamMode = game.kkTeamMode ?? 'ffa') {
   setGroundProjection(KK_PROJECTION);
   const s = Number.isFinite(seed) ? seed : (Date.now() % 1e9);
   const map = generateKKMap(s);
   const hq = map.hqs.find((h) => h.seat === 0);
-  const kk = { map, seed: s, row: hq.row, pan: 0, switchHold: 0, reveal: new Set(), time: 0 };
+  const ally = teamMode === '2v2' ? map.hqs.find((h) => h.seat !== 0 && h.row === hq.row)?.seat ?? null : null;
+  const kk = { map, seed: s, row: hq.row, pan: 0, switchHold: 0, reveal: new Set(), time: 0, teamMode: ally != null ? '2v2' : 'ffa', allies: ally != null ? [0, ally] : [0] };
   game.modeState.kk = kk;
   Object.assign(game.battlefield.boundsOverride, { left: 60, right: map.width - 60, farZ: .03, nearZ: .97 });
   const P = game.player; P.x = hq.x + 190; P.z = .6; game.battlefield.placeOnSurface(P);
@@ -213,7 +216,7 @@ export function renderKKMinimap(ctx, game, viewW, opts = {}) {
     if (s.kind === 'castle' && s.owner != null && Number.isFinite(s.garrison)) { ctx.fillStyle = '#fff'; ctx.fillText(String(s.garrison), x0 + s.x * sx + 8, y0 + s.row * rowH + 8); }
   }
   for (const h of map.hqs) {
-    if (h.seat !== 0 && !isRevealed(kk, h.row, h.x)) continue;
+    if (!kk.allies.includes(h.seat) && !isRevealed(kk, h.row, h.x)) continue; /* allies always see each other's main castle */
     ctx.fillStyle = SEAT_COLORS[h.seat]; ctx.fillRect(x0 + h.x * sx - 4, y0 + h.row * rowH + 4, 8, rowH - 9);
     if (Number.isFinite(h.garrison)) { ctx.fillStyle = '#fff'; ctx.fillText(String(h.garrison), x0 + h.x * sx, y0 + h.row * rowH - 1); }
   }

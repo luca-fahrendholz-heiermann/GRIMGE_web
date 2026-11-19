@@ -69,7 +69,7 @@ export function tameAt(game, caster, x, z) {
   const c = game.minions.find((m) => m.isKKCreature && !m.isDead && m.team !== 'blue' && Math.abs(m.x - x) < 100 && Math.abs((m.z - z) * 150) < 50);
   if (!c) return false;
   if (c.hp > c.maxHp * .5) { game.showAnnouncement?.('ZU STARK — ERST UNTER HALBES LEBEN', 1.3); return true; }
-  if (kk.units.filter((u) => u.creature && u.tamed && u.team === 'blue').length >= TAME_LIMIT) { game.showAnnouncement?.('DU FÜHRST SCHON EINE GEZÄHMTE KREATUR', 1.3); return true; }
+  if (kk.units.filter((u) => u.creature && u.tamed && u.seat === 0).length >= TAME_LIMIT) { game.showAnnouncement?.('DU FÜHRST SCHON EINE GEZÄHMTE KREATUR', 1.3); return true; }
   const rec = c.rec; rec.team = 'blue'; rec.seat = 0; rec.tamed = true; rec.role = 'squad'; rec.siteId = null; c.team = 'blue'; c.followLeader = game.player; c.target = null;
   gainXp(game, XP.free * 2); game.showAnnouncement?.(`${CREATURE_NAME[rec.kind]} GEZÄHMT — SIE KÄMPFT FÜR DICH`, 2); combat.spawnShockwave?.(c.x, c.y - 40, 90, '#c98a4a'); audio.playRuneChime?.(980);
   return true;

@@ -10,7 +10,7 @@ import { CASTLE_CLASSES, kkDistance, biomeAt } from './kk_map.js';
 import { rollChest, levelForXp, lootTier, XP, heroKillXp } from './kk_progress.js';
 import { kkState, kkOn, SEAT_COLORS, SEAT_NAMES, elementColor } from './kk_world.js';
 import { gainXp, dropPile } from './kk_loot.js';
-import { addRecord, teamOfSeat, unitName } from './kk_army.js';
+import { addRecord, teamOfSeat, sameTeam } from './kk_army.js';
 
 export const HQ_TIERS = Object.freeze([
   null, { mat: 'wood', cost: 30, name: 'HOLZBURG' }, { mat: 'stone', cost: 40, name: 'STEINBURG' }, { mat: 'steel', cost: 30, name: 'STAHLBURG' }, { mat: 'obsidian', cost: 20, name: 'OBSIDIANBURG' }
@@ -27,19 +27,19 @@ export function initWar(game) {
   const kk = kkState(game);
   for (const hq of kk.map.hqs) { hq.level = 0; hq.hp = hqMaxHp(hq); hq.res = {}; hq.fallen = false; hq.siegeT = 0; }
   kk.bots = kk.map.hqs.filter((h) => h.seat !== 0).map((h, i) => ({
-    seat: h.seat, team: teamOfSeat(h.seat), heroKey: BOT_HEROES[i % BOT_HEROES.length], row: h.row, x: h.x + 160, z: .55,
+    seat: h.seat, team: teamOfSeat(h.seat, kk), ally: kk.allies.includes(h.seat), heroKey: BOT_HEROES[i % BOT_HEROES.length], row: h.row, x: h.x + 160, z: .55,
     level: 1, xp: 0, gold: 0, alive: true, respawnT: 0, hpFrac: 1, task: null, think: i * .3, travel: 0, stones: {}, weapons: {}, kills: 0
   }));
   kk.over = false; kk.towerT = 0;
   // hooks for kk_army.js (it may not import this module: kk_war imports kk_army)
   kk.resistFn = (rec, el) => resistMul(kk, rec, el);
   kk.hqHooks = { extras: () => hqPanelExtras(game), upgrade: () => upgradeHQ(game), resist: (el) => addResistance(game, el) };
-  kk.botLeader = (team) => { const bot = kk.bots.find((b) => b.team === team); if (!bot) return null; if (kk.championBot === bot) return game.enemyChampion; return bot.anchor ?? (bot.anchor = { isBotAnchor: true, isAlive: true, x: bot.x, z: bot.z }); };
+  kk.botLeader = (seat) => { const bot = kk.bots.find((b) => b.seat === seat); if (!bot) return null; if (kk.championBot === bot) return game.enemyChampion; return bot.anchor ?? (bot.anchor = { isBotAnchor: true, isAlive: true, x: bot.x, z: bot.z }); };
   game.enemyChampion.lifeState = 'Dead'; game.enemyChampion.respawnTimer = Infinity; kk.championBot = null;
   return kk;
 }
 const hqOfSeat = (kk, seat) => kk.map.hqs.find((h) => h.seat === seat);
-const botSquad = (kk, bot) => kk.units.filter((u) => u.role === 'squad' && u.team === bot.team);
+const botSquad = (kk, bot) => kk.units.filter((u) => u.role === 'squad' && u.seat === bot.seat);
 const strength = (list) => list.reduce((s, u) => s + u.tier * (u.tier > 1 ? 1.4 : 1), 0);
 const siteById = (kk, id) => kk.map.sites.find((s) => s.id === id) ?? kk.map.hqs.find((h) => h.id === id);
 
@@ -74,9 +74,9 @@ function pickTask(kk, bot) {
   const owned = kk.map.sites.filter((s) => s.kind === 'castle' && s.owner === bot.seat);
   if (owned.length && bot.gold >= 25 && mine.length < 6) return { kind: 'train', id: owned.sort((a, b) => kkDistance(bot, a) - kkDistance(bot, b))[0].id };
   const guardStr = (s) => strength(kk.units.filter((u) => (u.siteId === s.id && u.role === 'guard' && u.team !== bot.team) || (u.siteId === s.id && u.role === 'garrison' && u.team !== bot.team)));
-  const castles = kk.map.sites.filter((s) => s.kind === 'castle' && s.owner !== bot.seat && guardStr(s) * 1.1 <= str + bot.level * .8).sort((a, b) => kkDistance(bot, a) - kkDistance(bot, b));
+  const castles = kk.map.sites.filter((s) => s.kind === 'castle' && s.owner !== bot.seat && !sameTeam(kk, s.owner, bot.seat) && guardStr(s) * 1.1 <= str + bot.level * .8).sort((a, b) => kkDistance(bot, a) - kkDistance(bot, b));
   if (castles.length) return { kind: 'capture', id: castles[0].id };
-  if (kk.time > 720 && str >= 8) { const foes = kk.map.hqs.filter((h) => h.seat !== bot.seat && !h.fallen).sort((a, b) => (a.garrison ?? 0) - (b.garrison ?? 0)); if (foes.length) return { kind: 'siege', id: foes[0].id }; }
+  if (kk.time > 720 && str >= 8) { const foes = kk.map.hqs.filter((h) => !sameTeam(kk, h.seat, bot.seat) && !h.fallen).sort((a, b) => (a.garrison ?? 0) - (b.garrison ?? 0)); if (foes.length) return { kind: 'siege', id: foes[0].id }; }
   const loot = kk.map.sites.filter((s) => (s.kind === 'building' && !s.looted) || (s.kind === 'goldvein' && !(s.cd > 0)) || (s.kind === 'prison' && !s.freed)).sort((a, b) => kkDistance(bot, a) - kkDistance(bot, b));
   if (loot.length) return { kind: 'loot', id: loot[0].id };
   return { kind: 'idle', id: hq.id };
@@ -117,9 +117,10 @@ function actBot(game, bot, dt) {
     const was = site.owner; site.owner = bot.seat; botGain(kk, bot, XP.capture);
     for (const u of botSquad(kk, bot).slice(0, 2)) { u.role = 'garrison'; u.siteId = site.id; }
     if (was === 0) game.showAnnouncement?.(`${SEAT_NAMES[bot.seat]} HAT DEINE ${site.label}BURG EROBERT!`, 2.2);
+    else if (bot.ally) game.showAnnouncement?.(`DEIN VERBÜNDETER ${SEAT_NAMES[bot.seat]} EROBERT DIE ${site.label}BURG`, 1.6);
     bot.task = null;
   } else if (t.kind === 'siege' || t.kind === 'defend') {
-    if (site.seat === bot.seat) { bot.task = null; return; }
+    if (site.seat === bot.seat || sameTeam(kk, site.seat, bot.seat)) { bot.task = null; return; }
     const defenders = kk.units.filter((u) => u.role === 'garrison' && u.siteId === site.id && u.team !== bot.team);
     if (!inBand && !abstractBattle(kk, bot, defenders, dt)) { site.siegeT = 3; return; }
     if (defenders.length) { site.siegeT = 3; return; }
@@ -158,7 +159,7 @@ function updateChampion(game, dt) {
     if (cb.row !== kk.row) { kk.championBot = null; E.lifeState = 'Dead'; E.respawnTimer = Infinity; }
     return;
   }
-  const bot = kk.bots.filter((b) => b.alive && b.row === kk.row && b.travel <= 0).sort((a, b) => Math.abs(a.x - P.x) - Math.abs(b.x - P.x))[0];
+  const bot = kk.bots.filter((b) => b.alive && !b.ally && b.row === kk.row && b.travel <= 0) /* an ally never becomes the enemy champion */.sort((a, b) => Math.abs(a.x - P.x) - Math.abs(b.x - P.x))[0];
   if (!bot || Math.abs(bot.x - P.x) > 1100) return;
   kk.championBot = bot; E.team = bot.team; E.heroKey = bot.heroKey; E.maxHp = 600 + bot.level * 60; E.hp = Math.max(1, E.maxHp * bot.hpFrac);
   E.x = bot.x; E.z = bot.z; E.lifeState = 'Alive'; E.respawnTimer = Infinity; E.isDead = false; E.state = 'idle'; game.battlefield.placeOnSurface?.(E);
@@ -176,7 +177,7 @@ function updateSieges(game, dt) {
   const kk = kkState(game);
   for (const hq of kk.map.hqs) {
     hq.siegeT = Math.max(0, (hq.siegeT ?? 0) - dt); if (hq.fallen || hq.row !== kk.row) continue;
-    const myTeam = teamOfSeat(hq.seat);
+    const myTeam = teamOfSeat(hq.seat, kk);
     const attackers = game.minions.filter((m) => m.isKKUnit && !m.isDead && m.team !== myTeam && Math.abs(m.x - hq.x) < 220);
     const defenders = game.minions.filter((m) => m.isKKUnit && !m.isDead && m.team === myTeam && m.rec?.role === 'garrison' && m.rec.siteId === hq.id);
     if (attackers.length) hq.siegeT = 3;
@@ -205,12 +206,12 @@ function sideAlive(game, seat) {
 }
 function checkEnd(game) {
   const kk = kkState(game); if (kk.over) return;
-  const alive = [0, 1, 2, 3].filter((s) => sideAlive(game, s));
-  const armies = [0, 1, 2, 3].map((s) => kk.units.filter((u) => u.team === teamOfSeat(s)).length + (sideAlive(game, s) ? 1 : 0));
+  const alive = [0, 1, 2, 3].filter((s) => sideAlive(game, s)); const teams = [...new Set(alive.map((s) => teamOfSeat(s, kk)))]; const mineTeam = teamOfSeat(0, kk);
+  const armyOf = (team) => kk.units.filter((u) => u.team === team).length + alive.filter((s) => teamOfSeat(s, kk) === team).length;
   let winner = null;
-  if (!alive.includes(0)) winner = -1;
-  else if (alive.length === 1) winner = 0;
-  else if (kk.time >= FLOOD.full) winner = armies.indexOf(Math.max(...armies)) === 0 ? 0 : -1;
+  if (!teams.includes(mineTeam)) winner = -1;
+  else if (teams.length === 1) winner = 0;
+  else if (kk.time >= FLOOD.full) { const all = [...new Set([0, 1, 2, 3].map((s) => teamOfSeat(s, kk)))]; const best = all.sort((a, b) => armyOf(b) - armyOf(a))[0]; winner = best === mineTeam ? 0 : -1; }
   if (winner === null) return;
   kk.over = true;
   game.finishMode?.(winner === 0 ? 'blue' : 'red', winner === 0 ? 'SIEG — DEINE KRONE STEHT ALS LETZTE' : 'NIEDERLAGE — DEINE KRONE IST GEFALLEN');
@@ -241,7 +242,7 @@ export function renderFlood(ctx, game, x0, x1, top, bottom) {
 // Bots on the minimap (only where the map is revealed) and the flood edges.
 export function warMinimapDots(game) {
   const kk = kkState(game); if (!kk?.bots) return [];
-  return kk.bots.filter((b) => b.alive && b !== kk.championBot && kk.reveal.has(b.row + ':' + Math.floor(b.x / 240))).map((b) => ({ row: b.row, x: b.x, z: .5, color: SEAT_COLORS[b.seat] }));
+  return kk.bots.filter((b) => b.alive && b !== kk.championBot && (b.ally || kk.reveal.has(b.row + ':' + Math.floor(b.x / 240)))).map((b) => ({ row: b.row, x: b.x, z: .5, color: SEAT_COLORS[b.seat] }));
 }
 export function hqPanelExtras(game) {
   const kk = kkState(game); const hq = hqOfSeat(kk, 0); const next = HQ_TIERS[(hq.level ?? 0) + 1];
