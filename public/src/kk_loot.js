@@ -83,7 +83,7 @@ export function dropPile(game, x, z, contents) {
 function takePile(game, item) {
   const kk = kkState(game);
   addBundle(game, { gold: item.gold, materials: item.materials, stones: item.stones, weapons: item.weapons, potions: item.potions }, { quiet: true });
-  const left = []; for (const r of item.runes ?? []) { const got = giveRune(game, r); if (got === 'full' || got === 'double') left.push(r); }
+  const left = []; for (const r of item.runes ?? []) { const got = giveRune(game, r); if (got === 'full') left.push(r); else if (got === 'double') kk.gold += 15; /* a rune one already holds turns into gold */ }
   if (left.length) { item.runes = left; item.gold = 0; item.materials = {}; item.stones = {}; item.weapons = []; item.potions = {}; say(game, 'DECK VOLL — RUNEN BLEIBEN LIEGEN'); return false; }
   say(game, 'BEUTE AUFGEHOBEN', 1.2); audio.playRuneChime?.(700); return true;
 }
