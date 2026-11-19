@@ -77,7 +77,7 @@ Jede Runde soll so eine Geschichte erzeugen. Daran wird jede Regel gemessen.
 
 | Objekt | Was es ist | Warum man hingeht |
 |---|---|---|
-| **Hauptburg** (4) | Heimat, Rückkehrpunkt, Lager | Respawn, Truppen stationieren, sie darf nicht fallen |
+| **Hauptburg** (4) | Heimat, Rückkehrpunkt, Lager | Respawn, Truppen stationieren, in 4 Stufen aufrüsten (§6.5), sie darf nicht fallen |
 | **Zwischenburg** (≈ 12–16) | bildet **eine** Kämpferklasse aus | Armee bauen, Gebiet halten |
 | **Gebäude** (viele) | Türme, Höfe, Krypten, Ruinen mit **mehreren Ebenen** | Truhen: Tränke, Runen, Waffen, Steine |
 | **Gefangenenlager** | befreibare Kämpfer, von kleinen Armeen bewacht | kostenlose Truppen, sofort im Trupp |
@@ -109,9 +109,11 @@ Jede Runde soll so eine Geschichte erzeugen. Daran wird jede Regel gemessen.
 |---|---|---|
 | **Waffen** (die vorhandenen Waffen-Kits: Bogen, Schwert & Schild, Speer, Zauberstab, Klauen …) | Truhen, Gebäude, besiegte Armeen, Waffenkisten | bestimmen die **Klasse** einer Einheit |
 | **Elementsteine** (13, je Element-Rune einer: Ignis, Ventus, Fulgur, Terra, Aqua, Glacies, Bestia, Konstrukt, Void, Lux, Natura, Schutz, Umbra) | Biome, Quellen, Kreaturen, Truhen | bestimmen das **Element** einer Einheit, öffnen Eier |
-| **Kronsilber** (allgemeines Material) | überall ein wenig, Burgen erzeugen es langsam | bezahlt Ausbildung, Ausbau und Stationierung |
+| **Baustoffe: Holz, Stein, Stahl, Obsidian** (von häufig nach selten) | Holz: Wälder, Höfe · Stein: Felsland, Ruinen · Stahl: Schmieden in Gebäuden, besiegte Armeen · Obsidian: Vulkanfeld, epische Kreaturen, Mitte der Karte | Ausbildung (einfache Einheiten Holz / Stein, starke Stahl), Burg-Ausbau, **Aufrüstung der Hauptburg** (§6.5) |
 
-- Waffen und Steine trägt der Held im Rucksack mit **begrenzten Plätzen**. Die Hauptburg ist das sichere Lager.
+- Ein allgemeines Geld gibt es nicht: die vier Baustoffe sind die Währung. Je wertvoller der Baustoff, desto weiter
+  muss man für ihn ziehen — Obsidian lockt in die gefährliche Mitte.
+- Waffen, Steine und Baustoffe trägt der Held im Rucksack mit **begrenzten Plätzen**. Die Hauptburg ist das sichere Lager.
   Wer mit vollem Rucksack stirbt, verliert viel. Das schafft eine Entscheidung: zurück zum Lager oder weiter
   ziehen.
 - Elementsteine kommen in drei Stufen (Splitter → Stein → Kern). An einer passenden Quelle lassen sich
@@ -150,7 +152,7 @@ Eine Einheit hat **Klasse (aus der Waffe)** und **Element (aus dem Stein)**. Bei
   Schützen aus. Welches **Element** sie bekommen, entscheidet der Stein, den der Besitzer investiert.
 - **Erobern:** Verteidiger besiegen, danach den Burgstein in der Mitte halten (Kanalisieren mit Fortschrittsring,
   ein Treffer bricht ab). Wer eine Burg hält, sieht ihre Umgebung.
-- **Ausbilden:** Waffe + Stein + Kronsilber in die Warteschlange legen, die Einheiten entstehen nach Zeit. Ausbau
+- **Ausbilden:** Waffe + Elementstein + Baustoffe in die Warteschlange legen, die Einheiten entstehen nach Zeit. Ausbau
   in drei Stufen: mehr gleichzeitige Ausbildung, stärkere Einheiten, Mauern.
 - **Verlieren:** Andere Spieler können sie wegnehmen. Stationierte Truppen verteidigen sie. Die laufende
   Warteschlange geht an den neuen Besitzer, das ist der Anreiz für Überfälle.
@@ -169,6 +171,27 @@ Eine Einheit hat **Klasse (aus der Waffe)** und **Element (aus dem Stein)**. Bei
 - **Karte:** An jeder eigenen Burg steht ein Pfeil mit der **Gesamtzahl** der stationierten Kämpfer, ohne ihre Art.
   Sinkt die Zahl, blinkt der Pfeil: Die Burg wird angegriffen. Fremde Burgen zeigen ihre Zahl nur, solange man sie
   sieht.
+
+### 6.5 Die Hauptburg aufrüsten
+Die Hauptburg wächst mit dem Spieler. Ausgebaut wird sie in **vier Stufen**, jede mit ihrem eigenen Baustoff:
+
+| Stufe | Baustoff | Was sich ändert (Vorschlag) |
+|---|---|---|
+| 1 · Holzburg | Holz | Palisade, mehr Lagerplätze, mehr Stationierungsplätze |
+| 2 · Steinburg | Stein | Steinmauern mit mehr Leben, ein Wachturm schießt auf Angreifer, kürzere Rückkehrzeit |
+| 3 · Stahlburg | Stahl | Stahltore, zwei Türme, die Kommandostufe (Truppgröße) steigt |
+| 4 · Obsidianburg | Obsidian | Obsidianmauern, die Burg hält deutlich länger der Grimmflut stand (sie schützt ihre Umgebung als letzter sicherer Ort) |
+
+- Jede Stufe braucht eine **bestimmte Menge** ihres Baustoffs, und die Stufen gehen nur der Reihe nach. Man sieht
+  die Burg optisch wachsen: Holz → Stein → Stahl → Obsidian. Auch Gegner erkennen auf einen Blick, wie stark sie ist.
+- **Element-Resistenzen:** In die Burg lassen sich zusätzlich **Elementsteine jedes Elements** einbauen. Jedes
+  eingebaute Element macht Mauern, Türme und stationierte Truppen **resistenter gegen dieses Element** (z. B. Aqua
+  gegen Wasserzauber und wasserbasierte Einheiten). Pro Burgstufe gibt es eine weitere Resistenzstufe je Element,
+  und jede kostet **mehr Steine** als die vorige (Vorschlag: 3 / 6 / 10 / 15). Wer weiß, dass sein Nachbar
+  Frostschützen baut, mauert Glacies ein.
+- Die eingebauten Elemente leuchten in den Mauern. Das ist schön und zugleich Information für den Angreifer.
+- Zwischenburgen bekommen eine **vereinfachte** Version: zwei Stufen (Holz, Stein) und höchstens ein
+  Resistenz-Element, damit die Hauptburg das Herzstück bleibt.
 
 ---
 
@@ -189,7 +212,7 @@ Eine Einheit hat **Klasse (aus der Waffe)** und **Element (aus dem Stein)**. Bei
 - Große Gegner mit eigenem Revier (Feuerdrache im Vulkanfeld, Frostwyrm am Gletscher, Donnerhirsch in der
   Gewitterheide …). Sie wandern, greifen Armeen an, die durch ihr Revier ziehen, und erwachen ab der zweiten Phase.
 - **Besiegt** lassen sie **eines** fallen:
-  - gute Ressourcen (viele Steine, Kronsilber) **oder**
+  - gute Ressourcen (viele Elementsteine, Stahl und Obsidian) **oder**
   - eine **seltene Rune** **oder**
   - als **einzigen** Drop ihr **Ei** (§9).
 - **Zähmen statt töten:** Mit der neuen Runen-Kombination **Bändigung (Bestia + Bestia)** wirkt man auf eine
@@ -225,7 +248,7 @@ Der Kern-Moment des Modus. Er soll **entdeckt** werden, nicht erklärt.
 - **Träger:** wer das Ei trägt, langsam und verwundbar.
 - **Geleit:** Mitspieler (im 2-gegen-2) oder der eigene Trupp schützen den Träger. **In jeder-gegen-jeden** kann ein
   anderer Spieler einen **Geleitpakt** anbieten. Nimmt der Träger an, sind beide bis zum Schlüpfen Verbündete, und
-  das Geleit erhält einen Anteil der Beute (Steine und Kronsilber, plus eine Rune des Schlupfs).
+  das Geleit erhält einen Anteil der Beute (Elementsteine und Baustoffe, plus eine Rune des Schlupfs).
 - **Plünderer:** jeder, der das Ei will. Zusätzlich jagen **wilde Banditen** (neutrale Gegner) Ei-Träger. So ist
   jeder Weg gefährlich, auch ohne andere Spieler in der Nähe.
 - Das erzeugt die Spannung eines Warentransports: große Beute, langer Weg, und alle wissen, wo du bist.
@@ -305,7 +328,7 @@ Damit jede Runde ein Ende findet und nicht in Verstecken versandet:
 2. **Beute:** Gebäude mit Ebenen und Truhen, Tränke, Rundendeck und Rucksack, Tod mit Beutehaufen. *Ziel: der
    eigene Aufbau beim Spielen.*
 3. **Armee:** Gefangenenlager, Trupp-Befehle, Zwischenburgen erobern, Ausbildung aus Waffe + Stein,
-   Stationieren mit Pfeilen. *Ziel: vom Helden zum Kommandanten.*
+   Stationieren mit Pfeilen, Hauptburg-Stufen und Element-Resistenzen. *Ziel: vom Helden zum Kommandanten.*
 4. **Hauptburgen und Sieg:** 4 faire Startplätze, Bots (zuerst eine Persönlichkeit), Grimmflut, Siegbedingung.
    *Ziel: eine komplette 20-Minuten-Runde gegen Bots.*
 5. **Kreaturen:** epische Kreaturen, Drops, die Rune Bändigung (auch für die anderen Modi), Eier, Quellen, Brut,
@@ -321,5 +344,6 @@ Damit jede Runde ein Ende findet und nicht in Verstecken versandet:
 | Wie groß ist die Karte? | Start mit ca. 4 × 4 Bildschirmbreiten pro Sektor (gesamt ≈ 8 × 8), im Playtest anpassen |
 | Wie viele Einheiten gleichzeitig? | Trupp anfangs 6, maximal 20; insgesamt ≈ 120 Einheiten auf der Karte (Leistung am Handy prüfen) |
 | Deckgröße der Runde? | 8 Karten, Fusion erlaubt; beim Tod fällt alles |
+| Wie viel kostet eine Burgstufe? | Stufe 1: 30 Holz · 2: 40 Stein · 3: 30 Stahl · 4: 20 Obsidian; so ist Stufe 4 in einer guten Runde um Minute 15–18 erreichbar |
 | Bändigung in Arena / Siege? | ja, teuer und nur auf Beschwörungen unter halbem Leben |
 | Name des Modus? | **Kronenkrieg** (vier Kronen = vier Hauptburgen); Alternativen: Reichsfall, Vier Thronen |
