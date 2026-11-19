@@ -152,6 +152,7 @@ Ketten-Gefühl — „ich sehe deine Rune und antworte“:
 | **Dungeon** (Roguelite) | Glück + Wissen | Rune 1 aus 3 wählen, Geheimrouten, Drops |
 | **Arena** (PvP) | Deck-Duell | Konter, Fallen, Ranked |
 | **Castle Siege** (PvP-Strategie) | Clash Royale | Kommandant auf der Burg: Beschwörung und Unterstützung stärker, Buff-Zonen auf der Lane, gezieltes Absetzen als Druck-Moment |
+| **Kronenkrieg** (Krieg / Survival, PvE + PvP, 4 Plätze oder 2 gegen 2) | Aufbau × Survival × Warenlauf | Start nur mit Klasse auf riesiger offener Karte, Gebäude plündern, Zwischenburgen erobern und aus Waffe + Elementstein Truppen ausbilden, Kreaturen zähmen, Eier zur passenden Quelle bringen, Grimmflut erzwingt die Endschlacht — Konzept: GRIMGE_KRONENKRIEG.md |
 
 - **Invasion** geht im Feldzug auf (Massenschlacht-Level, Endschlacht gegen die große Armee).
 - **Armee im Feldzug:** nach gewonnenen Gefechten Einheiten auswählen und rekrutieren; sie begleiten den Spieler
