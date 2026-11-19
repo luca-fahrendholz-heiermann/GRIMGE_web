@@ -2,6 +2,14 @@
 
 Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
+## 19. Nov 2026 – Kronenkrieg, Meilenstein 3: Armee
+
+- Einheiten aus Klasse und Element (8 Klassen der Zwischenburgen × 13 Elemente): eigene Werte je Klasse, ihre Treffer lösen die Statuseffekte ihres Elements aus; Wimpel in der Farbe der Seite, Edelstein fürs Element, Sterne für die Stufe.
+- Abtrünnige: Besatzungen in Zwischenburgen, Banditenlagern und bei Gefangenenlagern; Patrouillen ziehen aus den Lagern über die Straßen und werden mit der Zeit stärker. Besiegte Gegner geben Gold und Erfahrung.
+- Gefangene befreien (Wachen besiegen, Käfig berühren): sie folgen als Trupp. Der Trupp geht beim Streifenwechsel mit.
+- Zwischenburg erobern: Besatzung besiegen, 3 s in der Burg stehen. Burg-Menü am rechten Rand: Ausbilden aus Gold + Waffe der Burg + Elementstein, optional mit Walzen-Dreh (Bonus Veteran / Doppelelement / Elite, die letzte Zeichennote verschiebt die Chancen), Stationieren ▲ und Mitnehmen ▼, Verschmelzen von drei gleichen zu einer stärkeren Stufe. Die Übersichtskarte zeigt die Zahl der Stationierten an eigenen Burgen.
+- Nur Einheiten im aktuellen Streifen sind lebendig, der Rest läuft als Liste weiter (Leistung).
+
 ## 19. Nov 2026 – Schwert & Schild: Schwert vorne in der Hand (Rückmeldung des Nutzers)
 
 - Das Schwert zeigte nach hinten und lag hinter dem Körper. Jetzt hält die vordere Hand das Schwert, vor dem Körper gezeichnet und schräg nach vorn oben; der Schild sitzt am hinteren Arm hinter dem Körper und kommt beim Blocken und beim Schildstoß nach vorn. Gilt auch für Streitkolben & Schild. Im Browser in beiden Blickrichtungen und beim Blocken geprüft.

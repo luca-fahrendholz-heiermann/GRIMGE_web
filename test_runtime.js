@@ -5581,6 +5581,22 @@ game.running = false;
   P.respawn(game.battlefield); KL.updateLoot(game, 1 / 60); const home = kk.map.hqs.find((h) => h.seat === 0); const returned = kk.row === home.row && Math.abs(P.x - home.x) < 300;
   kk.row = pile.row; P.x = pile.x; P.z = pile.z; pile.lock = 0; KL.updateLoot(game, 1 / 60); const picked = !kk.items.includes(pile) && kk.gold === 50 && [...P.runeDeck, ...P.runeHand].some((c) => c.id === 'buff_B01');
   assert(searched && sealedCounts && fuseBlocked && unsealed && dropped && returned && picked, 'Kronenkrieg loot: searching a building gives gold and XP, an Arcane State found at level 1 is sealed but takes a deck slot, fusion waits for level 2, level 8 unseals it; dying drops gold, backpack and every rune as a pile, the hero returns at the main castle and can pick the pile up (' + [searched, sealedCounts, fuseBlocked, unsealed, dropped, returned, picked].join('/') + ')');
+  // army: renegade garrisons live in the band, capture a mid castle, train (frost stone + reel), garrison ▲ ▼, merge, prisoners, squad crosses bands
+  const KA = await import('./public/src/kk_army.js'); game.returnToHub(); game.setMatchMode('kronenkrieg'); game.startMatch(); const k2 = game.modeState.kk; const P2 = game.player;
+  KA.updateArmy(game, 1 / 60); const liveGuards = game.minions.filter((m) => m.isKKUnit && m.team === 'red').length; const inBand = k2.units.filter((u) => u.row === k2.row && u.team === 'red').length;
+  const castle = k2.map.sites.filter((x) => x.kind === 'castle').sort((a2, b2) => (a2.row - k2.row) ** 2 * 1e8 + Math.abs(a2.x - P2.x) - ((b2.row - k2.row) ** 2 * 1e8 + Math.abs(b2.x - P2.x)))[0];
+  k2.row = castle.row; for (const u of k2.units.filter((x) => x.siteId === castle.id)) { if (u.live) u.live.takeDamage(9999); } k2.units = k2.units.filter((x) => x.siteId !== castle.id); P2.x = castle.x; P2.z = castle.z;
+  for (let i = 0; i < 200 && castle.owner !== 0; i++) { game.minions = game.minions.filter((m) => !m.isDead); KA.updateArmy(game, 1 / 60); } const captured = castle.owner === 0;
+  k2.gold = 200; k2.inv.weapons[castle.weapon] = 4; k2.inv.stones.frost = 4; const tr = KA.trainUnit(game, castle, 'frost', { spin: true });
+  for (let i = 0; i < 400; i++) KA.updateArmy(game, 1 / 60); const gar = k2.units.filter((u) => u.role === 'garrison' && u.siteId === castle.id); const trained = tr.ok && !!tr.reels && gar.length === 1 && gar[0].element === 'frost' && castle.garrison === 1;
+  const key = KA.groupTypes(gar)[0].key; const took = KA.takeAlong(game, castle, key) && k2.units.some((u) => u.role === 'squad' && u.element === 'frost'); const back = KA.station(game, castle, key) && castle.garrison !== undefined;
+  for (let i = 0; i < 2; i++) KA.addRecord(k2, { team: 'blue', cls: castle.cls, element: 'frost', tier: 1, row: castle.row, x: castle.x, z: castle.z, role: 'garrison', siteId: castle.id });
+  const merged = KA.mergeUnits(game, castle, key) && k2.units.some((u) => u.siteId === castle.id && u.tier === 2 && u.element === 'frost');
+  const prison = k2.map.sites.find((x) => x.kind === 'prison'); k2.row = prison.row; k2.units = k2.units.filter((x) => x.siteId !== prison.id || x.team === 'blue'); P2.x = prison.x; P2.z = prison.z; const before = k2.units.filter((u) => u.role === 'squad').length;
+  KA.updateArmy(game, 1 / 60); const freed = prison.freed && k2.units.filter((u) => u.role === 'squad').length > before;
+  const reels = Array.from({ length: 300 }, (_, i) => KA.spinReels(KM.mulberry32(i + 1), { weapons: 4, stones: 4, grade: 'S' })); const reelsOk = reels.every((r) => r.grid.length === 9 && r.bonus.length <= 2) && reels.some((r) => r.bonus.length) && reels.some((r) => !r.bonus.length);
+  const dir2 = k2.row === 0 ? 1 : -1; KW.switchBand(game, dir2); KA.updateArmy(game, 1 / 60); const squadFollows = k2.units.filter((u) => u.role === 'squad').every((u) => u.row === k2.row);
+  assert(liveGuards > 0 && liveGuards === inBand && captured && trained && took && back && merged && freed && reelsOk && squadFollows, 'Kronenkrieg army: renegade garrisons are live only in the current band, a cleared mid castle is captured by standing in it, it trains a frost unit (reel spin included) into its garrison, units go along / stay (▲ ▼), three equal ones merge into tier 2, freed prisoners join the squad and the squad crosses bands with the player (' + [liveGuards, inBand, captured, trained, took, back, merged, freed, reelsOk, squadFollows].join('/') + ')');
   game.returnToHub();
 }
 {

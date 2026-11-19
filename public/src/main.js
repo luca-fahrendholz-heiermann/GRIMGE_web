@@ -23,7 +23,8 @@ import { environment, renderProp } from './environment.js';
 import { TRAINING_MAPS, getTrainingMap, zoneToWorld } from './training_maps.js';
 import { setupGallery, updateGallery, galleryActors, renderGalleryLabels } from './spell_gallery.js';
 import { setupKronenkrieg, updateKronenkrieg, renderKKGround, kkActors, renderKKMinimap, kkPanY } from './kk_world.js'; // Kronenkrieg: the banded open map
-import { initLoot, updateLoot, lootActors, renderLootHud, kkFuseAllowed, respawnDelay } from './kk_loot.js'; // Kronenkrieg: loot and the round level // the Training map where clones show every spell
+import { initLoot, updateLoot, lootActors, renderLootHud, kkFuseAllowed, respawnDelay } from './kk_loot.js'; // Kronenkrieg: loot and the round level
+import { initArmy, updateArmy, armyActors, closeKKPanel, recordGrade } from './kk_army.js'; // Kronenkrieg: armies, castles, garrisons // the Training map where clones show every spell
 import { loadFxSprites } from './fx_sprites.js';
 import { loadSpellSprites } from './spell_visuals.js';
 import { renderPixelated } from './abilities.js';
@@ -1184,6 +1185,7 @@ export class GameWorld {
         const bonusGrade = recognizer.gradeForConfidence(result.confidence);
         const grade = GRADES[Math.max(GRADES.indexOf(baseGrade), freeDraw ? GRADES.indexOf(bonusGrade) : -1)];
         const runeProgress = this.profile.awardRuneUse(added.id, grade);
+        if (this.activeMode?.id === 'kronenkrieg') recordGrade(this, grade); /* the last drawing grade shifts the reel odds (kk_army.js) */
         const prepared = { ...added, grade, quality: result.confidence, runeLevel: this.profile.runeLevel(added.id), manaCost: runeManaCost(added) };
         // A recognized rune only goes into a spell slot in every mode; it is
         // released later by tapping its slot (or E), never fired automatically.
@@ -1664,7 +1666,7 @@ export class GameWorld {
       return;
     }
     if (mode.id === 'kronenkrieg') {
-      initLoot(setupKronenkrieg(this));
+      initLoot(setupKronenkrieg(this)); initArmy(this);
       this.player.configureRuneDeck?.([]); /* the class only: runes are found in the round */
       this.enemyChampion.lifeState = 'Dead'; this.enemyChampion.respawnTimer = Infinity;
       return;
@@ -2124,7 +2126,7 @@ export class GameWorld {
   renderOffscreenArrows(ctx) {
     if ((FOLLOW_ZOOM[this.activeMode?.id] ?? 1) === 1 || !this.player) return;
     const camX = this.modeState?.dungeonCameraX ?? 0; const W = this.renderWidth; const H = this.renderHeight;
-    const foes = this.getHostileTargets(this.player.team).filter((t) => !t.isProp && !t.isStoneWall && !t.isDead && t.lifeState !== 'Dead')
+    const foes = this.getHostileTargets(this.player.team).filter((t) => !t.isProp && !t.isStoneWall && !t.isDead && t.lifeState !== 'Dead' && !(t.isKKUnit && this.activeMode?.id === 'kronenkrieg')) /* Kronenkrieg: the map shows armies; no arrow for every bandit */
       .map((t) => ({ t, d: Math.abs(t.x - this.player.x), s: this.zoomPoint({ x: t.x + (this.cameraOffsetX ?? 0) - camX, y: (t.y ?? 0) + (this.worldOffsetY ?? 0) - 40 }) }))
       .filter((o) => o.s.x < -8 || o.s.x > W + 8).sort((a, b) => a.d - b.d).slice(0, 5);
     ctx.save(); ctx.font = 'bold 12px monospace'; ctx.textAlign = 'center'; const used = { '-1': [], '1': [] };
@@ -2460,6 +2462,7 @@ export class GameWorld {
       this.updateCameraZoom(dt);
       updateKronenkrieg(this, dt);
       updateLoot(this, dt);
+      updateArmy(this, dt);
       return;
     }
     if (this.activeMode.id === 'gallery') {
@@ -2517,7 +2520,7 @@ export class GameWorld {
     for (const summon of spells.getSummons()) {
       if (summon.team !== myTeam) targets.push(summon);
     }
-    if (myTeam === 'red' && this.player.isAlive) targets.push(this.player);
+    if ((myTeam === 'red' || (this.activeMode?.id === 'kronenkrieg' && myTeam !== this.player.team)) && this.player.isAlive) targets.push(this.player);
     if (this.primal && myTeam !== this.primal.team && this.primal.isTargetable && (!this.siegeMatch || this.primal.onLane)) targets.push(this.primal);
     if (myTeam === 'blue' && this.enemyChampion.isAlive) targets.push(this.enemyChampion);
 
@@ -2554,7 +2557,7 @@ export class GameWorld {
     for (const summon of spells.getSummons()) {
       if (summon.team !== myTeam && summon.isMobileCombatant) targets.push(summon);
     }
-    if (myTeam === 'red' && this.player.isAlive && this.player.isMobileCombatant && !sheltered(this.player)) targets.push(this.player);
+    if ((myTeam === 'red' || (this.activeMode?.id === 'kronenkrieg' && myTeam !== this.player.team)) && this.player.isAlive && this.player.isMobileCombatant && !sheltered(this.player)) targets.push(this.player);
     if (this.primal && myTeam !== this.primal.team && this.primal.isTargetable && (!this.siegeMatch || this.primal.onLane)) targets.push(this.primal);
     if (myTeam === 'blue' && this.enemyChampion.isAlive && this.enemyChampion.isMobileCombatant && !sheltered(this.enemyChampion)) targets.push(this.enemyChampion);
     return targets;
@@ -3058,7 +3061,7 @@ export class GameWorld {
   }
 
   returnToHub(reason = 'menu') {
-    closeBasePrompt();
+    closeBasePrompt(); closeKKPanel();
     this.markMatchSession(false);
     try { const log = JSON.parse(globalThis.localStorage?.getItem?.('grimge-hub-log') ?? '[]'); log.push({ reason, mode: this.activeMode?.id, at: new Date().toISOString(), stack: String(new Error().stack).split(String.fromCharCode(10)).slice(2, 6).join(' < ').slice(0, 400) }); globalThis.localStorage?.setItem?.('grimge-hub-log', JSON.stringify(log.slice(-10))); } catch { /* optional */ }
     this.matchState = 'Menu';
@@ -3441,7 +3444,7 @@ export class GameWorld {
     if (this.primal?.isTargetable) actors.push(this.primal);
     if (this.activeMode?.id === 'base') actors.push(...baseActors(this)); /* stations and stands share the depth order */
     if (this.activeMode?.id === 'gallery') actors.push(...galleryActors(this)); /* the casting clones of the Spell Gallery */
-    if (this.activeMode?.id === 'kronenkrieg') actors.push(...kkActors(this), ...lootActors(this)); /* castles, buildings, camps and loot of the current band */
+    if (this.activeMode?.id === 'kronenkrieg') actors.push(...kkActors(this), ...lootActors(this), ...armyActors(this)); /* castles, buildings, camps and loot of the current band */
     // Spells with a ground position and summons share the painter's order
     // with the actors, so a spike behind the dummy is hidden by the dummy.
     actors.push(...spells.depthEntries());
