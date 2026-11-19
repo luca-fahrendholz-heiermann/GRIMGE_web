@@ -323,6 +323,44 @@ Die Hauptburg wächst mit dem Spieler. Ausgebaut wird sie in **vier Stufen**, je
 - Zwischenburgen bekommen eine **vereinfachte** Version: zwei Stufen (Holz, Stein) und höchstens ein
   Resistenz-Element, damit die Hauptburg das Herzstück bleibt.
 
+### 6.6 Glück mit Spielraum: Walzen-Ausbildung, Können-Glück, Verschmelzen
+Angeregt von einem Spiel, in dem man einen 3×3-Automaten dreht und die Chancen selbst beeinflusst (Nutzer, 19. Nov
+2026). Übernommen wird nur das Prinzip *Glück trifft Strategie*, nicht Optik, Namen oder Gegenstände. Die Regel
+bleibt: **Glück gibt Boni, nie die Grundlage. Die Krönung (§4c) hängt nie vom Glück ab.**
+
+**1. Walzen-Ausbildung in der Zwischenburg**
+- Die **normale Ausbildung bleibt sicher:** Gold + Waffe + Elementstein ergibt immer die Einheit.
+- Wer mehr Gold einsetzt, darf zusätzlich die **Runen-Walzen** drehen (3 × 3). Die Symbole stammen aus dem, was man
+  eingelegt hat: Waffensymbole aus den eingelegten Waffen, Elementsymbole aus den eingelegten Steinen. Mehr
+  Eis-Steine bedeuten mehr Eis-Symbole. **Man baut sich die Chancen selbst.**
+- **Drei gleiche in einer Reihe** geben der Einheit einen Bonus (Vorschlag):
+  - drei Waffen: **Veteran** (mehr Leben und Rüstung);
+  - drei Elemente: **doppeltes Element** (zweiter Effekt, z. B. Frost + Splitter);
+  - drei Runensymbole (selten): **Elite** (die Fähigkeit der Klasse wird stärker);
+  - Diagonale oder zwei Reihen: zwei Boni oder eine Einheit gratis.
+- Die **Wahrscheinlichkeit steht offen dabei** („Veteran: 34 %“), nichts ist versteckt.
+- Eine Niete kostet nur den Zusatzeinsatz, die Einheit gibt es trotzdem.
+
+**2. Können beeinflusst das Glück (GRIMGE-eigene Wendung)**
+- **Zeichennote zählt:** Vor dem Drehen zeichnet man eine Rune. Ihre Note (C–S) verschiebt die Chancen: Mit S
+  rutschen die Walzen eher auf die guten Symbole, mit C bleibt es reines Glück. Wer gut zeichnet, hat mehr Glück.
+- **Walzen-Truhen:** Manche Truhen in Gebäuden tragen drei Walzen. Jeder Treffer auf die Truhe stoppt eine Walze.
+  Wer im richtigen Moment schlägt, trifft die gute Reihe (bessere Beute), wer wild draufhaut, bekommt den
+  Normalinhalt.
+- Glück lässt sich so trainieren. Das Gefühl „ich hatte Glück, weil ich gut war“ ist der Kern.
+
+**3. Verschmelzen**
+- **Drei gleiche Einheiten** (gleiche Klasse und gleiches Element) verschmelzen in einer eigenen Burg zu **einer**
+  stärkeren der nächsten Stufe, z. B. 3 Frostschützen → 1 Frost-Scharfschütze → 3 Scharfschützen → 1
+  Frostmeister. Ein Walzen-Bonus wie Veteran bleibt dabei erhalten.
+- Kein Glück, reine Planung: Wer gezielt eine Einheitenart ausbildet, bekommt eine kleine Elite statt einer
+  großen Masse.
+- Nebeneffekt: weniger Figuren auf dem Feld, also eine übersichtlichere Armee und bessere Leistung am Handy.
+
+**Grenze (wichtig):** Gedreht wird **nur mit Gold aus der Runde**, nie mit echtem Geld oder Kaufwährung. Gekaufte
+Drehs würden simuliertes Glücksspiel bedeuten, mit Folgen für die Altersfreigabe, und Spieler hassen das zu Recht.
+Die Optik ist die von Runen-Walzen in der Burg, nicht die eines Casinos.
+
 ---
 
 ## 7. Gebäude erkunden
@@ -475,7 +513,8 @@ Die Karte gehört zu Beginn **niemandem**. Neben den vier Spielern (Menschen ode
    mit Freischaltungen und versiegelten Runen, Tod mit Beutehaufen, Banditen-Patrouillen. *Ziel: der
    eigene Aufbau beim Spielen.*
 3. **Armee:** Gefangenenlager, Trupp-Befehle, Zwischenburgen erobern, Ausbildung aus Waffe + Stein,
-   Stationieren mit Pfeilen, Hauptburg-Stufen und Element-Resistenzen. *Ziel: vom Helden zum Kommandanten.*
+   Stationieren mit Pfeilen, Hauptburg-Stufen und Element-Resistenzen, Verschmelzen, Walzen-Ausbildung mit
+   Zeichennote, Walzen-Truhen. *Ziel: vom Helden zum Kommandanten.*
 4. **Hauptburgen und Sieg:** 4 faire Startplätze, Bots (zuerst eine Persönlichkeit), Grimmflut, Siegbedingung.
    *Ziel: eine komplette 20-Minuten-Runde gegen Bots.*
 5. **Kreaturen:** epische Kreaturen, Drops, die Rune Bändigung (auch für die anderen Modi), Eier, Quellen, Brut,
@@ -492,6 +531,7 @@ Die Karte gehört zu Beginn **niemandem**. Neben den vier Spielern (Menschen ode
 | Wie viele Einheiten gleichzeitig? | Trupp anfangs 6, maximal 20; insgesamt ≈ 120 Einheiten auf der Karte (Leistung am Handy prüfen) |
 | Deckgröße der Runde? | 4 Karten zu Beginn, mit der Rundenstufe bis 8; beim Tod fällt alles |
 | Wie schwer sind die Prüfungen? | Stufe 8: ein Wächter etwa so stark wie eine Zwischenburg-Besatzung; Stufe 10: ein Wächter wie eine epische Kreatur. Der eigene Trupp darf helfen |
+| Wie viel kostet ein Walzen-Dreh? | Vorschlag: der halbe Goldpreis der Einheit; höchstens ein Dreh pro ausgebildeter Einheit, damit niemand Gold „verzockt“ statt zu kämpfen |
 | Primal von Anfang an? | entschieden: ja, als kleiner Begleiter, wächst mit (reitbar ab 5, Flug ab 8), stirbt er, Wiederbelebung nur in der Hauptburg; Primal-Transformation als dritte Wahl auf Stufe 10 (§4d) |
 | Gilt die Stufen-Sperre auch in anderen Modi? | Vorerst nur im Kronenkrieg. In Arena und Siege regeln Deck-Budget und Seltenheit die Macht, im Feldzug die Fortschritts-Freischaltungen. Ein ähnliches Muster kann später in den Dungeon (Stufe pro Raum) |
 | Wie viel kostet ein Kämpfer? | einfache Einheit ≈ 20 Gold, starke 60 Gold + Stahl; ein Banditentrupp bringt ≈ 40–80 Gold |
