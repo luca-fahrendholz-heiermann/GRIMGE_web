@@ -162,6 +162,8 @@ const SPELL_DEFINITIONS_EXT = {
   // An original GRIMGE feral transformation: its nine rune-flame tails
   // evoke a legendary beast without borrowing a named character or form.
   ninefold_beast_form: def('ninefold_beast_form', { name: 'RISSWILD', tier: 3, manaCost: 55, cooldown: 22, color: '#f29b35', deliveryType: DELIVERY.SELF, desc: 'Three cracked molten energy bands: faster movement, savage melee and light damage resistance.' }),
+  // BÄNDIGUNG (Kronenkrieg concept §8): an enemy summon under half its life changes sides; in Kronenkrieg a weakened creature joins the army.
+  beast_taming: def('beast_taming', { name: 'BÄNDIGUNG', tier: 2, manaCost: 34, color: '#c98a4a', deliveryType: DELIVERY.AREA, targetingMode: TARGETING.GROUND, desc: 'Tames a weakened creature: an enemy summon under half its life fights for you; in Kronenkrieg an epic creature under half its life joins your army.' }),
   dragon_invocation: def('dragon_invocation', { name: 'DRAGON INVOCATION', tier: 3, manaCost: 70, color: '#ff7043', deliveryType: DELIVERY.AREA, desc: 'Calls a temporary fire dragon to scorch a battlefield zone.' }),
   summon_rune_snake: def('summon_rune_snake', { name: 'WORLD RUNE SERPENT', tier: 3, manaCost: 48, color: '#b668ff', deliveryType: DELIVERY.SUMMON, desc: 'A mountable lane-control serpent that slithers through the fight and launches enemies upward.' }),
   summon_spirit_wolf: def('summon_spirit_wolf', { name: 'SPIRIT WOLF', tier: 3, manaCost: 32, color: '#80d8ff', deliveryType: DELIVERY.SUMMON, desc: 'Summons a quick frost spirit that hunts nearby enemies.' }),
@@ -182,7 +184,7 @@ const SPELL_RECIPES_EXT = {
   'aqua+fulgur': 'aura_shock', 'aqua+terra': 'arcane_aegis', 'terra+terra': 'stone_wall',
   'ignis+ignis': 'inferno_beam', 'aqua+aqua': 'tidal_wave', 'frost+frost': 'glacial_ray', 'fulgur+fulgur': 'thunder_lance', 'void+void': 'null_ray',
   'construct+ventus': 'mirror_ward', 'ventus+void': 'gravity_lift', 'fulgur+terra': 'seismic_slam',
-  'bestia+terra': 'titan_stomp', 'ignis+void': 'soul_seekers',
+  'bestia+terra': 'titan_stomp', 'bestia+bestia': 'beast_taming', 'ignis+void': 'soul_seekers',
   'bestia+ignis': 'dragon_breath', 'terra+void': 'burrow_strike',
   'aqua+void': 'mirror_gate', 'terra+umbra': 'shadow_stomper', 'lux+lux': 'radiant_lance',
   'ignis+lux': 'solar_orb', 'aqua+umbra': 'lunar_orb', 'lux+umbra': 'eclipse', 'fulgur+umbra': 'thunderhead',
@@ -267,6 +269,7 @@ const TARGETING_HOW_TO = Object.freeze({
 });
 
 export const SPELL_HOW_TO = Object.freeze({
+  beast_taming: 'Tap its slot, then the creature to tame. It must be under half its life: an enemy summon then fights for you for the rest of its time; in Kronenkrieg an epic creature joins your army (one tamed creature at a time).',
   gravity_lift: 'Up to four enemies near the chosen spot are lifted and held in the air (Telekinetic Grip: more, longer). While they hang: ATTACK FORWARD to throw them away, ATTACK WHILE HOLDING BACK to pull them to you — or wait and they are slammed into the ground.',
   mirror_ward: 'A ward appears in front of you and catches up to five enemy projectiles. After a moment it fires all of them back as a volley.',
   shadow_stomper: 'You hop and stomp; your shadow runs to the nearest enemy in the cone and holds it in place (no walking, jumping or dashing). Enemies who guard in time slip free. Walk too far away and the hold breaks.',

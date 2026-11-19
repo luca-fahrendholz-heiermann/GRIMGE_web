@@ -125,7 +125,8 @@ export class PrimalCompanion extends GroundEntity {
   // ── Riding (user, 29 Oct 2026) — the same interface as a rideable summon (Wizard.mount / mountAttack) ──
   get definition() {
     const a = this.archetype; const dragon = a === 'dragon';
-    return { id: 'primal_' + a, name: this.info.name, color: this.info.variant, mountable: dragon || this.stage >= 2, flying: dragon,
+    const gate = globalThis.window?.gameWorld?.kkMountGate?.() ?? { ride: true, fly: true }; /* Kronenkrieg: riding from level 5, flying from 8 */
+    return { id: 'primal_' + a, name: this.info.name, color: this.info.variant, mountable: gate.ride && (dragon || this.stage >= 2), flying: dragon && gate.fly,
       mountSpeed: dragon ? 400 + this.stage * 25 : a === 'wolf' ? 420 : a === 'ape' ? 300 : 240,
       riderOffsetY: dragon ? 8 + 6 * this.bodyScale : a === 'ape' ? 40 : a === 'turtle' ? 30 : 26 };
   }

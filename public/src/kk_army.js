@@ -89,7 +89,7 @@ function anchorFor(kk, rec) {
   return a;
 }
 function spawnLive(game, rec) {
-  const kk = kkState(game); const u = new KKUnit(rec); rec.live = u; u.x = rec.x; u.z = rec.z;
+  const kk = kkState(game); const u = rec.creature && kk.creatureClass ? new kk.creatureClass(rec) : new KKUnit(rec); rec.live = u; /* creatures: kk_creatures.js */ u.x = rec.x; u.z = rec.z;
   u.followLeader = rec.role === 'squad' ? (rec.team === 'blue' ? game.player : (kk.botLeader?.(rec.team) ?? anchorFor(kk, rec))) : anchorFor(kk, rec);
   game.battlefield.placeOnSurface?.(u); game.minions.push(u); return u;
 }
@@ -108,6 +108,7 @@ function syncLive(game) {
 function despawn(game, rec) { const u = rec.live; if (!u) return; const i = game.minions.indexOf(u); if (i >= 0) game.minions.splice(i, 1); rec.live = null; }
 function onUnitDeath(game, rec) {
   const kk = kkState(game); kk.units.splice(kk.units.indexOf(rec), 1); rec.live = null;
+  if (rec.creature && rec.team !== 'blue') { kk.onCreatureDeath?.(rec); return; }
   if (rec.team !== 'blue') { const g = 6 + Math.floor(Math.random() * 7); kk.gold += g; gainXp(game, XP.kill); combat.spawnDamageText?.(rec.x, groundYForDepth(rec.z) - 60, `+${g}◉`, { color: '#ffcf3a' }); }
   if (rec.role === 'garrison' && rec.team === 'blue') { kk.alerts[rec.siteId] = 4; }
 }
@@ -250,6 +251,7 @@ function onPanelAction(game, act, arg) {
   else if (act === 'spin') panel.spin = !panel.spin;
   else if (act === 'upgrade' && kk.hqHooks) { const r = kk.hqHooks.upgrade(); res = r.ok; panel.msg = r.ok ? '' : r.why; }
   else if (act === 'resist' && kk.hqHooks) { const r = kk.hqHooks.resist(arg); res = r.ok; panel.msg = r.ok ? '' : r.why; }
+  else if (act === 'egg' && kk.eggHooks) res = kk.eggHooks.take(site);
   else if (act === 'up') res = station(game, site, arg); else if (act === 'down') res = takeAlong(game, site, arg); else if (act === 'merge') res = mergeUnits(game, site, arg);
   if (!res) audio.playRuneFail?.(); else audio.playRuneChime?.(640);
   panel.html = ''; refreshPanel(game, site);
@@ -278,6 +280,7 @@ function refreshPanel(game, site) {
   for (const g of garrison) h += `<div>${g.units.length}× ${unitName(g.sample)} ${btn('down', g.key, '▼ mitnehmen')} ${g.units.length >= TRAIN.mergeCount && g.sample.tier < TRAIN.maxTier ? btn('merge', g.key, '✦ verschmelzen') : ''}</div>`;
   h += `<div style="margin-top:6px;color:#ffe9a8">TRUPP (${squadRecords(kk).length}/${squadCap(kk)})</div>`;
   for (const g of squad) h += `<div>${g.units.length}× ${unitName(g.sample)} ${btn('up', g.key, '▲ stationieren')}</div>`;
+  if (site.egg) h += `<div style="margin-top:6px;color:#ffe9a8">EI (${site.egg.element.toUpperCase()}) LIEGT HIER ${btn('egg', '', 'MITNEHMEN', !kk.carry)}</div>`;
   if (p.msg) h += `<div style="margin-top:6px;color:#ffd27a">${p.msg}</div>`;
   if (h !== p.html) { p.el.innerHTML = h; p.html = h; }
   p.el.style.display = 'block'; p.siteId = site.id;

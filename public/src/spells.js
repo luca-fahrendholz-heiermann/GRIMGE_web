@@ -608,6 +608,19 @@ export class SpellSystem {
         break;
       }
 
+      case 'beast_taming': {
+        // BÄNDIGUNG: an enemy summon near the target, under half its life, changes sides; Kronenkrieg creatures via the game.
+        const tx = target?.x ?? caster.x + (caster.facing || 1) * 80; const tz = target?.z ?? caster.z; let done = false;
+        for (const s of this.activeSummons) {
+          if (s.isDead || s.team === caster.team || Math.abs(s.x - tx) > 90 || Math.abs((s.z - tz) * 150) > 45) continue;
+          if (s.hp > s.maxHp * .5) { gameWorld.showAnnouncement?.('ZU STARK — ERST UNTER HALBES LEBEN', 1.3); done = true; break; }
+          s.team = caster.team; s.owner = caster; s.target = null; done = true;
+          gameWorld.showAnnouncement?.(`BÄNDIGUNG: ${s.definition?.name ?? 'WESEN'} WECHSELT DIE SEITE`, 1.6); combat.spawnShockwave(s.x, s.y - 30, 60, '#c98a4a'); break;
+        }
+        if (!done) done = !!gameWorld.kkTame?.(caster, tx, tz);
+        if (!done) gameWorld.showAnnouncement?.('KEINE KREATUR ZUM BÄNDIGEN', 1.2);
+        break;
+      }
       case 'summon_lesser_beast': {
         this.summon(caster, SUMMON_DEFINITIONS.lesser_beast, gameWorld, castQuality);
         break;

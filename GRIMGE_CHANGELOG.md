@@ -2,6 +2,14 @@
 
 Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
+## 19. Nov 2026 – Kronenkrieg, Meilenstein 5: Kreaturen, Eier, Reittiere
+
+- Epische Kreaturen in ihren Revieren (Glutkoloss, Sturmwolf, Flutschlange, Frostwolf je nach Element). Besiegt lassen sie genau eines fallen: reiche Beute, eine seltene Rune oder ihr Ei.
+- Neue Rune BÄNDIGUNG (Bestia + Bestia), in allen Modi: eine gegnerische Beschwörung unter halbem Leben wechselt die Seite; im Kronenkrieg schließt sich eine geschwächte epische Kreatur deiner Armee an (eine zur Zeit).
+- Eier: durch Darüberlaufen aufheben (schwer: langsamer, auf der Übersichtskarte für alle sichtbar, ein harter Treffer lässt es fallen), in einer eigenen Burg ablegen (still stehen) und im Burg-Menü wieder mitnehmen. Es schlüpft nur an einer Quelle seines Elements (10 s); das Ei pulsiert stärker, je näher die Quelle ist, und die Quelle antwortet mit einem Lichtstrahl. Brut-Walzen bestimmen Größe (Kümmerling / normal / prächtig), Wesen (flink / zäh / wild) und ein mögliches Zusatzelement, selten leuchtend; Elementsteine, eine reine Quelle und die Zeichennote verbessern die Chancen.
+- Stall: ein Reittier ab Stufe 3 (vorerst die vorhandene Reitbestie). Der Primal ist immer dabei, wächst mit der Rundenstufe (Stufe 2 ab 5 und reitbar, Stufe 3 ab 8; ein Drache fliegt ab 8) und wird nach einem Sturz nur in der Hauptburg wiederbelebt.
+- Fix: das Reittier aus dem Stall wurde ohne Qualitätsprofil beschworen (Absturz verhindert).
+
 ## 19. Nov 2026 – Kronenkrieg, Meilenstein 4: Rivalen, Hauptburgen, Grimmflut, Sieg
 
 - Drei Bot-Rivalen spielen dieselbe Karte: sie plündern, befreien Gefangene, bilden in ihren Burgen aus, erobern Zwischenburgen (auch deine) und belagern spät die schwächste Hauptburg. Steht ein Rivale in deinem Streifen, kämpft er als echter Gegner (die Champion-KI) mit seinem Trupp; besiegt lässt er Gold und Beute fallen und kehrt später an seiner Hauptburg zurück. Außerhalb deines Streifens laufen Kämpfe als Simulation.

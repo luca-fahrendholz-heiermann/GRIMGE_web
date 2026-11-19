@@ -25,7 +25,8 @@ import { setupGallery, updateGallery, galleryActors, renderGalleryLabels } from 
 import { setupKronenkrieg, updateKronenkrieg, renderKKGround, kkActors, renderKKMinimap, kkPanY } from './kk_world.js'; // Kronenkrieg: the banded open map
 import { initLoot, updateLoot, lootActors, renderLootHud, kkFuseAllowed, respawnDelay } from './kk_loot.js'; // Kronenkrieg: loot and the round level
 import { initArmy, updateArmy, armyActors, closeKKPanel, recordGrade } from './kk_army.js'; // Kronenkrieg: armies, castles, garrisons
-import { initWar, updateWar, warActors, renderFlood, warMinimapDots, kkEnemyHome, kkCanRespawn } from './kk_war.js'; // Kronenkrieg: bots, main castles, Grimmflut, the end // the Training map where clones show every spell
+import { initWar, updateWar, warActors, renderFlood, warMinimapDots, kkEnemyHome, kkCanRespawn } from './kk_war.js'; // Kronenkrieg: bots, main castles, Grimmflut, the end
+import { initCreatures, updateCreatures, creatureActors, creatureMinimapDots, tameAt, kkMountGate } from './kk_creatures.js'; // Kronenkrieg: creatures, eggs, mounts // the Training map where clones show every spell
 import { loadFxSprites } from './fx_sprites.js';
 import { loadSpellSprites } from './spell_visuals.js';
 import { renderPixelated } from './abilities.js';
@@ -1668,7 +1669,8 @@ export class GameWorld {
       return;
     }
     if (mode.id === 'kronenkrieg') {
-      initLoot(setupKronenkrieg(this)); initArmy(this); initWar(this);
+      initLoot(setupKronenkrieg(this)); initArmy(this); initWar(this); initCreatures(this);
+      if (this.primal) this.primal.stage = 1; /* the Primal starts small and grows with the round level */
       this.player.configureRuneDeck?.([]); /* the class only: runes are found in the round */
       this.enemyChampion.lifeState = 'Dead'; this.enemyChampion.respawnTimer = Infinity;
       return;
@@ -2466,6 +2468,7 @@ export class GameWorld {
       updateLoot(this, dt);
       updateArmy(this, dt);
       updateWar(this, dt);
+      updateCreatures(this, dt);
       return;
     }
     if (this.activeMode.id === 'gallery') {
@@ -2872,12 +2875,15 @@ export class GameWorld {
     try { return Math.max(1, Math.min(3, parseInt(globalThis.localStorage?.getItem?.('grimge-primal-stage') ?? '1', 10) || 1)); } catch { return 1; }
   }
 
-  // The Wizard's Primal joins Siege, Invasion and Training.
+  // Kronenkrieg hooks for modules that cannot import the game (spells.js, primals.js).
+  kkTame(caster, x, z) { return this.activeMode?.id === 'kronenkrieg' ? tameAt(this, caster, x, z) : false; }
+  kkMountGate() { return this.activeMode?.id === 'kronenkrieg' ? kkMountGate(this) : null; }
+  // The Wizard's Primal joins Siege, Invasion, Training and Kronenkrieg.
   spawnPrimal() {
     if (this.player?.primalBond) this.player.primalBond = null;
     this.primal = null;
     const mode = this.activeMode?.id;
-    if (!['siege', 'invasion', 'training'].includes(mode) || this.primalChoice === 'none') return null;
+    if (!['siege', 'invasion', 'training', 'kronenkrieg'].includes(mode) || this.primalChoice === 'none') return null;
     this.primal = new PrimalCompanion(this.player, this.primalChoice, this.primalStage);
     if (this.siegeMatch) this.primal.returnToPlatform(this);
     else this.primal.place(this, this.player.x - (this.player.facing || 1) * 24, this.player.z - .05);
@@ -3449,7 +3455,7 @@ export class GameWorld {
     if (this.primal?.isTargetable) actors.push(this.primal);
     if (this.activeMode?.id === 'base') actors.push(...baseActors(this)); /* stations and stands share the depth order */
     if (this.activeMode?.id === 'gallery') actors.push(...galleryActors(this)); /* the casting clones of the Spell Gallery */
-    if (this.activeMode?.id === 'kronenkrieg') actors.push(...kkActors(this), ...lootActors(this), ...armyActors(this), ...warActors(this)); /* castles, buildings, camps and loot of the current band */
+    if (this.activeMode?.id === 'kronenkrieg') actors.push(...kkActors(this), ...lootActors(this), ...armyActors(this), ...warActors(this), ...creatureActors(this)); /* castles, buildings, camps and loot of the current band */
     // Spells with a ground position and summons share the painter's order
     // with the actors, so a spike behind the dummy is hidden by the dummy.
     actors.push(...spells.depthEntries());
@@ -3501,7 +3507,7 @@ export class GameWorld {
     // Map weather (snow, rain, embers, leaves, dust, mana motes) in screen space.
     environment.renderWeather(ctx, viewW, viewH);
     this.renderDungeonExitArrow(ctx, viewW);
-    if (this.activeMode?.id === 'kronenkrieg') { renderKKMinimap(ctx, this, viewW, { dots: warMinimapDots(this) }); renderLootHud(ctx, this, viewW); }
+    if (this.activeMode?.id === 'kronenkrieg') { renderKKMinimap(ctx, this, viewW, { dots: [...warMinimapDots(this), ...creatureMinimapDots(this)] }); renderLootHud(ctx, this, viewW); }
     this.renderOffscreenArrows(ctx);
 
     // 3. Screen Space Rune Drawing

@@ -856,7 +856,7 @@ export class Player extends GroundEntity {
     const bondMult = bondMoveMultiplier(this) * (isGenericBuff(this) ? 1.08 : 1); // Wolf bond: SpeedBoost; buff forms move a little faster
     // Signature specials: hover stances glide slower, walkways / currents speed up.
     const sigMult = signatureMoveMult(this) * (this._sigBoost?.k ?? 1);
-    const combinedMult = this.slowFactor * guardMult * beastMult * focusMult * sprintMult * clashMult * burrowMult * bondMult * sigMult * weaponMoveMult(this) * masteryMoveMult(this);
+    const combinedMult = this.slowFactor * guardMult * beastMult * focusMult * sprintMult * clashMult * burrowMult * bondMult * sigMult * weaponMoveMult(this) * masteryMoveMult(this) * (this.kkCarryMult ?? 1); /* kkCarryMult: carrying an egg (Kronenkrieg) */
 
     const baseSpeed = this.moveSpeed;
     const baseDepth = this.depthSpeed;
