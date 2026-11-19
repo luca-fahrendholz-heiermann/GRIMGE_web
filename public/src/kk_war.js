@@ -4,6 +4,7 @@
 // stone → steel → obsidian) and take element resistances; they can be besieged and fall. The Grimmflut closes in from
 // minute 16; the last side with a living hero or a standing main castle wins.
 import { combat } from './combat.js';
+import { sprites } from './sprites.js';
 import { audio } from './audio.js';
 import { groundYForDepth } from './world.js';
 import { CASTLE_CLASSES, kkDistance, biomeAt } from './kk_map.js';
@@ -230,6 +231,13 @@ export function updateWar(game, dt) {
 // ── drawing ────────────────────────────────────────────────────────────────────────────────────────────────────────
 export function warActors(game) {
   const kk = kkState(game); if (!kk?.bots) return []; const out = [];
+  // an ally in the players band walks there as a figure (it plays by the strategy, its squad fights beside you)
+  for (const b of kk.bots) {
+    if (!b.ally || !b.alive || b.row !== kk.row || b.travel > 0 || Math.abs(b.x - game.player.x) > 1400) continue;
+    const moving = Math.abs((b.lastX ?? b.x) - b.x) > .5; if (moving) b.facing = Math.sign(b.x - (b.lastX ?? b.x)) || b.facing || 1; b.lastX = b.x; b.animT = (b.animT ?? 0) + 1 / 60;
+    const y = groundYForDepth(b.z ?? .55);
+    out.push({ y, render: (ctx) => { sprites.renderEntity(ctx, b.heroKey, b.x, y, { facing: b.facing || 1, state: moving ? 'run' : 'idle', animTime: b.animT }); ctx.font = 'bold 9px monospace'; ctx.textAlign = 'center'; ctx.fillStyle = SEAT_COLORS[b.seat]; ctx.fillText(`VERBÜNDET · ${SEAT_NAMES[b.seat]} · ST ${b.level}`, b.x, y - 104); } });
+  }
   // HQ life bars when damaged
   for (const hq of kk.map.hqs) { if (hq.row !== kk.row || hq.hp >= hqMaxHp(hq)) continue; const y = groundYForDepth(hq.z) - 230; out.push({ y: groundYForDepth(hq.z) + .7, render: (ctx) => { ctx.fillStyle = 'rgba(0,0,0,.7)'; ctx.fillRect(hq.x - 80, y, 160, 8); ctx.fillStyle = SEAT_COLORS[hq.seat]; ctx.fillRect(hq.x - 80, y, 160 * Math.max(0, hq.hp) / hqMaxHp(hq), 8); } }); }
   return out;
