@@ -47,7 +47,7 @@ export function switchBand(game, dir) {
   const to = kk.row + dir; if (to < 0 || to >= kk.map.rows) return false;
   kk.row = to; P.z = dir < 0 ? b.nearZ - .02 : b.farZ + .02; P.vz = 0;
   kk.pan = dir < 0 ? -bandH() : bandH(); /* the world jumps one band, the camera glides after it */
-  kk.onSwitch?.(dir);
+  kk.onSwitch?.(dir); for (const fn of kk.switchHooks ?? []) fn(dir);
   revealAround(kk, P); return true;
 }
 

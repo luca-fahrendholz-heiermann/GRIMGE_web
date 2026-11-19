@@ -2,6 +2,14 @@
 
 Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
+## 19. Nov 2026 – Kronenkrieg, Meilenstein 2: Beute und Rundenstufe
+
+- Gebäude durchsuchen (an der Tür stehen, Ring füllt sich): je Etage eine Truhe mit Gold, Baustoffen (Holz, Stein, Stahl, Obsidian), Elementsteinen des Gebiets, Waffen, Tränken und manchmal einer Rune. Was eine Truhe enthalten kann, hängt von Spielzeit und Ort ab (Mitte und weit weg von den Hauptburgen = besser).
+- Goldadern abbauen (mit Abklingzeit), Wegschreine decken eine große Gegend auf, entdeckte Orte geben etwas Erfahrung.
+- Rundenstufe 1–10 mit Erfahrung; Deckplätze 4 → 8; Runen nach Stufe: Beschwörungen/Haltungen 3, Atmung 4, Mehrfach 5, Sphären 6, Arcane State 8. Zu früh gefundene Runen sind versiegelt, belegen aber einen Deckplatz, und brechen beim Aufstieg auf. Fusion ab Stufe 2, Dreier-Fusion ab 6.
+- Rucksack mit 40 Plätzen, an der Hauptburg wird automatisch eingelagert; Tränke werden bei wenig Leben/Mana selbst getrunken.
+- Tod: Gold, Rucksack und alle Runen der Runde fallen als Beutehaufen; Rückkehr an der Hauptburg nach wachsender Wartezeit. Anzeige unter der Übersichtskarte.
+
 ## 19. Nov 2026 – Kronenkrieg, Meilenstein 1: die Karte (Konzept GRIMGE_KRONENKRIEG.md)
 
 - Neuer Modus KRONENKRIEG (Karte auf der Spielmodus-Seite im Hub).

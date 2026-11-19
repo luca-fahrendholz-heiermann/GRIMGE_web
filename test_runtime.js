@@ -5570,6 +5570,17 @@ game.running = false;
   for (let i = 0; i < 20; i++) KW.updateKronenkrieg(game, 1 / 60); const switched = kk.row === row0 + dir && kk.pan !== 0; game.input.move = { x: 0, z: 0 };
   for (let i = 0; i < 90; i++) KW.updateKronenkrieg(game, 1 / 60); const settled = kk.pan === 0 && KW.isRevealed(kk, kk.row, P.x);
   assert(startOk && switched && settled, 'Kronenkrieg: starts at the own main castle with the class only, pressing against the band edge enters the next band (the camera glides after) and the map reveals around the figure');
+  // loot: search a building, sealed runes, level-up unseals, fusion gate, death pile, return at the main castle, picking the pile up
+  const KL = await import('./public/src/kk_loot.js'); const KP = await import('./public/src/kk_progress.js');
+  const bld = kk.map.sites.filter((x) => x.kind === 'building' && x.row === kk.row).sort((a2, b2) => Math.abs(a2.x - P.x) - Math.abs(b2.x - P.x))[0];
+  P.x = bld.x; P.z = bld.z + .04; for (let i = 0; i < 100 && !bld.looted; i++) KL.updateLoot(game, 1 / 60); const searched = bld.looted && kk.gold > 0 && kk.xp >= KP.XP.search;
+  const arcane = recognizer.runes.find((r) => r.id === 'buff_B01'); kk.level = 1; kk.xp = 0; const res = KL.giveRune(game, arcane); const sealedCounts = res === 'sealed' && KL.deckCount(game) >= 1;
+  const fuseBlocked = !KL.kkFuseAllowed(game, 2); KL.gainXp(game, KP.LEVEL_XP[8]); const unsealed = kk.level === 8 && !kk.sealed.length && [...P.runeDeck, ...P.runeHand].some((c) => c.id === 'buff_B01') && KL.kkFuseAllowed(game, 3);
+  kk.gold = 50; kk.inv.wood = 5; P.x = 2000 > kk.map.width ? 300 : P.x; const deathX = P.x; P.beginDeath(); KL.updateLoot(game, 1 / 60); const pile = kk.items.find((it) => it.kind === 'pile' && it.runes.length);
+  const dropped = !!pile && pile.gold === 50 && kk.gold === 0 && P.runeDeck.length + P.runeHand.length === 0;
+  P.respawn(game.battlefield); KL.updateLoot(game, 1 / 60); const home = kk.map.hqs.find((h) => h.seat === 0); const returned = kk.row === home.row && Math.abs(P.x - home.x) < 300;
+  kk.row = pile.row; P.x = pile.x; P.z = pile.z; pile.lock = 0; KL.updateLoot(game, 1 / 60); const picked = !kk.items.includes(pile) && kk.gold === 50 && [...P.runeDeck, ...P.runeHand].some((c) => c.id === 'buff_B01');
+  assert(searched && sealedCounts && fuseBlocked && unsealed && dropped && returned && picked, 'Kronenkrieg loot: searching a building gives gold and XP, an Arcane State found at level 1 is sealed but takes a deck slot, fusion waits for level 2, level 8 unseals it; dying drops gold, backpack and every rune as a pile, the hero returns at the main castle and can pick the pile up (' + [searched, sealedCounts, fuseBlocked, unsealed, dropped, returned, picked].join('/') + ')');
   game.returnToHub();
 }
 {

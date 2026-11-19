@@ -22,7 +22,8 @@ import { GamepadController } from './gamepad.js';
 import { environment, renderProp } from './environment.js';
 import { TRAINING_MAPS, getTrainingMap, zoneToWorld } from './training_maps.js';
 import { setupGallery, updateGallery, galleryActors, renderGalleryLabels } from './spell_gallery.js';
-import { setupKronenkrieg, updateKronenkrieg, renderKKGround, kkActors, renderKKMinimap, kkPanY } from './kk_world.js'; // Kronenkrieg: the banded open map // the Training map where clones show every spell
+import { setupKronenkrieg, updateKronenkrieg, renderKKGround, kkActors, renderKKMinimap, kkPanY } from './kk_world.js'; // Kronenkrieg: the banded open map
+import { initLoot, updateLoot, lootActors, renderLootHud, kkFuseAllowed, respawnDelay } from './kk_loot.js'; // Kronenkrieg: loot and the round level // the Training map where clones show every spell
 import { loadFxSprites } from './fx_sprites.js';
 import { loadSpellSprites } from './spell_visuals.js';
 import { renderPixelated } from './abilities.js';
@@ -1425,6 +1426,7 @@ export class GameWorld {
   fuseSlots(positions) {
     if (!this.isMatchRunning() || !this.player.isAlive) return { ok: false, reason: 'inactive' };
     const unique = [...new Set(positions)];
+    if (!kkFuseAllowed(this, unique.length)) return { ok: false, reason: 'level' }; /* Kronenkrieg: fusion follows the round level */
     const chosen = unique.map((position) => this.slotAt(position));
     if (unique.length < 2 || chosen.some((slot) => !slot)) return { ok: false, reason: 'empty' };
     if (chosen.some((slot) => slot.isCombo || slot.runes.some((rune) => isSpecialRune(rune)))) {
@@ -1662,7 +1664,7 @@ export class GameWorld {
       return;
     }
     if (mode.id === 'kronenkrieg') {
-      setupKronenkrieg(this);
+      initLoot(setupKronenkrieg(this));
       this.player.configureRuneDeck?.([]); /* the class only: runes are found in the round */
       this.enemyChampion.lifeState = 'Dead'; this.enemyChampion.respawnTimer = Infinity;
       return;
@@ -2457,6 +2459,7 @@ export class GameWorld {
       state.dungeonCameraX += (this.dungeonCameraTarget() - state.dungeonCameraX) * Math.min(1, 3.5 * dt);
       this.updateCameraZoom(dt);
       updateKronenkrieg(this, dt);
+      updateLoot(this, dt);
       return;
     }
     if (this.activeMode.id === 'gallery') {
@@ -2620,6 +2623,7 @@ export class GameWorld {
   }
 
   respawnPenalty(entity) {
+    if (this.activeMode?.id === 'kronenkrieg' && entity === this.player && this.modeState?.kk) return Math.max(0, respawnDelay(this.modeState.kk) - (entity.respawnDuration ?? 3)); /* the return grows with the time played */
     if (this.activeMode?.id !== 'invasion' || entity !== this.player) return 0;
     this.modeState.deaths = (this.modeState.deaths ?? 0) + 1;
     return Math.min(14, this.modeState.deaths * 2.5);
@@ -3437,7 +3441,7 @@ export class GameWorld {
     if (this.primal?.isTargetable) actors.push(this.primal);
     if (this.activeMode?.id === 'base') actors.push(...baseActors(this)); /* stations and stands share the depth order */
     if (this.activeMode?.id === 'gallery') actors.push(...galleryActors(this)); /* the casting clones of the Spell Gallery */
-    if (this.activeMode?.id === 'kronenkrieg') actors.push(...kkActors(this)); /* castles, buildings and camps of the current band */
+    if (this.activeMode?.id === 'kronenkrieg') actors.push(...kkActors(this), ...lootActors(this)); /* castles, buildings, camps and loot of the current band */
     // Spells with a ground position and summons share the painter's order
     // with the actors, so a spike behind the dummy is hidden by the dummy.
     actors.push(...spells.depthEntries());
@@ -3489,7 +3493,7 @@ export class GameWorld {
     // Map weather (snow, rain, embers, leaves, dust, mana motes) in screen space.
     environment.renderWeather(ctx, viewW, viewH);
     this.renderDungeonExitArrow(ctx, viewW);
-    if (this.activeMode?.id === 'kronenkrieg') renderKKMinimap(ctx, this, viewW);
+    if (this.activeMode?.id === 'kronenkrieg') { renderKKMinimap(ctx, this, viewW); renderLootHud(ctx, this, viewW); }
     this.renderOffscreenArrows(ctx);
 
     // 3. Screen Space Rune Drawing
