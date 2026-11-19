@@ -2,16 +2,16 @@
 // wide bands; the figure walks one band at a time (a normal 2.5D stage), the bands above and below are drawn as the
 // same endless ground, and walking off the back or front edge glides the camera into the neighbouring band. The map
 // reveals itself while exploring (fog on the minimap). No painted background: the ground itself is the world.
-import { generateKKMap, BIOME_OF, biomeAt } from './kk_map.js';
+import { generateKKMap, BIOME_OF, biomeAt, spanAt, KK, LEVEL_NAMES } from './kk_map.js';
 import { drawKKSite, buildDecor, drawDecor } from './kk_art.js'; // the places and the landscape in the game's pixel style
 import { groundYForDepth, getGroundProjection, setGroundProjection } from './world.js';
 
-export const KK_PROJECTION = Object.freeze({ farY: 236, nearY: 496 }); // a deeper floor than the arena (like Training)
+export const KK_PROJECTION = Object.freeze({ farY: 214, nearY: 512 }); /* a deep floor: the plane should feel wide in depth too */
 export const SEAT_COLORS = Object.freeze(['#4fc3f7', '#ef5350', '#7bd66b', '#ffca28']);
 export const SEAT_NAMES = Object.freeze(['DU', 'ROT', 'GRÜN', 'GOLD']);
-const SWITCH_HOLD = .22;           // s pressing against a band edge before the switch
+const LIFT_TIME = 1.2; /* s standing on a lift until it rises */ const SHAFT_R = 38;
 const PAN_SPEED = 5.5;             // how fast the camera glides into the new band
-const REVEAL_CELL = 240; const REVEAL_SAME = 900; const REVEAL_NEAR = 420;
+const REVEAL_CELL = 240; const REVEAL_SAME = 900;
 
 export const kkOn = (game) => game?.activeMode?.id === 'kronenkrieg' && !!game?.modeState?.kk;
 export const kkState = (game) => game?.modeState?.kk ?? null;
@@ -24,12 +24,11 @@ export function setupKronenkrieg(game, seed = null, teamMode = game.kkTeamMode ?
   const s = Number.isFinite(seed) ? seed : (Date.now() % 1e9);
   const map = generateKKMap(s);
   const hq = map.hqs.find((h) => h.seat === 0);
-  const ally = teamMode === '2v2' ? map.hqs.find((h) => h.seat !== 0 && h.row === hq.row)?.seat ?? null : null;
+  const ally = teamMode === '2v2' ? [...map.hqs].filter((h) => h.seat !== 0).sort((a, b) => Math.abs(a.x - hq.x) - Math.abs(b.x - hq.x))[0]?.seat ?? null : null; /* the neighbour on the plane */
   map.seed = s;
-  const kk = { decor: buildDecor(map), map, seed: s, row: hq.row, pan: 0, switchHold: 0, reveal: new Set(), time: 0, teamMode: ally != null ? '2v2' : 'ffa', allies: ally != null ? [0, ally] : [0] };
+  const kk = { decor: buildDecor(map), map, seed: s, row: hq.row, pan: 0, liftT: 0, reveal: new Set(), time: 0, teamMode: ally != null ? '2v2' : 'ffa', allies: ally != null ? [0, ally] : [0] };
   game.modeState.kk = kk;
-  Object.assign(game.battlefield.boundsOverride, { left: 60, right: map.width - 60, farZ: .03, nearZ: .97 });
-  const P = game.player; P.x = hq.x + 190; P.z = .6; game.battlefield.placeOnSurface(P);
+  const P = game.player; P.x = hq.x + 190; P.z = .6; applyBounds(game, kk); game.battlefield.placeOnSurface(P);
   revealAround(kk, P);
   return kk;
 }
@@ -37,32 +36,48 @@ export function setupKronenkrieg(game, seed = null, teamMode = game.kkTeamMode ?
 // ── fog ────────────────────────────────────────────────────────────────────────────────────────────────────────────
 const cellKey = (row, x) => row + ':' + Math.floor(x / REVEAL_CELL);
 export function revealAround(kk, P) {
-  const rows = kk.map.rows;
-  for (let r = Math.max(0, kk.row - 1); r <= Math.min(rows - 1, kk.row + 1); r++) {
-    const reach = r === kk.row ? REVEAL_SAME : REVEAL_NEAR;
-    for (let x = P.x - reach; x <= P.x + reach; x += REVEAL_CELL) kk.reveal.add(cellKey(r, Math.max(0, Math.min(kk.map.width - 1, x))));
-  }
+  /* only the level one stands on: the others are seen when one goes there */
+  for (let x = P.x - REVEAL_SAME; x <= P.x + REVEAL_SAME; x += REVEAL_CELL) kk.reveal.add(cellKey(kk.row, Math.max(0, Math.min(kk.map.width - 1, x))));
 }
 export const isRevealed = (kk, row, x) => kk.reveal.has(cellKey(row, x));
 
-// ── band switch ────────────────────────────────────────────────────────────────────────────────────────────────────
-// Pressing against the back (or front) edge for a moment carries the figure into the band behind (or in front).
-export function switchBand(game, dir) {
-  const kk = kkState(game); const P = game.player; const b = game.battlefield.boundsOverride;
-  const to = kk.row + dir; if (to < 0 || to >= kk.map.rows) return false;
-  kk.row = to; P.z = dir < 0 ? b.nearZ - .02 : b.farZ + .02; P.vz = 0;
-  kk.pan = dir < 0 ? -bandH() : bandH(); /* the world jumps one band, the camera glides after it */
+// ── levels: one huge main plane, sections above and below, joined by shafts and lifts ─────────────────────────────
+// The walkable stretch of the level one stands on: the whole main plane, or the section one is in (hard edges).
+export function applyBounds(game, kk = kkState(game)) {
+  const P = game.player; const sp = spanAt(kk.map, kk.row, P.x) ?? kk.map.spans[kk.row]?.[0] ?? [0, kk.map.width];
+  Object.assign(game.battlefield.boundsOverride, { left: sp[0] + 60, right: sp[1] - 60, farZ: .03, nearZ: .97 });
+}
+// Changes the level at x (the figure lands beside the connector, not on it); dir +1 = down, −1 = up.
+export function switchLevel(game, to, x, z = null) {
+  const kk = kkState(game); const P = game.player; if (to < 0 || to >= kk.map.rows || to === kk.row) return false;
+  const dir = to > kk.row ? 1 : -1; kk.row = to; P.x = x; if (z != null) P.z = z; P.vz = 0; P.vx = 0;
+  applyBounds(game, kk); P.x = Math.max(game.battlefield.boundsOverride.left, Math.min(game.battlefield.boundsOverride.right, P.x));
+  kk.pan = dir < 0 ? -bandH() : bandH(); /* the world drops or rises one level, the camera glides after it */
+  game.modeState.dungeonCameraX = game.dungeonCameraTarget?.() ?? game.modeState.dungeonCameraX;
   kk.onSwitch?.(dir); for (const fn of kk.switchHooks ?? []) fn(dir);
   revealAround(kk, P); return true;
 }
+// Kept for tools and tests: the level above / below at the same x (snapped into its section).
+export function switchBand(game, dir) {
+  const kk = kkState(game); const to = kk.row + dir; const spans = kk.map.spans[to]; if (!spans) return false;
+  const x = game.player.x; const sp = spans.find(([x0, x1]) => x >= x0 && x <= x1) ?? spans.sort((p, q) => Math.abs((p[0] + p[1]) / 2 - x) - Math.abs((q[0] + q[1]) / 2 - x))[0];
+  return switchLevel(game, to, Math.max(sp[0] + 80, Math.min(sp[1] - 80, x)), .55);
+}
+export const connectorsOf = (kk, row) => kk.map.sites.filter((s) => (s.kind === 'shaft' || s.kind === 'lift') && s.row === row);
 
 export function updateKronenkrieg(game, dt) {
   const kk = kkState(game); if (!kk) return;
   kk.time += dt;
-  const P = game.player; const b = game.battlefield.boundsOverride; const mz = game.input?.move?.z ?? 0;
-  const atBack = P.z <= b.farZ + .006 && mz < -.3 && kk.row > 0; const atFront = P.z >= b.nearZ - .006 && mz > .3 && kk.row < kk.map.rows - 1;
-  kk.switchHold = (atBack || atFront) && P.grounded !== false ? kk.switchHold + dt : 0;
-  if (kk.switchHold >= SWITCH_HOLD) { kk.switchHold = 0; switchBand(game, atBack ? -1 : 1); }
+  const P = game.player;
+  if (P.isAlive && !P.isMounted) {
+    // a shaft: walking into the hole drops one level down, beside the lift that leads back up
+    const shaft = connectorsOf(kk, kk.row).find((s) => s.kind === 'shaft' && Math.abs(P.x - s.x) < SHAFT_R && Math.abs(P.z - s.z) < .12 && P.grounded !== false);
+    if (shaft) { switchLevel(game, shaft.to, shaft.x + 80, .6); game.showAnnouncement?.(`HINAB — ${LEVEL_NAMES[shaft.to]}`, 1.2); kk.liftT = 0; }
+    // a lift: standing on its platform for a moment rises one level up, beside the shaft
+    const lift = connectorsOf(kk, kk.row).find((s) => s.kind === 'lift' && Math.abs(P.x - s.x) < 46 && Math.abs(P.z - s.z) < .14);
+    kk.liftT = lift ? kk.liftT + dt : 0; kk.liftAt = lift?.id ?? null;
+    if (lift && kk.liftT >= LIFT_TIME) { kk.liftT = 0; switchLevel(game, lift.to, lift.x + 110, .66); game.showAnnouncement?.(`HINAUF — ${LEVEL_NAMES[lift.to]}`, 1.2); }
+  } else kk.liftT = 0;
   kk.pan += (0 - kk.pan) * Math.min(1, dt * PAN_SPEED); if (Math.abs(kk.pan) < .5) kk.pan = 0;
   revealAround(kk, P);
 }
@@ -183,27 +198,27 @@ export function siteOpts(kk, site) {
   o.biome = biomeAt(kk.map, site.row, site.x).element;
   o.friendly = site.kind === 'hq' ? kk.allies?.includes(site.seat) : site.owner != null && kk.allies?.includes(site.owner);
   if (site.looted) o.looted = true; if (site.freed) o.freed = true;
+  if (site.kind === 'lift') o.liftK = kk.liftAt === site.id ? Math.min(1, kk.liftT / LIFT_TIME) : 0;
   return o;
 }
 
-// Ground and neighbour bands (world space, before the actors). x0/x1: the visible world span.
+// The ground of the level one stands on (world space, before the actors). x0/x1: the visible world span. Above the
+// floor each level has its own air: dusk sky over the plateaus, night over the main plane, a rock ceiling in the depths.
 export function renderKKGround(ctx, game, x0, x1) {
-  const kk = kkState(game); if (!kk) return; const H = bandH(); const t = kk.time;
-  for (const dr of [-1, 1, 0]) {
-    const row = kk.row + dr; if (row < 0 || row >= kk.map.rows) continue; const off = dr * H;
-    drawBandGround(ctx, kk, row, off, x0, x1);
-    if (dr !== 0) {
-      // the neighbour band's places stand there too (drawn statically), then the band is dimmed a little
-      const items = [...kk.map.hqs, ...kk.map.sites].filter((s) => s.row === row && s.x > x0 - 300 && s.x < x1 + 300).map((s) => ({ z: s.z, draw: () => drawSite(ctx, s, groundYForDepth(s.z) + off, t, siteOpts(kk, s)) }));
-      for (const d of kk.decor ?? []) if (d.row === row && d.x > x0 - 60 && d.x < x1 + 60) items.push({ z: d.z, draw: () => drawDecor(ctx, d, groundYForDepth(d.z) + off) });
-      items.sort((a, b) => a.z - b.z).forEach((it) => it.draw());
-      const p = getGroundProjection(); ctx.fillStyle = 'rgba(8,10,20,.38)'; ctx.fillRect(Math.floor(x0), Math.floor(p.farY + off), Math.ceil(x1 - x0), Math.ceil(H) + 1);
-    }
-  }
-  // beyond the map's first and last band: darkness (the edge of the known world)
-  const p = getGroundProjection();
-  if (kk.row === 0) { ctx.fillStyle = '#05060b'; ctx.fillRect(Math.floor(x0), p.farY - H * 2, Math.ceil(x1 - x0), H * 2); }
-  if (kk.row === kk.map.rows - 1) { ctx.fillStyle = '#05060b'; ctx.fillRect(Math.floor(x0), p.nearY, Math.ceil(x1 - x0), H * 2); }
+  const kk = kkState(game); if (!kk) return; const p = getGroundProjection(); const H = bandH(); const row = kk.row; const t = kk.time;
+  const above = row === 0 ? ['#2a3350', '#141a2c'] : row === KK.main ? ['#11141f', '#090b12'] : ['#140d0a', '#0a0605'];
+  ctx.fillStyle = above[1]; ctx.fillRect(Math.floor(x0), p.farY - H * 3, Math.ceil(x1 - x0), H * 3);
+  ctx.fillStyle = above[0]; ctx.fillRect(Math.floor(x0), p.farY - 70, Math.ceil(x1 - x0), 70);
+  if (row === 2) { ctx.fillStyle = '#20150f'; for (let x = Math.floor(x0 / 46) * 46; x < x1; x += 46) { const hh = 26 + hash(x, 7) * 60; ctx.beginPath(); ctx.moveTo(x, p.farY - H); ctx.lineTo(x + 23, p.farY - H + hh + 60); ctx.lineTo(x + 46, p.farY - H); ctx.closePath(); ctx.fill(); } }
+  if (row === 0) { ctx.fillStyle = 'rgba(255,255,255,.5)'; for (let i = 0; i < 40; i++) { const sx = Math.floor(x0 / 400) * 400 + hash(i, 3) * 4000; if (sx > x0 && sx < x1) ctx.fillRect(Math.floor(sx), Math.floor(p.farY - 40 - hash(3, i) * 200), 2, 2); } }
+  drawBandGround(ctx, kk, row, 0, x0, x1);
+  // outside the sections of this level: solid rock (the walls of the plateau / the cave)
+  if (row !== KK.main) { ctx.fillStyle = '#17120f'; let cx = x0; const spans = [...(kk.map.spans[row] ?? [])].sort((a, b) => a[0] - b[0]); for (const [s0, s1] of spans) { if (s0 > cx) ctx.fillRect(Math.floor(cx), p.farY - 4, Math.ceil(Math.min(s0, x1) - cx), H + 8); cx = Math.max(cx, s1); } if (cx < x1) ctx.fillRect(Math.floor(cx), p.farY - 4, Math.ceil(x1 - cx), H + 8);
+    ctx.fillStyle = '#2a201a'; for (const [s0, s1] of spans) for (const e of [s0, s1]) if (e > x0 - 20 && e < x1 + 20) for (let y = p.farY; y < p.nearY; y += 12) ctx.fillRect(Math.floor(e - 6 + hash(e, y) * 6), y, 8, 10); }
+  // under the floor: the cliff face of the level
+  ctx.fillStyle = row === 2 ? '#120c09' : '#1a1410'; ctx.fillRect(Math.floor(x0), p.nearY, Math.ceil(x1 - x0), H * 2);
+  ctx.fillStyle = 'rgba(0,0,0,.35)'; for (let x = Math.floor(x0 / 24) * 24; x < x1; x += 24) ctx.fillRect(x + Math.floor(hash(x, 1) * 10), p.nearY + 6 + Math.floor(hash(1, x) * 30), 10, 3);
+  void t;
 }
 // The places of the current band take part in the depth order (a figure behind a castle is hidden by it).
 export function kkActors(game) {
@@ -214,16 +229,17 @@ export function kkActors(game) {
 }
 
 // ── minimap (screen space, top right) ──────────────────────────────────────────────────────────────────────────────
-const KIND_ICON = Object.freeze({ castle: '♜', lair: '☠', camp: '⚑', building: '⌂', goldvein: '◆', prison: '⛓', source: '◉', stable: '♞', shrine: '✧', trial: '✪' });
+const KIND_ICON = Object.freeze({ castle: '♜', lair: '☠', camp: '⚑', building: '⌂', goldvein: '◆', prison: '⛓', source: '◉', stable: '♞', shrine: '✧', trial: '✪', shaft: '⇩', lift: '⇧' });
 export function renderKKMinimap(ctx, game, viewW, opts = {}) {
   const kk = kkState(game); if (!kk) return;
   const W = opts.w ?? 300; const rowH = opts.rowH ?? 22; const x0 = opts.x ?? viewW - W - 14; const y0 = opts.y ?? 14; const map = kk.map; const sx = W / map.width;
   ctx.save(); ctx.fillStyle = 'rgba(6,6,12,.82)'; ctx.fillRect(x0 - 4, y0 - 4, W + 8, rowH * map.rows + 8);
   for (let r = 0; r < map.rows; r++) {
+    ctx.fillStyle = 'rgba(30,24,20,.9)'; ctx.fillRect(x0, y0 + r * rowH, W, rowH - 1); /* rock where a level does not exist */
     for (const bio of map.biomes) if (bio.row === r) { ctx.fillStyle = BIOME_OF[bio.element].ground; ctx.fillRect(x0 + bio.x0 * sx, y0 + r * rowH, (bio.x1 - bio.x0) * sx + 1, rowH - 1); }
     // fog over every unrevealed cell
     ctx.fillStyle = 'rgba(4,4,8,.92)';
-    for (let x = 0; x < map.width; x += REVEAL_CELL) if (!isRevealed(kk, r, x)) ctx.fillRect(x0 + x * sx, y0 + r * rowH, REVEAL_CELL * sx + .6, rowH - 1);
+    for (const [s0, s1] of map.spans?.[r] ?? [[0, map.width]]) for (let x = Math.floor(s0 / REVEAL_CELL) * REVEAL_CELL; x < s1; x += REVEAL_CELL) if (!isRevealed(kk, r, x)) ctx.fillRect(x0 + Math.max(s0, x) * sx, y0 + r * rowH, REVEAL_CELL * sx + .6, rowH - 1);
   }
   ctx.font = '9px monospace'; ctx.textAlign = 'center';
   for (const s of map.sites) {

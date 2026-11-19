@@ -171,6 +171,24 @@ export function drawKKSite(ctx, site, y, t, opts = {}) {
       ctx.save(); ctx.globalAlpha = site.won ? .25 : .55 + .35 * Math.sin(t * 3); ctx.strokeStyle = c; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(x, y, 76, 17, 0, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
       blit(ctx, st, x, y + 4, .62); ctx.font = 'bold 10px monospace'; ctx.textAlign = 'center'; ctx.fillStyle = '#fff3c8'; ctx.fillText(site.won ? 'PRÜFUNG BESTANDEN' : `PRÜFUNG ${site.stage === 8 ? 'I' : 'II'}`, x, y - 172); return true;
     }
+    case 'shaft': {
+      // a shaft: a dark hole with a stone rim and a rope ladder going down
+      ctx.fillStyle = '#4e4840'; ctx.beginPath(); ctx.ellipse(x, y, 58, 16, 0, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#6a635a'; ctx.beginPath(); ctx.ellipse(x, y - 2, 54, 13, 0, Math.PI, 0); ctx.fill();
+      ctx.fillStyle = '#050403'; ctx.beginPath(); ctx.ellipse(x, y + 1, 44, 11, 0, 0, Math.PI * 2); ctx.fill();
+      for (let i = 0; i < 9; i++) { const a = i / 9 * Math.PI * 2; ctx.fillStyle = i % 2 ? '#7a7268' : '#5a534a'; ctx.fillRect(Math.round(x + Math.cos(a) * 52 - 5), Math.round(y + Math.sin(a) * 14 - 3), 10, 6); }
+      ctx.fillStyle = '#6b4428'; ctx.fillRect(Math.round(x - 14), Math.round(y - 4), 2, 14); ctx.fillRect(Math.round(x + 12), Math.round(y - 4), 2, 14); for (let r = 0; r < 3; r++) ctx.fillRect(Math.round(x - 14), Math.round(y - 2 + r * 5), 28, 2);
+      ctx.font = 'bold 9px monospace'; ctx.textAlign = 'center'; ctx.fillStyle = '#e8dcc0'; ctx.fillText('⇩ SCHACHT', x, y - 22); return true;
+    }
+    case 'lift': {
+      // a lift: a timber frame with a pulley, ropes and a plank platform (it rises when one stands on it)
+      const rise = opts.liftK ?? 0;
+      ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.beginPath(); ctx.ellipse(x, y + 2, 52, 9, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#4a2e1a'; ctx.fillRect(Math.round(x - 48), Math.round(y - 170), 7, 172); ctx.fillRect(Math.round(x + 41), Math.round(y - 170), 7, 172); ctx.fillRect(Math.round(x - 52), Math.round(y - 176), 104, 8);
+      ctx.fillStyle = '#8a8a8a'; ctx.beginPath(); ctx.arc(x, y - 166, 9, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#3a3a3a'; ctx.fillRect(Math.round(x - 2), Math.round(y - 168), 4, 4);
+      const py = y - 6 - rise * 60; ctx.fillStyle = '#c9b38a'; ctx.fillRect(Math.round(x - 30), Math.round(y - 166), 1, Math.round(py - (y - 166))); ctx.fillRect(Math.round(x + 30), Math.round(y - 166), 1, Math.round(py - (y - 166)));
+      ctx.fillStyle = '#2a1d14'; ctx.fillRect(Math.round(x - 40), Math.round(py), 80, 10); ctx.fillStyle = '#8a5a34'; for (let i = 0; i < 5; i++) ctx.fillRect(Math.round(x - 39 + i * 16), Math.round(py + 1), 14, 7);
+      ctx.font = 'bold 9px monospace'; ctx.textAlign = 'center'; ctx.fillStyle = '#e8dcc0'; ctx.fillText('⇧ AUFZUG', x, y - 184); return true;
+    }
     default: return false;
   }
 }

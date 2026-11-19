@@ -9,7 +9,8 @@ import { audio } from './audio.js';
 import { groundYForDepth } from './world.js';
 import { CASTLE_CLASSES, biomeAt, kkDistance } from './kk_map.js';
 import { levelForXp, xpProgress, deckSlots, gateFor, rollChest, lootTier, LEVEL_UNLOCKS, XP, MATERIALS, FUSE_GATE } from './kk_progress.js';
-import { kkState, kkOn, revealAround, isRevealed, elementColor } from './kk_world.js';
+import { kkState, kkOn, revealAround, isRevealed, elementColor, applyBounds } from './kk_world.js';
+import { KK } from './kk_map.js';
 
 export const BACKPACK = 40;             // units of materials + stones + weapons one carries
 const SEARCH_TIME = 1.4; const MINE_TIME = 2.2; const VEIN_COOLDOWN = 25; const PICK_RANGE = 44;
@@ -88,7 +89,7 @@ function takePile(game, item) {
 const near = (P, s, dx, dz) => Math.abs(P.x - s.x) < dx && Math.abs(P.z - s.z) < dz;
 const hqOf = (kk, seat = 0) => kk.map.hqs.find((h) => h.seat === seat);
 function tierAt(kk, site) {
-  const hq = hqOf(kk); return lootTier({ time: kk.time, middleBand: site.row === Math.floor(kk.map.rows / 2), hqDistance: kkDistance(hq, site) });
+  const hq = hqOf(kk); return lootTier({ time: kk.time, middleBand: site.row !== KK.main /* the sections above and below are the rich places */, hqDistance: kkDistance(hq, site) });
 }
 function searchBuilding(game, site) {
   const kk = kkState(game); site.looted = true; const floors = site.floors ?? 1; const tier = tierAt(kk, site); const biome = biomeAt(kk.map, site.row, site.x).element;
@@ -117,7 +118,7 @@ function updatePlaces(game, dt) {
       if (kk.progress[s.id] >= MINE_TIME) { kk.progress[s.id] = 0; s.cd = VEIN_COOLDOWN; const g = 15 + Math.floor(Math.random() * 16); kk.gold += g; say(game, `+${g} GOLD`, 1.1); gainXp(game, XP.mine); audio.playRuneChime?.(820); }
     } else if (s.kind === 'shrine' && !s.used && near(P, s, 50, .14)) {
       s.used = true; gainXp(game, XP.shrine); say(game, 'WEGSCHREIN — DIE GEGEND DECKT SICH AUF', 1.6);
-      for (let r = Math.max(0, s.row - 1); r <= Math.min(kk.map.rows - 1, s.row + 1); r++) { const reach = r === s.row ? 2600 : 1500; for (let x = s.x - reach; x <= s.x + reach; x += 200) revealAround({ ...kk, row: r, reveal: kk.reveal, map: kk.map }, { x }); }
+      for (let x = s.x - 2600; x <= s.x + 2600; x += 200) revealAround(kk, { x });
     }
   }
   // the own main castle: carried goods are stored there safely
@@ -145,7 +146,7 @@ function updateLife(game, dt) {
     say(game, 'GEFALLEN — DEINE BEUTE LIEGT AM BODEN', 2);
   } else if (!kk.alive && P.isAlive) {
     kk.alive = true; const hq = hqOf(kk); const dir = hq.row - kk.row;
-    kk.row = hq.row; P.x = hq.x + 190; P.z = .6; game.battlefield.placeOnSurface?.(P); if (dir) kk.pan = 0;
+    kk.row = hq.row; P.x = hq.x + 190; P.z = .6; applyBounds(game, kk); game.battlefield.placeOnSurface?.(P); if (dir) kk.pan = 0;
     game.modeState.dungeonCameraX = game.dungeonCameraTarget?.() ?? game.modeState.dungeonCameraX; revealAround(kk, P);
     say(game, 'ZURÜCK IN DER HAUPTBURG', 1.4);
   }

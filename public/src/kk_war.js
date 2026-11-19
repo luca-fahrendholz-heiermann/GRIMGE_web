@@ -7,7 +7,7 @@ import { combat } from './combat.js';
 import { sprites } from './sprites.js';
 import { audio } from './audio.js';
 import { groundYForDepth } from './world.js';
-import { CASTLE_CLASSES, kkDistance, biomeAt } from './kk_map.js';
+import { CASTLE_CLASSES, kkDistance, biomeAt, spanAt, KK } from './kk_map.js';
 import { rollChest, levelForXp, lootTier, XP, heroKillXp } from './kk_progress.js';
 import { kkState, kkOn, SEAT_COLORS, SEAT_NAMES, elementColor } from './kk_world.js';
 import { gainXp, dropPile } from './kk_loot.js';
@@ -84,9 +84,21 @@ function pickTask(kk, bot) {
   if (loot.length) return { kind: 'loot', id: loot[0].id };
   return { kind: 'idle', id: hq.id };
 }
+// Bots change levels only where the player can: down a shaft, up a lift (another section of the same level means
+// going through the main plane).
 function moveBot(kk, bot, target, dt) {
-  if (bot.travel > 0) { bot.travel -= dt; if (bot.travel <= 0) bot.row += Math.sign(target.row - bot.row); return false; }
-  if (bot.row !== target.row) { bot.travel = BAND_TIME; return false; }
+  if (bot.travel > 0) { bot.travel -= dt; if (bot.travel <= 0) { bot.row = bot.travelTo; bot.x = bot.travelX; } return false; }
+  let aim = target.row;
+  if (aim === bot.row && bot.row !== KK.main && spanAt(kk.map, bot.row, bot.x) !== spanAt(kk.map, bot.row, target.x)) aim = KK.main;
+  if (bot.row !== aim) {
+    const down = aim > bot.row; const kind = down ? 'shaft' : 'lift';
+    const here = spanAt(kk.map, bot.row, bot.x);
+    const cons = kk.map.sites.filter((s) => s.kind === kind && s.row === bot.row && (down ? s.to > bot.row : s.to < bot.row) && (!here || spanAt(kk.map, bot.row, s.x) === here));
+    if (!cons.length) return true; /* no way from here: act where it is */
+    const c = cons.sort((a, b) => Math.abs(a.x - bot.x) - Math.abs(b.x - bot.x))[0];
+    if (Math.abs(c.x - bot.x) < 40) { bot.travel = BAND_TIME * .5; bot.travelTo = c.to; bot.travelX = c.x + (down ? 80 : 110); return false; }
+    bot.x += Math.sign(c.x - bot.x) * Math.min(Math.abs(c.x - bot.x), BOT_SPEED * dt); return false;
+  }
   const dx = target.x - bot.x; if (Math.abs(dx) < 90) return true;
   bot.x += Math.sign(dx) * Math.min(Math.abs(dx), BOT_SPEED * dt); return false;
 }

@@ -10,7 +10,7 @@ import { setStatusSource } from './status_effects.js';
 import { combat } from './combat.js';
 import { audio } from './audio.js';
 import { groundYForDepth } from './world.js';
-import { CASTLE_CLASSES, mulberry32 } from './kk_map.js';
+import { CASTLE_CLASSES, mulberry32, spanAt } from './kk_map.js';
 import { squadBonus, XP } from './kk_progress.js';
 import { kkState, kkOn, SEAT_COLORS, elementColor } from './kk_world.js';
 import { gainXp } from './kk_loot.js';
@@ -155,7 +155,7 @@ function updatePatrols(game, dt) {
     else if (kk.carry && Math.abs(game.player.x - a.x) < 1500) { a.x += Math.sign(game.player.x - a.x) * 70 * dt; a.z = game.player.z; } /* bandits smell an egg carrier */
     else { a.x += rec.dir * 55 * dt; a.z = .5 + Math.sin((a.x + rec.id * 40) * .002) * .12; }
     if ((rec.dir > 0 && a.x >= rec.legEnd) || (rec.dir < 0 && a.x <= rec.legEnd)) { rec.dir *= -1; const camp = siteById(kk, rec.siteId); rec.legEnd = camp ? camp.x : rec.x; }
-    a.x = Math.max(80, Math.min(kk.map.width - 80, a.x));
+    { const camp = siteById(kk, rec.siteId); const sp = spanAt(kk.map, rec.row, camp?.x ?? a.x) ?? [0, kk.map.width]; a.x = Math.max(sp[0] + 80, Math.min(sp[1] - 80, a.x)); if (!rec.live) rec.x = a.x; rec.legEnd = Math.max(sp[0] + 80, Math.min(sp[1] - 80, rec.legEnd)); } /* patrols stay in their stretch */
   }
 }
 

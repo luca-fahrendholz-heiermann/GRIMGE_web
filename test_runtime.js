@@ -5560,16 +5560,19 @@ game.running = false;
   const KM = await import('./public/src/kk_map.js'); let bad = 0; let worst = 0;
   for (let seed = 1; seed <= 60; seed++) { const m = KM.generateKKMap(seed); const near = m.hqs.map((h) => KM.valueNear(m, h)); const c = {}; m.sites.forEach((x) => { c[x.kind] = (c[x.kind] ?? 0) + 1; }); worst = Math.max(worst, m.fairRatio);
     const bigNearHQ = m.sites.some((x) => KM.SITE_KINDS[x.kind].big && m.hqs.some((h) => h.row === x.row && Math.abs(h.x - x.x) < KM.KK.hqKeepOut));
-    if (m.fairRatio > KM.KK.fairRatio || Math.max(...near) > KM.KK.hqValueCap || Math.max(...near) - Math.min(...near) > KM.KK.nearSpread || c.castle !== 12 || c.source !== 14 || bigNearHQ || new Set(m.hqs.map((h) => h.seat)).size !== 4) bad++; }
+    const linked = m.sites.filter((x) => x.kind === 'shaft').every((sh) => m.sites.some((l) => l.kind === 'lift' && l.row === sh.to && l.to === sh.row && l.x === sh.x)) && c.shaft === 8 && c.lift === 8; const onMain = m.hqs.every((h) => h.row === KM.KK.main);
+    if (m.fairRatio > KM.KK.fairRatio || Math.max(...near) > KM.KK.hqValueCap || Math.max(...near) - Math.min(...near) > KM.KK.nearSpread || c.castle !== 14 || c.source !== 14 || bigNearHQ || new Set(m.hqs.map((h) => h.seat)).size !== 4 || !linked || !onMain) bad++; }
   const same = JSON.stringify(KM.generateKKMap(7)) === JSON.stringify(KM.generateKKMap(7)); const differs = JSON.stringify(KM.generateKKMap(7)) !== JSON.stringify(KM.generateKKMap(8));
-  assert(!bad && same && differs, 'Kronenkrieg map: 60 seeds all fair (worst ' + worst + '), capped and unclustered around every main castle, every one with 12 mid castles and 14 sources; same seed = same map, other seed = other map');
+  assert(!bad && same && differs, 'Kronenkrieg map: 60 seeds all fair (worst ' + worst + '), capped and unclustered around every main castle, one huge main plane with all four main castles and sections above and below joined by shaft + lift pairs, 14 mid castles and 14 sources; same seed = same map, other seed = other map');
   // the mode: start at the own main castle, walk against the band edge to enter the next band
   const KW = await import('./public/src/kk_world.js'); game.setMatchMode('kronenkrieg'); game.startMatch(); const kk = game.modeState.kk; const P = game.player; const hq = kk.map.hqs.find((h) => h.seat === 0);
   const startOk = game.activeMode.id === 'kronenkrieg' && kk.row === hq.row && Math.abs(P.x - hq.x) < 400 && P.runeDeck.length + P.runeHand.length === 0;
-  const dir = kk.row === 0 ? 1 : -1; const b = game.battlefield.boundsOverride; P.z = dir < 0 ? b.farZ : b.nearZ; P.grounded = true; game.input.move = { x: 0, z: dir }; const row0 = kk.row;
-  for (let i = 0; i < 20; i++) KW.updateKronenkrieg(game, 1 / 60); const switched = kk.row === row0 + dir && kk.pan !== 0; game.input.move = { x: 0, z: 0 };
+  const b = game.battlefield.boundsOverride; P.z = b.farZ; P.grounded = true; game.input.move = { x: 0, z: -1 }; const row0 = kk.row; for (let i = 0; i < 40; i++) KW.updateKronenkrieg(game, 1 / 60); game.input.move = { x: 0, z: 0 }; const edgeHolds = kk.row === row0;
+  const shaft = kk.map.sites.find((x) => x.kind === 'shaft' && x.row === kk.row); P.x = shaft.x; P.z = shaft.z; KW.updateKronenkrieg(game, 1 / 60); const wentDown = kk.row === shaft.to && kk.pan !== 0;
+  const sec = KM.spanAt(kk.map, kk.row, P.x); const bounded = !!sec && b.left >= sec[0] && b.right <= sec[1];
+  const lift = kk.map.sites.find((x) => x.kind === 'lift' && x.row === kk.row && x.x === shaft.x); P.x = lift.x; P.z = lift.z; for (let i = 0; i < 80; i++) KW.updateKronenkrieg(game, 1 / 60); const wentUp = kk.row === row0;
   for (let i = 0; i < 90; i++) KW.updateKronenkrieg(game, 1 / 60); const settled = kk.pan === 0 && KW.isRevealed(kk, kk.row, P.x);
-  assert(startOk && switched && settled, 'Kronenkrieg: starts at the own main castle with the class only, pressing against the band edge enters the next band (the camera glides after) and the map reveals around the figure');
+  assert(startOk && edgeHolds && wentDown && bounded && wentUp && settled, 'Kronenkrieg: starts at the own main castle with the class only; the edge of the plane holds, a shaft drops one level down into a bounded section, its lift brings the figure back up (the camera glides after) and the map reveals around the figure (' + [startOk, edgeHolds, wentDown, bounded, wentUp, settled].join('/') + ')');
   // loot: search a building, sealed runes, level-up unseals, fusion gate, death pile, return at the main castle, picking the pile up
   const KL = await import('./public/src/kk_loot.js'); const KP = await import('./public/src/kk_progress.js');
   const bld = kk.map.sites.filter((x) => x.kind === 'building' && x.row === kk.row).sort((a2, b2) => Math.abs(a2.x - P.x) - Math.abs(b2.x - P.x))[0];

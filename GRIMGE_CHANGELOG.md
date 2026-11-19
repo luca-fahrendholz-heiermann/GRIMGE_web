@@ -2,6 +2,13 @@
 
 Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
+## 19. Nov 2026 – Kronenkrieg: eine riesige Ebene mit Sektionen, Schächte und Aufzüge (Rückmeldung des Nutzers)
+
+- Statt drei gleich breiter Streifen, zwischen denen man am Rand einfach wechselte, gibt es jetzt EINE riesige 2,5D-Hauptebene (doppelt so breit, tiefer im Bild), auf der die vier Hauptburgen und der Großteil der Orte verteilt sind. Am Rand ist eine feste Grenze.
+- Darüber zwei Hochebenen, darunter zwei Tiefen als begrenzte Sektionen (eigene Gebiete, Kreaturen-Reviere, die reine Quelle, bessere Beute). Wechsel nur an SCHÄCHTEN (hineinlaufen = hinab) und AUFZÜGEN (auf der Plattform stehen = hinauf), je ein Paar an beiden Enden jeder Sektion; die Übergänge liegen nie an einer Hauptburg.
+- Jede Ebene hat ihre Stimmung: Dämmerungshimmel über den Hochebenen, Nacht über der Hauptebene, eine Höhlendecke mit Stalaktiten in der Tiefe; außerhalb einer Sektion Fels. Die Übersichtskarte zeigt Sektionen nur, wo es sie gibt, mit Pfeilen für Schacht und Aufzug.
+- Kleine Orte (Häuser, Goldadern, Schreine) dürfen hintereinander in der Tiefe stehen; Bots, Patrouillen und Rückkehr folgen den neuen Ebenen; im 2 gegen 2 ist der Verbündete der Nachbar auf der Ebene.
+
 ## 19. Nov 2026 – Kronenkrieg: Kreaturen reiten, Pferd
 
 - Gezähmte und geschlüpfte Kreaturen tragen ihren Helden ab Rundenstufe 5 (Aufsteigen wie bei anderen Reittieren, Reitangriffe je nach Art; flinke Kreaturen sind schneller, ein Glutkoloss langsamer).
