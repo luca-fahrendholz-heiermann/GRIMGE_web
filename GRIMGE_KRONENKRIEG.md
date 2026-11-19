@@ -137,8 +137,8 @@ bei 1 beginnt. Das trägt die Säule „vom Nichts zur Armee“ und gibt laufend
 | 2 | +1 Deckplatz | Fusion von zwei Runen |
 | 3 | **einfache Pferde reiten** (aus Ställen) | Beschwörungen, Haltungen |
 | 4 | +1 Deckplatz, Trupp +2 | **Atmung** |
-| 5 | **gezähmte und geschlüpfte Kreaturen reiten** | Mehrfachzauber (große Kombinationen) |
-| 6 | +1 Deckplatz | **Sphären / Domänen**, Fusion von drei Runen |
+| 5 | **gezähmte und geschlüpfte Kreaturen reiten** | **Mehrfach-Runen** (Spezialrunen mit zweiter Aktivierung: nochmal tippen oder halten & loslassen) |
+| 6 | +1 Deckplatz | **Sphären / Domänen**, Fusion von drei Runen (die großen Dreier-Kombinationen) |
 | 7 | Trupp +2, zweiter Trankplatz | — |
 | 8 | **fliegen** mit fliegenden Kreaturen | **Arcane State** |
 | 9 | +1 Deckplatz (8 Karten) | **Fokus-Transformation** |
@@ -158,8 +158,10 @@ weghauen.** Deshalb gilt wie beim Mastery-Baum: Jede Machtstufe der Runen hat ei
 in §4a).
 
 - **Versiegelte Runen:** Findet man eine Rune, deren Stufe man noch nicht hat, wird sie trotzdem eingesammelt,
-  aber **versiegelt**. Sie liegt mit Schloss und Zahl („ab Stufe 8“) im Deck, lässt sich nicht slotten oder wirken
-  und zählt nicht gegen die freien Deckplätze. Sobald man die Stufe erreicht, bricht das Siegel. Ein kurzer
+  aber **versiegelt**. Sie liegt mit Schloss und Zahl („ab Stufe 8“) im Deck und lässt sich nicht slotten oder
+  wirken, **belegt aber einen Deckplatz** (Nutzer, 19. Nov 2026). Das ist das Risiko: Man trägt einen Platz, der
+  noch nichts tut, weiß dafür aber, dass man ab Stufe 8 eine starke Rune hat. Wegwerfen geht jederzeit (sie fällt
+  dann als Beute auf den Boden). Sobald man die Stufe erreicht, bricht das Siegel. Ein kurzer
   Moment mit Ansage: „ARCANE STATE ENTSIEGELT“.
 - So bleibt der Fund spannend (man weiß, was kommt, und hat ein Ziel), ohne das frühe Spiel zu zerstören.
 - **Beim Tod** fallen auch versiegelte Runen. Ein Spieler, der schon die passende Stufe hat, kann sie sofort nutzen.
