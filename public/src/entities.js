@@ -807,6 +807,8 @@ export class Player extends GroundEntity {
       return;
     }
     let move = normalizeMove(moveVector(input));
+    // The summon pose (user, 20 Nov 2026: the summoner stays put): no walking or sprinting — attacks and blocking still work.
+    if (this.summonPoseT > 0) { move = { x: 0, z: 0 }; this.cancelSprint(); this.vx = 0; this.vz = 0; }
 
     // Keyboard double-flicks keep their PC behaviour. Touch flicks are
     // classified by the left-half gesture router instead, so an active
@@ -991,7 +993,7 @@ export class Player extends GroundEntity {
   }
 
   performJump() {
-    if (this.jumpsLeft <= 0 || this.rootTimer > 0) return;
+    if (this.jumpsLeft <= 0 || this.rootTimer > 0 || (this.summonPoseT > 0 && this.grounded)) return;
     if (this.grounded && this.state !== 'uppercut') this.airUpUsed = false; // a fresh jump from the ground: the air up-swipe is available again
     const wasSprinting = this.sprintActive;
     this.cancelSprint();
@@ -1014,7 +1016,7 @@ export class Player extends GroundEntity {
 
   activateSprint(dir) {
     this._sprintHits = new Set();
-    if (this.rootTimer > 0 || this.isGuarding || this.backdashTimer > 0 || this.backdashSuppressTimer > 0 || !this.grounded || this.activeClash) return;
+    if (this.rootTimer > 0 || this.summonPoseT > 0 || this.isGuarding || this.backdashTimer > 0 || this.backdashSuppressTimer > 0 || !this.grounded || this.activeClash) return;
     this.sprintActive = true;
     this.sprintDir = dir;
     audio.playDash();
@@ -1265,7 +1267,7 @@ export class Player extends GroundEntity {
   }
 
   triggerBackdash(options = {}) {
-    if (this.rootTimer > 0 || this.isGuarding || this.backdashTimer > 0 || this.backdashCooldown > 0 || !this.grounded || !this.isAlive || this.activeClash) return false;
+    if (this.rootTimer > 0 || this.summonPoseT > 0 || this.isGuarding || this.backdashTimer > 0 || this.backdashCooldown > 0 || !this.grounded || !this.isAlive || this.activeClash) return false;
     this.backdashCooldown = BACKDASH_COOLDOWN + BACKDASH_DURATION;
     // Forget pending direction flicks so the dodge cannot turn into a sprint.
     this._lastFlickDir = 0; this._lastFlickTime = 0;
@@ -2716,7 +2718,7 @@ export class Minion extends GroundEntity {
       }
     }
     else if (hint && followSceneHint(this, hint, dt)) { /* the hint owns the movement this frame */ }
-    else if (target && distance <= (target.isObjective ? 70 : this.attackRange)) { this.vx = this.vz = 0; this.facing = Math.sign(target.x - this.x) || this.facing; if (this.attackTimer <= 0) { this.attackTimer = this.attackCooldown; this.state = 'attack'; this.performAttack(target, gameWorld); } else { this.state = this.attackTimer > this.attackCooldown - 0.35 ? 'attack' : 'idle'; } }
+    else if (target && !target.isNavPoint && distance <= (target.isObjective ? 70 : this.attackRange)) { /* a nav point (stair foot / top) is walked to, never struck */ this.vx = this.vz = 0; this.facing = Math.sign(target.x - this.x) || this.facing; if (this.attackTimer <= 0) { this.attackTimer = this.attackCooldown; this.state = 'attack'; this.performAttack(target, gameWorld); } else { this.state = this.attackTimer > this.attackCooldown - 0.35 ? 'attack' : 'idle'; } }
     else {
       // Structures are attacked from each lane; combat units may pull a minion
       // slightly off its lane only when already nearby.

@@ -5635,6 +5635,25 @@ game.running = false;
     assert(refused && tookStone && woodLies && runeRefused && runeSwapped, 'Swap window: an item that does not fit offers a swap, the chosen stack is dropped as items (not picked straight back up) and the new one is taken; a full deck swaps a deck rune for the one lying there (' + [refused, tookStone, woodLies, runeRefused, runeSwapped].join('/') + ')');
   }
   {
+    // stairs as ramps (user, 20 Nov 2026): the summoner stays put; on a stair one leaves only at its foot / top or by jumping; Kronenkrieg
+    // units use stairs: a foe on the rampart is reached over the stair foot
+    const SS = await import('./public/src/summon_seal.js'); const KCr = await import('./public/src/kk_castle.js'); const KAr = await import('./public/src/kk_army.js');
+    const inpR = (mx, mz) => ({ keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: mx, z: mz }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false });
+    const stepR = (mx, mz, n) => { game.input.move = { x: mx, z: mz }; for (let i = 0; i < n; i++) { P.update(1 / 60, inpR(mx, mz), game.battlefield, game); KW.updateKronenkrieg(game, 1 / 60); } game.input.move = { x: 0, z: 0 }; };
+    for (const m of game.minions) if (m.isKKUnit && m.team !== P.team) m.isDead = true; game.minions = game.minions.filter((m) => !m.isDead);
+    const cs = kk.map.sites.find((x) => x.kind === 'castle' && x.row === kk.row) ?? kk.map.sites.find((x) => x.kind === 'castle'); kk.row = cs.row; kk.inside = null; KW.updateKronenkrieg(game, 1 / 60);
+    P.x = cs.x + 600; P.z = cs.z + .3; P.elevation = 0; P.surfaceHeight = 0; game.battlefield.placeOnSurface(P); const x0 = P.x; SS.beginSummonPose(P); stepR(1, 0, 40); const stays = Math.abs(P.x - x0) < 1;
+    P.summonPoseT = 0; stepR(1, 0, 20); const movesAfter = P.x > x0 + 5;
+    const stair = game.battlefield.levelSurfaces.find((S) => S.siteId === cs.id && S.structure === 'stairs'); const footHigh = stair.heightAt(stair.xMin) > stair.heightAt(stair.xMax); const footX = footHigh ? stair.xMax + 20 : stair.xMin - 20; const dir = footHigh ? -1 : 1;
+    P.x = footX; P.z = (stair.zMin + stair.zMax) / 2; P.surfaceHeight = 0; game.battlefield.placeOnSurface(P); stepR(dir, 0, 30); const climbing = (P.surfaceHeight ?? 0) > 8;
+    stepR(0, 1, 40); const railHolds = P.surfaceId === stair.id && (P.surfaceHeight ?? 0) > 8;
+    const top = Math.max(stair.heightAt(stair.xMin), stair.heightAt(stair.xMax)); let topSeen = 0; for (let i = 0; i < 70 && topSeen < top - 8; i++) { stepR(dir, 0, 1); topSeen = Math.max(topSeen, P.surfaceHeight ?? 0); } stepR(dir, 0, 12); const onTop = topSeen > top - 8 && (P.surfaceHeight ?? 0) > top - 8;
+    const foe = KAr.addRecord(kk, { team: 'red', bandit: true, cls: 'Berserker', element: null, tier: 1, row: cs.row, x: footX + dir * -140, z: (stair.zMin + stair.zMax) / 2 + .25, role: 'guard', siteId: null }); KAr.updateArmy(game, 1 / 60); const fu = foe.live; fu.kkEngaged = P; fu.followLeader = { isAlive: true, x: P.x, z: P.z };
+    let maxH = 0; for (let i = 0; i < 900 && maxH < top - 8; i++) { P.x = P.x; KAr.updateArmy(game, 1 / 60); fu.update(1 / 60, game, game.battlefield); maxH = Math.max(maxH, fu.surfaceHeight ?? 0); if (i % 300 === 0) console.log('NAV', i, Math.round(fu.x), fu.z.toFixed(3), fu.grounded, fu.state, JSON.stringify(fu._nav && { x: Math.round(fu._nav.x), z: fu._nav.z.toFixed(3) }), Math.round(stair.xMin), Math.round(stair.xMax), stair.zMin.toFixed(3), stair.zMax.toFixed(3), Math.round(fu.vx), fu.hurtTimer, fu.freezeTimer); }
+    const aiClimbs = maxH > top - 8; fu.isDead = true; kk.units = kk.units.filter((u) => u !== foe); game.minions = game.minions.filter((m) => !m.isDead); P.surfaceHeight = 0; P.elevation = 0; P.x = cs.x + 600; P.z = cs.z + .3; game.battlefield.placeOnSurface(P);
+    assert(stays && movesAfter && climbing && railHolds && onTop && aiClimbs, 'Stairs as ramps: no walking during the summon pose, a stair is walked up without a jump, its front rail holds the figure on it, it leads onto the rampart, and a foe unit climbs the stair to reach a figure up there (' + [stays, movesAfter, climbing, railHolds, onTop, aiClimbs, Math.round(maxH)].join('/') + ')');
+  }
+  {
     // resources (feedback 20 Nov 2026): trees give wood, rocks stone, ore veins steel, obsidian takes longest; a felled node drops items and regrows
     const KR = await import('./public/src/kk_resources.js'); const kinds = new Set(kk.decor.map((d) => d.kind)); const allKinds = ['rock', 'ore', 'obsidian'].every((k) => kinds.has(k)) && ['oak', 'pine', 'snowpine', 'dead'].some((k) => kinds.has(k));
     const tree = kk.decor.find((d) => KR.RESOURCE[d.kind]?.mat === 'wood' && d.row === kk.row); P.x = tree.x + 30; P.z = tree.z;

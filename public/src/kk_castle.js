@@ -36,8 +36,8 @@ function defsOf(s) {
   const d = dimsOf(s); const b = castleBox(s);
   return [
     { type: 'gallery', x0: b.x0, x1: b.x1, zMin: b.zMin, zMax: b.zMax, h: d.h, backWall: true }, /* the back parapet */
-    { type: 'stairs', x0: b.x0 - d.stair, x1: b.x0, zMin: b.zMin + .02, zMax: b.zMax, from: 0, to: d.h, backWall: true },
-    { type: 'stairs', x0: b.x1, x1: b.x1 + d.stair, zMin: b.zMin + .02, zMax: b.zMax, from: d.h, to: 0, backWall: true }
+    { type: 'stairs', x0: b.x0 - d.stair, x1: b.x0, zMin: b.zMin + .02, zMax: b.zMax, from: 0, to: d.h, backWall: true, frontRail: true },
+    { type: 'stairs', x0: b.x1, x1: b.x1 + d.stair, zMin: b.zMin + .02, zMax: b.zMax, from: d.h, to: 0, backWall: true, frontRail: true }
   ];
 }
 function allSurfaces(kk) {

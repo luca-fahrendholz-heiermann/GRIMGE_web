@@ -17,7 +17,7 @@ import { damageCastle } from './kk_castle.js';
 // solid footprint of the house in the world (nobody walks through a house, only through its door).
 export const HOUSE = Object.freeze({ half: 140, depth: .3, floorH: 66, openTime: 1, doorHalf: 28, outHalf: 93, outDepth: .13 });
 const zBack = (s) => s.z - HOUSE.depth; const zFront = (s) => s.z + .02;
-const galleryBand = (s) => [zBack(s), zBack(s) + .12];
+const galleryBand = (s) => [zBack(s), zBack(s) + .16]; /* wide enough to walk the stair without slipping off */
 // The chests of a house: one on the ground floor, one or two on the gallery.
 export function chestsOf(site) {
   if (site.chests) return site.chests;
@@ -34,7 +34,7 @@ function houseStructures(site) {
   const [g0, g1] = galleryBand(site); const x0 = site.x - HOUSE.half; const x1 = site.x + HOUSE.half;
   return structureSurfaces([
     { type: 'gallery', x0, x1: site.x + 10, zMin: g0, zMax: g1, h: HOUSE.floorH, backWall: true },
-    { type: 'stairs', x0: site.x + 10, x1: x1 - 46, zMin: g0, zMax: g1, from: HOUSE.floorH, to: 0, backWall: true } /* the foot stands free of the wall */
+    { type: 'stairs', x0: site.x + 10, x1: x1 - 46, zMin: g0, zMax: g1, from: HOUSE.floorH, to: 0, backWall: true, frontRail: true } /* the foot stands free of the wall */
   ], 0);
 }
 

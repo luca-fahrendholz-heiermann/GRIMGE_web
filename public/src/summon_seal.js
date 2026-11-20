@@ -55,8 +55,8 @@ export class SummonSeal {
   }
 }
 
-// The caster kneels with a palm on the ground: the rig clip 'summon' while summonPoseT runs. Purely visual — nothing locks the
-// caster; as soon as it walks or acts the pose gives way (entities.js plays it only for a standing figure).
+// The caster kneels with a palm on the ground: the rig clip 'summon' while summonPoseT runs. The caster stays put meanwhile
+// (user, 20 Nov 2026: no walking, sprinting, jumping or backdash during the summon — entities.js).
 export function beginSummonPose(caster) { if (caster) caster.summonPoseT = SEAL.pose; }
 // 0..1 how far a creature has climbed out of its seal (eased, after the short wait while the ring closes).
 export function riseProgress(timer, duration) { if (!(duration > 0)) return 1; const p = 1 - timer / duration; const k = clamp01((p - SEAL.riseWait) / (1 - SEAL.riseWait)); return k * k * (3 - 2 * k); }

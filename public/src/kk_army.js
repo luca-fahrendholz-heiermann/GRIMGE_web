@@ -51,7 +51,7 @@ export class KKUnit extends Minion {
   constructor(rec) {
     const stats = CLASS_STATS[rec.cls] ?? CLASS_STATS.Guardian;
     super(rec.x, rec.z, rec.team === 'blue' ? 'blue' : 'red', stats.type, 1);
-    this.team = rec.team; this.rec = rec; this.isKKUnit = true;
+    this.team = rec.team; this.rec = rec; this.isKKUnit = true; this.usesLevels = true; /* stairs and ramparts (battlefield.getSurfaceAt) */
     const tierMul = 1 + (rec.tier - 1) * .55; const vet = rec.bonus?.includes('veteran') ? 1.25 : 1; const elite = rec.bonus?.includes('elite') ? 1.3 : 1;
     this.maxHp = Math.round(this.maxHp * stats.hp * tierMul * vet * (rec.bandit ? .9 : 1)); this.hp = Math.min(this.maxHp, rec.hp ?? this.maxHp);
     this.damage = Math.round(this.damage * stats.dmg * tierMul * elite); this.speed *= stats.spd; this.renderHeight = 54 + (rec.tier - 1) * 6;
@@ -111,7 +111,32 @@ export function kkFindTarget(game, unit) {
     unit.kkEngaged = eng; best = eng;
   }
   if (best && best === game.player && kk.inside && unit.kkInHouse !== kk.inside.id) { const door = kk.doorProxy?.(unit) ?? null; unit.target = door; return door; }
-  unit.target = best; return best;
+  unit.target = best; return navPoint(game, unit, best);
+}
+// Stairs for the AI (user, 20 Nov 2026: "Gegner-KI muss Treppen zuverlässig verwenden"): a target up on a rampart / gallery is
+// reached over the foot and the top of a stair of that structure; down again over the stair (or straight off the front edge).
+const stairFoot = (s) => (s.heightAt(s.xMin) <= s.heightAt(s.xMax) ? { x: s.xMin, out: -1 } : { x: s.xMax, out: 1 });
+function navPoint(game, unit, target) {
+  const S = game.battlefield?.levelSurfaces; if (!target || !S?.length || !unit.usesLevels) return target;
+  const uh = (unit.surfaceHeight ?? 0) + (unit.elevation ?? 0); const th = (target.surfaceHeight ?? 0) + (target.elevation ?? 0);
+  const here = S.find((s) => s.id === unit.surfaceId); const there = S.find((s) => s.id === target.surfaceId);
+  const nav = (x, z) => { const n = unit._nav ?? (unit._nav = { isNavPoint: true, isAlive: true, isDead: false, team: unit.team, radius: 4, takeDamage() {} }); n.x = x; n.z = z; n.y = groundYForDepth(z); return n; };
+  const mid = (s) => (s.zMin + s.zMax) / 2;
+  const stairsOf = (site) => S.filter((s) => s.structure === 'stairs' && (site == null || s.siteId === site));
+  if (th > 20 && uh < th - 14) { /* up */
+    if (here?.structure === 'stairs') { const f = stairFoot(here); return nav(f.out < 0 ? here.xMax + 6 : here.xMin - 6, mid(here)); }
+    const list = stairsOf(there?.siteId ?? null); if (!list.length) return target;
+    const st = list.reduce((a, b) => (Math.abs(stairFoot(a).x - unit.x) < Math.abs(stairFoot(b).x - unit.x) ? a : b)); const f = stairFoot(st);
+    const ox = f.x + f.out * 26; const onIt = unit.x >= st.xMin && unit.x <= st.xMax && unit.z >= st.zMin && unit.z <= st.zMax;
+    const atFoot = Math.sign(unit.x - f.x) === f.out && Math.abs(unit.x - f.x) < 44 && Math.abs(unit.z - mid(st)) * 150 < 14; /* lined up in front of the foot */
+    if (!onIt && !atFoot) return nav(ox, mid(st));
+    return nav(f.out < 0 ? st.xMax + 6 : st.xMin - 6, mid(st));
+  }
+  if (uh > 14 && th < uh - 14) { /* down */
+    if (here?.structure === 'stairs') { const f = stairFoot(here); return nav(f.x + f.out * 30, mid(here)); }
+    if (here && target.z < here.zMax) { const list = stairsOf(here.siteId ?? null); if (list.length) { const st = list.reduce((a, b) => (Math.abs(a.xMin - unit.x) < Math.abs(b.xMin - unit.x) ? a : b)); const f = stairFoot(st); return nav(f.out < 0 ? st.xMax - 4 : st.xMin + 4, mid(st)); } }
+  }
+  return target;
 }
 
 // ── records ────────────────────────────────────────────────────────────────────────────────────────────────────────

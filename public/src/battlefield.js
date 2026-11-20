@@ -243,7 +243,7 @@ export class Battlefield {
     // Siege: a Wizard is confined to its platform or to the lane (siege_match.js).
     clampToArena(entity, entity.confineBounds ?? (onDeck ? { ...bounds, left: 0, right: this.width } : this.boundsOverride));
     // A stair / gallery against a back wall (user, 20 Nov 2026): whoever stands on it cannot step off its back edge.
-    if (entity.surfaceId != null && this.levelSurfaces?.length) { const S = this.levelSurfaces.find((s) => s.id === entity.surfaceId); if (S?.backWall && entity.z < S.zMin + .006 && entity.x >= S.xMin && entity.x <= S.xMax) entity.z = S.zMin + .006; }
+    if (entity.surfaceId != null && this.levelSurfaces?.length) { const S = this.levelSurfaces.find((s) => s.id === entity.surfaceId); if (S?.backWall && entity.z < S.zMin + .006 && entity.x >= S.xMin && entity.x <= S.xMax) entity.z = S.zMin + .006; if (S?.frontRail && entity.grounded && entity.z > S.zMax - .006 && entity.x >= S.xMin && entity.x <= S.xMax) entity.z = S.zMax - .006; } /* on a stair one leaves at its foot, its top — or by jumping */
     if (entity.x !== oldX) entity.vx = 0;
     if (entity.z !== oldZ) entity.vz = 0;
     let surface = this.getSurfaceAt(entity.x, entity.z, entity);
@@ -274,7 +274,7 @@ export class Battlefield {
     // Level structures: the ground under stairs / galleries is blocked like a wall (no walking into the flight from the side).
     if (this.levelSurfaces?.length) {
       const cur = previousSurfaceHeight + (entity.elevation ?? 0);
-      const wall = this.levelSurfaces.find((S) => surface !== S && surfaceContains(S, entity.x, entity.z) && surfaceHeight(S, entity.x) > cur + 14);
+      const wall = this.levelSurfaces.find((S) => surface !== S && surfaceContains(S, entity.x, entity.z) && surfaceHeight(S, entity.x) > cur + 18);
       const safe = entity._structSafe;
       if (wall && safe && !surfaceContains(wall, safe.x, safe.z)) { entity.x = safe.x; entity.z = safe.z; entity.vx = 0; entity.vz = 0; surface = this.getSurfaceAt(entity.x, entity.z, entity); }
       else entity._structSafe = { x: entity.x, z: entity.z };
@@ -336,7 +336,7 @@ export class Battlefield {
     // Lane units always remain on the ground plane. This intentionally makes
     // Castle battlements a Wizard-only spell-duel zone without reintroducing
     // separate rails or platformer physics for the rest of the arena.
-    if (entity?.isMinion) return this.surfaces[0];
+    if (entity?.isMinion && !entity.usesLevels) return this.surfaces[0]; /* Kronenkrieg units walk stairs and ramparts too */
     // Training castle ramparts: stood on (or landed on from above), never
     // walked up onto from the ground — the gate leads up there.
     if (this.trainingMap) {
@@ -347,14 +347,14 @@ export class Battlefield {
     // A landing-only Arena platform is never a walk-up ledge. A character
     // must be falling from at least its top height, or already stand on it.
     // Spell geometry (geometry.js: pillars, platforms, the world tree) is checked first.
-    const candidates = [...this.surfaces, ...(this.levelSurfaces ?? []), ...(this.dynamicSurfaces ?? [])].reverse().filter((surface) => surfaceContains(surface, x, z));
+    const candidates = (entity?.isMinion ? [this.surfaces[0], ...(this.levelSurfaces ?? [])] : [...this.surfaces, ...(this.levelSurfaces ?? []), ...(this.dynamicSurfaces ?? [])]).reverse().filter((surface) => surfaceContains(surface, x, z));
     for (const surface of candidates) {
       if (!surface.landingOnly || !entity) return surface;
       if (entity.surfaceId === surface.id) return surface;
       const currentHeight = (entity.surfaceHeight ?? 0) + (entity.elevation ?? 0);
       const canLand = !entity.grounded && entity.vElevation <= 0 && currentHeight >= surfaceHeight(surface, x) - 8;
       // Level structures (stairs / galleries) are walked onto at the same height (stairs foot, stairs → gallery).
-      const walksOn = surface.levelWalk && entity.grounded && Math.abs(currentHeight - surfaceHeight(surface, x)) <= 14;
+      const walksOn = surface.levelWalk && entity.grounded && Math.abs(currentHeight - surfaceHeight(surface, x)) <= 18;
       if (canLand || walksOn) return surface;
     }
     return this.surfaces[0];
