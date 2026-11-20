@@ -5863,6 +5863,21 @@ game.running = false;
     assert(high && low && upkeep && roster, 'Morale and upkeep: one faction lifts morale, more than three lower it, every unit above twelve and every dino-dragon costs upkeep each week, the bag shows the army as stacks (' + [high, low, upkeep, roster].join('/') + ')');
   }
   {
+    // the end must be fought (user, 20 Nov 2026): the round clock counts, rivals go to war with the Grimmflut, the crown altar appears in the middle —
+    // held alone for 20 s it wins, a rival near it contests; titles for deeds (+1 % each)
+    game.setMatchMode('kronenkrieg'); game.startMatch(); const kA = game.modeState.kk; const PA2 = game.player; const KT = await import('./public/src/kk_titles.js');
+    kA.time = 100; const c1 = game.kkClockText(); kA.time = 160; const c2 = game.kkClockText(); const clock = c1 !== c2 && /FLUT/.test(c1); kA.time = KWR.FLOOD.start + 10; const c3 = game.kkClockText(); const clockFlood = /☠/.test(c3);
+    const bot = kA.bots.find((b) => !b.ally); bot.alive = true; bot.task = null; kA.units.push({ id: 77777, team: bot.team, seat: bot.seat, cls: 'Guardian', tier: 2, row: bot.row, x: bot.x, z: bot.z, role: 'squad', bonus: [] }); const keepR = kA.rng; kA.rng = () => .9; bot.think = 0; KWR.updateWar(game, .1); kA.rng = keepR; const war = ['siege', 'altar', 'hunt'].includes(bot.task?.kind);
+    kA.time = KWR.FLOOD.start + (KWR.FLOOD.full - KWR.FLOOD.start) * .6; for (const b of kA.bots) b.alive = false; for (const m of game.minions) if (m.isKKUnit && m.team !== PA2.team) m.isDead = true; game.minions = game.minions.filter((m) => !m.isDead);
+    kA.championBot = null; game.enemyChampion.lifeState = 'Dead'; KWR.updateWar(game, 1 / 60); const altar = !!kA.altar; kA.row = kA.altar.row; PA2.x = kA.altar.x; PA2.z = kA.altar.z; PA2.hp = PA2.maxHp;
+    bot.alive = true; bot.row = kA.altar.row; bot.x = kA.altar.x + 120; bot.z = kA.altar.z; bot.travel = 0; bot.task = { kind: 'altar' }; kA.championBot = null; KWR.updateWar(game, 1); const contested = (kA.altar.prog[0] ?? 0) === 0;
+    bot.alive = false; kA.championBot = null; game.enemyChampion.lifeState = 'Dead'; for (let i = 0; i < 22 && !kA.over; i++) { PA2.x = kA.altar.x; PA2.z = kA.altar.z; PA2.hp = PA2.maxHp; kA.championBot = null; game.enemyChampion.lifeState = 'Dead'; KWR.updateWar(game, 1); } const won = kA.over && game.winnerTeam === 'blue';
+    game.setMatchMode('kronenkrieg'); game.startMatch(); const kT = game.modeState.kk; const t0 = KT.titleBonus(kT); const got = KT.addDeed(game, 'mats', 60); const titled = got.includes('Sammler') && KT.titleBonus(kT) > t0 && KT.currentTitle(kT) === 'Sammler';
+    KT.addDeed(game, 'bandits', 10); KT.setDeedMax(game, 'army', 15); const more = ['Banditenschreck', 'Kommandant'].every((n) => kT.titles.includes(n)) && game.kkTitleMult() > 1.02;
+    game.returnToHub(); /* the won round must not leak into the next test */
+    assert(clock && clockFlood && war && altar && contested && won && titled && more, 'The end is fought: the round clock counts down to the Grimmflut, rivals go to war, the crown altar rises in the middle, a rival near it contests and holding it alone 20 s wins; titles for deeds raise the player (' + [clock, clockFlood, war, altar, contested, won, titled, more].join('/') + ')');
+  }
+  {
     // world map (user, 20 Nov 2026): unexplored places stay hidden, exploring shows them for the round, resources once seen stay, rivals only as
     // a fading "last seen" (dynamic, not lasting knowledge), the player is marked
     game.setMatchMode('kronenkrieg'); game.startMatch(); const kM = game.modeState.kk; const PM = game.player; const WM = await import('./public/src/kk_worldmap.js');

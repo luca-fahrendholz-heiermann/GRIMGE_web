@@ -13,6 +13,7 @@ import { drawDecor } from './kk_art.js';
 import { kkState, kkOn } from './kk_world.js';
 import { spawnItems } from './kk_items.js';
 import { gainXp } from './kk_loot.js';
+import { addDeed } from './kk_titles.js';
 
 export const RESOURCE = Object.freeze({
   oak: { mat: 'wood', n: 4, hp: 60, chip: '#8a5a34', tree: true },
@@ -57,7 +58,7 @@ function fell(game, d, dir) {
   d.gone = true; d.hp = 0; d.regrowAt = kk.time + REGROW; d.fallT = 0; d.fallDir = dir;
   combat.spawnHitSparks(d.x, groundYForDepth(d.z) - 14, dir, def.chip, 16);
   spawnItems(game, d.x + dir * (def.tree ? 40 : 10), d.z + .03, { materials: { [def.mat]: def.n } }, { row: d.row, spread: 26 });
-  gainXp(game, def.mat === 'obsidian' ? 6 : def.mat === 'steel' ? 3 : 1);
+  gainXp(game, def.mat === 'obsidian' ? 6 : def.mat === 'steel' ? 3 : 1); addDeed(game, 'nodes');
 }
 
 const nodeOf = (game, d) => (d.node ??= new ResourceNode(game, d));

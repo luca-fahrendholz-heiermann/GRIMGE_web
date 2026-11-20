@@ -9,7 +9,8 @@ import { castleActors, updateCastles } from './kk_castle.js';
 import { updateWorldMap } from './kk_worldmap.js';
 import { updatePortals, portalActors } from './kk_portal.js';
 import { updateEvents, eventActors, bossDrop, wildDinoDrop } from './kk_events.js';
-import { updateFactions } from './kk_factions.js'; // the places and the landscape in the game's pixel style
+import { updateFactions } from './kk_factions.js';
+import { updateTitles } from './kk_titles.js'; // the places and the landscape in the game's pixel style
 import { groundYForDepth, getGroundProjection, setGroundProjection } from './world.js';
 
 export const KK_PROJECTION = Object.freeze({ farY: 214, nearY: 512, depth: KK.depth }); /* a deep floor: the plane should feel wide in depth too */
@@ -75,7 +76,7 @@ export const connectorsOf = (kk, row) => kk.map.sites.filter((s) => (s.kind === 
 export function updateKronenkrieg(game, dt) {
   const kk = kkState(game); if (!kk) return;
   kk.time += dt;
-  updateResources(game, dt); updateCastles(game, dt); updateWorldMap(game); updatePortals(game, dt); updateEvents(game, dt); updateFactions(game, dt); kk.onBossDeath ??= (rec) => bossDrop(game, rec); kk.onWildDinoDeath ??= (rec) => wildDinoDrop(game, rec);
+  updateResources(game, dt); updateCastles(game, dt); updateWorldMap(game); updatePortals(game, dt); updateEvents(game, dt); updateFactions(game, dt); updateTitles(game); kk.onBossDeath ??= (rec) => bossDrop(game, rec); kk.onWildDinoDeath ??= (rec) => wildDinoDrop(game, rec);
   const P = game.player;
   if (P.isAlive) { /* a rider steps off at a shaft or lift (the mount follows if it is part of the squad) */
     // a shaft: walking into the hole drops one level down, beside the lift that leads back up

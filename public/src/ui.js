@@ -1396,7 +1396,7 @@ export class UIManager {
     if (window.gameWorld) {
       const mins = Math.floor(window.gameWorld.matchTime / 60);
       const secs = Math.floor(window.gameWorld.matchTime % 60);
-      this.clockDisplay.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+      this.clockDisplay.textContent = window.gameWorld.kkClockText?.() ?? `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`; /* Kronenkrieg: the time until the Grimmflut */
       const obj = window.gameWorld.getObjectiveStatus(); this.objectiveHud.textContent = obj; this.objectiveHud.style.display = obj ? '' : 'none'; /* no empty banner */
     }
 

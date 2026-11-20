@@ -17,6 +17,7 @@ import { addRecord, teamOfSeat, sameTeam } from './kk_army.js';
 import { EnemyChampion } from './entities.js';
 import { drawHorse } from './kk_art.js';
 import { factionOf, FACTIONS } from './kk_factions.js';
+import { addDeed } from './kk_titles.js';
 import { castleHp, castleMaxHp, damageCastle, CASTLE } from './kk_castle.js';
 
 export const HQ_TIERS = Object.freeze([
@@ -82,6 +83,7 @@ export function resistMul(kk, rec, element) {
 function pickTask(kk, bot) {
   const hq = hqOfSeat(kk, bot.seat); const mine = botSquad(kk, bot); const str = strength(mine);
   if (hq.siegeT > 0 && !hq.fallen) return { kind: 'defend', id: hq.id };
+  if (kk.time >= FLOOD.start && str >= 2 && !bot.ally && !kk.altar) { const foes = kk.map.hqs.filter((h) => !sameTeam(kk, h.seat, bot.seat) && !h.fallen).sort((a, c) => kkDistance(bot, a) - kkDistance(bot, c)); if (foes.length) return { kind: 'siege', id: foes[0].id }; } /* with the Grimmflut every rival goes to war first */
   // rivals ride, carry eggs and hatch them too (user, 20 Nov 2026)
   if (bot.egg) { const here = spanAt(kk.map, bot.row, bot.x); const near = (s) => s.row === bot.row && spanAt(kk.map, s.row, s.x) === here; /* a source on its own stretch first: no shuttling between levels */
     const src = kk.map.sites.filter((s) => s.kind === 'source').sort((a, b) => (near(a) ? 0 : 2) + (a.element === bot.egg.element ? 0 : 1) - (near(b) ? 0 : 2) - (b.element === bot.egg.element ? 0 : 1) || kkDistance(bot, a) - kkDistance(bot, b))[0]; if (src) return { kind: 'hatch', id: src.id }; }
@@ -94,7 +96,8 @@ function pickTask(kk, bot) {
   const guardStr = (s) => strength(kk.units.filter((u) => (u.siteId === s.id && u.role === 'guard' && u.team !== bot.team) || (u.siteId === s.id && u.role === 'garrison' && u.team !== bot.team)));
   const castles = kk.map.sites.filter((s) => s.kind === 'castle' && s.owner !== bot.seat && !sameTeam(kk, s.owner, bot.seat) && guardStr(s) * 1.1 <= str + bot.level * .8).sort((a, b) => kkDistance(bot, a) - kkDistance(bot, b));
   if (castles.length) return { kind: 'capture', id: castles[0].id };
-  if (kk.time > 720 && str >= 8) { const foes = kk.map.hqs.filter((h) => !sameTeam(kk, h.seat, bot.seat) && !h.fallen).sort((a, b) => (a.garrison ?? 0) - (b.garrison ?? 0)); if (foes.length) return { kind: 'siege', id: foes[0].id }; }
+  if (kk.altar && !kk.over) return { kind: 'altar', id: null }; /* the crown altar draws every rival to the middle */
+  if ((kk.time > 480 && str >= 5) || (kk.time >= FLOOD.start && str >= 2)) { /* earlier raids; with the Grimmflut every rival goes to war (user: no waiting at the end) */ const foes = kk.map.hqs.filter((h) => !sameTeam(kk, h.seat, bot.seat) && !h.fallen).sort((a, b) => (a.garrison ?? 0) - (b.garrison ?? 0)); if (foes.length) return { kind: 'siege', id: foes[0].id }; }
   const loot = kk.map.sites.filter((s) => (s.kind === 'building' && !s.looted) || (s.kind === 'goldvein' && !(s.cd > 0)) || (s.kind === 'prison' && !s.freed)).sort((a, b) => kkDistance(bot, a) - kkDistance(bot, b));
   if (loot.length) return { kind: 'loot', id: loot[0].id };
   return { kind: 'idle', id: hq.id };
@@ -158,6 +161,26 @@ function dressChampion(E, bot) {
     if (on && E.kkEgg) { const y = E.y - (E.kkRiding ? 30 : 0) - 128; ctx.save(); ctx.fillStyle = '#1d1a22'; ctx.beginPath(); ctx.ellipse(E.x, y, 13, 17, 0, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = elementColor(E.kkEgg.element); ctx.beginPath(); ctx.ellipse(E.x, y, 11, 15, 0, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.fillRect(Math.round(E.x - 5), Math.round(y - 9), 3, 6); ctx.restore(); }
   };
 }
+// ── the crown altar (user, 20 Nov 2026: "am Ende wartet man nur ab, bis alle tot sind, ohne gekämpft zu haben") ──────────
+// In the second half of the Grimmflut a crown altar rises in the middle of the safe square. Who holds it ALTAR.hold seconds
+// alone wins the round — everyone is drawn there, the last fight happens.
+export const ALTAR = Object.freeze({ at: .55, hold: 20, radius: 130, contest: 360 });
+// Nobody else at the altar: no live foe of that side near it, no rival bot of another side on it, the player not on it.
+function altarFree(game, A, seat) {
+  const kk = kkState(game); const P = game.player; const mineTeam = teamOfSeat(seat, kk);
+  if (seat !== 0 && P.isAlive && kk.row === A.row && boardGap(P, A) < ALTAR.contest && !sameTeam(kk, 0, seat)) return false;
+  if (kk.bots.some((b) => b.alive && b.seat !== seat && !sameTeam(kk, b.seat, seat) && b.row === A.row && boardGap(b, A) < ALTAR.contest)) return false;
+  if (game.minions.some((m) => m.isKKUnit && !m.isDead && m.team !== mineTeam && m.team !== 'beast' && Math.hypot(m.x - A.x, (m.z - A.z) * ZPX) < ALTAR.contest)) return false;
+  return true;
+}
+function updateAltar(game, dt) {
+  const kk = kkState(game); if (kk.over) return; const P = game.player;
+  if (!kk.altar && kk.time >= FLOOD.start + (FLOOD.full - FLOOD.start) * ALTAR.at) { kk.altar = { x: kk.map.width / 2, z: (kk.map.depth ?? KK.depth) / 2, row: KK.main, prog: {} }; for (const b of kk.bots) b.task = null; game.showAnnouncement?.('DER KRONENALTAR IST ERSCHIENEN — WER IHN 20 S ALLEIN HÄLT, GEWINNT', 3); }
+  const A = kk.altar; if (!A) return;
+  const here = P.isAlive && kk.row === A.row && boardGap(P, A) < ALTAR.radius;
+  if (here) A.prog[0] = altarFree(game, A, 0) ? (A.prog[0] ?? 0) + dt : A.prog[0] ?? 0; else if (A.prog[0]) A.prog[0] = Math.max(0, A.prog[0] - dt * 2); /* stepping away lets it sink */
+  for (const [seat, t] of Object.entries(A.prog)) if (t >= ALTAR.hold) { kk.over = true; const s = Number(seat); const mine = s === 0 || sameTeam(kk, s, 0); game.finishMode?.(mine ? 'blue' : 'red', mine ? 'SIEG — DU HÄLTST DEN KRONENALTAR' : `NIEDERLAGE — ${SEAT_NAMES[s]} HÄLT DEN KRONENALTAR`); return; }
+}
 function botGain(kk, bot, xp) { bot.xp += xp * .55; bot.level = levelForXp(bot.xp); } /* bots grow a little slower than an active player */
 // Abstract fight at a site (outside the player's band): both sides lose units in proportion to the other's strength.
 // a fallen record leaves the game too, also when it happens to be a live unit near the player
@@ -217,6 +240,7 @@ function updateBots(game, dt) {
     if (bot === kk.championBot || kk.extraBots?.has(bot)) continue; /* a live champion moves by itself */
     bot.think -= dt; if (!bot.task || bot.think <= 0) { bot.think = THINK * 3; if (!bot.task) bot.task = pickTask(kk, bot); }
     if (bot.task?.kind === 'hunt') { const P = game.player; if (!(kk.carry || kk.crown?.trial) || !P.isAlive) { bot.task = null; continue; } moveBot(kk, bot, { row: kk.row, x: P.x, z: P.z }, dt); for (const u of botSquad(kk, bot)) if (!u.live) { u.row = bot.row; u.x += (bot.x - u.x) * Math.min(1, dt * 2); } continue; }
+    if (bot.task?.kind === 'altar') { const A = kk.altar; if (!A) { bot.task = null; continue; } if (moveBot(kk, bot, A, dt)) A.prog[bot.seat] = (A.prog[bot.seat] ?? 0) + (altarFree(game, A, bot.seat) ? dt : 0); for (const u of botSquad(kk, bot)) if (!u.live) { u.row = bot.row; u.x += (bot.x - u.x) * Math.min(1, dt * 2); u.z += ((bot.z ?? u.z) - u.z) * Math.min(1, dt * 2); } continue; }
     if (bot.task?.kind === 'egg') { const egg = kk.items.find((it) => it.id === bot.task.id && it.kind === 'egg'); if (!egg) { bot.task = null; continue; } if (moveBot(kk, bot, egg, dt)) { kk.items.splice(kk.items.indexOf(egg), 1); bot.egg = { element: egg.element, creature: egg.creature }; bot.task = null; if (boardGap(bot, game.player) < 1600) game.showAnnouncement?.(`${SEAT_NAMES[bot.seat]} TRÄGT EIN EI DAVON`, 1.6); } continue; }
     const site = bot.task && siteById(kk, bot.task.id); if (!site) { bot.task = null; continue; }
     if (moveBot(kk, bot, site, dt)) actBot(game, bot, dt);
@@ -230,7 +254,7 @@ function killBot(game, bot, killer) {
   if (bot.gold > 0 || bot.runes?.length) dropPile(game, bot.x, bot.z, { gold: bot.gold, materials: {}, stones: { ...bot.stones }, weapons: Object.entries(bot.weapons).flatMap(([w, n]) => Array(n).fill(w)), runes: bot.runes ?? [], row: bot.row });
   bot.gold = 0; bot.stones = {}; bot.weapons = {}; bot.runes = [];
   if (bot.egg) { kk.items.push({ id: kk.nextItem++, kind: 'egg', row: bot.row, x: bot.x, z: bot.z, lock: 1, element: bot.egg.element, creature: bot.egg.creature }); bot.egg = null; } /* the egg falls */
-  if (killer === 'player') { foeDrop(game, bot.x, bot.z, bot.row, { gold: 30 + bot.level * 8, tier: Math.min(4, 1 + Math.floor(bot.level / 3)), weapon: CASTLE_CLASSES[bot.seat % CASTLE_CLASSES.length].weapon, champion: true }); /* a beaten rival: gold, goods, stones, a weapon and runes */ gainXp(game, heroKillXp(kk.level, bot.level)); game.showAnnouncement?.(`${SEAT_NAMES[bot.seat]} BESIEGT`, 1.8); }
+  if (killer === 'player') { addDeed(game, 'heroes'); foeDrop(game, bot.x, bot.z, bot.row, { gold: 30 + bot.level * 8, tier: Math.min(4, 1 + Math.floor(bot.level / 3)), weapon: CASTLE_CLASSES[bot.seat % CASTLE_CLASSES.length].weapon, champion: true }); /* a beaten rival: gold, goods, stones, a weapon and runes */ gainXp(game, heroKillXp(kk.level, bot.level)); game.showAnnouncement?.(`${SEAT_NAMES[bot.seat]} BESIEGT`, 1.8); }
 }
 
 // The bot in the player's band fights as the champion (the game's duel AI); only one at a time.
@@ -305,6 +329,8 @@ function updateSieges(game, dt) {
 }
 
 // ── Grimmflut and the end ──────────────────────────────────────────────────────────────────────────────────────────
+// The clock of a round (bug: the shared match clock stood still at 06:42 in Kronenkrieg): the time until the Grimmflut, then until it covers all.
+export function kkClock(kk) { const t = kk?.time ?? 0; const left = t < FLOOD.start ? FLOOD.start - t : Math.max(0, FLOOD.full - t); const mm = String(Math.floor(left / 60)).padStart(2, '0'); const ss = String(Math.floor(left % 60)).padStart(2, '0'); return { text: (t < FLOOD.start ? 'FLUT ' : '☠ ') + mm + ':' + ss, flood: t >= FLOOD.start }; }
 // The Grimmflut (user, 20 Nov 2026: adapted to the square board): it closes in from all four edges; at the end it covers all.
 export function floodFrac(kk) { return Math.max(0, Math.min(1, (kk.time - FLOOD.start) / (FLOOD.full - FLOOD.start))); }
 export function floodFront(kk) { return floodFrac(kk) * kk.map.width / 2; }
@@ -344,7 +370,7 @@ function checkEnd(game) {
 
 export function updateWar(game, dt) {
   if (!kkOn(game)) return; const kk = kkState(game); if (!kk.bots) return;
-  updateBots(game, dt); updateChampion(game, dt); updateExtraChampions(game, dt); rivalPickups(game); updateSieges(game, dt); updateFlood(game, dt);
+  updateAltar(game, dt); updateBots(game, dt); updateChampion(game, dt); updateExtraChampions(game, dt); rivalPickups(game); updateSieges(game, dt); updateFlood(game, dt);
   if (Math.floor(kk.time) !== kk._endTick) { kk._endTick = Math.floor(kk.time); checkEnd(game); }
 }
 
@@ -352,6 +378,7 @@ export const killBotForTest = (game, bot, killer = null) => killBot(game, bot, k
 // ── drawing ────────────────────────────────────────────────────────────────────────────────────────────────────────
 export function warActors(game) {
   const kk = kkState(game); if (!kk?.bots) return []; const out = [];
+  if (kk.altar && kk.row === kk.altar.row && Math.abs(kk.altar.x - game.player.x) < 1800) { const A = kk.altar; out.push({ y: groundYForDepth(A.z), render: (ctx) => { /* the crown altar: a stone pedestal, a floating crown, the hold ring of the player */ const y = groundYForDepth(A.z); const t = kk.time; ctx.save(); ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(A.x, y, 70, 16, 0, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#5f5c56'; ctx.fillRect(A.x - 40, y - 46, 80, 46); ctx.fillStyle = '#8a857a'; ctx.fillRect(A.x - 48, y - 54, 96, 10); const cy = y - 96 + Math.sin(t * 2) * 6; ctx.fillStyle = '#ffd24a'; ctx.beginPath(); ctx.moveTo(A.x - 22, cy + 14); ctx.lineTo(A.x - 22, cy - 6); ctx.lineTo(A.x - 11, cy + 4); ctx.lineTo(A.x, cy - 12); ctx.lineTo(A.x + 11, cy + 4); ctx.lineTo(A.x + 22, cy - 6); ctx.lineTo(A.x + 22, cy + 14); ctx.closePath(); ctx.fill(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = .25 + .15 * Math.sin(t * 3); ctx.fillStyle = '#ffe9a8'; ctx.fillRect(A.x - 3, y - 400, 6, 300); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = .7; ctx.strokeStyle = '#ffe9a8'; ctx.setLineDash?.([6, 5]); ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(A.x, y, ALTAR.radius, 26, 0, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash?.([]); const k = Math.min(1, (A.prog[0] ?? 0) / ALTAR.hold); if (k > 0) { ctx.globalAlpha = 1; ctx.strokeStyle = SEAT_COLORS[0]; ctx.lineWidth = 5; ctx.beginPath(); ctx.ellipse(A.x, y, ALTAR.radius, 26, 0, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * k); ctx.stroke(); } ctx.restore(); } }); }
   for (const ent of kk.extraBots?.values() ?? []) out.push(ent); /* further rival champions take part in the depth order */
   // an ally in the players band walks there as a figure (it plays by the strategy, its squad fights beside you)
   for (const b of kk.bots) {
@@ -387,7 +414,8 @@ export function renderMinimapFlood(ctx, game, x0, y0, sx, sz) {
 // Bots on the minimap (only where the map is revealed) and the flood edges.
 export function warMinimapDots(game) {
   const kk = kkState(game); if (!kk?.bots) return [];
-  return kk.bots.filter((b) => b.alive && b !== kk.championBot && (b.ally || boardGap(b, game.player) < 1400)).map((b) => ({ row: b.row, x: b.x, z: b.z ?? (kk.map.depth ?? KK.depth) / 2, color: SEAT_COLORS[b.seat], live: true })); /* rivals: only what one sees right now (dynamic), allies always */
+  const altarDot = kk.altar ? [{ row: kk.altar.row, x: kk.altar.x, z: kk.altar.z, color: '#ffd24a' }] : [];
+  return altarDot.concat(kk.bots.filter((b) => b.alive && b !== kk.championBot && (b.ally || boardGap(b, game.player) < 1400)).map((b) => ({ row: b.row, x: b.x, z: b.z ?? (kk.map.depth ?? KK.depth) / 2, color: SEAT_COLORS[b.seat], live: true }))); /* rivals: only what one sees right now (dynamic), allies always; the altar */
 }
 export function hqPanelExtras(game) {
   const kk = kkState(game); const hq = hqOfSeat(kk, 0); const next = HQ_TIERS[(hq.level ?? 0) + 1];

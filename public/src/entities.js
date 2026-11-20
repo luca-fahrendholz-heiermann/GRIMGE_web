@@ -1871,6 +1871,7 @@ export class Player extends GroundEntity {
     const shrine = this.shrineCharge?.n > 0 && this.shrineCharge.until > performance.now() / 1000 ? this.shrineCharge : null; // element shrine charges (scene_pack_elements.js)
     const prevStatusSource = setStatusSource({ team: this.team, statusElements: [...(isBladeLook(bladeLook) ? ['blade'] : []), ...(shrine ? [shrine.element] : [])], statusChance: isFinisher ? 2 : 1, castBy: this });
     dmg *= signatureMeleeMult(this); // breathing: the awakened mark
+    if (this === window.gameWorld?.player) dmg *= window.gameWorld.kkTitleMult?.() ?? 1; /* Kronenkrieg titles: +1 % each */
     // Letztes Gefecht (skill): melee and charged hits below 25 % HP hit harder.
     if (this.buildModifiers?.lastStand && this.hp < this.maxHp * .25) dmg *= 1 + this.buildModifiers.lastStand;
     // Weapon reach / sweeps behind (scythe); the default reach stays 78 px.

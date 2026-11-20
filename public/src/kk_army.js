@@ -17,6 +17,7 @@ import { gainXp, foeDrop, bagSlots, bagUpgradeCost, BAG_MAX_LEVEL } from './kk_l
 import { spawnItems, showReels } from './kk_items.js';
 import { castleHp, castleMaxHp, inGateRing, outOfCastle, squadWallTarget } from './kk_castle.js';
 import { FACTIONS, TIERS, LAIRS, TRAIT_DE, dinoImage, dinoName, tierUnit, factionOf, initCastleRecruits, recruit, buildLair, creditKill, canAfford, squadMorale } from './kk_factions.js';
+import { addDeed, titleBonus } from './kk_titles.js';
 
 // Per class: melee/ranged and multipliers on the minion base values.
 export const CLASS_STATS = Object.freeze({
@@ -76,6 +77,7 @@ export class KKUnit extends Minion {
     { const key = unitLook(rec); const arch = ART_ASSETS.archetypes?.[key]; if (ART_ASSETS.entities?.[key] || arch) { this.spriteKey = key; this.renderHeight = heroH * ((arch?.renderHeight ?? 56) / 56) * (key === 'void_brute' ? .8 : 1) * (1 + (rec.tier - 1) * .06); } } /* painted sheets instead of the plain minions */
     // faction trait (kk_factions.js), veteran rank, the dino-dragon (tier 4 / wild): a big body with a signature blow
     const tr = FACTIONS[rec.faction]?.trait; if (tr === 'dmg') this.damage = Math.round(this.damage * 1.15); if (tr === 'hp') { this.maxHp = Math.round(this.maxHp * 1.25); this.hp = Math.min(this.maxHp, rec.hp ?? this.maxHp); } if (tr === 'speed') this.speed *= 1.15; this.regen = tr === 'regen';
+    if (rec.team === 'blue' && rec.seat === 0) { const tb = titleBonus(kkState(globalThis.window?.gameWorld)); if (tb > 1) { this.maxHp = Math.round(this.maxHp * tb); this.hp = Math.min(this.maxHp, rec.hp ?? this.maxHp); } } /* titles: +1 % life each */
     if (rec.vet) { const k = rec.vet >= 2 ? 1.5 : 1.2; this.maxHp = Math.round(this.maxHp * k); this.hp = Math.min(this.maxHp, rec.hp ?? this.maxHp); this.damage = Math.round(this.damage * k); }
     if (rec.dino) { const k = rec.wild ? 2.5 : 1; this.maxHp = Math.round(this.maxHp * 6 * k); this.hp = Math.min(this.maxHp, rec.hp ?? this.maxHp); this.damage = Math.round(this.damage * 2.5); this.speed *= 1.1; this.attackRange = 70; this.renderHeight = rec.wild ? 165 : 135; this.width = 56; /* clearly bigger than a hero, without hiding him */ this.dinoCd = 3; this.spriteKey = null; }
     this.statusElements = rec.element ? (rec.bonus?.includes('double') ? [rec.element, rec.element === 'frost' ? 'aqua' : 'ignis'] : [rec.element]) : null;
@@ -249,7 +251,7 @@ export const unitDiesForTest = (game, rec) => onUnitDeath(game, rec); /* tests: 
 function onUnitDeath(game, rec) {
   const kk = kkState(game); kk.units.splice(kk.units.indexOf(rec), 1); rec.live = null;
   if (rec.creature && rec.team !== 'blue') { kk.onCreatureDeath?.(rec); return; }
-  if (rec.team !== 'blue' && rec.team !== game.player.team) creditKill(game, rec); /* veterans */
+  if (rec.team !== 'blue' && rec.team !== game.player.team) { creditKill(game, rec); /* veterans */ if (Math.hypot(rec.x - game.player.x, ((rec.z ?? 0) - game.player.z) * 150) < 520) { addDeed(game, 'kills'); if (rec.bandit) addDeed(game, 'bandits'); } } /* titles: foes beaten near the player */
   if (rec.wild && rec.dino) { kk.onWildDinoDeath?.(rec); return; } /* a wild dino-dragon: its egg (kk_events.js) */
   if (rec.boss) { kk.onBossDeath?.(rec); return; } /* the event boss: its hoard (kk_events.js) */
   if (rec.team !== 'blue') { const g = 6 + Math.floor(Math.random() * 7); foeDrop(game, rec.x, rec.z, rec.row, { gold: g, tier: rec.tier, element: rec.element, weapon: CASTLE_CLASSES.find((c) => c.cls === rec.cls)?.weapon, runeChance: rec.tier > 1 ? .12 : .06 }); /* coins, sometimes goods, a stone, the weapon or a rune */ gainXp(game, XP.kill); /* the coins fall to the ground */ combat.spawnDamageText?.(rec.x, groundYForDepth(rec.z) - 60, `+${g}◉`, { color: '#ffcf3a' }); }
@@ -302,7 +304,7 @@ function updateSites(game, dt) {
       kk.progress[s.id] = ring && open && !guards ? (kk.progress[s.id] ?? 0) + dt : 0; /* any foe nearby or leaving the ring starts it over */
       if (close && guards && Math.floor(kk.time * 2) % 6 === 0) s.blockedHint = true;
       if (kk.progress[s.id] >= CAPTURE_TIME) {
-        kk.progress[s.id] = 0; s.owner = 0; s.garrison = 0; initCastleRecruits(kk, s); /* its faction's units open up */ s.hp = castleMaxHp(s) * .5; s.lastHitT = kk.time; gainXp(game, XP.capture);
+        kk.progress[s.id] = 0; s.owner = 0; s.garrison = 0; initCastleRecruits(kk, s); addDeed(game, 'castles'); /* its faction's units open up */ s.hp = castleMaxHp(s) * .5; s.lastHitT = kk.time; gainXp(game, XP.capture);
         game.showAnnouncement?.(`${s.label}BURG EROBERT — ${FACTIONS[s.faction]?.name ?? ''}: NEUE EINHEITEN ANWERBBAR`, 2.2);
         combat.spawnShockwave?.(s.x, groundYForDepth(s.z) - 60, 120, SEAT_COLORS[0]); audio.playRuneChime?.(880);
       }
@@ -396,7 +398,7 @@ function onPanelAction(game, act, arg) {
   const kk = kkState(game); if (act === 'close') { kk.panelOpen = false; closeKKPanel(); return; }
   if (act === 'bag') { const c = bagUpgradeCost(kk); if (kk.gold >= c && (kk.bagLevel ?? 0) < BAG_MAX_LEVEL) { kk.gold -= c; kk.bagLevel = (kk.bagLevel ?? 0) + 1; panel.msg = `BEUTEL: ${bagSlots(kk)} PLÄTZE`; } return; } const site = siteById(kk, panel.siteId); if (!site) return;
   let res = true;
-  if (act === 'recruit') { const [t, n] = String(arg).split(':'); const r = recruit(game, site, Number(t), n === 'all' ? 99 : 1, addRecord, TRAIN.garrisonCap - garrisonOf(kk, site.id).length); panel.msg = r.ok ? `+${r.n} ANGEWORBEN` : r.why; kk._panelTick = -1; return; }
+  if (act === 'recruit') { const [t, n] = String(arg).split(':'); const r = recruit(game, site, Number(t), n === 'all' ? 99 : 1, addRecord, TRAIN.garrisonCap - garrisonOf(kk, site.id).length); if (r.ok && t === '4') addDeed(game, 'dinos', r.n); panel.msg = r.ok ? `+${r.n} ANGEWORBEN` : r.why; kk._panelTick = -1; return; }
   if (act === 'lair') { const r = buildLair(game, site, arg); panel.msg = r.ok ? '' : r.why; kk._panelTick = -1; return; }
   if (act === 'train') { const r = trainUnit(game, site, arg || null, { spin: panel.spin }); res = r.ok; if (r.reels) showReels(game, r.reels, unitName({ cls: site.cls, element: arg || null, tier: 1 })); panel.msg = r.ok ? (r.reels ? `WALZEN: ${r.reels.grid.map((g) => REEL_SYMBOLS[g]).join('')} ${r.reels.bonus.length ? '→ ' + r.reels.bonus.map((b) => BONUS_LABEL[b]).join(' + ') : '→ kein Bonus'}` : 'IN AUSBILDUNG') : r.why; }
   else if (act === 'spin') panel.spin = !panel.spin;

@@ -14,6 +14,7 @@ import { spawnItems } from './kk_items.js';
 import { randomRune, gainXp } from './kk_loot.js';
 import { biomeAt } from './kk_map.js';
 import { dinoName } from './kk_factions.js';
+import { addDeed } from './kk_titles.js';
 
 export const EVENTS = Object.freeze({ first: 120, every: 150, openTime: 1.5, bossHp: 9, kinds: ['cache', 'dragon', 'boss', 'restock'] });
 const near = (a, b, r) => Math.hypot(a.x - b.x, ((a.z ?? 0) - (b.z ?? 0)) * KK.zPx) < r;
@@ -45,21 +46,21 @@ export function startEvent(game, kind = null) {
 function openCache(game, ev) {
   const kk = kkState(game); ev.done = true; const runes = [];
   for (let i = 0; i < 2; i++) { const cat = kk.rng() < .55 ? (kk.rng() < .5 ? 'simple' : 'arcane') : 'element'; const r = randomRune(game, cat, kk.rng) ?? randomRune(game, 'element', kk.rng); if (r) runes.push(r); }
-  spawnItems(game, ev.x, ev.z + .05, { gold: 60, runes, materials: { steel: 6 } }, { row: ev.row, spread: 50 }); gainXp(game, 40);
+  spawnItems(game, ev.x, ev.z + .05, { gold: 60, runes, materials: { steel: 6 } }, { row: ev.row, spread: 50 }); gainXp(game, 40); addDeed(game, 'events');
   combat.spawnShockwave?.(ev.x, groundYForDepth(ev.z) - 30, 120, '#d8b4ff'); audio.playRuneChime?.(1200); game.showAnnouncement?.('RUNENTRUHE GEÖFFNET', 1.4);
 }
 // A beaten boss drops its hoard (kk_army.js onUnitDeath calls this).
 export function bossDrop(game, rec) {
   const kk = kkState(game); const runes = [];
   for (let i = 0; i < 3; i++) { const cat = i === 0 ? 'arcane' : kk.rng() < .5 ? 'simple' : 'element'; const r = randomRune(game, cat, kk.rng) ?? randomRune(game, 'element', kk.rng); if (r) runes.push(r); }
-  spawnItems(game, rec.x, rec.z, { gold: 150, runes, materials: { obsidian: 6, steel: 10 }, stones: { [rec.element ?? 'ignis']: 5 } }, { row: rec.row, spread: 80 }); gainXp(game, 120);
+  addDeed(game, 'events'); spawnItems(game, rec.x, rec.z, { gold: 150, runes, materials: { obsidian: 6, steel: 10 }, stones: { [rec.element ?? 'ignis']: 5 } }, { row: rec.row, spread: 80 }); gainXp(game, 120);
   const ev = kk.map.sites.find((s) => s.id === rec.siteId); if (ev) ev.done = true;
   combat.spawnShockwave?.(rec.x, groundYForDepth(rec.z) - 40, 180, '#ffd24a'); combat.shakeCamera?.(8, .5); game.showAnnouncement?.('DER BANDITENFÜRST IST GEFALLEN — SEINE BEUTE LIEGT AM BODEN', 2.2);
 }
 // A beaten wild dino-dragon leaves its egg (hatch it at a source: the dino-dragon joins the squad), runes and gold.
 export function wildDinoDrop(game, rec) {
   const kk = kkState(game); kk.items.push({ id: kk.nextItem++, kind: 'egg', row: rec.row, x: rec.x, z: rec.z, lock: .8, element: rec.dino, creature: 'dino_' + rec.dino });
-  const runes = [randomRune(game, kk.rng() < .5 ? 'simple' : 'element', kk.rng)].filter(Boolean); spawnItems(game, rec.x + 40, rec.z, { gold: 90, runes, stones: { [rec.dino]: 4 } }, { row: rec.row, spread: 60 }); gainXp(game, 100);
+  addDeed(game, 'events'); const runes = [randomRune(game, kk.rng() < .5 ? 'simple' : 'element', kk.rng)].filter(Boolean); spawnItems(game, rec.x + 40, rec.z, { gold: 90, runes, stones: { [rec.dino]: 4 } }, { row: rec.row, spread: 60 }); gainXp(game, 100);
   const ev = kk.map.sites.find((s) => s.id === rec.siteId); if (ev) ev.done = true;
   combat.spawnShockwave?.(rec.x, groundYForDepth(rec.z) - 40, 200, '#ffe9a8'); combat.shakeCamera?.(8, .5); game.showAnnouncement?.(`${dinoName(rec.dino).toUpperCase()} BESIEGT — SEIN EI LIEGT AM BODEN`, 2.2);
 }

@@ -25,7 +25,7 @@ import { setupGallery, updateGallery, galleryActors, renderGalleryLabels } from 
 import { setupKronenkrieg, updateKronenkrieg, renderKKGround, kkActors, renderKKMinimap, kkPanY } from './kk_world.js'; // Kronenkrieg: the banded open map
 import { initLoot, updateLoot, lootActors, renderLootHud, kkFuseAllowed, respawnDelay, closePotionButtons } from './kk_loot.js'; // Kronenkrieg: loot and the round level
 import { initArmy, updateArmy, armyActors, closeKKPanel, recordGrade, kkFindTarget, closeCastleOpener, blessSquad } from './kk_army.js'; // Kronenkrieg: armies, castles, garrisons
-import { initWar, updateWar, warActors, renderFlood, renderMinimapFlood, warMinimapDots, kkEnemyHome, kkCanRespawn } from './kk_war.js'; // Kronenkrieg: bots, main castles, Grimmflut, the end
+import { initWar, updateWar, warActors, renderFlood, renderMinimapFlood, warMinimapDots, kkEnemyHome, kkCanRespawn, kkClock } from './kk_war.js'; // Kronenkrieg: bots, main castles, Grimmflut, the end
 import { initCreatures, updateCreatures, creatureActors, creatureMinimapDots, tameAt, kkMountGate } from './kk_creatures.js'; // Kronenkrieg: creatures, eggs, mounts
 import { initCrown, updateCrown, closeCrownPanel, kkFocusLocked, kkFocusStyle } from './kk_crown.js'; // Kronenkrieg: the crowning trials
 import { updateInterior, interiorActors } from './kk_interior.js'; // Kronenkrieg: houses you walk into (cut-away)
@@ -33,6 +33,7 @@ import { itemActors, renderReels, closeBag, kkUseHeld } from './kk_items.js'; //
 import { kkResourceTargets } from './kk_resources.js'; // Kronenkrieg: trees, rocks, ore, obsidian to harvest
 import { castleTargets, tryCastleTap } from './kk_castle.js';
 import { closeWorldMap } from './kk_worldmap.js';
+import { titleBonus } from './kk_titles.js'; // Kronenkrieg: titles for deeds
 import { closePortalUi } from './kk_portal.js';
 import { eventMinimapDots } from './kk_events.js'; // Kronenkrieg: world events (rune chests, bosses, restocked houses) // Kronenkrieg: portals (castle stones, a field portal) // Kronenkrieg: the world map (button / key M) // Kronenkrieg: foe castle walls to batter
 import { loadFxSprites } from './fx_sprites.js';
@@ -182,6 +183,8 @@ export class GameWorld {
     environment.levelSurfaces = () => this.battlefield?.levelSurfaces; /* ground effects lie on stairs / galleries */
     this.onPlayerCast = (def, els) => { if (this.activeMode?.id === 'kronenkrieg') blessSquad(this, els); }; /* a rune blesses the squad */
     this.kkTryFly = (p) => { const kk = this.activeMode?.id === 'kronenkrieg' ? this.modeState?.kk : null; if (!kk?.canFly || p !== this.player || p.kkFlying || p.mp < 10) return false; p.kkFlying = true; p.kkFlyT = 10; return true; }; /* flying, learned at a sky shrine */
+    this.kkClockText = () => (this.activeMode?.id === 'kronenkrieg' && this.modeState?.kk ? kkClock(this.modeState.kk).text : null); /* the round clock of Kronenkrieg */
+    this.kkTitleMult = () => (this.activeMode?.id === 'kronenkrieg' ? titleBonus(this.modeState?.kk) : 1);
     this.kkUseHeld = (p) => this.activeMode?.id === 'kronenkrieg' && kkUseHeld(this, p); /* Kronenkrieg: the attack drinks the potion in the hand */
     this.player = new Player(ARENA_LAYOUT.spawns.blueCastle.x, ARENA_LAYOUT.spawns.blueCastle.z);
     this.enemyChampion = new EnemyChampion(ARENA_LAYOUT.spawns.redCastle.x, ARENA_LAYOUT.spawns.redCastle.z, 'warlord');

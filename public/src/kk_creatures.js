@@ -17,6 +17,7 @@ import { KKUnit, addRecord, squadCap } from './kk_army.js';
 import { XP } from './kk_progress.js';
 import { drawHorse } from './kk_art.js';
 import { FACTIONS } from './kk_factions.js';
+import { addDeed } from './kk_titles.js';
 const FACTIONS_NAME = new Proxy({}, { get: (_, el) => FACTIONS[el]?.dino?.[0] });
 
 export const CREATURE_OF = Object.freeze({ ignis: 'siege_golem', terra: 'siege_golem', ventus: 'storm_wolf', fulgur: 'storm_wolf', aqua: 'rune_snake', frost: 'spirit_wolf' });
@@ -105,7 +106,7 @@ function hatch(game, egg, source) {
   const kk = kkState(game); const P = game.player;
   const stones = Math.min(3, kk.inv.stones[egg.element] ?? 0); kk.inv.stones[egg.element] = (kk.inv.stones[egg.element] ?? 0) - stones;
   const recent = kk.time - kk.lastGradeAt < 90 ? kk.lastGrade : null; const r = spinHatch(kk.rng, { stones, pure: !!source.pure, grade: recent });
-  if (String(egg.creature).startsWith('dino_')) { const el = egg.creature.slice(5); addRecord(kk, { team: 'blue', dino: el, element: el, faction: el, cls: 'Berserker', tier: 3, row: kk.row, x: source.x, z: source.z + .3, role: 'squad', hatched: true }); kk.carry = null; P.kkCarryMult = 1; gainXp(game, XP.hatch * 2); game.showAnnouncement?.(`EIN ${(FACTIONS_NAME[el] ?? 'URDRACHE').toUpperCase()} IST GESCHLÜPFT — ER GEHÖRT ZU DIR`, 2.6); combat.spawnShockwave?.(source.x, groundYForDepth(source.z) - 50, 200, elementColor(el)); return; } /* a dino-dragon egg */
+  if (String(egg.creature).startsWith('dino_')) { const el = egg.creature.slice(5); addRecord(kk, { team: 'blue', dino: el, element: el, faction: el, cls: 'Berserker', tier: 3, row: kk.row, x: source.x, z: source.z + .3, role: 'squad', hatched: true }); kk.carry = null; P.kkCarryMult = 1; gainXp(game, XP.hatch * 2); addDeed(game, 'dinos'); game.showAnnouncement?.(`EIN ${(FACTIONS_NAME[el] ?? 'URDRACHE').toUpperCase()} IST GESCHLÜPFT — ER GEHÖRT ZU DIR`, 2.6); combat.spawnShockwave?.(source.x, groundYForDepth(source.z) - 50, 200, elementColor(el)); return; } /* a dino-dragon egg */
   addRecord(kk, { team: 'blue', creature: true, kind: egg.creature, element: egg.element, extra: r.extra, temper: r.temper, size: r.size, glow: r.glow, cls: 'Berserker', tier: 1 + r.size, row: kk.row, x: source.x, z: source.z, role: 'squad', hatched: true });
   kk.carry = null; P.kkCarryMult = 1; gainXp(game, XP.hatch);
   const name = CREATURE_NAME[egg.creature] ?? 'KREATUR';
