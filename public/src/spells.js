@@ -265,7 +265,8 @@ export class SpellSystem {
     const prev = this.castElements; this.castElements = statusElementsOf(spellDef);
     // The last normal element rune a fighter cast (the Elemental Gateway and the Bankai impact take their element from it).
     const castElement = this.castElements?.find((id) => ELEMENT_RUNE_IDS.has(id));
-    if (caster && castElement) caster.lastElementCast = { id: castElement, at: performance.now() / 1000, form: caster.buffForm ?? null }; /* form: the Arcane State running at that moment */
+    if (caster && castElement) caster.lastElementCast = { id: castElement, at: performance.now() / 1000, form: caster.buffForm ?? null };
+    if (caster && caster === gameWorld?.player) gameWorld.onPlayerCast?.(spellDef, this.castElements); /* Kronenkrieg: a rune blesses the squad (kk_army.js) */ /* form: the Arcane State running at that moment */
     const prevCaster = this.castCaster; this.castCaster = caster;
     // Damage dealt right during the cast (chain lightning, strikes) rolls statuses / combos too.
     const prevSource = setStatusSource(this.castElements ? { team: caster.team, statusElements: this.castElements, quality: this.normalizeQuality(quality), castBy: caster } : null);

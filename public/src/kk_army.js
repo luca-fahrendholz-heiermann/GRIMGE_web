@@ -59,10 +59,26 @@ export class KKUnit extends Minion {
     const heroH = ENTITY_VISUALS.heroHeight; this.renderHeight = heroH * (1 + (rec.tier - 1) * .06); this.width = ENTITY_VISUALS.heroColliderWidth; this.height = ENTITY_VISUALS.heroColliderHeight;
     { const key = unitLook(rec); const arch = ART_ASSETS.archetypes?.[key]; if (ART_ASSETS.entities?.[key] || arch) { this.spriteKey = key; this.renderHeight = heroH * ((arch?.renderHeight ?? 56) / 56) * (key === 'void_brute' ? .8 : 1) * (1 + (rec.tier - 1) * .06); } } /* painted sheets instead of the plain minions */
     this.statusElements = rec.element ? (rec.bonus?.includes('double') ? [rec.element, rec.element === 'frost' ? 'aqua' : 'ignis'] : [rec.element]) : null;
-    this.runXpValue = 0;
+    this.runXpValue = 0; this.baseSpeed = this.speed;
+  }
+  // The squad keeps the player's pace (user, 20 Nov 2026) — on foot with a figure on foot; a rider only with mounted / creature units —
+  // and a rune blessing (blessSquad) makes it stronger and quicker for a while.
+  update(dt, gameWorld, battlefield) {
+    const lead = this.followLeader; let pace = this.baseSpeed ?? this.speed;
+    if (lead && lead === gameWorld?.player && this.rec?.role === 'squad') {
+      const gap = Math.hypot(lead.x - this.x, (lead.z - this.z) * 150); const ridesToo = !lead.isMounted || this.rec.creature;
+      const leadSpeed = Math.max(Math.hypot(lead.vx ?? 0, (lead.vz ?? 0) * 150), lead.moveSpeed ?? 0) * (lead.isMounted ? 1.6 : 1);
+      if (gap > 110 && ridesToo) pace = Math.max(pace, leadSpeed * (gap > 260 ? 1.25 : 1.05));
+    }
+    this.blessT = Math.max(0, (this.blessT ?? 0) - dt); if (this.blessT > 0) pace *= 1.1;
+    this.speed = pace; return super.update(dt, gameWorld, battlefield);
   }
   performAttack(target, gameWorld) {
+    if (this.blessT > 0) { const d = this.damage; const keepEls = this.statusElements; this.damage = Math.round(d * 1.2); if (this.blessEl) this.statusElements = [this.blessEl]; try { return this.statusElements ? this.withStatus(target, gameWorld) : super.performAttack(target, gameWorld); } finally { this.damage = d; this.statusElements = keepEls; } } /* blessed: stronger, the rune's element on its strikes */
     if (!this.statusElements) return super.performAttack(target, gameWorld);
+    return this.withStatus(target, gameWorld);
+  }
+  withStatus(target, gameWorld) {
     const prev = setStatusSource({ team: this.team, statusElements: this.statusElements, castBy: this }); attackingElement = this.rec.element;
     try { return super.performAttack(target, gameWorld); } finally { setStatusSource(prev); attackingElement = null; }
   }
@@ -72,6 +88,7 @@ export class KKUnit extends Minion {
     return super.takeDamage(amount, ...rest);
   }
   render(ctx) {
+    if (this.blessT > 0) { ctx.save(); ctx.globalAlpha = .35 + .2 * Math.sin((this.animTime ?? 0) * 6); ctx.strokeStyle = this.blessEl ? elementColor(this.blessEl) : '#ffe9a8'; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(this.x, groundYForDepth(this.z) - (this.surfaceHeight ?? 0), 26, 7, 0, 0, Math.PI * 2); ctx.stroke(); ctx.restore(); } /* the blessing's aura */
     super.render(ctx);
     const r = this.rec; const vh = this.renderHeight; const y = this.y - vh - 9; ctx.save();
     // the side's colour as a small pennant, the element as a gem, stars for the tier
@@ -93,6 +110,15 @@ export const AGGRO = Object.freeze({ guard: 230, garrison: 260, patrol: 260 });
 const CHASE = Object.freeze({ guard: 520, garrison: 520, patrol: 560 });
 const live = (t) => t && !t.isDead && t.isAlive !== false && t.lifeState !== 'Dead' && !t.isProp && !t.isStoneWall && !t.isWorldProp;
 const gap = (a, b) => Math.hypot(a.x - b.x, ((a.z ?? 0) - (b.z ?? 0)) * 150);
+// A rune the player casts blesses the own squad near him (user, 20 Nov 2026: "die ganze Truppe mit Runen buffen"): +20 % damage,
+// +10 % speed and the rune's element on their strikes for 10 s.
+export const BLESS = Object.freeze({ time: 10, range: 520 });
+export function blessSquad(game, elements = null) {
+  const kk = kkState(game); if (!kk) return 0; const P = game.player; const el = (elements ?? []).find((e) => typeof e === 'string') ?? null; let n = 0;
+  for (const m of game.minions) if (m.isKKUnit && !m.isDead && m.team === P.team && m.rec?.role === 'squad' && Math.hypot(m.x - P.x, (m.z - P.z) * 150) < BLESS.range) { m.blessT = BLESS.time; m.blessEl = el; n++; }
+  if (n && kk.time - (kk.blessHintAt ?? -99) > 8) { kk.blessHintAt = kk.time; game.showAnnouncement?.(`RUNENSEGEN — ${n} KÄMPFER GESTÄRKT`, 1.2); }
+  return n;
+}
 export function kkFindTarget(game, unit) {
   const kk = kkState(game); const rec = unit.rec ?? {}; const anchor = unit.followLeader ?? unit;
   let best = null;

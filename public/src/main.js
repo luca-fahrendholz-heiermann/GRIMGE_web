@@ -24,7 +24,7 @@ import { TRAINING_MAPS, getTrainingMap, zoneToWorld } from './training_maps.js';
 import { setupGallery, updateGallery, galleryActors, renderGalleryLabels } from './spell_gallery.js'; // the Training map where clones show every spell
 import { setupKronenkrieg, updateKronenkrieg, renderKKGround, kkActors, renderKKMinimap, kkPanY } from './kk_world.js'; // Kronenkrieg: the banded open map
 import { initLoot, updateLoot, lootActors, renderLootHud, kkFuseAllowed, respawnDelay, closePotionButtons } from './kk_loot.js'; // Kronenkrieg: loot and the round level
-import { initArmy, updateArmy, armyActors, closeKKPanel, recordGrade, kkFindTarget, closeCastleOpener } from './kk_army.js'; // Kronenkrieg: armies, castles, garrisons
+import { initArmy, updateArmy, armyActors, closeKKPanel, recordGrade, kkFindTarget, closeCastleOpener, blessSquad } from './kk_army.js'; // Kronenkrieg: armies, castles, garrisons
 import { initWar, updateWar, warActors, renderFlood, renderMinimapFlood, warMinimapDots, kkEnemyHome, kkCanRespawn } from './kk_war.js'; // Kronenkrieg: bots, main castles, Grimmflut, the end
 import { initCreatures, updateCreatures, creatureActors, creatureMinimapDots, tameAt, kkMountGate } from './kk_creatures.js'; // Kronenkrieg: creatures, eggs, mounts
 import { initCrown, updateCrown, closeCrownPanel, kkFocusLocked, kkFocusStyle } from './kk_crown.js'; // Kronenkrieg: the crowning trials
@@ -178,6 +178,7 @@ export class GameWorld {
 
     this.battlefield = new Battlefield();
     environment.levelSurfaces = () => this.battlefield?.levelSurfaces; /* ground effects lie on stairs / galleries */
+    this.onPlayerCast = (def, els) => { if (this.activeMode?.id === 'kronenkrieg') blessSquad(this, els); }; /* a rune blesses the squad */
     this.kkUseHeld = (p) => this.activeMode?.id === 'kronenkrieg' && kkUseHeld(this, p); /* Kronenkrieg: the attack drinks the potion in the hand */
     this.player = new Player(ARENA_LAYOUT.spawns.blueCastle.x, ARENA_LAYOUT.spawns.blueCastle.z);
     this.enemyChampion = new EnemyChampion(ARENA_LAYOUT.spawns.redCastle.x, ARENA_LAYOUT.spawns.redCastle.z, 'warlord');

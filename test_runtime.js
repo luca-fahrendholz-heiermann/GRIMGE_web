@@ -5796,6 +5796,17 @@ game.running = false;
     assert(champDrop && unitDrops, 'Beaten foes drop loot: a rival champion drops gold, goods and runes, units drop coins and now and then goods and runes (' + [champDrop, unitDrops, unitGoods, unitRunes].join('/') + ')');
   }
   {
+    // the squad keeps the pace and takes rune blessings (user, 20 Nov 2026)
+    game.setMatchMode('kronenkrieg'); game.startMatch(); const kS = game.modeState.kk; const PS = game.player; const KAs = await import('./public/src/kk_army.js');
+    for (const m of game.minions) if (m.isKKUnit && m.team !== PS.team) m.isDead = true; game.minions = game.minions.filter((m) => !m.isDead);
+    const rec = KAs.addRecord(kS, { team: 'blue', cls: 'Guardian', element: null, tier: 1, row: kS.row, x: PS.x - 500, z: PS.z, role: 'squad' }); KAs.updateArmy(game, 1 / 60); const u = rec.live; u.x = PS.x - 500; u.z = PS.z;
+    const base = u.baseSpeed; PS.vx = PS.moveSpeed; u.update(1 / 60, game, game.battlefield); const catches = u.speed > base * 1.05 && u.speed >= PS.moveSpeed;
+    u.x = PS.x - 40; u.update(1 / 60, game, game.battlefield); const calm = u.speed === base; PS.vx = 0;
+    game.onPlayerCast?.({ id: 'ignis' }, ['ignis']); const blessed = u.blessT > 0 && u.blessEl === 'ignis';
+    rec.live.isDead = true; kS.units = kS.units.filter((r) => r !== rec); game.minions = game.minions.filter((m) => !m.isDead);
+    assert(catches && calm && blessed, 'Squad: a unit far behind catches up at the player pace (back to its own speed when close), a rune the player casts blesses the squad with its element (' + [catches, calm, blessed].join('/') + ')');
+  }
+  {
     // world map (user, 20 Nov 2026): unexplored places stay hidden, exploring shows them for the round, resources once seen stay, rivals only as
     // a fading "last seen" (dynamic, not lasting knowledge), the player is marked
     game.setMatchMode('kronenkrieg'); game.startMatch(); const kM = game.modeState.kk; const PM = game.player; const WM = await import('./public/src/kk_worldmap.js');

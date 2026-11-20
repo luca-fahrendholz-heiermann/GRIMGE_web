@@ -106,7 +106,7 @@ export function foeDrop(game, x, z, row, { gold = 8, tier = 1, element = null, w
   if (champion || r() < .15) b.stones[element ?? ['ignis', 'aqua', 'frost', 'terra', 'ventus', 'fulgur'][Math.floor(r() * 6)]] = champion ? 3 : 1;
   if (weapon && r() < (champion ? 1 : .1)) b.weapons.push(weapon);
   const nr = champion ? 1 + (tier >= 3 ? 1 : 0) + (r() < .35 ? 1 : 0) : r() < runeChance ? 1 : 0;
-  for (let i = 0; i < nr; i++) { const cat = champion && r() < .2 + tier * .05 ? (r() < .5 ? 'special' : 'arcane') : 'element'; const rune = randomRune(game, cat) ?? randomRune(game, 'element'); if (rune) b.runes.push(rune); }
+  for (let i = 0; i < nr; i++) { const cat = champion && r() < .2 + tier * .05 ? (r() < .5 ? 'simple' : 'arcane') : 'element'; const rune = randomRune(game, cat) ?? randomRune(game, 'element'); if (rune) b.runes.push(rune); }
   return spawnItems(game, x, z, b, { row, spread: champion ? 70 : 24 });
 }
 export function openChest(game, site, floor = 0, at = null) {
