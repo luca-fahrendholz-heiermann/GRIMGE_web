@@ -13,7 +13,10 @@ import { kkState, kkOn, revealAround, isRevealed, elementColor, applyBounds } fr
 import { KK } from './kk_map.js';
 import { spawnItems, pickupItem, updateItemHops, updateBagUi } from './kk_items.js';
 
-export const BACKPACK = 40;             // units of materials + stones + weapons one carries
+// The bag (user, 20 Nov 2026): slots that hold a stack of up to 64 of one kind; the main castle enlarges it (+4 slots a level).
+export const STACK = 64; export const BAG_BASE = 10; export const BAG_MAX_LEVEL = 3;
+export const bagSlots = (kk) => BAG_BASE + 4 * Math.min(BAG_MAX_LEVEL, kk?.bagLevel ?? 0);
+export const bagUpgradeCost = (kk) => 60 + 60 * (kk?.bagLevel ?? 0);
 const MINE_TIME = 2.2; const VEIN_COOLDOWN = 25; const PICK_RANGE = 44;
 const MAT_NAME = Object.freeze({ wood: 'HOLZ', stone: 'STEIN', steel: 'STAHL', obsidian: 'OBSIDIAN' });
 const emptyInv = () => ({ wood: 0, stone: 0, steel: 0, obsidian: 0, stones: {}, weapons: {}, potions: { hp: 0, mp: 0 } });
@@ -21,6 +24,9 @@ const emptyInv = () => ({ wood: 0, stone: 0, steel: 0, obsidian: 0, stones: {}, 
 export function initLoot(kk) {
   Object.assign(kk, { gold: 0, inv: emptyInv(), store: emptyInv(), xp: 0, level: 1, sealed: [], items: [], progress: {}, discovered: new Set(), potionCd: 0, alive: true, nextItem: 1, log: [] });
 }
+export function slotsUsed(inv) { const st = (n) => Math.ceil((n ?? 0) / STACK); return MATERIALS.reduce((s, m) => s + st(inv[m]), 0) + Object.values(inv.stones).reduce((s, n) => s + st(n), 0) + Object.values(inv.weapons).reduce((s, n) => s + st(n), 0); }
+// How many of one kind still fit: the rest of its open stack plus the free slots.
+export function roomFor(kk, kind, key = null) { const inv = kk.inv; const c = kind === 'gem' ? (inv.stones[key] ?? 0) : kind === 'weapon' ? (inv.weapons[key] ?? 0) : (inv[kind] ?? 0); return (c % STACK ? STACK - c % STACK : 0) + Math.max(0, bagSlots(kk) - slotsUsed(inv)) * STACK; }
 export const invUnits = (inv) => MATERIALS.reduce((s, m) => s + (inv[m] ?? 0), 0) + Object.values(inv.stones).reduce((s, n) => s + n, 0) + Object.values(inv.weapons).reduce((s, n) => s + n, 0);
 const say = (game, text, t = 1.4) => game.showAnnouncement?.(text, t);
 
@@ -66,11 +72,11 @@ export function kkFuseAllowed(game, count) {
 // ── backpack ───────────────────────────────────────────────────────────────────────────────────────────────────────
 // Adds a bundle; whatever does not fit in the backpack falls to the ground as a pile next to the player.
 export function addBundle(game, b, { quiet = false } = {}) {
-  const kk = kkState(game); const inv = kk.inv; const P = game.player; const rest = { materials: {}, stones: {}, weapons: [] }; let room = BACKPACK - invUnits(inv); const got = [];
+  const kk = kkState(game); const inv = kk.inv; const P = game.player; const rest = { materials: {}, stones: {}, weapons: [] }; const got = [];
   kk.gold += b.gold ?? 0; if (b.gold) got.push(`${b.gold} GOLD`);
-  for (const [m, n] of Object.entries(b.materials ?? {})) { const take = Math.min(n, room); inv[m] += take; room -= take; if (take) got.push(`${take} ${MAT_NAME[m]}`); if (n > take) rest.materials[m] = n - take; }
-  for (const [el, n] of Object.entries(b.stones ?? {})) { const take = Math.min(n, room); inv.stones[el] = (inv.stones[el] ?? 0) + take; room -= take; if (take) got.push(`${take} ${el.toUpperCase()}-STEIN`); if (n > take) rest.stones[el] = n - take; }
-  for (const w of b.weapons ?? []) { if (room > 0) { inv.weapons[w] = (inv.weapons[w] ?? 0) + 1; room--; got.push('WAFFE'); } else rest.weapons.push(w); }
+  for (const [m, n] of Object.entries(b.materials ?? {})) { const take = Math.min(n, roomFor(kk, m)); inv[m] += take; if (take) got.push(`${take} ${MAT_NAME[m]}`); if (n > take) rest.materials[m] = n - take; }
+  for (const [el, n] of Object.entries(b.stones ?? {})) { const take = Math.min(n, roomFor(kk, 'gem', el)); inv.stones[el] = (inv.stones[el] ?? 0) + take; if (take) got.push(`${take} ${el.toUpperCase()}-STEIN`); if (n > take) rest.stones[el] = n - take; }
+  for (const w of b.weapons ?? []) { if (roomFor(kk, 'weapon', w) > 0) { inv.weapons[w] = (inv.weapons[w] ?? 0) + 1; got.push('WAFFE'); } else rest.weapons.push(w); }
   if (Object.values(b.potions ?? {}).some((n) => n > 0)) spawnItems(game, P.x + (P.facing || 1) * 30, P.z, { potions: b.potions }); /* potions are carried in the hand (kk_items.js) */
   const left = Object.keys(rest.materials).length + Object.keys(rest.stones).length + rest.weapons.length;
   if (left) { dropPile(game, P.x + (P.facing || 1) * 40, P.z, { gold: 0, materials: rest.materials, stones: rest.stones, weapons: rest.weapons, runes: [], lock: 2.5 }); say(game, 'BEUTEL VOLL — DER REST LIEGT AM BODEN', 1.6); }

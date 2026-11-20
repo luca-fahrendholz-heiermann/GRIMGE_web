@@ -13,7 +13,7 @@ import { groundYForDepth, clampZ, ENTITY_VISUALS } from './world.js';
 import { CASTLE_CLASSES, mulberry32, spanAt, roadZ } from './kk_map.js';
 import { squadBonus, XP } from './kk_progress.js';
 import { kkState, kkOn, SEAT_COLORS, elementColor } from './kk_world.js';
-import { gainXp, foeDrop } from './kk_loot.js';
+import { gainXp, foeDrop, bagSlots, bagUpgradeCost, BAG_MAX_LEVEL } from './kk_loot.js';
 import { spawnItems, showReels } from './kk_items.js';
 import { castleHp, castleMaxHp, inGateRing, outOfCastle, squadWallTarget } from './kk_castle.js';
 
@@ -335,7 +335,8 @@ function ensurePanel(game) {
   doc.body.appendChild(el); panel = { el, siteId: null, html: '', spin: false, msg: '' }; return panel;
 }
 function onPanelAction(game, act, arg) {
-  const kk = kkState(game); if (act === 'close') { kk.panelOpen = false; closeKKPanel(); return; } const site = siteById(kk, panel.siteId); if (!site) return;
+  const kk = kkState(game); if (act === 'close') { kk.panelOpen = false; closeKKPanel(); return; }
+  if (act === 'bag') { const c = bagUpgradeCost(kk); if (kk.gold >= c && (kk.bagLevel ?? 0) < BAG_MAX_LEVEL) { kk.gold -= c; kk.bagLevel = (kk.bagLevel ?? 0) + 1; panel.msg = `BEUTEL: ${bagSlots(kk)} PLÄTZE`; } return; } const site = siteById(kk, panel.siteId); if (!site) return;
   let res = true;
   if (act === 'train') { const r = trainUnit(game, site, arg || null, { spin: panel.spin }); res = r.ok; if (r.reels) showReels(game, r.reels, unitName({ cls: site.cls, element: arg || null, tier: 1 })); panel.msg = r.ok ? (r.reels ? `WALZEN: ${r.reels.grid.map((g) => REEL_SYMBOLS[g]).join('')} ${r.reels.bonus.length ? '→ ' + r.reels.bonus.map((b) => BONUS_LABEL[b]).join(' + ') : '→ kein Bonus'}` : 'IN AUSBILDUNG') : r.why; }
   else if (act === 'spin') panel.spin = !panel.spin;
@@ -365,6 +366,7 @@ function refreshPanel(game, site) {
     const x = kk.hqHooks.extras();
     h += `<div style="color:#cbb8ff">${['UNBEFESTIGT', 'HOLZBURG', 'STEINBURG', 'STAHLBURG', 'OBSIDIANBURG'][x.hq.level ?? 0]} · ♥ ${Math.max(0, Math.round(x.hq.hp))}</div>`;
     if (kk.reserve && kk.crownHooks) h += btn('swap', '', `RESERVE: ${kk.reserve.name} ⇄ DECK`);
+    h += (kk.bagLevel ?? 0) < BAG_MAX_LEVEL ? btn('bag', '', `🎒 ${bagSlots(kk)}→${bagSlots(kk) + 4} (${bagUpgradeCost(kk)}◉)`, kk.gold >= bagUpgradeCost(kk)) : ''; /* the bag grows at the main castle */
     if (x.next) h += btn('upgrade', '', `BAUEN ${x.next.name} ${x.built}/${x.next.cost} (+${x.have})`, x.have > 0);
     for (const e of x.stones) { const c = x.resCost(e); h += btn('resist', e, `🛡${e.slice(0, 4).toUpperCase()} ${x.hq.res?.[e] ?? 0}${c ? '+' + c : ''}`, !!c && (x.hq.res?.[e] ?? 0) < (x.hq.level ?? 0)); }
   }

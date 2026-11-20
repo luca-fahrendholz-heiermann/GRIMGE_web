@@ -5591,8 +5591,8 @@ game.running = false;
   assert(searched && sealedCounts && fuseBlocked && unsealed && dropped && returned && picked, 'Kronenkrieg loot: walking into a house (cut-away, stairs and gallery from two storeys), opening a chest gives gold and XP and walking out leaves it; an Arcane State found at level 1 is sealed but takes a deck slot, fusion waits for level 2, level 8 unseals it; dying drops gold, backpack and every rune as a pile, the hero returns at the main castle and can pick the pile up (' + [searched, sealedCounts, fuseBlocked, unsealed, dropped, returned, picked].join('/') + ')');
   {
     // items (feedback 20 Nov 2026): loot lies as single items with an icon, a full bag leaves the rest on the ground, the bag drops goods, the reels show after a spin
-    const KIt = await import('./public/src/kk_items.js'); const inv = kk.inv; const room = KL.BACKPACK - KL.invUnits(inv);
-    const [wood] = KIt.spawnItems(game, P.x, P.z, { materials: { wood: room + 3 } }); const partial = KIt.pickupItem(game, wood) === false && wood.n === 3 && KL.invUnits(inv) === KL.BACKPACK;
+    const KIt = await import('./public/src/kk_items.js'); const inv = kk.inv; const room = KL.roomFor(kk, 'wood');
+    const [wood] = KIt.spawnItems(game, P.x, P.z, { materials: { wood: room + 3 } }); const partial = KIt.pickupItem(game, wood) === false && wood.n === 3 && KL.roomFor(kk, 'wood') === 0;
     const [coin] = KIt.spawnItems(game, P.x, P.z, { gold: 9 }); const g0 = kk.gold; const coinFits = KIt.pickupItem(game, coin) && kk.gold === g0 + 9;
     const icons = ['gold', 'wood', 'stone', 'steel', 'obsidian', 'weapon', 'rune'].every((t) => KIt.itemIcon({ type: t }) !== undefined) && KIt.itemIcon({ type: 'gem', el: 'fire' }) !== undefined && KIt.itemIcon({ type: 'potion', kind: 'hp' }) !== undefined;
     KIt.showReels(game, { grid: ['weapon', 'weapon', 'weapon', 'blank', 'rune', 'element', 'blank', 'blank', 'blank'], wins: ['weapon'], bonus: ['veteran'] }, 'TEST'); const shown = !!kk.reelShow;
@@ -5606,7 +5606,7 @@ game.running = false;
   {
     // video bugs (20 Nov 2026): a full bag no longer re-drops the rest in front of the figure (4:17–4:41 "BEUTE AUFGEHOBEN" again and again);
     // a phone tap counts once (the compatibility mousedown after a touch was a second attack); a guard shields allies behind from blows
-    const KIt2 = await import('./public/src/kk_items.js'); const KLx = await import('./public/src/kk_loot.js'); const inv2 = kk.inv; const keepInv = JSON.stringify(inv2); inv2.wood = KLx.BACKPACK - KLx.invUnits(inv2) + inv2.wood; 
+    const KIt2 = await import('./public/src/kk_items.js'); const KLx = await import('./public/src/kk_loot.js'); const inv2 = kk.inv; const keepInv = JSON.stringify(inv2); Object.assign(inv2, { wood: KLx.bagSlots(kk) * KLx.STACK, stone: 0, steel: 0, obsidian: 0, stones: {}, weapons: {} }); /* every slot full */ 
     const [st] = KIt2.spawnItems(game, P.x, P.z, { materials: { stone: 6 } }); st.lock = 0; const shown = []; const keepAnn = game.showAnnouncement; game.showAnnouncement = (t) => shown.push(t);
     for (let i = 0; i < 600; i++) KLx.updateLoot(game, 1 / 60); game.showAnnouncement = keepAnn;
     const noLoop = !kk.items.some((it) => it.id > st.id) && kk.items.includes(st) && st.n === 6 && shown.filter((t) => /AUFGEHOBEN/.test(t)).length === 0 && shown.length <= 4;
@@ -5619,9 +5619,17 @@ game.running = false;
     assert(noLoop && tapOnce && mouseStill && guarded && openHit, 'Video bugs: a full bag leaves the item lying without a pick-up loop, a phone tap is one attack (not a second mousedown), a desktop click still attacks, a guard toward the attacker shields the ally behind from a blow and without the guard it lands (' + [noLoop, tapOnce, mouseStill, guarded, openHit].join('/') + ')');
   }
   {
+    // the bag (user, 20 Nov 2026): slots of up to 64 of one kind; the main castle enlarges it
+    const KB = await import('./public/src/kk_loot.js'); const KBi = await import('./public/src/kk_items.js'); const keepB = JSON.stringify(kk.inv); const keepLvl = kk.bagLevel; kk.bagLevel = 0;
+    Object.assign(kk.inv, { wood: 0, stone: 0, steel: 0, obsidian: 0, stones: {}, weapons: {} }); const [w70] = KBi.spawnItems(game, P.x, P.z, { materials: { wood: 70 } }); const took70 = KBi.pickupItem(game, w70) && kk.inv.wood === 70 && KB.slotsUsed(kk.inv) === 2;
+    const room = KB.roomFor(kk, 'wood') === 58 + (KB.BAG_BASE - 2) * 64; kk.gold = 500; const s0 = KB.bagSlots(kk); kk.bagLevel = 1; const grows = KB.bagSlots(kk) === s0 + 4;
+    Object.assign(kk.inv, JSON.parse(keepB)); kk.bagLevel = keepLvl;
+    assert(took70 && room && grows, 'Bag: 70 wood fill two slots of 64, the open stack and the free slots count as room, a bag level adds 4 slots (' + [took70, room, grows].join('/') + ')');
+  }
+  {
     // swap window (video 2:23 / 4:47 "BEUTEL VOLL" without a way to exchange): the item lying there against a chosen stack / deck rune
     const KS = await import('./public/src/kk_items.js'); const KLs = await import('./public/src/kk_loot.js'); const invS = kk.inv; const keepS = JSON.stringify(invS);
-    invS.wood += KLs.BACKPACK - KLs.invUnits(invS); const [stn] = KS.spawnItems(game, P.x, P.z, { materials: { stone: 4 } }); const stone0 = invS.stone;
+    Object.assign(invS, { wood: KLs.bagSlots(kk) * KLs.STACK, stone: 0, steel: 0, obsidian: 0, stones: {}, weapons: {} }); /* every slot full */ const [stn] = KS.spawnItems(game, P.x, P.z, { materials: { stone: 4 } }); const stone0 = invS.stone;
     const refused = KS.pickupItem(game, stn) === false && kk.swapOffer?.item === stn && KS.swapChoices(game).some((c) => c.key === 'mat:wood');
     const woodBefore = invS.wood; const tookStone = KS.swapWith(game, 'mat:wood') && invS.stone === stone0 + 4 && invS.wood === 0 && !kk.items.includes(stn);
     const woodLies = kk.items.some((it) => it.type === 'wood' && it.n === woodBefore && it.lock > 0);
@@ -5775,7 +5783,7 @@ game.running = false;
     rv.row = kR.row; rv.x = game.player.x + 200; rv.z = game.player.z; rv.task = { kind: 'idle', id: 'none' }; KWR.updateWar(game, 1 / 60); const E = game.enemyChampion; const champRides = kR.championBot === rv && E.kkRiding === true;
     kR.championBot = null; E.lifeState = 'Dead'; rv.x = game.player.x > 7000 ? 1600 : 12800; rv.z = game.player.z > 24 ? 8 : 40; /* far from the player: no live champion */ rv.row = kR.map.hqs[0].row; rv.task = null; rv.think = 0; kR.items.push({ id: kR.nextItem++, kind: 'egg', row: rv.row, x: rv.x + 400, z: rv.z, lock: 0, element: 'ignis', creature: 'siege_golem' });
     for (let i = 0; i < 60 && !rv.egg; i++) { rv.think = 0; KWR.updateWar(game, .25); } const carries = !!rv.egg; const sq0 = kR.units.filter((u) => u.seat === rv.seat && u.creature).length;
-    for (let i = 0; i < 4000 && rv.egg; i++) { rv.think = 0; KWR.updateWar(game, .5); if (!rv.alive) break; } const hatched = !rv.egg && kR.units.filter((u) => u.seat === rv.seat && u.creature && u.hatched).length > sq0;
+    const keepPX = game.player.x; const keepPZ = game.player.z; game.player.z = 0.2; for (let i = 0; i < 4000 && rv.egg; i++) { rv.think = 0; game.player.x = rv.x < 7200 ? 14200 : 200; kR.championBot = null; KWR.updateWar(game, .5); if (!rv.alive) break; } game.player.x = keepPX; game.player.z = keepPZ; /* the player far away: the rival stays abstract */ const hatched = !rv.egg && kR.units.filter((u) => u.seat === rv.seat && u.creature && u.hatched).length > sq0;
     rv.egg = { element: 'aqua', creature: 'rune_snake' }; const nEggs = kR.items.filter((it) => it.kind === 'egg').length; KWR.killBotForTest?.(game, rv); const drops = !KWR.killBotForTest || kR.items.filter((it) => it.kind === 'egg').length === nEggs + 1;
     assert(tookRune && rides && champRides && carries && hatched && drops, 'Rivals: a rival takes a rune and gold lying about (the rune makes it stronger), gets a horse at a stable and rides as the champion, carries an egg to a source and hatches a creature, a killed carrier drops the egg (' + [tookRune, rides, champRides, carries, hatched, drops].join('/') + ')');
   }
