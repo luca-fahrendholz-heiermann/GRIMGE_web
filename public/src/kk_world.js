@@ -42,8 +42,8 @@ export function setupKronenkrieg(game, seed = null, teamMode = game.kkTeamMode ?
 const cellKey = (row, x, z) => row + ':' + Math.floor(x / REVEAL_CELL) + ':' + Math.floor(z / REVEAL_ZCELL);
 // Exploring (2D): the cells around the figure are revealed for the rest of the round (only the level one stands on).
 export function revealAround(kk, P, rx = REVEAL_SAME, rz = REVEAL_DEPTH) {
-  const D = kk.map.depth ?? KK.depth; const z0 = P.z ?? D / 2;
-  for (let x = P.x - rx; x <= P.x + rx; x += REVEAL_CELL) for (let z = z0 - rz; z <= z0 + rz; z += REVEAL_ZCELL) kk.reveal.add(cellKey(kk.row, Math.max(0, Math.min(kk.map.width - 1, x)), Math.max(0, Math.min(D - .01, z))));
+  const D = kk.map.depth ?? KK.depth; const z0 = P.z ?? D / 2; const row = P.row ?? kk.row; /* a place reveals its own level (an event, a shrine), the player the one he stands on */
+  for (let x = P.x - rx; x <= P.x + rx; x += REVEAL_CELL) for (let z = z0 - rz; z <= z0 + rz; z += REVEAL_ZCELL) kk.reveal.add(cellKey(row, Math.max(0, Math.min(kk.map.width - 1, x)), Math.max(0, Math.min(D - .01, z))));
 }
 export const isRevealed = (kk, row, x, z = (kk.map.depth ?? KK.depth) / 2) => kk.reveal.has(cellKey(row, x, z));
 
