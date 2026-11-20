@@ -2,6 +2,36 @@
 
 Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
+## 20. Nov 2026 – Kronenkrieg: großes Korrekturpaket (Rückmeldung des Nutzers, zwei Videos)
+
+**Fehler aus den Videos** (iPhone 5:28 und PC 2:17, Bild für Bild ausgelesen):
+- **Beute-Schleife** (iPhone 4:17–4:41, „BEUTE AUFGEHOBEN“ alle paar Sekunden): Bei vollem Beutel legte das Aufheben den Rest als neuen Haufen vor die Figur, der sofort wieder aufgehoben wurde. Haufen gibt es nicht mehr, nur noch Einzelgegenstände.
+- **Doppelte Schläge am Handy:** Der Browser schickt nach jedem Tippen ein nachgeahmtes Maus-Klicken, das als zweiter Angriff zählte. Es wird jetzt ignoriert, wodurch das Handy so „ruhig“ schlägt wie der PC.
+- **Lose Turmbilder hinter der Burg** (iPhone 0:41–0:53, PC 0:18): Die Burg ist jetzt ein einziger Block (siehe unten).
+- **Dunkles Rechteck um durchsuchte Häuser** (PC 1:19–2:05): Jetzt wird nur das Bild abgedunkelt.
+- **Figur verschwand auf dem tiefen Burgdach:** Die Zeichenreihenfolge richtet sich nach dem Boden unter der Figur.
+- **Gegner-KI konnte nie Treppen benutzen:** Die Engine hielt alle Minions auf dem Boden. Kronenkrieg-Einheiten gehen jetzt über Treppen und Dächer und finden den Treppenfuß.
+
+**Neu und geändert:**
+- **Burg:** ein zusammenhängender Block. Das Dach ist eine begehbare Kampfplattform mit Brüstung hinten, die Türme sind in den Block eingebaut. Vor der Fassade führt eine Doppeltreppe mit Podest hinauf, zwei Tore in der Front führen in die Halle. Die Fahne steht in der Dachmitte: Antippen öffnet das Burgmenü. Das Menü ist kompakt und schließt sich, wenn man weggeht. Eingenommen wird eine Burg, indem man nach dem Mauerbruch allein an der Fahne steht. Die Tore öffnen sich für Angreifer erst nach dem Mauerbruch.
+- **Treppen als Rampen:** mehr Toleranz beim Betreten und ein Geländer vorne (weg nur am Fuß, oben oder per Sprung). Die Haustreppe ist breiter. Während der Beschwörung bleibt man stehen.
+- **Quadratisches Spielbrett:** 14 400 px breit und 48 Tiefeneinheiten tief, auf dem Bildschirm etwa gleich breit wie hoch. Die Hauptburgen stehen in den vier Vierteln, Orte verteilen sich über die Fläche, Biome sind Flächen, je drei Straßen laufen quer und längs. Gezeichnet und aktualisiert wird nur, was nah oder sichtbar ist.
+- **Todeszone:** Sie schließt sich von allen vier Rändern und zerstört Hauptburgen (~40 s) und Mittelburgen. In einer gefallenen oder überfluteten Hauptburg gibt es keine Rückkehr mehr, die Runde endet.
+- **Weltkarte** (🗺 / Taste M): maßstabsgetreu, mit Fog of War, Orten, Erz und Obsidian, der Todeszone und der eigenen Position. Rivalen erscheinen nur als verblassendes „zuletzt gesehen“. Zoomen und Verschieben gehen per Maus und Finger. Die Minikarte ist quadratisch.
+- **Beutel:** Plätze mit Stapeln von je 64, in der Hauptburg um +4 Plätze erweiterbar. Bei vollem Beutel oder Deck öffnet sich ein Tauschfenster. Runen fallen beim Tod einzeln mit eigenem Symbol.
+- **Gegner lassen Beute fallen:** Einheiten Münzen und manchmal Waren, Steine, Waffen oder Runen. Rivalen-Champions Gold, Waren, Steine, eine Waffe und 1–3 Runen.
+- **Rivalen** heben Liegendes auf und nutzen es: Runen machen sie stärker. Sie reiten nach einem Stall und tragen Eier zu einer Quelle, um sie auszubrüten. Ein besiegter Eierträger lässt das Ei fallen.
+- **Armee:**
+  - Einheiten sind so groß wie die Figuren.
+  - Eine Ausbildung bringt einen 3er-Trupp.
+  - Der Trupp hält das eigene Tempo (zu Fuß; beritten nur Kreaturen).
+  - Jede gewirkte Rune segnet den Trupp in der Nähe für 10 s (+20 % Schaden, +10 % Tempo, Element).
+  - Blocken schützt Verbündete auch vor Nahkampfschlägen.
+- **Portale:** ein Portalstein an jeder eigenen Burg und ein Feldportal (🌀 / Taste P). Wer darauf steht, kann mitsamt dem Trupp reisen.
+- **Fliegen:** an einem von drei Himmelsschreinen lernbar. Ein Sprung in der Luft hebt ab, Fliegen kostet Mana.
+- **Weltereignisse** alle ~2,5 min: Runentruhe mit guten Chancen auf epische Runen, ein Banditenfürst als Boss mit großer Beute, Häuser, die sich neu füllen.
+- **Plan:** `GRIMGE_ARMEE_PLAN.md` überträgt das Rekrutierungs- und Armeesystem von Heroes of Might and Magic auf GRIMGE.
+
 ## 20. Nov 2026 – Kronenkrieg: schlanke Anzeige, die rechte Seite bleibt frei, Tränke in der Hand (Rückmeldung des Nutzers)
 
 - Die große Beute-/Stufen-Tafel und die Trank-Knöpfe rechts sind weg; die rechte Bildschirmhälfte bleibt frei zum Schlagen.
