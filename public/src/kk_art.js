@@ -98,6 +98,9 @@ const DECOR = Object.freeze({
   crystal: [16, 22, (p) => { p(6, 2, 4, 18, '#9b6bff'); p(6, 2, 2, 18, '#d8c4ff'); p(2, 8, 3, 12, '#7a4fd8'); p(11, 6, 3, 14, '#b48cff'); p(1, 20, 14, 2, '#2a1f3d'); }],
   reeds: [18, 18, (p) => { for (let i = 0; i < 7; i++) { const x = 2 + i * 2; const hh = 9 + Math.round(hash(i, 5) * 8); p(x, 18 - hh, 1, hh, i % 2 ? '#7a9a4a' : '#5a7a3a'); if (i % 3 === 0) p(x, 18 - hh, 2, 3, '#6a4a2a'); } }],
   tuft: [12, 8, (p) => { for (let i = 0; i < 5; i++) p(1 + i * 2, 8 - 3 - (i % 2) * 2, 1, 3 + (i % 2) * 2, '#5a8a3a'); }],
+  // resource rocks (kk_resources.js): an ore vein (steel) and a block of obsidian (the hardest)
+  ore: [24, 16, (p) => { p(2, 6, 20, 10, '#4e4842'); p(4, 3, 15, 5, '#6a6258'); p(4, 3, 6, 1, '#857c70'); p(2, 15, 20, 1, '#2e2924'); for (const [x, y] of [[6, 8], [12, 6], [16, 10], [9, 12], [18, 7]]) { p(x, y, 3, 2, '#a9c4d6'); p(x, y, 1, 1, '#eef8ff'); } }],
+  obsidian: [22, 22, (p) => { p(4, 8, 15, 13, '#160c20'); p(7, 3, 8, 7, '#1f1430'); p(8, 1, 4, 3, '#2b1d3a'); p(8, 3, 2, 14, '#5a3a8a'); p(13, 8, 1, 9, '#9b6bff'); p(5, 12, 1, 6, '#3a2a50'); p(2, 20, 19, 2, '#0c0612'); p(9, 2, 1, 2, '#d8c4ff'); }],
   lava: [20, 10, (p) => { p(2, 4, 16, 5, '#2a1410'); p(4, 5, 12, 3, '#ff6a1f'); p(6, 5, 5, 1, '#ffd24a'); }]
 });
 const BIOME_DECOR = Object.freeze({
@@ -114,7 +117,10 @@ export function buildDecor(map) {
     for (let i = 0; i < n; i++) {
       const x = bio.x0 + rng() * (bio.x1 - bio.x0); let z = rng() < .5 ? .06 + rng() * .28 : .72 + rng() * .24;
       if ([...map.hqs, ...map.sites].some((s) => s.row === bio.row && Math.abs(s.x - x) < 170 && Math.abs(s.z - z) < .25)) continue;
-      out.push({ row: bio.row, x, z: +z.toFixed(3), kind: kinds[Math.floor(rng() * kinds.length)], flip: rng() < .5 });
+      let kind = kinds[Math.floor(rng() * kinds.length)]; const roll = rng();
+      // some rocks are resources of the stronger materials: ore veins (steel), and obsidian in the deep and in fire / void / shadow land
+      if (kind === 'rock' && roll < .24) kind = 'ore'; else if ((kind === 'rock' || kind === 'crystal' || kind === 'lava') && roll > (bio.row === 2 || ['ignis', 'void', 'umbra'].includes(bio.element) ? .72 : .93)) kind = 'obsidian';
+      out.push({ row: bio.row, x, z: +z.toFixed(3), kind, flip: rng() < .5 });
     }
   }
   return out;

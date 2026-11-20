@@ -5600,6 +5600,19 @@ game.running = false;
     kk.items = kk.items.filter((it) => it !== wood); inv.wood = Math.max(0, inv.wood - room);
     assert(partial && coinFits && icons && shown && gone, 'Kronenkrieg items: a full bag takes only what fits and leaves the rest lying, coins always fit, every item kind has its icon, the reel window shows a spin and closes after 4 s (' + [partial, coinFits, icons, shown, gone].join('/') + ')');
   }
+  {
+    // resources (feedback 20 Nov 2026): trees give wood, rocks stone, ore veins steel, obsidian takes longest; a felled node drops items and regrows
+    const KR = await import('./public/src/kk_resources.js'); const kinds = new Set(kk.decor.map((d) => d.kind)); const allKinds = ['rock', 'ore', 'obsidian'].every((k) => kinds.has(k)) && ['oak', 'pine', 'snowpine', 'dead'].some((k) => kinds.has(k));
+    const tree = kk.decor.find((d) => KR.RESOURCE[d.kind]?.mat === 'wood' && d.row === kk.row); P.x = tree.x + 30; P.z = tree.z;
+    const blueSees = game.getHostileTargets(P.team).some((t) => t.d === tree); const redBlind = !game.getHostileTargets('red').some((t) => t.isResourceNode);
+    const node = game.getHostileTargets(P.team).find((t) => t.d === tree); const n0 = kk.items.length; let hitsTree = 0; while (!tree.gone && hitsTree < 50) { node.takeDamage(12, -1); hitsTree++; }
+    const woodItem = kk.items.slice(n0).find((it) => it.type === 'wood'); const felled = tree.gone && !!woodItem && woodItem.n === KR.RESOURCE[tree.kind].n && !game.getHostileTargets(P.team).includes(node);
+    const obs = kk.decor.find((d) => d.kind === 'obsidian'); const kr = kk.row; kk.row = obs.row; P.x = obs.x; const on = KR.kkResourceTargets(game).find((t) => t.d === obs); let hitsObs = 0; while (!obs.gone && hitsObs < 80) { on.takeDamage(12, 1); hitsObs++; } kk.row = kr;
+    const harder = obs.gone && hitsObs > hitsTree * 3 && kk.items.some((it) => it.type === 'obsidian');
+    const tt = kk.time; kk.time += KR.REGROW + 1; KR.updateResources(game, 1 / 60); kk.time = tt; const regrown = !tree.gone && tree.hp === KR.RESOURCE[tree.kind].hp;
+    kk.items = kk.items.slice(0, n0);
+    assert(allKinds && blueSees && redBlind && felled && harder && regrown, 'Kronenkrieg resources: trees, rocks, ore veins and obsidian stand in the landscape; only the player side can hit them; a felled tree drops its wood as items, obsidian takes far more blows (' + hitsObs + ' vs ' + hitsTree + '), a node regrows (' + [allKinds, blueSees, redBlind, felled, harder, regrown].join('/') + ')');
+  }
   // army: renegade garrisons live in the band, capture a mid castle, train (frost stone + reel), garrison ▲ ▼, merge, prisoners, squad crosses bands
   const KA = await import('./public/src/kk_army.js'); game.returnToHub(); game.setMatchMode('kronenkrieg'); game.startMatch(); const k2 = game.modeState.kk; const P2 = game.player;
   { const c0 = k2.map.sites.find((x) => x.kind === 'castle' && x.row === k2.row) ?? k2.map.sites.find((x) => x.kind === 'castle'); k2.row = c0.row; P2.x = c0.x - 300; } /* next to a garrison: the start may have none in reach */

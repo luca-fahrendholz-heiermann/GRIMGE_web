@@ -2,6 +2,13 @@
 
 Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
+## 20. Nov 2026 – Kronenkrieg: Feedback-Liste, Teil 3 — Rohstoffe aus der Landschaft
+
+- Bäume geben Holz, Felsen Stein, Erzadern (Gestein mit blanken Einschlüssen) Stahl, Obsidianblöcke Obsidian. Schlagen nutzt sie ab: sie wackeln, zeigen einen kleinen Balken, Bäume kippen um, Gestein zerbricht, das Material fällt als Gegenstände heraus.
+- Härteres Material braucht mehr Schläge: Baum < Fels < Erz < Obsidian (etwa sechsmal so viele Hiebe wie ein Baum). Waffenhiebe zählen voll, Zauber halb.
+- Erz liegt überall verstreut, Obsidian vor allem in der Tiefe und in Feuer-, Leere- und Schattenland. Nach 2,5 Minuten wächst ein Baum bzw. Gestein nach (bis dahin Stumpf / Geröll).
+- Nur die Seite des Spielers erntet; die eigene Truppe jagt keine Bäume.
+
 ## 20. Nov 2026 – Kronenkrieg: Feedback-Liste, Teil 2 — Gegenstände, Beutel, Walzen-Fenster
 
 - Beute fällt als einzelne Gegenstände auf den Boden, jeder mit eigenem Pixel-Icon (Münzen, Holz, Stein, Stahlbarren, Obsidian, Elementstein in seiner Farbe, Waffe, Heil-/Manatrank, Runenrolle); sie hüpfen heraus und werden durch Darüberlaufen eingesammelt (Truhen, besiegte Gegner, Kreaturen).
