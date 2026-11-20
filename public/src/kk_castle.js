@@ -12,7 +12,7 @@ import { structureSurfaces } from './level_structures.js';
 import { groundYForDepth } from './world.js';
 import { combat } from './combat.js';
 import { audio } from './audio.js';
-import { kkState, kkOn, siteOpts } from './kk_world.js';
+import { kkState, kkOn, siteOpts, roomClip } from './kk_world.js';
 import { castleTowerImage } from './kk_art.js';
 import { hqMaxHp } from './kk_war.js';
 import { sameTeam } from './kk_army.js';
@@ -35,9 +35,9 @@ const ownCastle = (s) => (s.kind === 'hq' ? s.seat === 0 : s.owner === 0);
 function defsOf(s) {
   const d = dimsOf(s); const b = castleBox(s);
   return [
-    { type: 'gallery', x0: b.x0, x1: b.x1, zMin: b.zMin, zMax: b.zMax, h: d.h },
-    { type: 'stairs', x0: b.x0 - d.stair, x1: b.x0, zMin: b.zMin + .02, zMax: b.zMax, from: 0, to: d.h },
-    { type: 'stairs', x0: b.x1, x1: b.x1 + d.stair, zMin: b.zMin + .02, zMax: b.zMax, from: d.h, to: 0 }
+    { type: 'gallery', x0: b.x0, x1: b.x1, zMin: b.zMin, zMax: b.zMax, h: d.h, backWall: true }, /* the back parapet */
+    { type: 'stairs', x0: b.x0 - d.stair, x1: b.x0, zMin: b.zMin + .02, zMax: b.zMax, from: 0, to: d.h, backWall: true },
+    { type: 'stairs', x0: b.x1, x1: b.x1 + d.stair, zMin: b.zMin + .02, zMax: b.zMax, from: d.h, to: 0, backWall: true }
   ];
 }
 function allSurfaces(kk) {
@@ -171,10 +171,11 @@ export function castleActors(game) {
   const kk = kkState(game); if (!kk) return []; const P = game.player; const t = kk.time; const out = [];
   for (const s of castlesOf(kk)) {
     if (s.row !== kk.row || Math.abs(s.x - P.x) > 1800) continue;
+    const clip = kk.inside === s ? null : roomClip(kk, s.x, s.z, dimsOf(s).half + dimsOf(s).stair); if (clip === 'hide') continue; /* nothing reaches into the room one stands in */
     const d = dimsOf(s); const b = castleBox(s); const yb = groundYForDepth(b.zMin); const yf = groundYForDepth(b.zMax); const H = d.h; const m = matOf(s); const big = s.kind === 'hq';
     const opts = siteOpts(kk, s); const color = opts.ownerColor ?? '#9e9e9e'; const inside = kk.inside === s;
     const behind = !inside && P.z < b.zMin + .005 && P.x > b.x0 - 60 && P.x < b.x1 + 60 && (P.surfaceHeight ?? 0) < 10;
-    const alpha = behind ? .42 : 1; const sx = s.shake > 0 ? Math.sin(s.shake * 90) * 2 : 0; const broken = castleHp(s) <= 0 || s.fallen;
+    const alpha = clip === 'fade' ? .28 : behind ? .42 : 1; const sx = s.shake > 0 ? Math.sin(s.shake * 90) * 2 : 0; const broken = castleHp(s) <= 0 || s.fallen;
     // the towers at the back corners (and the keep of a main castle)
     out.push({ y: yb - .6, render: (ctx) => {
       ctx.save(); ctx.globalAlpha = alpha; ctx.translate(sx, 0);

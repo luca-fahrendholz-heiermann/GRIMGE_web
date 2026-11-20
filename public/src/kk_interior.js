@@ -33,8 +33,8 @@ function houseStructures(site) {
   if ((site.floors ?? 1) < 2) return [];
   const [g0, g1] = galleryBand(site); const x0 = site.x - HOUSE.half; const x1 = site.x + HOUSE.half;
   return structureSurfaces([
-    { type: 'gallery', x0, x1: site.x + 10, zMin: g0, zMax: g1, h: HOUSE.floorH },
-    { type: 'stairs', x0: site.x + 10, x1: x1 - 46, zMin: g0, zMax: g1, from: HOUSE.floorH, to: 0 } /* the foot stands free of the wall */
+    { type: 'gallery', x0, x1: site.x + 10, zMin: g0, zMax: g1, h: HOUSE.floorH, backWall: true },
+    { type: 'stairs', x0: site.x + 10, x1: x1 - 46, zMin: g0, zMax: g1, from: HOUSE.floorH, to: 0, backWall: true } /* the foot stands free of the wall */
   ], 0);
 }
 

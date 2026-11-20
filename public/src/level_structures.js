@@ -11,7 +11,7 @@ const depthForGroundY = (y) => { const { farY, nearY } = getGroundProjection(); 
 // Furniture (below) is landing-only too, but never walked onto: you jump up. Foreground pieces have no surface.
 export function structureSurfaces(defs = [], left = 0) {
   return defs.filter((d) => d.type === 'stairs' || d.type === 'gallery' || FURNITURE.has(d.type)).map((d, i) => {
-    const xMin = left + d.x0; const xMax = left + d.x1; const base = { id: `structure${i}`, xMin, xMax, zMin: d.zMin, zMax: d.zMax, landingOnly: true, levelWalk: !FURNITURE.has(d.type), structure: d.type };
+    const xMin = left + d.x0; const xMax = left + d.x1; const base = { id: `structure${i}`, xMin, xMax, zMin: d.zMin, zMax: d.zMax, landingOnly: true, levelWalk: !FURNITURE.has(d.type), structure: d.type, backWall: !!d.backWall };
     if (d.type === 'stairs') { const span = Math.max(1, xMax - xMin); return { ...base, baseHeight: Math.max(d.from, d.to), heightAt: (x) => d.from + (d.to - d.from) * Math.max(0, Math.min(1, (x - xMin) / span)) }; }
     return { ...base, baseHeight: d.h };
   });

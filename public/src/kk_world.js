@@ -208,6 +208,7 @@ export function siteOpts(kk, site) {
 
 // The ground of the level one stands on (world space, before the actors). x0/x1: the visible world span. Above the
 // floor each level has its own air: dusk sky over the plateaus, night over the main plane, a rock ceiling in the depths.
+const SITE_W = Object.freeze({ building: 200, goldvein: 90, prison: 170, source: 120, stable: 150, shrine: 60, shaft: 140, lift: 140, lair: 260, camp: 200, trial: 200 });
 export function renderKKGround(ctx, game, x0, x1) {
   const kk = kkState(game); if (!kk) return; const p = getGroundProjection(); const H = bandH(); const row = kk.row; const t = kk.time;
   const above = row === 0 ? ['#2a3350', '#141a2c'] : row === KK.main ? ['#11141f', '#090b12'] : ['#140d0a', '#0a0605'];
@@ -224,11 +225,21 @@ export function renderKKGround(ctx, game, x0, x1) {
   ctx.fillStyle = 'rgba(0,0,0,.35)'; for (let x = Math.floor(x0 / 24) * 24; x < x1; x += 24) ctx.fillRect(x + Math.floor(hash(x, 1) * 10), p.nearY + 6 + Math.floor(hash(1, x) * 30), 10, 3);
   void t;
 }
+// Inside a house or a castle hall (user, 20 Nov 2026: "Goldadern etc. dürfen nicht in Innenräume ragen — klare Ebenen"):
+// a world piece overlapping the room is hidden when it stands at the room's depth or behind it, and faded in front of it.
+export function roomClip(kk, x, z, half = 40) {
+  const r = kk?.inside; if (!r) return null;
+  const house = r.kind === 'building'; const rHalf = house ? 148 : (r.kind === 'hq' ? 258 : 208); const front = house ? r.z + .02 : r.z - .01;
+  if (Math.abs(x - r.x) >= rHalf + half) return null;
+  return z < front + .015 ? 'hide' : 'fade';
+}
+const clipped = (kk, x, z, half, render) => { const c = roomClip(kk, x, z, half); if (c === 'hide') return null; if (c !== 'fade') return render; return (ctx) => { ctx.save(); ctx.globalAlpha *= .28; render(ctx); ctx.restore(); }; };
 // The places of the current band take part in the depth order (a figure behind a castle is hidden by it).
 export function kkActors(game) {
   const kk = kkState(game); if (!kk) return [];
-  const out = [...kk.map.hqs, ...kk.map.sites].filter((s) => s.row === kk.row && s.kind !== 'castle' && s.kind !== 'hq').map((s) => ({ y: groundYForDepth(s.z), render: (ctx) => drawSite(ctx, s, groundYForDepth(s.z), kk.time, siteOpts(kk, s)) }));
-  const P = game.player; for (const d of kk.decor ?? []) if (d.row === kk.row && Math.abs(d.x - P.x) < 1400) out.push({ y: groundYForDepth(d.z), render: (ctx) => drawNode(ctx, d, groundYForDepth(d.z)) }); /* resource nodes: kk_resources.js */
+  const out = [];
+  for (const s of [...kk.map.hqs, ...kk.map.sites]) { if (s.row !== kk.row || s.kind === 'castle' || s.kind === 'hq') continue; const r = kk.inside === s ? (ctx) => drawSite(ctx, s, groundYForDepth(s.z), kk.time, siteOpts(kk, s)) : clipped(kk, s.x, s.z, (SITE_W[s.kind] ?? 120) / 2, (ctx) => drawSite(ctx, s, groundYForDepth(s.z), kk.time, siteOpts(kk, s))); if (r) out.push({ y: groundYForDepth(s.z), render: r }); }
+  const P = game.player; for (const d of kk.decor ?? []) { if (d.row !== kk.row || Math.abs(d.x - P.x) > 1400) continue; const r = clipped(kk, d.x, d.z, 34, (ctx) => drawNode(ctx, d, groundYForDepth(d.z))); if (r) out.push({ y: groundYForDepth(d.z), render: r }); } /* resource nodes: kk_resources.js */
   out.push(...castleActors(game)); /* the castles: solid wall blocks with rampart and stairs (kk_castle.js) */
   return out;
 }

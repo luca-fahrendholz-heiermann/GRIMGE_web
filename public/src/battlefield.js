@@ -242,6 +242,8 @@ export class Battlefield {
     const bounds = this.boundsOverride ?? this.playableBounds;
     // Siege: a Wizard is confined to its platform or to the lane (siege_match.js).
     clampToArena(entity, entity.confineBounds ?? (onDeck ? { ...bounds, left: 0, right: this.width } : this.boundsOverride));
+    // A stair / gallery against a back wall (user, 20 Nov 2026): whoever stands on it cannot step off its back edge.
+    if (entity.surfaceId != null && this.levelSurfaces?.length) { const S = this.levelSurfaces.find((s) => s.id === entity.surfaceId); if (S?.backWall && entity.z < S.zMin + .006 && entity.x >= S.xMin && entity.x <= S.xMax) entity.z = S.zMin + .006; }
     if (entity.x !== oldX) entity.vx = 0;
     if (entity.z !== oldZ) entity.vz = 0;
     let surface = this.getSurfaceAt(entity.x, entity.z, entity);

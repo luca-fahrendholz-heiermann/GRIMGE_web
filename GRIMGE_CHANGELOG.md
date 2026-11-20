@@ -2,6 +2,11 @@
 
 Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
+## 20. Nov 2026 – Klare Ebenen in Innenräumen, Treppen an der Rückwand (Rückmeldung des Nutzers)
+
+- In einem Haus oder in der Burghalle ragt nichts mehr in den Raum: Goldadern, Bäume, Felsen, andere Häuser, Burgen und Gegenstände auf Höhe des Raums oder dahinter werden ausgeblendet; was davor steht, wird durchsichtig.
+- Treppen, Galerien und Wehrgänge lehnen an einer Rückwand: wer oben steht, kann nicht mehr hinten herunterfallen, nur nach vorne springen (Häuser und Burgen, allgemein über `backWall` in level_structures.js).
+
 ## 20. Nov 2026 – Kronenkrieg: Feedback-Liste, Teil 4 — Burgen als feste, begehbare Bauwerke
 
 - Burgen sind feste Mauerblöcke, etwa doppelt so breit wie vorher: niemand läuft hindurch (Spieler, Einheiten, Rivalen).
