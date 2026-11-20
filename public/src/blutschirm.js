@@ -13,7 +13,7 @@ import { offerRecast } from './recast.js';
 import { applyStatus } from './status_effects.js';
 import { combat } from './combat.js';
 import { environment } from './environment.js';
-import { groundYForDepth } from './world.js';
+import { groundYForDepth, clampZ } from './world.js';
 
 export const BLOOD = Object.freeze({ dur: 7, rainTime: 3.2, archers: 5, every: .09, zoneR: 70, arrowDmg: 8, shell: .2, dragonDmg: 50, hpCost: 8, puddleR: 22 });
 const C = { dark: '#2a0006', body: '#b71c1c', bright: '#e53935', light: '#ff8a80', white: '#ffebee' };
@@ -125,7 +125,7 @@ defineSignature('S90', {
       if (st.t < BLOOD.rainTime && (st.fireT -= dt) <= 0) {
         st.fireT = BLOOD.every; const i = st.shot++ % BLOOD.archers; const from = archerAt(p, i, st.t);
         const a = st.shot * 2.39; const rr = Math.sqrt((st.shot * 37 % 100) / 100) * BLOOD.zoneR;
-        emit(new BloodArrow(p, from, { x: st.zone.x + Math.cos(a) * rr, z: Math.max(.04, Math.min(.96, st.zone.z + Math.sin(a) * rr / DEPTH)) }));
+        emit(new BloodArrow(p, from, { x: st.zone.x + Math.cos(a) * rr, z: clampZ(st.zone.z + Math.sin(a) * rr / DEPTH, .04, .96) }));
       }
       // Guarding: the umbrella folds into a dome; hostile shots soak into it.
       st.shellK = Math.max(0, Math.min(1, st.shellK + (p.isGuarding ? dt * 6 : -dt * 6)));

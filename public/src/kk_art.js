@@ -7,7 +7,7 @@
 //     shade, highlight) into small offscreen canvases and scaled up crisp;
 //   • every biome scatters its own landscape pieces (pines, oaks, dead trees, rocks, crystals, reeds, tufts).
 // When an image is not loaded yet (or in node tests) drawKKSite returns false and the plain drawing in kk_world is used.
-import { mulberry32, BIOME_OF } from './kk_map.js';
+import { mulberry32, BIOME_OF, KK, roadZ } from './kk_map.js';
 
 const S = 2; // pixel scale of the drawn sprites (one sprite pixel = 2 world pixels)
 const images = {};
@@ -116,7 +116,7 @@ export function buildDecor(map) {
   for (const bio of map.biomes) {
     const kinds = BIOME_DECOR[bio.element] ?? ['tuft']; const n = Math.round((bio.x1 - bio.x0) / 120);
     for (let i = 0; i < n; i++) {
-      const x = bio.x0 + rng() * (bio.x1 - bio.x0); let z = rng() < .5 ? .06 + rng() * .28 : .72 + rng() * .24;
+      const x = bio.x0 + rng() * (bio.x1 - bio.x0); const z = .05 + rng() * (KK.depth - .1); if (Math.abs(z - roadZ(x, bio.row)) < .14) continue; /* the whole depth, not on the road */
       if ([...map.hqs, ...map.sites].some((s) => s.row === bio.row && (s.kind === 'castle' || s.kind === 'hq' ? Math.abs(s.x - x) < (s.kind === 'hq' ? 400 : 340) && z > s.z - .24 && z < s.z + .12 : Math.abs(s.x - x) < 170 && Math.abs(s.z - z) < .25))) continue; /* castles: wall block plus stairs */
       let kind = kinds[Math.floor(rng() * kinds.length)]; const roll = rng();
       // some rocks are resources of the stronger materials: ore veins (steel), and obsidian in the deep and in fire / void / shadow land

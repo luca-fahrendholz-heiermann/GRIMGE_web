@@ -13,6 +13,7 @@
 import { RUNE_GUIDES, guideStrokes } from './rune_guides.js';
 import { combat } from './combat.js';
 import { drawCastTell } from './cast_circle.js';
+import { clampZ } from './world.js'; // the depth clamp that knows the field's depth
 
 // Skill profiles. reaction: s until a new snapshot; speed: drawing px/s on a 60 px glyph; pause: s per rune;
 // aim: px error at 300 px; grades: chances of S / A / B (rest C); fail: misfire chance; dodge: chance to side-step.
@@ -55,7 +56,7 @@ export function perceive(ai, target, dt, gw) {
 export function aimPoint(ai, gw, lead = .35) {
   const s = ai.seen; if (!s) return null;
   const k = lead * (.5 + Math.random() * .7);
-  return { x: s.x + (s.vx ?? 0) * (k + s.t), z: Math.max(.04, Math.min(.96, s.z + (s.vz ?? 0) * (k + s.t))) };
+  return { x: s.x + (s.vx ?? 0) * (k + s.t), z: clampZ(s.z + (s.vz ?? 0) * (k + s.t), .04, .96) };
 }
 
 // ── drawing a rune ───────────────────────────────────────────────────────
@@ -147,7 +148,7 @@ export function planMove(ai, s, home, plan) {
   if (plan === 'PRESS' || plan === 'PUNISH') return { x: s.x - side * 50, z: s.z, speed: plan === 'PUNISH' ? 1 : .95, face: side };
   // KITE: hold 200–320 px, a little off the target's lane.
   const want = d < 190 ? s.x - side * 260 : d > 330 ? s.x - side * 280 : ai.x;
-  return { x: want, z: Math.max(.06, Math.min(.94, s.z + (ai.aiLaneOffset ?? .08))), speed: d < 190 ? .85 : .6, face: side };
+  return { x: want, z: clampZ(s.z + (ai.aiLaneOffset ?? .08), .06, .94), speed: d < 190 ? .85 : .6, face: side };
 }
 // Incoming hostile shot in the AI's lane → step aside in depth (chance by skill, once per shot).
 export function dodgeShot(ai, gw, shots) {

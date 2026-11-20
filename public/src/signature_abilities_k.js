@@ -11,7 +11,7 @@ import { defineSignature, emit, foesOf, TAU, DEPTH } from './signature_core.js';
 import { offerRecast } from './recast.js';
 import { combat } from './combat.js';
 import { audio } from './audio.js';
-import { groundYForDepth } from './world.js';
+import { groundYForDepth, clampZ } from './world.js';
 import { sprites } from './sprites.js';
 
 export const TRUG = Object.freeze({ life: 5, count: 3, deceiveRange: 420, confuse: .6 });
@@ -19,7 +19,7 @@ const alive = (t) => t && !t.isDead && t.lifeState !== 'Dead' && t.lifeState !==
 
 // One double: looks like the caster, can be attacked, bursts when hit.
 export class IllusionDouble {
-  constructor(owner, x, z, seed) { this.owner = owner; this.team = owner.team; this.x = x; this.z = Math.max(.04, Math.min(.96, z)); this.seed = seed; this.isAlive = true; this.isDead = false; this.lifeState = 'Alive'; this.hp = 1; this.maxHp = 1; this.isIllusion = true; this.burstT = null; this.elevation = 0; this.surfaceHeight = 0; this.facing = owner.facing || 1; this.hitRadiusX = 16; this.hitRadiusZ = .2; this.state = 'idle'; this.isGuarding = false; }
+  constructor(owner, x, z, seed) { this.owner = owner; this.team = owner.team; this.x = x; this.z = clampZ(z, .04, .96); this.seed = seed; this.isAlive = true; this.isDead = false; this.lifeState = 'Alive'; this.hp = 1; this.maxHp = 1; this.isIllusion = true; this.burstT = null; this.elevation = 0; this.surfaceHeight = 0; this.facing = owner.facing || 1; this.hitRadiusX = 16; this.hitRadiusZ = .2; this.state = 'idle'; this.isGuarding = false; }
   get y() { return groundYForDepth(this.z); }
   get worldHeight() { return 0; }
   takeDamage() { this.burst(); return { illusion: true }; }

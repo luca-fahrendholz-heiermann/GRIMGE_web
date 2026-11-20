@@ -6,7 +6,8 @@
 // nothing good is ever clustered at one start.
 
 export const KK = Object.freeze({
-  rows: 3, width: 24000, edgeX: 180, main: 1, /* wider since the castles became wall blocks with stairs (20 Nov 2026) */
+  rows: 3, width: 24000, edgeX: 180, main: 1,
+  depth: 2.4,              // the field reaches 2.4 classic bands into the screen (user, 20 Nov 2026: a big battlefield, not a tube) /* wider since the castles became wall blocks with stairs (20 Nov 2026) */
   hqInset: 1250, hqJitter: 260,
   sectionsPerLevel: 2, sectionLen: [2600, 3600], connectorInset: 320,
   bandCost: 2400,          // how far (in x px) a band switch "counts" for distances
@@ -42,6 +43,8 @@ export const SITE_KINDS = Object.freeze({
   stable: { w: 150, value: 1 }, shrine: { w: 60, value: 1 },
   shaft: { w: 140, value: 0 }, lift: { w: 140, value: 0 }
 });
+// The road winds through the depth of every level (drawn by kk_world.js, walked by the patrols, kept free of decor).
+export const roadZ = (x, row) => KK.depth / 2 + Math.sin(x * .0013 + row * 2.1) * KK.depth * .22;
 export const LEVEL_NAMES = Object.freeze(['HOCHEBENE', 'HAUPTEBENE', 'TIEFE']);
 // Placement order matters: big and rare places first, the many buildings last (they fill what is left).
 const COUNTS = Object.freeze({ castle: 14, camp: 8, lair: 4, prison: 8, stable: 5, goldvein: 14, shrine: 8, building: 30 });
@@ -69,7 +72,7 @@ function attempt(rng) {
   const W = KK.width; const rows = KK.rows; const M = KK.main;
   // 1. main castles: all on the main plane, evenly spread (fair by construction), jittered; seats shuffled
   const seats = shuffle(rng, [0, 1, 2, 3]);
-  const hqs = [.1, .36, .64, .9].map((f, i) => ({ id: 'hq' + i, kind: 'hq', row: M, x: Math.round(W * f + (rng() * 2 - 1) * KK.hqJitter), z: .5, seat: seats[i], level: 0 }));
+  const hqs = [.1, .36, .64, .9].map((f, i) => ({ id: 'hq' + i, kind: 'hq', row: M, x: Math.round(W * f + (rng() * 2 - 1) * KK.hqJitter), z: +(KK.depth * .46).toFixed(3), seat: seats[i], level: 0 })); /* in the middle of the depth: open to every side */
   // 2. sections of the upper and lower level; their shafts and lifts keep away from every main castle
   const spans = { [M]: [[0, W]] }; const clearOfHQ = (x) => hqs.every((h) => Math.abs(h.x - x) > 900);
   for (const row of [0, 2]) {
@@ -91,7 +94,7 @@ function attempt(rng) {
   // 4. the connectors: at both ends of every section a shaft above and a lift below, at the same x
   for (const row of [0, 2]) for (const [sx0, sx1] of spans[row]) for (const x of [sx0 + KK.connectorInset, sx1 - KK.connectorInset]) {
     const upper = row === 0 ? 0 : M; const lower = row === 0 ? M : 2;
-    sites.push({ id: 'shaft' + sites.length, kind: 'shaft', row: upper, x, z: .5, to: lower }); sites.push({ id: 'lift' + sites.length, kind: 'lift', row: lower, x, z: .5, to: upper });
+    const cz = +(KK.depth / 2).toFixed(3); sites.push({ id: 'shaft' + sites.length, kind: 'shaft', row: upper, x, z: cz, to: lower }); sites.push({ id: 'lift' + sites.length, kind: 'lift', row: lower, x, z: cz, to: upper });
     occupied[upper].push({ x0: x - 90, x1: x + 90, big: true }); occupied[lower].push({ x0: x - 90, x1: x + 90, big: true });
   }
   const inSpan = (row, x, w) => (spans[row] ?? []).some(([x0, x1]) => x - w / 2 > x0 + KK.edgeX * .5 && x + w / 2 < x1 - KK.edgeX * .5);
@@ -107,7 +110,7 @@ function attempt(rng) {
     for (let n = 0; n < (kind === 'castle' ? 900 : 160); n++) { /* the wide castles need more tries to find room */
       const row = pick?.row ?? pickRow(); const x = pick?.x0 != null ? pick.x0 + rng() * (pick.x1 - pick.x0) : pickX(row);
       if ((def.big || kind === 'prison') && nearHQ(row, x)) continue; /* guarded places keep away from a start too */
-      const z = def.big ? .42 + rng() * .16 : kind === 'building' ? .42 + rng() * .4 /* room for the inside behind the front */ : .2 + rng() * .62;
+      const D = KK.depth; const z = def.big ? .42 + rng() * (D - 1) : kind === 'building' ? .42 + rng() * (D - .62) /* room for the inside behind the front */ : .2 + rng() * (D - .4);
       if (!free(row, x, def.w, def.big, z)) continue;
       const site = { id: kind + sites.length, kind, row, x: Math.round(x), z: +z.toFixed(3), ...props };
       sites.push(site); occupied[row].push({ x0: x - def.w / 2, x1: x + def.w / 2, big: !!def.big, z }); return site;

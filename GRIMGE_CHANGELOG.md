@@ -2,6 +2,13 @@
 
 Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
+## 20. Nov 2026 – Kronenkrieg: Feedback-Liste, Teil 5 — ein Schlachtfeld, das in die Tiefe geht
+
+- Das Kronenkrieg-Feld ist 2,4-mal so tief: man läuft weit in den Bildschirm hinein bzw. heraus, die Kamera folgt der Figur in die Tiefe (Himmel oben, die vordere Kante unten). Kein Schlauch mehr.
+- Hauptburgen stehen mitten in der Tiefe; Burgen, Häuser, Lager, Bäume und Felsen verteilen sich über die ganze Tiefe, die Straße schlängelt sich hindurch und die Patrouillen folgen ihr. Durch den Platz passen wieder alle Häuser und Gefangenenlager auf die Karte.
+- Häuser am hinteren Rand mit unerreichbarer Treppe gibt es nicht mehr.
+- Technik: ein gemeinsamer Tiefen-Helfer (`clampZ`, `depthSpan` in world.js) ersetzt 31 feste Grenzen in Zaubern, Atemtechniken und KI; in allen anderen Modi bleibt alles wie bisher.
+
 ## 20. Nov 2026 – Klare Ebenen in Innenräumen, Treppen an der Rückwand (Rückmeldung des Nutzers)
 
 - In einem Haus oder in der Burghalle ragt nichts mehr in den Raum: Goldadern, Bäume, Felsen, andere Häuser, Burgen und Gegenstände auf Höhe des Raums oder dahinter werden ausgeblendet; was davor steht, wird durchsichtig.

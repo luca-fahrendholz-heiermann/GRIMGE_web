@@ -10,7 +10,7 @@ import {
 } from './signature_core.js';
 import { combat } from './combat.js';
 import { environment } from './environment.js';
-import { groundYForDepth } from './world.js';
+import { groundYForDepth, clampZ } from './world.js';
 
 const linePts = (a, b, n, lift = 0, bulge = 0) => Array.from({ length: n + 1 }, (_, i) => { const u = i / n; return [a.x + (b.x - a.x) * u, groundYForDepth(a.z + (b.z - a.z) * u) - lift - Math.sin(u * Math.PI) * bulge]; });
 const boost = (e, k = 1.2) => { e._sigBoost = { k, t: .15 }; };
@@ -48,7 +48,7 @@ class Garden {
     this.t += dt;
     const heights = [34, 50, 64];
     while (this.sprouted < 3 && this.t > .3 + this.sprouted * .15) {
-      const c = this.cores[this.sprouted * 2 + 1]; const b = new Blossom(this.sig, this.owner, this.x + Math.cos(c.a) * c.r, Math.max(.05, Math.min(.95, this.z + Math.sin(c.a) * c.r / DEPTH)), heights[this.sprouted], this.power);
+      const c = this.cores[this.sprouted * 2 + 1]; const b = new Blossom(this.sig, this.owner, this.x + Math.cos(c.a) * c.r, clampZ(this.z + Math.sin(c.a) * c.r / DEPTH, .05, .95), heights[this.sprouted], this.power);
       emit(b); this.sprouted++;
       // At most three blossoms per player: the oldest withers.
       const list = gardens.get(this.owner) ?? []; list.push(b); while (list.filter((x) => !x.isDead && !x.isFinished).length > 3) { const old = list.shift(); if (!old.isDead) old.retire(); } gardens.set(this.owner, list.filter((x) => !x.isFinished));
@@ -109,7 +109,7 @@ class FloodRail {
     const roll = Math.min(1, this.t / .5);
     for (const p of projectilesOf(gw)) { if (projHeight(p) > 50) continue; const info = this.inside(p); if (!info || info.u > roll) continue; const [vx, vz] = projVel(p); projSetVel(p, vx + info.tx * 260 * dt, vz + info.tz * 260 * dt / DEPTH); }
     // Light, unfixed minions drift downstream (never bosses, heroes or castles).
-    for (const m of gw.minions ?? []) { if (m.isDead || m.isBoss || m.isTrainingDummy) continue; const info = this.inside(m); if (!info || info.u > roll) continue; m.x += info.tx * 70 * dt; m.z = Math.max(.05, Math.min(.95, m.z + info.tz * 70 * dt / DEPTH)); }
+    for (const m of gw.minions ?? []) { if (m.isDead || m.isBoss || m.isTrainingDummy) continue; const info = this.inside(m); if (!info || info.u > roll) continue; m.x += info.tx * 70 * dt; m.z = clampZ(m.z + info.tz * 70 * dt / DEPTH, .05, .95); }
     const pl = gw.player; const info = pl && this.inside(pl);
     if (info && ((pl.vx ?? 0) * info.tx + (pl.vz ?? 0) * DEPTH * info.tz) > 20) boost(pl, 1.22);
   }
@@ -298,7 +298,7 @@ class BeamPrism extends SigProp {
   get fineVfx() { return spellSheetReady('prism_weaver'); }
   constructor(sig, owner, x, z) { super(sig, owner, x, z, { hp: 80, size: 14, duration: 14, heavyObject: true }); this.energy = 3; this.lastBeam = -9; this.beam = null; this.rot = 0; this.tickT = 0; }
   onFriendlyBeam(beam) { this.beam = beam; this.lastBeam = this.t; this.rot += (Math.atan2(0, beam.facing) - this.rot) * .2; }
-  branches() { const f = this.beam?.facing ?? 1; return [-.45, .45].map((a) => ({ a: { x: this.x, z: this.z }, b: { x: this.x + f * Math.cos(a) * 170, z: Math.max(.03, Math.min(.97, this.z + Math.sin(a) * 170 / DEPTH)) } })); }
+  branches() { const f = this.beam?.facing ?? 1; return [-.45, .45].map((a) => ({ a: { x: this.x, z: this.z }, b: { x: this.x + f * Math.cos(a) * 170, z: clampZ(this.z + Math.sin(a) * 170 / DEPTH, .03, .97) } })); }
   update(dt, gw) {
     this.tick(dt); if (this.isDead) return;
     const active = this.beam && !this.beam.isFinished && this.t - this.lastBeam < .15;

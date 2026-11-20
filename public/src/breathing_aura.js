@@ -12,6 +12,7 @@ import { combat } from './combat.js';
 import { environment } from './environment.js';
 import { applyStatus } from './status_effects.js';
 import { spellSheetReady, drawSpellSpriteTinted, drawFineFromLayer } from './spell_visuals.js';
+import { clampZ } from './world.js'; // the depth clamp that knows the field's depth
 
 export const AURA = Object.freeze({ stages: [0, 250, 600], power: [1, 1.1, 1.2] });
 // The stage-II hue per style (the "blue" of the transformation's gold → blue → white).
@@ -84,7 +85,7 @@ const SIDE = {
     for (const a of gw?.minions ?? []) if (a.team === p.team && alive(a) && dist(a, p) < 120 && Number.isFinite(a.hp)) a.hp = Math.min(a.maxHp ?? a.hp, a.hp + .4 * lvl);
   } },
   moon: { every: (lvl) => 1.7 - .3 * lvl, tick(p, st, gw, lvl, s) { const t = nearest(gw, p, 95 + 10 * lvl); if (!t) return; zap(p, st, s, t, 5 * lvl, 'moon'); if (lvl >= 3) applyStatus(t, 'bleed', { quiet: true }); } },
-  mist: { every: .7, tick(p, st, gw, lvl) { const a = Math.random() * TAU; const r = fogRadius(st) * .6; environment.add('smoke', p.x + Math.cos(a) * r, Math.max(.04, Math.min(.96, p.z + Math.sin(a) * r / DEPTH * .5)), { radius: 26 + 10 * lvl, team: p.team }); } },
+  mist: { every: .7, tick(p, st, gw, lvl) { const a = Math.random() * TAU; const r = fogRadius(st) * .6; environment.add('smoke', p.x + Math.cos(a) * r, clampZ(p.z + Math.sin(a) * r / DEPTH * .5, .04, .96), { radius: 26 + 10 * lvl, team: p.team }); } },
   beast: { every: .5, tick(p, st, gw, lvl) { for (const t of near(gw, p, 60 + 15 * lvl)) if (chance(.08 * lvl)) applyStatus(t, 'bleed', { quiet: true }); } },
   forge: { every: .5, tick(p, st, gw, lvl) { for (const t of near(gw, p, 50 + 10 * lvl)) if (chance(.1 * lvl)) applyStatus(t, 'burn', { quiet: true }); } },
   ward: { every: .5, tick(p, st, gw, lvl) { if (Number.isFinite(p.arcaneShield)) p.arcaneShield = Math.min(Math.max(p.arcaneShield, 15 * lvl), p.arcaneShield + .8 * lvl); } },

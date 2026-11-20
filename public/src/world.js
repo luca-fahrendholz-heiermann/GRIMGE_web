@@ -81,6 +81,10 @@ export function setGroundProjection(projection = null) {
   activeGroundProjection = projection ?? ARENA_LAYOUT.groundProjection;
 }
 export function getGroundProjection() { return activeGroundProjection; }
+// How deep the current field is in depth units (1 = the classic band; Kronenkrieg: a deep battlefield, user 20 Nov 2026).
+export const depthSpan = () => activeGroundProjection.depth ?? 1;
+// Clamps a depth value into the field; the margins at the near edge follow the field's depth.
+export function clampZ(z, lo = .04, hi = .96) { return Math.max(lo, Math.min(hi + depthSpan() - 1, z)); }
 
 export function groundYForDepth(z) {
   const { farY, nearY } = activeGroundProjection;

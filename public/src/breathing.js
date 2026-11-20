@@ -15,7 +15,7 @@
 import { defineSignature, startStance, emit, SigSequence, foesOf, hit, plate, thread, ribbon, sparks, TAU, DEPTH } from './signature_core.js';
 import { combat } from './combat.js';
 import { environment } from './environment.js';
-import { groundYForDepth, clampToArena } from './world.js';
+import { groundYForDepth, clampToArena, clampZ } from './world.js';
 import { applyStatus, hasStatus } from './status_effects.js';
 import { deliveryOf, drawHead, drawFlourish, breathMotion } from './breathing_weapons.js';
 import { RayCrownFx } from './cast_circle.js';
@@ -187,7 +187,7 @@ function applyTrait(p, st, t, dmg = 10) {
 function blowAway(t, fromX, fromZ, power) {
   const dx = t.x - fromX; const dz = ((t.z ?? fromZ) - fromZ) * DEPTH; const d = Math.hypot(dx, dz) || 1;
   if ('kbVelX' in t) t.kbVelX = dx / d * power; else t.x += dx / d * power * .08;
-  if (Number.isFinite(t.z)) { if ('kbVelZ' in t) t.kbVelZ = dz / d * power / DEPTH; t.z = Math.max(.04, Math.min(.96, t.z + dz / d * power / DEPTH * .12)); }
+  if (Number.isFinite(t.z)) { if ('kbVelZ' in t) t.kbVelZ = dz / d * power / DEPTH; t.z = clampZ(t.z + dz / d * power / DEPTH * .12, .04, .96); }
 }
 const quake = (amp, dur = .25, stop = 0) => { combat.shakeCamera?.(amp, dur); if (stop) combat.triggerHitstop?.(stop); };
 function swing(p, dur = .3) { p.state = 'heavyStrike'; p.stateTimer = Math.max(p.stateTimer ?? 0, dur); p.canAttack = false; p.vx = 0; p.vz = 0; }
@@ -386,7 +386,7 @@ function drill(p, st, k, m) {
     if (s.t < wind + run) {
       p.state = 'dash'; p.stateTimer = .08; p.invulnerableTimer = Math.max(p.invulnerableTimer ?? 0, .1);
       const u = (s.t - wind) / run; p.x = x0 + f * dist * u; clampToArena(p, gw?.battlefield?.boundsOverride ?? null);
-      s.twinZ = Math.max(.04, Math.min(.96, z0 + Math.sin(u * Math.PI * 4) * .09)); // the twin weaves across the lane
+      s.twinZ = clampZ(z0 + Math.sin(u * Math.PI * 4) * .09, .04, .96); // the twin weaves across the lane
       s.next -= dt; if (s.next > 0) return; s.next = .07;
       let any = false;
       for (const t of foes(gw, p)) {
@@ -434,7 +434,7 @@ function crescents(p, st, k, m) {
   emit(new SigSequence({ mat: R.mat, seed: 4700 }, p, { dur: .9, data: { blades }, tick: (s, dt, gw) => {
     for (const b of s.blades) {
       if (s.t < b.delay) continue;
-      b.x += f * b.v * dt; b.z = Math.max(.03, Math.min(.97, b.z + b.vz * dt));
+      b.x += f * b.v * dt; b.z = clampZ(b.z + b.vz * dt, .03, .97);
       for (const t of foes(gw, p)) if (!b.hit.has(t) && Math.abs(t.x - b.x) < 20 * b.s && Math.abs(((t.z ?? b.z) - b.z) * DEPTH) < 24 * b.s) { b.hit.add(t); strike(p, st, t, (chaos ? 9 : 13) + 8 * k, f * 160, 80, .3); }
     }
     if (s.t < .03) quake(3, .15);
@@ -590,7 +590,7 @@ function flurry(p, st, k, m) {
   emit(new SigSequence({ mat: R.mat, seed: 5200 }, p, { dur: dur + .35, data: { count: new Map(), next: 0, marks: [] }, tick: (s, dt, gw) => {
     if (s.t > dur) { p.vx = 0; return; }
     swing(p, .08); p.invulnerableTimer = Math.max(p.invulnerableTimer ?? 0, .08);
-    const u = s.t / dur; p.x = x0 + f * dist * u; if (m.zigzag) p.z = Math.max(.05, Math.min(.95, z0 + Math.sin(u * Math.PI * 4) * .12));
+    const u = s.t / dur; p.x = x0 + f * dist * u; if (m.zigzag) p.z = clampZ(z0 + Math.sin(u * Math.PI * 4) * .12, .05, .95);
     clampToArena(p, gw?.battlefield?.boundsOverride ?? null);
     s.next -= dt; if (s.next > 0) return; s.next = dur / n;
     s.marks.push({ x: p.x + f * 30, z: p.z, t: s.t, rot: (s.marks.length % 2 ? 1 : -1) * .8 });
@@ -673,7 +673,7 @@ function orbit(p, st, k, m, gw) {
     const step = Math.floor(s.t / .14); p.invulnerableTimer = Math.max(p.invulnerableTimer ?? 0, .1);
     if (step < 4 && step >= s.step) {
       s.step = step + 1; const ang = step * Math.PI / 2 + Math.PI;
-      p.x = cx + Math.cos(ang) * 50; p.z = Math.max(.04, Math.min(.96, cz + Math.sin(ang) * 50 / DEPTH)); p.facing = Math.sign(cx - p.x) || f; swing(p, .1);
+      p.x = cx + Math.cos(ang) * 50; p.z = clampZ(cz + Math.sin(ang) * 50 / DEPTH, .04, .96); p.facing = Math.sign(cx - p.x) || f; swing(p, .1);
       if (alive(t0)) { strike(p, st, t0, 10 + 6 * k, 0, step === 3 ? 600 : 40, .3, step === 3); quake(step === 3 ? 7 : 2, .12, step === 3 ? 4 : 1); }
     }
   }, draw: (ctx, s) => {
@@ -694,7 +694,7 @@ function arrowRain(p, st, k, m, gw, teleport) {
   if (teleport) { combat.spawnShockwave?.(p.x, (p.y ?? 0) - 40, 30, R.mid); p.x = tx - f * 8; p.z = tz; clampToArena(p, gw?.battlefield?.boundsOverride ?? null); p.grounded = false; p.elevation = Math.max(p.elevation ?? 0, 140); /* high above the foe (user, 22 Oct 2026), still below the HUD chips */ p.invulnerableTimer = Math.max(p.invulnerableTimer ?? 0, .5); }
   p.state = 'heavyStrike'; p.stateTimer = .6; p.vx = 0; p.vz = 0; p.vElevation = 0; p.airLatch = null;
   p._weaponMotion = d?.look === 'bow' ? 'draw' : d?.look === 'crossbow' ? 'aim' : 'throw'; p._weaponSwingTime = .6; /* bows are drawn, crossbows aimed, the rest is thrown */
-  const n = 12; const arrows = Array.from({ length: n }, (_, i) => ({ at: .12 + i * .035, x: tx + Math.sin(i * 2.39) * 62, z: Math.max(.03, Math.min(.97, tz + Math.cos(i * 1.7) * .1)), done: false }));
+  const n = 12; const arrows = Array.from({ length: n }, (_, i) => ({ at: .12 + i * .035, x: tx + Math.sin(i * 2.39) * 62, z: clampZ(tz + Math.cos(i * 1.7) * .1, .03, .97), done: false }));
   const end = .12 + n * .035 + .16;
   p.aerialAim = end + .15; // the archer lies flat in the air, the bow pointing down (entities.js render)
   emit(new SigSequence({ mat: R.mat, seed: 7900 }, p, { dur: end + .5, data: { arrows, fin: false }, tick: (s, dt, gw2) => {

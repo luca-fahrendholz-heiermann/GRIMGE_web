@@ -10,7 +10,7 @@ import {
 } from './signature_core.js';
 import { combat } from './combat.js';
 import { environment } from './environment.js';
-import { groundYForDepth } from './world.js';
+import { groundYForDepth, clampZ } from './world.js';
 
 const linePts = (a, b, n, lift = 0, bulge = 0) => Array.from({ length: n + 1 }, (_, i) => { const u = i / n; return [a.x + (b.x - a.x) * u, groundYForDepth(a.z + (b.z - a.z) * u) - lift - Math.sin(u * Math.PI) * bulge]; });
 const nearestFoe = (gw, team, x, z, range = 9999, filter = () => true) => { let best = null; let bd = range; for (const t of foesOf(gw, team)) { if (!filter(t)) continue; const d = Math.hypot(t.x - x, (t.z - z) * DEPTH); if (d < bd) { bd = d; best = t; } } return best; };
@@ -497,7 +497,7 @@ class WorldSeam {
       if (!prev || prev === info.side || info.dist > 28 || info.i / 12 > wave) continue;
       // Each edge acts once per fighter: shoved on through.
       const key = prev; const set = this.done.get(t) ?? new Set(); if (set.has(key)) continue; set.add(key); this.done.set(t, set);
-      hit(t, 8 * this.power, -prev * info.nx * 260 * massOf(t), 60, .2); t.z = Math.max(.05, Math.min(.95, t.z - prev * info.nz * 30 / DEPTH));
+      hit(t, 8 * this.power, -prev * info.nx * 260 * massOf(t), 60, .2); t.z = clampZ(t.z - prev * info.nz * 30 / DEPTH, .05, .95);
     }
     for (const p of projectilesOf(gw)) {
       if (p._seamWarp) continue; const info = this.near(p.x, p.z); if (info.dist > 14 || info.i / 12 > wave) continue;

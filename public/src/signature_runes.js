@@ -17,6 +17,7 @@ import './breathing.js'; // S40–S42, S75–S83 breathing styles (+ derived com
 import './will_runes.js';
 import './grenzenlos.js';
 import './blutschirm.js';
+import { clampZ } from './world.js'; // the depth clamp that knows the field's depth
 import './mash_runes.js'; // S91 SPIRALKERN, S92 WÄCHTERGEIST-HAGEL, S93 TAUSENDSTICH (tap / mash stances)
 import './antimagie.js'; // S95 NULLKLINGE (anti-magic stance: every swing negates hostile magic)
 import './blutfinsternis.js'; // S94 BLUTFINSTERNIS (blood-weapon stance) // S90 BLUTSCHIRM (blood archers, blood dome, twin blood dragons) // S89 GRENZENLOS (Sog · Stoß · Nichts · Unendlichkeit)
@@ -134,7 +135,7 @@ export function signatureProjectileSpawned(spell) {
 // Per frame: lateral drift of steered projectiles that do not move in depth themselves.
 export function updateSignatureWorld(dt, gameWorld) {
   world = gameWorld ?? world;
-  for (const p of gameWorld?.projectiles ?? []) if (p._vz) { p.z = Math.max(.02, Math.min(.98, p.z + p._vz * dt)); if (p.type === 'bolt') p.targetZ = p.z; }
-  for (const s of sigSink()?.activeSpells ?? []) if (s._vz && !s.isSigProjectile && !s.isFinished) s.z = Math.max(.02, Math.min(.98, s.z + s._vz * dt));
+  for (const p of gameWorld?.projectiles ?? []) if (p._vz) { p.z = clampZ(p.z + p._vz * dt, .02, .98); if (p.type === 'bolt') p.targetZ = p.z; }
+  for (const s of sigSink()?.activeSpells ?? []) if (s._vz && !s.isSigProjectile && !s.isFinished) s.z = clampZ(s.z + s._vz * dt, .02, .98);
   runSimplePayoffs(sigSink(), dt, gameWorld);
 }

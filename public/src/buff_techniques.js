@@ -11,7 +11,7 @@
 import { bankaiStyleOf } from './bankai.js';
 import { applyStatus } from './status_effects.js';
 import { combat } from './combat.js';
-import { groundYForDepth } from './world.js';
+import { groundYForDepth, clampZ } from './world.js';
 import { FormStrikeSpell } from './form_moves.js';
 import { plate, band, fallout, rng } from './buff_vfx.js';
 import { drawWyrmBody, drawWyrmHead, stoneRing, STONE, ACID_GLASS } from './buff_signatures.js';
@@ -48,7 +48,7 @@ export class BuffStrikeSpell extends FormStrikeSpell {
     this.buff = form; this.mat = form.mat; this.statuses = config.status ?? [];
     this.seed = (config.seed ?? 1) + form.id.charCodeAt(1) * 31;
     if (this.kind === 'projectile') { this.px = this.x; this.travelled = 0; }
-    if (this.kind === 'wyrms') this.heads = [-.13, .13].map((dz) => ({ x: caster.x + this.facing * 20, z: Math.max(.04, Math.min(.96, caster.z + dz)), trail: [], hits: new Set() }));
+    if (this.kind === 'wyrms') this.heads = [-.13, .13].map((dz) => ({ x: caster.x + this.facing * 20, z: clampZ(caster.z + dz, .04, .96), trail: [], hits: new Set() }));
     if (this.kind === 'portals') this.setupPortals();
     this.impacts = [];
     if (FINE_ARCANE_MOVES.includes(form.id)) this.fineVfx = true; // full techniques as crisp as the idle look

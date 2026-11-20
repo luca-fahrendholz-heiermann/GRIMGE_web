@@ -2,13 +2,13 @@
 // wide bands; the figure walks one band at a time (a normal 2.5D stage), the bands above and below are drawn as the
 // same endless ground, and walking off the back or front edge glides the camera into the neighbouring band. The map
 // reveals itself while exploring (fog on the minimap). No painted background: the ground itself is the world.
-import { generateKKMap, BIOME_OF, biomeAt, spanAt, KK, LEVEL_NAMES } from './kk_map.js';
+import { generateKKMap, BIOME_OF, biomeAt, spanAt, KK, LEVEL_NAMES, roadZ } from './kk_map.js';
 import { drawKKSite, buildDecor } from './kk_art.js';
 import { drawNode, updateResources } from './kk_resources.js';
 import { castleActors, updateCastles } from './kk_castle.js'; // the places and the landscape in the game's pixel style
 import { groundYForDepth, getGroundProjection, setGroundProjection } from './world.js';
 
-export const KK_PROJECTION = Object.freeze({ farY: 214, nearY: 512 }); /* a deep floor: the plane should feel wide in depth too */
+export const KK_PROJECTION = Object.freeze({ farY: 214, nearY: 512, depth: KK.depth }); /* a deep floor: the plane should feel wide in depth too */
 export const SEAT_COLORS = Object.freeze(['#4fc3f7', '#ef5350', '#7bd66b', '#ffca28']);
 export const SEAT_NAMES = Object.freeze(['DU', 'ROT', 'GRÜN', 'GOLD']);
 const LIFT_TIME = 1.2; /* s standing on a lift until it rises */ const SHAFT_R = 38;
@@ -30,7 +30,7 @@ export function setupKronenkrieg(game, seed = null, teamMode = game.kkTeamMode ?
   map.seed = s;
   const kk = { decor: buildDecor(map), map, seed: s, row: hq.row, pan: 0, liftT: 0, reveal: new Set(), time: 0, teamMode: ally != null ? '2v2' : 'ffa', allies: ally != null ? [0, ally] : [0] };
   game.modeState.kk = kk;
-  const P = game.player; P.x = hq.x + 190; P.z = .6; applyBounds(game, kk); game.battlefield.placeOnSurface(P);
+  const P = game.player; P.x = hq.x + 190; P.z = hq.z + .1; applyBounds(game, kk); game.battlefield.placeOnSurface(P);
   revealAround(kk, P);
   return kk;
 }
@@ -47,7 +47,7 @@ export const isRevealed = (kk, row, x) => kk.reveal.has(cellKey(row, x));
 // The walkable stretch of the level one stands on: the whole main plane, or the section one is in (hard edges).
 export function applyBounds(game, kk = kkState(game)) {
   const P = game.player; const sp = spanAt(kk.map, kk.row, P.x) ?? kk.map.spans[kk.row]?.[0] ?? [0, kk.map.width];
-  Object.assign(game.battlefield.boundsOverride, { left: sp[0] + 60, right: sp[1] - 60, farZ: .03, nearZ: .97 });
+  Object.assign(game.battlefield.boundsOverride, { left: sp[0] + 60, right: sp[1] - 60, farZ: .03, nearZ: KK.depth - .03 });
 }
 // Changes the level at x (the figure lands beside the connector, not on it); dir +1 = down, −1 = up.
 export function switchLevel(game, to, x, z = null) {
@@ -89,7 +89,7 @@ export const kkPanY = (game) => (kkOn(game) ? kkState(game).pan : 0);
 // ── drawing: the endless ground ────────────────────────────────────────────────────────────────────────────────────
 const hash = (a, b) => { const s = Math.sin(a * 127.1 + b * 311.7) * 43758.5453; return s - Math.floor(s); };
 function drawBandGround(ctx, kk, row, off, x0, x1) {
-  const p = getGroundProjection(); const top = p.farY + off; const H = p.nearY - p.farY;
+  const p = getGroundProjection(); const top = p.farY + off; const Hz = p.nearY - p.farY; const H = Hz * KK.depth; /* Hz: one depth unit; H: the whole deep floor */
   for (const bio of kk.map.biomes) {
     if (bio.row !== row || bio.x1 < x0 || bio.x0 > x1) continue;
     const b = BIOME_OF[bio.element]; const a = Math.max(bio.x0, x0); const e = Math.min(bio.x1, x1);
@@ -110,7 +110,7 @@ function drawBandGround(ctx, kk, row, off, x0, x1) {
   }
   // the road along the band (a little wavy), stones at its edges
   ctx.fillStyle = 'rgba(176,150,108,.55)';
-  for (let x = Math.floor(x0 / 16) * 16; x < x1; x += 16) { const z = .5 + Math.sin(x * .0013 + row * 2.1) * .12; const y = top + z * H; ctx.fillRect(x, Math.floor(y - 9), 16, 18); if (hash(x, row) > .7) { ctx.fillStyle = 'rgba(90,76,58,.6)'; ctx.fillRect(x + 4, Math.floor(y + 9), 5, 3); ctx.fillStyle = 'rgba(176,150,108,.55)'; } }
+  for (let x = Math.floor(x0 / 16) * 16; x < x1; x += 16) { const z = roadZ(x, row); const y = top + z * Hz; ctx.fillRect(x, Math.floor(y - 9), 16, 18); if (hash(x, row) > .7) { ctx.fillStyle = 'rgba(90,76,58,.6)'; ctx.fillRect(x + 4, Math.floor(y + 9), 5, 3); ctx.fillStyle = 'rgba(176,150,108,.55)'; } }
   // the seam to the next band: a line of tufts so the bands read as one surface with gentle steps
   ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.fillRect(Math.floor(x0), Math.floor(top), Math.ceil(x1 - x0), 2);
 }
@@ -210,7 +210,7 @@ export function siteOpts(kk, site) {
 // floor each level has its own air: dusk sky over the plateaus, night over the main plane, a rock ceiling in the depths.
 const SITE_W = Object.freeze({ building: 200, goldvein: 90, prison: 170, source: 120, stable: 150, shrine: 60, shaft: 140, lift: 140, lair: 260, camp: 200, trial: 200 });
 export function renderKKGround(ctx, game, x0, x1) {
-  const kk = kkState(game); if (!kk) return; const p = getGroundProjection(); const H = bandH(); const row = kk.row; const t = kk.time;
+  const kk = kkState(game); if (!kk) return; const p = getGroundProjection(); const H = bandH(); const row = kk.row; const t = kk.time; const nearEdge = groundYForDepth(KK.depth); /* the near edge of the deep floor */
   const above = row === 0 ? ['#2a3350', '#141a2c'] : row === KK.main ? ['#11141f', '#090b12'] : ['#140d0a', '#0a0605'];
   ctx.fillStyle = above[1]; ctx.fillRect(Math.floor(x0), p.farY - H * 3, Math.ceil(x1 - x0), H * 3);
   ctx.fillStyle = above[0]; ctx.fillRect(Math.floor(x0), p.farY - 70, Math.ceil(x1 - x0), 70);
@@ -219,10 +219,10 @@ export function renderKKGround(ctx, game, x0, x1) {
   drawBandGround(ctx, kk, row, 0, x0, x1);
   // outside the sections of this level: solid rock (the walls of the plateau / the cave)
   if (row !== KK.main) { ctx.fillStyle = '#17120f'; let cx = x0; const spans = [...(kk.map.spans[row] ?? [])].sort((a, b) => a[0] - b[0]); for (const [s0, s1] of spans) { if (s0 > cx) ctx.fillRect(Math.floor(cx), p.farY - 4, Math.ceil(Math.min(s0, x1) - cx), H + 8); cx = Math.max(cx, s1); } if (cx < x1) ctx.fillRect(Math.floor(cx), p.farY - 4, Math.ceil(x1 - cx), H + 8);
-    ctx.fillStyle = '#2a201a'; for (const [s0, s1] of spans) for (const e of [s0, s1]) if (e > x0 - 20 && e < x1 + 20) for (let y = p.farY; y < p.nearY; y += 12) ctx.fillRect(Math.floor(e - 6 + hash(e, y) * 6), y, 8, 10); }
+    ctx.fillStyle = '#2a201a'; for (const [s0, s1] of spans) for (const e of [s0, s1]) if (e > x0 - 20 && e < x1 + 20) for (let y = p.farY; y < nearEdge; y += 12) ctx.fillRect(Math.floor(e - 6 + hash(e, y) * 6), y, 8, 10); }
   // under the floor: the cliff face of the level
-  ctx.fillStyle = row === 2 ? '#120c09' : '#1a1410'; ctx.fillRect(Math.floor(x0), p.nearY, Math.ceil(x1 - x0), H * 2);
-  ctx.fillStyle = 'rgba(0,0,0,.35)'; for (let x = Math.floor(x0 / 24) * 24; x < x1; x += 24) ctx.fillRect(x + Math.floor(hash(x, 1) * 10), p.nearY + 6 + Math.floor(hash(1, x) * 30), 10, 3);
+  ctx.fillStyle = row === 2 ? '#120c09' : '#1a1410'; ctx.fillRect(Math.floor(x0), nearEdge, Math.ceil(x1 - x0), H * 2);
+  ctx.fillStyle = 'rgba(0,0,0,.35)'; for (let x = Math.floor(x0 / 24) * 24; x < x1; x += 24) ctx.fillRect(x + Math.floor(hash(x, 1) * 10), nearEdge + 6 + Math.floor(hash(1, x) * 30), 10, 3);
   void t;
 }
 // Inside a house or a castle hall (user, 20 Nov 2026: "Goldadern etc. dürfen nicht in Innenräume ragen — klare Ebenen"):

@@ -12,7 +12,7 @@ import { defineSignature, emit, foesOf, hit, plate, TAU, DEPTH } from './signatu
 import { offerRecast } from './recast.js';
 import { combat } from './combat.js';
 import { audio } from './audio.js';
-import { groundYForDepth } from './world.js';
+import { groundYForDepth, clampZ } from './world.js';
 
 export const SHADOW = Object.freeze({ speed: 420, reach: 330, bind: 3, strangle: 30, airDodge: 22 });
 // Strangling hands: lighter violet so they read against dark clothing.
@@ -58,7 +58,7 @@ export class ShadowBind {
     // Bound: the foe copies the caster's movement, facing and hop.
     const dx = p.x - this.lastX; const dz = p.z - this.lastZ; const de = (p.elevation ?? 0) - this.lastElev;
     this.lastX = p.x; this.lastZ = p.z; this.lastElev = p.elevation ?? 0;
-    v.x += dx; if (Number.isFinite(v.z)) v.z = Math.max(.02, Math.min(.98, v.z + dz));
+    v.x += dx; if (Number.isFinite(v.z)) v.z = clampZ(v.z + dz, .02, .98);
     if (Number.isFinite(v.elevation)) { v.elevation = Math.max(0, v.elevation + de); v.vElevation = 0; }
     v.facing = p.facing; v.vx = 0; v.vz = 0; v.kbVelX = 0;
     v.freeze?.(.12);

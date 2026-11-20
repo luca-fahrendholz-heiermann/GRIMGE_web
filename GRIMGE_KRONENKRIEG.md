@@ -551,7 +551,7 @@ Die Karte gehört zu Beginn **niemandem**. Neben den vier Spielern (Menschen ode
 
 ---
 
-## 17. Umsetzungsstand (19. Nov 2026)
+## 17. Umsetzungsstand (20. Nov 2026)
 
 **Gebaut und getestet** (kk_map.js, kk_world.js, kk_progress.js, kk_loot.js, kk_army.js, kk_war.js, kk_creatures.js, kk_crown.js):
 - Karte aus Bausteinen je Runde mit Fairness-Prüfung; eine riesige 2,5D-Hauptebene plus Sektionen oben (Hochebenen) und unten (Tiefen), verbunden durch Schächte und Aufzüge (Nutzer, 19. Nov 2026); Übersichtskarte mit Nebel.
@@ -562,6 +562,7 @@ Die Karte gehört zu Beginn **niemandem**. Neben den vier Spielern (Menschen ode
 - Kreaturen mit Beute, Rune BÄNDIGUNG, Eier mit Quellen und Brut-Walzen, Reittier aus dem Stall, mitwachsender Primal.
 - Krönung mit Prüfungen auf Stufe 8 und 10.
 - Jeder gegen jeden oder 2 gegen 2 (Verbündeter = der Nachbar auf der Hauptebene).
+- Feedback-Liste vom 20. Nov 2026 (kk_items.js, kk_resources.js, kk_castle.js): Beute als einzelne Gegenstände mit Icons, Beutel-Menü (I) mit gezieltem Ablegen, voller Beutel lässt den Rest liegen; Walzen-Fenster beim Ausbilden; Holz/Stein/Stahl/Obsidian aus Bäumen, Felsen, Erzadern und Obsidianblöcken; Burgen als feste Mauerblöcke mit Treppen, begehbarem Wehrgang, Fahne auf dem Dach, Halle hinter dem Tor (Burg-Menü nur innen), Lebensbalken und Einnahme nur über den ungestörten Kreis am Tor; das Feld reicht 2,4 Streifen tief in den Bildschirm (die Kamera folgt in die Tiefe); klare Ebenen in Innenräumen, Treppen und Wehrgänge mit Rückwand.
 
 **Noch offen / vereinfacht:**
 - Grafik: Burgen, Requisiten, Pixel-Sprites und Landschaft sind eingebaut (kk_art.js); eigene neue Bilder brauchen Generierungs-Guthaben.

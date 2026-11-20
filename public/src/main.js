@@ -11,7 +11,7 @@ import { setupDungeonSecrets, updateDungeonSecret, renderSecretTint, secretExitX
 globalThis.__GrimgeMinion = Minion; // scene objects (a grave) raise minions without importing entities
 import { Battlefield } from './battlefield.js';
 import { ui } from './ui.js';
-import { VIEWPORT, ARENA_LAYOUT, ENTITY_VISUALS, groundDistance, groundYForDepth } from './world.js';
+import { VIEWPORT, ARENA_LAYOUT, ENTITY_VISUALS, groundDistance, groundYForDepth, depthSpan } from './world.js';
 import { ART_ASSETS } from './art_assets.js';
 import { MageProfile, MAGE_SKILL_TREE, applyMageProfile, DEFAULT_MATCH_DECK, MATCH_DECK_SIZE, MAX_RUNE_COPIES, ALL_RUNE_IDS, deckAccepts, isDomainRuneId } from './progression.js';
 import { getGameMode, DEBUG_BUILD } from './game_modes.js';
@@ -2130,7 +2130,10 @@ export class GameWorld {
     const target = this.modeState?.bossActive ? Math.max(1, base - .2) : near >= 6 ? Math.max(1, base - .18) : near >= 4 ? base - .1 : base;
     const now = this._zoomNow ?? base; this._zoomNow = now + (target - now) * Math.min(1, dt * 1.5);
     // On stairs / galleries the camera rises with the Wizard so the upper floor stays in view.
-    const lift = Math.max(0, (this.player.surfaceHeight ?? 0)) * .75; this._camY = (this._camY ?? 0) + (lift - (this._camY ?? 0)) * Math.min(1, dt * 2.5);
+    let lift = Math.max(0, (this.player.surfaceHeight ?? 0)) * .75;
+    // A deep field (Kronenkrieg, user 20 Nov 2026: the battlefield reaches into the screen): the camera follows the figure in depth.
+    if (depthSpan() > 1) { const z = this._zoomNow ?? base; const p = this.zoomPivot(); const H = this.renderHeight ?? 720; const wy = this.worldOffsetY ?? 0; const py = wy + groundYForDepth(this.player.z) - (this.player.surfaceHeight ?? 0); const want = (H * .62 - p.y) / z - py + p.y; const minCam = (H - p.y) / z - (wy + groundYForDepth(depthSpan()) + 24) + p.y; lift = Math.max(Math.min(minCam, lift), Math.min(lift, want)); }
+    this._camY = (this._camY ?? 0) + (lift - (this._camY ?? 0)) * Math.min(1, dt * 2.5);
   }
   // Foes outside the view: an arrow at the screen edge with the distance (red; gold for the boss).
   renderOffscreenArrows(ctx) {
@@ -2152,7 +2155,7 @@ export class GameWorld {
   }
   zoomPivot() {
     const bounds = this.battlefield?.boundsOverride ?? ARENA_LAYOUT.playableBounds;
-    return { x: this.renderWidth / 2, y: (this.worldOffsetY ?? 0) + groundYForDepth(bounds?.nearZ ?? .94) };
+    return { x: this.renderWidth / 2, y: (this.worldOffsetY ?? 0) + groundYForDepth(Math.min(.97, bounds?.nearZ ?? .94)) }; /* a deep field keeps the classic pivot (the camera scrolls instead) */
   }
   applyWorldZoom(ctx) { const z = this.cameraZoom(); if (z === 1) return; const p = this.zoomPivot(); ctx.translate(p.x, p.y); ctx.scale(z, z); ctx.translate(-p.x, -p.y + (this._camY ?? 0)); }
   // A screen point in world pixels (x along the battlefield, y on the world layer): for taps on actors.
@@ -3433,7 +3436,7 @@ export class GameWorld {
     this.applyWorldZoom(ctx);
     ctx.translate(this.cameraOffsetX + cam.shakeX - dungeonCamX, cam.shakeY + worldY + kkPanY(this));
     if (this.activeMode?.id === 'base') renderBaseHall(ctx);
-    if (this.activeMode?.id === 'kronenkrieg') { const z = this.cameraZoom() || 1; const span = this.logicalWidth / z; renderKKGround(ctx, this, dungeonCamX - span * .5 - 200, dungeonCamX + span * 1.5 + 200); renderFlood(ctx, this, dungeonCamX - span * .5 - 200, dungeonCamX + span * 1.5 + 200, -300, 1000); }
+    if (this.activeMode?.id === 'kronenkrieg') { const z = this.cameraZoom() || 1; const span = this.logicalWidth / z; renderKKGround(ctx, this, dungeonCamX - span * .5 - 200, dungeonCamX + span * 1.5 + 200); renderFlood(ctx, this, dungeonCamX - span * .5 - 200, dungeonCamX + span * 1.5 + 200, -300, 1500); }
 
     // Foreground Crystal Glows on Beacons
     if (this.activeMode?.id !== 'base' && this.activeMode?.id !== 'kronenkrieg') this.battlefield.renderForeground(ctx); /* no tower beacons in the base hall */

@@ -24,7 +24,7 @@ import { SceneObject, registerSceneKind, SCENE_KINDS, actorsOf, groundDist, px, 
 import { Fixture, burnTick, launchActor, lightAt, LOCK_COLORS } from './scene_pack_elements.js';
 import { combat } from './combat.js';
 import { audio } from './audio.js';
-import { groundYForDepth } from './world.js';
+import { groundYForDepth, clampZ } from './world.js';
 import { getStatusSource } from './status_effects.js';
 
 const isHero = (a, gw) => a === gw?.player || !!a.heroKey;
@@ -108,7 +108,7 @@ class Waterfall extends Fixture {
 // A barrier across the whole lane: it follows the depth of the Wizard so every swing reaches it.
 class Barrier extends SceneObject {
   constructor(kind, x, z, o = {}) { super(kind, x, z, { hp: kind === 'curtain' ? 140 : kind === 'cracked_wall' ? 160 : 50, half: 12, tol: 300, blocks: true, barColor: kind === 'cracked_wall' ? '#bcaaa4' : '#c5e1a5' }); this.halfZ = .5; this.onOpen = o.onOpen ?? null; this.link = o.link ?? null; }
-  update(dt, gw) { const p = gw?.player; if (p) this.z = Math.max(.08, Math.min(.92, p.z)); this.tick2?.(dt, gw); }
+  update(dt, gw) { const p = gw?.player; if (p) this.z = clampZ(p.z, .08, .92); this.tick2?.(dt, gw); }
   onBreak(gw, env) { combat.spawnDust(this.x, this.y, 12); this.onOpen?.(gw, this); if (this.link) puzzleHooks.enterLink?.(this.link, this, gw, 'reveal'); }
   drawBand(ctx, fn) { const yTop = groundYForDepth(.06); const yBot = groundYForDepth(.94); fn(Math.round(this.x), Math.round(yTop), Math.round(yBot)); }
 }

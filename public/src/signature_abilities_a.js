@@ -12,7 +12,7 @@ import { FORM_MOVESETS, registerFormPalette } from './form_moves.js';
 import { ghostOf } from './buff_signatures.js';
 import { combat } from './combat.js';
 import { environment } from './environment.js';
-import { groundYForDepth } from './world.js';
+import { groundYForDepth, clampZ } from './world.js';
 
 const S = (id) => SIGNATURES[id];
 const boundsOf = (gw) => gw?.battlefield?.boundsOverride ?? gw?.battlefield?.playableBounds ?? { left: 40, right: 984 };
@@ -329,7 +329,7 @@ class AirSeam {
       const cd = (this.cool.get(e) ?? 0) - dt; this.cool.set(e, cd);
       if (prev && prev !== info.side && info.dist < 30 && info.u > 0 && info.u < 1 && cd <= 0) {
         const dir = Math.sign((e.vx ?? 0) * info.tx + (e.vz ?? 0) * info.tz) || 1;
-        e.kbVelX = info.tx * dir * 420; e.z = Math.max(.05, Math.min(.95, e.z + info.tz * dir * 40 / DEPTH));
+        e.kbVelX = info.tx * dir * 420; e.z = clampZ(e.z + info.tz * dir * 40 / DEPTH, .05, .95);
         this.cool.set(e, .5); this.crossings++; combat.spawnShockwave(e.x, e.y - 30, 30, this.mat.edge);
         if (this.crossings >= 2) { this.tear(); return; }
       }

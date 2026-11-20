@@ -19,7 +19,7 @@
 // signature_abilities_{a,b,c}.js.
 import { plate, band, fallout, shard, mix, hashStr } from './buff_vfx.js';
 import { combat } from './combat.js';
-import { groundYForDepth } from './world.js';
+import { groundYForDepth, clampZ } from './world.js';
 import { SIGNATURE_RUNE_DATA } from './signature_data.js';
 
 export const TAU = Math.PI * 2;
@@ -109,7 +109,7 @@ export class SigBolt {
       this.vx = Math.cos(a) * sp; this._vz = Math.sin(a) * sp / DEPTH; this.facing = Math.sign(this.vx) || this.facing;
     }
     const px = this.x;
-    this.x += this.vx * dt; this.z = Math.max(.02, Math.min(.98, this.z + this._vz * dt)); this.life -= dt;
+    this.x += this.vx * dt; this.z = clampZ(this.z + this._vz * dt, .02, .98); this.life -= dt;
     this.trail.unshift([this.x, this.y]); if (this.trail.length > 6) this.trail.length = 6;
     // Solid walls stop it (a wall between needle and target breaks the lock).
     for (const s of sink?.activeSpells ?? []) if (s.isStoneWall && !s.isDead && s.team !== this.team && s.blocksProjectile?.(this)) { this.burst(); return; }

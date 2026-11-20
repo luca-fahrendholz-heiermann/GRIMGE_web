@@ -20,7 +20,7 @@
 // Nature spells drop a wild seedling with SEED_CHANCE (at most MAX_WILD_SEEDS at a time).
 import { combat } from './combat.js';
 import { audio } from './audio.js';
-import { groundYForDepth } from './world.js';
+import { groundYForDepth, clampZ } from './world.js';
 import { getStatusSource } from './status_effects.js';
 import { registerSurface, unregisterSurface } from './geometry.js';
 
@@ -449,7 +449,7 @@ export function dropFromCast(env, caster, target, elements, roll = Math.random()
     if (!elements?.includes(el) || !SCENE_KINDS[kind]) continue;
     if (el === 'natura') { const p = plantFromNature(env, caster, target, roll); if (p) out.push(p); continue; }
     if (roll >= sceneConfig.seedChance * k || env.props.filter((o) => o.kind === kind && o.wild && !o.isDead).length >= cap) continue;
-    const f = caster.facing || 1; const x = (Number.isFinite(target?.x) ? target.x : caster.x + f * 80) + f * (24 + i * 30); const z = Math.max(.08, Math.min(.92, Number.isFinite(target?.z) ? target.z : caster.z ?? .5));
+    const f = caster.facing || 1; const x = (Number.isFinite(target?.x) ? target.x : caster.x + f * 80) + f * (24 + i * 30); const z = clampZ(Number.isFinite(target?.z) ? target.z : caster.z ?? .5, .08, .92);
     if (env.props.some((o) => !o.isDead && Math.hypot(o.x - x, (o.z - z) * DEPTH) < 26)) continue;
     const o = SCENE_KINDS[kind](x, z, {}); o.wild = true; env.props.push(o); out.push(o);
   }
@@ -461,7 +461,7 @@ export function plantFromNature(env, caster, target = null, roll = Math.random()
   if (env.props.filter((o) => o.kind === 'plant' && o.wild && !o.isDead).length >= MAX_WILD_SEEDS) return null;
   const f = caster.facing || 1;
   let x = Number.isFinite(target?.x) ? target.x : caster.x + f * 90; let z = Number.isFinite(target?.z) ? target.z : (caster.z ?? .5);
-  x += (Math.random() - .5) * 30; z = Math.max(.08, Math.min(.92, z + (Math.random() - .5) * .1));
+  x += (Math.random() - .5) * 30; z = clampZ(z + (Math.random() - .5) * .1, .08, .92);
   for (let i = 0; i < 4 && env.props.some((o) => !o.isDead && Math.hypot(o.x - x, (o.z - z) * DEPTH) < 28); i++) x += f * 30;
   const plant = new Plant(x, z, 0, { wild: true });
   env.props.push(plant);

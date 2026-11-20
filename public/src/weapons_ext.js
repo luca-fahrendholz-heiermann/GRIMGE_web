@@ -11,7 +11,7 @@
 // Numbers are prototype tuning on top of MELEE_BASELINE's input contract.
 import { audio } from './audio.js';
 import { combat } from './combat.js';
-import { groundYForDepth } from './world.js';
+import { groundYForDepth, clampZ } from './world.js';
 import { drawSpellSprite, spellSheetReady } from './spell_visuals.js';
 
 const hit = (state, time, vx, damage, knockback, lift, reach, extra = {}) => Object.freeze({ state, time, vx, damage, knockback, lift, radius: Math.round(reach * .6), reach, hitstopTicks: extra.finisher ? 6 : 3, hitReaction: extra.finisher ? 'finisher' : 'light', ...extra });
@@ -280,7 +280,7 @@ export class WeaponShot {
     }
     const px = this.x;
     if (this.shot.drop) this.height = Math.max(4, this.height - dt * this.shot.drop); // angled down (arrow rain)
-    this.x += this.vx * dt; this.z = Math.max(.02, Math.min(.98, this.z + this._vz * dt)); this.life -= dt;
+    this.x += this.vx * dt; this.z = clampZ(this.z + this._vz * dt, .02, .98); this.life -= dt;
     for (const t of this.targets(gw)) {
       const sx = Math.max(Math.min(px, this.x), Math.min(Math.max(px, this.x), t.x));
       if (Math.hypot(sx - t.x, ((t.z ?? this.z) - this.z) * 150) > this.radius + (t.hitRadiusX ?? t.radius ?? 16) * .7) continue;

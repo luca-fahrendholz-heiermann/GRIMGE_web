@@ -23,7 +23,7 @@
 import { foesOf, hit, emit, DEPTH, signatureImpl, sigSink } from './signature_core.js';
 import { applyStatus } from './status_effects.js';
 import { combat } from './combat.js';
-import { groundYForDepth } from './world.js';
+import { groundYForDepth, clampZ } from './world.js';
 
 const gy = (z) => groundYForDepth(z);
 const powOf = (s) => s.quality?.power ?? s.power ?? 1;
@@ -88,7 +88,7 @@ const PAYOFFS = {
     // The fold snaps shut with a cut along it (also hits foes that never crossed).
     if ((s.collapsed || s.t > 9.6) && once(s, 'snap')) for (const t of foesOf(gw, s.team)) { const q = seg(s.a, s.b, t.x, t.z ?? s.z); if (q.d < 60) { hit(t, Math.round(16 * powOf(s)), 0, 140, .35); fx(t, colorOf(s), 12); } }
     if (s.collapsed) return; const sides = (s._po ??= {}).sides ??= new Map();
-    for (const t of foesOf(gw, s.team)) { const q = seg(s.a, s.b, t.x, t.z ?? s.z); const was = sides.get(t); if (q.d < 40 && q.u > 0 && q.u < 1) { if (was != null && was !== q.side && q.side !== 0) { t.x += q.nx * q.side * 60; if (Number.isFinite(t.z)) t.z = Math.max(.04, Math.min(.96, t.z + q.nz * q.side * 60 / DEPTH)); hit(t, Math.round(10 * powOf(s)), q.nx * q.side * 200, 100, .3); fx(t, colorOf(s)); } sides.set(t, q.side); } else sides.delete(t); }
+    for (const t of foesOf(gw, s.team)) { const q = seg(s.a, s.b, t.x, t.z ?? s.z); const was = sides.get(t); if (q.d < 40 && q.u > 0 && q.u < 1) { if (was != null && was !== q.side && q.side !== 0) { t.x += q.nx * q.side * 60; if (Number.isFinite(t.z)) t.z = clampZ(t.z + q.nz * q.side * 60 / DEPTH, .04, .96); hit(t, Math.round(10 * powOf(s)), q.nx * q.side * 200, 100, .3); fx(t, colorOf(s)); } sides.set(t, q.side); } else sides.delete(t); }
   },
   GlassField(s, dt, gw) {
     if (s.t > .5 && every(s, 'spike', 1.6, dt)) for (const t of foesOf(gw, s.team)) if (s.inside(t.x, t.z ?? s.z)) { hit(t, Math.round(10 * powOf(s)), 0, 150, .25); if (Math.random() < .4) applyStatus(t, 'bleed'); fx(t, '#e1f5fe', 10); }

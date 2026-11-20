@@ -42,7 +42,7 @@ import { arcanePassivesTick } from './arcane_passives.js'; // T08 / T23 / T24 / 
 import { arsenalTick } from './arcane_bloodarsenal.js'; // A09 Blutarsenal (weapon fusion: techniques, look, bleed passive) // A05–A08 body powers (techniques, looks, water weakness, passives) // A04: the held weapon's arsenal (look + techniques)
 import { combat } from './combat.js';
 import { TransformationFx, transitionStyleOf, TRANSFORM_TIMING } from './transform_fx.js';
-import { groundYForDepth } from './world.js';
+import { groundYForDepth, clampZ } from './world.js';
 
 export const BUFF_RUNE_PREFIX = 'buff_';
 export const BUFF_DURATION = 16;            // seconds at grade B (× rune quality)
@@ -490,7 +490,7 @@ FORM_FX_HOOKS.grabSlam = (fx) => {
   };
   const [dmg, kx, lift, stun] = throws[kind] ?? throws.forward;
   t.takeDamage?.(dmg, kx, lift, stun, true, 'grab');
-  if (kind === 'side' && 'z' in t) t.z = Math.max(.04, Math.min(.96, t.z + (t.z > .5 ? -.12 : .12)));
+  if (kind === 'side' && 'z' in t) t.z = clampZ(t.z + (t.z > .5 ? -.12 : .12), .04, .96);
   applyStatuses(t, form.tech.grab?.status ?? [], fx.player, f);
   const ty = (t.y ?? groundYForDepth(t.z ?? fx.player.z));
   emit(new BuffBurstFx(form, t.x, kind === 'slam' ? ty - 2 : ty - 36, kind === 'slam' ? 'stomp' : 'scatter', { facing: f, size: kind === 'slam' ? 1.3 : .8 }));

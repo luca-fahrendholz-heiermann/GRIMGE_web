@@ -6,7 +6,7 @@
 //   • a full bag leaves the item lying (with a hint); the bag menu (button / key I) shows the contents with icons and
 //     drops single pieces or a whole stack to make room;
 //   • the reel spin of the castle training is shown as a 3 × 3 reel window that spins, stops and lights the winning lines.
-import { groundYForDepth } from './world.js';
+import { groundYForDepth, clampZ } from './world.js';
 import { audio } from './audio.js';
 import { kkState, kkOn, elementColor, roomClip } from './kk_world.js';
 import { BACKPACK, invUnits, giveRune } from './kk_loot.js';
@@ -49,7 +49,7 @@ export function spawnItems(game, x, z, b, { row = null, spread = 70 } = {}) {
   for (const w of b.weapons ?? []) list.push({ type: 'weapon', weapon: w, n: 1 });
   for (const [k, n] of Object.entries(b.potions ?? {})) for (let i = 0; i < n; i++) list.push({ type: 'potion', kind: k, n: 1 });
   for (const r of b.runes ?? []) list.push({ type: 'rune', rune: r, n: 1 });
-  const out = list.map((it, i) => { const a = (i / Math.max(1, list.length)) * Math.PI * 2 + kk.time; const item = { id: kk.nextItem++, kind: 'item', row: row ?? kk.row, x: x + Math.cos(a) * spread * (.4 + .6 * ((i % 3) / 2)), z: Math.max(.05, Math.min(.95, z + Math.sin(a) * .08)), lock: .5, hop: .5, born: kk.time, ...it }; kk.items.push(item); return item; });
+  const out = list.map((it, i) => { const a = (i / Math.max(1, list.length)) * Math.PI * 2 + kk.time; const item = { id: kk.nextItem++, kind: 'item', row: row ?? kk.row, x: x + Math.cos(a) * spread * (.4 + .6 * ((i % 3) / 2)), z: clampZ(z + Math.sin(a) * .08, .05, .95), lock: .5, hop: .5, born: kk.time, ...it }; kk.items.push(item); return item; });
   return out;
 }
 // Walking over an item: gold, potions and runes always fit; goods take bag room (what does not fit stays).

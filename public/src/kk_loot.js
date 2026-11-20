@@ -151,7 +151,7 @@ function updateLife(game, dt) {
     say(game, 'GEFALLEN — DEINE BEUTE LIEGT AM BODEN', 2);
   } else if (!kk.alive && P.isAlive) {
     kk.alive = true; const hq = hqOf(kk); const dir = hq.row - kk.row;
-    kk.row = hq.row; P.x = hq.x + 190; P.z = .6; applyBounds(game, kk); game.battlefield.placeOnSurface?.(P); if (dir) kk.pan = 0;
+    kk.row = hq.row; P.x = hq.x + 190; P.z = hq.z + .1; applyBounds(game, kk); game.battlefield.placeOnSurface?.(P); if (dir) kk.pan = 0;
     game.modeState.dungeonCameraX = game.dungeonCameraTarget?.() ?? game.modeState.dungeonCameraX; revealAround(kk, P);
     say(game, 'ZURÜCK IN DER HAUPTBURG', 1.4);
   }

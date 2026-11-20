@@ -16,7 +16,7 @@ import { defineSignature, startStance, endStance, emit, foesOf, groundDist, hit,
 import { offerRecast } from './recast.js';
 import { combat } from './combat.js';
 import { audio } from './audio.js';
-import { groundYForDepth } from './world.js';
+import { groundYForDepth, clampZ } from './world.js';
 
 const alive = (t) => t && !t.isDead && t.lifeState !== 'Dead' && (t.hp ?? 1) > 0;
 const nearestAhead = (gw, p, range) => foesOf(gw, p.team).filter((t) => !t.isProp && (t.x - p.x) * (p.facing || 1) > -10 && groundDist(t, p) < range).sort((a, b) => groundDist(a, p) - groundDist(b, p))[0] ?? null;
@@ -24,7 +24,7 @@ const nearestAhead = (gw, p, range) => foesOf(gw, p.team).filter((t) => !t.isPro
 function teleport(p, x, z, gw, color) {
   p.ghosts?.push({ x: p.x, y: p.y, z: p.z, elevation: p.elevation, facing: p.facing, alpha: .6, state: p.state, animTime: p.animTime });
   combat.spawnShockwave(p.x, (p.y ?? 0) - 40, 30, color);
-  p.x = x; p.z = Math.max(.04, Math.min(.96, z));
+  p.x = x; p.z = clampZ(z, .04, .96);
   gw?.battlefield?.placeOnSurface?.(p);
   p.vx = 0; p.vz = 0; p.invulnerableTimer = Math.max(p.invulnerableTimer ?? 0, .2);
   combat.spawnShockwave(p.x, (p.y ?? 0) - 40, 36, color);

@@ -7,7 +7,7 @@ import { combat } from './combat.js';
 import { sprites } from './sprites.js';
 import { audio } from './audio.js';
 import { groundYForDepth } from './world.js';
-import { CASTLE_CLASSES, kkDistance, biomeAt, spanAt, KK } from './kk_map.js';
+import { CASTLE_CLASSES, kkDistance, biomeAt, spanAt, KK, roadZ } from './kk_map.js';
 import { rollChest, levelForXp, lootTier, XP, heroKillXp } from './kk_progress.js';
 import { kkState, kkOn, SEAT_COLORS, SEAT_NAMES, elementColor } from './kk_world.js';
 import { gainXp, dropPile } from './kk_loot.js';
@@ -30,7 +30,7 @@ export function initWar(game) {
   const kk = kkState(game);
   for (const hq of kk.map.hqs) { hq.level = 0; hq.hp = hqMaxHp(hq); hq.res = {}; hq.fallen = false; hq.siegeT = 0; }
   kk.bots = kk.map.hqs.filter((h) => h.seat !== 0).map((h, i) => ({
-    seat: h.seat, team: teamOfSeat(h.seat, kk), ally: kk.allies.includes(h.seat), heroKey: BOT_HEROES[i % BOT_HEROES.length], row: h.row, x: h.x + 160, z: .55,
+    seat: h.seat, team: teamOfSeat(h.seat, kk), ally: kk.allies.includes(h.seat), heroKey: BOT_HEROES[i % BOT_HEROES.length], row: h.row, x: h.x + 160, z: h.z + .06,
     level: 1, xp: 0, gold: 0, alive: true, respawnT: 0, hpFrac: 1, task: null, think: i * .3, travel: 0, stones: {}, weapons: {}, kills: 0
   }));
   kk.over = false; kk.towerT = 0;
@@ -167,7 +167,7 @@ function updateBots(game, dt) {
     if (moveBot(kk, bot, site, dt)) actBot(game, bot, dt);
     if (bot.hpFrac <= 0) killBot(game, bot, null);
     // the squad follows (abstractly)
-    for (const u of botSquad(kk, bot)) { if (!u.live) { u.row = bot.row; u.x += (bot.x - u.x) * Math.min(1, dt * 2); u.z = .5; } else if (u.live.followLeader?.isBotAnchor) { u.live.followLeader.x = bot.x; u.live.followLeader.z = bot.z; } }
+    for (const u of botSquad(kk, bot)) { if (!u.live) { u.row = bot.row; u.x += (bot.x - u.x) * Math.min(1, dt * 2); u.z = roadZ(u.x, u.row); } else if (u.live.followLeader?.isBotAnchor) { u.live.followLeader.x = bot.x; u.live.followLeader.z = bot.z; } }
   }
 }
 function killBot(game, bot, killer) {
