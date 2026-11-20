@@ -185,8 +185,8 @@ function syncLive(game) {
       if (u.isDead || !game.minions.includes(u)) { onUnitDeath(game, rec); continue; }
       rec.x = u.x; rec.z = u.z; rec.hp = u.hp;
       if (rec.role === 'squad' && mine(rec)) rec.row = kk.row;
-      if (rec.row !== kk.row || (rec.role !== 'squad' && Math.abs(rec.x - game.player.x) > 3000)) { despawn(game, rec); }
-    } else if (rec.row === kk.row && rec.role !== 'prisoner' && Math.abs(rec.x - game.player.x) < 2600) spawnLive(game, rec); /* far parts of the band stay records too */
+      if (rec.row !== kk.row || (rec.role !== 'squad' && (Math.abs(rec.x - game.player.x) > 3000 || Math.abs(rec.z - game.player.z) > 10))) { despawn(game, rec); }
+    } else if (rec.row === kk.row && rec.role !== 'prisoner' && Math.abs(rec.x - game.player.x) < 2600 && Math.abs(rec.z - game.player.z) < 8.5) spawnLive(game, rec); /* only near the player (both directions): the rest of the board stays records */ /* far parts of the band stay records too */
   }
 }
 function despawn(game, rec) { const u = rec.live; if (!u) return; const i = game.minions.indexOf(u); if (i >= 0) game.minions.splice(i, 1); rec.live = null; }
@@ -212,17 +212,17 @@ function updatePatrols(game, dt) {
     const camp = camps[Math.floor(kk.rng() * camps.length)];
     if (camp && kk.units.filter((u) => u.role === 'patrol').length < 10) {
       const strength = 2 + Math.floor(kk.time / 240); const dir = kk.rng() < .5 ? -1 : 1;
-      for (let i = 0; i < Math.min(6, strength); i++) addRecord(kk, { team: 'red', bandit: true, cls: ['Guardian', 'Ranger', 'Berserker', 'Shadow'][i % 4], element: null, tier: kk.time > 600 ? 2 : 1, row: camp.row, x: camp.x + dir * 120 + i * 14, z: roadZ(camp.x, camp.row), role: 'patrol', siteId: camp.id, dir, legEnd: camp.x + dir * (1400 + kk.rng() * 1600) });
+      for (let i = 0; i < Math.min(6, strength); i++) addRecord(kk, { team: 'red', bandit: true, cls: ['Guardian', 'Ranger', 'Berserker', 'Shadow'][i % 4], element: null, tier: kk.time > 600 ? 2 : 1, row: camp.row, x: camp.x + dir * 120 + i * 14, z: roadZ(camp.x, camp.row, camp.z), role: 'patrol', siteId: camp.id, dir, legEnd: camp.x + dir * (1400 + kk.rng() * 1600) });
     }
   }
   // a patrol walks its leg along the band (off-band ones move abstractly), then turns home
   for (const rec of kk.units) {
     if (rec.role !== 'patrol') continue;
-    const a = rec._anchor ?? (rec._anchor = { isAlive: true, x: rec.x, z: roadZ(rec.x, rec.row) });
+    const a = rec._anchor ?? (rec._anchor = { isAlive: true, x: rec.x, z: roadZ(rec.x, rec.row, rec.z) });
     if (!rec.live) { rec.x += rec.dir * 50 * dt; a.x = rec.x; }
     else if (kk.map.hqs.some((h) => h.row === rec.row && Math.abs(h.x - a.x) < 1300)) { rec.dir = Math.sign(a.x - kk.map.hqs.filter((h) => h.row === rec.row).sort((p, q) => Math.abs(p.x - a.x) - Math.abs(q.x - a.x))[0].x) || -rec.dir; a.x += rec.dir * 55 * dt; } /* renegades keep away from the main castles: a calm start */
     else if (kk.carry && Math.abs(game.player.x - a.x) < 1500) { a.x += Math.sign(game.player.x - a.x) * 70 * dt; a.z = game.player.z; } /* bandits smell an egg carrier */
-    else { a.x += rec.dir * 55 * dt; a.z = roadZ(a.x, rec.row) + Math.sin((a.x + rec.id * 40) * .002) * .1; } /* along the road */
+    else { a.x += rec.dir * 55 * dt; a.z = roadZ(a.x, rec.row, rec.roadZ ?? (rec.roadZ = rec.z)) + Math.sin((a.x + rec.id * 40) * .002) * .1; } /* along the nearest road */
     if ((rec.dir > 0 && a.x >= rec.legEnd) || (rec.dir < 0 && a.x <= rec.legEnd)) { rec.dir *= -1; const camp = siteById(kk, rec.siteId); rec.legEnd = camp ? camp.x : rec.x; }
     { const camp = siteById(kk, rec.siteId); const sp = spanAt(kk.map, rec.row, camp?.x ?? a.x) ?? [0, kk.map.width]; a.x = Math.max(sp[0] + 80, Math.min(sp[1] - 80, a.x)); if (!rec.live) rec.x = a.x; rec.legEnd = Math.max(sp[0] + 80, Math.min(sp[1] - 80, rec.legEnd)); } /* patrols stay in their stretch */
   }

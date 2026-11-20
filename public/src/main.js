@@ -25,7 +25,7 @@ import { setupGallery, updateGallery, galleryActors, renderGalleryLabels } from 
 import { setupKronenkrieg, updateKronenkrieg, renderKKGround, kkActors, renderKKMinimap, kkPanY } from './kk_world.js'; // Kronenkrieg: the banded open map
 import { initLoot, updateLoot, lootActors, renderLootHud, kkFuseAllowed, respawnDelay, closePotionButtons } from './kk_loot.js'; // Kronenkrieg: loot and the round level
 import { initArmy, updateArmy, armyActors, closeKKPanel, recordGrade, kkFindTarget, closeCastleOpener } from './kk_army.js'; // Kronenkrieg: armies, castles, garrisons
-import { initWar, updateWar, warActors, renderFlood, warMinimapDots, kkEnemyHome, kkCanRespawn } from './kk_war.js'; // Kronenkrieg: bots, main castles, Grimmflut, the end
+import { initWar, updateWar, warActors, renderFlood, renderMinimapFlood, warMinimapDots, kkEnemyHome, kkCanRespawn } from './kk_war.js'; // Kronenkrieg: bots, main castles, Grimmflut, the end
 import { initCreatures, updateCreatures, creatureActors, creatureMinimapDots, tameAt, kkMountGate } from './kk_creatures.js'; // Kronenkrieg: creatures, eggs, mounts
 import { initCrown, updateCrown, closeCrownPanel, kkFocusLocked, kkFocusStyle } from './kk_crown.js'; // Kronenkrieg: the crowning trials
 import { updateInterior, interiorActors } from './kk_interior.js'; // Kronenkrieg: houses you walk into (cut-away)
@@ -3441,7 +3441,7 @@ export class GameWorld {
     this.applyWorldZoom(ctx);
     ctx.translate(this.cameraOffsetX + cam.shakeX - dungeonCamX, cam.shakeY + worldY + kkPanY(this));
     if (this.activeMode?.id === 'base') renderBaseHall(ctx);
-    if (this.activeMode?.id === 'kronenkrieg') { const z = this.cameraZoom() || 1; const span = this.logicalWidth / z; renderKKGround(ctx, this, dungeonCamX - span * .5 - 200, dungeonCamX + span * 1.5 + 200); renderFlood(ctx, this, dungeonCamX - span * .5 - 200, dungeonCamX + span * 1.5 + 200, -300, 1500); }
+    if (this.activeMode?.id === 'kronenkrieg') { const z = this.cameraZoom() || 1; const span = this.logicalWidth / z; const vy0 = this.unzoomPoint({ x: 0, y: 0 }).y - (this.worldOffsetY ?? 0) - 80; const vy1 = this.unzoomPoint({ x: 0, y: this.renderHeight }).y - (this.worldOffsetY ?? 0) + 80; /* the board is deep: only the visible rows */ renderKKGround(ctx, this, dungeonCamX - span * .5 - 200, dungeonCamX + span * 1.5 + 200, vy0, vy1); renderFlood(ctx, this, dungeonCamX - span * .5 - 200, dungeonCamX + span * 1.5 + 200, vy0, vy1); }
 
     // Foreground Crystal Glows on Beacons
     if (this.activeMode?.id !== 'base' && this.activeMode?.id !== 'kronenkrieg') this.battlefield.renderForeground(ctx); /* no tower beacons in the base hall */
@@ -3531,7 +3531,7 @@ export class GameWorld {
     // Map weather (snow, rain, embers, leaves, dust, mana motes) in screen space.
     environment.renderWeather(ctx, viewW, viewH);
     this.renderDungeonExitArrow(ctx, viewW);
-    if (this.activeMode?.id === 'kronenkrieg') { renderKKMinimap(ctx, this, viewW, { x: 14, y: 82, w: 240, rowH: 14, dots: [...warMinimapDots(this), ...creatureMinimapDots(this)] }); /* top left under the life bars: the right side stays free */ renderLootHud(ctx, this, viewW); renderReels(ctx, this, viewW, viewH); }
+    if (this.activeMode?.id === 'kronenkrieg') { renderKKMinimap(ctx, this, viewW, { x: 14, y: 82, size: 132, flood: (c, mx, my, sx, sz) => renderMinimapFlood(c, this, mx, my, sx, sz), dots: [...warMinimapDots(this), ...creatureMinimapDots(this)] }); /* top left under the life bars: the right side stays free */ renderLootHud(ctx, this, viewW); renderReels(ctx, this, viewW, viewH); }
     this.renderOffscreenArrows(ctx);
 
     // 3. Screen Space Rune Drawing

@@ -475,6 +475,8 @@ export class Player extends GroundEntity {
       return;
     }
     if (this.lifeState === 'Dead') {
+      // Kronenkrieg: the way back can close while one waits (the main castle falls or the Grimmflut reaches it) — no respawn into the zone.
+      if (gameWorld?.activeMode?.id === 'kronenkrieg' && gameWorld.canRespawn?.(this.team) === false) this.respawnTimer = Infinity;
       this.respawnTimer -= dt;
       if (this.respawnTimer <= 0) this.respawn(battlefield);
       return;

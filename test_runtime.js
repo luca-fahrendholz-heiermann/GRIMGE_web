@@ -5559,7 +5559,7 @@ game.running = false;
   // Kronenkrieg map (kk_map.js): a new map per seed, deterministic, fair, nothing clustered at a main castle.
   const KM = await import('./public/src/kk_map.js'); let bad = 0; let worst = 0;
   for (let seed = 1; seed <= 60; seed++) { const m = KM.generateKKMap(seed); const near = m.hqs.map((h) => KM.valueNear(m, h)); const c = {}; m.sites.forEach((x) => { c[x.kind] = (c[x.kind] ?? 0) + 1; }); worst = Math.max(worst, m.fairRatio);
-    const bigNearHQ = m.sites.some((x) => KM.SITE_KINDS[x.kind].big && m.hqs.some((h) => h.row === x.row && Math.abs(h.x - x.x) < KM.KK.hqKeepOut));
+    const bigNearHQ = m.sites.some((x) => KM.SITE_KINDS[x.kind].big && m.hqs.some((h) => h.row === x.row && KM.kkDistance(h, x) < KM.KK.hqKeepOut)); /* across the square board */
     const linked = m.sites.filter((x) => x.kind === 'shaft').every((sh) => m.sites.some((l) => l.kind === 'lift' && l.row === sh.to && l.to === sh.row && l.x === sh.x)) && c.shaft === 8 && c.lift === 8; const onMain = m.hqs.every((h) => h.row === KM.KK.main);
     if (m.fairRatio > KM.KK.fairRatio || Math.max(...near) > KM.KK.hqValueCap || Math.max(...near) - Math.min(...near) > KM.KK.nearSpread || c.castle !== 14 || c.source !== 14 || bigNearHQ || new Set(m.hqs.map((h) => h.seat)).size !== 4 || !linked || !onMain) bad++; }
   const same = JSON.stringify(KM.generateKKMap(7)) === JSON.stringify(KM.generateKKMap(7)); const differs = JSON.stringify(KM.generateKKMap(7)) !== JSON.stringify(KM.generateKKMap(8));
@@ -5571,7 +5571,7 @@ game.running = false;
   const shaft = kk.map.sites.find((x) => x.kind === 'shaft' && x.row === kk.row); P.x = shaft.x; P.z = shaft.z; KW.updateKronenkrieg(game, 1 / 60); const wentDown = kk.row === shaft.to && kk.pan !== 0;
   const sec = KM.spanAt(kk.map, kk.row, P.x); const bounded = !!sec && b.left >= sec[0] && b.right <= sec[1];
   const lift = kk.map.sites.find((x) => x.kind === 'lift' && x.row === kk.row && x.x === shaft.x); P.x = lift.x; P.z = lift.z; for (let i = 0; i < 80; i++) KW.updateKronenkrieg(game, 1 / 60); const wentUp = kk.row === row0;
-  for (let i = 0; i < 90; i++) KW.updateKronenkrieg(game, 1 / 60); const settled = kk.pan === 0 && KW.isRevealed(kk, kk.row, P.x);
+  for (let i = 0; i < 90; i++) KW.updateKronenkrieg(game, 1 / 60); const settled = kk.pan === 0 && KW.isRevealed(kk, kk.row, P.x, P.z);
   assert(startOk && edgeHolds && wentDown && bounded && wentUp && settled, 'Kronenkrieg: starts at the own main castle with the class only; the edge of the plane holds, a shaft drops one level down into a bounded section, its lift brings the figure back up (the camera glides after) and the map reveals around the figure (' + [startOk, edgeHolds, wentDown, bounded, wentUp, settled].join('/') + ')');
   // loot: search a building, sealed runes, level-up unseals, fusion gate, death pile, return at the main castle, picking the pile up
   const KL = await import('./public/src/kk_loot.js'); const KP = await import('./public/src/kk_progress.js');
@@ -5660,7 +5660,7 @@ game.running = false;
     const blueSees = game.getHostileTargets(P.team).some((t) => t.d === tree); const redBlind = !game.getHostileTargets('red').some((t) => t.isResourceNode);
     const node = game.getHostileTargets(P.team).find((t) => t.d === tree); const n0 = kk.items.length; let hitsTree = 0; while (!tree.gone && hitsTree < 50) { node.takeDamage(12, -1); hitsTree++; }
     const woodItem = kk.items.slice(n0).find((it) => it.type === 'wood'); const felled = tree.gone && !!woodItem && woodItem.n === KR.RESOURCE[tree.kind].n && !game.getHostileTargets(P.team).includes(node);
-    const obs = kk.decor.find((d) => d.kind === 'obsidian'); const kr = kk.row; kk.row = obs.row; P.x = obs.x; const on = KR.kkResourceTargets(game).find((t) => t.d === obs); let hitsObs = 0; while (!obs.gone && hitsObs < 80) { on.takeDamage(12, 1); hitsObs++; } kk.row = kr;
+    const obs = kk.decor.find((d) => d.kind === 'obsidian'); const kr = kk.row; kk.row = obs.row; P.x = obs.x; P.z = obs.z; const on = KR.kkResourceTargets(game).find((t) => t.d === obs); let hitsObs = 0; while (!obs.gone && hitsObs < 80) { on.takeDamage(12, 1); hitsObs++; } kk.row = kr;
     const harder = obs.gone && hitsObs > hitsTree * 3 && kk.items.some((it) => it.type === 'obsidian');
     const tt = kk.time; kk.time += KR.REGROW + 1; KR.updateResources(game, 1 / 60); kk.time = tt; const regrown = !tree.gone && tree.hp === KR.RESOURCE[tree.kind].hp;
     kk.items = kk.items.slice(0, n0);
@@ -5690,8 +5690,8 @@ game.running = false;
   }
   // army: renegade garrisons live in the band, capture a mid castle, train (frost stone + reel), garrison ▲ ▼, merge, prisoners, squad crosses bands
   const KA = await import('./public/src/kk_army.js'); game.returnToHub(); game.setMatchMode('kronenkrieg'); game.startMatch(); const k2 = game.modeState.kk; const P2 = game.player;
-  { const c0 = k2.map.sites.find((x) => x.kind === 'castle' && x.row === k2.row) ?? k2.map.sites.find((x) => x.kind === 'castle'); k2.row = c0.row; P2.x = c0.x - 300; } /* next to a garrison: the start may have none in reach */
-  KA.updateArmy(game, 1 / 60); const liveGuards = game.minions.filter((m) => m.isKKUnit && m.team === 'red').length; const inBand = k2.units.filter((u) => u.row === k2.row && u.team === 'red' && Math.abs(u.x - P2.x) < 2600).length; /* far parts of a band stay records */
+  { const c0 = k2.map.sites.find((x) => x.kind === 'castle' && x.row === k2.row) ?? k2.map.sites.find((x) => x.kind === 'castle'); k2.row = c0.row; P2.x = c0.x - 300; P2.z = c0.z + .3; } /* next to a garrison: the start may have none in reach */
+  KA.updateArmy(game, 1 / 60); const liveGuards = game.minions.filter((m) => m.isKKUnit && m.team === 'red').length; const inBand = k2.units.filter((u) => u.row === k2.row && u.team === 'red' && Math.abs(u.x - P2.x) < 2600 && Math.abs(u.z - P2.z) < 8.5).length; /* near in both directions */ /* far parts of a band stay records */
   const castle = k2.map.sites.filter((x) => x.kind === 'castle').sort((a2, b2) => (a2.row - k2.row) ** 2 * 1e8 + Math.abs(a2.x - P2.x) - ((b2.row - k2.row) ** 2 * 1e8 + Math.abs(b2.x - P2.x)))[0];
   k2.row = castle.row; for (const u of k2.units.filter((x) => x.siteId === castle.id)) { if (u.live) u.live.takeDamage(9999); } k2.units = k2.units.filter((x) => x.siteId !== castle.id); const KCcap = await import('./public/src/kk_castle.js'); P2.x = castle.x; P2.z = KCcap.flagZ(castle); P2.elevation = 0; P2.surfaceHeight = KCcap.dimsOf(castle).h; /* at the flag on the roof */
   KA.updateArmy(game, 1 / 60); const heldBack = castle.owner !== 0 && (k2.progress[castle.id] ?? 0) === 0; /* the wall still stands: no capture yet */
@@ -5711,7 +5711,7 @@ game.running = false;
   const KWR = await import('./public/src/kk_war.js'); game.returnToHub(); game.setMatchMode('kronenkrieg'); game.startMatch(); const k3 = game.modeState.kk; const P3 = game.player; const myHQ = k3.map.hqs.find((h) => h.seat === 0);
   k3.store.wood = 30; const up = KWR.upgradeHQ(game).ok && myHQ.level === 1 && myHQ.hp === KWR.hqMaxHp(myHQ); k3.store.stones.frost = 9; const r1 = KWR.addResistance(game, 'frost').ok; const r2 = KWR.addResistance(game, 'frost').ok; const resOk = r1 && !r2 && myHQ.res.frost === 1;
   P3.x = myHQ.x; for (let i = 0; i < 240; i++) { k3.time += .5; KWR.updateWar(game, .5); } const botsPlayed = k3.bots.some((b) => b.xp > 0) && k3.map.sites.some((x) => x.looted);
-  k3.championBot = null; game.enemyChampion.lifeState = 'Dead'; /* a clean start for this part */ const bot = k3.bots[0]; for (const b of k3.bots) if (b !== bot) b.alive = false; /* only this rival is near */ bot.alive = true; bot.row = k3.row; bot.x = P3.x + 300; bot.travel = 0; bot.task = { kind: 'idle', id: myHQ.id }; bot.think = 99; /* no trip into another band this frame */ KWR.updateWar(game, 1 / 60); const E = game.enemyChampion; const champ = E.lifeState === 'Alive' && E.team === bot.team && k3.championBot === bot;
+  k3.championBot = null; game.enemyChampion.lifeState = 'Dead'; /* a clean start for this part */ const bot = k3.bots[0]; for (const b of k3.bots) if (b !== bot) b.alive = false; /* only this rival is near */ bot.alive = true; bot.row = k3.row; bot.x = P3.x + 300; bot.z = P3.z; bot.travel = 0; bot.task = { kind: 'idle', id: myHQ.id }; bot.think = 99; /* no trip into another band this frame */ KWR.updateWar(game, 1 / 60); const E = game.enemyChampion; const champ = E.lifeState === 'Alive' && E.team === bot.team && k3.championBot === bot;
   const xpBefore = k3.xp; E.lifeState = 'Dying'; KWR.updateWar(game, 1 / 60); E.lifeState = 'Dead'; game.onFinalWizardDeath(E.team); const beaten = !bot.alive && k3.xp > xpBefore && game.matchState === 'Running';
   k3.time = KWR.FLOOD.start + 270; const flood = KWR.inFlood(k3, 50) && !KWR.inFlood(k3, k3.map.width / 2);
   if (!P3.isAlive) P3.respawn(game.battlefield); /* the simulated minutes may have cost the player a life */
@@ -5722,7 +5722,7 @@ game.running = false;
   const lairRecs = k4.units.filter((u) => u.creature && u.team === 'beast'); const lairsOk = lairRecs.length === k4.map.sites.filter((x) => x.kind === 'lair').length;
   const cr = lairRecs[0]; k4.row = cr.row; P4.x = cr.x - 60; P4.z = cr.z; KA.updateArmy(game, 1 / 60); const live = cr.live?.isKKCreature ? cr.live : null;
   live.hp = live.maxHp * .4; const tamed = KC.tameAt(game, P4, live.x, live.z) && cr.team === 'blue' && cr.role === 'squad';
-  const cr2 = lairRecs[1]; k4.row = cr2.row; P4.x = cr2.x - 60; KA.updateArmy(game, 1 / 60); if (cr2.live) cr2.live.hp = cr2.live.maxHp * .3; const limited = cr2.live && KC.tameAt(game, P4, cr2.live.x, cr2.live.z) && cr2.team === 'beast';
+  const cr2 = lairRecs[1]; k4.row = cr2.row; P4.x = cr2.x - 60; P4.z = cr2.z; KA.updateArmy(game, 1 / 60); if (cr2.live) cr2.live.hp = cr2.live.maxHp * .3; const limited = cr2.live && KC.tameAt(game, P4, cr2.live.x, cr2.live.z) && cr2.team === 'beast';
   const seq = [.1, .5, .9]; const kinds = []; for (const r of seq) { const keep = k4.rng; k4.rng = () => r; const n0 = k4.items.length; KC.creatureDrop(game, { ...cr2, x: P4.x, z: P4.z }); k4.rng = keep; const it = k4.items[k4.items.length - 1]; kinds.push(k4.items.length > n0 ? (it.kind === 'egg' ? 'egg' : it.runes?.length || it.type === 'rune' ? 'rune' : 'goods') : 'none'); }
   const drops = kinds.join(',') === 'goods,rune,egg'; const egg = k4.items.find((it) => it.kind === 'egg'); egg.lock = 0; egg.row = k4.row; egg.x = P4.x; egg.z = P4.z;
   KC.updateCreatures(game, 1 / 60); const carried = k4.carry === egg && P4.kkCarryMult < 1;
@@ -5760,10 +5760,24 @@ game.running = false;
   assert(teamsOk && notTaken && neverChampion && teamWin, 'Kronenkrieg 2 vs 2: the ally shares the players band and team, both rivals form one team, an ally castle is not taken, the ally never becomes the enemy champion and the team wins together (' + [teamsOk, notTaken, neverChampion, teamWin].join('/') + ')');
   game.returnToHub();
   // the egg carrier is hunted: a strong rival drops its plan and heads for the player
-  game.setMatchMode('kronenkrieg'); game.startMatch(); const k7 = game.modeState.kk; const hunter = k7.bots[0]; for (let i = 0; i < 4; i++) KA.addRecord(k7, { team: hunter.team, seat: hunter.seat, cls: 'Guardian', element: null, tier: 1, row: hunter.row, x: hunter.x, z: .5, role: 'squad' });
+  game.setMatchMode('kronenkrieg'); game.startMatch(); const k7 = game.modeState.kk; const hunter = k7.bots[0]; for (let i = 0; i < 4; i++) KA.addRecord(k7, { team: hunter.team, seat: hunter.seat, cls: 'Guardian', element: null, tier: 1, row: hunter.row, x: hunter.x, z: hunter.z, role: 'squad' });
   k7.carry = { element: 'ignis', creature: 'siege_golem' }; hunter.task = null; hunter.think = 0; const keep7 = k7.rng; k7.rng = () => .1; KWR.updateWar(game, .1); k7.rng = keep7; const hunting = hunter.task?.kind === 'hunt';
-  const d0 = KM.kkDistance(hunter, { row: k7.row, x: game.player.x }); for (let i = 0; i < 40; i++) { k7.time += .25; KWR.updateWar(game, .25); } const closer = KM.kkDistance(hunter, { row: k7.row, x: game.player.x }) < d0;
+  const d0 = KM.kkDistance(hunter, { row: k7.row, x: game.player.x, z: game.player.z }); for (let i = 0; i < 40; i++) { k7.time += .25; KWR.updateWar(game, .25); } const closer = KM.kkDistance(hunter, { row: k7.row, x: game.player.x, z: game.player.z }) < d0;
   assert(hunting && closer, 'Kronenkrieg: a strong rival hunts the visible egg carrier (' + [hunting, closer].join('/') + ')');
+  {
+    // the square board and the Grimmflut (user, 20 Nov 2026): a board about as deep as wide with places spread over both directions; the death zone
+    // closes in from every edge, takes the main castle, then there is no return — no endless respawn in the zone, the round ends
+    game.setMatchMode('kronenkrieg'); game.startMatch(); const kF = game.modeState.kk; const PF = game.player; const map = kF.map;
+    const square = Math.abs(map.depth * KM.KK.zPx / map.width - 1) < .15; const zs = map.sites.filter((x) => x.row === KM.KK.main).map((x) => x.z); const spread = Math.max(...zs) - Math.min(...zs) > map.depth * .7;
+    const hqZ = map.hqs.map((h) => h.z); const quarters = Math.max(...hqZ) - Math.min(...hqZ) > map.depth * .4;
+    kF.time = KWR.FLOOD.start + (KWR.FLOOD.full - KWR.FLOOD.start) * .5; const edgeIn = KWR.inFlood(kF, map.width / 2, .5) && KWR.inFlood(kF, 50, map.depth / 2) && !KWR.inFlood(kF, map.width / 2, map.depth / 2);
+    const home = map.hqs.find((h) => h.seat === 0); kF.time = KWR.FLOOD.start + 1; while (!KWR.inFlood(kF, home.x, home.z) && kF.time < KWR.FLOOD.full) kF.time += 2; const reached = KWR.inFlood(kF, home.x, home.z) && kF.time < KWR.FLOOD.noReturn + 400;
+    const keepNo = KWR.FLOOD.noReturn; const noBack = !KWR.kkCanRespawn(game); const hp0 = home.hp; for (const b of kF.bots) b.alive = true; KWR.updateWar(game, 1); const damaged = home.hp < hp0;
+    let t = 0; while (!home.fallen && t < 200) { KWR.updateWar(game, .5); t += .5; } const fell = home.fallen && t < 120;
+    PF.hp = 0; PF.beginDeath?.(); for (let i = 0; i < 200; i++) { PF.update(1 / 20, game.input, game.battlefield, game); } const stayedDead = !PF.isAlive && !Number.isFinite(PF.respawnTimer);
+    kF._endTick = -1; KWR.updateWar(game, 1 / 60); const ended = kF.over && game.winnerTeam !== 'blue'; void keepNo;
+    assert(square && spread && quarters && edgeIn && reached && noBack && damaged && fell && stayedDead && ended, 'Square board and death zone: the board is about as deep as wide, places and main castles spread over both directions, the Grimmflut closes in from every edge, reaches the main castle, wears it down and destroys it, the player cannot return into the zone and the round ends (' + [square, spread, quarters, edgeIn, reached, noBack, damaged, fell, stayedDead, ended, Math.round(t)].join('/') + ')');
+  }
   k7.carry = null; game.returnToHub();
   // a whole round in the real game loop: 26 minutes (bots, sieges, flood) without an error, and it ends
   game.setMatchMode('kronenkrieg'); game.startMatch(); const k8 = game.modeState.kk; let loopErr = null; const t0 = Date.now(); const wasRunning = game.running; game.running = true; game.scheduleFrame = () => {}; /* the test drives the loop */ const crashes = []; const rc = game.reportCrash.bind(game); game.reportCrash = (e) => { crashes.push(String(e?.message) + ' @ ' + String(e?.stack ?? '').split(String.fromCharCode(10))[1]); rc(e); };
@@ -5781,7 +5795,7 @@ game.running = false;
   spells.clearRuntime(); game.returnToHub();
   // two rivals in the players band: both fight as real champions, the second one is hittable and its defeat counts
   game.setMatchMode('kronenkrieg'); game.startMatch(); const kA = game.modeState.kk; const PA = game.player; const [rvA, rvB, rvC] = kA.bots; rvC.alive = false; rvC.respawnT = 999;
-  for (const [b, dx] of [[rvA, 300], [rvB, -350]]) { b.row = kA.row; b.x = PA.x + dx; b.travel = 0; b.task = { kind: 'idle', id: kA.map.hqs.find((h) => h.seat === b.seat).id }; b.think = 99; }
+  for (const [b, dx] of [[rvA, 300], [rvB, -350]]) { b.row = kA.row; b.x = PA.x + dx; b.z = PA.z; b.travel = 0; b.task = { kind: 'idle', id: kA.map.hqs.find((h) => h.seat === b.seat).id }; b.think = 99; }
   KWR.updateWar(game, 1 / 60); KWR.updateWar(game, 1 / 60); const extra = game.kkExtraFoes?.[0]; const both = game.enemyChampion.lifeState === 'Alive' && !!extra && extra.lifeState === 'Alive' && extra.team !== game.enemyChampion.team;
   const hittable = !!extra && game.getHostileTargets(PA.team).includes(extra); const xpA = kA.xp; const bot2 = extra?.kkBot; if (extra) extra.lifeState = 'Dying'; KWR.updateWar(game, 1 / 60); const counted = !!bot2 && !bot2.alive && kA.xp > xpA && !(game.kkExtraFoes ?? []).includes(extra);
   assert(both && hittable && counted, 'Kronenkrieg: two rivals near the player both fight as champions, the second one is a target for the player and beating it counts (' + [both, hittable, counted].join('/') + ')');
@@ -5803,8 +5817,8 @@ game.running = false;
   assert(leashFar && leashNear && solid && safe && throughDoor && climbed && unique, 'Kronenkrieg feedback: foes only take on the player near their post (calm start), houses are solid from outside, inside one is safe until a foe comes through the door, the stair stands free of the wall and is climbable, a special rune only once and an element rune at most twice in the deck (' + [leashFar, leashNear, solid, safe, throughDoor, climbed, unique].join('/') + ')');
   game.returnToHub();
   // bandits patrol and only attack when one comes close: notice range, alert of the post, leash, struck = noticed, guards walk a round
-  game.setMatchMode('kronenkrieg'); game.startMatch(); const kC = game.modeState.kk; const PC = game.player; const post = { id: 'testpost', kind: 'camp', row: kC.row, x: PC.x + 600, z: .5 }; kC.map.sites.push(post);
-  const ga = KA.addRecord(kC, { team: 'red', bandit: true, cls: 'Shadow', element: null, tier: 1, row: kC.row, x: post.x, z: .5, role: 'guard', siteId: post.id }); const gb = KA.addRecord(kC, { team: 'red', bandit: true, cls: 'Guardian', element: null, tier: 1, row: kC.row, x: post.x + 60, z: .5, role: 'guard', siteId: post.id });
+  game.setMatchMode('kronenkrieg'); game.startMatch(); const kC = game.modeState.kk; const PC = game.player; const post = { id: 'testpost', kind: 'camp', row: kC.row, x: PC.x + 600, z: PC.z }; kC.map.sites.push(post);
+  const ga = KA.addRecord(kC, { team: 'red', bandit: true, cls: 'Shadow', element: null, tier: 1, row: kC.row, x: post.x, z: PC.z, role: 'guard', siteId: post.id }); const gb = KA.addRecord(kC, { team: 'red', bandit: true, cls: 'Guardian', element: null, tier: 1, row: kC.row, x: post.x + 60, z: PC.z, role: 'guard', siteId: post.id });
   KA.updateArmy(game, 1 / 60); const A = ga.live; const B = gb.live; const ax0 = A.followLeader.x; kC.time += 3; KA.updateArmy(game, 1 / 60); const walks = Math.abs(A.followLeader.x - ax0) > 5;
   PC.x = A.x - 300; PC.z = A.z; const unseen = KA.kkFindTarget(game, A) !== PC; PC.x = A.x - 200; const seen = KA.kkFindTarget(game, A) === PC && B.kkEngaged === PC;
   PC.x = post.x - 900; const gaveUp = KA.kkFindTarget(game, A) !== PC; A.kkEngaged = null; B.kkEngaged = null; PC.x = A.x - 500; A.takeDamage(5); const struck = A.kkEngaged === PC;

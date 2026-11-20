@@ -42,9 +42,9 @@ export function crownOptions(game, stage) {
 // A choice raises the trial: a marked place on the map with its guardian, a little away toward the middle.
 export function chooseCrown(game, stage, path) {
   const kk = kkState(game); const P = game.player; if (kk.crown[stage] || kk.crown.trial) return null;
-  const W = kk.map.width; const dir = P.x < W / 2 ? 1 : -1; const x = Math.max(300, Math.min(W - 300, P.x + dir * 1300));
+  const W = kk.map.width; const D = kk.map.depth ?? KK.depth; const dir = P.x < W / 2 ? 1 : -1; const x = Math.max(300, Math.min(W - 300, P.x + dir * 1300)); const tz = Math.max(1.5, Math.min(D - 1.5, P.z + (P.z < D / 2 ? 2.5 : -2.5)));
   const el = path.startsWith('element:') ? path.slice(8) : null;
-  const site = { id: 'trial' + stage, kind: 'trial', row: KK.main, /* always on the main plane: everyone can come */ x, z: +(KK.depth / 2).toFixed(3), stage, path, element: el ?? (path === 'primal' ? 'natura' : 'lux') };
+  const site = { id: 'trial' + stage, kind: 'trial', row: KK.main, /* always on the main plane: everyone can come */ x, z: +tz.toFixed(3), stage, path, element: el ?? (path === 'primal' ? 'natura' : 'lux') };
   kk.map.sites.push(site); kk.crown.trial = site; kk.crown[stage] = { path, done: false };
   const kind = path === 'class' ? 'siege_golem' : path === 'primal' ? 'spirit_wolf' : (CREATURE_OF[el] ?? 'storm_wolf');
   addRecord(kk, { team: 'beast', creature: true, trialGuardian: true, kind, element: site.element, size: stage === 8 ? 2 : 3, cls: 'Berserker', tier: 3, row: site.row, x: site.x, z: site.z + .1, role: 'guard', siteId: site.id });

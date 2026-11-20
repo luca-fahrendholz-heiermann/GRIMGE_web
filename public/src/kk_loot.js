@@ -89,7 +89,7 @@ function tierAt(kk, site) {
 }
 // One chest of a house (the walk-in interior, kk_interior.js): the loot of one floor; the first chest of a house gives XP.
 export function openChest(game, site, floor = 0, at = null) {
-  const kk = kkState(game); const tier = tierAt(kk, site); const biome = biomeAt(kk.map, site.row, site.x).element;
+  const kk = kkState(game); const tier = tierAt(kk, site); const biome = biomeAt(kk.map, site.row, site.x, site.z).element;
   const weapons = CASTLE_CLASSES.map((c) => c.weapon);
   const c = rollChest(kk.seed * 31 + site.x * 7 + floor * 131, tier, { biomeElement: biome, weapons });
   const runes = [];
@@ -109,13 +109,13 @@ function updatePlaces(game, dt) {
   for (const s of kk.map.sites) {
     if (s.row !== kk.row) continue;
     // discovering a place gives a little XP
-    if (!kk.discovered.has(s.id) && isRevealed(kk, s.row, s.x) && Math.abs(P.x - s.x) < 700) { kk.discovered.add(s.id); gainXp(game, XP.discover); }
+    if (!kk.discovered.has(s.id) && isRevealed(kk, s.row, s.x, s.z) && Math.abs(P.x - s.x) < 700 && Math.abs(P.z - s.z) < 2.5) { kk.discovered.add(s.id); gainXp(game, XP.discover); }
     if (s.kind === 'goldvein') { /* houses are walked into (kk_interior.js) */
       s.cd = Math.max(0, (s.cd ?? 0) - dt); const at = s.cd <= 0 && near(P, s, 64, .13); kk.progress[s.id] = at ? (kk.progress[s.id] ?? 0) + dt : 0;
       if (kk.progress[s.id] >= MINE_TIME) { kk.progress[s.id] = 0; s.cd = VEIN_COOLDOWN; const g = 15 + Math.floor(Math.random() * 16); kk.gold += g; say(game, `+${g} GOLD`, 1.1); gainXp(game, XP.mine); audio.playRuneChime?.(820); }
     } else if (s.kind === 'shrine' && !s.used && near(P, s, 50, .14)) {
       s.used = true; gainXp(game, XP.shrine); say(game, 'WEGSCHREIN — DIE GEGEND DECKT SICH AUF', 1.6);
-      for (let x = s.x - 2600; x <= s.x + 2600; x += 200) revealAround(kk, { x });
+      revealAround(kk, s, 2600, 9); /* a wide square around the shrine */
     }
   }
   // the own main castle: carried goods are stored there safely
@@ -144,7 +144,7 @@ function updateLife(game, dt) {
     say(game, 'GEFALLEN — DEINE BEUTE LIEGT AM BODEN', 2);
   } else if (!kk.alive && P.isAlive) {
     kk.alive = true; const hq = hqOf(kk); const dir = hq.row - kk.row;
-    kk.row = hq.row; P.x = hq.x + 190; P.z = hq.z + .1; applyBounds(game, kk); game.battlefield.placeOnSurface?.(P); if (dir) kk.pan = 0;
+    kk.row = hq.row; P.x = hq.x + 190; P.z = hq.z + .3; /* in front of the castle stair */ applyBounds(game, kk); game.battlefield.placeOnSurface?.(P); if (dir) kk.pan = 0;
     game.modeState.dungeonCameraX = game.dungeonCameraTarget?.() ?? game.modeState.dungeonCameraX; revealAround(kk, P);
     say(game, 'ZURÜCK IN DER HAUPTBURG', 1.4);
   }
@@ -196,7 +196,7 @@ export function lootActors(game) {
 export function renderLootHud(ctx, game, viewW) {
   const kk = kkState(game); if (!kk) return;
   // fallen: the way back (user asked whether the round should end — it does not while the main castle stands)
-  const P = game.player; if (!P.isAlive) { const hq = hqOf(kk); const back = !hq.fallen && kk.time < 1200; const tLeft = Math.max(0, Math.ceil(P.respawnTimer ?? 0)); ctx.save(); ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(viewW / 2 - 260, 210, 520, 64); ctx.font = 'bold 18px monospace'; ctx.fillStyle = back ? '#ffe9a8' : '#ff6b6b'; ctx.fillText(back ? `GEFALLEN — RÜCKKEHR IN ${tLeft} S` : 'GEFALLEN — KEINE RÜCKKEHR', viewW / 2, 238); ctx.font = '11px monospace'; ctx.fillStyle = '#e8e2d0'; ctx.fillText(back ? 'solange deine Hauptburg steht · deine Beute liegt am Todesort' : 'deine Hauptburg ist gefallen oder die Grimmflut lässt keine Rückkehr mehr zu', viewW / 2, 260); ctx.restore(); }
+  const P = game.player; if (!P.isAlive) { const hq = hqOf(kk); const back = game.canRespawn?.(P.team) !== false && Number.isFinite(P.respawnTimer); const tLeft = Math.max(0, Math.ceil(P.respawnTimer ?? 0)); ctx.save(); ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(viewW / 2 - 260, 210, 520, 64); ctx.font = 'bold 18px monospace'; ctx.fillStyle = back ? '#ffe9a8' : '#ff6b6b'; ctx.fillText(back ? `GEFALLEN — RÜCKKEHR IN ${tLeft} S` : 'GEFALLEN — KEINE RÜCKKEHR', viewW / 2, 238); ctx.font = '11px monospace'; ctx.fillStyle = '#e8e2d0'; ctx.fillText(back ? 'solange deine Hauptburg steht · deine Beute liegt am Todesort' : 'deine Hauptburg ist gefallen oder steht in der Grimmflut — keine Rückkehr', viewW / 2, 260); ctx.restore(); }
   // a slim line under the map (top left): level, XP, gold — the rest lives in the bag (user: the right side must stay free)
   { const cx = 134; const ly = 134; ctx.save(); ctx.fillStyle = 'rgba(6,6,12,.7)'; ctx.fillRect(cx - 120, ly, 240, 16); ctx.font = 'bold 10px monospace'; ctx.textAlign = 'left'; ctx.fillStyle = '#ffe9a8'; ctx.fillText(`STUFE ${kk.level}`, cx - 114, ly + 12); ctx.fillStyle = '#2a2234'; ctx.fillRect(cx - 52, ly + 5, 100, 6); ctx.fillStyle = '#ffd24a'; ctx.fillRect(cx - 52, ly + 5, 100 * xpProgress(kk.xp), 6); ctx.fillStyle = '#ffcf3a'; ctx.fillText(`◉ ${kk.gold}`, cx + 58, ly + 12); ctx.restore(); }
 }

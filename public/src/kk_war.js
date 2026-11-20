@@ -8,6 +8,8 @@ import { sprites } from './sprites.js';
 import { audio } from './audio.js';
 import { groundYForDepth } from './world.js';
 import { CASTLE_CLASSES, kkDistance, biomeAt, spanAt, KK, roadZ } from './kk_map.js';
+const ZPX = KK.zPx;
+const boardGap = (a, b) => Math.hypot(a.x - b.x, ((a.z ?? KK.depth / 2) - (b.z ?? KK.depth / 2)) * ZPX); /* distance on the square board */
 import { rollChest, levelForXp, lootTier, XP, heroKillXp } from './kk_progress.js';
 import { kkState, kkOn, SEAT_COLORS, SEAT_NAMES, elementColor } from './kk_world.js';
 import { gainXp, dropPile } from './kk_loot.js';
@@ -102,11 +104,15 @@ function moveBot(kk, bot, target, dt) {
     const cons = kk.map.sites.filter((s) => s.kind === kind && s.row === bot.row && (down ? s.to > bot.row : s.to < bot.row) && (!here || spanAt(kk.map, bot.row, s.x) === here));
     if (!cons.length) return true; /* no way from here: act where it is */
     const c = cons.sort((a, b) => Math.abs(a.x - bot.x) - Math.abs(b.x - bot.x))[0];
-    if (Math.abs(c.x - bot.x) < 40) { bot.travel = BAND_TIME * .5; bot.travelTo = c.to; bot.travelX = c.x + (down ? 80 : 110); return false; }
-    bot.x += Math.sign(c.x - bot.x) * Math.min(Math.abs(c.x - bot.x), BOT_SPEED * dt); return false;
+    if (stepToward(bot, c, dt, 40)) { bot.travel = BAND_TIME * .5; bot.travelTo = c.to; bot.travelX = c.x + (down ? 80 : 110); bot.z = c.z; return false; }
+    return false;
   }
-  const dx = target.x - bot.x; if (Math.abs(dx) < 90) return true;
-  bot.x += Math.sign(dx) * Math.min(Math.abs(dx), BOT_SPEED * dt); return false;
+  return stepToward(bot, target, dt, 90);
+}
+// One step across the board toward a spot (true = arrived).
+function stepToward(bot, t, dt, near) {
+  const dx = t.x - bot.x; const dz = ((t.z ?? bot.z) - (bot.z ?? KK.depth / 2)) * ZPX; const d = Math.hypot(dx, dz); if (d < near) return true;
+  const k = Math.min(1, BOT_SPEED * dt / d); bot.x += dx * k; bot.z = (bot.z ?? KK.depth / 2) + dz * k / ZPX; return false;
 }
 function botGain(kk, bot, xp) { bot.xp += xp * .55; bot.level = levelForXp(bot.xp); } /* bots grow a little slower than an active player */
 // Abstract fight at a site (outside the player's band): both sides lose units in proportion to the other's strength.
@@ -123,7 +129,7 @@ function abstractBattle(kk, bot, foes, dt, game = globalThis.window?.gameWorld) 
 function actBot(game, bot, dt) {
   const kk = kkState(game); const t = bot.task; const site = t && siteById(kk, t.id); if (!site) { bot.task = null; return; }
   // 'in band' = fought out live: the bot is the champion near the player; farther away the fight is simulated
-  const inBand = bot.row === kk.row && (bot === kk.championBot || kk.extraBots?.has(bot) || Math.abs(bot.x - game.player.x) < 1100);
+  const inBand = bot.row === kk.row && (bot === kk.championBot || kk.extraBots?.has(bot) || boardGap(bot, game.player) < 1100);
   if (t.kind === 'loot') {
     if (site.kind === 'building' && !site.looted) { site.looted = true; const c = rollChest(kk.seed * 13 + site.x, lootTier({ time: kk.time, middleBand: site.row === 1 }), { biomeElement: biomeAt(kk.map, site.row, site.x).element, weapons: CASTLE_CLASSES.map((x) => x.weapon) }); bot.gold += c.gold; for (const [e, n] of Object.entries(c.stones)) bot.stones[e] = (bot.stones[e] ?? 0) + n; for (const w of c.weapons) bot.weapons[w] = (bot.weapons[w] ?? 0) + 1; botGain(kk, bot, XP.search); }
     else if (site.kind === 'goldvein' && !(site.cd > 0)) { site.cd = 25; bot.gold += 20; botGain(kk, bot, XP.mine); }
@@ -159,15 +165,15 @@ function updateBots(game, dt) {
   const kk = kkState(game);
   for (const bot of kk.bots) {
     const hq = hqOfSeat(kk, bot.seat);
-    if (!bot.alive) { if (hq.fallen) continue; bot.respawnT -= dt; if (bot.respawnT <= 0 && kk.time < FLOOD.noReturn) { bot.alive = true; bot.hpFrac = 1; bot.row = hq.row; bot.x = hq.x + 160; } continue; }
+    if (!bot.alive) { if (hq.fallen) continue; bot.respawnT -= dt; if (bot.respawnT <= 0 && homeOpen(kk, bot.seat)) { bot.alive = true; bot.hpFrac = 1; bot.row = hq.row; bot.x = hq.x + 160; bot.z = hq.z + .3; } continue; }
     if (bot === kk.championBot || kk.extraBots?.has(bot)) continue; /* a live champion moves by itself */
     bot.think -= dt; if (!bot.task || bot.think <= 0) { bot.think = THINK * 3; if (!bot.task) bot.task = pickTask(kk, bot); }
-    if (bot.task?.kind === 'hunt') { const P = game.player; if (!(kk.carry || kk.crown?.trial) || !P.isAlive) { bot.task = null; continue; } moveBot(kk, bot, { row: kk.row, x: P.x }, dt); for (const u of botSquad(kk, bot)) if (!u.live) { u.row = bot.row; u.x += (bot.x - u.x) * Math.min(1, dt * 2); } continue; }
+    if (bot.task?.kind === 'hunt') { const P = game.player; if (!(kk.carry || kk.crown?.trial) || !P.isAlive) { bot.task = null; continue; } moveBot(kk, bot, { row: kk.row, x: P.x, z: P.z }, dt); for (const u of botSquad(kk, bot)) if (!u.live) { u.row = bot.row; u.x += (bot.x - u.x) * Math.min(1, dt * 2); } continue; }
     const site = bot.task && siteById(kk, bot.task.id); if (!site) { bot.task = null; continue; }
     if (moveBot(kk, bot, site, dt)) actBot(game, bot, dt);
     if (bot.hpFrac <= 0) killBot(game, bot, null);
     // the squad follows (abstractly)
-    for (const u of botSquad(kk, bot)) { if (!u.live) { u.row = bot.row; u.x += (bot.x - u.x) * Math.min(1, dt * 2); u.z = roadZ(u.x, u.row); } else if (u.live.followLeader?.isBotAnchor) { u.live.followLeader.x = bot.x; u.live.followLeader.z = bot.z; } }
+    for (const u of botSquad(kk, bot)) { if (!u.live) { u.row = bot.row; u.x += (bot.x - u.x) * Math.min(1, dt * 2); u.z += ((bot.z ?? u.z) - u.z) * Math.min(1, dt * 2); } else if (u.live.followLeader?.isBotAnchor) { u.live.followLeader.x = bot.x; u.live.followLeader.z = bot.z; } }
   }
 }
 function killBot(game, bot, killer) {
@@ -187,8 +193,8 @@ function updateChampion(game, dt) {
     if (cb.row !== kk.row) { kk.championBot = null; E.lifeState = 'Dead'; E.respawnTimer = Infinity; }
     return;
   }
-  const bot = kk.bots.filter((b) => b.alive && !b.ally && b.row === kk.row && b.travel <= 0 && !kk.extraBots?.has(b)) /* an ally never becomes the enemy champion */.sort((a, b) => Math.abs(a.x - P.x) - Math.abs(b.x - P.x))[0];
-  if (!bot || Math.abs(bot.x - P.x) > 1100) return;
+  const bot = kk.bots.filter((b) => b.alive && !b.ally && b.row === kk.row && b.travel <= 0 && !kk.extraBots?.has(b)) /* an ally never becomes the enemy champion */.sort((a, b) => boardGap(a, P) - boardGap(b, P))[0];
+  if (!bot || boardGap(bot, P) > 1100) return;
   kk.championBot = bot; E.team = bot.team; E.heroKey = bot.heroKey; E.maxHp = 600 + bot.level * 60; E.hp = Math.max(1, E.maxHp * bot.hpFrac);
   E.x = bot.x; E.z = bot.z; E.lifeState = 'Alive'; E.respawnTimer = Infinity; E.isDead = false; E.state = 'idle'; game.battlefield.placeOnSurface?.(E);
   for (const u of botSquad(kk, bot)) if (u.live) u.live.followLeader = E;
@@ -204,7 +210,7 @@ function updateExtraChampions(game, dt) {
   }
   if (!kk.championBot) return; /* the first one is the main champion */
   for (const bot of kk.bots) {
-    if (!bot.alive || bot.ally || bot === kk.championBot || kk.extraBots.has(bot) || bot.row !== kk.row || bot.travel > 0 || Math.abs(bot.x - P.x) > 1100 || kk.extraBots.size >= 2) continue;
+    if (!bot.alive || bot.ally || bot === kk.championBot || kk.extraBots.has(bot) || bot.row !== kk.row || bot.travel > 0 || boardGap(bot, P) > 1100 || kk.extraBots.size >= 2) continue;
     const ent = new EnemyChampion(bot.x, bot.z, bot.heroKey); ent.team = bot.team; ent.maxHp = 600 + bot.level * 60; ent.hp = Math.max(1, ent.maxHp * bot.hpFrac); ent.isKKExtra = true; ent.kkBot = bot;
     game.battlefield.placeOnSurface?.(ent); kk.extraBots.set(bot, ent); for (const u of botSquad(kk, bot)) if (u.live) u.live.followLeader = ent;
   }
@@ -249,21 +255,29 @@ function updateSieges(game, dt) {
 }
 
 // ── Grimmflut and the end ──────────────────────────────────────────────────────────────────────────────────────────
-export function floodFront(kk) { const f = Math.max(0, Math.min(1, (kk.time - FLOOD.start) / (FLOOD.full - FLOOD.start))); return f * kk.map.width / 2; }
-export const inFlood = (kk, x) => { const f = floodFront(kk); return f > 0 && (x < f || x > kk.map.width - f); };
+// The Grimmflut (user, 20 Nov 2026: adapted to the square board): it closes in from all four edges; at the end it covers all.
+export function floodFrac(kk) { return Math.max(0, Math.min(1, (kk.time - FLOOD.start) / (FLOOD.full - FLOOD.start))); }
+export function floodFront(kk) { return floodFrac(kk) * kk.map.width / 2; }
+export const floodSafe = (kk) => 1 - floodFrac(kk); /* the half size of the safe square (1 = the whole board) */
+export const inFlood = (kk, x, z = (kk.map.depth ?? KK.depth) / 2) => { const f = floodFrac(kk); if (f <= 0) return false; const W = kk.map.width; const D = kk.map.depth ?? KK.depth; return Math.max(Math.abs(x - W / 2) / (W / 2), Math.abs(z - D / 2) / (D / 2)) > 1 - f; };
 function updateFlood(game, dt) {
   const kk = kkState(game); if (kk.time < FLOOD.start) return;
   if (!kk.floodWarned) { kk.floodWarned = true; game.showAnnouncement?.('DIE GRIMMFLUT KOMMT — VON DEN RÄNDERN ZUR MITTE', 2.6); }
-  const P = game.player; if (P.isAlive && inFlood(kk, P.x)) { P.takeHazardDamage?.(P.maxHp * .03 * dt * (1 + (kk.time - FLOOD.start) / 300)); }
-  for (const u of [...kk.units]) if (inFlood(kk, u.x) && kk.rng() < dt * .05) { if (u.live) u.live.takeDamage(30); else kk.units.splice(kk.units.indexOf(u), 1); }
-  for (const hq of kk.map.hqs) if (!hq.fallen && inFlood(kk, hq.x)) { hq.hp -= dt * (hq.level >= 4 ? 4 : 15); if (hq.hp <= 0) fallHQ(game, hq, null); }
-  for (const b of kk.bots) if (b.alive && inFlood(kk, b.x) && b !== kk.championBot) { b.hpFrac -= dt * .02; if (b.hpFrac <= 0) killBot(game, b, null); }
+  const P = game.player; if (P.isAlive && inFlood(kk, P.x, P.z)) { P.takeHazardDamage?.(P.maxHp * .03 * dt * (1 + (kk.time - FLOOD.start) / 300)); }
+  for (const u of [...kk.units]) if (inFlood(kk, u.x, u.z) && kk.rng() < dt * .05) { if (u.live) u.live.takeDamage(30); else kk.units.splice(kk.units.indexOf(u), 1); }
+  // the castles too (user, 20 Nov 2026: no respawn loop at a castle inside the zone): a main castle crumbles in ~40 s (obsidian ~65 s), a mid castle
+  // turns into an ownerless ruin
+  for (const hq of kk.map.hqs) if (!hq.fallen && inFlood(kk, hq.x, hq.z)) { hq.hp -= dt * hqMaxHp(hq) * (hq.level >= 4 ? .015 : .025); hq.floodT = (hq.floodT ?? 0) + dt; if (hq.hp <= 0) fallHQ(game, hq, null); }
+  for (const s of kk.map.sites) if (s.kind === 'castle' && !s.drowned && inFlood(kk, s.x, s.z)) { s.hp = Math.max(0, castleHp(s) - castleMaxHp(s) * .04 * dt); s.lastHitT = kk.time; if (s.hp <= 0) { s.drowned = true; s.owner = null; kk.units = kk.units.filter((u) => u.siteId !== s.id || u.live); } }
+  for (const b of kk.bots) if (b.alive && inFlood(kk, b.x, b.z) && b !== kk.championBot) { b.hpFrac -= dt * .02; if (b.hpFrac <= 0) killBot(game, b, null); }
 }
-export function kkCanRespawn(game) { const kk = kkState(game); return !!kk && !hqOfSeat(kk, 0).fallen && kk.time < FLOOD.noReturn; }
+// No return at a main castle that has fallen or stands in the Grimmflut (user, 20 Nov 2026: no endless dying in the zone).
+const homeOpen = (kk, seat) => { const hq = hqOfSeat(kk, seat); return !hq.fallen && kk.time < FLOOD.noReturn && !inFlood(kk, hq.x, hq.z); };
+export function kkCanRespawn(game) { const kk = kkState(game); return !!kk && homeOpen(kk, 0); }
 function sideAlive(game, seat) {
   const kk = kkState(game); const hq = hqOfSeat(kk, seat);
-  if (seat === 0) return game.player.isAlive || (!hq.fallen && kk.time < FLOOD.noReturn);
-  const bot = kk.bots.find((b) => b.seat === seat); return bot.alive || (!hq.fallen && kk.time < FLOOD.noReturn);
+  if (seat === 0) return game.player.isAlive || homeOpen(kk, seat);
+  const bot = kk.bots.find((b) => b.seat === seat); return bot.alive || homeOpen(kk, seat);
 }
 function checkEnd(game) {
   const kk = kkState(game); if (kk.over) return;
@@ -290,7 +304,7 @@ export function warActors(game) {
   for (const ent of kk.extraBots?.values() ?? []) out.push(ent); /* further rival champions take part in the depth order */
   // an ally in the players band walks there as a figure (it plays by the strategy, its squad fights beside you)
   for (const b of kk.bots) {
-    if (!b.ally || !b.alive || b.row !== kk.row || b.travel > 0 || Math.abs(b.x - game.player.x) > 1400) continue;
+    if (!b.ally || !b.alive || b.row !== kk.row || b.travel > 0 || boardGap(b, game.player) > 1400) continue;
     const moving = Math.abs((b.lastX ?? b.x) - b.x) > .5; if (moving) b.facing = Math.sign(b.x - (b.lastX ?? b.x)) || b.facing || 1; b.lastX = b.x; b.animT = (b.animT ?? 0) + 1 / 60;
     const y = groundYForDepth(b.z ?? .55);
     out.push({ y, render: (ctx) => { sprites.renderEntity(ctx, b.heroKey, b.x, y, { facing: b.facing || 1, state: moving ? 'run' : 'idle', animTime: b.animT }); ctx.font = 'bold 9px monospace'; ctx.textAlign = 'center'; ctx.fillStyle = SEAT_COLORS[b.seat]; ctx.fillText(`VERBÜNDET · ${SEAT_NAMES[b.seat]} · ST ${b.level}`, b.x, y - 104); } });
@@ -300,17 +314,29 @@ export function warActors(game) {
 }
 // The flood over the ground (world space), drawn after the ground.
 export function renderFlood(ctx, game, x0, x1, top, bottom) {
-  const kk = kkState(game); if (!kk || kk.time < FLOOD.start) return; const f = floodFront(kk); const W = kk.map.width; const t = kk.time;
+  const kk = kkState(game); if (!kk || kk.time < FLOOD.start) return; const W = kk.map.width; const D = kk.map.depth ?? KK.depth; const t = kk.time; const safe = floodSafe(kk);
+  const sx0 = W / 2 - safe * W / 2; const sx1 = W / 2 + safe * W / 2; const yA = groundYForDepth(D / 2 - safe * D / 2); const yB = groundYForDepth(D / 2 + safe * D / 2);
   ctx.save(); ctx.fillStyle = 'rgba(40,6,60,.62)';
-  if (f > x0) ctx.fillRect(x0, top, Math.min(f, x1) - x0, bottom - top);
-  if (W - f < x1) ctx.fillRect(Math.max(W - f, x0), top, x1 - Math.max(W - f, x0), bottom - top);
-  ctx.fillStyle = 'rgba(180,90,255,.5)'; for (const edge of [f, W - f]) if (edge > x0 && edge < x1) for (let y = top; y < bottom; y += 12) ctx.fillRect(edge - 3 + Math.sin(t * 3 + y * .05) * 4, y, 6, 8);
+  if (sx0 > x0) ctx.fillRect(x0, top, Math.min(sx0, x1) - x0, bottom - top);
+  if (sx1 < x1) ctx.fillRect(Math.max(sx1, x0), top, x1 - Math.max(sx1, x0), bottom - top);
+  const ix0 = Math.max(x0, sx0); const ix1 = Math.min(x1, sx1);
+  if (ix1 > ix0) { if (yA > top) ctx.fillRect(ix0, top, ix1 - ix0, Math.min(yA, bottom) - top); if (yB < bottom) ctx.fillRect(ix0, Math.max(yB, top), ix1 - ix0, bottom - Math.max(yB, top)); }
+  ctx.fillStyle = 'rgba(180,90,255,.5)';
+  for (const edge of [sx0, sx1]) if (edge > x0 && edge < x1) for (let y = Math.max(top, yA); y < Math.min(bottom, yB); y += 12) ctx.fillRect(edge - 3 + Math.sin(t * 3 + y * .05) * 4, y, 6, 8);
+  for (const ey of [yA, yB]) if (ey > top && ey < bottom) for (let x = Math.max(x0, sx0); x < Math.min(x1, sx1); x += 12) ctx.fillRect(x, ey - 3 + Math.sin(t * 3 + x * .05) * 4, 8, 6);
   ctx.restore();
+}
+// The Grimmflut on a map (minimap / world map): the board outside the safe square.
+export function renderMinimapFlood(ctx, game, x0, y0, sx, sz) {
+  const kk = kkState(game); if (!kk || kk.time < FLOOD.start - 60) return; const W = kk.map.width; const D = kk.map.depth ?? KK.depth; const safe = kk.time < FLOOD.start ? 1 : floodSafe(kk);
+  const a = W / 2 - safe * W / 2; const b = W / 2 + safe * W / 2; const c = D / 2 - safe * D / 2; const d = D / 2 + safe * D / 2;
+  ctx.save(); ctx.fillStyle = 'rgba(120,30,170,.55)'; ctx.fillRect(x0, y0, W * sx, c * sz); ctx.fillRect(x0, y0 + d * sz, W * sx, (D - d) * sz); ctx.fillRect(x0, y0 + c * sz, a * sx, (d - c) * sz); ctx.fillRect(x0 + b * sx, y0 + c * sz, (W - b) * sx, (d - c) * sz);
+  ctx.strokeStyle = kk.time < FLOOD.start ? 'rgba(200,140,255,.6)' : '#d8a0ff'; ctx.lineWidth = 1; ctx.strokeRect(x0 + a * sx, y0 + c * sz, (b - a) * sx, (d - c) * sz); ctx.restore();
 }
 // Bots on the minimap (only where the map is revealed) and the flood edges.
 export function warMinimapDots(game) {
   const kk = kkState(game); if (!kk?.bots) return [];
-  return kk.bots.filter((b) => b.alive && b !== kk.championBot && (b.ally || kk.reveal.has(b.row + ':' + Math.floor(b.x / 240)))).map((b) => ({ row: b.row, x: b.x, z: .5, color: SEAT_COLORS[b.seat] }));
+  return kk.bots.filter((b) => b.alive && b !== kk.championBot && (b.ally || boardGap(b, game.player) < 1400)).map((b) => ({ row: b.row, x: b.x, z: b.z ?? (kk.map.depth ?? KK.depth) / 2, color: SEAT_COLORS[b.seat], live: true })); /* rivals: only what one sees right now (dynamic), allies always */
 }
 export function hqPanelExtras(game) {
   const kk = kkState(game); const hq = hqOfSeat(kk, 0); const next = HQ_TIERS[(hq.level ?? 0) + 1];

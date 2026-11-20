@@ -205,7 +205,7 @@ function tower(ctx, x, yBase, w, hTop, m, color) {
 export function castleActors(game) {
   const kk = kkState(game); if (!kk) return []; const P = game.player; const t = kk.time; const out = [];
   for (const s of castlesOf(kk)) {
-    if (s.row !== kk.row || Math.abs(s.x - P.x) > 1900) continue;
+    if (s.row !== kk.row || Math.abs(s.x - P.x) > 1900 || Math.abs(s.z - P.z) > 7) continue;
     const d = dimsOf(s); const clip = kk.inside === s ? null : roomClip(kk, s.x, s.z, d.half); if (clip === 'hide') continue; /* nothing reaches into the room one stands in */
     const b = castleBox(s); const f = frontBand(s); const yb = groundYForDepth(b.zMin); const yf = groundYForDepth(b.zMax); const H = d.h; const m = matOf(s); const big = s.kind === 'hq';
     const opts = siteOpts(kk, s); const color = opts.ownerColor ?? '#9e9e9e'; const inside = kk.inside === s;

@@ -134,7 +134,7 @@ function updateSwapUi(game) {
 export function itemActors(game) {
   const kk = kkState(game); if (!kk) return []; const t = kk.time; const out = [];
   for (const it of kk.items) {
-    if (it.kind !== 'item' || it.row !== kk.row) continue; const y = groundYForDepth(it.z); if (kk.inside && roomClip(kk, it.x, it.z, 10) === 'hide' && it.z < kk.inside.z - (kk.inside.kind === 'building' ? .3 : .15) - .01) continue; /* items outside behind the room */
+    if (it.kind !== 'item' || it.row !== kk.row || Math.abs(it.x - game.player.x) > 1600 || Math.abs(it.z - game.player.z) > 6) continue; const y = groundYForDepth(it.z); if (kk.inside && roomClip(kk, it.x, it.z, 10) === 'hide' && it.z < kk.inside.z - (kk.inside.kind === 'building' ? .3 : .15) - .01) continue; /* items outside behind the room */
     out.push({ y, render: (ctx) => {
       const hop = it.hop > 0 ? Math.sin(Math.PI * (1 - it.hop / .5)) * 22 : Math.sin(t * 3 + it.x) * 1.5; const im = itemIcon(it);
       ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.beginPath(); ctx.ellipse(it.x, y, 9, 3, 0, 0, Math.PI * 2); ctx.fill();

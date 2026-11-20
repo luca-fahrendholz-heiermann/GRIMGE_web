@@ -65,7 +65,7 @@ const nodeOf = (game, d) => (d.node ??= new ResourceNode(game, d));
 export function kkResourceTargets(game) {
   const kk = kkState(game); if (!kk?.decor || kk.inside) return [];
   const P = game.player; const out = [];
-  for (const d of kk.decor) if (RESOURCE[d.kind] && !d.gone && d.row === kk.row && Math.abs(d.x - P.x) < REACH) out.push(nodeOf(game, d));
+  for (const d of kk.decor) if (RESOURCE[d.kind] && !d.gone && d.row === kk.row && Math.abs(d.x - P.x) < REACH && Math.abs(d.z - P.z) < 4) out.push(nodeOf(game, d));
   return out;
 }
 

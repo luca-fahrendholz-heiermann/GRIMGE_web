@@ -7,7 +7,7 @@
 //     shade, highlight) into small offscreen canvases and scaled up crisp;
 //   • every biome scatters its own landscape pieces (pines, oaks, dead trees, rocks, crystals, reeds, tufts).
 // When an image is not loaded yet (or in node tests) drawKKSite returns false and the plain drawing in kk_world is used.
-import { mulberry32, BIOME_OF, KK, roadZ } from './kk_map.js';
+import { mulberry32, BIOME_OF, KK, roadGap, biomeAt } from './kk_map.js';
 
 const S = 2; // pixel scale of the drawn sprites (one sprite pixel = 2 world pixels)
 const images = {};
@@ -112,16 +112,19 @@ const BIOME_DECOR = Object.freeze({
 const decorSprite = (kind) => { const d = DECOR[kind]; return d ? sprite('decor_' + kind, d[0], d[1], d[2]) : null; };
 // Deterministic landscape pieces per band (away from the places and the road band).
 export function buildDecor(map) {
-  const rng = mulberry32(map.seed * 7 + 11); const out = [];
-  for (const bio of map.biomes) {
-    const kinds = BIOME_DECOR[bio.element] ?? ['tuft']; const n = Math.round((bio.x1 - bio.x0) / 120);
+  const rng = mulberry32(map.seed * 7 + 11); const out = []; const D = map.depth ?? KK.depth;
+  // over the whole board (2D): about one piece per 120 px across and per 1.4 depth units; off the roads and the places
+  for (let row = 0; row < map.rows; row++) for (const [sx0, sx1] of map.spans?.[row] ?? [[0, map.width]]) {
+    const n = Math.round((sx1 - sx0) / 120 * D / 1.4);
     for (let i = 0; i < n; i++) {
-      const x = bio.x0 + rng() * (bio.x1 - bio.x0); const z = .05 + rng() * (KK.depth - .1); if (Math.abs(z - roadZ(x, bio.row)) < .14) continue; /* the whole depth, not on the road */
-      if ([...map.hqs, ...map.sites].some((s) => s.row === bio.row && (s.kind === 'castle' || s.kind === 'hq' ? Math.abs(s.x - x) < (s.kind === 'hq' ? 400 : 340) && z > s.z - .65 && z < s.z + .3 : Math.abs(s.x - x) < 170 && Math.abs(s.z - z) < .25))) continue; /* castles: wall block plus stairs */
-      let kind = kinds[Math.floor(rng() * kinds.length)]; const roll = rng();
+      const x = sx0 + rng() * (sx1 - sx0); const z = .05 + rng() * (D - .1); const pickK = rng(); const roll = rng(); const flip = rng() < .5;
+      if (roadGap(x, z, row) < 60) continue;
+      if ([...map.hqs, ...map.sites].some((s) => s.row === row && (s.kind === 'castle' || s.kind === 'hq' ? Math.abs(s.x - x) < (s.kind === 'hq' ? 400 : 340) && z > s.z - .65 && z < s.z + .45 : Math.abs(s.x - x) < 170 && Math.abs(s.z - z) < .4))) continue; /* castles: block, stair and guards */
+      const bio = biomeAt(map, row, x, z); const kinds = BIOME_DECOR[bio.element] ?? ['tuft'];
+      let kind = kinds[Math.floor(pickK * kinds.length)];
       // some rocks are resources of the stronger materials: ore veins (steel), and obsidian in the deep and in fire / void / shadow land
-      if (kind === 'rock' && roll < .24) kind = 'ore'; else if ((kind === 'rock' || kind === 'crystal' || kind === 'lava') && roll > (bio.row === 2 || ['ignis', 'void', 'umbra'].includes(bio.element) ? .72 : .93)) kind = 'obsidian';
-      out.push({ row: bio.row, x, z: +z.toFixed(3), kind, flip: rng() < .5 });
+      if (kind === 'rock' && roll < .24) kind = 'ore'; else if ((kind === 'rock' || kind === 'crystal' || kind === 'lava') && roll > (row === 2 || ['ignis', 'void', 'umbra'].includes(bio.element) ? .72 : .93)) kind = 'obsidian';
+      out.push({ row, x, z: +z.toFixed(3), kind, flip });
     }
   }
   return out;
