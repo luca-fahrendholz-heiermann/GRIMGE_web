@@ -2,6 +2,20 @@
 
 Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
+## 20. Nov 2026 – Kronenkrieg: Fraktionen und Dino-Drachen nach dem Vorbild von Heroes of Might and Magic
+
+- **Fraktionen = die 13 Elemente** (die Klasse des Spielers bleibt gesetzt): Glutreich, Sturmbund, Donnerkreis, Steinwacht, Gezeitenhof, Frostmark, Wildrudel, Zahnradorden, Risskult, Sonnenhof, Hainbund, Aegiswacht, Schattenzirkel. Jede hat eine Eigenschaft und vier Stufen:
+  1. die Kämpfer der Burg
+  2. die Signatur-Kämpfer der Fraktion
+  3. ein mystisches Wesen (Bestienhort)
+  4. der Dino-Drache der Fraktion (Drachenhort)
+- **Eroberung lohnt sich:** Eine Burg gehört zur Fraktion ihres Landes; wer sie einnimmt, kann deren Einheiten anwerben.
+- **Dino-Drachen:** Magmarax, Zephyraptor, Voltraptor, Terrankyl, Thalasspin, Cryoceratops, Ravagerox, Mechanosteg, Nihilzinos, Luminara, Sylvadrakon, Aegisaurus, Noctivenom. Die Sprites des Nutzers sind freigestellt und klein gerechnet (864 KB zusammen). Es sind große, starke Einheiten mit einer Elementwelle alle 7 s.
+- **Rhythmus:** Eine „Woche“ dauert 3 Minuten und füllt die Rekrutierungspools auf. Bestien- und Drachenhort sind auf der Burg zu sehen.
+- **Armee:** Veteranen mit Namen (ab 4 bzw. 10 Siegen), Moral (eine Fraktion +10 %, mehr als drei −5 %), Sold ab der 13. Einheit, Armee-Übersicht als Stapel im Beutel.
+- **Wilde Dino-Drachen** als Weltereignis: Sie hinterlassen ihr Ei; ausgebrütet gehört der Drache dir. Rivalen werben ebenfalls Fraktionseinheiten an und ziehen Dino-Drachen groß.
+- **Dokumente:** `GRIMGE_ARMEE_PLAN.md` hat einen neuen Abschnitt „Umgesetzt“, neu ist `GRIMGE_PRODUKTREIFE.md` (was bis zum fertigen Produkt fehlt).
+
 ## 20. Nov 2026 – Kronenkrieg: großes Korrekturpaket (Rückmeldung des Nutzers, zwei Videos)
 
 **Fehler aus den Videos** (iPhone 5:28 und PC 2:17, Bild für Bild ausgelesen):

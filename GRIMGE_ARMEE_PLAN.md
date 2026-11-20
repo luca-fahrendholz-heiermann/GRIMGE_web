@@ -77,3 +77,31 @@ Dieses Dokument analysiert, was HoMM (vor allem Teil III, das Vorbild der Reihe)
 Offene Fragen an den Nutzer:
 - Soll die „Woche“ 3 Minuten dauern?
 - Soll es 7 Plätze geben wie in HoMM, oder weniger für das Handy?
+
+## 5. Umgesetzt (20. Nov 2026, zweiter Schritt — nach der Analyse des Nutzers)
+
+Leitsätze aus der Analyse: **Aneignung** (die Welt gehört zunehmend mir), **Sammlung** (jede Fraktion erweitert die Armee), **Entwicklung** (Held, Armee und Burgen wachsen gemeinsam). Zentrale Regel: *Jede größere Eroberung öffnet eine neue strategische Option.*
+
+- **Die Klasse des Spielers bleibt gesetzt.** Fraktionen sind die 13 Elemente (wie bei Runen und Mastery).
+- **Fraktion einer Burg:** das Land, in dem sie steht. Wer sie einnimmt, kann ihre Einheiten anwerben (`kk_factions.js`).
+- **Vier Stufen je Fraktion:**
+  1. die Kämpfer der Burg
+  2. die Signatur-Kämpfer der Fraktion
+  3. ein mystisches Wesen (braucht den Bestienhort)
+  4. der Dino-Drache der Fraktion (braucht den Drachenhort)
+- **Die 13 Dino-Drachen** aus dem Bestiarium des Nutzers (Element + Dinosaurier + Drache) haben jetzt Sprites in `assets/creatures/dinodragons/`. Originale und Tabelle liegen in `art_source/dinodragons/`.
+- **Woche = 3 Minuten:** Die Pools jeder eigenen Burg füllen sich auf. Eine stärkere Hauptburg gibt mehr Wachstum.
+- **Sichtbarer Fortschritt:** Der Bestienhort zeigt Kristalle der Fraktion auf dem Dach, auf dem Drachenhort ruht der Dino-Drache.
+- **Moral:** Eine Fraktion allein bringt +10 %, mehr als drei gemischt −5 %.
+- **Unterhalt** gegen Snowballing: 1 Gold pro Einheit über 12, ein Dino-Drache kostet 10. Unbezahlt sinkt die Moral.
+- **Veteranen mit Namen** (die Armee erzählt eine Geschichte): ab 4 Siegen Veteran, ab 10 Elite.
+- **Wilde Dino-Drachen** als Weltereignis: Sie hinterlassen ihr Ei; ausgebrütet schließt sich der Drache dem Trupp an. Rivalen ziehen ebenfalls Dino-Drachen groß.
+- **Armee-Übersicht** als Stapel im Beutel; Runensegen, Truppen-Tempo und Portale (siehe oben).
+
+**Noch offen:**
+- Die 12 Hybrid-Dino-Drachen (zwei Elemente) als seltene Brut aus zwei Steinarten
+- Söldnerlager (externe Behausungen)
+- Feldherr-Fähigkeiten im Meisterschaftsbaum
+- Signaturfähigkeiten je Dino-Drache (jetzt eine gemeinsame Elementwelle mit dem Namen der Fähigkeit)
+- Animationen der Dino-Drachen (jetzt Einzelbilder mit Atem- und Ausfallbewegung)
+- Ein Conquest-Modus über mehrere Stunden (siehe Analyse: Snowballing gehört eher in Kampagne und Conquest als ins PvP)
