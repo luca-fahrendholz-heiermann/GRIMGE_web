@@ -5613,13 +5613,31 @@ game.running = false;
     kk.items = kk.items.slice(0, n0);
     assert(allKinds && blueSees && redBlind && felled && harder && regrown, 'Kronenkrieg resources: trees, rocks, ore veins and obsidian stand in the landscape; only the player side can hit them; a felled tree drops its wood as items, obsidian takes far more blows (' + hitsObs + ' vs ' + hitsTree + '), a node regrows (' + [allKinds, blueSees, redBlind, felled, harder, regrown].join('/') + ')');
   }
+  {
+    // castles (feedback 20 Nov 2026): a solid wall block, the rampart reached by the side stair, the own gate leads into the hall with the menu, foes stay out and only batter it
+    const KCa = await import('./public/src/kk_castle.js'); const KAc = await import('./public/src/kk_army.js'); const kr0 = kk.row; const keepInside = kk.inside; kk.inside = null;
+    const cs = kk.map.sites.find((x) => x.kind === 'castle' && x.row === KM.KK.main) ?? kk.map.sites.find((x) => x.kind === 'castle'); kk.row = cs.row; KW.updateKronenkrieg(game, 1 / 60); const box = KCa.castleBox(cs); const dims = KCa.dimsOf(cs);
+    const surfOk = game.battlefield.levelSurfaces.filter((S) => S.siteId === cs.id).length === 3;
+    const walk = (mx, mz, n) => { const inp = { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: mx, z: mz }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false }; game.input.move = { x: mx, z: mz }; for (let i = 0; i < n; i++) { P.update(1 / 60, inp, game.battlefield, game); KW.updateKronenkrieg(game, 1 / 60); } game.input.move = { x: 0, z: 0 }; };
+    for (const m of game.minions) if (m.isKKUnit && m.team !== P.team) m.isDead = true; game.minions = game.minions.filter((m) => !m.isDead);
+    P.x = cs.x + 110; P.z = cs.z + .06; P.elevation = 0; P.grounded = true; game.battlefield.placeOnSurface(P); walk(0, -1, 60); const solid = P.z > box.zMax - .005 && (P.surfaceHeight ?? 0) < 5;
+    P.x = box.x0 - dims.stair - 30; P.z = (box.zMin + box.zMax) / 2 + .03; game.battlefield.placeOnSurface(P); walk(1, 0, 150); const onRampart = P.x > box.x0 + 10 && (P.surfaceHeight ?? 0) > dims.h - 6;
+    const was = cs.owner; cs.owner = 0; P.x = cs.x; P.z = cs.z + .05; P.surfaceHeight = 0; P.elevation = 0; game.battlefield.placeOnSurface(P); walk(0, -1, 4); const entered = kk.inside === cs && kk.panelOpen === true;
+    const foe = KAc.addRecord(kk, { team: 'red', bandit: true, cls: 'Berserker', element: null, tier: 1, row: cs.row, x: cs.x + 40, z: cs.z + .08, role: 'guard', siteId: null }); KAc.updateArmy(game, 1 / 60); const fu = foe.live; if (fu) { fu.x = cs.x + 60; fu.z = cs.z - .06; } KW.updateKronenkrieg(game, 1 / 60); const foeOut = !!fu && (fu.z > box.zMax || fu.x < box.x0 || fu.x > box.x1);
+    const gate = kk.doorProxy?.(fu); const hp0 = KCa.castleHp(cs); gate?.takeDamage(30); const battered = !!gate?.isCastleGate && KCa.castleHp(cs) === hp0 - 30;
+    P.z = box.zMax + .006; walk(0, 1, 2); const left = kk.inside === null && kk.panelOpen === false;
+    if (fu) fu.isDead = true; kk.units = kk.units.filter((u) => u !== foe); game.minions = game.minions.filter((m) => !m.isDead); cs.owner = was; cs.hp = KCa.castleMaxHp(cs); kk.row = kr0; kk.inside = keepInside; KW.updateKronenkrieg(game, 1 / 60);
+    assert(surfOk && solid && onRampart && entered && foeOut && battered && left, 'Kronenkrieg castles: a solid wall block (walking into it stops at the wall), the side stair leads up onto the rampart, the own gate opens the hall with the castle menu, a foe stays outside and only batters the gate, walking out closes the menu (' + [surfOk, solid, onRampart, entered, foeOut, battered, left].join('/') + ')');
+  }
   // army: renegade garrisons live in the band, capture a mid castle, train (frost stone + reel), garrison ▲ ▼, merge, prisoners, squad crosses bands
   const KA = await import('./public/src/kk_army.js'); game.returnToHub(); game.setMatchMode('kronenkrieg'); game.startMatch(); const k2 = game.modeState.kk; const P2 = game.player;
   { const c0 = k2.map.sites.find((x) => x.kind === 'castle' && x.row === k2.row) ?? k2.map.sites.find((x) => x.kind === 'castle'); k2.row = c0.row; P2.x = c0.x - 300; } /* next to a garrison: the start may have none in reach */
   KA.updateArmy(game, 1 / 60); const liveGuards = game.minions.filter((m) => m.isKKUnit && m.team === 'red').length; const inBand = k2.units.filter((u) => u.row === k2.row && u.team === 'red' && Math.abs(u.x - P2.x) < 2600).length; /* far parts of a band stay records */
   const castle = k2.map.sites.filter((x) => x.kind === 'castle').sort((a2, b2) => (a2.row - k2.row) ** 2 * 1e8 + Math.abs(a2.x - P2.x) - ((b2.row - k2.row) ** 2 * 1e8 + Math.abs(b2.x - P2.x)))[0];
   k2.row = castle.row; for (const u of k2.units.filter((x) => x.siteId === castle.id)) { if (u.live) u.live.takeDamage(9999); } k2.units = k2.units.filter((x) => x.siteId !== castle.id); P2.x = castle.x; P2.z = castle.z;
-  for (let i = 0; i < 200 && castle.owner !== 0; i++) { game.minions = game.minions.filter((m) => !m.isDead); KA.updateArmy(game, 1 / 60); } const captured = castle.owner === 0;
+  KA.updateArmy(game, 1 / 60); const heldBack = castle.owner !== 0 && (k2.progress[castle.id] ?? 0) === 0; /* the wall still stands: no capture yet */
+  const wallT = game.getHostileTargets(P2.team).find((t) => t.isCastleWall && t.s === castle); for (let i = 0; i < 400 && wallT && !wallT.isDead; i++) wallT.takeDamage(25, 1); /* batter the wall down first (feedback 20 Nov 2026) */
+  for (let i = 0; i < 400 && castle.owner !== 0; i++) { game.minions = game.minions.filter((m) => !m.isDead); KA.updateArmy(game, 1 / 60); } const captured = castle.owner === 0 && heldBack && !!wallT;
   k2.gold = 200; k2.inv.weapons[castle.weapon] = 4; k2.inv.stones.frost = 4; const tr = KA.trainUnit(game, castle, 'frost', { spin: true });
   for (let i = 0; i < 400; i++) KA.updateArmy(game, 1 / 60); const gar = k2.units.filter((u) => u.role === 'garrison' && u.siteId === castle.id); const trained = tr.ok && !!tr.reels && gar.length === 1 && gar[0].element === 'frost' && castle.garrison === 1;
   const key = KA.groupTypes(gar)[0].key; const took = KA.takeAlong(game, castle, key) && k2.units.some((u) => u.role === 'squad' && u.element === 'frost'); const back = KA.station(game, castle, key) && castle.garrison !== undefined;

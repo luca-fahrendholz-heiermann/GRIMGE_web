@@ -18,6 +18,7 @@ function img(path) {
 }
 const prop = (name) => img(`assets/scenes/props/${name}.png`);
 const tower = (skin, team) => img(`assets/castles/${skin}_${team}.png`);
+export const castleTowerImage = (biome, friendly) => tower(CASTLE_SKIN_OF[biome] ?? 'ruins', friendly ? 'blue' : 'red'); /* kk_castle.js */
 export const CASTLE_SKIN_OF = Object.freeze({ ignis: 'volcano', frost: 'frozen', aqua: 'waterfalls', fulgur: 'storm', ventus: 'canyon', terra: 'canyon', natura: 'ruins', bestia: 'ruins', construct: 'ruins', void: 'arcane', lux: 'arcane', umbra: 'arcane', ward: 'rain' });
 
 // ── pixel sprites ──────────────────────────────────────────────────────────────────────────────────────────────────
@@ -116,7 +117,7 @@ export function buildDecor(map) {
     const kinds = BIOME_DECOR[bio.element] ?? ['tuft']; const n = Math.round((bio.x1 - bio.x0) / 120);
     for (let i = 0; i < n; i++) {
       const x = bio.x0 + rng() * (bio.x1 - bio.x0); let z = rng() < .5 ? .06 + rng() * .28 : .72 + rng() * .24;
-      if ([...map.hqs, ...map.sites].some((s) => s.row === bio.row && Math.abs(s.x - x) < 170 && Math.abs(s.z - z) < .25)) continue;
+      if ([...map.hqs, ...map.sites].some((s) => s.row === bio.row && (s.kind === 'castle' || s.kind === 'hq' ? Math.abs(s.x - x) < (s.kind === 'hq' ? 400 : 340) && z > s.z - .24 && z < s.z + .12 : Math.abs(s.x - x) < 170 && Math.abs(s.z - z) < .25))) continue; /* castles: wall block plus stairs */
       let kind = kinds[Math.floor(rng() * kinds.length)]; const roll = rng();
       // some rocks are resources of the stronger materials: ore veins (steel), and obsidian in the deep and in fire / void / shadow land
       if (kind === 'rock' && roll < .24) kind = 'ore'; else if ((kind === 'rock' || kind === 'crystal' || kind === 'lava') && roll > (bio.row === 2 || ['ignis', 'void', 'umbra'].includes(bio.element) ? .72 : .93)) kind = 'obsidian';

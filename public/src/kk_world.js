@@ -4,7 +4,8 @@
 // reveals itself while exploring (fog on the minimap). No painted background: the ground itself is the world.
 import { generateKKMap, BIOME_OF, biomeAt, spanAt, KK, LEVEL_NAMES } from './kk_map.js';
 import { drawKKSite, buildDecor } from './kk_art.js';
-import { drawNode, updateResources } from './kk_resources.js'; // the places and the landscape in the game's pixel style
+import { drawNode, updateResources } from './kk_resources.js';
+import { castleActors, updateCastles } from './kk_castle.js'; // the places and the landscape in the game's pixel style
 import { groundYForDepth, getGroundProjection, setGroundProjection } from './world.js';
 
 export const KK_PROJECTION = Object.freeze({ farY: 214, nearY: 512 }); /* a deep floor: the plane should feel wide in depth too */
@@ -69,7 +70,7 @@ export const connectorsOf = (kk, row) => kk.map.sites.filter((s) => (s.kind === 
 export function updateKronenkrieg(game, dt) {
   const kk = kkState(game); if (!kk) return;
   kk.time += dt;
-  updateResources(game, dt);
+  updateResources(game, dt); updateCastles(game, dt);
   const P = game.player;
   if (P.isAlive) { /* a rider steps off at a shaft or lift (the mount follows if it is part of the squad) */
     // a shaft: walking into the hole drops one level down, beside the lift that leads back up
@@ -226,8 +227,9 @@ export function renderKKGround(ctx, game, x0, x1) {
 // The places of the current band take part in the depth order (a figure behind a castle is hidden by it).
 export function kkActors(game) {
   const kk = kkState(game); if (!kk) return [];
-  const out = [...kk.map.hqs, ...kk.map.sites].filter((s) => s.row === kk.row).map((s) => ({ y: groundYForDepth(s.z), render: (ctx) => drawSite(ctx, s, groundYForDepth(s.z), kk.time, siteOpts(kk, s)) }));
+  const out = [...kk.map.hqs, ...kk.map.sites].filter((s) => s.row === kk.row && s.kind !== 'castle' && s.kind !== 'hq').map((s) => ({ y: groundYForDepth(s.z), render: (ctx) => drawSite(ctx, s, groundYForDepth(s.z), kk.time, siteOpts(kk, s)) }));
   const P = game.player; for (const d of kk.decor ?? []) if (d.row === kk.row && Math.abs(d.x - P.x) < 1400) out.push({ y: groundYForDepth(d.z), render: (ctx) => drawNode(ctx, d, groundYForDepth(d.z)) }); /* resource nodes: kk_resources.js */
+  out.push(...castleActors(game)); /* the castles: solid wall blocks with rampart and stairs (kk_castle.js) */
   return out;
 }
 

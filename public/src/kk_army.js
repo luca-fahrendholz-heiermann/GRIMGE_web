@@ -15,6 +15,7 @@ import { squadBonus, XP } from './kk_progress.js';
 import { kkState, kkOn, SEAT_COLORS, elementColor } from './kk_world.js';
 import { gainXp } from './kk_loot.js';
 import { spawnItems, showReels } from './kk_items.js';
+import { castleHp, castleMaxHp, inGateRing, outOfCastle, squadWallTarget } from './kk_castle.js';
 
 // Per class: melee/ranged and multipliers on the minion base values.
 export const CLASS_STATS = Object.freeze({
@@ -97,6 +98,7 @@ export function kkFindTarget(game, unit) {
     // the own side: foes near the leader / the post
     const leash = LEASH[rec.role] ?? 420; let bestD = Infinity;
     for (const t of game.getHostileTargets(unit.team)) { if (!live(t)) continue; const d = gap(t, unit); if (gap(t, anchor) > leash || d > leash + 200) continue; if (d < bestD) { best = t; bestD = d; } }
+    if (!best && rec.role === 'squad' && mine(rec)) best = squadWallTarget(game, anchor); /* no foe about: help batter the foe castle in front of the leader */
   } else {
     // renegades, creatures, rivals: notice, alert, chase on a leash, return
     let eng = unit.kkEngaged;
@@ -139,11 +141,12 @@ function anchorFor(kk, rec) {
   if (site && rec.role !== 'patrol') {
     const t = kk.time ?? 0; const ph = rec.id * 1.7; const walk = rec.role === 'guard' ? 1 : .4; /* guards patrol around their post, garrisons stay closer */
     a.x = site.x + ((rec.id * 53) % 160) - 80 + Math.sin(t * .45 + ph) * 130 * walk; a.z = Math.max(.08, Math.min(.92, site.z + (((rec.id * 31) % 30) - 15) / 100 + Math.sin(t * .3 + ph * 2) * .12 * walk));
+    if (site.kind === 'castle' || site.kind === 'hq') outOfCastle(kk, a, site.row); /* guards stand in front of the wall block */
   }
   return a;
 }
 function spawnLive(game, rec) {
-  const kk = kkState(game); const u = rec.creature && kk.creatureClass ? new kk.creatureClass(rec) : new KKUnit(rec); rec.live = u; /* creatures: kk_creatures.js */ u.x = rec.x; u.z = rec.z;
+  const kk = kkState(game); const u = rec.creature && kk.creatureClass ? new kk.creatureClass(rec) : new KKUnit(rec); rec.live = u; /* creatures: kk_creatures.js */ u.x = rec.x; u.z = rec.z; outOfCastle(kk, u, rec.row); /* never inside a wall block */
   u.followLeader = rec.role === 'squad' ? (mine(rec) ? game.player : (kk.botLeader?.(rec.seat) ?? anchorFor(kk, rec))) : anchorFor(kk, rec);
   game.battlefield.placeOnSurface?.(u); game.minions.push(u); return u;
 }
@@ -199,18 +202,21 @@ function updatePatrols(game, dt) {
 }
 
 // ── capturing, prisoners ───────────────────────────────────────────────────────────────────────────────────────────
-const CAPTURE_TIME = 3;
+const CAPTURE_TIME = 4; /* = CASTLE.captureTime (kk_castle.js; a literal: the modules import each other) */
 function updateSites(game, dt) {
   const kk = kkState(game); const P = game.player; if (!P.isAlive) return;
   for (const s of kk.map.sites) {
     if (s.row !== kk.row) continue;
     const close = Math.abs(P.x - s.x) < 120 && Math.abs(P.z - s.z) < .2;
     if (s.kind === 'castle' && s.owner !== 0 && !sameTeam(kk, s.owner, 0)) { /* an ally's castle is not taken */
-      const guards = hostileGuards(kk, s).length + kk.units.filter((u) => u.role === 'garrison' && u.siteId === s.id && u.team !== 'blue').length;
-      kk.progress[s.id] = close && !guards ? (kk.progress[s.id] ?? 0) + dt : 0;
+      // only a castle without life is taken: alone in the ring at its gate until the ring is full (user, 20 Nov 2026)
+      const ring = inGateRing(s, P); const open = castleHp(s) <= 0;
+      const guards = hostileGuards(kk, s).length + kk.units.filter((u) => u.role === 'garrison' && u.siteId === s.id && u.team !== 'blue').length + game.minions.filter((m) => m.isKKUnit && !m.isDead && m.team !== P.team && Math.hypot(m.x - s.x, (m.z - s.z) * 150) < 280).length;
+      if (ring && !open && kk.time - (s.wallHintAt ?? -99) > 4) { s.wallHintAt = kk.time; game.showAnnouncement?.('ERST DIE BURGMAUER ZERSTÖREN (SCHLÄGE, ZAUBER, DEINE TRUPPE HILFT)', 1.6); }
+      kk.progress[s.id] = ring && open && !guards ? (kk.progress[s.id] ?? 0) + dt : 0; /* any foe nearby or leaving the ring starts it over */
       if (close && guards && Math.floor(kk.time * 2) % 6 === 0) s.blockedHint = true;
       if (kk.progress[s.id] >= CAPTURE_TIME) {
-        kk.progress[s.id] = 0; s.owner = 0; s.garrison = 0; gainXp(game, XP.capture);
+        kk.progress[s.id] = 0; s.owner = 0; s.garrison = 0; s.hp = castleMaxHp(s) * .5; s.lastHitT = kk.time; gainXp(game, XP.capture);
         game.showAnnouncement?.(`${s.label}BURG EROBERT — DU BILDEST HIER ${s.label === 'BOGEN' ? 'SCHÜTZEN' : 'KÄMPFER'} AUS`, 2);
         combat.spawnShockwave?.(s.x, groundYForDepth(s.z) - 60, 120, SEAT_COLORS[0]); audio.playRuneChime?.(880);
       }
@@ -358,7 +364,7 @@ function ensureOpener(game) {
 }
 function updatePanel(game) {
   const kk = kkState(game); const P = game.player;
-  const own = [...kk.map.sites.filter((s) => s.kind === 'castle' && s.owner === 0), ...kk.map.hqs.filter((h) => h.seat === 0)].find((s) => s.row === kk.row && Math.abs(P.x - s.x) < 170 && Math.abs(P.z - s.z) < .35);
+  const own = kk.inside && kk.inside.kind !== 'building' ? kk.inside : null; /* the castle menu lives inside the castle (user: inside one creates warriors) */
   const op = ensureOpener(game);
   if (!own || !P.isAlive) { kk.panelOpen = false; if (op) op.el.style.display = 'none'; if (panel?.siteId) { closeKKPanel(); if (panel) panel.msg = ''; } return; }
   if (op) { op.el.style.display = 'block'; op.el.textContent = kk.panelOpen ? '✕ SCHLIESSEN (F)' : `♜ ${own.kind === 'hq' ? 'HAUPTBURG' : own.label + 'BURG'} (F)`; }
@@ -374,8 +380,6 @@ export function updateArmy(game, dt) {
   updatePatrols(game, dt); syncLive(game);
   for (const rec of kk.units) if (rec.live && (rec.role === 'guard' || rec.role === 'garrison')) anchorFor(kk, rec); /* the round of the guards moves on */ updateSites(game, dt); updateQueues(game, dt); updatePanel(game);
 }
-// Capture rings over a castle being taken.
 export function armyActors(game) {
-  const kk = kkState(game); if (!kk?.units) return [];
-  return kk.map.sites.filter((s) => s.row === kk.row && s.kind === 'castle' && kk.progress[s.id] > 0).map((s) => ({ y: groundYForDepth(s.z) + .6, render: (ctx) => { const k = Math.min(1, kk.progress[s.id] / CAPTURE_TIME); const y = groundYForDepth(s.z) - 170; ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(s.x, y, 20, 0, Math.PI * 2); ctx.stroke(); ctx.strokeStyle = SEAT_COLORS[0]; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(s.x, y, 20, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * k); ctx.stroke(); } }));
+  return []; /* the capture ring is drawn at the castle gate (kk_castle.js) */
 }

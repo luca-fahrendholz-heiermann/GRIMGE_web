@@ -2,6 +2,16 @@
 
 Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
+## 20. Nov 2026 – Kronenkrieg: Feedback-Liste, Teil 4 — Burgen als feste, begehbare Bauwerke
+
+- Burgen sind feste Mauerblöcke, etwa doppelt so breit wie vorher: niemand läuft hindurch (Spieler, Einheiten, Rivalen).
+- An beiden Seiten führt eine Steintreppe auf den Wehrgang. Oben kann man Wache halten und kämpfen, die Zinnen stehen vor den Füßen; die Fahne weht auf dem Dach. Vom Wehrgang springt man nach vorn hinunter.
+- Fronttor wie bei Häusern: die eigene Burg (bzw. Hauptburg) betritt man durchs Tor. Innen liegt eine Halle (Banner, Waffenständer, Übungspuppe), dort öffnet sich das Burg-Menü zum Ausbilden, Bauen und Einlagern; hinaus geht es durch das offene Tor.
+- Gegner kommen nicht in Burgen. Jede Burg hat einen Lebensbalken; Feinde können nur Mauer und Tor von außen einschlagen.
+- Einnehmen: erst den Lebensbalken von außen zerstören (Schläge und Zauber, die eigene Truppe hilft mit), dann allein im Kreis vor dem Tor stehen, bis er voll ist. Ein Feind in der Nähe oder das Verlassen des Kreises setzt ihn zurück. Das gilt auch für Rivalen; steht der Spieler an seiner Burg, bricht er ihren Kreis. Eine Hauptburg ohne Leben fällt erst nach 8 Sekunden ungestörtem Kreis.
+- Mittlere Burgen reparieren sich, wenn sie 10 Sekunden in Ruhe gelassen werden. Wachen stehen vor dem Mauerblock.
+- Die Hauptebene ist breiter (24 000 statt 19 200), damit die großen Burgen, Häuser und Lager Platz haben.
+
 ## 20. Nov 2026 – Kronenkrieg: Feedback-Liste, Teil 3 — Rohstoffe aus der Landschaft
 
 - Bäume geben Holz, Felsen Stein, Erzadern (Gestein mit blanken Einschlüssen) Stahl, Obsidianblöcke Obsidian. Schlagen nutzt sie ab: sie wackeln, zeigen einen kleinen Balken, Bäume kippen um, Gestein zerbricht, das Material fällt als Gegenstände heraus.

@@ -30,7 +30,8 @@ import { initCreatures, updateCreatures, creatureActors, creatureMinimapDots, ta
 import { initCrown, updateCrown, closeCrownPanel, kkFocusLocked, kkFocusStyle } from './kk_crown.js'; // Kronenkrieg: the crowning trials
 import { updateInterior, interiorActors } from './kk_interior.js'; // Kronenkrieg: houses you walk into (cut-away)
 import { itemActors, renderReels, closeBag } from './kk_items.js';
-import { kkResourceTargets } from './kk_resources.js'; // Kronenkrieg: trees, rocks, ore, obsidian to harvest // Kronenkrieg: items, the bag, the reel window // the Training map where clones show every spell
+import { kkResourceTargets } from './kk_resources.js';
+import { castleTargets } from './kk_castle.js'; // Kronenkrieg: foe castle walls to batter // Kronenkrieg: trees, rocks, ore, obsidian to harvest // Kronenkrieg: items, the bag, the reel window // the Training map where clones show every spell
 import { loadFxSprites } from './fx_sprites.js';
 import { loadSpellSprites } from './spell_visuals.js';
 import { renderPixelated } from './abilities.js';
@@ -2537,7 +2538,7 @@ export class GameWorld {
     if (this.primal && myTeam !== this.primal.team && this.primal.isTargetable && (!this.siegeMatch || this.primal.onLane)) targets.push(this.primal);
     if (myTeam === 'blue' && this.enemyChampion.isAlive) targets.push(this.enemyChampion);
     for (const foe of this.activeMode?.id === 'kronenkrieg' ? (this.kkExtraFoes ?? []) : []) if (foe.isAlive && foe.team !== myTeam) targets.push(foe); /* further rival champions (kk_war.js) */
-    if (this.activeMode?.id === 'kronenkrieg' && myTeam === this.player.team) targets.push(...kkResourceTargets(this)); /* resource nodes: only the player's side harvests */
+    if (this.activeMode?.id === 'kronenkrieg' && myTeam === this.player.team) targets.push(...kkResourceTargets(this), ...castleTargets(this)); /* resource nodes, foe castle walls: the player's side */
 
     if (this.activeMode?.objectives !== false || this.battlefield.trainingTowersOn) {
       const enemyTeam = myTeam === 'blue' ? 'red' : 'blue';
@@ -3086,7 +3087,7 @@ export class GameWorld {
 
   returnToHub(reason = 'menu') {
     this.kkExtraFoes = [];
-    closeBasePrompt(); closeKKPanel(); closeCrownPanel(); closePotionButtons(); closeCastleOpener(); closeBag();
+    closeBasePrompt(); closeKKPanel(); closeCrownPanel(); closePotionButtons(); closeCastleOpener(); closeBag(); if (this.activeMode?.id === 'kronenkrieg' && this.battlefield) this.battlefield.levelSurfaces = []; /* the castle ramparts */
     this.markMatchSession(false);
     try { const log = JSON.parse(globalThis.localStorage?.getItem?.('grimge-hub-log') ?? '[]'); log.push({ reason, mode: this.activeMode?.id, at: new Date().toISOString(), stack: String(new Error().stack).split(String.fromCharCode(10)).slice(2, 6).join(' < ').slice(0, 400) }); globalThis.localStorage?.setItem?.('grimge-hub-log', JSON.stringify(log.slice(-10))); } catch { /* optional */ }
     this.matchState = 'Menu';

@@ -11,6 +11,7 @@ import { audio } from './audio.js';
 import { kkState, kkOn, applyBounds } from './kk_world.js';
 import { openChest } from './kk_loot.js';
 import { addRecord } from './kk_army.js';
+import { damageCastle } from './kk_castle.js';
 
 // half / depth: the inside (wider and deeper than the house looks from outside, user 19 Nov 2026); outHalf / outDepth: the
 // solid footprint of the house in the world (nobody walks through a house, only through its door).
@@ -87,6 +88,7 @@ function houseSolidity(game) {
 // Where a foe aims while the player hides in a house: the door (it then follows inside).
 export function doorProxy(game, unit) {
   const kk = kkState(game); const s = kk.inside; if (!s) return null;
+  if (s.kind !== 'building') return { isDoorProxy: true, isCastleGate: true, team: game.player.team, x: s.x, z: s.z + .03, get y() { return groundYForDepth(s.z + .03); }, isDead: false, isAlive: true, radius: 6, takeDamage: (a) => { damageCastle(game, s, a, unit); return {}; } }; /* a castle: foes only batter its gate */
   return { isDoorProxy: true, team: game.player.team, x: s.x, z: s.z + .06, get y() { return groundYForDepth(s.z + .06); }, isDead: false, isAlive: true, radius: 6, takeDamage: () => {} };
 }
 
@@ -94,6 +96,7 @@ export function updateInterior(game, dt) {
   if (!kkOn(game)) return; const kk = kkState(game); const P = game.player; const mz = game.input?.move?.z ?? 0;
   kk.doorProxy ??= (unit) => doorProxy(game, unit);
   houseSolidity(game);
+  if (kk.inside && kk.inside.kind !== 'building') return; /* inside a castle: kk_castle.js */
   if (!kk.inside) {
     if (!P.isAlive || P.isMounted) return;
     const door = kk.map.sites.find((s) => s.kind === 'building' && s.row === kk.row && Math.abs(P.x - s.x) < HOUSE.doorHalf && P.z >= s.z - .005 && P.z <= s.z + .1);
@@ -124,7 +127,7 @@ function chest(ctx, x, y, open, k) {
   else if (k > 0) { ctx.strokeStyle = '#ffe9a8'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y - 40, 11, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * k); ctx.stroke(); }
 }
 export function interiorActors(game) {
-  const kk = kkState(game); const site = kk?.inside; if (!site) return [];
+  const kk = kkState(game); const site = kk?.inside; if (!site || site.kind !== 'building') return [];
   const x0 = site.x - HOUSE.half; const x1 = site.x + HOUSE.half; const yb = groundYForDepth(zBack(site)); const yf = groundYForDepth(zFront(site)); const wallH = 80 + Math.min(2, site.floors ?? 1) * 62; const two = (site.floors ?? 1) >= 2;
   const [g0, g1] = galleryBand(site); const H = HOUSE.floorH; const t = kk.time;
   const out = [];

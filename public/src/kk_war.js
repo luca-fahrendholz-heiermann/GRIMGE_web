@@ -13,6 +13,7 @@ import { kkState, kkOn, SEAT_COLORS, SEAT_NAMES, elementColor } from './kk_world
 import { gainXp, dropPile } from './kk_loot.js';
 import { addRecord, teamOfSeat, sameTeam } from './kk_army.js';
 import { EnemyChampion } from './entities.js';
+import { castleHp, castleMaxHp, damageCastle, CASTLE } from './kk_castle.js';
 
 export const HQ_TIERS = Object.freeze([
   null, { mat: 'wood', cost: 30, name: 'HOLZBURG' }, { mat: 'stone', cost: 40, name: 'STEINBURG' }, { mat: 'steel', cost: 30, name: 'STAHLBURG' }, { mat: 'obsidian', cost: 20, name: 'OBSIDIANBURG' }
@@ -137,6 +138,9 @@ function actBot(game, bot, dt) {
   } else if (t.kind === 'capture') {
     const foes = kk.units.filter((u) => u.siteId === site.id && (u.role === 'guard' || u.role === 'garrison') && u.team !== bot.team);
     if (!abstractBattle(kk, bot, foes, dt, game)) return;
+    if (castleHp(site) > 0) { damageCastle(game, site, (strength(botSquad(kk, bot)) * 5 + 15 + bot.level * 3) * dt, bot); return; } /* the wall first (user, 20 Nov 2026) */
+    if (defendedByPlayer(game, site)) { site.capT = 0; return; } /* the ring is broken while the owner stands there */
+    site.capT = (site.capT ?? 0) + dt; if (site.capT < CASTLE.captureTime) return; site.capT = 0; site.hp = castleMaxHp(site) * .5; site.lastHitT = kk.time;
     const was = site.owner; site.owner = bot.seat; botGain(kk, bot, XP.capture);
     for (const u of botSquad(kk, bot).slice(0, 2)) { u.role = 'garrison'; u.siteId = site.id; }
     if (was === 0) game.showAnnouncement?.(`${SEAT_NAMES[bot.seat]} HAT DEINE ${site.label}BURG EROBERT!`, 2.2);
@@ -147,7 +151,7 @@ function actBot(game, bot, dt) {
     const defenders = kk.units.filter((u) => u.role === 'garrison' && u.siteId === site.id && u.team !== bot.team);
     if (!inBand && !abstractBattle(kk, bot, defenders, dt, game)) { site.siegeT = 3; return; }
     if (defenders.length) { site.siegeT = 3; return; }
-    if (!inBand) { site.siegeT = 3; site.hp -= (strength(botSquad(kk, bot)) * 6 + bot.level * 4) * dt * (site.level >= 4 ? .7 : 1); if (site.hp <= 0) fallHQ(game, site, bot.seat); }
+    if (!inBand) { site.siegeT = 3; site.hp -= (strength(botSquad(kk, bot)) * 6 + bot.level * 4) * dt * (site.level >= 4 ? .7 : 1); if (site.hp <= 0) breachHQ(game, site, bot.seat, dt); }
     if (!botSquad(kk, bot).length) bot.task = null;
   } else bot.task = null;
 }
@@ -209,6 +213,18 @@ function updateExtraChampions(game, dt) {
 export function kkEnemyHome(game) { const kk = kkState(game); const cb = kk?.championBot; if (!cb) return null; const site = cb.task && siteById(kk, cb.task.id); return site && site.row === kk.row ? { x: site.x, z: site.z } : { x: cb.x, z: cb.z }; }
 
 // ── sieges on the player's band, the HQ tower, falling ─────────────────────────────────────────────────────────────
+// The owner (the player at his own castle, or a live defender of the garrison) breaks a capture ring.
+function defendedByPlayer(game, site) {
+  const kk = kkState(game); const P = game.player; const own = site.kind === 'hq' ? site.seat === 0 : site.owner === 0;
+  if (own && P.isAlive && kk.row === site.row && Math.abs(P.x - site.x) < 420) return true;
+  return game.minions.some((m) => m.isKKUnit && !m.isDead && m.rec?.role === 'garrison' && m.rec.siteId === site.id && m.team === teamOfSeat(site.kind === 'hq' ? site.seat : site.owner, kk));
+}
+// A main castle without life falls only after the attackers held the ring at its gate (user, 20 Nov 2026).
+function breachHQ(game, hq, by, dt) {
+  hq.hp = 0; if (hq.fallen) return;
+  if (defendedByPlayer(game, hq)) { hq.capT = 0; return; }
+  hq.capT = (hq.capT ?? 0) + dt; if (hq.capT >= CASTLE.hqCaptureTime) { hq.capT = 0; fallHQ(game, hq, by); }
+}
 function fallHQ(game, hq, by) {
   if (hq.fallen) return; hq.fallen = true; hq.hp = 0;
   game.showAnnouncement?.(hq.seat === 0 ? 'DEINE HAUPTBURG IST GEFALLEN — KEINE RÜCKKEHR MEHR' : `DIE HAUPTBURG VON ${SEAT_NAMES[hq.seat]} IST GEFALLEN`, 2.6);
@@ -225,7 +241,8 @@ function updateSieges(game, dt) {
     const attackers = game.minions.filter((m) => m.isKKUnit && !m.isDead && m.team !== myTeam && m.team !== 'red' && m.team !== 'beast' && Math.abs(m.x - hq.x) < 220 && sieging(m));
     const defenders = game.minions.filter((m) => m.isKKUnit && !m.isDead && m.team === myTeam && m.rec?.role === 'garrison' && m.rec.siteId === hq.id);
     if (attackers.length) hq.siegeT = 3;
-    if (attackers.length && !defenders.length) { hq.hp -= attackers.length * 7 * dt * (hq.level >= 4 ? .7 : 1); if (hq.hp <= 0) fallHQ(game, hq, attackers[0].rec?.seat); }
+    if (attackers.length && !defenders.length) { hq.hp -= attackers.length * 7 * dt * (hq.level >= 4 ? .7 : 1); if (hq.hp <= 0) breachHQ(game, hq, attackers[0].rec?.seat, dt); }
+    if (hq.siegeT <= 0) hq.capT = 0; /* the siege has ended: the ring starts over */
     // stone tier and up: a tower shoots at hostile units near the castle
     if (hq.level >= 2 && attackers.length) { hq.towerT = (hq.towerT ?? 0) - dt; if (hq.towerT <= 0) { hq.towerT = hq.level >= 3 ? .8 : 1.2; const t = attackers[0]; t.takeDamage(22 + hq.level * 6, Math.sign(t.x - hq.x) * 90, 30, .15); combat.spawnShockwave?.(t.x, t.y - 20, 22, SEAT_COLORS[hq.seat]); } }
   }
@@ -278,8 +295,7 @@ export function warActors(game) {
     const y = groundYForDepth(b.z ?? .55);
     out.push({ y, render: (ctx) => { sprites.renderEntity(ctx, b.heroKey, b.x, y, { facing: b.facing || 1, state: moving ? 'run' : 'idle', animTime: b.animT }); ctx.font = 'bold 9px monospace'; ctx.textAlign = 'center'; ctx.fillStyle = SEAT_COLORS[b.seat]; ctx.fillText(`VERBÜNDET · ${SEAT_NAMES[b.seat]} · ST ${b.level}`, b.x, y - 104); } });
   }
-  // HQ life bars when damaged
-  for (const hq of kk.map.hqs) { if (hq.row !== kk.row || hq.hp >= hqMaxHp(hq)) continue; const y = groundYForDepth(hq.z) - 230; out.push({ y: groundYForDepth(hq.z) + .7, render: (ctx) => { ctx.fillStyle = 'rgba(0,0,0,.7)'; ctx.fillRect(hq.x - 80, y, 160, 8); ctx.fillStyle = SEAT_COLORS[hq.seat]; ctx.fillRect(hq.x - 80, y, 160 * Math.max(0, hq.hp) / hqMaxHp(hq), 8); } }); }
+  /* castle life bars and capture rings: kk_castle.js */
   return out;
 }
 // The flood over the ground (world space), drawn after the ground.
