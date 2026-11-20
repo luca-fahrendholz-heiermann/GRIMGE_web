@@ -2,6 +2,12 @@
 
 Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
+## 21. Nov 2026 – Kronenkrieg: Das Ende wird ausgekämpft, die Uhr läuft, Titel (Rückmeldung des Nutzers)
+
+- **Rundenuhr:** Die gemeinsame Uhr stand im Kronenkrieg fest bei 06:42. Jetzt zählt sie bis zur Grimmflut herunter (⏳) und danach bis zu deren Ende (☠).
+- **Kein Abwarten mehr am Ende:** Rivalen überfallen früher, und mit der Grimmflut zieht jeder Rival zuerst in den Krieg. In der zweiten Hälfte der Flut erscheint in der Mitte des sicheren Felds der **Kronenaltar**: Wer ihn 20 Sekunden lang allein hält, gewinnt die Runde. Alle Rivalen marschieren dorthin; ein Gegner in der Nähe unterbricht das Halten.
+- **Titel wie in Anime-Rollenspielen** für Taten der Runde: Material, Banditen, Gegner, Rivalen-Champions, Burgen, Armeegröße, Dino-Drachen, gefällte Rohstoffe, Ereignisse. 21 Titel in Stufen, etwa »Banditenschreck«, »Eroberer«, »Kriegsfürst«, »Drachenzähmer«. Sie werden angekündigt, der neueste steht unter der Stufe, alle stehen im Beutel. Jeder Titel gibt +1 % Schaden und +1 % Leben für die eigene Armee.
+
 ## 20. Nov 2026 – Kronenkrieg: Fraktionen und Dino-Drachen nach dem Vorbild von Heroes of Might and Magic
 
 - **Fraktionen = die 13 Elemente** (die Klasse des Spielers bleibt gesetzt): Glutreich, Sturmbund, Donnerkreis, Steinwacht, Gezeitenhof, Frostmark, Wildrudel, Zahnradorden, Risskult, Sonnenhof, Hainbund, Aegiswacht, Schattenzirkel. Jede hat eine Eigenschaft und vier Stufen:

@@ -5866,7 +5866,7 @@ game.running = false;
     // the end must be fought (user, 20 Nov 2026): the round clock counts, rivals go to war with the Grimmflut, the crown altar appears in the middle —
     // held alone for 20 s it wins, a rival near it contests; titles for deeds (+1 % each)
     game.setMatchMode('kronenkrieg'); game.startMatch(); const kA = game.modeState.kk; const PA2 = game.player; const KT = await import('./public/src/kk_titles.js');
-    kA.time = 100; const c1 = game.kkClockText(); kA.time = 160; const c2 = game.kkClockText(); const clock = c1 !== c2 && /FLUT/.test(c1); kA.time = KWR.FLOOD.start + 10; const c3 = game.kkClockText(); const clockFlood = /☠/.test(c3);
+    kA.time = 100; const c1 = game.kkClockText(); kA.time = 160; const c2 = game.kkClockText(); const clock = c1 !== c2 && /⏳/.test(c1); kA.time = KWR.FLOOD.start + 10; const c3 = game.kkClockText(); const clockFlood = /☠/.test(c3);
     const bot = kA.bots.find((b) => !b.ally); bot.alive = true; bot.task = null; kA.units.push({ id: 77777, team: bot.team, seat: bot.seat, cls: 'Guardian', tier: 2, row: bot.row, x: bot.x, z: bot.z, role: 'squad', bonus: [] }); const keepR = kA.rng; kA.rng = () => .9; bot.think = 0; KWR.updateWar(game, .1); kA.rng = keepR; const war = ['siege', 'altar', 'hunt'].includes(bot.task?.kind);
     kA.time = KWR.FLOOD.start + (KWR.FLOOD.full - KWR.FLOOD.start) * .6; for (const b of kA.bots) b.alive = false; for (const m of game.minions) if (m.isKKUnit && m.team !== PA2.team) m.isDead = true; game.minions = game.minions.filter((m) => !m.isDead);
     kA.championBot = null; game.enemyChampion.lifeState = 'Dead'; KWR.updateWar(game, 1 / 60); const altar = !!kA.altar; kA.row = kA.altar.row; PA2.x = kA.altar.x; PA2.z = kA.altar.z; PA2.hp = PA2.maxHp;

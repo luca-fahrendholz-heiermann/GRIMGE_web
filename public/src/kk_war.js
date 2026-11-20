@@ -330,7 +330,7 @@ function updateSieges(game, dt) {
 
 // ── Grimmflut and the end ──────────────────────────────────────────────────────────────────────────────────────────
 // The clock of a round (bug: the shared match clock stood still at 06:42 in Kronenkrieg): the time until the Grimmflut, then until it covers all.
-export function kkClock(kk) { const t = kk?.time ?? 0; const left = t < FLOOD.start ? FLOOD.start - t : Math.max(0, FLOOD.full - t); const mm = String(Math.floor(left / 60)).padStart(2, '0'); const ss = String(Math.floor(left % 60)).padStart(2, '0'); return { text: (t < FLOOD.start ? 'FLUT ' : '☠ ') + mm + ':' + ss, flood: t >= FLOOD.start }; }
+export function kkClock(kk) { const t = kk?.time ?? 0; const left = t < FLOOD.start ? FLOOD.start - t : Math.max(0, FLOOD.full - t); const mm = String(Math.floor(left / 60)).padStart(2, '0'); const ss = String(Math.floor(left % 60)).padStart(2, '0'); return { text: (t < FLOOD.start ? '⏳' : '☠') + mm + ':' + ss, flood: t >= FLOOD.start }; }
 // The Grimmflut (user, 20 Nov 2026: adapted to the square board): it closes in from all four edges; at the end it covers all.
 export function floodFrac(kk) { return Math.max(0, Math.min(1, (kk.time - FLOOD.start) / (FLOOD.full - FLOOD.start))); }
 export function floodFront(kk) { return floodFrac(kk) * kk.map.width / 2; }
