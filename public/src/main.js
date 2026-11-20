@@ -460,7 +460,7 @@ export class GameWorld {
   setupInputs() {
     this.detectInputMode();
     window.addEventListener('pointerdown', (e) => {
-      if (e.pointerType === 'touch' || e.pointerType === 'pen') this.setInputMode('touch');
+      if (e.pointerType === 'touch' || e.pointerType === 'pen') { this.setInputMode('touch'); this._lastTouchAt = performance.now(); } /* see the canvas mousedown */
       else if (e.pointerType === 'mouse') this.setInputMode('desktop');
     }, { capture: true, passive: true });
     window.addEventListener('keydown', (e) => {
@@ -593,6 +593,8 @@ export class GameWorld {
 
     this.canvas.addEventListener('mousedown', (e) => {
       audio.ensureContext();
+      // A phone sends a compatibility mousedown after every tap: it must not count as a second attack (bug: taps struck twice on mobile).
+      if (e.sourceCapabilities?.firesTouchEvents || performance.now() - (this._lastTouchAt ?? -1e9) < 900) return;
       const pt = this.getCanvasCoords(e.clientX, e.clientY);
       this.input.mouse.x = pt.x;
       this.input.mouse.y = pt.y;

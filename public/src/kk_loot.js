@@ -71,21 +71,14 @@ export function addBundle(game, b, { quiet = false } = {}) {
   for (const [m, n] of Object.entries(b.materials ?? {})) { const take = Math.min(n, room); inv[m] += take; room -= take; if (take) got.push(`${take} ${MAT_NAME[m]}`); if (n > take) rest.materials[m] = n - take; }
   for (const [el, n] of Object.entries(b.stones ?? {})) { const take = Math.min(n, room); inv.stones[el] = (inv.stones[el] ?? 0) + take; room -= take; if (take) got.push(`${take} ${el.toUpperCase()}-STEIN`); if (n > take) rest.stones[el] = n - take; }
   for (const w of b.weapons ?? []) { if (room > 0) { inv.weapons[w] = (inv.weapons[w] ?? 0) + 1; room--; got.push('WAFFE'); } else rest.weapons.push(w); }
-  for (const [k, n] of Object.entries(b.potions ?? {})) { inv.potions[k] = (inv.potions[k] ?? 0) + n; got.push(k === 'hp' ? 'HEILTRANK' : 'MANATRANK'); }
+  if (Object.values(b.potions ?? {}).some((n) => n > 0)) spawnItems(game, P.x + (P.facing || 1) * 30, P.z, { potions: b.potions }); /* potions are carried in the hand (kk_items.js) */
   const left = Object.keys(rest.materials).length + Object.keys(rest.stones).length + rest.weapons.length;
-  if (left) { dropPile(game, P.x + (P.facing || 1) * 40, P.z, { gold: 0, materials: rest.materials, stones: rest.stones, weapons: rest.weapons, runes: [] }); say(game, 'RUCKSACK VOLL — DER REST LIEGT AM BODEN', 1.6); }
+  if (left) { dropPile(game, P.x + (P.facing || 1) * 40, P.z, { gold: 0, materials: rest.materials, stones: rest.stones, weapons: rest.weapons, runes: [], lock: 2.5 }); say(game, 'BEUTEL VOLL — DER REST LIEGT AM BODEN', 1.6); }
   else if (!quiet && got.length) say(game, got.slice(0, 4).join(' · '), 1.6);
   return got;
 }
 export function dropPile(game, x, z, contents) {
-  const kk = kkState(game); const item = { id: kk.nextItem++, kind: 'pile', row: kk.row, x, z, lock: .6, ...contents }; kk.items.push(item); return item;
-}
-function takePile(game, item) {
-  const kk = kkState(game);
-  addBundle(game, { gold: item.gold, materials: item.materials, stones: item.stones, weapons: item.weapons, potions: item.potions }, { quiet: true });
-  const left = []; for (const r of item.runes ?? []) { const got = giveRune(game, r); if (got === 'full') left.push(r); else if (got === 'double') kk.gold += 15; /* a rune one already holds turns into gold */ }
-  if (left.length) { item.runes = left; item.gold = 0; item.materials = {}; item.stones = {}; item.weapons = []; item.potions = {}; say(game, 'DECK VOLL — RUNEN BLEIBEN LIEGEN'); return false; }
-  say(game, 'BEUTE AUFGEHOBEN', 1.2); audio.playRuneChime?.(700); return true;
+  const items = spawnItems(game, x, z, contents, { row: contents.row ?? kkState(game).row, spread: 60 }); for (const it of items) it.lock = contents.lock ?? .8; return items; /* single items, each with its icon (no piles any more) */
 }
 
 // ── places ─────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -146,7 +139,7 @@ function updateLife(game, dt) {
     const all = [...P.runeDeck, ...P.runeHand, ...P.slottedSpells.flatMap((s) => s.runes)].map(({ cardId, grade, quality, runeLevel, manaCost, ...r }) => r);
     const bound = all.filter((r) => r.soulBound); /* won in a trial: never dropped */
     const runes = all.filter((r) => !r.soulBound).concat(kk.sealed.map(({ gate, ...r }) => r));
-    const inv = kk.inv; dropPile(game, P.x, P.z, { gold: kk.gold, materials: { wood: inv.wood, stone: inv.stone, steel: inv.steel, obsidian: inv.obsidian }, stones: { ...inv.stones }, weapons: Object.entries(inv.weapons).flatMap(([w, n]) => Array(n).fill(w)), potions: { ...inv.potions }, runes, lock: 1.2 });
+    const inv = kk.inv; dropPile(game, P.x, P.z, { gold: kk.gold, materials: { wood: inv.wood, stone: inv.stone, steel: inv.steel, obsidian: inv.obsidian }, stones: { ...inv.stones }, weapons: Object.entries(inv.weapons).flatMap(([w, n]) => Array(n).fill(w)), runes, lock: 1.2 }); /* every rune lies there with its own icon: anyone can take it */
     kk.gold = 0; kk.inv = emptyInv(); kk.sealed = []; P.configureRuneDeck(bound); kk.deathRow = kk.row;
     say(game, 'GEFALLEN — DEINE BEUTE LIEGT AM BODEN', 2);
   } else if (!kk.alive && P.isAlive) {
@@ -165,7 +158,7 @@ function updateItems(game, dt) {
     it.lock = Math.max(0, (it.lock ?? 0) - dt);
     if (it.row !== kk.row || it.lock > 0 || !P.isAlive) continue;
     if (Math.abs(P.x - it.x) < PICK_RANGE && Math.abs(P.z - it.z) * 150 < 30) {
-      const taken = it.kind === 'item' ? pickupItem(game, it) : takePile(game, it);
+      if (it.kind !== 'item') continue; const taken = pickupItem(game, it);
       if (taken) kk.items.splice(kk.items.indexOf(it), 1); else it.lock = 1.5;
     }
   }

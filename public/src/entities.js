@@ -1948,7 +1948,7 @@ export class Player extends GroundEntity {
   }
 
   takeDamage(amount, kx = 0, lift = 0, stun = 0.3, isCrit = false, hitKind = 'melee') {
-    if (shieldedByGuard(this, hitKind)) return { blocked: true, shielded: true }; /* behind a blocking ally */
+    if (shieldedByGuard(this, hitKind, kx)) return { blocked: true, shielded: true }; /* behind a blocking ally */
     if (!this.isAlive || this.invulnerableTimer > 0) return { ignored: true };
     // The Primal steps in: during its intercept window it takes the melee hit.
     if (hitKind === 'melee' && window.gameWorld?.primal?.tryIntercept?.(this, amount)) return { intercepted: true };
@@ -2836,7 +2836,7 @@ export class Minion extends GroundEntity {
       }
     }
   }
-  takeDamage(amount, kx = 0, lift = 0, stun = .25, isCrit = false, hitKind = 'melee') { if (shieldedByGuard(this, hitKind)) return; if (this.arcaneShield > 0) { const absorbed = Math.min(amount, this.arcaneShield); this.arcaneShield -= absorbed; amount -= absorbed; if (amount <= 0) return; } this.hp = Math.max(0, this.hp - amount); if (this.hp > 0) onStatusHit(this, amount, hitKind); this.hitFlash = .15; this.kbVelX = kx; this.vx = 0; this.vElevation = lift; this.hurtTimer = Math.max(this.hurtTimer, stun); combat.spawnDamageText(this.x, this.y - 25, amount, { color: this.team === 'blue' ? '#90caf9' : '#ffab91' }); if (!this.hp) { this.isDead = true; combat.spawnHitSparks(this.x, this.y - 16, this.facing, '#fff', 8); } }
+  takeDamage(amount, kx = 0, lift = 0, stun = .25, isCrit = false, hitKind = 'melee') { if (shieldedByGuard(this, hitKind, kx)) return; if (this.arcaneShield > 0) { const absorbed = Math.min(amount, this.arcaneShield); this.arcaneShield -= absorbed; amount -= absorbed; if (amount <= 0) return; } this.hp = Math.max(0, this.hp - amount); if (this.hp > 0) onStatusHit(this, amount, hitKind); this.hitFlash = .15; this.kbVelX = kx; this.vx = 0; this.vElevation = lift; this.hurtTimer = Math.max(this.hurtTimer, stun); combat.spawnDamageText(this.x, this.y - 25, amount, { color: this.team === 'blue' ? '#90caf9' : '#ffab91' }); if (!this.hp) { this.isDead = true; combat.spawnHitSparks(this.x, this.y - 16, this.facing, '#fff', 8); } }
   freeze(duration) { this.freezeTimer = duration; } slow(duration, factor) { this.slowTimer = duration; this.slowFactor = factor; }
   // Damage over time (burn, poison, bleed, hazards): no stagger, no knockback — the march goes on.
   takeHazardDamage(amount) { if (this.isDead || !(amount > 0)) return; if (this.hp - amount <= 0) { this.takeDamage(amount, 0, 0, 0, false, 'status'); return; } this.hp -= amount; this.hitFlash = Math.max(this.hitFlash, .06); combat.spawnDamageText(this.x, this.y - 25, Math.round(amount), { color: '#ff8a65' }); }
@@ -2902,13 +2902,21 @@ export class Castle extends GroundEntity {
 
 // A blocking front line (user, 19 Nov 2026): a spell does not pass a fighter who guards toward it — the ones standing
 // behind him (same depth lane, farther from the caster) are not hit by it.
-export function shieldedByGuard(target, hitKind) {
-  if (hitKind !== 'spell' && hitKind !== 'beam') return false;
+export function shieldedByGuard(target, hitKind, kx = 0) {
+  if (hitKind !== 'spell' && hitKind !== 'beam') return shieldedFromMelee(target, kx);
   const sp = spells.currentSpell; const origin = sp?.caster ?? sp?.owner; if (!sp || !origin || !Number.isFinite(origin.x) || sp.team === target.team) return false;
   const gw = window.gameWorld; if (!gw) return false;
   const guards = [gw.player, gw.enemyChampion, ...(gw.kkExtraFoes ?? [])];
   const dT = target.x - origin.x;
   return guards.some((g) => g && g !== target && g.team === target.team && g.isGuarding && g.isAlive !== false && Math.sign(g.x - origin.x) === Math.sign(dT) && Math.abs(g.x - origin.x) < Math.abs(dT) && Math.abs((g.z - target.z) * 150) < 30 && Math.sign(origin.x - g.x) === (g.facing || 0));
+}
+// A blow (melee, heavy, sweep …): an ally guarding right in front of the target, toward the attacker, takes it instead.
+function shieldedFromMelee(target, kx) {
+  const gw = window.gameWorld; if (!gw || !target) return false;
+  const by = currentAttacker(); if (by && by.team === target.team) return false;
+  const side = by && by !== target && Number.isFinite(by.x) ? Math.sign(by.x - target.x) : -Math.sign(kx); if (!side) return false;
+  const guards = [gw.player, gw.enemyChampion, ...(gw.kkExtraFoes ?? [])];
+  return guards.some((g) => g && g !== target && g !== by && g.team === target.team && g.isGuarding && g.isAlive !== false && Math.sign(g.x - target.x) === side && Math.abs(g.x - target.x) < 90 && Math.abs((g.z - target.z) * 150) < 32 && (g.facing || 1) === side && (!by || Math.abs(by.x - target.x) > Math.abs(g.x - target.x)));
 }
 export class EnemyChampion extends GroundEntity {
   constructor(x, z, heroKey = 'warlord') { super(x, z); this.heroKey = heroKey; this.team = 'red'; this.isMobileCombatant = true; this.facing = -1; this.width = ENTITY_VISUALS.heroColliderWidth; this.height = ENTITY_VISUALS.heroColliderHeight; this.maxHp = this.hp = 280; this.maxMp = this.mp = 100; this.speed = 230; this.state = 'idle'; this.animTime = 0; this.hitFlash = 0; this.freezeTimer = 0; this.slowTimer = 0; this.slowFactor = 1; this.attackCooldown = 0; this.spellCooldown = 1.4; this.defensiveCooldown = 0; this.arcaneShield = 0; this.arcaneShieldTimer = 0; this.aiMode = 'DEFEND_CASTLE'; this.stateTimer = 0; this.lifeState = 'Alive'; this.respawnTimer = 0; this.respawnDuration = 3; this.beamCooldown = 4; this.activeClash = null; }
@@ -3160,7 +3168,7 @@ export class EnemyChampion extends GroundEntity {
   // Ninefold Beast: harder blows while it lasts.
   formDamageMult() { return (this.ninefoldTimer ?? 0) > 0 ? 1.3 * (this.ninefoldPower ?? 1) : 1; }
   executeAIPlainAttack(target) { this.attackCooldown = 1.1; this.state = 'attack1'; this.stateTimer = .28; audio.playSlash(1.1); combat.spawnSlashArc(this.x + this.facing * 20, this.y - 28, this.facing, { radius: 42, color: '#f44336', glow: '#b71c1c' }); if (!(isUpperCastleBattlement(this) && isUpperCastleBattlement(target)) && Math.abs(target.z - this.z) <= .22 && Math.abs((target.worldHeight ?? 0) - this.worldHeight) <= 70) target.takeDamage(24, this.facing * 240, 100, .3); }
-  takeDamage(amount, kx = 0, lift = 0, stun = .35, isCrit = false, hitKind = 'melee') { if (!this.isAlive) return; if (shieldedByGuard(this, hitKind)) return; if (this.arcaneShield > 0) { const absorbed = Math.min(amount, this.arcaneShield); this.arcaneShield -= absorbed; amount -= absorbed; if (amount <= 0) { combat.spawnElementalParticles(this.x, this.y - 35, 'fulgur', 5); return; } } if ((this.eidolonTimer ?? 0) > 0) amount *= 1 - (this.eidolonArmor ?? 0); /* Eidolon Mantle armour */ const rift = riftAbsorb(this, amount); if (rift?.ignored) return; if (rift) { kx *= rift.mult; lift *= rift.mult; } this.passiveIdle = 0; if (this.aiDraw && amount >= 6) cancelAIDraw(this); this.hp = Math.max(this.passive ? 1 : 0, this.hp - (rift ? 0 : amount)); if (this.hp > 0) onStatusHit(this, amount, hitKind); this.hitFlash = .15; this.kbVelX = kx; this.vx = 0; this.vElevation = lift; this.state = 'hurt'; this.stateTimer = stun; combat.spawnDamageText(this.x, this.y - 45, amount, { isCrit, color: '#ff7043' }); if (!this.hp) { window.gameWorld?.recordWizardDeath?.(this.team); this.lifeState = 'Dying'; this.state = 'dead'; this.stateTimer = .45; combat.spawnShockwave(this.x, this.y - 30, 80, '#ff5252'); } }
+  takeDamage(amount, kx = 0, lift = 0, stun = .35, isCrit = false, hitKind = 'melee') { if (!this.isAlive) return; if (shieldedByGuard(this, hitKind, kx)) return; if (this.arcaneShield > 0) { const absorbed = Math.min(amount, this.arcaneShield); this.arcaneShield -= absorbed; amount -= absorbed; if (amount <= 0) { combat.spawnElementalParticles(this.x, this.y - 35, 'fulgur', 5); return; } } if ((this.eidolonTimer ?? 0) > 0) amount *= 1 - (this.eidolonArmor ?? 0); /* Eidolon Mantle armour */ const rift = riftAbsorb(this, amount); if (rift?.ignored) return; if (rift) { kx *= rift.mult; lift *= rift.mult; } this.passiveIdle = 0; if (this.aiDraw && amount >= 6) cancelAIDraw(this); this.hp = Math.max(this.passive ? 1 : 0, this.hp - (rift ? 0 : amount)); if (this.hp > 0) onStatusHit(this, amount, hitKind); this.hitFlash = .15; this.kbVelX = kx; this.vx = 0; this.vElevation = lift; this.state = 'hurt'; this.stateTimer = stun; combat.spawnDamageText(this.x, this.y - 45, amount, { isCrit, color: '#ff7043' }); if (!this.hp) { window.gameWorld?.recordWizardDeath?.(this.team); this.lifeState = 'Dying'; this.state = 'dead'; this.stateTimer = .45; combat.spawnShockwave(this.x, this.y - 30, 80, '#ff5252'); } }
   takeHazardDamage(amount) {
     if (!this.isAlive || !(amount > 0)) return;
     if (this.arcaneShield > 0) { const absorbed = Math.min(amount, this.arcaneShield); this.arcaneShield -= absorbed; amount -= absorbed; if (amount <= 0) return; }

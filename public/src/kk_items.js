@@ -35,7 +35,10 @@ export function itemIcon(it) {
   if (t === 'gem') return icon('gem' + it.el, (p) => { const c = elementColor(it.el); p(5, 3, 6, 2, '#1d1a22'); p(3, 5, 10, 4, '#1d1a22'); p(5, 9, 6, 3, '#1d1a22'); p(7, 12, 2, 2, '#1d1a22'); p(6, 4, 4, 1, c); p(4, 6, 8, 2, c); p(6, 9, 4, 2, c); p(5, 5, 2, 1, '#ffffff'); });
   if (t === 'weapon') return icon('weapon', (p) => { for (let i = 0; i < 9; i++) p(3 + i, 11 - i, 2, 2, i < 7 ? '#d8e2ea' : '#ffffff'); p(2, 12, 3, 2, '#8a5a34'); p(3, 10, 4, 1, '#c9a64a'); });
   if (t === 'potion') return icon('potion' + it.kind, (p) => { const c = it.kind === 'hp' ? '#e5395a' : '#3d7ae5'; p(6, 2, 4, 3, '#c9b38a'); p(4, 5, 8, 9, '#2a2230'); p(5, 6, 6, 7, c); p(5, 6, 2, 3, '#ffffff'); });
-  if (t === 'rune') return icon('rune', (p) => { p(2, 3, 12, 10, '#6b4a2e'); p(3, 4, 10, 8, '#efe3c4'); p(5, 6, 6, 1, '#7a4fb0'); p(7, 5, 2, 6, '#7a4fb0'); p(5, 9, 6, 1, '#7a4fb0'); });
+  if (t === 'rune') { /* a rune stone in the colour of its element, the rim by its kind (element / special / arcane state) */
+    const r = it.rune ?? {}; const c = r.element ? elementColor(r.element) : '#b48cff'; const rim = r.category === 'arcane' || r.category === 'buff' ? '#ffd24a' : r.category === 'signature' || r.category === 'special' ? '#d8b4ff' : '#efe3c4'; const glyph = (r.id ?? r.name ?? 'x').length % 3;
+    return icon(`rune_${r.element ?? 'none'}_${rim}_${glyph}`, (p) => { p(3, 1, 10, 14, '#1d1a22'); p(4, 2, 8, 12, rim); p(5, 3, 6, 10, '#2a2234'); p(7, 4, 2, 8, c); if (glyph === 0) { p(5, 6, 6, 2, c); } else if (glyph === 1) { p(5, 4, 2, 2, c); p(9, 10, 2, 2, c); } else { p(5, 10, 6, 2, c); p(5, 4, 2, 2, c); } p(6, 3, 1, 1, '#ffffff'); });
+  }
   return null;
 }
 export const itemLabel = (it) => it.type === 'gold' ? `${it.n} GOLD` : it.type === 'gem' ? `${it.n} ${it.el.toUpperCase()}-STEIN` : it.type === 'weapon' ? 'WAFFE' : it.type === 'potion' ? (it.kind === 'hp' ? 'HEILTRANK' : 'MANATRANK') : it.type === 'rune' ? `RUNE: ${it.rune?.name ?? ''}` : `${it.n} ${MAT_DE[it.type] ?? it.type}`;

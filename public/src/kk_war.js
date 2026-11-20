@@ -172,8 +172,8 @@ function updateBots(game, dt) {
 }
 function killBot(game, bot, killer) {
   const kk = kkState(game); bot.alive = false; bot.respawnT = Math.min(25, 8 + kk.time / 60); bot.task = null;
-  if (bot.gold > 0) dropPile(game, bot.x, bot.z, { gold: bot.gold, materials: {}, stones: { ...bot.stones }, weapons: Object.entries(bot.weapons).flatMap(([w, n]) => Array(n).fill(w)), runes: [], row: bot.row });
-  bot.gold = 0; bot.stones = {}; bot.weapons = {};
+  if (bot.gold > 0 || bot.runes?.length) dropPile(game, bot.x, bot.z, { gold: bot.gold, materials: {}, stones: { ...bot.stones }, weapons: Object.entries(bot.weapons).flatMap(([w, n]) => Array(n).fill(w)), runes: bot.runes ?? [], row: bot.row });
+  bot.gold = 0; bot.stones = {}; bot.weapons = {}; bot.runes = [];
   if (killer === 'player') { gainXp(game, heroKillXp(kk.level, bot.level)); game.showAnnouncement?.(`${SEAT_NAMES[bot.seat]} BESIEGT`, 1.8); }
 }
 

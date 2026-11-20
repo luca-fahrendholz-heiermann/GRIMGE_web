@@ -5584,10 +5584,10 @@ game.running = false;
   P.z = bld2.z + .02; game.input.move = { x: 0, z: 1 }; KI.updateInterior(game, 1 / 60); game.input.move = { x: 0, z: 0 }; const left = !kk.inside && game.battlefield.levelSurfaces.length === 0; const searched = inside && opened && left;
   const arcane = recognizer.runes.find((r) => r.id === 'buff_B01'); kk.level = 1; kk.xp = 0; const res = KL.giveRune(game, arcane); const sealedCounts = res === 'sealed' && KL.deckCount(game) >= 1;
   const fuseBlocked = !KL.kkFuseAllowed(game, 2); KL.gainXp(game, KP.LEVEL_XP[8]); const unsealed = kk.level === 8 && !kk.sealed.length && [...P.runeDeck, ...P.runeHand].some((c) => c.id === 'buff_B01') && KL.kkFuseAllowed(game, 3);
-  kk.gold = 50; kk.inv.wood = 5; P.x = 2000 > kk.map.width ? 300 : P.x; const deathX = P.x; P.beginDeath(); KL.updateLoot(game, 1 / 60); const pile = kk.items.find((it) => it.kind === 'pile' && it.runes.length);
-  const dropped = !!pile && pile.gold === 50 && kk.gold === 0 && P.runeDeck.length + P.runeHand.length === 0;
+  kk.gold = 50; kk.inv.wood = 5; P.x = 2000 > kk.map.width ? 300 : P.x; const deathX = P.x; P.beginDeath(); KL.updateLoot(game, 1 / 60); const fallen = kk.items.filter((it) => it.kind === 'item'); const runeItems = fallen.filter((it) => it.type === 'rune'); const pile = fallen.find((it) => it.type === 'gold');
+  const dropped = !!pile && pile.n === 50 && runeItems.length >= 1 && fallen.some((it) => it.type === 'wood' && it.n === 5) && kk.gold === 0 && P.runeDeck.length + P.runeHand.length === 0; /* every rune lies as its own item */
   P.respawn(game.battlefield); KL.updateLoot(game, 1 / 60); const home = kk.map.hqs.find((h) => h.seat === 0); const returned = kk.row === home.row && Math.abs(P.x - home.x) < 300;
-  kk.row = pile.row; P.x = pile.x; P.z = pile.z; pile.lock = 0; KL.updateLoot(game, 1 / 60); const picked = !kk.items.includes(pile) && kk.gold === 50 && [...P.runeDeck, ...P.runeHand].some((c) => c.id === 'buff_B01');
+  kk.row = pile.row; for (const it of fallen) { it.lock = 0; P.x = it.x; P.z = it.z; KL.updateLoot(game, 1 / 60); } const picked = !kk.items.includes(pile) && kk.gold === 50 && runeItems.every((it) => !kk.items.includes(it)) && [...P.runeDeck, ...P.runeHand].some((c) => c.id === 'buff_B01');
   assert(searched && sealedCounts && fuseBlocked && unsealed && dropped && returned && picked, 'Kronenkrieg loot: walking into a house (cut-away, stairs and gallery from two storeys), opening a chest gives gold and XP and walking out leaves it; an Arcane State found at level 1 is sealed but takes a deck slot, fusion waits for level 2, level 8 unseals it; dying drops gold, backpack and every rune as a pile, the hero returns at the main castle and can pick the pile up (' + [searched, sealedCounts, fuseBlocked, unsealed, dropped, returned, picked].join('/') + ')');
   {
     // items (feedback 20 Nov 2026): loot lies as single items with an icon, a full bag leaves the rest on the ground, the bag drops goods, the reels show after a spin
@@ -5602,6 +5602,21 @@ game.running = false;
     kk.held = null; const [p1, p2] = KIt.spawnItems(game, P.x, P.z, { potions: { hp: 2 } }); const hand = KIt.pickupItem(game, p1) && kk.held?.kind === 'hp' && KIt.pickupItem(game, p2) === false;
     P.hp = P.maxHp * .3; P.attackCooldown = 0; P.state = 'idle'; const hp0 = P.hp; const drank = P.executeAttack(game.input, 'normal') && P.hp > hp0 && kk.held === null;
     assert(partial && coinFits && icons && shown && gone && hand && drank, 'Kronenkrieg items: a full bag takes only what fits and leaves the rest lying, coins always fit, every item kind has its icon, the reel window shows a spin and closes after 4 s, a potion goes into the hand (a second one stays lying) and the attack drinks it (' + [partial, coinFits, icons, shown, gone, hand, drank].join('/') + ')');
+  }
+  {
+    // video bugs (20 Nov 2026): a full bag no longer re-drops the rest in front of the figure (4:17–4:41 "BEUTE AUFGEHOBEN" again and again);
+    // a phone tap counts once (the compatibility mousedown after a touch was a second attack); a guard shields allies behind from blows
+    const KIt2 = await import('./public/src/kk_items.js'); const KLx = await import('./public/src/kk_loot.js'); const inv2 = kk.inv; const keepInv = JSON.stringify(inv2); inv2.wood = KLx.BACKPACK - KLx.invUnits(inv2) + inv2.wood; 
+    const [st] = KIt2.spawnItems(game, P.x, P.z, { materials: { stone: 6 } }); st.lock = 0; const shown = []; const keepAnn = game.showAnnouncement; game.showAnnouncement = (t) => shown.push(t);
+    for (let i = 0; i < 600; i++) KLx.updateLoot(game, 1 / 60); game.showAnnouncement = keepAnn;
+    const noLoop = !kk.items.some((it) => it.id > st.id) && kk.items.includes(st) && st.n === 6 && shown.filter((t) => /AUFGEHOBEN/.test(t)).length === 0 && shown.length <= 4;
+    kk.items = kk.items.filter((it) => it !== st); Object.assign(inv2, JSON.parse(keepInv));
+    game._lastTouchAt = performance.now(); game.input.justPressedMouse[0] = false; game.canvas.listeners.mousedown?.({ button: 0, clientX: 900, clientY: 300, preventDefault() {} }); const tapOnce = !game.input.justPressedMouse[0];
+    game._lastTouchAt = -1e9; game.canvas.listeners.mousedown?.({ button: 0, clientX: 900, clientY: 300, preventDefault() {} }); const mouseStill = !!game.input.justPressedMouse[0]; game.input.justPressedMouse[0] = false; game.input.mouse.isDown = false;
+    const KAm = await import('./public/src/kk_army.js'); const behind = KAm.addRecord(kk, { team: 'blue', cls: 'Ranger', element: null, tier: 1, row: kk.row, x: P.x - 50, z: P.z, role: 'squad' }); KAm.updateArmy(game, 1 / 60); const bu = behind.live; bu.x = P.x - 50; bu.z = P.z;
+    P.facing = 1; P.isGuarding = true; const hpB = bu.hp; bu.takeDamage(20, -120, 0, .2, false, 'melee'); const guarded = bu.hp === hpB; P.isGuarding = false; bu.takeDamage(20, -120, 0, .2, false, 'melee'); const openHit = bu.hp < hpB;
+    bu.isDead = true; kk.units = kk.units.filter((u) => u !== behind); game.minions = game.minions.filter((m) => !m.isDead);
+    assert(noLoop && tapOnce && mouseStill && guarded && openHit, 'Video bugs: a full bag leaves the item lying without a pick-up loop, a phone tap is one attack (not a second mousedown), a desktop click still attacks, a guard toward the attacker shields the ally behind from a blow and without the guard it lands (' + [noLoop, tapOnce, mouseStill, guarded, openHit].join('/') + ')');
   }
   {
     // resources (feedback 20 Nov 2026): trees give wood, rocks stone, ore veins steel, obsidian takes longest; a felled node drops items and regrows
