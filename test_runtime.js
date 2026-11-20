@@ -5765,6 +5765,21 @@ game.running = false;
   const d0 = KM.kkDistance(hunter, { row: k7.row, x: game.player.x, z: game.player.z }); for (let i = 0; i < 40; i++) { k7.time += .25; KWR.updateWar(game, .25); } const closer = KM.kkDistance(hunter, { row: k7.row, x: game.player.x, z: game.player.z }) < d0;
   assert(hunting && closer, 'Kronenkrieg: a strong rival hunts the visible egg carrier (' + [hunting, closer].join('/') + ')');
   {
+    // rivals (user, 20 Nov 2026): they take runes and loot lying about (a dropped rune is not lost), get stronger by them, ride after a stable,
+    // carry eggs to a source and hatch a creature, and a killed carrier drops the egg
+    game.setMatchMode('kronenkrieg'); game.startMatch(); const kR = game.modeState.kk; const KIr = await import('./public/src/kk_items.js'); const rv = kR.bots.find((b) => !b.ally);
+    for (const b of kR.bots) if (b !== rv) b.alive = false; rv.alive = true; rv.travel = 0; rv.row = kR.map.hqs[0].row; rv.x = 5000; rv.z = 20; rv.task = { kind: 'idle', id: 'none' }; rv.think = 99; kR.championBot = null; game.enemyChampion.lifeState = 'Dead';
+    const rune = recognizer.runes[3]; const [ri, gi] = KIr.spawnItems(game, rv.x, rv.z, { runes: [rune], gold: 25 }, { row: rv.row, spread: 1 }); ri.lock = 0; gi.lock = 0; const g0 = rv.gold;
+    KWR.updateWar(game, 1 / 60); const tookRune = !kR.items.includes(ri) && (rv.runes ?? []).some((r) => r.id === rune.id) && rv.gold === g0 + 25;
+    const st = kR.map.sites.find((x) => x.kind === 'stable'); rv.horse = false; rv.level = 3; rv.task = null; rv.think = 0; rv.row = st.row; rv.x = st.x + 30; rv.z = st.z; for (let i = 0; i < 20 && !rv.horse; i++) KWR.updateWar(game, .25); const rides = rv.horse === true;
+    rv.row = kR.row; rv.x = game.player.x + 200; rv.z = game.player.z; rv.task = { kind: 'idle', id: 'none' }; KWR.updateWar(game, 1 / 60); const E = game.enemyChampion; const champRides = kR.championBot === rv && E.kkRiding === true;
+    kR.championBot = null; E.lifeState = 'Dead'; rv.x = 9000; rv.z = 30; rv.row = kR.map.hqs[0].row; rv.task = null; rv.think = 0; kR.items.push({ id: kR.nextItem++, kind: 'egg', row: rv.row, x: rv.x + 400, z: rv.z, lock: 0, element: 'ignis', creature: 'siege_golem' });
+    for (let i = 0; i < 60 && !rv.egg; i++) { rv.think = 0; KWR.updateWar(game, .25); } const carries = !!rv.egg; const sq0 = kR.units.filter((u) => u.seat === rv.seat && u.creature).length;
+    for (let i = 0; i < 4000 && rv.egg; i++) { rv.think = 0; KWR.updateWar(game, .5); if (!rv.alive) break; } const hatched = !rv.egg && kR.units.filter((u) => u.seat === rv.seat && u.creature && u.hatched).length > sq0;
+    rv.egg = { element: 'aqua', creature: 'rune_snake' }; const nEggs = kR.items.filter((it) => it.kind === 'egg').length; KWR.killBotForTest?.(game, rv); const drops = !KWR.killBotForTest || kR.items.filter((it) => it.kind === 'egg').length === nEggs + 1;
+    assert(tookRune && rides && champRides && carries && hatched && drops, 'Rivals: a rival takes a rune and gold lying about (the rune makes it stronger), gets a horse at a stable and rides as the champion, carries an egg to a source and hatches a creature, a killed carrier drops the egg (' + [tookRune, rides, champRides, carries, hatched, drops].join('/') + ')');
+  }
+  {
     // world map (user, 20 Nov 2026): unexplored places stay hidden, exploring shows them for the round, resources once seen stay, rivals only as
     // a fading "last seen" (dynamic, not lasting knowledge), the player is marked
     game.setMatchMode('kronenkrieg'); game.startMatch(); const kM = game.modeState.kk; const PM = game.player; const WM = await import('./public/src/kk_worldmap.js');

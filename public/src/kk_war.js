@@ -15,6 +15,7 @@ import { kkState, kkOn, SEAT_COLORS, SEAT_NAMES, elementColor } from './kk_world
 import { gainXp, dropPile } from './kk_loot.js';
 import { addRecord, teamOfSeat, sameTeam } from './kk_army.js';
 import { EnemyChampion } from './entities.js';
+import { drawHorse } from './kk_art.js';
 import { castleHp, castleMaxHp, damageCastle, CASTLE } from './kk_castle.js';
 
 export const HQ_TIERS = Object.freeze([
@@ -80,6 +81,10 @@ export function resistMul(kk, rec, element) {
 function pickTask(kk, bot) {
   const hq = hqOfSeat(kk, bot.seat); const mine = botSquad(kk, bot); const str = strength(mine);
   if (hq.siegeT > 0 && !hq.fallen) return { kind: 'defend', id: hq.id };
+  // rivals ride, carry eggs and hatch them too (user, 20 Nov 2026)
+  if (bot.egg) { const src = kk.map.sites.filter((s) => s.kind === 'source').sort((a, b) => (a.element === bot.egg.element ? 0 : 1) - (b.element === bot.egg.element ? 0 : 1) || kkDistance(bot, a) - kkDistance(bot, b))[0]; if (src) return { kind: 'hatch', id: src.id }; }
+  const egg = kk.items.filter((it) => it.kind === 'egg' && !(it.lock > 0) && kkDistance(bot, it) < 6000).sort((a, b) => kkDistance(bot, a) - kkDistance(bot, b))[0]; if (egg && !bot.ally) return { kind: 'egg', id: egg.id };
+  if (!bot.horse && bot.level >= 2) { const st = kk.map.sites.filter((s) => s.kind === 'stable' && kkDistance(bot, s) < 7000).sort((a, b) => kkDistance(bot, a) - kkDistance(bot, b))[0]; if (st) return { kind: 'stable', id: st.id }; }
   // the big prize: a visible egg carrier or a player fighting a crowning trial is hunted by a strong rival (§9.1)
   if (!bot.ally && (kk.carry || kk.crown?.trial) && str >= 3 && kk.rng() < .6) return { kind: 'hunt', id: null };
   const owned = kk.map.sites.filter((s) => s.kind === 'castle' && s.owner === bot.seat);
@@ -112,14 +117,50 @@ function moveBot(kk, bot, target, dt) {
 // One step across the board toward a spot (true = arrived).
 function stepToward(bot, t, dt, near) {
   const dx = t.x - bot.x; const dz = ((t.z ?? bot.z) - (bot.z ?? KK.depth / 2)) * ZPX; const d = Math.hypot(dx, dz); if (d < near) return true;
-  const k = Math.min(1, BOT_SPEED * dt / d); bot.x += dx * k; bot.z = (bot.z ?? KK.depth / 2) + dz * k / ZPX; return false;
+  const k = Math.min(1, BOT_SPEED * (bot.horse ? 1.5 : 1) * (bot.egg ? .7 : 1) * dt / d); /* riding / carrying an egg */ bot.x += dx * k; bot.z = (bot.z ?? KK.depth / 2) + dz * k / ZPX; return false;
+}
+// A rival hatches its egg at a source: a creature joins its squad (the size by chance, a pure source helps).
+function hatchForBot(game, bot, src) {
+  const kk = kkState(game); const egg = bot.egg; if (!egg) return; bot.egg = null; const size = src.pure || kk.rng() < .35 ? 2 : 1;
+  addRecord(kk, { team: bot.team, seat: bot.seat, creature: true, kind: egg.creature, element: egg.element, size, cls: 'Berserker', tier: 1 + size, row: src.row, x: src.x, z: src.z + .2, role: 'squad', hatched: true }); botGain(kk, bot, XP.hatch ?? 40);
+  if (boardGap(src, game.player) < 1800) game.showAnnouncement?.(`${SEAT_NAMES[bot.seat]} BRÜTET EINE KREATUR AUS`, 1.8);
+}
+// Rivals take what lies within reach (user, 20 Nov 2026: runes dropped on death can be taken by others) and use it: gold and goods
+// for training, runes make the rival stronger (champion life, abstract fights), potions heal, an egg is carried home.
+function rivalPickups(game) {
+  const kk = kkState(game); if (!kk.items?.length) return; const live = new Map(); if (kk.championBot && game.enemyChampion.lifeState === 'Alive') live.set(kk.championBot, game.enemyChampion); for (const [b, e] of kk.extraBots ?? []) if (e.lifeState === 'Alive') live.set(b, e);
+  for (const bot of kk.bots) {
+    if (!bot.alive || bot.travel > 0) continue; const ent = live.get(bot); const at = ent ?? bot; const reach = ent ? 40 : 70; const row = bot.row;
+    for (const it of [...kk.items]) {
+      if (it.row !== row || it.lock > 0 || boardGap(at, it) > reach) continue;
+      if (it.kind === 'egg') { if (bot.egg || bot.ally) continue; bot.egg = { element: it.element, creature: it.creature }; }
+      else if (it.kind !== 'item') continue;
+      else if (it.type === 'gold') bot.gold += it.n;
+      else if (it.type === 'rune') { (bot.runes ??= []).push(it.rune); botGain(kk, bot, 10); if (ent) { ent.maxHp += 40; ent.hp += 40; } if (boardGap(at, game.player) < 1400) game.showAnnouncement?.(`${SEAT_NAMES[bot.seat]} NIMMT DIE RUNE ${it.rune?.name ?? ''}`, 1.6); }
+      else if (it.type === 'gem') bot.stones[it.el] = (bot.stones[it.el] ?? 0) + it.n;
+      else if (it.type === 'weapon') bot.weapons[it.weapon] = (bot.weapons[it.weapon] ?? 0) + 1;
+      else if (it.type === 'potion') { bot.hpFrac = Math.min(1, bot.hpFrac + .4); if (ent) ent.hp = Math.min(ent.maxHp, ent.hp + ent.maxHp * .4); }
+      else bot.gold += it.n; /* building goods: worth their number in gold to a rival */
+      kk.items.splice(kk.items.indexOf(it), 1);
+    }
+  }
+}
+// The live champion shows what its rival has: it rides its horse, it carries its egg above its head.
+function dressChampion(E, bot) {
+  E.kkBot = bot; E.kkRiding = !!bot.horse; E.kkEgg = bot.egg ?? null; E.baseMoveSpeed ??= E.moveSpeed; if (E.baseMoveSpeed) E.moveSpeed = E.baseMoveSpeed * (E.kkRiding ? 1.4 : 1) * (E.kkEgg ? .75 : 1);
+  if (E._kkDressed) return; E._kkDressed = true; const orig = E.render.bind(E);
+  E.render = (ctx) => {
+    const on = E.lifeState === 'Alive' && kkOn(globalThis.window?.gameWorld);
+    if (on && E.kkRiding) { drawHorse(ctx, { x: E.x, y: E.y, facing: E.facing, state: Math.abs(E.vx ?? 0) > 5 ? 'run' : 'idle', animTime: E.animTime, vx: E.vx }); ctx.save(); ctx.translate(0, -30); orig(ctx); ctx.restore(); } else orig(ctx);
+    if (on && E.kkEgg) { const y = E.y - (E.kkRiding ? 30 : 0) - 128; ctx.save(); ctx.fillStyle = '#1d1a22'; ctx.beginPath(); ctx.ellipse(E.x, y, 13, 17, 0, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = elementColor(E.kkEgg.element); ctx.beginPath(); ctx.ellipse(E.x, y, 11, 15, 0, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.fillRect(Math.round(E.x - 5), Math.round(y - 9), 3, 6); ctx.restore(); }
+  };
 }
 function botGain(kk, bot, xp) { bot.xp += xp * .55; bot.level = levelForXp(bot.xp); } /* bots grow a little slower than an active player */
 // Abstract fight at a site (outside the player's band): both sides lose units in proportion to the other's strength.
 // a fallen record leaves the game too, also when it happens to be a live unit near the player
 const removeRecord = (kk, game, v) => { kk.units.splice(kk.units.indexOf(v), 1); if (v.live) { const i = game.minions.indexOf(v.live); if (i >= 0) game.minions.splice(i, 1); v.live = null; } };
 function abstractBattle(kk, bot, foes, dt, game = globalThis.window?.gameWorld) {
-  const mine = botSquad(kk, bot); const sMine = strength(mine) + bot.level * .45; const sFoe = strength(foes);
+  const mine = botSquad(kk, bot); const sMine = strength(mine) + bot.level * .45 + (bot.runes?.length ?? 0) * .3; const sFoe = strength(foes); /* taken runes count */
   if (!foes.length) return true;
   if (kk.rng() < dt * sMine * .12) { const v = foes[Math.floor(kk.rng() * foes.length)]; removeRecord(kk, game, v); bot.gold += 8; botGain(kk, bot, XP.kill * .5); }
   if (mine.length && kk.rng() < dt * sFoe * .08) { const v = mine[Math.floor(kk.rng() * mine.length)]; removeRecord(kk, game, v); }
@@ -130,6 +171,8 @@ function actBot(game, bot, dt) {
   const kk = kkState(game); const t = bot.task; const site = t && siteById(kk, t.id); if (!site) { bot.task = null; return; }
   // 'in band' = fought out live: the bot is the champion near the player; farther away the fight is simulated
   const inBand = bot.row === kk.row && (bot === kk.championBot || kk.extraBots?.has(bot) || boardGap(bot, game.player) < 1100);
+  if (t.kind === 'stable') { bot.horse = true; bot.task = null; return; } /* a horse: faster across the board, the champion rides */
+  if (t.kind === 'hatch') { hatchForBot(game, bot, site); bot.task = null; return; }
   if (t.kind === 'loot') {
     if (site.kind === 'building' && !site.looted) { site.looted = true; const c = rollChest(kk.seed * 13 + site.x, lootTier({ time: kk.time, middleBand: site.row === 1 }), { biomeElement: biomeAt(kk.map, site.row, site.x).element, weapons: CASTLE_CLASSES.map((x) => x.weapon) }); bot.gold += c.gold; for (const [e, n] of Object.entries(c.stones)) bot.stones[e] = (bot.stones[e] ?? 0) + n; for (const w of c.weapons) bot.weapons[w] = (bot.weapons[w] ?? 0) + 1; botGain(kk, bot, XP.search); }
     else if (site.kind === 'goldvein' && !(site.cd > 0)) { site.cd = 25; bot.gold += 20; botGain(kk, bot, XP.mine); }
@@ -169,6 +212,7 @@ function updateBots(game, dt) {
     if (bot === kk.championBot || kk.extraBots?.has(bot)) continue; /* a live champion moves by itself */
     bot.think -= dt; if (!bot.task || bot.think <= 0) { bot.think = THINK * 3; if (!bot.task) bot.task = pickTask(kk, bot); }
     if (bot.task?.kind === 'hunt') { const P = game.player; if (!(kk.carry || kk.crown?.trial) || !P.isAlive) { bot.task = null; continue; } moveBot(kk, bot, { row: kk.row, x: P.x, z: P.z }, dt); for (const u of botSquad(kk, bot)) if (!u.live) { u.row = bot.row; u.x += (bot.x - u.x) * Math.min(1, dt * 2); } continue; }
+    if (bot.task?.kind === 'egg') { const egg = kk.items.find((it) => it.id === bot.task.id && it.kind === 'egg'); if (!egg) { bot.task = null; continue; } if (moveBot(kk, bot, egg, dt)) { kk.items.splice(kk.items.indexOf(egg), 1); bot.egg = { element: egg.element, creature: egg.creature }; bot.task = null; if (boardGap(bot, game.player) < 1600) game.showAnnouncement?.(`${SEAT_NAMES[bot.seat]} TRÄGT EIN EI DAVON`, 1.6); } continue; }
     const site = bot.task && siteById(kk, bot.task.id); if (!site) { bot.task = null; continue; }
     if (moveBot(kk, bot, site, dt)) actBot(game, bot, dt);
     if (bot.hpFrac <= 0) killBot(game, bot, null);
@@ -180,6 +224,7 @@ function killBot(game, bot, killer) {
   const kk = kkState(game); bot.alive = false; bot.respawnT = Math.min(25, 8 + kk.time / 60); bot.task = null;
   if (bot.gold > 0 || bot.runes?.length) dropPile(game, bot.x, bot.z, { gold: bot.gold, materials: {}, stones: { ...bot.stones }, weapons: Object.entries(bot.weapons).flatMap(([w, n]) => Array(n).fill(w)), runes: bot.runes ?? [], row: bot.row });
   bot.gold = 0; bot.stones = {}; bot.weapons = {}; bot.runes = [];
+  if (bot.egg) { kk.items.push({ id: kk.nextItem++, kind: 'egg', row: bot.row, x: bot.x, z: bot.z, lock: 1, element: bot.egg.element, creature: bot.egg.creature }); bot.egg = null; } /* the egg falls */
   if (killer === 'player') { gainXp(game, heroKillXp(kk.level, bot.level)); game.showAnnouncement?.(`${SEAT_NAMES[bot.seat]} BESIEGT`, 1.8); }
 }
 
@@ -189,13 +234,13 @@ function updateChampion(game, dt) {
   const cb = kk.championBot;
   if (cb) {
     if (E.lifeState !== 'Alive') { killBot(game, cb, 'player'); kk.championBot = null; E.lifeState = 'Dead'; E.respawnTimer = Infinity; return; }
-    cb.x = E.x; cb.z = E.z; cb.hpFrac = E.hp / E.maxHp;
+    cb.x = E.x; cb.z = E.z; cb.hpFrac = E.hp / E.maxHp; dressChampion(E, cb); /* horse / egg may change */
     if (cb.row !== kk.row) { kk.championBot = null; E.lifeState = 'Dead'; E.respawnTimer = Infinity; }
     return;
   }
   const bot = kk.bots.filter((b) => b.alive && !b.ally && b.row === kk.row && b.travel <= 0 && !kk.extraBots?.has(b)) /* an ally never becomes the enemy champion */.sort((a, b) => boardGap(a, P) - boardGap(b, P))[0];
   if (!bot || boardGap(bot, P) > 1100) return;
-  kk.championBot = bot; E.team = bot.team; E.heroKey = bot.heroKey; E.maxHp = 600 + bot.level * 60; E.hp = Math.max(1, E.maxHp * bot.hpFrac);
+  kk.championBot = bot; E.team = bot.team; E.heroKey = bot.heroKey; E.maxHp = 600 + bot.level * 60 + (bot.runes?.length ?? 0) * 40; E.hp = Math.max(1, E.maxHp * bot.hpFrac); dressChampion(E, bot);
   E.x = bot.x; E.z = bot.z; E.lifeState = 'Alive'; E.respawnTimer = Infinity; E.isDead = false; E.state = 'idle'; game.battlefield.placeOnSurface?.(E);
   for (const u of botSquad(kk, bot)) if (u.live) u.live.followLeader = E;
 }
@@ -211,7 +256,7 @@ function updateExtraChampions(game, dt) {
   if (!kk.championBot) return; /* the first one is the main champion */
   for (const bot of kk.bots) {
     if (!bot.alive || bot.ally || bot === kk.championBot || kk.extraBots.has(bot) || bot.row !== kk.row || bot.travel > 0 || boardGap(bot, P) > 1100 || kk.extraBots.size >= 2) continue;
-    const ent = new EnemyChampion(bot.x, bot.z, bot.heroKey); ent.team = bot.team; ent.maxHp = 600 + bot.level * 60; ent.hp = Math.max(1, ent.maxHp * bot.hpFrac); ent.isKKExtra = true; ent.kkBot = bot;
+    const ent = new EnemyChampion(bot.x, bot.z, bot.heroKey); ent.team = bot.team; ent.maxHp = 600 + bot.level * 60 + (bot.runes?.length ?? 0) * 40; ent.hp = Math.max(1, ent.maxHp * bot.hpFrac); dressChampion(ent, bot); ent.isKKExtra = true; ent.kkBot = bot;
     game.battlefield.placeOnSurface?.(ent); kk.extraBots.set(bot, ent); for (const u of botSquad(kk, bot)) if (u.live) u.live.followLeader = ent;
   }
   game.kkExtraFoes = [...kk.extraBots.values()];
@@ -294,10 +339,11 @@ function checkEnd(game) {
 
 export function updateWar(game, dt) {
   if (!kkOn(game)) return; const kk = kkState(game); if (!kk.bots) return;
-  updateBots(game, dt); updateChampion(game, dt); updateExtraChampions(game, dt); updateSieges(game, dt); updateFlood(game, dt);
+  updateBots(game, dt); updateChampion(game, dt); updateExtraChampions(game, dt); rivalPickups(game); updateSieges(game, dt); updateFlood(game, dt);
   if (Math.floor(kk.time) !== kk._endTick) { kk._endTick = Math.floor(kk.time); checkEnd(game); }
 }
 
+export const killBotForTest = (game, bot) => killBot(game, bot, null); /* tests: the egg falls with the rival */
 // ── drawing ────────────────────────────────────────────────────────────────────────────────────────────────────────
 export function warActors(game) {
   const kk = kkState(game); if (!kk?.bots) return []; const out = [];
