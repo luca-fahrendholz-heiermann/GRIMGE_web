@@ -11,7 +11,7 @@ import { audio } from './audio.js';
 import { kkState, kkOn, applyBounds } from './kk_world.js';
 import { openChest } from './kk_loot.js';
 import { addRecord } from './kk_army.js';
-import { damageCastle } from './kk_castle.js';
+import { damageCastle, gatesOf } from './kk_castle.js';
 
 // half / depth: the inside (wider and deeper than the house looks from outside, user 19 Nov 2026); outHalf / outDepth: the
 // solid footprint of the house in the world (nobody walks through a house, only through its door).
@@ -88,7 +88,7 @@ function houseSolidity(game) {
 // Where a foe aims while the player hides in a house: the door (it then follows inside).
 export function doorProxy(game, unit) {
   const kk = kkState(game); const s = kk.inside; if (!s) return null;
-  if (s.kind !== 'building') return { isDoorProxy: true, isCastleGate: true, team: game.player.team, x: s.x, z: s.z + .03, get y() { return groundYForDepth(s.z + .03); }, isDead: false, isAlive: true, radius: 6, takeDamage: (a) => { damageCastle(game, s, a, unit); return {}; } }; /* a castle: foes only batter its gate */
+  if (s.kind !== 'building') return { isDoorProxy: true, isCastleGate: true, team: game.player.team, x: gatesOf(s).reduce((a, g) => (Math.abs(g - (unit?.x ?? s.x)) < Math.abs(a - (unit?.x ?? s.x)) ? g : a)), z: s.z + .03, get y() { return groundYForDepth(s.z + .03); }, isDead: false, isAlive: true, radius: 6, takeDamage: (a) => { damageCastle(game, s, a, unit); return {}; } }; /* a castle: foes only batter its gate */
   return { isDoorProxy: true, team: game.player.team, x: s.x, z: s.z + .06, get y() { return groundYForDepth(s.z + .06); }, isDead: false, isAlive: true, radius: 6, takeDamage: () => {} };
 }
 

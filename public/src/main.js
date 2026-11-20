@@ -21,7 +21,7 @@ import { SpellTargeting, SlotChord, needsTarget } from './targeting.js';
 import { GamepadController } from './gamepad.js';
 import { environment, renderProp } from './environment.js';
 import { TRAINING_MAPS, getTrainingMap, zoneToWorld } from './training_maps.js';
-import { setupGallery, updateGallery, galleryActors, renderGalleryLabels } from './spell_gallery.js';
+import { setupGallery, updateGallery, galleryActors, renderGalleryLabels } from './spell_gallery.js'; // the Training map where clones show every spell
 import { setupKronenkrieg, updateKronenkrieg, renderKKGround, kkActors, renderKKMinimap, kkPanY } from './kk_world.js'; // Kronenkrieg: the banded open map
 import { initLoot, updateLoot, lootActors, renderLootHud, kkFuseAllowed, respawnDelay, closePotionButtons } from './kk_loot.js'; // Kronenkrieg: loot and the round level
 import { initArmy, updateArmy, armyActors, closeKKPanel, recordGrade, kkFindTarget, closeCastleOpener } from './kk_army.js'; // Kronenkrieg: armies, castles, garrisons
@@ -29,9 +29,9 @@ import { initWar, updateWar, warActors, renderFlood, warMinimapDots, kkEnemyHome
 import { initCreatures, updateCreatures, creatureActors, creatureMinimapDots, tameAt, kkMountGate } from './kk_creatures.js'; // Kronenkrieg: creatures, eggs, mounts
 import { initCrown, updateCrown, closeCrownPanel, kkFocusLocked, kkFocusStyle } from './kk_crown.js'; // Kronenkrieg: the crowning trials
 import { updateInterior, interiorActors } from './kk_interior.js'; // Kronenkrieg: houses you walk into (cut-away)
-import { itemActors, renderReels, closeBag, kkUseHeld } from './kk_items.js';
-import { kkResourceTargets } from './kk_resources.js';
-import { castleTargets } from './kk_castle.js'; // Kronenkrieg: foe castle walls to batter // Kronenkrieg: trees, rocks, ore, obsidian to harvest // Kronenkrieg: items, the bag, the reel window // the Training map where clones show every spell
+import { itemActors, renderReels, closeBag, kkUseHeld } from './kk_items.js'; // Kronenkrieg: items, the bag, the reel window
+import { kkResourceTargets } from './kk_resources.js'; // Kronenkrieg: trees, rocks, ore, obsidian to harvest
+import { castleTargets, tryCastleTap } from './kk_castle.js'; // Kronenkrieg: foe castle walls to batter
 import { loadFxSprites } from './fx_sprites.js';
 import { loadSpellSprites } from './spell_visuals.js';
 import { renderPixelated } from './abilities.js';
@@ -1498,6 +1498,7 @@ export class GameWorld {
     if (!pt || !this.isMatchRunning() || !p?.isAlive || this.drawing.active || this.targeting.isActive) return false;
     pt = this.screenToWorldPx(pt); // taps on actors compare in world pixels (zoom + scrolling camera)
     if (this.activeMode?.id === 'base') return baseTap(this, pt); /* a tap on a station or an armour stand */
+    if (this.activeMode?.id === 'kronenkrieg' && tryCastleTap(this, pt)) return true; /* a tap / click on a castle flag: the castle menu */
     // Siege: a tap on the waiting Primal sends it to the lane alone.
     if (this.primal?.tryTapDeploy(pt, this)) return true;
     // A tap on an enemy marks it as the Primal's focus target (an armed
@@ -3489,7 +3490,8 @@ export class GameWorld {
       actors.sort((a, b) => key.get(a) - key.get(b));
     } else {
       // A jump keeps its place in the depth order: the ground under the jumper counts, not the height in the air (user, 12 Nov 2026).
-      const depthY = (a) => a.y + (Number.isFinite(a.elevation) && a.elevation > 0 && Number.isFinite(a.z) ? a.elevation : 0);
+      // Standing on a stair / roof counts by the ground under the figure too (bug: a figure on a deep castle roof sorted before the castle and vanished).
+      const depthY = (a) => a.y + (Number.isFinite(a.z) ? (Number.isFinite(a.elevation) && a.elevation > 0 ? a.elevation : 0) + (a.surfaceHeight > 0 && a.isMobileCombatant ? a.surfaceHeight : 0) : 0);
       actors.sort((a, b) => depthY(a) - depthY(b));
     }
     let spellBatch = [];

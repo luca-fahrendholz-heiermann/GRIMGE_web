@@ -117,7 +117,7 @@ export function buildDecor(map) {
     const kinds = BIOME_DECOR[bio.element] ?? ['tuft']; const n = Math.round((bio.x1 - bio.x0) / 120);
     for (let i = 0; i < n; i++) {
       const x = bio.x0 + rng() * (bio.x1 - bio.x0); const z = .05 + rng() * (KK.depth - .1); if (Math.abs(z - roadZ(x, bio.row)) < .14) continue; /* the whole depth, not on the road */
-      if ([...map.hqs, ...map.sites].some((s) => s.row === bio.row && (s.kind === 'castle' || s.kind === 'hq' ? Math.abs(s.x - x) < (s.kind === 'hq' ? 400 : 340) && z > s.z - .24 && z < s.z + .12 : Math.abs(s.x - x) < 170 && Math.abs(s.z - z) < .25))) continue; /* castles: wall block plus stairs */
+      if ([...map.hqs, ...map.sites].some((s) => s.row === bio.row && (s.kind === 'castle' || s.kind === 'hq' ? Math.abs(s.x - x) < (s.kind === 'hq' ? 400 : 340) && z > s.z - .65 && z < s.z + .3 : Math.abs(s.x - x) < 170 && Math.abs(s.z - z) < .25))) continue; /* castles: wall block plus stairs */
       let kind = kinds[Math.floor(rng() * kinds.length)]; const roll = rng();
       // some rocks are resources of the stronger materials: ore veins (steel), and obsidian in the deep and in fire / void / shadow land
       if (kind === 'rock' && roll < .24) kind = 'ore'; else if ((kind === 'rock' || kind === 'crystal' || kind === 'lava') && roll > (bio.row === 2 || ['ignis', 'void', 'umbra'].includes(bio.element) ? .72 : .93)) kind = 'obsidian';

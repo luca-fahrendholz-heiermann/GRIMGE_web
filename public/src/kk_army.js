@@ -237,7 +237,7 @@ function updateSites(game, dt) {
       // only a castle without life is taken: alone in the ring at its gate until the ring is full (user, 20 Nov 2026)
       const ring = inGateRing(s, P); const open = castleHp(s) <= 0;
       const guards = hostileGuards(kk, s).length + kk.units.filter((u) => u.role === 'garrison' && u.siteId === s.id && u.team !== 'blue').length + game.minions.filter((m) => m.isKKUnit && !m.isDead && m.team !== P.team && Math.hypot(m.x - s.x, (m.z - s.z) * 150) < 280).length;
-      if (ring && !open && kk.time - (s.wallHintAt ?? -99) > 4) { s.wallHintAt = kk.time; game.showAnnouncement?.('ERST DIE BURGMAUER ZERSTÖREN (SCHLÄGE, ZAUBER, DEINE TRUPPE HILFT)', 1.6); }
+      if (ring && !open && kk.time - (s.wallHintAt ?? -99) > 4) { s.wallHintAt = kk.time; game.showAnnouncement?.('ERST DIE BURGMAUER ZERSTÖREN (SCHLÄGE, ZAUBER, DEINE TRUPPE HILFT)', 1.6); } /* the ring: alone at the flag on the roof */
       kk.progress[s.id] = ring && open && !guards ? (kk.progress[s.id] ?? 0) + dt : 0; /* any foe nearby or leaving the ring starts it over */
       if (close && guards && Math.floor(kk.time * 2) % 6 === 0) s.blockedHint = true;
       if (kk.progress[s.id] >= CAPTURE_TIME) {
@@ -374,25 +374,12 @@ function refreshPanel(game, site) {
   if (h !== p.html) { p.el.innerHTML = h; p.html = h; }
   p.el.style.display = 'block'; p.siteId = site.id;
 }
-// The castle menu only opens on demand (user: the UI was in the way while fighting): near an own castle a small button
-// (or key F) opens / closes it.
-let opener = null;
-export function closeCastleOpener() { if (opener?.el) opener.el.style.display = 'none'; }
-function ensureOpener(game) {
-  const doc = globalThis.document; if (typeof doc?.createElement !== 'function' || typeof doc.body?.appendChild !== 'function') return null;
-  if (opener) return opener;
-  const el = doc.createElement('button'); el.type = 'button'; el.id = 'kk-castle-open';
-  el.style.cssText = 'position:fixed;left:calc(50% + 124px);top:14px;z-index:61;min-height:40px;font-family:Cinzel,serif;font-size:13px;color:#fff3c8;background:#3a2a4ecc;border:2px solid #c9a95a;border-radius:8px;padding:0 .6em;display:none';
-  const toggle = (e) => { e?.preventDefault?.(); e?.stopPropagation?.(); const kk = kkState(globalThis.window?.gameWorld); if (kk) kk.panelOpen = !kk.panelOpen; };
-  el.addEventListener('pointerdown', toggle); doc.addEventListener('keydown', (e) => { if (e.code === 'KeyF' && kkOn(globalThis.window?.gameWorld) && opener?.el.style.display !== 'none') toggle(e); });
-  doc.body.appendChild(el); opener = { el }; return opener;
-}
+// The castle menu opens only on purpose: a tap / click on the own castle flag (kk_castle.js tryCastleTap).
+export function closeCastleOpener() { /* the former button: the flag took its place */ }
 function updatePanel(game) {
   const kk = kkState(game); const P = game.player;
-  const own = kk.inside && kk.inside.kind !== 'building' ? kk.inside : null; /* the castle menu lives inside the castle (user: inside one creates warriors) */
-  const op = ensureOpener(game);
-  if (!own || !P.isAlive) { kk.panelOpen = false; if (op) op.el.style.display = 'none'; if (panel?.siteId) { closeKKPanel(); if (panel) panel.msg = ''; } return; }
-  if (op) { op.el.style.display = 'block'; op.el.textContent = kk.panelOpen ? '✕ ♜' : '♜'; op.el.title = 'Burg-Menü (F)'; }
+  const own = kk.panelOpen && kk.flagSite ? kk.flagSite : null; /* the castle menu opens from the castle's flag (kk_castle.js tryCastleTap) */
+  if (!own || !P.isAlive) { kk.panelOpen = false; if (panel?.siteId) { closeKKPanel(); if (panel) panel.msg = ''; } return; }
   if (!kk.panelOpen) { if (panel?.siteId) closeKKPanel(); return; }
   if (panel?.siteId !== own.id && panel) panel.msg = '';
   if (Math.floor(kk.time * 4) !== kk._panelTick || panel?.siteId !== own.id) { kk._panelTick = Math.floor(kk.time * 4); refreshPanel(game, own); }

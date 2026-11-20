@@ -38,7 +38,7 @@ export const BIOME_OF = Object.freeze({
 });
 // The modular sites: width (x px they occupy), value (for fairness), big (keeps out of a main castle's surroundings).
 export const SITE_KINDS = Object.freeze({
-  castle: { w: 640, value: 6, big: true }, /* the wall block with a stair on each side (kk_castle.js) */ lair: { w: 260, value: 5, big: true }, camp: { w: 200, value: 2, big: true },
+  castle: { w: 600, value: 6, big: true }, /* the wall block with its double stair (kk_castle.js) */ lair: { w: 260, value: 5, big: true }, camp: { w: 200, value: 2, big: true },
   building: { w: 200, value: 1 }, goldvein: { w: 90, value: 3 }, prison: { w: 170, value: 3 }, source: { w: 120, value: 2 },
   stable: { w: 150, value: 1 }, shrine: { w: 60, value: 1 },
   shaft: { w: 140, value: 0 }, lift: { w: 140, value: 0 }
@@ -90,7 +90,7 @@ function attempt(rng) {
     while (x < sx1) { const len = Math.min(sx1 - x, 1300 + Math.floor(rng() * 900)); if (!pool.length) pool = shuffle(rng, ELEMENTS); biomes.push({ row, x0: x, x1: x + len, element: pool.pop() }); x += len; }
   }
   const sites = []; const occupied = Array.from({ length: rows }, () => []);
-  for (const hq of hqs) occupied[hq.row].push({ x0: hq.x - 390, x1: hq.x + 390, big: true });
+  for (const hq of hqs) occupied[hq.row].push({ x0: hq.x - 380, x1: hq.x + 380, big: true });
   // 4. the connectors: at both ends of every section a shaft above and a lift below, at the same x
   for (const row of [0, 2]) for (const [sx0, sx1] of spans[row]) for (const x of [sx0 + KK.connectorInset, sx1 - KK.connectorInset]) {
     const upper = row === 0 ? 0 : M; const lower = row === 0 ? M : 2;
@@ -110,7 +110,7 @@ function attempt(rng) {
     for (let n = 0; n < (kind === 'castle' ? 900 : 160); n++) { /* the wide castles need more tries to find room */
       const row = pick?.row ?? pickRow(); const x = pick?.x0 != null ? pick.x0 + rng() * (pick.x1 - pick.x0) : pickX(row);
       if ((def.big || kind === 'prison') && nearHQ(row, x)) continue; /* guarded places keep away from a start too */
-      const D = KK.depth; const z = def.big ? .42 + rng() * (D - 1) : kind === 'building' ? .42 + rng() * (D - .62) /* room for the inside behind the front */ : .2 + rng() * (D - .4);
+      const D = KK.depth; const z = kind === 'castle' ? .7 + rng() * (D - 1.2) /* the block reaches .5 back */ : def.big ? .42 + rng() * (D - 1) : kind === 'building' ? .42 + rng() * (D - .62) /* room for the inside behind the front */ : .2 + rng() * (D - .4);
       if (!free(row, x, def.w, def.big, z)) continue;
       const site = { id: kind + sites.length, kind, row, x: Math.round(x), z: +z.toFixed(3), ...props };
       sites.push(site); occupied[row].push({ x0: x - def.w / 2, x1: x + def.w / 2, big: !!def.big, z }); return site;
