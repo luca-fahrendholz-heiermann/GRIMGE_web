@@ -5598,7 +5598,10 @@ game.running = false;
     KIt.showReels(game, { grid: ['weapon', 'weapon', 'weapon', 'blank', 'rune', 'element', 'blank', 'blank', 'blank'], wins: ['weapon'], bonus: ['veteran'] }, 'TEST'); const shown = !!kk.reelShow;
     const fakeCtx = new Proxy({}, { get: (o, k) => (k in o ? o[k] : () => {}), set: (o, k, v) => { o[k] = v; return true; } }); for (let i = 0; i < 250; i++) KIt.renderReels(fakeCtx, game, 1280, 720); const gone = !kk.reelShow;
     kk.items = kk.items.filter((it) => it !== wood); inv.wood = Math.max(0, inv.wood - room);
-    assert(partial && coinFits && icons && shown && gone, 'Kronenkrieg items: a full bag takes only what fits and leaves the rest lying, coins always fit, every item kind has its icon, the reel window shows a spin and closes after 4 s (' + [partial, coinFits, icons, shown, gone].join('/') + ')');
+    // a potion is carried in the hand (one at a time) and the attack drinks it (user, 20 Nov 2026: like a bottle in Little Fighter)
+    kk.held = null; const [p1, p2] = KIt.spawnItems(game, P.x, P.z, { potions: { hp: 2 } }); const hand = KIt.pickupItem(game, p1) && kk.held?.kind === 'hp' && KIt.pickupItem(game, p2) === false;
+    P.hp = P.maxHp * .3; P.attackCooldown = 0; P.state = 'idle'; const hp0 = P.hp; const drank = P.executeAttack(game.input, 'normal') && P.hp > hp0 && kk.held === null;
+    assert(partial && coinFits && icons && shown && gone && hand && drank, 'Kronenkrieg items: a full bag takes only what fits and leaves the rest lying, coins always fit, every item kind has its icon, the reel window shows a spin and closes after 4 s, a potion goes into the hand (a second one stays lying) and the attack drinks it (' + [partial, coinFits, icons, shown, gone, hand, drank].join('/') + ')');
   }
   {
     // resources (feedback 20 Nov 2026): trees give wood, rocks stone, ore veins steel, obsidian takes longest; a felled node drops items and regrows

@@ -9,7 +9,9 @@
 import { groundYForDepth, clampZ } from './world.js';
 import { audio } from './audio.js';
 import { kkState, kkOn, elementColor, roomClip } from './kk_world.js';
-import { BACKPACK, invUnits, giveRune } from './kk_loot.js';
+import { BACKPACK, invUnits, giveRune, deckCount } from './kk_loot.js';
+import { combat } from './combat.js';
+import { deckSlots, xpProgress } from './kk_progress.js';
 import { MATERIALS } from './kk_progress.js';
 
 const ICON_S = 2;
@@ -56,7 +58,12 @@ export function spawnItems(game, x, z, b, { row = null, spread = 70 } = {}) {
 export function pickupItem(game, it) {
   const kk = kkState(game); const inv = kk.inv;
   if (it.type === 'gold') { kk.gold += it.n; audio.playRuneChime?.(880); return true; }
-  if (it.type === 'potion') { inv.potions[it.kind] = (inv.potions[it.kind] ?? 0) + 1; audio.playRuneChime?.(700); return true; }
+  if (it.type === 'potion') { /* a potion is carried in the hand (one at a time) and drunk with the attack (user, 20 Nov 2026) */
+    if (kk.held) return false;
+    kk.held = { type: 'potion', kind: it.kind }; audio.playRuneChime?.(700);
+    if (!kk.heldHint) { kk.heldHint = true; game.showAnnouncement?.(`${it.kind === 'hp' ? 'HEILTRANK' : 'MANATRANK'} IN DER HAND — SCHLAG ZUM TRINKEN`, 1.8); }
+    return true;
+  }
   if (it.type === 'rune') { const got = giveRune(game, it.rune); if (got === 'double') { kk.gold += 15; return true; } return got !== 'full'; }
   const room = BACKPACK - invUnits(inv); if (room <= 0) { bagFullHint(game); return false; }
   if (it.type === 'weapon') { inv.weapons[it.weapon] = (inv.weapons[it.weapon] ?? 0) + 1; audio.playRuneChime?.(640); return true; }
@@ -65,6 +72,15 @@ export function pickupItem(game, it) {
   it.n -= take; audio.playRuneChime?.(620);
   if (it.n > 0) { bagFullHint(game); return false; }
   return true;
+}
+// The attack with a potion in the hand drinks it (true = the attack is used up).
+export function kkUseHeld(game, P) {
+  const kk = kkState(game); const h = kk?.held; if (!h || P !== game.player || !P.isAlive) return false;
+  kk.held = null;
+  if (h.kind === 'hp') { P.hp = Math.min(P.maxHp, P.hp + P.maxHp * .45); combat.spawnShockwave?.(P.x, P.y - 30, 40, '#ff6b8a'); }
+  else { P.mp = Math.min(P.maxMp, P.mp + P.maxMp * .5); combat.spawnShockwave?.(P.x, P.y - 30, 40, '#6bb8ff'); }
+  combat.spawnHitSparks?.(P.x + (P.facing || 1) * 12, P.y - 52, P.facing || 1, h.kind === 'hp' ? '#ff6b8a' : '#6bb8ff', 8); audio.playRuneChime?.(h.kind === 'hp' ? 560 : 720);
+  P.attackCooldown = Math.max(P.attackCooldown ?? 0, .35); return true;
 }
 function bagFullHint(game) { const kk = kkState(game); if ((kk.time - (kk.bagHintAt ?? -9)) < 3) return; kk.bagHintAt = kk.time; game.showAnnouncement?.('BEUTEL VOLL — IM BEUTEL (I) ETWAS ABLEGEN', 1.6); }
 
@@ -80,6 +96,9 @@ export function itemActors(game) {
       if (it.n > 1) { ctx.font = 'bold 9px monospace'; ctx.textAlign = 'center'; ctx.fillStyle = '#fff'; ctx.fillText(String(it.n), it.x + 12, y - 4 - hop); }
     } });
   }
+  // the potion in the hand
+  const P = game.player; const h = kk.held;
+  if (h && P.isAlive) out.push({ y: groundYForDepth(P.z) + .3, render: (ctx) => { const im = itemIcon({ type: 'potion', kind: h.kind }); const f = P.facing || 1; const x = P.x + f * 15; const y = groundYForDepth(P.z) - (P.surfaceHeight ?? 0) - (P.elevation ?? 0) - 58; if (im) { ctx.save(); ctx.imageSmoothingEnabled = false; ctx.drawImage(im, Math.round(x - 11), Math.round(y - 11), 22, 22); ctx.restore(); } } });
   return out;
 }
 export function updateItemHops(kk, dt) {
@@ -106,7 +125,10 @@ function refreshBag(game) {
   for (const [el, n] of Object.entries(inv.stones)) if (n > 0) rows.push({ type: 'gem', key: el, el, n, label: `${el.toUpperCase()}-STEIN` });
   for (const [w, n] of Object.entries(inv.weapons)) if (n > 0) rows.push({ type: 'weapon', key: w, n, label: `WAFFE (${w.replace(/_/g, ' ').toUpperCase()})` });
   const btn = (act, row, label) => `<button data-bag="${act}" data-type="${row.type}" data-key="${row.key}" style="margin-left:4px;min-height:30px;font:inherit;color:#fff3c8;background:#3a2a4e;border:1px solid #c9a95a">${label}</button>`;
-  let h = `<b style="color:#ffe9a8">BEUTEL ${invUnits(inv)}/${BACKPACK}</b> <span style="color:#cbb8ff">· Gold ${kk.gold} · Tränke ♥${inv.potions.hp} ✦${inv.potions.mp}</span>`;
+  const mats = MATERIALS.map((m) => `${MAT_DE[m]} ${inv[m]}/${kk.store[m]}`).join(' · ');
+  let h = `<b style="color:#ffe9a8">STUFE ${kk.level}</b> <span style="display:inline-block;width:90px;height:7px;background:#2a2234;vertical-align:middle"><span style="display:block;height:7px;width:${Math.round(90 * xpProgress(kk.xp))}px;background:#ffd24a"></span></span> <span style="color:#ffcf3a">◉ ${kk.gold}</span>`;
+  h += `<div style="color:#cbb8ff;margin-top:3px">DECK ${deckCount(game)}/${deckSlots(kk.level)} · BEUTEL ${invUnits(inv)}/${BACKPACK}${kk.held ? ' · IN DER HAND: ' + (kk.held.kind === 'hp' ? 'HEILTRANK' : 'MANATRANK') : ''}</div><div style="color:#9a8fb0;font-size:11px">dabei / im Lager: ${mats}</div>`;
+  for (const r of kk.sealed ?? []) h += `<div style="color:#9a8fb0;font-size:11px">🔒 ${r.name} — ab Stufe ${r.gate}</div>`;
   if (!rows.length) h += '<div style="margin-top:6px;color:#9a8fb0">leer — Beute liegt am Boden und wird durch Darüberlaufen eingesammelt</div>';
   for (const r of rows) { const url = iconUrl({ type: r.type, el: r.el }); h += `<div style="display:flex;align-items:center;margin-top:4px">${url ? `<img src="${url}" width="24" height="24" style="image-rendering:pixelated;margin-right:6px">` : ''}<span style="flex:1">${r.n}× ${r.label}</span>${btn('one', r, 'ABLEGEN')}${r.n > 1 ? btn('all', r, 'ALLE') : ''}</div>`; }
   if (h !== bag.html) { bag.el.innerHTML = h; bag.html = h; }
@@ -114,10 +136,10 @@ function refreshBag(game) {
 export function updateBagUi(game) {
   const doc = globalThis.document; if (typeof doc?.createElement !== 'function' || typeof doc.body?.appendChild !== 'function') return;
   if (!bag) {
-    const btnEl = doc.createElement('button'); btnEl.type = 'button'; btnEl.id = 'kk-bag-btn'; btnEl.textContent = '🎒 BEUTEL (I)';
-    btnEl.style.cssText = 'position:fixed;right:max(1vw,env(safe-area-inset-right));top:36.5vh;z-index:61;min-height:40px;font-family:monospace;font-size:13px;color:#fff3c8;background:#2a2234ee;border:2px solid #c9a95a;padding:.2em .7em';
+    const btnEl = doc.createElement('button'); btnEl.type = 'button'; btnEl.id = 'kk-bag-btn'; btnEl.textContent = '🎒'; btnEl.title = 'Beutel (I)';
+    btnEl.style.cssText = 'position:fixed;left:calc(50% + 78px);top:14px;z-index:61;width:40px;height:40px;font-size:20px;line-height:1;color:#fff3c8;background:#2a2234cc;border:2px solid #c9a95a;border-radius:8px;padding:0'; /* next to the clock: the right side stays free for fighting */
     const el = doc.createElement('div'); el.id = 'kk-bag';
-    el.style.cssText = 'position:fixed;right:calc(max(1vw,env(safe-area-inset-right)) + 190px);top:30vh;z-index:62;width:min(340px,42vw);max-height:62vh;overflow:auto;font-family:monospace;font-size:12px;color:#f1e9d2;background:#1a1424f2;border:2px solid #c9a95a;padding:8px;display:none';
+    el.style.cssText = 'position:fixed;left:max(1vw,env(safe-area-inset-left));top:27vh;z-index:62;width:min(340px,42vw);max-height:62vh;overflow:auto;font-family:monospace;font-size:12px;color:#f1e9d2;background:#1a1424f2;border:2px solid #c9a95a;padding:8px;display:none';
     const toggle = (e) => { e?.preventDefault?.(); e?.stopPropagation?.(); bag.open = !bag.open; bag.el.style.display = bag.open ? 'block' : 'none'; bag.html = ''; if (bag.open) refreshBag(globalThis.window?.gameWorld); };
     btnEl.addEventListener('pointerdown', toggle);
     doc.addEventListener('keydown', (e) => { if (e.code === 'KeyI' && kkOn(globalThis.window?.gameWorld) && !e.target?.closest?.('input')) toggle(e); });

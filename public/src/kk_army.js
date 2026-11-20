@@ -302,7 +302,7 @@ function ensurePanel(game) {
   const doc = globalThis.document; if (typeof doc?.createElement !== 'function' || typeof doc.body?.appendChild !== 'function') return null;
   if (panel?.el) return panel;
   const el = doc.createElement('div'); el.id = 'kk-castle-panel';
-  el.style.cssText = 'position:fixed;right:max(1vw,env(safe-area-inset-right));top:50vh;z-index:61;width:min(340px,40vw);max-height:48vh;overflow:auto;font-family:monospace;font-size:12px;color:#f1e9d2;background:#1a1424ee;border:2px solid #c9a95a;padding:8px;display:none';
+  el.style.cssText = 'position:fixed;left:max(1vw,env(safe-area-inset-left));top:27vh;z-index:63;width:min(340px,40vw);max-height:60vh;overflow:auto;font-family:monospace;font-size:12px;color:#f1e9d2;background:#1a1424ee;border:2px solid #c9a95a;padding:8px;display:none';
   el.addEventListener('pointerdown', (e) => { const b = e.target?.closest?.('[data-kk]'); if (!b) return; e.preventDefault(); e.stopPropagation(); onPanelAction(game, b.getAttribute('data-kk'), b.getAttribute('data-arg')); });
   doc.body.appendChild(el); panel = { el, siteId: null, html: '', spin: false, msg: '' }; return panel;
 }
@@ -357,7 +357,7 @@ function ensureOpener(game) {
   const doc = globalThis.document; if (typeof doc?.createElement !== 'function' || typeof doc.body?.appendChild !== 'function') return null;
   if (opener) return opener;
   const el = doc.createElement('button'); el.type = 'button'; el.id = 'kk-castle-open';
-  el.style.cssText = 'position:fixed;right:max(1vw,env(safe-area-inset-right));top:43vh;z-index:61;min-height:42px;font-family:Cinzel,serif;font-size:14px;color:#fff3c8;background:#3a2a4eee;border:2px solid #c9a95a;padding:.3em .8em;display:none';
+  el.style.cssText = 'position:fixed;left:calc(50% + 124px);top:14px;z-index:61;min-height:40px;font-family:Cinzel,serif;font-size:13px;color:#fff3c8;background:#3a2a4ecc;border:2px solid #c9a95a;border-radius:8px;padding:0 .6em;display:none';
   const toggle = (e) => { e?.preventDefault?.(); e?.stopPropagation?.(); const kk = kkState(globalThis.window?.gameWorld); if (kk) kk.panelOpen = !kk.panelOpen; };
   el.addEventListener('pointerdown', toggle); doc.addEventListener('keydown', (e) => { if (e.code === 'KeyF' && kkOn(globalThis.window?.gameWorld) && opener?.el.style.display !== 'none') toggle(e); });
   doc.body.appendChild(el); opener = { el }; return opener;
@@ -367,7 +367,7 @@ function updatePanel(game) {
   const own = kk.inside && kk.inside.kind !== 'building' ? kk.inside : null; /* the castle menu lives inside the castle (user: inside one creates warriors) */
   const op = ensureOpener(game);
   if (!own || !P.isAlive) { kk.panelOpen = false; if (op) op.el.style.display = 'none'; if (panel?.siteId) { closeKKPanel(); if (panel) panel.msg = ''; } return; }
-  if (op) { op.el.style.display = 'block'; op.el.textContent = kk.panelOpen ? '✕ SCHLIESSEN (F)' : `♜ ${own.kind === 'hq' ? 'HAUPTBURG' : own.label + 'BURG'} (F)`; }
+  if (op) { op.el.style.display = 'block'; op.el.textContent = kk.panelOpen ? '✕ ♜' : '♜'; op.el.title = 'Burg-Menü (F)'; }
   if (!kk.panelOpen) { if (panel?.siteId) closeKKPanel(); return; }
   if (panel?.siteId !== own.id && panel) panel.msg = '';
   if (Math.floor(kk.time * 4) !== kk._panelTick || panel?.siteId !== own.id) { kk._panelTick = Math.floor(kk.time * 4); refreshPanel(game, own); }

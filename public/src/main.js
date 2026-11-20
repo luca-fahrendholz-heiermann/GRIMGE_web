@@ -29,7 +29,7 @@ import { initWar, updateWar, warActors, renderFlood, warMinimapDots, kkEnemyHome
 import { initCreatures, updateCreatures, creatureActors, creatureMinimapDots, tameAt, kkMountGate } from './kk_creatures.js'; // Kronenkrieg: creatures, eggs, mounts
 import { initCrown, updateCrown, closeCrownPanel, kkFocusLocked, kkFocusStyle } from './kk_crown.js'; // Kronenkrieg: the crowning trials
 import { updateInterior, interiorActors } from './kk_interior.js'; // Kronenkrieg: houses you walk into (cut-away)
-import { itemActors, renderReels, closeBag } from './kk_items.js';
+import { itemActors, renderReels, closeBag, kkUseHeld } from './kk_items.js';
 import { kkResourceTargets } from './kk_resources.js';
 import { castleTargets } from './kk_castle.js'; // Kronenkrieg: foe castle walls to batter // Kronenkrieg: trees, rocks, ore, obsidian to harvest // Kronenkrieg: items, the bag, the reel window // the Training map where clones show every spell
 import { loadFxSprites } from './fx_sprites.js';
@@ -177,6 +177,7 @@ export class GameWorld {
 
     this.battlefield = new Battlefield();
     environment.levelSurfaces = () => this.battlefield?.levelSurfaces; /* ground effects lie on stairs / galleries */
+    this.kkUseHeld = (p) => this.activeMode?.id === 'kronenkrieg' && kkUseHeld(this, p); /* Kronenkrieg: the attack drinks the potion in the hand */
     this.player = new Player(ARENA_LAYOUT.spawns.blueCastle.x, ARENA_LAYOUT.spawns.blueCastle.z);
     this.enemyChampion = new EnemyChampion(ARENA_LAYOUT.spawns.redCastle.x, ARENA_LAYOUT.spawns.redCastle.z, 'warlord');
     this.battlefield.placeOnSurface(this.player);
@@ -2713,6 +2714,7 @@ export class GameWorld {
       return this.modeState?.runeCollectibles?.length ? 'COLLECT RUNE RELICS — DEFEAT THE CHAMPION' : 'DEFEAT THE ARENA CHAMPION';
     }
     if (this.activeMode?.id === 'training') return 'PRACTICE — NO REWARDS';
+    if (this.activeMode?.id === 'kronenkrieg') return ''; /* the map and the bag tell everything */
     if (this.activeMode?.id === 'base') return 'DEINE BASIS';
     const tower = this.battlefield.redTower;
     const castle = this.battlefield.redCastle;
@@ -3525,7 +3527,7 @@ export class GameWorld {
     // Map weather (snow, rain, embers, leaves, dust, mana motes) in screen space.
     environment.renderWeather(ctx, viewW, viewH);
     this.renderDungeonExitArrow(ctx, viewW);
-    if (this.activeMode?.id === 'kronenkrieg') { renderKKMinimap(ctx, this, viewW, { dots: [...warMinimapDots(this), ...creatureMinimapDots(this)] }); renderLootHud(ctx, this, viewW); renderReels(ctx, this, viewW, viewH); }
+    if (this.activeMode?.id === 'kronenkrieg') { renderKKMinimap(ctx, this, viewW, { x: 14, y: 82, w: 240, rowH: 14, dots: [...warMinimapDots(this), ...creatureMinimapDots(this)] }); /* top left under the life bars: the right side stays free */ renderLootHud(ctx, this, viewW); renderReels(ctx, this, viewW, viewH); }
     this.renderOffscreenArrows(ctx);
 
     // 3. Screen Space Rune Drawing

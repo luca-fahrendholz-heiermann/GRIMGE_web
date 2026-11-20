@@ -16,7 +16,6 @@ import { spawnItems, pickupItem, updateItemHops, updateBagUi } from './kk_items.
 export const BACKPACK = 40;             // units of materials + stones + weapons one carries
 const MINE_TIME = 2.2; const VEIN_COOLDOWN = 25; const PICK_RANGE = 44;
 const MAT_NAME = Object.freeze({ wood: 'HOLZ', stone: 'STEIN', steel: 'STAHL', obsidian: 'OBSIDIAN' });
-const MAT_COLOR = Object.freeze({ wood: '#b07a45', stone: '#9e9e9e', steel: '#b8d0e0', obsidian: '#7a4fb0' });
 const emptyInv = () => ({ wood: 0, stone: 0, steel: 0, obsidian: 0, stones: {}, weapons: {}, potions: { hp: 0, mp: 0 } });
 
 export function initLoot(kk) {
@@ -142,6 +141,7 @@ function updateLife(game, dt) {
   const kk = kkState(game); const P = game.player;
   if (kk.alive && !P.isAlive) {
     kk.alive = false;
+    if (kk.held) { spawnItems(game, P.x + 20, P.z, { potions: { [kk.held.kind]: 1 } }); kk.held = null; } /* the potion in the hand falls */
     // everything carried falls: gold, the backpack and every rune of the round (sealed ones too)
     const all = [...P.runeDeck, ...P.runeHand, ...P.slottedSpells.flatMap((s) => s.runes)].map(({ cardId, grade, quality, runeLevel, manaCost, ...r }) => r);
     const bound = all.filter((r) => r.soulBound); /* won in a trial: never dropped */
@@ -156,11 +156,7 @@ function updateLife(game, dt) {
     say(game, 'ZURÜCK IN DER HAUPTBURG', 1.4);
   }
   // potions: drunk by hand (buttons, keys 1 / 2); AUTO drinks at low life / mana (a short cooldown between two)
-  kk.potionCd = Math.max(0, kk.potionCd - dt); updatePotionButtons(game);
-  if (P.isAlive && kk.potionCd <= 0 && kk.autoPotion) {
-    if (P.hp < P.maxHp * .3 && kk.inv.potions.hp > 0) { kk.inv.potions.hp--; P.hp = Math.min(P.maxHp, P.hp + P.maxHp * .45); kk.potionCd = 6; say(game, 'HEILTRANK', .9); combat.spawnShockwave?.(P.x, P.y - 30, 40, '#ff6b8a'); }
-    else if (P.mp < P.maxMp * .2 && kk.inv.potions.mp > 0) { kk.inv.potions.mp--; P.mp = Math.min(P.maxMp, P.mp + P.maxMp * .5); kk.potionCd = 6; say(game, 'MANATRANK', .9); }
-  }
+  kk.potionCd = Math.max(0, kk.potionCd - dt); /* potions are carried in the hand and drunk with the attack (kk_items.js) */
 }
 function updateItems(game, dt) {
   const kk = kkState(game); const P = game.player; updateItemHops(kk, dt); updateBagUi(game);
@@ -184,22 +180,7 @@ export function drinkPotion(game, kind) {
   if (kind === 'hp') { P.hp = Math.min(P.maxHp, P.hp + P.maxHp * .45); combat.spawnShockwave?.(P.x, P.y - 30, 40, '#ff6b8a'); } else { P.mp = Math.min(P.maxMp, P.mp + P.maxMp * .5); combat.spawnShockwave?.(P.x, P.y - 30, 40, '#6bb8ff'); }
   audio.playRuneChime?.(kind === 'hp' ? 560 : 720); return true;
 }
-let potionUi = null;
-export function closePotionButtons() { if (potionUi?.el) potionUi.el.style.display = 'none'; }
-function updatePotionButtons(game) {
-  const doc = globalThis.document; if (typeof doc?.createElement !== 'function' || typeof doc.body?.appendChild !== 'function') return;
-  const kk = kkState(game);
-  if (!potionUi) {
-    const el = doc.createElement('div'); el.id = 'kk-potions';
-    el.style.cssText = 'position:fixed;right:max(1vw,env(safe-area-inset-right));top:30vh;z-index:60;display:flex;gap:6px;font-family:monospace';
-    el.addEventListener('pointerdown', (e) => { const b = e.target?.closest?.('[data-potion]'); if (!b) return; e.preventDefault(); e.stopPropagation(); const k = b.getAttribute('data-potion'); const g = globalThis.window?.gameWorld; if (k === 'auto') { const st = kkState(g); if (st) st.autoPotion = !st.autoPotion; } else drinkPotion(g, k); });
-    doc.addEventListener('keydown', (e) => { const g = globalThis.window?.gameWorld; if (!kkOn(g) || e.target?.closest?.('input')) return; if (e.code === 'Digit1') drinkPotion(g, 'hp'); else if (e.code === 'Digit2') drinkPotion(g, 'mp'); });
-    doc.body.appendChild(el); potionUi = { el, html: '' };
-  }
-  const btn = (k, label, col) => `<button data-potion="${k}" style="min-width:52px;min-height:40px;font:inherit;font-size:13px;color:#fff3c8;background:${col};border:2px solid #c9a95a">${label}</button>`;
-  const h = btn('hp', `♥ ${kk.inv.potions.hp}`, '#5a1f2e') + btn('mp', `✦ ${kk.inv.potions.mp}`, '#1f2e5a') + btn('auto', kk.autoPotion ? 'AUTO AN' : 'AUTO AUS', '#2a2234');
-  if (h !== potionUi.html) { potionUi.el.innerHTML = h; potionUi.html = h; } potionUi.el.style.display = 'flex';
-}
+export function closePotionButtons() { /* no potion buttons any more: potions are carried in the hand (kk_items.js) */ }
 
 export function updateLoot(game, dt) {
   if (!kkOn(game)) return;
@@ -220,19 +201,9 @@ export function lootActors(game) {
 }
 // The round panel (screen space, under the minimap): level, gold, materials, stones, deck slots and the sealed runes.
 export function renderLootHud(ctx, game, viewW) {
-  const kk = kkState(game); if (!kk) return; const x0 = viewW - 314; let y = 96;
+  const kk = kkState(game); if (!kk) return;
   // fallen: the way back (user asked whether the round should end — it does not while the main castle stands)
   const P = game.player; if (!P.isAlive) { const hq = hqOf(kk); const back = !hq.fallen && kk.time < 1200; const tLeft = Math.max(0, Math.ceil(P.respawnTimer ?? 0)); ctx.save(); ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(viewW / 2 - 260, 210, 520, 64); ctx.font = 'bold 18px monospace'; ctx.fillStyle = back ? '#ffe9a8' : '#ff6b6b'; ctx.fillText(back ? `GEFALLEN — RÜCKKEHR IN ${tLeft} S` : 'GEFALLEN — KEINE RÜCKKEHR', viewW / 2, 238); ctx.font = '11px monospace'; ctx.fillStyle = '#e8e2d0'; ctx.fillText(back ? 'solange deine Hauptburg steht · deine Beute liegt am Todesort' : 'deine Hauptburg ist gefallen oder die Grimmflut lässt keine Rückkehr mehr zu', viewW / 2, 260); ctx.restore(); }
-  ctx.save(); ctx.fillStyle = 'rgba(6,6,12,.78)'; ctx.fillRect(x0 - 4, y - 4, 308, 70 + kk.sealed.length * 12);
-  ctx.font = 'bold 11px monospace'; ctx.textAlign = 'left'; ctx.fillStyle = '#ffe9a8'; ctx.fillText(`STUFE ${kk.level}`, x0, y + 9);
-  ctx.fillStyle = '#2a2234'; ctx.fillRect(x0 + 70, y + 2, 120, 7); ctx.fillStyle = '#ffd24a'; ctx.fillRect(x0 + 70, y + 2, 120 * xpProgress(kk.xp), 7);
-  ctx.fillStyle = '#ffcf3a'; ctx.fillText(`◉ ${kk.gold}`, x0 + 200, y + 9); y += 18;
-  ctx.font = '10px monospace'; let x = x0;
-  for (const m of MATERIALS) { ctx.fillStyle = MAT_COLOR[m]; ctx.fillRect(x, y, 8, 8); ctx.fillStyle = '#e8e2d0'; ctx.fillText(`${kk.inv[m]}/${kk.store[m]}`, x + 11, y + 8); x += 72; }
-  y += 14; x = x0; const stones = Object.entries(kk.inv.stones).filter(([, n]) => n > 0);
-  for (const [el, n] of stones.slice(0, 8)) { ctx.fillStyle = elementColor(el); ctx.fillRect(x, y, 7, 7); ctx.fillStyle = '#e8e2d0'; ctx.fillText(String(n), x + 9, y + 7); x += 34; }
-  if (!stones.length) { ctx.fillStyle = '#7d7590'; ctx.fillText('keine Elementsteine', x0, y + 7); }
-  y += 14; ctx.fillStyle = '#cbb8ff'; ctx.fillText(`DECK ${deckCount(game)}/${deckSlots(kk.level)} · RUCKSACK ${invUnits(kk.inv)}/${BACKPACK} · TRÄNKE ${kk.inv.potions.hp}♥ ${kk.inv.potions.mp}✦`, x0, y + 8);
-  for (const r of kk.sealed) { y += 12; ctx.fillStyle = '#9a8fb0'; ctx.fillText(`🔒 ${r.name} — AB STUFE ${r.gate}`, x0, y + 8); }
-  ctx.restore();
+  // a slim line under the map (top left): level, XP, gold — the rest lives in the bag (user: the right side must stay free)
+  { const cx = 134; const ly = 134; ctx.save(); ctx.fillStyle = 'rgba(6,6,12,.7)'; ctx.fillRect(cx - 120, ly, 240, 16); ctx.font = 'bold 10px monospace'; ctx.textAlign = 'left'; ctx.fillStyle = '#ffe9a8'; ctx.fillText(`STUFE ${kk.level}`, cx - 114, ly + 12); ctx.fillStyle = '#2a2234'; ctx.fillRect(cx - 52, ly + 5, 100, 6); ctx.fillStyle = '#ffd24a'; ctx.fillRect(cx - 52, ly + 5, 100 * xpProgress(kk.xp), 6); ctx.fillStyle = '#ffcf3a'; ctx.fillText(`◉ ${kk.gold}`, cx + 58, ly + 12); ctx.restore(); }
 }

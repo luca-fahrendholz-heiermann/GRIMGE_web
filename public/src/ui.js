@@ -1397,7 +1397,7 @@ export class UIManager {
       const mins = Math.floor(window.gameWorld.matchTime / 60);
       const secs = Math.floor(window.gameWorld.matchTime % 60);
       this.clockDisplay.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-      this.objectiveHud.textContent = window.gameWorld.getObjectiveStatus();
+      const obj = window.gameWorld.getObjectiveStatus(); this.objectiveHud.textContent = obj; this.objectiveHud.style.display = obj ? '' : 'none'; /* no empty banner */
     }
 
     // Card highlight states

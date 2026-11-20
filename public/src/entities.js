@@ -1389,6 +1389,7 @@ export class Player extends GroundEntity {
     if (this.isMounted && (attackKind === 'normal' || attackKind === 'heavy')) return this.mountAttack(attackKind);
     // A guided chain (guided_chains.js) owns every attack input while it runs: taps / swipes confirm its beats.
     if (this.guidedChain) return this.guidedChain.press(attackKind);
+    if (window.gameWorld?.kkUseHeld?.(this)) return true; /* Kronenkrieg: a potion in the hand is drunk instead (like a bottle in Little Fighter) */
     // A stance may own attack inputs (S89 GRENZENLOS: swipe → Sog, tap → Stoß / Nichts); true = consumed.
     if (this.signature?.impl?.stance?.attack?.(this, this.signature, attackKind, window.gameWorld)) return true;
     // Attack while backdashing: the counter shot (once per dash).

@@ -2,6 +2,14 @@
 
 Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
+## 20. Nov 2026 – Kronenkrieg: schlanke Anzeige, die rechte Seite bleibt frei, Tränke in der Hand (Rückmeldung des Nutzers)
+
+- Die große Beute-/Stufen-Tafel und die Trank-Knöpfe rechts sind weg; die rechte Bildschirmhälfte bleibt frei zum Schlagen.
+- Die Karte steht klein oben links unter den Lebensbalken, darunter eine schmale Zeile mit Stufe, Erfahrung und Gold.
+- Beutel (🎒) und Burg-Menü (♜, nur in der Burg) sind kleine Knöpfe neben der Uhr; ihre Fenster öffnen sich links. Der Beutel zeigt jetzt auch Deck, Baustoffe (dabei / im Lager) und versiegelte Runen.
+- Tränke werden wie Gegenstände aufgehoben und in der Hand getragen (einer zugleich, sichtbar in der Hand); der nächste Schlag trinkt ihn — wie eine Flasche bei Little Fighter. Beim Tod fällt der Trank zu Boden. AUTO-Trinken und die Tasten 1 / 2 entfallen.
+- Kein leeres Ziel-Banner („DESTROY ENEMY TOWER“) mehr im Kronenkrieg.
+
 ## 20. Nov 2026 – Kronenkrieg: Feedback-Liste, Teil 5 — ein Schlachtfeld, das in die Tiefe geht
 
 - Das Kronenkrieg-Feld ist 2,4-mal so tief: man läuft weit in den Bildschirm hinein bzw. heraus, die Kamera folgt der Figur in die Tiefe (Himmel oben, die vordere Kante unten). Kein Schlauch mehr.
