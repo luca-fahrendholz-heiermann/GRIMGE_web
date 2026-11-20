@@ -12,6 +12,7 @@ import { runeCategory } from './progression.js';
 import { groundYForDepth } from './world.js';
 import { kkState, kkOn, elementColor, SEAT_COLORS } from './kk_world.js';
 import { gainXp, dropPile } from './kk_loot.js';
+import { spawnItems } from './kk_items.js';
 import { KKUnit, addRecord, squadCap } from './kk_army.js';
 import { XP } from './kk_progress.js';
 import { drawHorse } from './kk_art.js';
@@ -66,10 +67,10 @@ export function creatureDrop(game, rec) {
   const kk = kkState(game);
   if (rec.trialGuardian) { kk.onTrialWon?.(rec); return; } /* a trial's guardian gives the crowning, not loot (kk_crown.js) */ const r = kk.rng(); const at = { x: rec.x, z: rec.z };
   gainXp(game, XP.kill * 4);
-  if (r < .4) { dropPile(game, at.x, at.z, { gold: 40, materials: { steel: 4, obsidian: 2 }, stones: { [rec.element]: 6 }, weapons: [], runes: [] }); game.showAnnouncement?.(`${CREATURE_NAME[rec.kind]} BESIEGT — REICHE BEUTE`, 1.8); }
+  if (r < .4) { spawnItems(game, at.x, at.z, { gold: 40, materials: { steel: 4, obsidian: 2 }, stones: { [rec.element]: 6 } }, { row: rec.row }); game.showAnnouncement?.(`${CREATURE_NAME[rec.kind]} BESIEGT — REICHE BEUTE`, 1.8); }
   else if (r < .7) {
     const pool = recognizer.runes.filter((x) => ['breath', 'domain', 'arcane', 'multi'].includes(runeCategory(x.id)) && x.id !== 'buff_A04');
-    const rune = pool[Math.floor(kk.rng() * pool.length)]; dropPile(game, at.x, at.z, { gold: 10, materials: {}, stones: {}, weapons: [], runes: rune ? [rune] : [] }); game.showAnnouncement?.(`${CREATURE_NAME[rec.kind]} BESIEGT — EINE SELTENE RUNE`, 1.8);
+    const rune = pool[Math.floor(kk.rng() * pool.length)]; spawnItems(game, at.x, at.z, { gold: 10, runes: rune ? [rune] : [] }, { row: rec.row }); game.showAnnouncement?.(`${CREATURE_NAME[rec.kind]} BESIEGT — EINE SELTENE RUNE`, 1.8);
   } else { kk.items.push({ id: kk.nextItem++, kind: 'egg', row: rec.row, x: at.x, z: at.z, lock: .8, element: rec.element, creature: rec.kind }); game.showAnnouncement?.(`${CREATURE_NAME[rec.kind]} BESIEGT — ES HINTERLÄSST EIN EI`, 2); }
   combat.spawnShockwave?.(at.x, groundYForDepth(at.z) - 40, 110, elementColor(rec.element));
 }

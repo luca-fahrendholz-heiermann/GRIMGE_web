@@ -2,6 +2,14 @@
 
 Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
+## 20. Nov 2026 – Kronenkrieg: Feedback-Liste, Teil 2 — Gegenstände, Beutel, Walzen-Fenster
+
+- Beute fällt als einzelne Gegenstände auf den Boden, jeder mit eigenem Pixel-Icon (Münzen, Holz, Stein, Stahlbarren, Obsidian, Elementstein in seiner Farbe, Waffe, Heil-/Manatrank, Runenrolle); sie hüpfen heraus und werden durch Darüberlaufen eingesammelt (Truhen, besiegte Gegner, Kreaturen).
+- Voller Beutel: es wird nur genommen, was passt, der Rest bleibt liegen (mit Hinweis). Gold, Tränke und Runen passen immer.
+- Beutel-Menü (Knopf „BEUTEL“ oder Taste I): zeigt den Inhalt mit Icons; einzelne Stücke oder ganze Stapel lassen sich gezielt ablegen, um Platz zu machen.
+- Ausbilden mit Walzen: ein 3×3-Walzenfenster dreht sich sichtbar, hält Spalte für Spalte an, leuchtet die Gewinnlinien auf und nennt den Bonus.
+- Rechte Bildschirmspalte neu geordnet (Tränke, Beutel, Burg-Knopf, Burg-Menü unter der Anzeige); Münzen ferner Kämpfe verschwinden nach 3 Minuten.
+
 ## 19. Nov 2026 – Kronenkrieg: Feedback-Liste, Teil 1 (Rückmeldung des Nutzers, PDF)
 
 - Blocken hält Zauber auf: wer zum Zauber hin blockt, schützt die Verbündeten hinter sich (gleiche Tiefe, weiter vom Zaubernden weg) — in allen Modi.

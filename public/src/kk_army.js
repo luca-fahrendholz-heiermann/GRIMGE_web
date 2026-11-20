@@ -14,6 +14,7 @@ import { CASTLE_CLASSES, mulberry32, spanAt } from './kk_map.js';
 import { squadBonus, XP } from './kk_progress.js';
 import { kkState, kkOn, SEAT_COLORS, elementColor } from './kk_world.js';
 import { gainXp } from './kk_loot.js';
+import { spawnItems, showReels } from './kk_items.js';
 
 // Per class: melee/ranged and multipliers on the minion base values.
 export const CLASS_STATS = Object.freeze({
@@ -162,7 +163,7 @@ function despawn(game, rec) { const u = rec.live; if (!u) return; const i = game
 function onUnitDeath(game, rec) {
   const kk = kkState(game); kk.units.splice(kk.units.indexOf(rec), 1); rec.live = null;
   if (rec.creature && rec.team !== 'blue') { kk.onCreatureDeath?.(rec); return; }
-  if (rec.team !== 'blue') { const g = 6 + Math.floor(Math.random() * 7); kk.gold += g; gainXp(game, XP.kill); combat.spawnDamageText?.(rec.x, groundYForDepth(rec.z) - 60, `+${g}◉`, { color: '#ffcf3a' }); }
+  if (rec.team !== 'blue') { const g = 6 + Math.floor(Math.random() * 7); spawnItems(game, rec.x, rec.z, { gold: g }, { row: rec.row, spread: 8 }); gainXp(game, XP.kill); /* the coins fall to the ground */ combat.spawnDamageText?.(rec.x, groundYForDepth(rec.z) - 60, `+${g}◉`, { color: '#ffcf3a' }); }
   if (rec.role === 'garrison' && mine(rec)) { kk.alerts[rec.siteId] = 4; }
 }
 // The squad crosses into the next band with the player (kk_world switch hook).
@@ -295,14 +296,14 @@ function ensurePanel(game) {
   const doc = globalThis.document; if (typeof doc?.createElement !== 'function' || typeof doc.body?.appendChild !== 'function') return null;
   if (panel?.el) return panel;
   const el = doc.createElement('div'); el.id = 'kk-castle-panel';
-  el.style.cssText = 'position:fixed;right:max(1vw,env(safe-area-inset-right));top:34vh;z-index:61;width:min(340px,40vw);max-height:60vh;overflow:auto;font-family:monospace;font-size:12px;color:#f1e9d2;background:#1a1424ee;border:2px solid #c9a95a;padding:8px;display:none';
+  el.style.cssText = 'position:fixed;right:max(1vw,env(safe-area-inset-right));top:50vh;z-index:61;width:min(340px,40vw);max-height:48vh;overflow:auto;font-family:monospace;font-size:12px;color:#f1e9d2;background:#1a1424ee;border:2px solid #c9a95a;padding:8px;display:none';
   el.addEventListener('pointerdown', (e) => { const b = e.target?.closest?.('[data-kk]'); if (!b) return; e.preventDefault(); e.stopPropagation(); onPanelAction(game, b.getAttribute('data-kk'), b.getAttribute('data-arg')); });
   doc.body.appendChild(el); panel = { el, siteId: null, html: '', spin: false, msg: '' }; return panel;
 }
 function onPanelAction(game, act, arg) {
   const kk = kkState(game); const site = siteById(kk, panel.siteId); if (!site) return;
   let res = true;
-  if (act === 'train') { const r = trainUnit(game, site, arg || null, { spin: panel.spin }); res = r.ok; panel.msg = r.ok ? (r.reels ? `WALZEN: ${r.reels.grid.map((g) => REEL_SYMBOLS[g]).join('')} ${r.reels.bonus.length ? '→ ' + r.reels.bonus.map((b) => BONUS_LABEL[b]).join(' + ') : '→ kein Bonus'}` : 'IN AUSBILDUNG') : r.why; }
+  if (act === 'train') { const r = trainUnit(game, site, arg || null, { spin: panel.spin }); res = r.ok; if (r.reels) showReels(game, r.reels, unitName({ cls: site.cls, element: arg || null, tier: 1 })); panel.msg = r.ok ? (r.reels ? `WALZEN: ${r.reels.grid.map((g) => REEL_SYMBOLS[g]).join('')} ${r.reels.bonus.length ? '→ ' + r.reels.bonus.map((b) => BONUS_LABEL[b]).join(' + ') : '→ kein Bonus'}` : 'IN AUSBILDUNG') : r.why; }
   else if (act === 'spin') panel.spin = !panel.spin;
   else if (act === 'upgrade' && kk.hqHooks) { const r = kk.hqHooks.upgrade(); res = r.ok; panel.msg = r.ok ? '' : r.why; }
   else if (act === 'resist' && kk.hqHooks) { const r = kk.hqHooks.resist(arg); res = r.ok; panel.msg = r.ok ? '' : r.why; }
@@ -350,7 +351,7 @@ function ensureOpener(game) {
   const doc = globalThis.document; if (typeof doc?.createElement !== 'function' || typeof doc.body?.appendChild !== 'function') return null;
   if (opener) return opener;
   const el = doc.createElement('button'); el.type = 'button'; el.id = 'kk-castle-open';
-  el.style.cssText = 'position:fixed;right:max(1vw,env(safe-area-inset-right));top:28vh;z-index:61;min-height:42px;font-family:Cinzel,serif;font-size:14px;color:#fff3c8;background:#3a2a4eee;border:2px solid #c9a95a;padding:.3em .8em;display:none';
+  el.style.cssText = 'position:fixed;right:max(1vw,env(safe-area-inset-right));top:43vh;z-index:61;min-height:42px;font-family:Cinzel,serif;font-size:14px;color:#fff3c8;background:#3a2a4eee;border:2px solid #c9a95a;padding:.3em .8em;display:none';
   const toggle = (e) => { e?.preventDefault?.(); e?.stopPropagation?.(); const kk = kkState(globalThis.window?.gameWorld); if (kk) kk.panelOpen = !kk.panelOpen; };
   el.addEventListener('pointerdown', toggle); doc.addEventListener('keydown', (e) => { if (e.code === 'KeyF' && kkOn(globalThis.window?.gameWorld) && opener?.el.style.display !== 'none') toggle(e); });
   doc.body.appendChild(el); opener = { el }; return opener;

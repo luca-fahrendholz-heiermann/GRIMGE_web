@@ -28,7 +28,8 @@ import { initArmy, updateArmy, armyActors, closeKKPanel, recordGrade, kkFindTarg
 import { initWar, updateWar, warActors, renderFlood, warMinimapDots, kkEnemyHome, kkCanRespawn } from './kk_war.js'; // Kronenkrieg: bots, main castles, Grimmflut, the end
 import { initCreatures, updateCreatures, creatureActors, creatureMinimapDots, tameAt, kkMountGate } from './kk_creatures.js'; // Kronenkrieg: creatures, eggs, mounts
 import { initCrown, updateCrown, closeCrownPanel, kkFocusLocked, kkFocusStyle } from './kk_crown.js'; // Kronenkrieg: the crowning trials
-import { updateInterior, interiorActors } from './kk_interior.js'; // Kronenkrieg: houses you walk into (cut-away) // the Training map where clones show every spell
+import { updateInterior, interiorActors } from './kk_interior.js'; // Kronenkrieg: houses you walk into (cut-away)
+import { itemActors, renderReels, closeBag } from './kk_items.js'; // Kronenkrieg: items, the bag, the reel window // the Training map where clones show every spell
 import { loadFxSprites } from './fx_sprites.js';
 import { loadSpellSprites } from './spell_visuals.js';
 import { renderPixelated } from './abilities.js';
@@ -3083,7 +3084,7 @@ export class GameWorld {
 
   returnToHub(reason = 'menu') {
     this.kkExtraFoes = [];
-    closeBasePrompt(); closeKKPanel(); closeCrownPanel(); closePotionButtons(); closeCastleOpener();
+    closeBasePrompt(); closeKKPanel(); closeCrownPanel(); closePotionButtons(); closeCastleOpener(); closeBag();
     this.markMatchSession(false);
     try { const log = JSON.parse(globalThis.localStorage?.getItem?.('grimge-hub-log') ?? '[]'); log.push({ reason, mode: this.activeMode?.id, at: new Date().toISOString(), stack: String(new Error().stack).split(String.fromCharCode(10)).slice(2, 6).join(' < ').slice(0, 400) }); globalThis.localStorage?.setItem?.('grimge-hub-log', JSON.stringify(log.slice(-10))); } catch { /* optional */ }
     this.matchState = 'Menu';
@@ -3466,7 +3467,7 @@ export class GameWorld {
     if (this.primal?.isTargetable) actors.push(this.primal);
     if (this.activeMode?.id === 'base') actors.push(...baseActors(this)); /* stations and stands share the depth order */
     if (this.activeMode?.id === 'gallery') actors.push(...galleryActors(this)); /* the casting clones of the Spell Gallery */
-    if (this.activeMode?.id === 'kronenkrieg') actors.push(...kkActors(this), ...lootActors(this), ...armyActors(this), ...warActors(this), ...creatureActors(this), ...interiorActors(this)); /* castles, buildings, camps and loot of the current band */
+    if (this.activeMode?.id === 'kronenkrieg') actors.push(...kkActors(this), ...lootActors(this), ...armyActors(this), ...warActors(this), ...creatureActors(this), ...interiorActors(this), ...itemActors(this)); /* castles, buildings, camps and loot of the current band */
     // Spells with a ground position and summons share the painter's order
     // with the actors, so a spike behind the dummy is hidden by the dummy.
     actors.push(...spells.depthEntries());
@@ -3518,7 +3519,7 @@ export class GameWorld {
     // Map weather (snow, rain, embers, leaves, dust, mana motes) in screen space.
     environment.renderWeather(ctx, viewW, viewH);
     this.renderDungeonExitArrow(ctx, viewW);
-    if (this.activeMode?.id === 'kronenkrieg') { renderKKMinimap(ctx, this, viewW, { dots: [...warMinimapDots(this), ...creatureMinimapDots(this)] }); renderLootHud(ctx, this, viewW); }
+    if (this.activeMode?.id === 'kronenkrieg') { renderKKMinimap(ctx, this, viewW, { dots: [...warMinimapDots(this), ...creatureMinimapDots(this)] }); renderLootHud(ctx, this, viewW); renderReels(ctx, this, viewW, viewH); }
     this.renderOffscreenArrows(ctx);
 
     // 3. Screen Space Rune Drawing

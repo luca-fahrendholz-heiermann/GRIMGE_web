@@ -112,7 +112,7 @@ export function updateInterior(game, dt) {
     if (c.opened) continue; const onFloor = Math.abs((P.surfaceHeight ?? 0) + (P.elevation ?? 0) - c.h) < 14;
     const at = onFloor && Math.abs(P.x - c.x) < 26 && Math.abs(P.z - c.z) < .07;
     c.t = at ? (c.t ?? 0) + dt : 0;
-    if (c.t >= HOUSE.openTime) { c.opened = true; openChest(game, site, c.i); combat.spawnShockwave?.(c.x, groundYForDepth(c.z) - c.h - 16, 34, '#f2c46a'); audio.playRuneChime?.(620); if (chestsOf(site).every((x) => x.opened)) site.looted = true; }
+    if (c.t >= HOUSE.openTime) { c.opened = true; openChest(game, site, c.i, { x: c.x + 24, z: c.h ? site.z - .05 : c.z + .03 }); combat.spawnShockwave?.(c.x, groundYForDepth(c.z) - c.h - 16, 34, '#f2c46a'); audio.playRuneChime?.(620); if (chestsOf(site).every((x) => x.opened)) site.looted = true; }
   }
 }
 

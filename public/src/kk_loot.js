@@ -11,6 +11,7 @@ import { CASTLE_CLASSES, biomeAt, kkDistance } from './kk_map.js';
 import { levelForXp, xpProgress, deckSlots, gateFor, rollChest, lootTier, LEVEL_UNLOCKS, XP, MATERIALS, FUSE_GATE } from './kk_progress.js';
 import { kkState, kkOn, revealAround, isRevealed, elementColor, applyBounds } from './kk_world.js';
 import { KK } from './kk_map.js';
+import { spawnItems, pickupItem, updateItemHops, updateBagUi } from './kk_items.js';
 
 export const BACKPACK = 40;             // units of materials + stones + weapons one carries
 const MINE_TIME = 2.2; const VEIN_COOLDOWN = 25; const PICK_RANGE = 44;
@@ -95,19 +96,19 @@ function tierAt(kk, site) {
   const hq = hqOf(kk); return lootTier({ time: kk.time, middleBand: site.row !== KK.main /* the sections above and below are the rich places */, hqDistance: kkDistance(hq, site) });
 }
 // One chest of a house (the walk-in interior, kk_interior.js): the loot of one floor; the first chest of a house gives XP.
-export function openChest(game, site, floor = 0) {
+export function openChest(game, site, floor = 0, at = null) {
   const kk = kkState(game); const tier = tierAt(kk, site); const biome = biomeAt(kk.map, site.row, site.x).element;
   const weapons = CASTLE_CLASSES.map((c) => c.weapon);
   const c = rollChest(kk.seed * 31 + site.x * 7 + floor * 131, tier, { biomeElement: biome, weapons });
-  addBundle(game, { gold: c.gold, materials: c.materials, stones: c.stones, weapons: c.weapons, potions: c.potions });
+  const runes = [];
   if (c.runeCategory) {
     const P = game.player; const held = new Set([...P.runeDeck, ...P.runeHand, ...P.slottedSpells.flatMap((s) => s.runes), ...kk.sealed].map((x) => x.id));
     const pool = runePool(c.runeCategory).filter((x) => c.runeCategory === 'element' || !held.has(x.id)); /* a special rune one holds does not come twice */
     const r = pool.length ? pool[Math.floor(((kk.seed + site.x + floor * 17) % 997) / 997 * pool.length)] : null;
-    const got = r ? giveRune(game, r) : null;
-    if (got === 'full') dropPile(game, site.x, site.z + .05, { gold: 0, materials: {}, stones: {}, weapons: [], runes: [r] });
-    else if (got === 'double' || !r) { kk.gold += 15; say(game, '+15 GOLD (RUNE SCHON IM DECK)', 1.2); }
+    if (r) runes.push(r); else c.gold += 15;
   }
+  // the chest's content falls out as single items to pick up (user: active collecting, an icon per item)
+  spawnItems(game, at?.x ?? site.x, at?.z ?? site.z - .03, { gold: c.gold, materials: c.materials, stones: c.stones, weapons: c.weapons, potions: c.potions, runes }, { row: site.row, spread: 46 });
   if (!site.searchedOnce) { site.searchedOnce = true; gainXp(game, XP.search); }
   return c;
 }
@@ -162,11 +163,15 @@ function updateLife(game, dt) {
   }
 }
 function updateItems(game, dt) {
-  const kk = kkState(game); const P = game.player;
+  const kk = kkState(game); const P = game.player; updateItemHops(kk, dt); updateBagUi(game);
   for (const it of [...kk.items]) {
+    if (it.kind === 'egg') continue; /* eggs: kk_creatures.js */
     it.lock = Math.max(0, (it.lock ?? 0) - dt);
     if (it.row !== kk.row || it.lock > 0 || !P.isAlive) continue;
-    if (Math.abs(P.x - it.x) < PICK_RANGE && Math.abs(P.z - it.z) * 150 < 30) { if (takePile(game, it)) kk.items.splice(kk.items.indexOf(it), 1); else it.lock = 3; }
+    if (Math.abs(P.x - it.x) < PICK_RANGE && Math.abs(P.z - it.z) * 150 < 30) {
+      const taken = it.kind === 'item' ? pickupItem(game, it) : takePile(game, it);
+      if (taken) kk.items.splice(kk.items.indexOf(it), 1); else it.lock = 1.5;
+    }
   }
 }
 
@@ -186,7 +191,7 @@ function updatePotionButtons(game) {
   const kk = kkState(game);
   if (!potionUi) {
     const el = doc.createElement('div'); el.id = 'kk-potions';
-    el.style.cssText = 'position:fixed;right:max(1vw,env(safe-area-inset-right));top:22vh;z-index:60;display:flex;gap:6px;font-family:monospace';
+    el.style.cssText = 'position:fixed;right:max(1vw,env(safe-area-inset-right));top:30vh;z-index:60;display:flex;gap:6px;font-family:monospace';
     el.addEventListener('pointerdown', (e) => { const b = e.target?.closest?.('[data-potion]'); if (!b) return; e.preventDefault(); e.stopPropagation(); const k = b.getAttribute('data-potion'); const g = globalThis.window?.gameWorld; if (k === 'auto') { const st = kkState(g); if (st) st.autoPotion = !st.autoPotion; } else drinkPotion(g, k); });
     doc.addEventListener('keydown', (e) => { const g = globalThis.window?.gameWorld; if (!kkOn(g) || e.target?.closest?.('input')) return; if (e.code === 'Digit1') drinkPotion(g, 'hp'); else if (e.code === 'Digit2') drinkPotion(g, 'mp'); });
     doc.body.appendChild(el); potionUi = { el, html: '' };
@@ -206,7 +211,7 @@ function ring(ctx, x, y, k, color = '#ffe9a8') { ctx.strokeStyle = 'rgba(0,0,0,.
 export function lootActors(game) {
   const kk = kkState(game); if (!kk) return []; const t = kk.time; const out = [];
   for (const it of kk.items) {
-    if (it.row !== kk.row) continue; const y = groundYForDepth(it.z);
+    if (it.row !== kk.row || it.kind !== 'pile') continue; const y = groundYForDepth(it.z); /* single items: kk_items.js */
     out.push({ y, render: (ctx) => { const bob = Math.sin(t * 4 + it.x) * 2; ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.beginPath(); ctx.ellipse(it.x, y, 16, 4, 0, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#6b4a2a'; ctx.fillRect(it.x - 12, y - 14 + bob, 24, 12); ctx.fillStyle = (it.runes?.length ? '#b388ff' : '#ffcf3a'); ctx.fillRect(it.x - 8, y - 20 + bob, 16, 7); if (it.runes?.length) { ctx.font = 'bold 9px monospace'; ctx.textAlign = 'center'; ctx.fillStyle = '#e8dcff'; ctx.fillText(`${it.runes.length} RUNEN`, it.x, y - 26 + bob); } } });
   }
   // progress rings over a door being searched / a vein being mined

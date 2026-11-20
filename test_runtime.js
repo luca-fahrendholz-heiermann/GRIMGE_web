@@ -5578,7 +5578,9 @@ game.running = false;
   const bld = kk.map.sites.filter((x) => x.kind === 'building' && x.row === kk.row).sort((a2, b2) => Math.abs(a2.x - P.x) - Math.abs(b2.x - P.x))[0];
   const KI = await import('./public/src/kk_interior.js'); const bld2 = kk.map.sites.find((x) => x.kind === 'building' && x.row === kk.row && (x.floors ?? 1) >= 2) ?? bld;
   P.x = bld2.x; P.z = bld2.z + .05; P.grounded = true; game.input.move = { x: 0, z: -1 }; KI.updateInterior(game, 1 / 60); game.input.move = { x: 0, z: 0 }; const inside = kk.inside === bld2 && game.battlefield.levelSurfaces.length === ((bld2.floors ?? 1) >= 2 ? 2 : 0);
-  const ch = KI.chestsOf(bld2)[0]; P.x = ch.x; P.z = ch.z; for (let i = 0; i < 80; i++) KI.updateInterior(game, 1 / 60); const opened = ch.opened && kk.gold > 0 && kk.xp >= KP.XP.search;
+  const ch = KI.chestsOf(bld2)[0]; P.x = ch.x; P.z = ch.z; const gold0 = kk.gold; for (let i = 0; i < 80; i++) KI.updateInterior(game, 1 / 60);
+  const fell = kk.items.filter((it) => it.kind === 'item'); for (const it of fell) { it.lock = 0; P.x = it.x; P.z = it.z; KL.updateLoot(game, 1 / 60); } /* the chest content falls out as items and is picked up */
+  const opened = ch.opened && fell.length > 0 && kk.gold > gold0 && kk.xp >= KP.XP.search && !kk.items.some((it) => fell.includes(it) && it.type === 'gold');
   P.z = bld2.z + .02; game.input.move = { x: 0, z: 1 }; KI.updateInterior(game, 1 / 60); game.input.move = { x: 0, z: 0 }; const left = !kk.inside && game.battlefield.levelSurfaces.length === 0; const searched = inside && opened && left;
   const arcane = recognizer.runes.find((r) => r.id === 'buff_B01'); kk.level = 1; kk.xp = 0; const res = KL.giveRune(game, arcane); const sealedCounts = res === 'sealed' && KL.deckCount(game) >= 1;
   const fuseBlocked = !KL.kkFuseAllowed(game, 2); KL.gainXp(game, KP.LEVEL_XP[8]); const unsealed = kk.level === 8 && !kk.sealed.length && [...P.runeDeck, ...P.runeHand].some((c) => c.id === 'buff_B01') && KL.kkFuseAllowed(game, 3);
@@ -5587,6 +5589,17 @@ game.running = false;
   P.respawn(game.battlefield); KL.updateLoot(game, 1 / 60); const home = kk.map.hqs.find((h) => h.seat === 0); const returned = kk.row === home.row && Math.abs(P.x - home.x) < 300;
   kk.row = pile.row; P.x = pile.x; P.z = pile.z; pile.lock = 0; KL.updateLoot(game, 1 / 60); const picked = !kk.items.includes(pile) && kk.gold === 50 && [...P.runeDeck, ...P.runeHand].some((c) => c.id === 'buff_B01');
   assert(searched && sealedCounts && fuseBlocked && unsealed && dropped && returned && picked, 'Kronenkrieg loot: walking into a house (cut-away, stairs and gallery from two storeys), opening a chest gives gold and XP and walking out leaves it; an Arcane State found at level 1 is sealed but takes a deck slot, fusion waits for level 2, level 8 unseals it; dying drops gold, backpack and every rune as a pile, the hero returns at the main castle and can pick the pile up (' + [searched, sealedCounts, fuseBlocked, unsealed, dropped, returned, picked].join('/') + ')');
+  {
+    // items (feedback 20 Nov 2026): loot lies as single items with an icon, a full bag leaves the rest on the ground, the bag drops goods, the reels show after a spin
+    const KIt = await import('./public/src/kk_items.js'); const inv = kk.inv; const room = KL.BACKPACK - KL.invUnits(inv);
+    const [wood] = KIt.spawnItems(game, P.x, P.z, { materials: { wood: room + 3 } }); const partial = KIt.pickupItem(game, wood) === false && wood.n === 3 && KL.invUnits(inv) === KL.BACKPACK;
+    const [coin] = KIt.spawnItems(game, P.x, P.z, { gold: 9 }); const g0 = kk.gold; const coinFits = KIt.pickupItem(game, coin) && kk.gold === g0 + 9;
+    const icons = ['gold', 'wood', 'stone', 'steel', 'obsidian', 'weapon', 'rune'].every((t) => KIt.itemIcon({ type: t }) !== undefined) && KIt.itemIcon({ type: 'gem', el: 'fire' }) !== undefined && KIt.itemIcon({ type: 'potion', kind: 'hp' }) !== undefined;
+    KIt.showReels(game, { grid: ['weapon', 'weapon', 'weapon', 'blank', 'rune', 'element', 'blank', 'blank', 'blank'], wins: ['weapon'], bonus: ['veteran'] }, 'TEST'); const shown = !!kk.reelShow;
+    const fakeCtx = new Proxy({}, { get: (o, k) => (k in o ? o[k] : () => {}), set: (o, k, v) => { o[k] = v; return true; } }); for (let i = 0; i < 250; i++) KIt.renderReels(fakeCtx, game, 1280, 720); const gone = !kk.reelShow;
+    kk.items = kk.items.filter((it) => it !== wood); inv.wood = Math.max(0, inv.wood - room);
+    assert(partial && coinFits && icons && shown && gone, 'Kronenkrieg items: a full bag takes only what fits and leaves the rest lying, coins always fit, every item kind has its icon, the reel window shows a spin and closes after 4 s (' + [partial, coinFits, icons, shown, gone].join('/') + ')');
+  }
   // army: renegade garrisons live in the band, capture a mid castle, train (frost stone + reel), garrison ▲ ▼, merge, prisoners, squad crosses bands
   const KA = await import('./public/src/kk_army.js'); game.returnToHub(); game.setMatchMode('kronenkrieg'); game.startMatch(); const k2 = game.modeState.kk; const P2 = game.player;
   { const c0 = k2.map.sites.find((x) => x.kind === 'castle' && x.row === k2.row) ?? k2.map.sites.find((x) => x.kind === 'castle'); k2.row = c0.row; P2.x = c0.x - 300; } /* next to a garrison: the start may have none in reach */
@@ -5620,7 +5633,7 @@ game.running = false;
   const cr = lairRecs[0]; k4.row = cr.row; P4.x = cr.x - 60; P4.z = cr.z; KA.updateArmy(game, 1 / 60); const live = cr.live?.isKKCreature ? cr.live : null;
   live.hp = live.maxHp * .4; const tamed = KC.tameAt(game, P4, live.x, live.z) && cr.team === 'blue' && cr.role === 'squad';
   const cr2 = lairRecs[1]; k4.row = cr2.row; P4.x = cr2.x - 60; KA.updateArmy(game, 1 / 60); if (cr2.live) cr2.live.hp = cr2.live.maxHp * .3; const limited = cr2.live && KC.tameAt(game, P4, cr2.live.x, cr2.live.z) && cr2.team === 'beast';
-  const seq = [.1, .5, .9]; const kinds = []; for (const r of seq) { const keep = k4.rng; k4.rng = () => r; const n0 = k4.items.length; KC.creatureDrop(game, { ...cr2, x: P4.x, z: P4.z }); k4.rng = keep; const it = k4.items[k4.items.length - 1]; kinds.push(k4.items.length > n0 ? (it.kind === 'egg' ? 'egg' : it.runes?.length ? 'rune' : 'goods') : 'none'); }
+  const seq = [.1, .5, .9]; const kinds = []; for (const r of seq) { const keep = k4.rng; k4.rng = () => r; const n0 = k4.items.length; KC.creatureDrop(game, { ...cr2, x: P4.x, z: P4.z }); k4.rng = keep; const it = k4.items[k4.items.length - 1]; kinds.push(k4.items.length > n0 ? (it.kind === 'egg' ? 'egg' : it.runes?.length || it.type === 'rune' ? 'rune' : 'goods') : 'none'); }
   const drops = kinds.join(',') === 'goods,rune,egg'; const egg = k4.items.find((it) => it.kind === 'egg'); egg.lock = 0; egg.row = k4.row; egg.x = P4.x; egg.z = P4.z;
   KC.updateCreatures(game, 1 / 60); const carried = k4.carry === egg && P4.kkCarryMult < 1;
   const hq4 = k4.map.hqs.find((h) => h.seat === 0); k4.row = hq4.row; P4.x = hq4.x; P4.z = hq4.z; P4.state = 'idle'; for (let i = 0; i < 110; i++) KC.updateCreatures(game, 1 / 60); const stored = hq4.egg === egg && !k4.carry && k4.eggHooks.take(hq4) && k4.carry === egg;
