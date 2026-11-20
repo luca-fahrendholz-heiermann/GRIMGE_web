@@ -12,7 +12,7 @@ const ZPX = KK.zPx;
 const boardGap = (a, b) => Math.hypot(a.x - b.x, ((a.z ?? KK.depth / 2) - (b.z ?? KK.depth / 2)) * ZPX); /* distance on the square board */
 import { rollChest, levelForXp, lootTier, XP, heroKillXp } from './kk_progress.js';
 import { kkState, kkOn, SEAT_COLORS, SEAT_NAMES, elementColor } from './kk_world.js';
-import { gainXp, dropPile } from './kk_loot.js';
+import { gainXp, dropPile, foeDrop } from './kk_loot.js';
 import { addRecord, teamOfSeat, sameTeam } from './kk_army.js';
 import { EnemyChampion } from './entities.js';
 import { drawHorse } from './kk_art.js';
@@ -82,7 +82,8 @@ function pickTask(kk, bot) {
   const hq = hqOfSeat(kk, bot.seat); const mine = botSquad(kk, bot); const str = strength(mine);
   if (hq.siegeT > 0 && !hq.fallen) return { kind: 'defend', id: hq.id };
   // rivals ride, carry eggs and hatch them too (user, 20 Nov 2026)
-  if (bot.egg) { const src = kk.map.sites.filter((s) => s.kind === 'source').sort((a, b) => (a.element === bot.egg.element ? 0 : 1) - (b.element === bot.egg.element ? 0 : 1) || kkDistance(bot, a) - kkDistance(bot, b))[0]; if (src) return { kind: 'hatch', id: src.id }; }
+  if (bot.egg) { const here = spanAt(kk.map, bot.row, bot.x); const near = (s) => s.row === bot.row && spanAt(kk.map, s.row, s.x) === here; /* a source on its own stretch first: no shuttling between levels */
+    const src = kk.map.sites.filter((s) => s.kind === 'source').sort((a, b) => (near(a) ? 0 : 2) + (a.element === bot.egg.element ? 0 : 1) - (near(b) ? 0 : 2) - (b.element === bot.egg.element ? 0 : 1) || kkDistance(bot, a) - kkDistance(bot, b))[0]; if (src) return { kind: 'hatch', id: src.id }; }
   const egg = kk.items.filter((it) => it.kind === 'egg' && !(it.lock > 0) && kkDistance(bot, it) < 6000).sort((a, b) => kkDistance(bot, a) - kkDistance(bot, b))[0]; if (egg && !bot.ally) return { kind: 'egg', id: egg.id };
   if (!bot.horse && bot.level >= 2) { const st = kk.map.sites.filter((s) => s.kind === 'stable' && kkDistance(bot, s) < 7000).sort((a, b) => kkDistance(bot, a) - kkDistance(bot, b))[0]; if (st) return { kind: 'stable', id: st.id }; }
   // the big prize: a visible egg carrier or a player fighting a crowning trial is hunted by a strong rival (§9.1)
@@ -225,7 +226,7 @@ function killBot(game, bot, killer) {
   if (bot.gold > 0 || bot.runes?.length) dropPile(game, bot.x, bot.z, { gold: bot.gold, materials: {}, stones: { ...bot.stones }, weapons: Object.entries(bot.weapons).flatMap(([w, n]) => Array(n).fill(w)), runes: bot.runes ?? [], row: bot.row });
   bot.gold = 0; bot.stones = {}; bot.weapons = {}; bot.runes = [];
   if (bot.egg) { kk.items.push({ id: kk.nextItem++, kind: 'egg', row: bot.row, x: bot.x, z: bot.z, lock: 1, element: bot.egg.element, creature: bot.egg.creature }); bot.egg = null; } /* the egg falls */
-  if (killer === 'player') { gainXp(game, heroKillXp(kk.level, bot.level)); game.showAnnouncement?.(`${SEAT_NAMES[bot.seat]} BESIEGT`, 1.8); }
+  if (killer === 'player') { foeDrop(game, bot.x, bot.z, bot.row, { gold: 30 + bot.level * 8, tier: Math.min(4, 1 + Math.floor(bot.level / 3)), weapon: CASTLE_CLASSES[bot.seat % CASTLE_CLASSES.length].weapon, champion: true }); /* a beaten rival: gold, goods, stones, a weapon and runes */ gainXp(game, heroKillXp(kk.level, bot.level)); game.showAnnouncement?.(`${SEAT_NAMES[bot.seat]} BESIEGT`, 1.8); }
 }
 
 // The bot in the player's band fights as the champion (the game's duel AI); only one at a time.
@@ -343,7 +344,7 @@ export function updateWar(game, dt) {
   if (Math.floor(kk.time) !== kk._endTick) { kk._endTick = Math.floor(kk.time); checkEnd(game); }
 }
 
-export const killBotForTest = (game, bot) => killBot(game, bot, null); /* tests: the egg falls with the rival */
+export const killBotForTest = (game, bot, killer = null) => killBot(game, bot, killer); /* tests: the egg falls with the rival */
 // ── drawing ────────────────────────────────────────────────────────────────────────────────────────────────────────
 export function warActors(game) {
   const kk = kkState(game); if (!kk?.bots) return []; const out = [];

@@ -13,7 +13,7 @@ import { groundYForDepth, clampZ, ENTITY_VISUALS } from './world.js';
 import { CASTLE_CLASSES, mulberry32, spanAt, roadZ } from './kk_map.js';
 import { squadBonus, XP } from './kk_progress.js';
 import { kkState, kkOn, SEAT_COLORS, elementColor } from './kk_world.js';
-import { gainXp } from './kk_loot.js';
+import { gainXp, foeDrop } from './kk_loot.js';
 import { spawnItems, showReels } from './kk_items.js';
 import { castleHp, castleMaxHp, inGateRing, outOfCastle, squadWallTarget } from './kk_castle.js';
 
@@ -27,7 +27,7 @@ export const CLASS_STATS = Object.freeze({
 const CLASS_LABEL = Object.fromEntries(CASTLE_CLASSES.map((c) => [c.cls, c.label]));
 const ELEMENT_LABEL = Object.freeze({ ignis: 'BRAND', ventus: 'STURM', fulgur: 'BLITZ', terra: 'STEIN', aqua: 'FLUT', frost: 'FROST', bestia: 'WILD', construct: 'RUNEN', void: 'LEERE', lux: 'LICHT', natura: 'RANKEN', ward: 'SCHILD', umbra: 'SCHATTEN' });
 export const unitName = (u) => `${u.element ? ELEMENT_LABEL[u.element] + '-' : ''}${CLASS_LABEL[u.cls] ?? u.cls}${u.tier > 1 ? ' ' + '★'.repeat(u.tier - 1) : ''}`;
-export const TRAIN = Object.freeze({ gold: 20, time: 6, spinGold: 10, mergeCount: 3, maxTier: 3, garrisonCap: 12, squadBase: 6 });
+export const TRAIN = Object.freeze({ gold: 30, batch: 3, time: 6, spinGold: 10, mergeCount: 3, maxTier: 3, garrisonCap: 24, squadBase: 10 }); /* a recruitment is a stack of 3 (user: one unit alone was dead at once) */
 // The team of a seat: the player and his ally are 'blue'; in 2v2 both rivals are 'rivals', otherwise every rival alone.
 export const teamOfSeat = (seat, kk = null) => (seat === 0 || kk?.allies?.includes(seat) ? 'blue' : kk?.teamMode === '2v2' ? 'rivals' : 'seat' + seat);
 export const sameTeam = (kk, a, b) => a != null && b != null && teamOfSeat(a, kk) === teamOfSeat(b, kk);
@@ -190,10 +190,11 @@ function syncLive(game) {
   }
 }
 function despawn(game, rec) { const u = rec.live; if (!u) return; const i = game.minions.indexOf(u); if (i >= 0) game.minions.splice(i, 1); rec.live = null; }
+export const unitDiesForTest = (game, rec) => onUnitDeath(game, rec); /* tests: the drop of a beaten unit */
 function onUnitDeath(game, rec) {
   const kk = kkState(game); kk.units.splice(kk.units.indexOf(rec), 1); rec.live = null;
   if (rec.creature && rec.team !== 'blue') { kk.onCreatureDeath?.(rec); return; }
-  if (rec.team !== 'blue') { const g = 6 + Math.floor(Math.random() * 7); spawnItems(game, rec.x, rec.z, { gold: g }, { row: rec.row, spread: 8 }); gainXp(game, XP.kill); /* the coins fall to the ground */ combat.spawnDamageText?.(rec.x, groundYForDepth(rec.z) - 60, `+${g}◉`, { color: '#ffcf3a' }); }
+  if (rec.team !== 'blue') { const g = 6 + Math.floor(Math.random() * 7); foeDrop(game, rec.x, rec.z, rec.row, { gold: g, tier: rec.tier, element: rec.element, weapon: CASTLE_CLASSES.find((c) => c.cls === rec.cls)?.weapon, runeChance: rec.tier > 1 ? .12 : .06 }); /* coins, sometimes goods, a stone, the weapon or a rune */ gainXp(game, XP.kill); /* the coins fall to the ground */ combat.spawnDamageText?.(rec.x, groundYForDepth(rec.z) - 60, `+${g}◉`, { color: '#ffcf3a' }); }
   if (rec.role === 'garrison' && mine(rec)) { kk.alerts[rec.siteId] = 4; }
 }
 // The squad crosses into the next band with the player (kk_world switch hook).
@@ -283,7 +284,7 @@ export function trainUnit(game, site, element, { spin = false } = {}) {
   take(inv, weapon, 'weapons') || take(kk.store, weapon, 'weapons'); if (element) take(inv, element, 'stones') || take(kk.store, element, 'stones');
   let reels = null;
   if (spin) { const recent = kk.time - kk.lastGradeAt < 90 ? kk.lastGrade : null; reels = spinReels(kk.rng, { weapons: (inv.weapons[weapon] ?? 0) + 1, stones: element ? (inv.stones[element] ?? 0) + 1 : 0, grade: recent }); }
-  (kk.castleQueue[site.id] ??= []).push({ cls: site.cls, element, t: TRAIN.time, bonus: reels?.bonus ?? [] });
+  (kk.castleQueue[site.id] ??= []).push({ cls: site.cls, element, t: TRAIN.time, bonus: reels?.bonus ?? [], count: TRAIN.batch });
   return { ok: true, reels };
 }
 function updateQueues(game, dt) {
@@ -292,8 +293,8 @@ function updateQueues(game, dt) {
     if (!q.length) continue; const site = siteById(kk, id); if (!site || site.owner !== 0) { q.length = 0; continue; }
     q[0].t -= dt; if (q[0].t > 0) continue; const job = q.shift();
     if (garrisonOf(kk, id).length >= TRAIN.garrisonCap) { game.showAnnouncement?.('BURG VOLL — EINHEIT WARTET', 1.2); q.unshift({ ...job, t: 2 }); continue; }
-    addRecord(kk, { team: 'blue', cls: job.cls, element: job.element, tier: 1, bonus: job.bonus, row: site.row, x: site.x, z: site.z + .1, role: 'garrison', siteId: id });
-    if (site.row === kk.row) game.showAnnouncement?.(`AUSGEBILDET: ${unitName({ cls: job.cls, element: job.element, tier: 1 })}${job.bonus.length ? ' · ' + job.bonus.map((b) => BONUS_LABEL[b]).join(' + ') : ''}`, 1.4);
+    const n = Math.min(job.count ?? 1, TRAIN.garrisonCap - garrisonOf(kk, id).length); for (let i = 0; i < n; i++) addRecord(kk, { team: 'blue', cls: job.cls, element: job.element, tier: 1, bonus: job.bonus, row: site.row, x: site.x + (i - 1) * 30, z: site.z + .3, role: 'garrison', siteId: id });
+    if (site.row === kk.row) game.showAnnouncement?.(`AUSGEBILDET: ${n}× ${unitName({ cls: job.cls, element: job.element, tier: 1 })}${job.bonus.length ? ' · ' + job.bonus.map((b) => BONUS_LABEL[b]).join(' + ') : ''}`, 1.4);
   }
   // garrison counts for the map (and a short alert when one shrinks)
   for (const s of [...kk.map.sites, ...kk.map.hqs]) { if (s.kind === 'castle' && s.owner !== 0) continue; s.garrison = garrisonOf(kk, s.id).filter((u) => mine(u) || u.team === 'blue').length; }
@@ -329,12 +330,12 @@ function ensurePanel(game) {
   const doc = globalThis.document; if (typeof doc?.createElement !== 'function' || typeof doc.body?.appendChild !== 'function') return null;
   if (panel?.el) return panel;
   const el = doc.createElement('div'); el.id = 'kk-castle-panel';
-  el.style.cssText = 'position:fixed;left:max(1vw,env(safe-area-inset-left));top:27vh;z-index:63;width:min(340px,40vw);max-height:60vh;overflow:auto;font-family:monospace;font-size:12px;color:#f1e9d2;background:#1a1424ee;border:2px solid #c9a95a;padding:8px;display:none';
+  el.style.cssText = 'position:fixed;left:max(1vw,env(safe-area-inset-left));top:27vh;z-index:63;width:min(270px,36vw);max-height:46vh;overflow:auto;font-family:monospace;font-size:11px;line-height:1.35;color:#f1e9d2;background:#1a1424e6;border:2px solid #c9a95a;padding:5px;display:none'; /* compact (user: the flag menu was too bulky) */
   el.addEventListener('pointerdown', (e) => { const b = e.target?.closest?.('[data-kk]'); if (!b) return; e.preventDefault(); e.stopPropagation(); onPanelAction(game, b.getAttribute('data-kk'), b.getAttribute('data-arg')); });
   doc.body.appendChild(el); panel = { el, siteId: null, html: '', spin: false, msg: '' }; return panel;
 }
 function onPanelAction(game, act, arg) {
-  const kk = kkState(game); const site = siteById(kk, panel.siteId); if (!site) return;
+  const kk = kkState(game); if (act === 'close') { kk.panelOpen = false; closeKKPanel(); return; } const site = siteById(kk, panel.siteId); if (!site) return;
   let res = true;
   if (act === 'train') { const r = trainUnit(game, site, arg || null, { spin: panel.spin }); res = r.ok; if (r.reels) showReels(game, r.reels, unitName({ cls: site.cls, element: arg || null, tier: 1 })); panel.msg = r.ok ? (r.reels ? `WALZEN: ${r.reels.grid.map((g) => REEL_SYMBOLS[g]).join('')} ${r.reels.bonus.length ? '→ ' + r.reels.bonus.map((b) => BONUS_LABEL[b]).join(' + ') : '→ kein Bonus'}` : 'IN AUSBILDUNG') : r.why; }
   else if (act === 'spin') panel.spin = !panel.spin;
@@ -349,28 +350,27 @@ function onPanelAction(game, act, arg) {
 function refreshPanel(game, site) {
   const kk = kkState(game); const p = ensurePanel(game); if (!p) return;
   const isHQ = site.kind === 'hq'; const garrison = groupTypes(garrisonOf(kk, site.id).filter((u) => mine(u))); const squad = groupTypes(squadRecords(kk));
-  const btn = (act, arg, label, on = true) => `<button data-kk="${act}" data-arg="${arg ?? ''}" ${on ? '' : 'disabled'} style="margin:2px;padding:4px 7px;min-height:30px;font:inherit;color:#fff3c8;background:${on ? '#3a2a4e' : '#2a2430'};border:1px solid #c9a95a">${label}</button>`;
-  let h = `<b style="color:#ffe9a8">${isHQ ? 'HAUPTBURG' : site.label + 'BURG'}</b>`;
+  const btn = (act, arg, label, on = true) => `<button data-kk="${act}" data-arg="${arg ?? ''}" ${on ? '' : 'disabled'} style="margin:1px;padding:2px 6px;min-height:26px;font:inherit;color:#fff3c8;background:${on ? '#3a2a4e' : '#2a2430'};border:1px solid #c9a95a">${label}</button>`;
+  let h = `<div style="display:flex;align-items:center"><b style="color:#ffe9a8;flex:1">${isHQ ? 'HAUPTBURG' : site.label + 'BURG'}</b>${btn('close', '', '✕')}</div>`;
   if (!isHQ) {
     const els = [...new Set([...Object.keys(kk.inv.stones), ...Object.keys(kk.store.stones)].filter((e) => (kk.inv.stones[e] ?? 0) + (kk.store.stones[e] ?? 0) > 0))];
     const hasW = (kk.inv.weapons[site.weapon] ?? 0) + (kk.store.weapons[site.weapon] ?? 0);
-    h += `<div style="margin:4px 0;color:#cbb8ff">AUSBILDEN (${TRAIN.gold}◉ + Waffe ${site.label} [${hasW}] + Stein) · Gold ${kk.gold}</div>`;
-    h += btn('train', '', `${CLASS_LABEL[site.cls]} ohne Element`, hasW > 0);
-    for (const e of els) h += btn('train', e, `${unitName({ cls: site.cls, element: e, tier: 1 })}`, hasW > 0);
-    h += `<div>${btn('spin', '', panel.spin ? `WALZEN AN (+${TRAIN.spinGold}◉)` : 'WALZEN AUS')} ${kk.lastGrade && kk.time - kk.lastGradeAt < 90 ? 'Zeichennote ' + kk.lastGrade : 'zeichne eine Rune für bessere Walzen'}</div>`;
+    h += `<div style="color:#cbb8ff">${TRAIN.batch}er-Trupp: ${TRAIN.gold}◉ + ${site.label} [${hasW}] · ◉ ${kk.gold}</div>`;
+    h += btn('train', '', `+${TRAIN.batch} ${CLASS_LABEL[site.cls]}`, hasW > 0);
+    for (const e of els) h += btn('train', e, `+${TRAIN.batch} ${e.toUpperCase().slice(0, 5)}`, hasW > 0);
+    h += btn('spin', '', panel.spin ? `WALZEN ✓ +${TRAIN.spinGold}◉` : 'WALZEN');
     const q = kk.castleQueue[site.id] ?? []; if (q.length) h += `<div style="color:#9fd">Warteschlange: ${q.length} · nächste in ${Math.ceil(q[0].t)} s</div>`;
   }
   if (isHQ && kk.hqHooks) {
     const x = kk.hqHooks.extras();
-    h += `<div style="margin:4px 0;color:#cbb8ff">${['UNBEFESTIGT', 'HOLZBURG', 'STEINBURG', 'STAHLBURG', 'OBSIDIANBURG'][x.hq.level ?? 0]} · Leben ${Math.max(0, Math.round(x.hq.hp))}</div>`;
+    h += `<div style="color:#cbb8ff">${['UNBEFESTIGT', 'HOLZBURG', 'STEINBURG', 'STAHLBURG', 'OBSIDIANBURG'][x.hq.level ?? 0]} · ♥ ${Math.max(0, Math.round(x.hq.hp))}</div>`;
     if (kk.reserve && kk.crownHooks) h += btn('swap', '', `RESERVE: ${kk.reserve.name} ⇄ DECK`);
-    if (x.next) h += btn('upgrade', '', `BAUEN → ${x.next.name}: ${x.built}/${x.next.cost} ${x.matName} verbaut · du hast ${x.have} — EINZAHLEN`, x.have > 0);
-    for (const e of x.stones) { const c = x.resCost(e); h += btn('resist', e, `RESISTENZ ${e.toUpperCase()} ${x.hq.res?.[e] ?? 0}${c ? ' (+' + c + ' Steine)' : ''}`, !!c && (x.hq.res?.[e] ?? 0) < (x.hq.level ?? 0)); }
+    if (x.next) h += btn('upgrade', '', `BAUEN ${x.next.name} ${x.built}/${x.next.cost} (+${x.have})`, x.have > 0);
+    for (const e of x.stones) { const c = x.resCost(e); h += btn('resist', e, `🛡${e.slice(0, 4).toUpperCase()} ${x.hq.res?.[e] ?? 0}${c ? '+' + c : ''}`, !!c && (x.hq.res?.[e] ?? 0) < (x.hq.level ?? 0)); }
   }
-  h += `<div style="margin-top:6px;color:#ffe9a8">STATIONIERT (${garrison.reduce((s, g) => s + g.units.length, 0)}/${TRAIN.garrisonCap})</div>`;
-  for (const g of garrison) h += `<div>${g.units.length}× ${unitName(g.sample)} ${btn('down', g.key, '▼ mitnehmen')} ${g.units.length >= TRAIN.mergeCount && g.sample.tier < TRAIN.maxTier ? btn('merge', g.key, '✦ verschmelzen') : ''}</div>`;
-  h += `<div style="margin-top:6px;color:#ffe9a8">TRUPP (${squadRecords(kk).length}/${squadCap(kk)})</div>`;
-  for (const g of squad) h += `<div>${g.units.length}× ${unitName(g.sample)} ${btn('up', g.key, '▲ stationieren')}</div>`;
+  h += `<div style="margin-top:4px;color:#ffe9a8">BURG ${garrison.reduce((s, g) => s + g.units.length, 0)}/${TRAIN.garrisonCap} · TRUPP ${squadRecords(kk).length}/${squadCap(kk)}</div>`;
+  for (const g of garrison) h += `<div>${g.units.length}× ${unitName(g.sample)} ${btn('down', g.key, '▼')}${g.units.length >= TRAIN.mergeCount && g.sample.tier < TRAIN.maxTier ? btn('merge', g.key, '✦') : ''}</div>`;
+  for (const g of squad) h += `<div style="color:#bfe">${g.units.length}× ${unitName(g.sample)} ${btn('up', g.key, '▲')}</div>`;
   if (site.egg) h += `<div style="margin-top:6px;color:#ffe9a8">EI (${site.egg.element.toUpperCase()}) LIEGT HIER ${btn('egg', '', 'MITNEHMEN', !kk.carry)}</div>`;
   if (p.msg) h += `<div style="margin-top:6px;color:#ffd27a">${p.msg}</div>`;
   if (h !== p.html) { p.el.innerHTML = h; p.html = h; }

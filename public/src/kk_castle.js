@@ -117,7 +117,7 @@ export function tryCastleTap(game, wp) {
     if (s.row !== kk.row || s.fallen) continue; const r = flagRect(s);
     if (wp.x < r.x0 || wp.x > r.x1 || wp.y < r.y0 || wp.y > r.y1) continue;
     if (!ownCastle(s)) { game.showAnnouncement?.(friendlyCastle(kk, s) ? 'DIE BURG DEINES VERBÜNDETEN' : castleHp(s) > 0 ? 'FREMDE BURG — ERST DIE MAUER ZERSTÖREN' : 'STELL DICH ALLEIN AN DIE FAHNE', 1.2); return true; }
-    if (Math.abs(P.x - s.x) > 900) { game.showAnnouncement?.('ZU WEIT WEG VON DER FAHNE', 1); return true; }
+    if (Math.abs(P.x - s.x) > 420 || Math.abs(P.z - flagZ(s)) > 2.2) { game.showAnnouncement?.('GEH NÄHER AN DIE FAHNE', 1); return true; }
     const open = kk.panelOpen && kk.flagSite === s; kk.panelOpen = !open; kk.flagSite = s; audio.playRuneChime?.(open ? 520 : 760); return true;
   }
   return false;
@@ -149,7 +149,8 @@ export function updateCastles(game, dt) {
     s.shake = Math.max(0, (s.shake ?? 0) - dt);
     if (s.kind === 'castle' && castleHp(s) < castleMaxHp(s) && kk.time - (s.lastHitT ?? -99) > CASTLE.regenDelay) s.hp = Math.min(castleMaxHp(s), s.hp + castleMaxHp(s) * CASTLE.regen * dt);
   }
-  if (kk.flagSite && (!ownCastle(kk.flagSite) || kk.flagSite.row !== kk.row || Math.abs(P.x - kk.flagSite.x) > 1000 || !P.isAlive)) { kk.panelOpen = false; kk.flagSite = null; }
+  // the menu closes by itself when one walks away from the flag (user, 20 Nov 2026)
+  if (kk.flagSite && (!ownCastle(kk.flagSite) || kk.flagSite.row !== kk.row || Math.abs(P.x - kk.flagSite.x) > 420 || Math.abs(P.z - flagZ(kk.flagSite)) > 2.2 || !P.isAlive)) { kk.panelOpen = false; kk.flagSite = null; }
   const s = kk.inside;
   if (s && s.kind !== 'building') {
     if (!P.isAlive || s.row !== kk.row || s.fallen || (!ownCastle(s) && castleHp(s) > 0)) { leaveCastle(game); return; }

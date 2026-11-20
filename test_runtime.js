@@ -5698,7 +5698,7 @@ game.running = false;
   const wallT = game.getHostileTargets(P2.team).find((t) => t.isCastleWall && t.s === castle); for (let i = 0; i < 400 && wallT && !wallT.isDead; i++) wallT.takeDamage(25, 1); /* batter the wall down first (feedback 20 Nov 2026) */
   for (let i = 0; i < 400 && castle.owner !== 0; i++) { game.minions = game.minions.filter((m) => !m.isDead); KA.updateArmy(game, 1 / 60); } const captured = castle.owner === 0 && heldBack && !!wallT; P2.surfaceHeight = 0; P2.z = castle.z + .1;
   k2.gold = 200; k2.inv.weapons[castle.weapon] = 4; k2.inv.stones.frost = 4; const tr = KA.trainUnit(game, castle, 'frost', { spin: true });
-  for (let i = 0; i < 400; i++) KA.updateArmy(game, 1 / 60); const gar = k2.units.filter((u) => u.role === 'garrison' && u.siteId === castle.id); const trained = tr.ok && !!tr.reels && gar.length === 1 && gar[0].element === 'frost' && castle.garrison === 1;
+  for (let i = 0; i < 400; i++) KA.updateArmy(game, 1 / 60); const gar = k2.units.filter((u) => u.role === 'garrison' && u.siteId === castle.id); const trained = tr.ok && !!tr.reels && gar.length === 3 && gar.every((u) => u.element === 'frost') && castle.garrison === 3; /* a stack of 3 per recruitment */
   const key = KA.groupTypes(gar)[0].key; const took = KA.takeAlong(game, castle, key) && k2.units.some((u) => u.role === 'squad' && u.element === 'frost'); const back = KA.station(game, castle, key) && castle.garrison !== undefined;
   for (let i = 0; i < 2; i++) KA.addRecord(k2, { team: 'blue', cls: castle.cls, element: 'frost', tier: 1, row: castle.row, x: castle.x, z: castle.z, role: 'garrison', siteId: castle.id });
   const merged = KA.mergeUnits(game, castle, key) && k2.units.some((u) => u.siteId === castle.id && u.tier === 2 && u.element === 'frost');
@@ -5773,11 +5773,19 @@ game.running = false;
     KWR.updateWar(game, 1 / 60); const tookRune = !kR.items.includes(ri) && (rv.runes ?? []).some((r) => r.id === rune.id) && rv.gold === g0 + 25;
     const st = kR.map.sites.find((x) => x.kind === 'stable'); rv.horse = false; rv.level = 3; rv.task = null; rv.think = 0; rv.row = st.row; rv.x = st.x + 30; rv.z = st.z; for (let i = 0; i < 20 && !rv.horse; i++) KWR.updateWar(game, .25); const rides = rv.horse === true;
     rv.row = kR.row; rv.x = game.player.x + 200; rv.z = game.player.z; rv.task = { kind: 'idle', id: 'none' }; KWR.updateWar(game, 1 / 60); const E = game.enemyChampion; const champRides = kR.championBot === rv && E.kkRiding === true;
-    kR.championBot = null; E.lifeState = 'Dead'; rv.x = 9000; rv.z = 30; rv.row = kR.map.hqs[0].row; rv.task = null; rv.think = 0; kR.items.push({ id: kR.nextItem++, kind: 'egg', row: rv.row, x: rv.x + 400, z: rv.z, lock: 0, element: 'ignis', creature: 'siege_golem' });
+    kR.championBot = null; E.lifeState = 'Dead'; rv.x = game.player.x > 7000 ? 1600 : 12800; rv.z = game.player.z > 24 ? 8 : 40; /* far from the player: no live champion */ rv.row = kR.map.hqs[0].row; rv.task = null; rv.think = 0; kR.items.push({ id: kR.nextItem++, kind: 'egg', row: rv.row, x: rv.x + 400, z: rv.z, lock: 0, element: 'ignis', creature: 'siege_golem' });
     for (let i = 0; i < 60 && !rv.egg; i++) { rv.think = 0; KWR.updateWar(game, .25); } const carries = !!rv.egg; const sq0 = kR.units.filter((u) => u.seat === rv.seat && u.creature).length;
     for (let i = 0; i < 4000 && rv.egg; i++) { rv.think = 0; KWR.updateWar(game, .5); if (!rv.alive) break; } const hatched = !rv.egg && kR.units.filter((u) => u.seat === rv.seat && u.creature && u.hatched).length > sq0;
     rv.egg = { element: 'aqua', creature: 'rune_snake' }; const nEggs = kR.items.filter((it) => it.kind === 'egg').length; KWR.killBotForTest?.(game, rv); const drops = !KWR.killBotForTest || kR.items.filter((it) => it.kind === 'egg').length === nEggs + 1;
     assert(tookRune && rides && champRides && carries && hatched && drops, 'Rivals: a rival takes a rune and gold lying about (the rune makes it stronger), gets a horse at a stable and rides as the champion, carries an egg to a source and hatches a creature, a killed carrier drops the egg (' + [tookRune, rides, champRides, carries, hatched, drops].join('/') + ')');
+  }
+  {
+    // beaten foes drop their loot (user, 20 Nov 2026): a rival champion beaten by the player drops gold, goods and at least one rune; units drop coins and sometimes more
+    game.setMatchMode('kronenkrieg'); game.startMatch(); const kD2 = game.modeState.kk; const rvD = kD2.bots.find((b) => !b.ally); rvD.alive = true; rvD.level = 6; rvD.row = kD2.row; rvD.x = game.player.x + 2500; rvD.z = game.player.z;
+    const before = new Set(kD2.items); KWR.killBotForTest(game, rvD, 'player'); const fell = kD2.items.filter((it) => !before.has(it)); const champDrop = fell.some((it) => it.type === 'rune') && fell.some((it) => it.type === 'gold') && fell.some((it) => it.type !== 'gold' && it.type !== 'rune');
+    const KAd = await import('./public/src/kk_army.js'); let unitRunes = 0; let unitGoods = 0; for (let i = 0; i < 60; i++) { const r = KAd.addRecord(kD2, { team: 'red', bandit: true, cls: 'Berserker', element: 'ignis', tier: 2, row: kD2.row, x: game.player.x + 3000, z: game.player.z, role: 'guard', siteId: null }); const b2 = new Set(kD2.items); KAd.unitDiesForTest?.(game, r); const f2 = kD2.items.filter((it) => !b2.has(it)); unitRunes += f2.filter((it) => it.type === 'rune').length; unitGoods += f2.filter((it) => it.type !== 'gold').length; }
+    const unitDrops = unitGoods > 5 && unitRunes >= 1;
+    assert(champDrop && unitDrops, 'Beaten foes drop loot: a rival champion drops gold, goods and runes, units drop coins and now and then goods and runes (' + [champDrop, unitDrops, unitGoods, unitRunes].join('/') + ')');
   }
   {
     // world map (user, 20 Nov 2026): unexplored places stay hidden, exploring shows them for the round, resources once seen stay, rivals only as

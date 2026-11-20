@@ -88,6 +88,21 @@ function tierAt(kk, site) {
   const hq = hqOf(kk); return lootTier({ time: kk.time, middleBand: site.row !== KK.main /* the sections above and below are the rich places */, hqDistance: kkDistance(hq, site) });
 }
 // One chest of a house (the walk-in interior, kk_interior.js): the loot of one floor; the first chest of a house gives XP.
+// A random rune of a kind (for drops of beaten foes): element runes may come twice, a special one the player holds does not.
+export function randomRune(game, category = 'element', rng = Math.random) {
+  const kk = kkState(game); const P = game.player; const held = new Set([...P.runeDeck, ...P.runeHand, ...P.slottedSpells.flatMap((s) => s.runes), ...(kk?.sealed ?? [])].map((x) => x.id));
+  const pool = runePool(category).filter((x) => category === 'element' || !held.has(x.id)); return pool.length ? pool[Math.floor(rng() * pool.length)] : null;
+}
+// What a beaten foe drops (user, 20 Nov 2026: "die Gegner, die ich besiege, sollen Beute und Runen fallen lassen").
+export function foeDrop(game, x, z, row, { gold = 8, tier = 1, element = null, weapon = null, runeChance = .06, champion = false } = {}) {
+  const r = Math.random; const b = { gold, materials: {}, stones: {}, weapons: [], runes: [] }; const mat = ['wood', 'stone', 'steel', 'obsidian'][Math.min(3, Math.floor(r() * (1 + tier)))];
+  if (champion || r() < .3) b.materials[mat] = (champion ? 6 : 1) + Math.floor(r() * (champion ? 6 : 3));
+  if (champion || r() < .15) b.stones[element ?? ['ignis', 'aqua', 'frost', 'terra', 'ventus', 'fulgur'][Math.floor(r() * 6)]] = champion ? 3 : 1;
+  if (weapon && r() < (champion ? 1 : .1)) b.weapons.push(weapon);
+  const nr = champion ? 1 + (tier >= 3 ? 1 : 0) + (r() < .35 ? 1 : 0) : r() < runeChance ? 1 : 0;
+  for (let i = 0; i < nr; i++) { const cat = champion && r() < .2 + tier * .05 ? (r() < .5 ? 'special' : 'arcane') : 'element'; const rune = randomRune(game, cat) ?? randomRune(game, 'element'); if (rune) b.runes.push(rune); }
+  return spawnItems(game, x, z, b, { row, spread: champion ? 70 : 24 });
+}
 export function openChest(game, site, floor = 0, at = null) {
   const kk = kkState(game); const tier = tierAt(kk, site); const biome = biomeAt(kk.map, site.row, site.x, site.z).element;
   const weapons = CASTLE_CLASSES.map((c) => c.weapon);
