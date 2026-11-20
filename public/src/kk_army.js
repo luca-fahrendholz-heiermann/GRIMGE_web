@@ -16,6 +16,7 @@ import { kkState, kkOn, SEAT_COLORS, elementColor } from './kk_world.js';
 import { gainXp, foeDrop, bagSlots, bagUpgradeCost, BAG_MAX_LEVEL } from './kk_loot.js';
 import { spawnItems, showReels } from './kk_items.js';
 import { castleHp, castleMaxHp, inGateRing, outOfCastle, squadWallTarget } from './kk_castle.js';
+import { FACTIONS, TIERS, LAIRS, TRAIT_DE, dinoImage, dinoName, tierUnit, factionOf, initCastleRecruits, recruit, buildLair, creditKill, canAfford } from './kk_factions.js';
 
 // Per class: melee/ranged and multipliers on the minion base values.
 export const CLASS_STATS = Object.freeze({
@@ -47,6 +48,21 @@ export function unitLook(rec) {
 }
 let attackingElement = null; /* the element of the unit striking right now (main castle resistances, kk_war.js) */
 // A live unit: a minion that carries its class and element (its hits roll the element's statuses).
+// The dino-dragon: its sprite (facing left in the file), a breathing bob, a lunge when it strikes, its bar and name.
+function renderDino(ctx, u) {
+  const im = dinoImage(u.rec.dino); if (!im || !(im.naturalWidth || im.width) || !im.complete) return false;
+  const h = u.renderHeight; const w = h * (im.naturalWidth || im.width) / (im.naturalHeight || im.height); const bob = Math.sin((u.animTime ?? 0) * (u.state === 'run' ? 9 : 2.5)) * (u.state === 'run' ? 3 : 1.5); const lunge = u.state === 'attack' ? 10 : 0; const f = u.facing || 1;
+  ctx.save(); ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.beginPath(); ctx.ellipse(u.x, u.y + 2, w * .36, 9, 0, 0, Math.PI * 2); ctx.fill();
+  if (u.hitFlash > 0) ctx.globalAlpha = .7; ctx.translate(u.x + f * lunge, u.y + bob); if (f > 0) ctx.scale(-1, 1); ctx.imageSmoothingEnabled = true; ctx.drawImage(im, -w / 2, -h, w, h); ctx.restore();
+  const by = u.y - h - 12; ctx.fillStyle = 'rgba(0,0,0,.7)'; ctx.fillRect(Math.round(u.x - 36), Math.round(by), 72, 6); ctx.fillStyle = u.team === 'blue' ? '#7bd66b' : '#ff5050'; ctx.fillRect(Math.round(u.x - 35), Math.round(by + 1), 70 * Math.max(0, u.hp / u.maxHp), 4);
+  ctx.font = 'bold 10px monospace'; ctx.textAlign = 'center'; ctx.fillStyle = elementColor(u.rec.dino); ctx.fillText(u.rec.name ?? dinoName(u.rec.dino), u.x, by - 4); return true;
+}
+// Its signature blow (named after the bestiary): a wave of its element around it that hurts foes and carries the element.
+function dinoSignature(game, u) {
+  if (!game) return; const foes = game.getHostileTargets(u.team).filter((t) => t && !t.isDead && t.isAlive !== false && !t.isProp && Math.hypot(t.x - u.x, ((t.z ?? 0) - u.z) * 150) < 150); if (!foes.length) return;
+  const prev = setStatusSource({ team: u.team, statusElements: [u.rec.dino], castBy: u }); try { for (const t of foes) t.takeDamage?.(Math.round(u.damage * 1.6), Math.sign(t.x - u.x) * 160, 40, .3, false, 'spell'); } finally { setStatusSource(prev); }
+  combat.spawnShockwave?.(u.x, u.y - 30, 150, elementColor(u.rec.dino)); combat.spawnDamageText?.(u.x, u.y - u.renderHeight - 26, FACTIONS[u.rec.dino]?.dino?.[3] ?? 'URGEWALT', { color: elementColor(u.rec.dino) });
+}
 export class KKUnit extends Minion {
   constructor(rec) {
     const stats = CLASS_STATS[rec.cls] ?? CLASS_STATS.Guardian;
@@ -58,6 +74,10 @@ export class KKUnit extends Minion {
     // as big as the characters (user, 20 Nov 2026): the hero height, a little more per tier; a hero-sized body to hit
     const heroH = ENTITY_VISUALS.heroHeight * (rec.boss ? 1.45 : 1); this.renderHeight = heroH * (1 + (rec.tier - 1) * .06); if (rec.boss) this.damage *= 2; this.width = ENTITY_VISUALS.heroColliderWidth; this.height = ENTITY_VISUALS.heroColliderHeight;
     { const key = unitLook(rec); const arch = ART_ASSETS.archetypes?.[key]; if (ART_ASSETS.entities?.[key] || arch) { this.spriteKey = key; this.renderHeight = heroH * ((arch?.renderHeight ?? 56) / 56) * (key === 'void_brute' ? .8 : 1) * (1 + (rec.tier - 1) * .06); } } /* painted sheets instead of the plain minions */
+    // faction trait (kk_factions.js), veteran rank, the dino-dragon (tier 4 / wild): a big body with a signature blow
+    const tr = FACTIONS[rec.faction]?.trait; if (tr === 'dmg') this.damage = Math.round(this.damage * 1.15); if (tr === 'hp') { this.maxHp = Math.round(this.maxHp * 1.25); this.hp = Math.min(this.maxHp, rec.hp ?? this.maxHp); } if (tr === 'speed') this.speed *= 1.15; this.regen = tr === 'regen';
+    if (rec.vet) { const k = rec.vet >= 2 ? 1.5 : 1.2; this.maxHp = Math.round(this.maxHp * k); this.hp = Math.min(this.maxHp, rec.hp ?? this.maxHp); this.damage = Math.round(this.damage * k); }
+    if (rec.dino) { const k = rec.wild ? 2.5 : 1; this.maxHp = Math.round(this.maxHp * 6 * k); this.hp = Math.min(this.maxHp, rec.hp ?? this.maxHp); this.damage = Math.round(this.damage * 2.5); this.speed *= 1.1; this.attackRange = 70; this.renderHeight = rec.wild ? 165 : 135; this.width = 56; /* clearly bigger than a hero, without hiding him */ this.dinoCd = 3; this.spriteKey = null; }
     this.statusElements = rec.element ? (rec.bonus?.includes('double') ? [rec.element, rec.element === 'frost' ? 'aqua' : 'ignis'] : [rec.element]) : null;
     this.runXpValue = 0; this.baseSpeed = this.speed;
   }
@@ -71,6 +91,8 @@ export class KKUnit extends Minion {
       if (gap > 110 && ridesToo) pace = Math.max(pace, leadSpeed * (gap > 260 ? 1.25 : 1.05));
     }
     this.blessT = Math.max(0, (this.blessT ?? 0) - dt); if (this.blessT > 0) pace *= 1.1;
+    if (this.regen && this.hp < this.maxHp) this.hp = Math.min(this.maxHp, this.hp + this.maxHp * .012 * dt); /* faction trait: slow healing */
+    if (this.rec?.dino && !this.isDead) { this.dinoCd -= dt; if (this.dinoCd <= 0) { this.dinoCd = 7; dinoSignature(gameWorld, this); } }
     this.speed = pace; return super.update(dt, gameWorld, battlefield);
   }
   performAttack(target, gameWorld) {
@@ -88,6 +110,7 @@ export class KKUnit extends Minion {
     return super.takeDamage(amount, ...rest);
   }
   render(ctx) {
+    if (this.rec?.dino && renderDino(ctx, this)) return; /* the dino-dragon sprite */
     if (this.blessT > 0) { ctx.save(); ctx.globalAlpha = .35 + .2 * Math.sin((this.animTime ?? 0) * 6); ctx.strokeStyle = this.blessEl ? elementColor(this.blessEl) : '#ffe9a8'; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(this.x, groundYForDepth(this.z) - (this.surfaceHeight ?? 0), 26, 7, 0, 0, Math.PI * 2); ctx.stroke(); ctx.restore(); } /* the blessing's aura */
     super.render(ctx);
     const r = this.rec; const vh = this.renderHeight; const y = this.y - vh - 9; ctx.save();
@@ -95,6 +118,7 @@ export class KKUnit extends Minion {
     ctx.fillStyle = r.bandit ? '#5a4632' : SEAT_COLORS[r.seat ?? 0]; ctx.fillRect(Math.round(this.x - 9), Math.round(y - 3), 6, 5);
     if (r.element) { ctx.fillStyle = elementColor(r.element); ctx.fillRect(Math.round(this.x - 1), Math.round(y - 3), 5, 5); }
     if (r.tier > 1) { ctx.fillStyle = '#ffe066'; for (let i = 0; i < r.tier - 1; i++) ctx.fillRect(Math.round(this.x + 6 + i * 4), Math.round(y - 3), 3, 3); }
+    if (r.name) { ctx.font = 'bold 9px monospace'; ctx.textAlign = 'center'; ctx.fillStyle = r.vet >= 2 ? '#ffd24a' : '#e8e2d0'; ctx.fillText(`${r.vet >= 2 ? '✦' : '★'} ${r.name}`, this.x, y - 8); } /* a named veteran */
     ctx.restore();
   }
 }
@@ -220,6 +244,8 @@ export const unitDiesForTest = (game, rec) => onUnitDeath(game, rec); /* tests: 
 function onUnitDeath(game, rec) {
   const kk = kkState(game); kk.units.splice(kk.units.indexOf(rec), 1); rec.live = null;
   if (rec.creature && rec.team !== 'blue') { kk.onCreatureDeath?.(rec); return; }
+  if (rec.team !== 'blue' && rec.team !== game.player.team) creditKill(game, rec); /* veterans */
+  if (rec.wild && rec.dino) { kk.onWildDinoDeath?.(rec); return; } /* a wild dino-dragon: its egg (kk_events.js) */
   if (rec.boss) { kk.onBossDeath?.(rec); return; } /* the event boss: its hoard (kk_events.js) */
   if (rec.team !== 'blue') { const g = 6 + Math.floor(Math.random() * 7); foeDrop(game, rec.x, rec.z, rec.row, { gold: g, tier: rec.tier, element: rec.element, weapon: CASTLE_CLASSES.find((c) => c.cls === rec.cls)?.weapon, runeChance: rec.tier > 1 ? .12 : .06 }); /* coins, sometimes goods, a stone, the weapon or a rune */ gainXp(game, XP.kill); /* the coins fall to the ground */ combat.spawnDamageText?.(rec.x, groundYForDepth(rec.z) - 60, `+${g}◉`, { color: '#ffcf3a' }); }
   if (rec.role === 'garrison' && mine(rec)) { kk.alerts[rec.siteId] = 4; }
@@ -271,8 +297,8 @@ function updateSites(game, dt) {
       kk.progress[s.id] = ring && open && !guards ? (kk.progress[s.id] ?? 0) + dt : 0; /* any foe nearby or leaving the ring starts it over */
       if (close && guards && Math.floor(kk.time * 2) % 6 === 0) s.blockedHint = true;
       if (kk.progress[s.id] >= CAPTURE_TIME) {
-        kk.progress[s.id] = 0; s.owner = 0; s.garrison = 0; s.hp = castleMaxHp(s) * .5; s.lastHitT = kk.time; gainXp(game, XP.capture);
-        game.showAnnouncement?.(`${s.label}BURG EROBERT — DU BILDEST HIER ${s.label === 'BOGEN' ? 'SCHÜTZEN' : 'KÄMPFER'} AUS`, 2);
+        kk.progress[s.id] = 0; s.owner = 0; s.garrison = 0; initCastleRecruits(kk, s); /* its faction's units open up */ s.hp = castleMaxHp(s) * .5; s.lastHitT = kk.time; gainXp(game, XP.capture);
+        game.showAnnouncement?.(`${s.label}BURG EROBERT — ${FACTIONS[s.faction]?.name ?? ''}: NEUE EINHEITEN ANWERBBAR`, 2.2);
         combat.spawnShockwave?.(s.x, groundYForDepth(s.z) - 60, 120, SEAT_COLORS[0]); audio.playRuneChime?.(880);
       }
     } else if (s.kind === 'prison' && !s.freed && close && !hostileGuards(kk, s).length) {
@@ -365,6 +391,8 @@ function onPanelAction(game, act, arg) {
   const kk = kkState(game); if (act === 'close') { kk.panelOpen = false; closeKKPanel(); return; }
   if (act === 'bag') { const c = bagUpgradeCost(kk); if (kk.gold >= c && (kk.bagLevel ?? 0) < BAG_MAX_LEVEL) { kk.gold -= c; kk.bagLevel = (kk.bagLevel ?? 0) + 1; panel.msg = `BEUTEL: ${bagSlots(kk)} PLÄTZE`; } return; } const site = siteById(kk, panel.siteId); if (!site) return;
   let res = true;
+  if (act === 'recruit') { const [t, n] = String(arg).split(':'); const r = recruit(game, site, Number(t), n === 'all' ? 99 : 1, addRecord, TRAIN.garrisonCap - garrisonOf(kk, site.id).length); panel.msg = r.ok ? `+${r.n} ANGEWORBEN` : r.why; kk._panelTick = -1; return; }
+  if (act === 'lair') { const r = buildLair(game, site, arg); panel.msg = r.ok ? '' : r.why; kk._panelTick = -1; return; }
   if (act === 'train') { const r = trainUnit(game, site, arg || null, { spin: panel.spin }); res = r.ok; if (r.reels) showReels(game, r.reels, unitName({ cls: site.cls, element: arg || null, tier: 1 })); panel.msg = r.ok ? (r.reels ? `WALZEN: ${r.reels.grid.map((g) => REEL_SYMBOLS[g]).join('')} ${r.reels.bonus.length ? '→ ' + r.reels.bonus.map((b) => BONUS_LABEL[b]).join(' + ') : '→ kein Bonus'}` : 'IN AUSBILDUNG') : r.why; }
   else if (act === 'spin') panel.spin = !panel.spin;
   else if (act === 'upgrade' && kk.hqHooks) { const r = kk.hqHooks.upgrade(); res = r.ok; panel.msg = r.ok ? '' : r.why; }
@@ -381,12 +409,20 @@ function refreshPanel(game, site) {
   const btn = (act, arg, label, on = true) => `<button data-kk="${act}" data-arg="${arg ?? ''}" ${on ? '' : 'disabled'} style="margin:1px;padding:2px 6px;min-height:26px;font:inherit;color:#fff3c8;background:${on ? '#3a2a4e' : '#2a2430'};border:1px solid #c9a95a">${label}</button>`;
   let h = `<div style="display:flex;align-items:center"><b style="color:#ffe9a8;flex:1">${isHQ ? 'HAUPTBURG' : site.label + 'BURG'}</b>${btn('close', '', '✕')}</div>`;
   if (!isHQ) {
+    initCastleRecruits(kk, site); const F = FACTIONS[site.faction]; const room = TRAIN.garrisonCap - garrisonOf(kk, site.id).length;
+    h += `<div style="color:${elementColor(site.faction)}">${F?.name ?? ''} · ${TRAIT_DE[F?.trait] ?? ''} · Woche ${kk.week ?? 1} · ◉ ${kk.gold}</div>`;
+    for (const t of [1, 2, 3, 4]) { const T = TIERS[t]; const u = tierUnit(site, t); const locked = T.needs && !site.lairs?.[T.needs]; const name = u.label ?? unitName({ cls: u.cls, element: u.element, tier: 1 }); const pool = Math.floor(site.pool[t] ?? 0); const cost = `${T.gold}◉${T.stones ? `+${T.stones}◆` : ''}${T.mats ? `+${Object.entries(T.mats).map(([m, n]) => n + m.slice(0, 2).toUpperCase()).join('+')}` : ''}`;
+      h += `<div style="opacity:${locked ? .5 : 1}">${t}· ${name} ×${pool} <span style="color:#9a8fb0">${cost}</span> ${locked ? `<i>(${LAIRS[T.needs].name})</i>` : btn('recruit', `${t}:1`, '+1', pool >= 1 && room > 0 && !canAfford(kk, T, site.faction)) + btn('recruit', `${t}:all`, 'ALLE', pool >= 2 && room > 1)}</div>`; }
+    if (!site.lairs?.hort) h += btn('lair', 'hort', `🏛 ${LAIRS.hort.name} (${LAIRS.hort.gold}◉+6HO+8ST)`, !canAfford(kk, LAIRS.hort));
+    else if (!site.lairs?.dragon) h += btn('lair', 'dragon', `🐉 ${LAIRS.dragon.name} (${LAIRS.dragon.gold}◉+10SH+5OB)`, !canAfford(kk, LAIRS.dragon));
+    if (false) {
     const els = [...new Set([...Object.keys(kk.inv.stones), ...Object.keys(kk.store.stones)].filter((e) => (kk.inv.stones[e] ?? 0) + (kk.store.stones[e] ?? 0) > 0))];
     const hasW = (kk.inv.weapons[site.weapon] ?? 0) + (kk.store.weapons[site.weapon] ?? 0);
     h += `<div style="color:#cbb8ff">${TRAIN.batch}er-Trupp: ${TRAIN.gold}◉ + ${site.label} [${hasW}] · ◉ ${kk.gold}</div>`;
     h += btn('train', '', `+${TRAIN.batch} ${CLASS_LABEL[site.cls]}`, hasW > 0);
     for (const e of els) h += btn('train', e, `+${TRAIN.batch} ${e.toUpperCase().slice(0, 5)}`, hasW > 0);
     h += btn('spin', '', panel.spin ? `WALZEN ✓ +${TRAIN.spinGold}◉` : 'WALZEN');
+    }
     const q = kk.castleQueue[site.id] ?? []; if (q.length) h += `<div style="color:#9fd">Warteschlange: ${q.length} · nächste in ${Math.ceil(q[0].t)} s</div>`;
   }
   if (isHQ && kk.hqHooks) {

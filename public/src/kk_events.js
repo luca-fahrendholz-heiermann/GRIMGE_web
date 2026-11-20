@@ -12,8 +12,10 @@ import { KK } from './kk_map.js';
 import { addRecord } from './kk_army.js';
 import { spawnItems } from './kk_items.js';
 import { randomRune, gainXp } from './kk_loot.js';
+import { biomeAt } from './kk_map.js';
+import { dinoName } from './kk_factions.js';
 
-export const EVENTS = Object.freeze({ first: 120, every: 150, openTime: 1.5, bossHp: 9, kinds: ['cache', 'boss', 'restock'] });
+export const EVENTS = Object.freeze({ first: 120, every: 150, openTime: 1.5, bossHp: 9, kinds: ['cache', 'dragon', 'boss', 'restock'] });
 const near = (a, b, r) => Math.hypot(a.x - b.x, ((a.z ?? 0) - (b.z ?? 0)) * KK.zPx) < r;
 // A spot 1500–4000 px from the player on the main board, away from places.
 function eventSpot(kk, P) {
@@ -35,6 +37,7 @@ export function startEvent(game, kind = null) {
   const at = eventSpot(kk, P); const ev = { id: 'event' + kk.eventN, kind: 'event', ev: kind, row: KK.main, x: Math.round(at.x), z: +at.z.toFixed(2), t: 0 };
   kk.map.sites.push(ev); kk.events.push(ev); revealAround(kk, ev, 400, 1.6);
   if (kind === 'cache') { for (let i = 0; i < 3; i++) addRecord(kk, { team: 'red', bandit: true, cls: ['Guardian', 'Ranger', 'Berserker'][i], element: null, tier: kk.time > 600 ? 2 : 1, row: ev.row, x: ev.x - 60 + i * 60, z: ev.z + .3, role: 'guard', siteId: ev.id }); game.showAnnouncement?.('RUNENSTURM — EINE RUNENTRUHE IST ERSCHIENEN (SIEHE KARTE)', 2.4); }
+  else if (kind === 'dragon') { /* a wild dino-dragon of the land: beaten, it leaves its egg */ const el = biomeAt(kk.map, ev.row, ev.x, ev.z).element; ev.el = el; ev.boss = addRecord(kk, { team: 'beast', wild: true, dino: el, element: el, cls: 'Berserker', tier: 3, row: ev.row, x: ev.x, z: ev.z + .2, role: 'guard', siteId: ev.id }); game.showAnnouncement?.(`EIN WILDER ${dinoName(el).toUpperCase()} WURDE GESICHTET — SEIN EI WARTET (SIEHE KARTE)`, 2.6); }
   else { ev.boss = addRecord(kk, { team: 'red', bandit: true, boss: true, cls: 'Berserker', element: ['ignis', 'fulgur', 'umbra', 'frost'][kk.eventN % 4], tier: 3, row: ev.row, x: ev.x, z: ev.z + .2, role: 'guard', siteId: ev.id }); game.showAnnouncement?.('EIN BANDITENFÜRST ZIEHT AUF — KRASSE BEUTE (SIEHE KARTE)', 2.4); }
   audio.playRuneChime?.(520); return ev;
 }
@@ -52,6 +55,13 @@ export function bossDrop(game, rec) {
   spawnItems(game, rec.x, rec.z, { gold: 150, runes, materials: { obsidian: 6, steel: 10 }, stones: { [rec.element ?? 'ignis']: 5 } }, { row: rec.row, spread: 80 }); gainXp(game, 120);
   const ev = kk.map.sites.find((s) => s.id === rec.siteId); if (ev) ev.done = true;
   combat.spawnShockwave?.(rec.x, groundYForDepth(rec.z) - 40, 180, '#ffd24a'); combat.shakeCamera?.(8, .5); game.showAnnouncement?.('DER BANDITENFÜRST IST GEFALLEN — SEINE BEUTE LIEGT AM BODEN', 2.2);
+}
+// A beaten wild dino-dragon leaves its egg (hatch it at a source: the dino-dragon joins the squad), runes and gold.
+export function wildDinoDrop(game, rec) {
+  const kk = kkState(game); kk.items.push({ id: kk.nextItem++, kind: 'egg', row: rec.row, x: rec.x, z: rec.z, lock: .8, element: rec.dino, creature: 'dino_' + rec.dino });
+  const runes = [randomRune(game, kk.rng() < .5 ? 'simple' : 'element', kk.rng)].filter(Boolean); spawnItems(game, rec.x + 40, rec.z, { gold: 90, runes, stones: { [rec.dino]: 4 } }, { row: rec.row, spread: 60 }); gainXp(game, 100);
+  const ev = kk.map.sites.find((s) => s.id === rec.siteId); if (ev) ev.done = true;
+  combat.spawnShockwave?.(rec.x, groundYForDepth(rec.z) - 40, 200, '#ffe9a8'); combat.shakeCamera?.(8, .5); game.showAnnouncement?.(`${dinoName(rec.dino).toUpperCase()} BESIEGT — SEIN EI LIEGT AM BODEN`, 2.2);
 }
 export function updateEvents(game, dt) {
   if (!kkOn(game)) return; const kk = kkState(game); const P = game.player; kk.events ??= [];
@@ -77,8 +87,9 @@ export function eventActors(game) {
       ctx.fillStyle = '#2a1d14'; ctx.fillRect(x - 22, y - 30, 44, 30); ctx.fillStyle = ev.done ? '#5a4632' : '#6b3fa0'; ctx.fillRect(x - 20, y - 28, 40, 26); ctx.fillStyle = '#ffd24a'; ctx.fillRect(x - 20, y - 18, 40, 3); ctx.fillRect(x - 3, y - 24, 6, 8);
       if (!ev.done) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = .3 + .2 * Math.sin(t * 4); ctx.fillStyle = '#d8b4ff'; ctx.fillRect(x - 3, y - 160, 6, 130); ctx.beginPath(); ctx.ellipse(x, y - 20, 40, 14, 0, 0, Math.PI * 2); ctx.fill(); }
       const k = Math.min(1, (kk.progress[ev.id] ?? 0) / EVENTS.openTime); if (k > 0) { ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; ctx.strokeStyle = '#ffe9a8'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y - 50, 11, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * k); ctx.stroke(); }
+    } else if (ev.ev === 'dragon') { /* a nest of stones */ if (!ev.done) { ctx.fillStyle = '#4a3e30'; for (let k = 0; k < 7; k++) ctx.fillRect(x - 60 + k * 17, y - 6 - (k % 2) * 4, 14, 8); }
     } else if (!ev.done) { ctx.fillStyle = '#3b2b1b'; ctx.fillRect(x - 70, y - 120, 4, 120); ctx.fillStyle = '#8a1f1f'; ctx.fillRect(x - 66, y - 118, 30, 40); ctx.fillStyle = '#ffd24a'; ctx.fillRect(x - 60, y - 108, 18, 4); }
     ctx.restore();
   } }));
 }
-export function eventMinimapDots(game) { const kk = kkState(game); return (kk?.events ?? []).filter((ev) => !ev.done && !ev.gone).map((ev) => ({ row: ev.row, x: ev.x, z: ev.z, color: ev.ev === 'boss' ? '#ff6a3d' : '#d8b4ff' })); }
+export function eventMinimapDots(game) { const kk = kkState(game); return (kk?.events ?? []).filter((ev) => !ev.done && !ev.gone).map((ev) => ({ row: ev.row, x: ev.x, z: ev.z, color: ev.ev === 'boss' ? '#ff6a3d' : ev.ev === 'dragon' ? '#ffe066' : '#d8b4ff' })); }

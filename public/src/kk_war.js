@@ -16,6 +16,7 @@ import { gainXp, dropPile, foeDrop } from './kk_loot.js';
 import { addRecord, teamOfSeat, sameTeam } from './kk_army.js';
 import { EnemyChampion } from './entities.js';
 import { drawHorse } from './kk_art.js';
+import { factionOf, FACTIONS } from './kk_factions.js';
 import { castleHp, castleMaxHp, damageCastle, CASTLE } from './kk_castle.js';
 
 export const HQ_TIERS = Object.freeze([
@@ -123,7 +124,8 @@ function stepToward(bot, t, dt, near) {
 // A rival hatches its egg at a source: a creature joins its squad (the size by chance, a pure source helps).
 function hatchForBot(game, bot, src) {
   const kk = kkState(game); const egg = bot.egg; if (!egg) return; bot.egg = null; const size = src.pure || kk.rng() < .35 ? 2 : 1;
-  addRecord(kk, { team: bot.team, seat: bot.seat, creature: true, kind: egg.creature, element: egg.element, size, cls: 'Berserker', tier: 1 + size, row: src.row, x: src.x, z: src.z + .2, role: 'squad', hatched: true }); botGain(kk, bot, XP.hatch ?? 40);
+  if (String(egg.creature).startsWith('dino_')) { const el = egg.creature.slice(5); addRecord(kk, { team: bot.team, seat: bot.seat, dino: el, element: el, faction: el, cls: 'Berserker', tier: 3, row: src.row, x: src.x, z: src.z + .2, role: 'squad', hatched: true }); } /* a rival raises a dino-dragon too */
+  else addRecord(kk, { team: bot.team, seat: bot.seat, creature: true, kind: egg.creature, element: egg.element, size, cls: 'Berserker', tier: 1 + size, row: src.row, x: src.x, z: src.z + .2, role: 'squad', hatched: true }); botGain(kk, bot, XP.hatch ?? 40);
   if (boardGap(src, game.player) < 1800) game.showAnnouncement?.(`${SEAT_NAMES[bot.seat]} BRÜTET EINE KREATUR AUS`, 1.8);
 }
 // Rivals take what lies within reach (user, 20 Nov 2026: runes dropped on death can be taken by others) and use it: gold and goods
@@ -183,7 +185,9 @@ function actBot(game, bot, dt) {
     }
     bot.task = null;
   } else if (t.kind === 'train') {
-    while (bot.gold >= 20 && botSquad(kk, bot).length < 8) { bot.gold -= 20; const el = Object.keys(bot.stones).find((e) => bot.stones[e] > 0) ?? null; if (el) bot.stones[el]--; addRecord(kk, { team: bot.team, seat: bot.seat, cls: site.cls, element: el, tier: 1, row: site.row, x: site.x, z: site.z + .1, role: 'squad' }); }
+    const fac = factionOf(kk, site); /* rivals recruit the castle's faction too */
+    while (bot.gold >= 20 && botSquad(kk, bot).length < 8) { bot.gold -= 20; const el = fac ?? Object.keys(bot.stones).find((e) => bot.stones[e] > 0) ?? null; addRecord(kk, { team: bot.team, seat: bot.seat, cls: kk.rng() < .4 ? (FACTIONS[fac]?.t2?.[0] ?? site.cls) : site.cls, element: el, faction: fac, tier: 1, row: site.row, x: site.x, z: site.z + .3, role: 'squad' }); }
+    if (bot.gold >= 220 && bot.level >= 6 && !kk.units.some((u) => u.seat === bot.seat && u.dino) && kk.rng() < .25) { bot.gold -= 220; addRecord(kk, { team: bot.team, seat: bot.seat, dino: fac, element: fac, faction: fac, cls: 'Berserker', tier: 3, row: site.row, x: site.x, z: site.z + .3, role: 'squad' }); } /* a rich rival raises its faction's dino-dragon */
     bot.task = null;
   } else if (t.kind === 'capture') {
     const foes = kk.units.filter((u) => u.siteId === site.id && (u.role === 'guard' || u.role === 'garrison') && u.team !== bot.team);

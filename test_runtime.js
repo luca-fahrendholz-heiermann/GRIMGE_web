@@ -5834,6 +5834,24 @@ game.running = false;
     assert(guarded && onMap && shut && opened && bossDrop && restocked && timed, 'World events: a rune chest appears guarded and marked on the map, it stays shut while guarded and then gives two runes; a beaten boss drops runes, obsidian and more; looted houses fill up again; events come on a timer (' + [guarded, onMap, shut, opened, bossDrop, restocked, timed].join('/') + ')');
   }
   {
+    // factions = elements (user, 20 Nov 2026, after HoMM): a castle belongs to the faction of its land; taking it opens four tiers (fighters, signature
+    // fighters, a mystic creature behind a beast lair, the dino-dragon behind a dragon lair); a week refills the pools; kills make named veterans;
+    // a wild dino-dragon leaves its egg; every faction has its dino-dragon sprite
+    game.setMatchMode('kronenkrieg'); game.startMatch(); const kF2 = game.modeState.kk; const KF = await import('./public/src/kk_factions.js'); const KAf = await import('./public/src/kk_army.js'); const KEf = await import('./public/src/kk_events.js');
+    const fsx = await import('node:fs'); const sprites = Object.keys(KF.FACTIONS).every((el) => fsx.existsSync('./public/assets/creatures/dinodragons/' + el + '.png')) && Object.keys(KF.FACTIONS).length === 13;
+    const cs = kF2.map.sites.find((x) => x.kind === 'castle'); const fac = KF.factionOf(kF2, cs); const ofLand = fac === KM.biomeAt(kF2.map, cs.row, cs.x, cs.z).element;
+    cs.owner = 0; KF.initCastleRecruits(kF2, cs); kF2.gold = 2000; const g0 = kF2.gold; const r1 = KF.recruit(game, cs, 1, 2, KAf.addRecord, 24); const t1ok = r1.ok && r1.n === 2 && kF2.gold === g0 - 30 && kF2.units.filter((u) => u.siteId === cs.id && u.faction === fac).length >= 2;
+    const lockedT3 = !KF.recruit(game, cs, 3, 1, KAf.addRecord, 24).ok; Object.assign(kF2.inv, { wood: 20, stone: 20, steel: 30, obsidian: 20 }); kF2.inv.stones[fac] = 10;
+    const hort = KF.buildLair(game, cs, 'hort').ok; const r3 = KF.recruit(game, cs, 3, 1, KAf.addRecord, 24); const t3ok = hort && r3.ok && kF2.units.some((u) => u.siteId === cs.id && u.creature && u.element === fac);
+    const dragon = KF.buildLair(game, cs, 'dragon').ok; const r4 = KF.recruit(game, cs, 4, 1, KAf.addRecord, 24); const dinoRec = kF2.units.find((u) => u.siteId === cs.id && u.dino === fac); const t4ok = dragon && r4.ok && !!dinoRec;
+    const live = new KAf.KKUnit({ ...dinoRec, id: 99999 }); const unitBig = live.renderHeight >= 130 && live.maxHp > 400;
+    const p1 = cs.pool[1]; kF2.time = (kF2.nextWeekAt ?? KF.WEEK) + 1; KF.updateFactions(game, 1 / 60); const weekly = cs.pool[1] > p1;
+    const PFx = game.player; const vu = KAf.addRecord(kF2, { team: 'blue', cls: 'Guardian', element: null, tier: 1, row: kF2.row, x: PFx.x + 30, z: PFx.z, role: 'squad' }); KAf.updateArmy(game, 1 / 60); vu.live.x = PFx.x + 30; vu.live.z = PFx.z; for (let i = 0; i < KF.VET.veteran; i++) KF.creditKill(game, { x: PFx.x + 30, z: PFx.z }); const veteran = vu.vet === 1 && typeof vu.name === 'string';
+    vu.live.isDead = true; kF2.units = kF2.units.filter((u) => u !== vu); game.minions = game.minions.filter((m) => !m.isDead);
+    const ev = KEf.startEvent(game, 'dragon'); const wild = ev.boss; const wildOk = wild.wild && wild.dino && wild.team === 'beast'; const n0 = kF2.items.length; KAf.unitDiesForTest(game, wild); const egg = kF2.items.slice(n0).find((it) => it.kind === 'egg' && String(it.creature).startsWith('dino_'));
+    assert(sprites && ofLand && t1ok && lockedT3 && t3ok && t4ok && unitBig && weekly && veteran && wildOk && !!egg, 'Factions: 13 element factions each with its dino-dragon sprite, a castle belongs to the faction of its land, tier 1 is recruited from the pool for gold, tier 3 needs the beast lair, tier 4 (the dino-dragon, a big strong unit) the dragon lair, a week refills the pools, kills make a named veteran, a wild dino-dragon leaves a dino egg (' + [sprites, ofLand, t1ok, lockedT3, t3ok, t4ok, unitBig, weekly, veteran, wildOk, !!egg].join('/') + ')');
+  }
+  {
     // world map (user, 20 Nov 2026): unexplored places stay hidden, exploring shows them for the round, resources once seen stay, rivals only as
     // a fading "last seen" (dynamic, not lasting knowledge), the player is marked
     game.setMatchMode('kronenkrieg'); game.startMatch(); const kM = game.modeState.kk; const PM = game.player; const WM = await import('./public/src/kk_worldmap.js');

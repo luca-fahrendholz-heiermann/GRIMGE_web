@@ -17,6 +17,7 @@ import { audio } from './audio.js';
 import { kkState, kkOn, siteOpts, roomClip } from './kk_world.js';
 import { hqMaxHp } from './kk_war.js';
 import { sameTeam } from './kk_army.js';
+import { dinoImage, factionOf, FACTIONS } from './kk_factions.js';
 
 export const CASTLE = Object.freeze({
   mid: { half: 260, depth: .5, h: 96, stairIn: 40, stairOut: 175, gateOff: 215, front: .13, hp: 420 },
@@ -33,6 +34,7 @@ export function castleHp(s) { if (s.hp == null) s.hp = castleMaxHp(s); return s.
 const castlesOf = (kk) => [...kk.map.hqs, ...kk.map.sites.filter((s) => s.kind === 'castle')];
 // The player's side owns it (own or an ally's).
 export function friendlyCastle(kk, s) { return s.kind === 'hq' ? (s.seat === 0 || sameTeam(kk, s.seat, 0)) : (s.owner === 0 || sameTeam(kk, s.owner, 0)); }
+const elementColorOf = (el) => ({ ignis: '#ff7a3c', ventus: '#bfe6d0', fulgur: '#ffe066', terra: '#c49a5c', aqua: '#5fd0e6', frost: '#d8f4ff', bestia: '#c98a4a', construct: '#c0b8a8', void: '#9b6bff', lux: '#fff3a8', natura: '#9be564', ward: '#cfe7ff', umbra: '#8a8aaa' }[el] ?? '#fff3c8');
 const ownCastle = (s) => (s.kind === 'hq' ? s.seat === 0 : s.owner === 0);
 const heightOf = (e) => (e.surfaceHeight ?? 0) + (e.elevation ?? 0);
 
@@ -246,7 +248,9 @@ export function castleActors(game) {
       if (s.fallen || inside) return; ctx.save(); ctx.globalAlpha = alpha; const fy = groundYForDepth(flagZ(s)) - H;
       flagOn(ctx, s.x - 2, fy, color, t, big ? 92 : 72);
       if (ownCastle(s) && Math.abs(P.x - s.x) < 900) { ctx.globalAlpha = alpha * (.5 + .3 * Math.sin(t * 3)); ctx.strokeStyle = '#ffe9a8'; ctx.lineWidth = 2; ctx.strokeRect(Math.round(s.x - 10), Math.round(fy - (big ? 92 : 72) - 6), 62, 36); ctx.globalAlpha = alpha; } /* the own flag can be tapped */
-      if (s.label && !big) { ctx.font = 'bold 10px monospace'; ctx.textAlign = 'center'; px(ctx, s.x - 30, fy - 104, 60, 13, 'rgba(0,0,0,.6)'); ctx.fillStyle = '#fff3c8'; ctx.fillText(s.label, s.x, fy - 94); }
+      if (s.label && !big) { const fac = FACTIONS[factionOf(kk, s)]; const lbl = `${s.label} · ${fac?.name ?? ''}`; ctx.font = 'bold 10px monospace'; ctx.textAlign = 'center'; const tw = ctx.measureText?.(lbl)?.width ?? 120; px(ctx, s.x - tw / 2 - 6, fy - 104, tw + 12, 13, 'rgba(0,0,0,.6)'); ctx.fillStyle = elementColorOf(s.faction); ctx.fillText(lbl, s.x, fy - 94); }
+      if (s.lairs?.hort) { ctx.fillStyle = elementColorOf(s.faction); for (let k = 0; k < 4; k++) px(ctx, s.x - 120 + k * 9, fy - 14 - (k % 2) * 8, 6, 14 + (k % 2) * 8, elementColorOf(s.faction)); } /* the beast lair: crystals of the faction on the roof */
+      if (s.lairs?.dragon) { const im = dinoImage(s.faction); if (im?.complete && (im.naturalWidth || im.width)) { const hh = 70; const ww = hh * (im.naturalWidth || im.width) / (im.naturalHeight || im.height); ctx.save(); ctx.globalAlpha = alpha * .95; ctx.drawImage(im, s.x + 70, fy - hh + 4, ww, hh); ctx.restore(); } } /* the dragon lair: the dino-dragon rests on the roof */
       ctx.restore();
     } });
     // merlons on the front edge of the roof (open at the landing): in front of the feet of whoever stands up there
