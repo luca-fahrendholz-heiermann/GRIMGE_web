@@ -5619,6 +5619,22 @@ game.running = false;
     assert(noLoop && tapOnce && mouseStill && guarded && openHit, 'Video bugs: a full bag leaves the item lying without a pick-up loop, a phone tap is one attack (not a second mousedown), a desktop click still attacks, a guard toward the attacker shields the ally behind from a blow and without the guard it lands (' + [noLoop, tapOnce, mouseStill, guarded, openHit].join('/') + ')');
   }
   {
+    // swap window (video 2:23 / 4:47 "BEUTEL VOLL" without a way to exchange): the item lying there against a chosen stack / deck rune
+    const KS = await import('./public/src/kk_items.js'); const KLs = await import('./public/src/kk_loot.js'); const invS = kk.inv; const keepS = JSON.stringify(invS);
+    invS.wood += KLs.BACKPACK - KLs.invUnits(invS); const [stn] = KS.spawnItems(game, P.x, P.z, { materials: { stone: 4 } }); const stone0 = invS.stone;
+    const refused = KS.pickupItem(game, stn) === false && kk.swapOffer?.item === stn && KS.swapChoices(game).some((c) => c.key === 'mat:wood');
+    const woodBefore = invS.wood; const tookStone = KS.swapWith(game, 'mat:wood') && invS.stone === stone0 + 4 && invS.wood === 0 && !kk.items.includes(stn);
+    const woodLies = kk.items.some((it) => it.type === 'wood' && it.n === woodBefore && it.lock > 0);
+    kk.items = kk.items.filter((it) => !(it.type === 'wood' && it.n === woodBefore)); Object.assign(invS, JSON.parse(keepS));
+    const lvl = kk.level; kk.level = 1; const keepDeck = [...P.runeDeck]; const keepHand = [...P.runeHand]; const keepSealed = [...kk.sealed]; P.runeDeck.length = 0; P.runeHand.length = 0; kk.sealed.length = 0;
+    const elems = recognizer.runes.filter((r) => /^(fire|frost|lightning|water|earth|wind)/i.test(r.id) || r.element).slice(0, 8); let gi = 0; while (KLs.deckCount(game) < 4 && gi < elems.length) KLs.giveRune(game, elems[gi++]);
+    const extra = elems.find((r) => ![...P.runeDeck, ...P.runeHand].some((c) => c.id === r.id)); const [ri] = KS.spawnItems(game, P.x, P.z, { runes: [extra] });
+    const runeRefused = KS.pickupItem(game, ri) === false && kk.swapOffer?.item === ri; const choice = KS.swapChoices(game)[0]; const oldId = choice && (choice.key.startsWith('hand') ? P.runeHand : P.runeDeck)[Number(choice.key.split(':')[1])]?.id;
+    const runeSwapped = !!choice && KS.swapWith(game, choice.key) && [...P.runeDeck, ...P.runeHand].some((c) => c.id === extra.id) && kk.items.some((it) => it.type === 'rune' && it.rune.id === oldId);
+    kk.items = kk.items.filter((it) => it.type !== 'rune'); P.runeDeck.length = 0; P.runeHand.length = 0; P.runeDeck.push(...keepDeck); P.runeHand.push(...keepHand); kk.sealed.push(...keepSealed); kk.level = lvl;
+    assert(refused && tookStone && woodLies && runeRefused && runeSwapped, 'Swap window: an item that does not fit offers a swap, the chosen stack is dropped as items (not picked straight back up) and the new one is taken; a full deck swaps a deck rune for the one lying there (' + [refused, tookStone, woodLies, runeRefused, runeSwapped].join('/') + ')');
+  }
+  {
     // resources (feedback 20 Nov 2026): trees give wood, rocks stone, ore veins steel, obsidian takes longest; a felled node drops items and regrows
     const KR = await import('./public/src/kk_resources.js'); const kinds = new Set(kk.decor.map((d) => d.kind)); const allKinds = ['rock', 'ore', 'obsidian'].every((k) => kinds.has(k)) && ['oak', 'pine', 'snowpine', 'dead'].some((k) => kinds.has(k));
     const tree = kk.decor.find((d) => KR.RESOURCE[d.kind]?.mat === 'wood' && d.row === kk.row); P.x = tree.x + 30; P.z = tree.z;

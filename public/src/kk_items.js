@@ -67,13 +67,13 @@ export function pickupItem(game, it) {
     if (!kk.heldHint) { kk.heldHint = true; game.showAnnouncement?.(`${it.kind === 'hp' ? 'HEILTRANK' : 'MANATRANK'} IN DER HAND — SCHLAG ZUM TRINKEN`, 1.8); }
     return true;
   }
-  if (it.type === 'rune') { const got = giveRune(game, it.rune); if (got === 'double') { kk.gold += 15; return true; } return got !== 'full'; }
-  const room = BACKPACK - invUnits(inv); if (room <= 0) { bagFullHint(game); return false; }
+  if (it.type === 'rune') { const got = giveRune(game, it.rune); if (got === 'double') { kk.gold += 15; return true; } if (got === 'full') offerSwap(game, it); return got !== 'full'; }
+  const room = BACKPACK - invUnits(inv); if (room <= 0) { offerSwap(game, it); return false; }
   if (it.type === 'weapon') { inv.weapons[it.weapon] = (inv.weapons[it.weapon] ?? 0) + 1; audio.playRuneChime?.(640); return true; }
   const take = Math.min(room, it.n);
   if (it.type === 'gem') inv.stones[it.el] = (inv.stones[it.el] ?? 0) + take; else inv[it.type] += take;
   it.n -= take; audio.playRuneChime?.(620);
-  if (it.n > 0) { bagFullHint(game); return false; }
+  if (it.n > 0) { offerSwap(game, it); return false; }
   return true;
 }
 // The attack with a potion in the hand drinks it (true = the attack is used up).
@@ -85,7 +85,51 @@ export function kkUseHeld(game, P) {
   combat.spawnHitSparks?.(P.x + (P.facing || 1) * 12, P.y - 52, P.facing || 1, h.kind === 'hp' ? '#ff6b8a' : '#6bb8ff', 8); audio.playRuneChime?.(h.kind === 'hp' ? 560 : 720);
   P.attackCooldown = Math.max(P.attackCooldown ?? 0, .35); return true;
 }
-function bagFullHint(game) { const kk = kkState(game); if ((kk.time - (kk.bagHintAt ?? -9)) < 3) return; kk.bagHintAt = kk.time; game.showAnnouncement?.('BEUTEL VOLL — IM BEUTEL (I) ETWAS ABLEGEN', 1.6); }
+// ── the swap window (user, 20 Nov 2026: "bei vollem Inventar selektiv austauschen") ─────────────────────────────────────
+// Standing on an item that does not fit, a small window on the left sets the item against what one carries: the stack (or
+// deck rune) one picks is dropped as items and the new one is taken. Walking away closes it.
+function offerSwap(game, it) {
+  const kk = kkState(game); if (kk.swapOffer?.item === it) return;
+  kk.swapOffer = { item: it }; if (kk.time - (kk.bagHintAt ?? -9) > 6) { kk.bagHintAt = kk.time; game.showAnnouncement?.(it.type === 'rune' ? 'DECK VOLL — TAUSCHEN ODER LIEGEN LASSEN' : 'BEUTEL VOLL — TAUSCHEN ODER LIEGEN LASSEN', 1.4); }
+}
+const strip = ({ cardId, grade, quality, runeLevel, manaCost, gate, ...r }) => r;
+// What can be given for the offered item: bag stacks for goods, deck runes for a rune.
+export function swapChoices(game) {
+  const kk = kkState(game); const it = kk?.swapOffer?.item; if (!it) return []; const inv = kk.inv; const P = game.player;
+  if (it.type === 'rune') return [...P.runeHand.map((c, i) => ({ key: `hand:${i}`, label: c.name, icon: { type: 'rune', rune: c } })), ...P.runeDeck.map((c, i) => ({ key: `deck:${i}`, label: c.name, icon: { type: 'rune', rune: c } })), ...kk.sealed.map((c, i) => ({ key: `sealed:${i}`, label: `${c.name} (versiegelt)`, icon: { type: 'rune', rune: c } }))];
+  const out = [];
+  for (const m of MATERIALS) if (inv[m] > 0 && m !== it.type) out.push({ key: `mat:${m}`, label: `${inv[m]}× ${MAT_DE[m]}`, icon: { type: m } });
+  for (const [el, n] of Object.entries(inv.stones)) if (n > 0 && !(it.type === 'gem' && it.el === el)) out.push({ key: `gem:${el}`, label: `${n}× ${el.toUpperCase()}-STEIN`, icon: { type: 'gem', el } });
+  for (const [w, n] of Object.entries(inv.weapons)) if (n > 0) out.push({ key: `weapon:${w}`, label: `${n}× WAFFE (${w.replace(/_/g, ' ').toUpperCase()})`, icon: { type: 'weapon' } });
+  return out;
+}
+// Drops the chosen stack / rune as items and takes the offered item (true = taken).
+export function swapWith(game, key) {
+  const kk = kkState(game); const it = kk?.swapOffer?.item; if (!it || !kk.items.includes(it)) { kk && (kk.swapOffer = null); return false; }
+  const P = game.player; const inv = kk.inv; const [kind, id] = key.split(':'); const b = { materials: {}, stones: {}, weapons: [], runes: [] };
+  if (kind === 'mat') { b.materials[id] = inv[id]; inv[id] = 0; }
+  else if (kind === 'gem') { b.stones[id] = inv.stones[id]; inv.stones[id] = 0; }
+  else if (kind === 'weapon') { for (let i = 0; i < inv.weapons[id]; i++) b.weapons.push(id); inv.weapons[id] = 0; }
+  else { const list = kind === 'hand' ? P.runeHand : kind === 'deck' ? P.runeDeck : kk.sealed; const c = list[Number(id)]; if (!c) return false; list.splice(Number(id), 1); b.runes.push(strip(c)); }
+  for (const d of spawnItems(game, P.x - (P.facing || 1) * 30, P.z, b, { spread: 14 })) d.lock = 3; /* given away: not picked straight back up */
+  const taken = pickupItem(game, it); if (taken) kk.items.splice(kk.items.indexOf(it), 1);
+  kk.swapOffer = null; audio.playRuneChime?.(660); return taken;
+}
+let swapUi = null;
+export function closeSwap() { if (swapUi?.el) swapUi.el.style.display = 'none'; }
+function updateSwapUi(game) {
+  const kk = kkState(game); const P = game.player; const it = kk.swapOffer?.item;
+  if (it && (!kk.items.includes(it) || Math.abs(P.x - it.x) > 46 || Math.abs(P.z - it.z) * 150 > 40 || !P.isAlive)) kk.swapOffer = null; /* walked away */
+  const doc = globalThis.document; if (typeof doc?.createElement !== 'function' || typeof doc.body?.appendChild !== 'function') return;
+  if (!swapUi) { const el = doc.createElement('div'); el.id = 'kk-swap'; el.style.cssText = 'position:fixed;left:max(1vw,env(safe-area-inset-left));top:27vh;z-index:64;width:min(330px,44vw);max-height:60vh;overflow:auto;font-family:monospace;font-size:12px;color:#f1e9d2;background:#1a1424f2;border:2px solid #ffd24a;padding:8px;display:none';
+    el.addEventListener('pointerdown', (e) => { const b = e.target?.closest?.('[data-swap]'); if (!b) return; e.preventDefault(); e.stopPropagation(); swapWith(globalThis.window?.gameWorld, b.getAttribute('data-swap')); });
+    doc.body.appendChild(el); swapUi = { el, html: '' }; }
+  if (!kk.swapOffer) { swapUi.el.style.display = 'none'; return; }
+  const url = (ic) => { const c = itemIcon(ic); try { return c?.toDataURL?.() ?? ''; } catch { return ''; } };
+  let h = `<b style="color:#ffe9a8">TAUSCHEN</b><div style="display:flex;align-items:center;margin:4px 0 6px">${url(it) ? `<img src="${url(it)}" width="28" height="28" style="image-rendering:pixelated;margin-right:6px">` : ''}<span>liegt hier: ${itemLabel(it)}</span></div><div style="color:#9a8fb0;margin-bottom:4px">dafür ablegen:</div>`;
+  for (const c of swapChoices(game)) h += `<div style="display:flex;align-items:center;margin-top:3px">${url(c.icon) ? `<img src="${url(c.icon)}" width="22" height="22" style="image-rendering:pixelated;margin-right:6px">` : ''}<span style="flex:1">${c.label}</span><button data-swap="${c.key}" style="min-height:32px;font:inherit;color:#fff3c8;background:#3a2a4e;border:1px solid #c9a95a">ABLEGEN</button></div>`;
+  if (h !== swapUi.html) { swapUi.el.innerHTML = h; swapUi.html = h; } swapUi.el.style.display = 'block';
+}
 
 export function itemActors(game) {
   const kk = kkState(game); if (!kk) return []; const t = kk.time; const out = [];
@@ -111,7 +155,7 @@ export function updateItemHops(kk, dt) {
 
 // ── the bag menu (DOM) ─────────────────────────────────────────────────────────────────────────────────────────────
 let bag = null;
-export function closeBag() { if (bag?.el) bag.el.style.display = 'none'; if (bag) bag.open = false; if (bag?.btn) bag.btn.style.display = 'none'; }
+export function closeBag() { closeSwap(); if (bag?.el) bag.el.style.display = 'none'; if (bag) bag.open = false; if (bag?.btn) bag.btn.style.display = 'none'; }
 const iconUrl = (it) => { const c = itemIcon(it); try { return c?.toDataURL?.() ?? ''; } catch { return ''; } };
 function dropFromBag(game, type, key, all) {
   const kk = kkState(game); const inv = kk.inv; const P = game.player; let n = 0; const b = { materials: {}, stones: {}, weapons: [] };
@@ -137,6 +181,7 @@ function refreshBag(game) {
   if (h !== bag.html) { bag.el.innerHTML = h; bag.html = h; }
 }
 export function updateBagUi(game) {
+  updateSwapUi(game);
   const doc = globalThis.document; if (typeof doc?.createElement !== 'function' || typeof doc.body?.appendChild !== 'function') return;
   if (!bag) {
     const btnEl = doc.createElement('button'); btnEl.type = 'button'; btnEl.id = 'kk-bag-btn'; btnEl.textContent = '🎒'; btnEl.title = 'Beutel (I)';
