@@ -5823,6 +5823,17 @@ game.running = false;
     assert(placed && again && onIt && went && noFly && learned && took && flies && ends, 'Portals and flying: a field portal is set (then a cooldown), standing on the castle portal lists it and travelling takes the squad along; flying is learned at a sky shrine, a jump in the air takes off, it holds a height and costs mana, a jump ends it (' + [placed, again, onIt, went, noFly, learned, took, flies, ends].join('/') + ')');
   }
   {
+    // world events (user, 20 Nov 2026): a guarded rune chest with good odds for epic runes, a boss with a big hoard, houses that fill up again
+    game.setMatchMode('kronenkrieg'); game.startMatch(); const kE = game.modeState.kk; const PE = game.player; const KE = await import('./public/src/kk_events.js'); const KAe = await import('./public/src/kk_army.js'); const KLe = await import('./public/src/kk_loot.js');
+    const cache = KE.startEvent(game, 'cache'); const guarded = kE.units.filter((u) => u.siteId === cache.id).length === 3; const onMap = kE.map.sites.includes(cache) && KW.isRevealed(kE, cache.row, cache.x, cache.z);
+    kE.row = cache.row; PE.x = cache.x; PE.z = cache.z; KE.updateEvents(game, 2); const shut = !cache.done; kE.units = kE.units.filter((u) => u.siteId !== cache.id); for (const m of game.minions) if (m.rec?.siteId === cache.id) m.isDead = true; game.minions = game.minions.filter((m) => !m.isDead);
+    const n0 = kE.items.length; for (let i = 0; i < 10; i++) KE.updateEvents(game, .2); const fell = kE.items.slice(n0); const opened = cache.done && fell.filter((it) => it.type === 'rune').length === 2;
+    const boss = KE.startEvent(game, 'boss'); const brec = boss.boss; const n1 = kE.items.length; KAe.unitDiesForTest(game, brec); const hoard = kE.items.slice(n1); const bossDrop = hoard.filter((it) => it.type === 'rune').length >= 2 && hoard.some((it) => it.type === 'obsidian') && boss.done;
+    for (const sb of kE.map.sites) if (sb.kind === 'building') sb.looted = true; KE.startEvent(game, 'restock'); const restocked = kE.map.sites.filter((sb) => sb.kind === 'building' && !sb.looted).length >= 1;
+    kE.nextEventAt = kE.time + 1; const before = (kE.events ?? []).length; kE.time += 2; KE.updateEvents(game, 1 / 60); const timed = (kE.events ?? []).length >= before;
+    assert(guarded && onMap && shut && opened && bossDrop && restocked && timed, 'World events: a rune chest appears guarded and marked on the map, it stays shut while guarded and then gives two runes; a beaten boss drops runes, obsidian and more; looted houses fill up again; events come on a timer (' + [guarded, onMap, shut, opened, bossDrop, restocked, timed].join('/') + ')');
+  }
+  {
     // world map (user, 20 Nov 2026): unexplored places stay hidden, exploring shows them for the round, resources once seen stay, rivals only as
     // a fading "last seen" (dynamic, not lasting knowledge), the player is marked
     game.setMatchMode('kronenkrieg'); game.startMatch(); const kM = game.modeState.kk; const PM = game.player; const WM = await import('./public/src/kk_worldmap.js');

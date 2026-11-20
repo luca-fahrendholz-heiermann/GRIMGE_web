@@ -33,7 +33,8 @@ import { itemActors, renderReels, closeBag, kkUseHeld } from './kk_items.js'; //
 import { kkResourceTargets } from './kk_resources.js'; // Kronenkrieg: trees, rocks, ore, obsidian to harvest
 import { castleTargets, tryCastleTap } from './kk_castle.js';
 import { closeWorldMap } from './kk_worldmap.js';
-import { closePortalUi } from './kk_portal.js'; // Kronenkrieg: portals (castle stones, a field portal) // Kronenkrieg: the world map (button / key M) // Kronenkrieg: foe castle walls to batter
+import { closePortalUi } from './kk_portal.js';
+import { eventMinimapDots } from './kk_events.js'; // Kronenkrieg: world events (rune chests, bosses, restocked houses) // Kronenkrieg: portals (castle stones, a field portal) // Kronenkrieg: the world map (button / key M) // Kronenkrieg: foe castle walls to batter
 import { loadFxSprites } from './fx_sprites.js';
 import { loadSpellSprites } from './spell_visuals.js';
 import { renderPixelated } from './abilities.js';
@@ -3535,7 +3536,7 @@ export class GameWorld {
     // Map weather (snow, rain, embers, leaves, dust, mana motes) in screen space.
     environment.renderWeather(ctx, viewW, viewH);
     this.renderDungeonExitArrow(ctx, viewW);
-    if (this.activeMode?.id === 'kronenkrieg') { renderKKMinimap(ctx, this, viewW, { x: 14, y: 82, size: 132, flood: (c, mx, my, sx, sz) => renderMinimapFlood(c, this, mx, my, sx, sz), dots: [...warMinimapDots(this), ...creatureMinimapDots(this)] }); /* top left under the life bars: the right side stays free */ renderLootHud(ctx, this, viewW); renderReels(ctx, this, viewW, viewH); }
+    if (this.activeMode?.id === 'kronenkrieg') { renderKKMinimap(ctx, this, viewW, { x: 14, y: 82, size: 132, flood: (c, mx, my, sx, sz) => renderMinimapFlood(c, this, mx, my, sx, sz), dots: [...warMinimapDots(this), ...creatureMinimapDots(this), ...eventMinimapDots(this)] }); /* top left under the life bars: the right side stays free */ renderLootHud(ctx, this, viewW); renderReels(ctx, this, viewW, viewH); }
     this.renderOffscreenArrows(ctx);
 
     // 3. Screen Space Rune Drawing

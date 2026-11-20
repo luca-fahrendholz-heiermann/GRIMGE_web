@@ -71,11 +71,11 @@ const shuffle = (rng, arr) => { const a = [...arr]; for (let i = a.length - 1; i
 export const kkDistance = (a, b) => Math.hypot(a.x - b.x, ((a.z ?? KK.depth / 2) - (b.z ?? KK.depth / 2)) * KK.zPx) + Math.abs(a.row - b.row) * KK.bandCost;
 const weight = (d) => (d < 2600 ? 1 : d < 5200 ? .6 : .3);
 export function hqValues(map) {
-  return map.hqs.map((hq) => map.sites.reduce((sum, s) => sum + SITE_KINDS[s.kind].value * weight(kkDistance(hq, s)), 0));
+  return map.hqs.map((hq) => map.sites.reduce((sum, s) => sum + (SITE_KINDS[s.kind]?.value ?? 0) * weight(kkDistance(hq, s)), 0));
 }
 export function fairness(map) { const v = hqValues(map); return Math.max(...v) / Math.max(1e-6, Math.min(...v)); }
 export function valueNear(map, hq, range = KK.hqCapRange) {
-  return map.sites.filter((s) => s.row === hq.row && kkDistance(s, hq) < range).reduce((sum, s) => sum + SITE_KINDS[s.kind].value, 0);
+  return map.sites.filter((s) => s.row === hq.row && kkDistance(s, hq) < range).reduce((sum, s) => sum + (SITE_KINDS[s.kind]?.value ?? 0), 0);
 }
 
 // Where a level exists: the main plane everywhere, the upper and lower level only in their sections (full depth).

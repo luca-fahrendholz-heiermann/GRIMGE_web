@@ -10,7 +10,7 @@ import { BIOME_OF, biomeAt, KK, LEVEL_NAMES, roadZi, roadXi, ROADS_H, ROADS_V } 
 import { renderMinimapFlood } from './kk_war.js';
 
 const CELL = 240; const SEEN_FADE = 90;
-const ICON = Object.freeze({ castle: '♜', lair: '☠', camp: '⚑', building: '⌂', goldvein: '◆', prison: '⛓', source: '◉', stable: '♞', shrine: '✧', trial: '✪', shaft: '⇩', lift: '⇧' });
+const ICON = Object.freeze({ castle: '♜', lair: '☠', camp: '⚑', building: '⌂', goldvein: '◆', prison: '⛓', source: '◉', stable: '♞', shrine: '✧', trial: '✪', event: '✹', shaft: '⇩', lift: '⇧' });
 // What the map knows (pure: also used by the tests): lasting places, resources once seen, rivals last seen, the player.
 export function worldMapModel(game, row = kkState(game)?.row) {
   const kk = kkState(game); if (!kk) return null; const map = kk.map; const D = map.depth ?? KK.depth;

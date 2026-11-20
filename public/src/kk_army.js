@@ -53,10 +53,10 @@ export class KKUnit extends Minion {
     super(rec.x, rec.z, rec.team === 'blue' ? 'blue' : 'red', stats.type, 1);
     this.team = rec.team; this.rec = rec; this.isKKUnit = true; this.usesLevels = true; /* stairs and ramparts (battlefield.getSurfaceAt) */
     const tierMul = 1 + (rec.tier - 1) * .55; const vet = rec.bonus?.includes('veteran') ? 1.25 : 1; const elite = rec.bonus?.includes('elite') ? 1.3 : 1;
-    this.maxHp = Math.round(this.maxHp * stats.hp * tierMul * vet * (rec.bandit ? .9 : 1)); this.hp = Math.min(this.maxHp, rec.hp ?? this.maxHp);
+    this.maxHp = Math.round(this.maxHp * stats.hp * tierMul * vet * (rec.bandit ? .9 : 1) * (rec.boss ? 9 : 1)); /* an event boss: many times the life */ this.hp = Math.min(this.maxHp, rec.hp ?? this.maxHp);
     this.damage = Math.round(this.damage * stats.dmg * tierMul * elite); this.speed *= stats.spd;
     // as big as the characters (user, 20 Nov 2026): the hero height, a little more per tier; a hero-sized body to hit
-    const heroH = ENTITY_VISUALS.heroHeight; this.renderHeight = heroH * (1 + (rec.tier - 1) * .06); this.width = ENTITY_VISUALS.heroColliderWidth; this.height = ENTITY_VISUALS.heroColliderHeight;
+    const heroH = ENTITY_VISUALS.heroHeight * (rec.boss ? 1.45 : 1); this.renderHeight = heroH * (1 + (rec.tier - 1) * .06); if (rec.boss) this.damage *= 2; this.width = ENTITY_VISUALS.heroColliderWidth; this.height = ENTITY_VISUALS.heroColliderHeight;
     { const key = unitLook(rec); const arch = ART_ASSETS.archetypes?.[key]; if (ART_ASSETS.entities?.[key] || arch) { this.spriteKey = key; this.renderHeight = heroH * ((arch?.renderHeight ?? 56) / 56) * (key === 'void_brute' ? .8 : 1) * (1 + (rec.tier - 1) * .06); } } /* painted sheets instead of the plain minions */
     this.statusElements = rec.element ? (rec.bonus?.includes('double') ? [rec.element, rec.element === 'frost' ? 'aqua' : 'ignis'] : [rec.element]) : null;
     this.runXpValue = 0; this.baseSpeed = this.speed;
@@ -220,6 +220,7 @@ export const unitDiesForTest = (game, rec) => onUnitDeath(game, rec); /* tests: 
 function onUnitDeath(game, rec) {
   const kk = kkState(game); kk.units.splice(kk.units.indexOf(rec), 1); rec.live = null;
   if (rec.creature && rec.team !== 'blue') { kk.onCreatureDeath?.(rec); return; }
+  if (rec.boss) { kk.onBossDeath?.(rec); return; } /* the event boss: its hoard (kk_events.js) */
   if (rec.team !== 'blue') { const g = 6 + Math.floor(Math.random() * 7); foeDrop(game, rec.x, rec.z, rec.row, { gold: g, tier: rec.tier, element: rec.element, weapon: CASTLE_CLASSES.find((c) => c.cls === rec.cls)?.weapon, runeChance: rec.tier > 1 ? .12 : .06 }); /* coins, sometimes goods, a stone, the weapon or a rune */ gainXp(game, XP.kill); /* the coins fall to the ground */ combat.spawnDamageText?.(rec.x, groundYForDepth(rec.z) - 60, `+${g}◉`, { color: '#ffcf3a' }); }
   if (rec.role === 'garrison' && mine(rec)) { kk.alerts[rec.siteId] = 4; }
 }

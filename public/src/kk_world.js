@@ -7,7 +7,8 @@ import { drawKKSite, buildDecor } from './kk_art.js';
 import { drawNode, updateResources } from './kk_resources.js';
 import { castleActors, updateCastles } from './kk_castle.js';
 import { updateWorldMap } from './kk_worldmap.js';
-import { updatePortals, portalActors } from './kk_portal.js'; // the places and the landscape in the game's pixel style
+import { updatePortals, portalActors } from './kk_portal.js';
+import { updateEvents, eventActors, bossDrop } from './kk_events.js'; // the places and the landscape in the game's pixel style
 import { groundYForDepth, getGroundProjection, setGroundProjection } from './world.js';
 
 export const KK_PROJECTION = Object.freeze({ farY: 214, nearY: 512, depth: KK.depth }); /* a deep floor: the plane should feel wide in depth too */
@@ -73,7 +74,7 @@ export const connectorsOf = (kk, row) => kk.map.sites.filter((s) => (s.kind === 
 export function updateKronenkrieg(game, dt) {
   const kk = kkState(game); if (!kk) return;
   kk.time += dt;
-  updateResources(game, dt); updateCastles(game, dt); updateWorldMap(game); updatePortals(game, dt);
+  updateResources(game, dt); updateCastles(game, dt); updateWorldMap(game); updatePortals(game, dt); updateEvents(game, dt); kk.onBossDeath ??= (rec) => bossDrop(game, rec);
   const P = game.player;
   if (P.isAlive) { /* a rider steps off at a shaft or lift (the mount follows if it is part of the squad) */
     // a shaft: walking into the hole drops one level down, beside the lift that leads back up
@@ -233,14 +234,14 @@ export function kkActors(game) {
   const kk = kkState(game); if (!kk) return [];
   const out = [];
   const P0 = game.player; const nearP = (s) => Math.abs(s.x - P0.x) < 1900 && Math.abs(s.z - P0.z) < 7; /* only what can be on screen */
-  for (const s of [...kk.map.hqs, ...kk.map.sites]) { if (s.row !== kk.row || s.kind === 'castle' || s.kind === 'hq' || !nearP(s)) continue; const r = kk.inside === s ? (ctx) => drawSite(ctx, s, groundYForDepth(s.z), kk.time, siteOpts(kk, s)) : clipped(kk, s.x, s.z, (SITE_W[s.kind] ?? 120) / 2, (ctx) => drawSite(ctx, s, groundYForDepth(s.z), kk.time, siteOpts(kk, s))); if (r) out.push({ y: groundYForDepth(s.z), render: r }); }
+  for (const s of [...kk.map.hqs, ...kk.map.sites]) { if (s.row !== kk.row || s.kind === 'castle' || s.kind === 'hq' || s.kind === 'event' || !nearP(s)) continue; /* events: kk_events.js */ const r = kk.inside === s ? (ctx) => drawSite(ctx, s, groundYForDepth(s.z), kk.time, siteOpts(kk, s)) : clipped(kk, s.x, s.z, (SITE_W[s.kind] ?? 120) / 2, (ctx) => drawSite(ctx, s, groundYForDepth(s.z), kk.time, siteOpts(kk, s))); if (r) out.push({ y: groundYForDepth(s.z), render: r }); }
   const P = game.player; for (const d of kk.decor ?? []) { if (d.row !== kk.row || Math.abs(d.x - P.x) > 1400 || Math.abs(d.z - P.z) > 6) continue; const r = clipped(kk, d.x, d.z, 34, (ctx) => drawNode(ctx, d, groundYForDepth(d.z))); if (r) out.push({ y: groundYForDepth(d.z), render: r }); } /* resource nodes: kk_resources.js */
-  out.push(...castleActors(game), ...portalActors(game)); /* the castles: solid wall blocks with rampart and stairs (kk_castle.js) */
+  out.push(...castleActors(game), ...portalActors(game), ...eventActors(game)); /* the castles: solid wall blocks with rampart and stairs (kk_castle.js) */
   return out;
 }
 
 // ── minimap (screen space, top right) ──────────────────────────────────────────────────────────────────────────────
-const KIND_ICON = Object.freeze({ castle: '♜', lair: '☠', camp: '⚑', building: '⌂', goldvein: '◆', prison: '⛓', source: '◉', stable: '♞', shrine: '✧', trial: '✪', shaft: '⇩', lift: '⇧' });
+const KIND_ICON = Object.freeze({ castle: '♜', lair: '☠', camp: '⚑', building: '⌂', goldvein: '◆', prison: '⛓', source: '◉', stable: '♞', shrine: '✧', trial: '✪', event: '✹', shaft: '⇩', lift: '⇧' });
 export function renderKKMinimap(ctx, game, viewW, opts = {}) {
   const kk = kkState(game); if (!kk) return; const map = kk.map; const D = map.depth ?? KK.depth; const row = kk.row;
   const S = opts.size ?? 150; const x0 = opts.x ?? viewW - S - 14; const y0 = opts.y ?? 14; const sx = S / map.width; const sz = S / D;
