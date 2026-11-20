@@ -5852,6 +5852,17 @@ game.running = false;
     assert(sprites && ofLand && t1ok && lockedT3 && t3ok && t4ok && unitBig && weekly && veteran && wildOk && !!egg, 'Factions: 13 element factions each with its dino-dragon sprite, a castle belongs to the faction of its land, tier 1 is recruited from the pool for gold, tier 3 needs the beast lair, tier 4 (the dino-dragon, a big strong unit) the dragon lair, a week refills the pools, kills make a named veteran, a wild dino-dragon leaves a dino egg (' + [sprites, ofLand, t1ok, lockedT3, t3ok, t4ok, unitBig, weekly, veteran, wildOk, !!egg].join('/') + ')');
   }
   {
+    // morale, upkeep and the roster (HoMM, against runaway snowballing)
+    game.setMatchMode('kronenkrieg'); game.startMatch(); const kMo = game.modeState.kk; const KFm = await import('./public/src/kk_factions.js'); const KAm2 = await import('./public/src/kk_army.js');
+    kMo.units = kMo.units.filter((u) => !(u.team === 'blue' && u.seat === 0)); const add = (fac, n, extra = {}) => { for (let i = 0; i < n; i++) KAm2.addRecord(kMo, { team: 'blue', cls: 'Guardian', element: fac, faction: fac, tier: 1, row: kMo.row, x: 100, z: 5, role: 'squad', ...extra }); };
+    add('ignis', 3); const high = KFm.squadMorale(kMo) === 1.1; add('aqua', 1); add('lux', 1); add('void', 1); const low = KFm.squadMorale(kMo) === .95;
+    add('ignis', 10); add('ignis', 1, { dino: 'ignis' }); kMo.gold = 1000; const army = kMo.units.filter((u) => u.team === 'blue' && u.seat === 0).length; kMo.map.sites.forEach((x) => { if (x.kind === 'castle') x.owner = null; });
+    kMo.time = (kMo.nextWeekAt ?? KFm.WEEK) + 1; KFm.updateFactions(game, 1 / 60); const upkeep = kMo.gold === 1000 - ((army - KFm.UPKEEP.free) * KFm.UPKEEP.perUnit + KFm.UPKEEP.perDino);
+    const ro = KFm.armyRoster(kMo); const roster = ro.some((e) => e.name === 'Magmarax' && e.n === 1) && ro[0].n >= 13;
+    kMo.units = kMo.units.filter((u) => !(u.team === 'blue' && u.seat === 0));
+    assert(high && low && upkeep && roster, 'Morale and upkeep: one faction lifts morale, more than three lower it, every unit above twelve and every dino-dragon costs upkeep each week, the bag shows the army as stacks (' + [high, low, upkeep, roster].join('/') + ')');
+  }
+  {
     // world map (user, 20 Nov 2026): unexplored places stay hidden, exploring shows them for the round, resources once seen stay, rivals only as
     // a fading "last seen" (dynamic, not lasting knowledge), the player is marked
     game.setMatchMode('kronenkrieg'); game.startMatch(); const kM = game.modeState.kk; const PM = game.player; const WM = await import('./public/src/kk_worldmap.js');

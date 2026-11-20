@@ -105,9 +105,25 @@ export function updateFactions(game, dt) {
     if (s.kind !== 'castle' || s.owner !== 0) continue; n++;
     for (const t of [1, 2, 3, 4]) { const T = TIERS[t]; if (T.needs && !s.lairs?.[T.needs]) continue; s.pool[t] = Math.min(T.cap, (s.pool[t] ?? 0) + T.grow + (t <= 2 ? hqBonus : 0)); }
   }
-  if (n) game.showAnnouncement?.(`WOCHE ${kk.week} — ${n} ${n === 1 ? 'BURG HAT' : 'BURGEN HABEN'} NEUE REKRUTEN`, 1.8);
+  // upkeep: every unit above twelve costs 1 gold a week, a dino-dragon 10 — unpaid, morale drops for a week
+  const army = kk.units.filter((u) => u.team === 'blue' && u.seat === 0 && (u.role === 'squad' || u.role === 'garrison'));
+  const cost = Math.max(0, army.length - UPKEEP.free) * UPKEEP.perUnit + army.filter((u) => u.dino).length * UPKEEP.perDino;
+  if (cost > 0) { if (kk.gold >= cost) { kk.gold -= cost; kk.unpaid = false; } else { kk.gold = 0; kk.unpaid = true; } }
+  if (n || cost) game.showAnnouncement?.(`WOCHE ${kk.week}${n ? ` — ${n} ${n === 1 ? 'BURG HAT' : 'BURGEN HABEN'} NEUE REKRUTEN` : ''}${cost ? ` · SOLD ${cost}◉${kk.unpaid ? ' (NICHT BEZAHLT — MORAL SINKT)' : ''}` : ''}`, 2);
 }
 
+// ── morale and upkeep (HoMM: mixed factions lower morale; against runaway snowballing: upkeep) ─────────────────────
+// Morale of the own squad: one faction +10 % damage, more than three factions −5 %; the factions without one (bandits freed etc.) do not count.
+export function squadMorale(kk) {
+  const facs = new Set(kk.units.filter((u) => u.team === 'blue' && u.seat === 0 && u.role === 'squad' && u.faction).map((u) => u.faction));
+  return facs.size === 1 ? 1.1 : facs.size > 3 ? .95 : 1;
+}
+// The army roster (for the bag): stacks of equal units with their number.
+export function armyRoster(kk) {
+  const m = new Map(); for (const u of kk.units) { if (u.team !== 'blue' || u.seat !== 0 || (u.role !== 'squad' && u.role !== 'garrison')) continue; const name = u.dino ? dinoName(u.dino) : u.creature ? (FACTIONS[u.faction ?? u.element]?.t3?.[1] ?? u.kind) : `${u.cls}${u.element ? '·' + u.element.slice(0, 4) : ''}`; const k = name + (u.role === 'squad' ? '' : ' (Burg)'); const e = m.get(k) ?? { name: k, n: 0, el: u.faction ?? u.element, vets: 0 }; e.n++; if (u.vet) e.vets++; m.set(k, e); }
+  return [...m.values()].sort((a, b) => b.n - a.n);
+}
+export const UPKEEP = Object.freeze({ free: 12, perUnit: 1, perDino: 10 });
 // ── veterans ────────────────────────────────────────────────────────────────────────────────────────────────────────
 const NAMES = ['Brann', 'Ysolde', 'Kael', 'Mirja', 'Torvin', 'Asha', 'Rurik', 'Elva', 'Dagan', 'Selin', 'Varek', 'Liora', 'Hakon', 'Nyra', 'Joren', 'Tamsin'];
 export const VET = Object.freeze({ veteran: 4, elite: 10 });

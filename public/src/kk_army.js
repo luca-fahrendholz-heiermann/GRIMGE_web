@@ -16,7 +16,7 @@ import { kkState, kkOn, SEAT_COLORS, elementColor } from './kk_world.js';
 import { gainXp, foeDrop, bagSlots, bagUpgradeCost, BAG_MAX_LEVEL } from './kk_loot.js';
 import { spawnItems, showReels } from './kk_items.js';
 import { castleHp, castleMaxHp, inGateRing, outOfCastle, squadWallTarget } from './kk_castle.js';
-import { FACTIONS, TIERS, LAIRS, TRAIT_DE, dinoImage, dinoName, tierUnit, factionOf, initCastleRecruits, recruit, buildLair, creditKill, canAfford } from './kk_factions.js';
+import { FACTIONS, TIERS, LAIRS, TRAIT_DE, dinoImage, dinoName, tierUnit, factionOf, initCastleRecruits, recruit, buildLair, creditKill, canAfford, squadMorale } from './kk_factions.js';
 
 // Per class: melee/ranged and multipliers on the minion base values.
 export const CLASS_STATS = Object.freeze({
@@ -96,6 +96,11 @@ export class KKUnit extends Minion {
     this.speed = pace; return super.update(dt, gameWorld, battlefield);
   }
   performAttack(target, gameWorld) {
+    const kkm = this.team === gameWorld?.player?.team && this.rec?.role === 'squad' ? kkState(gameWorld) : null; const mor = kkm ? (kkm.morale ?? 1) * (kkm.unpaid ? .9 : 1) : 1;
+    if (mor !== 1) { const d0 = this.damage; this.damage = Math.round(d0 * mor); try { return this.performAttackInner(target, gameWorld); } finally { this.damage = d0; } } /* squad morale (kk_factions.js) */
+    return this.performAttackInner(target, gameWorld);
+  }
+  performAttackInner(target, gameWorld) {
     if (this.blessT > 0) { const d = this.damage; const keepEls = this.statusElements; this.damage = Math.round(d * 1.2); if (this.blessEl) this.statusElements = [this.blessEl]; try { return this.statusElements ? this.withStatus(target, gameWorld) : super.performAttack(target, gameWorld); } finally { this.damage = d; this.statusElements = keepEls; } } /* blessed: stronger, the rune's element on its strikes */
     if (!this.statusElements) return super.performAttack(target, gameWorld);
     return this.withStatus(target, gameWorld);
@@ -456,7 +461,7 @@ export function updateArmy(game, dt) {
   if (!kkOn(game)) return;
   const kk = kkState(game); if (!kk.units) return;
   if (!kk._switchHooked) { (kk.switchHooks ??= []).push(() => onBandSwitch(game)); kk._switchHooked = true; }
-  updatePatrols(game, dt); syncLive(game);
+  updatePatrols(game, dt); syncLive(game); kk.morale = squadMorale(kk);
   for (const rec of kk.units) if (rec.live && (rec.role === 'guard' || rec.role === 'garrison')) anchorFor(kk, rec); /* the round of the guards moves on */ updateSites(game, dt); updateQueues(game, dt); updatePanel(game);
 }
 export function armyActors(game) {

@@ -10,6 +10,7 @@ import { groundYForDepth, clampZ } from './world.js';
 import { audio } from './audio.js';
 import { kkState, kkOn, elementColor, roomClip } from './kk_world.js';
 import { roomFor, slotsUsed, bagSlots, STACK, giveRune, deckCount } from './kk_loot.js';
+import { armyRoster } from './kk_factions.js';
 import { combat } from './combat.js';
 import { deckSlots, xpProgress } from './kk_progress.js';
 import { MATERIALS } from './kk_progress.js';
@@ -175,6 +176,7 @@ function refreshBag(game) {
   const mats = MATERIALS.map((m) => `${MAT_DE[m]} ${inv[m]}/${kk.store[m]}`).join(' · ');
   let h = `<b style="color:#ffe9a8">STUFE ${kk.level}</b> <span style="display:inline-block;width:90px;height:7px;background:#2a2234;vertical-align:middle"><span style="display:block;height:7px;width:${Math.round(90 * xpProgress(kk.xp))}px;background:#ffd24a"></span></span> <span style="color:#ffcf3a">◉ ${kk.gold}</span>`;
   h += `<div style="color:#cbb8ff;margin-top:3px">DECK ${deckCount(game)}/${deckSlots(kk.level)} · BEUTEL ${slotsUsed(inv)}/${bagSlots(kk)} PLÄTZE (je ${STACK})${kk.held ? ' · IN DER HAND: ' + (kk.held.kind === 'hp' ? 'HEILTRANK' : 'MANATRANK') : ''}</div><div style="color:#9a8fb0;font-size:11px">dabei / im Lager: ${mats}</div>`;
+  { const ro = armyRoster(kk); if (ro.length) h += `<div style="margin-top:4px;color:#ffe9a8">ARMEE${kk.morale > 1 ? ' · MORAL HOCH' : kk.morale < 1 || kk.unpaid ? ' · MORAL NIEDRIG' : ''}</div><div style="font-size:11px">${ro.map((e) => `<span style="color:${elementColor(e.el)}">${e.name} ×${e.n}${e.vets ? ' ★' + e.vets : ''}</span>`).join(' · ')}</div>`; } /* the army as stacks (HoMM) */
   for (const r of kk.sealed ?? []) h += `<div style="color:#9a8fb0;font-size:11px">🔒 ${r.name} — ab Stufe ${r.gate}</div>`;
   if (!rows.length) h += '<div style="margin-top:6px;color:#9a8fb0">leer — Beute liegt am Boden und wird durch Darüberlaufen eingesammelt</div>';
   for (const r of rows) { const url = iconUrl({ type: r.type, el: r.el }); h += `<div style="display:flex;align-items:center;margin-top:4px">${url ? `<img src="${url}" width="24" height="24" style="image-rendering:pixelated;margin-right:6px">` : ''}<span style="flex:1">${r.n}× ${r.label}</span>${btn('one', r, 'ABLEGEN')}${r.n > 1 ? btn('all', r, 'ALLE') : ''}</div>`; }
