@@ -134,7 +134,9 @@ function updatePlaces(game, dt) {
     if (s.kind === 'goldvein') { /* houses are walked into (kk_interior.js) */
       s.cd = Math.max(0, (s.cd ?? 0) - dt); const at = s.cd <= 0 && near(P, s, 64, .13); kk.progress[s.id] = at ? (kk.progress[s.id] ?? 0) + dt : 0;
       if (kk.progress[s.id] >= MINE_TIME) { kk.progress[s.id] = 0; s.cd = VEIN_COOLDOWN; const g = 15 + Math.floor(Math.random() * 16); kk.gold += g; say(game, `+${g} GOLD`, 1.1); gainXp(game, XP.mine); audio.playRuneChime?.(820); }
-    } else if (s.kind === 'shrine' && !s.used && near(P, s, 50, .14)) {
+    } else if (s.kind === 'shrine' && s.sky && !kk.canFly && near(P, s, 50, .3)) {
+      kk.canFly = true; s.used = true; gainXp(game, XP.shrine * 3); say(game, 'HIMMELSSCHREIN — DU KANNST FLIEGEN: IN DER LUFT NOCHMAL SPRINGEN (KOSTET MANA)', 2.6); audio.playRuneChime?.(1040);
+    } else if (s.kind === 'shrine' && !s.sky && !s.used && near(P, s, 50, .14)) {
       s.used = true; gainXp(game, XP.shrine); say(game, 'WEGSCHREIN — DIE GEGEND DECKT SICH AUF', 1.6);
       revealAround(kk, s, 2600, 9); /* a wide square around the shrine */
     }

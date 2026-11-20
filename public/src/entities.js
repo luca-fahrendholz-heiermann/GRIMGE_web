@@ -154,6 +154,7 @@ export const UNITY_MOVEMENT = Object.freeze({
   gravity: 41.0 * UNITY_PX                 // 41 u/s²           → 984 px/s²
 });
 const DEPTH_SPEED = UNITY_MOVEMENT.depthSpeed;
+const FLIGHT_HEIGHT = 150; const FLIGHT_MANA = 5; /* above a castle roof; mana per second */
 
 const WALK_ACCEL_TIME = 0.12;   // asset: accelerationTime
 const WALK_DECEL_TIME = 0.08;   // asset: decelerationTime
@@ -656,11 +657,13 @@ export class Player extends GroundEntity {
       if (!controlsBlocked && !isAction) {
         if (this.grounded) {
           this.handleMovementInput(dt, input);
+        } else if (this.kkFlying) {
+          this.updateFlight(dt, input); /* flying (a learned skill, Kronenkrieg) */
         } else if (this.isSprintJump) {
           this.updateAirSteering(dt, input);
-          if (input.justPressed('Space') && !silkAirJump(this)) this.jumpBufferTimer = JUMP_BUFFER_TIME;
+          if (input.justPressed('Space') && !silkAirJump(this) && !window.gameWorld?.kkTryFly?.(this)) this.jumpBufferTimer = JUMP_BUFFER_TIME;
         } else {
-          if (input.justPressed('Space') && !silkAirJump(this)) this.jumpBufferTimer = JUMP_BUFFER_TIME;
+          if (input.justPressed('Space') && !silkAirJump(this) && !window.gameWorld?.kkTryFly?.(this)) this.jumpBufferTimer = JUMP_BUFFER_TIME;
         }
       } else if (input.gameplayBlocked && this.grounded && !isAction) {
         // Drawing a rune (user, 4 Nov 2026): the Wizard stands — a sprint no longer carries on while drawing.
@@ -1347,8 +1350,16 @@ export class Player extends GroundEntity {
     }
   }
 
+  // Flying (user, 20 Nov 2026: a skill one masters somewhere): free movement at a height, mana flows away; a jump, a hit or empty
+  // mana ends it.
+  updateFlight(dt, input) {
+    const move = normalizeMove(moveVector(input)); this.vx = move.x * this.moveSpeed * 1.35; this.vz = move.z * this.depthSpeed * 1.35; if (move.x) this.facing = Math.sign(move.x);
+    this.vElevation = (FLIGHT_HEIGHT - this.elevation) * 4; this.kkFlyT = (this.kkFlyT ?? 0) - dt; this.mp = Math.max(0, this.mp - FLIGHT_MANA * dt);
+    if (input.justPressed('Space') || this.kkFlyT <= 0 || this.mp <= 0) this.kkFlying = false;
+  }
   getEffectiveGravity() {
     const g = UNITY_MOVEMENT.gravity;
+    if (this.kkFlying) { if (this.state === 'hurt' || this.grounded) this.kkFlying = false; else return 0; }
     if (this.guidedChain) return 0; // the chain places the Wizard itself
     if (this.airLatch && !this.grounded) return g * AIR_LATCH_GRAVITY;
     if (!this.launcherMode) return g;

@@ -5807,6 +5807,22 @@ game.running = false;
     assert(catches && calm && blessed, 'Squad: a unit far behind catches up at the player pace (back to its own speed when close), a rune the player casts blesses the squad with its element (' + [catches, calm, blessed].join('/') + ')');
   }
   {
+    // portals and flying (user, 20 Nov 2026): a field portal anywhere, the castle portal leads there with the squad; a sky shrine teaches
+    // flying: a second jump in the air flies at a height, mana flows away, a jump ends it
+    game.setMatchMode('kronenkrieg'); game.startMatch(); const kP = game.modeState.kk; const PP = game.player; const KPo = await import('./public/src/kk_portal.js'); const KAp = await import('./public/src/kk_army.js'); const KLp = await import('./public/src/kk_loot.js');
+    for (const m of game.minions) if (m.isKKUnit && m.team !== PP.team) m.isDead = true; game.minions = game.minions.filter((m) => !m.isDead);
+    const farX = PP.x > 7200 ? 2000 : 12400; PP.x = farX; PP.z = 10; KW.applyBounds(game, kP); const placed = KPo.placeFieldPortal(game) && !!kP.fieldPortal; const again = !KPo.placeFieldPortal(game); /* cooldown */
+    const home = KPo.portalsOf(kP).find((q) => q.id.startsWith('p_hq')); PP.x = home.x; PP.z = home.z; KW.updateKronenkrieg(game, 1 / 60); const onIt = kP.onPortal?.id === home.id;
+    const rec = KAp.addRecord(kP, { team: 'blue', cls: 'Ranger', element: null, tier: 1, row: kP.row, x: PP.x - 60, z: PP.z, role: 'squad' }); KAp.updateArmy(game, 1 / 60); const unit = rec.live; unit.x = PP.x - 60; unit.z = PP.z;
+    const went = KPo.travelTo(game, KPo.portalsOf(kP).find((q) => q.id === 'field')) && Math.abs(PP.x - farX) < 120 && Math.abs(unit.x - PP.x) < 200;
+    const sky = kP.map.sites.find((x) => x.kind === 'shrine' && x.sky); const noFly = !game.kkTryFly(PP); kP.row = sky.row; PP.x = sky.x; PP.z = sky.z; KLp.updateLoot(game, 1 / 60); const learned = kP.canFly === true;
+    PP.mp = PP.maxMp; PP.grounded = false; PP.elevation = 40; PP.vElevation = 0; const took = game.kkTryFly(PP) && PP.kkFlying; const inp = { keys: {}, justPressedKeys: {}, justPressedMouse: {}, move: { x: 1, z: 0 }, touchMove: { x: 0, z: 0 }, padMove: { x: 0, z: 0 }, justPressed: () => false };
+    const mp0 = PP.mp; for (let i = 0; i < 90; i++) PP.update(1 / 60, inp, game.battlefield, game); const flies = PP.kkFlying && PP.elevation > 100 && PP.mp < mp0;
+    PP.update(1 / 60, { ...inp, justPressed: (k) => k === 'Space' }, game.battlefield, game); const ends = !PP.kkFlying;
+    unit.isDead = true; kP.units = kP.units.filter((r) => r !== rec); game.minions = game.minions.filter((m) => !m.isDead);
+    assert(placed && again && onIt && went && noFly && learned && took && flies && ends, 'Portals and flying: a field portal is set (then a cooldown), standing on the castle portal lists it and travelling takes the squad along; flying is learned at a sky shrine, a jump in the air takes off, it holds a height and costs mana, a jump ends it (' + [placed, again, onIt, went, noFly, learned, took, flies, ends].join('/') + ')');
+  }
+  {
     // world map (user, 20 Nov 2026): unexplored places stay hidden, exploring shows them for the round, resources once seen stay, rivals only as
     // a fading "last seen" (dynamic, not lasting knowledge), the player is marked
     game.setMatchMode('kronenkrieg'); game.startMatch(); const kM = game.modeState.kk; const PM = game.player; const WM = await import('./public/src/kk_worldmap.js');

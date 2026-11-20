@@ -32,7 +32,8 @@ import { updateInterior, interiorActors } from './kk_interior.js'; // Kronenkrie
 import { itemActors, renderReels, closeBag, kkUseHeld } from './kk_items.js'; // Kronenkrieg: items, the bag, the reel window
 import { kkResourceTargets } from './kk_resources.js'; // Kronenkrieg: trees, rocks, ore, obsidian to harvest
 import { castleTargets, tryCastleTap } from './kk_castle.js';
-import { closeWorldMap } from './kk_worldmap.js'; // Kronenkrieg: the world map (button / key M) // Kronenkrieg: foe castle walls to batter
+import { closeWorldMap } from './kk_worldmap.js';
+import { closePortalUi } from './kk_portal.js'; // Kronenkrieg: portals (castle stones, a field portal) // Kronenkrieg: the world map (button / key M) // Kronenkrieg: foe castle walls to batter
 import { loadFxSprites } from './fx_sprites.js';
 import { loadSpellSprites } from './spell_visuals.js';
 import { renderPixelated } from './abilities.js';
@@ -179,6 +180,7 @@ export class GameWorld {
     this.battlefield = new Battlefield();
     environment.levelSurfaces = () => this.battlefield?.levelSurfaces; /* ground effects lie on stairs / galleries */
     this.onPlayerCast = (def, els) => { if (this.activeMode?.id === 'kronenkrieg') blessSquad(this, els); }; /* a rune blesses the squad */
+    this.kkTryFly = (p) => { const kk = this.activeMode?.id === 'kronenkrieg' ? this.modeState?.kk : null; if (!kk?.canFly || p !== this.player || p.kkFlying || p.mp < 10) return false; p.kkFlying = true; p.kkFlyT = 10; return true; }; /* flying, learned at a sky shrine */
     this.kkUseHeld = (p) => this.activeMode?.id === 'kronenkrieg' && kkUseHeld(this, p); /* Kronenkrieg: the attack drinks the potion in the hand */
     this.player = new Player(ARENA_LAYOUT.spawns.blueCastle.x, ARENA_LAYOUT.spawns.blueCastle.z);
     this.enemyChampion = new EnemyChampion(ARENA_LAYOUT.spawns.redCastle.x, ARENA_LAYOUT.spawns.redCastle.z, 'warlord');
@@ -3097,7 +3099,7 @@ export class GameWorld {
 
   returnToHub(reason = 'menu') {
     this.kkExtraFoes = [];
-    closeBasePrompt(); closeKKPanel(); closeCrownPanel(); closePotionButtons(); closeCastleOpener(); closeBag(); closeWorldMap(); if (this.activeMode?.id === 'kronenkrieg' && this.battlefield) this.battlefield.levelSurfaces = []; /* the castle ramparts */
+    closeBasePrompt(); closeKKPanel(); closeCrownPanel(); closePotionButtons(); closeCastleOpener(); closeBag(); closeWorldMap(); closePortalUi(); if (this.activeMode?.id === 'kronenkrieg' && this.battlefield) this.battlefield.levelSurfaces = []; /* the castle ramparts */
     this.markMatchSession(false);
     try { const log = JSON.parse(globalThis.localStorage?.getItem?.('grimge-hub-log') ?? '[]'); log.push({ reason, mode: this.activeMode?.id, at: new Date().toISOString(), stack: String(new Error().stack).split(String.fromCharCode(10)).slice(2, 6).join(' < ').slice(0, 400) }); globalThis.localStorage?.setItem?.('grimge-hub-log', JSON.stringify(log.slice(-10))); } catch { /* optional */ }
     this.matchState = 'Menu';

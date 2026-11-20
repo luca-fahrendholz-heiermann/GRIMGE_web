@@ -142,7 +142,7 @@ function attempt(rng) {
   const pureTries = [...shuffle(rng, spans[2]).map((sp) => ({ row: 2, x0: sp[0] + 600, x1: sp[1] - 600, z0: D * .35, z1: D * .65 })), ...spans[2].map((sp) => ({ row: 2, x0: sp[0] + 200, x1: sp[1] - 200 })), ...spans[0].map((sp) => ({ row: 0, x0: sp[0] + 200, x1: sp[1] - 200 })), { row: M, x0: W * .4, x1: W * .6 }];
   for (const pk of pureTries) if (place('source', { element: pureEl, pure: true }, pk)) break; /* deep down if there is room, else the next best place */
   // 6. filling
-  for (const [kind, n] of Object.entries(COUNTS)) { if (kind === 'castle' || kind === 'lair' || kind === 'camp') continue; for (let i = 0; i < n; i++) place(kind, kind === 'building' ? { floors: 1 + Math.floor(rng() * 3) } : {}); }
+  for (const [kind, n] of Object.entries(COUNTS)) { if (kind === 'castle' || kind === 'lair' || kind === 'camp') continue; for (let i = 0; i < n; i++) place(kind, kind === 'building' ? { floors: 1 + Math.floor(rng() * 3) } : kind === 'shrine' && i < 3 ? { sky: true } : {}); } /* three sky shrines teach flying */
   return { width: W, depth: D, rows, hqs, biomes, sites, spans };
 }
 
