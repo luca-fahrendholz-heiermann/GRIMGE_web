@@ -5,7 +5,8 @@
 import { generateKKMap, BIOME_OF, biomeAt, spanAt, KK, LEVEL_NAMES, roadZi, roadXi, ROADS_H, ROADS_V } from './kk_map.js';
 import { drawKKSite, buildDecor } from './kk_art.js';
 import { drawNode, updateResources } from './kk_resources.js';
-import { castleActors, updateCastles } from './kk_castle.js'; // the places and the landscape in the game's pixel style
+import { castleActors, updateCastles } from './kk_castle.js';
+import { updateWorldMap } from './kk_worldmap.js'; // the places and the landscape in the game's pixel style
 import { groundYForDepth, getGroundProjection, setGroundProjection } from './world.js';
 
 export const KK_PROJECTION = Object.freeze({ farY: 214, nearY: 512, depth: KK.depth }); /* a deep floor: the plane should feel wide in depth too */
@@ -71,7 +72,7 @@ export const connectorsOf = (kk, row) => kk.map.sites.filter((s) => (s.kind === 
 export function updateKronenkrieg(game, dt) {
   const kk = kkState(game); if (!kk) return;
   kk.time += dt;
-  updateResources(game, dt); updateCastles(game, dt);
+  updateResources(game, dt); updateCastles(game, dt); updateWorldMap(game);
   const P = game.player;
   if (P.isAlive) { /* a rider steps off at a shaft or lift (the mount follows if it is part of the squad) */
     // a shaft: walking into the hole drops one level down, beside the lift that leads back up

@@ -31,7 +31,8 @@ import { initCrown, updateCrown, closeCrownPanel, kkFocusLocked, kkFocusStyle } 
 import { updateInterior, interiorActors } from './kk_interior.js'; // Kronenkrieg: houses you walk into (cut-away)
 import { itemActors, renderReels, closeBag, kkUseHeld } from './kk_items.js'; // Kronenkrieg: items, the bag, the reel window
 import { kkResourceTargets } from './kk_resources.js'; // Kronenkrieg: trees, rocks, ore, obsidian to harvest
-import { castleTargets, tryCastleTap } from './kk_castle.js'; // Kronenkrieg: foe castle walls to batter
+import { castleTargets, tryCastleTap } from './kk_castle.js';
+import { closeWorldMap } from './kk_worldmap.js'; // Kronenkrieg: the world map (button / key M) // Kronenkrieg: foe castle walls to batter
 import { loadFxSprites } from './fx_sprites.js';
 import { loadSpellSprites } from './spell_visuals.js';
 import { renderPixelated } from './abilities.js';
@@ -3095,7 +3096,7 @@ export class GameWorld {
 
   returnToHub(reason = 'menu') {
     this.kkExtraFoes = [];
-    closeBasePrompt(); closeKKPanel(); closeCrownPanel(); closePotionButtons(); closeCastleOpener(); closeBag(); if (this.activeMode?.id === 'kronenkrieg' && this.battlefield) this.battlefield.levelSurfaces = []; /* the castle ramparts */
+    closeBasePrompt(); closeKKPanel(); closeCrownPanel(); closePotionButtons(); closeCastleOpener(); closeBag(); closeWorldMap(); if (this.activeMode?.id === 'kronenkrieg' && this.battlefield) this.battlefield.levelSurfaces = []; /* the castle ramparts */
     this.markMatchSession(false);
     try { const log = JSON.parse(globalThis.localStorage?.getItem?.('grimge-hub-log') ?? '[]'); log.push({ reason, mode: this.activeMode?.id, at: new Date().toISOString(), stack: String(new Error().stack).split(String.fromCharCode(10)).slice(2, 6).join(' < ').slice(0, 400) }); globalThis.localStorage?.setItem?.('grimge-hub-log', JSON.stringify(log.slice(-10))); } catch { /* optional */ }
     this.matchState = 'Menu';

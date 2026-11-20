@@ -5765,6 +5765,17 @@ game.running = false;
   const d0 = KM.kkDistance(hunter, { row: k7.row, x: game.player.x, z: game.player.z }); for (let i = 0; i < 40; i++) { k7.time += .25; KWR.updateWar(game, .25); } const closer = KM.kkDistance(hunter, { row: k7.row, x: game.player.x, z: game.player.z }) < d0;
   assert(hunting && closer, 'Kronenkrieg: a strong rival hunts the visible egg carrier (' + [hunting, closer].join('/') + ')');
   {
+    // world map (user, 20 Nov 2026): unexplored places stay hidden, exploring shows them for the round, resources once seen stay, rivals only as
+    // a fading "last seen" (dynamic, not lasting knowledge), the player is marked
+    game.setMatchMode('kronenkrieg'); game.startMatch(); const kM = game.modeState.kk; const PM = game.player; const WM = await import('./public/src/kk_worldmap.js');
+    const far = kM.map.sites.find((x) => x.row === kM.row && x.kind === 'castle' && Math.hypot(x.x - PM.x, (x.z - PM.z) * 300) > 4000); const m0 = WM.worldMapModel(game); const hidden = !m0.places.some((p2) => p2.x === far.x && p2.z === far.z);
+    KW.revealAround(kM, far, 600, 2); const m1 = WM.worldMapModel(game); const shown = m1.places.some((p2) => p2.x === far.x && p2.z === far.z && p2.kind === 'castle');
+    const rival = kM.bots.find((b) => !b.ally); rival.alive = true; rival.row = kM.row; rival.x = PM.x + 300; rival.z = PM.z; WM.noteRivals(game); rival.x += 5000; const seen = WM.worldMapModel(game).rivals.some((r) => r.seat === rival.seat && Math.abs(r.x - (PM.x + 300)) < 1);
+    kM.time += 120; const faded = !WM.worldMapModel(game).rivals.some((r) => r.seat === rival.seat); const stillKnown = WM.worldMapModel(game).places.some((p2) => p2.x === far.x && p2.z === far.z);
+    const me = WM.worldMapModel(game).player; const marked = me.here && me.x === PM.x && me.z === PM.z;
+    assert(hidden && shown && seen && faded && stillKnown && marked, 'World map: an unexplored castle is hidden, exploring shows it for the rest of the round, a rival appears only as a fading last-seen mark, the player is marked (' + [hidden, shown, seen, faded, stillKnown, marked].join('/') + ')');
+  }
+  {
     // the square board and the Grimmflut (user, 20 Nov 2026): a board about as deep as wide with places spread over both directions; the death zone
     // closes in from every edge, takes the main castle, then there is no return — no endless respawn in the zone, the round ends
     game.setMatchMode('kronenkrieg'); game.startMatch(); const kF = game.modeState.kk; const PF = game.player; const map = kF.map;
