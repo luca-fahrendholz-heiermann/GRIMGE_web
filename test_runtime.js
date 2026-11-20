@@ -5707,6 +5707,14 @@ game.running = false;
   PC.x = post.x - 900; const gaveUp = KA.kkFindTarget(game, A) !== PC; A.kkEngaged = null; B.kkEngaged = null; PC.x = A.x - 500; A.takeDamage(5); const struck = A.kkEngaged === PC;
   assert(walks && unseen && seen && gaveUp && struck, 'Kronenkrieg bandits: guards walk a round at their post, ignore a player 300 px away, notice him at 200 px and alert their comrade, give up when he runs far from the post, and a struck bandit notices the player (' + [walks, unseen, seen, gaveUp, struck].join('/') + ')');
   game.returnToHub();
+  // a guarding front line stops spells for the ones behind; castle materials can be paid in part
+  game.setMatchMode('kronenkrieg'); game.startMatch(); const kD = game.modeState.kk; const PD = game.player; const EN = await import('./public/src/entities.js');
+  const ally = KA.addRecord(kD, { team: 'blue', cls: 'Guardian', element: null, tier: 1, row: kD.row, x: PD.x - 60, z: PD.z, role: 'squad' }); KA.updateArmy(game, 1 / 60); const behind = ally.live; behind.x = PD.x - 60; behind.z = PD.z;
+  const caster = { x: PD.x + 300, z: PD.z, team: 'red' }; PD.facing = 1; PD.isGuarding = true; spells.currentSpell = { caster, team: 'red' }; const hp0 = behind.hp; behind.takeDamage(30, -100, 0, .2, false, 'spell'); const shieldedOk = behind.hp === hp0;
+  PD.isGuarding = false; behind.takeDamage(30, -100, 0, .2, false, 'spell'); const openHit = behind.hp < hp0; spells.currentSpell = null;
+  const hqD = kD.map.hqs.find((h) => h.seat === 0); kD.store.wood = 2; const part = KWR.upgradeHQ(game); const partOk = part.partial && hqD.build.have === 2 && kD.store.wood === 0 && hqD.level === 0; kD.store.wood = 40; KWR.upgradeHQ(game); const doneOk = hqD.level === 1 && kD.store.wood === 12;
+  assert(shieldedOk && openHit && partOk && doneOk, 'Kronenkrieg: a player guarding toward a spell shields the ally behind him (without guard the ally is hit); castle materials can be paid in part (2 / 30 first, the rest later) (' + [shieldedOk, openHit, partOk, doneOk].join('/') + ')');
+  game.returnToHub();
   // BÄNDIGUNG outside Kronenkrieg: an enemy summon under half its life changes sides
   game.setMatchMode('training'); game.startMatch(); spells.clearRuntime(); const E5 = game.enemyChampion; E5.lifeState = 'Alive'; E5.isDead = false; const foeWolf = spells.summon(E5, (await import('./public/src/spells.js')).SUMMON_DEFINITIONS.spirit_wolf, game, spells.qualityForRunes([]), { x: game.player.x + 90, z: game.player.z, noPose: true }); foeWolf.riseTimer = 0;
   const tameDef = spells.resolveSpell([{ id: 'bestia' }, { id: 'bestia' }]); foeWolf.hp = foeWolf.maxHp; spells.cast(game.player, tameDef, game, null, { x: foeWolf.x, z: foeWolf.z }); const tooStrong = foeWolf.team !== game.player.team; foeWolf.hp = foeWolf.maxHp * .4; spells.cast(game.player, tameDef, game, null, { x: foeWolf.x, z: foeWolf.z });

@@ -128,7 +128,7 @@ export function interiorActors(game) {
   const x0 = site.x - HOUSE.half; const x1 = site.x + HOUSE.half; const yb = groundYForDepth(zBack(site)); const yf = groundYForDepth(zFront(site)); const wallH = 80 + Math.min(2, site.floors ?? 1) * 62; const two = (site.floors ?? 1) >= 2;
   const [g0, g1] = galleryBand(site); const H = HOUSE.floorH; const t = kk.time;
   const out = [];
-  out.push({ y: yb - 2, render: (ctx) => {
+  out.push({ y: -1e6 + yb, render: (ctx) => { /* the back of the house is always behind every figure (also one on the gallery) */
     // back wall (plaster between beams), the side walls in section, the floor boards, the roof cut above
     px(ctx, x0 - 6, yb - wallH, x1 - x0 + 12, wallH, '#2a1d14'); px(ctx, x0, yb - wallH + 4, x1 - x0, wallH - 4, '#cdbd98');
     for (let bx = x0; bx < x1; bx += 24) px(ctx, bx, yb - wallH + 4, 3, wallH - 4, '#5a3d28');

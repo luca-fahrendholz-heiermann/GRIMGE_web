@@ -24,7 +24,7 @@ import { TRAINING_MAPS, getTrainingMap, zoneToWorld } from './training_maps.js';
 import { setupGallery, updateGallery, galleryActors, renderGalleryLabels } from './spell_gallery.js';
 import { setupKronenkrieg, updateKronenkrieg, renderKKGround, kkActors, renderKKMinimap, kkPanY } from './kk_world.js'; // Kronenkrieg: the banded open map
 import { initLoot, updateLoot, lootActors, renderLootHud, kkFuseAllowed, respawnDelay, closePotionButtons } from './kk_loot.js'; // Kronenkrieg: loot and the round level
-import { initArmy, updateArmy, armyActors, closeKKPanel, recordGrade, kkFindTarget } from './kk_army.js'; // Kronenkrieg: armies, castles, garrisons
+import { initArmy, updateArmy, armyActors, closeKKPanel, recordGrade, kkFindTarget, closeCastleOpener } from './kk_army.js'; // Kronenkrieg: armies, castles, garrisons
 import { initWar, updateWar, warActors, renderFlood, warMinimapDots, kkEnemyHome, kkCanRespawn } from './kk_war.js'; // Kronenkrieg: bots, main castles, Grimmflut, the end
 import { initCreatures, updateCreatures, creatureActors, creatureMinimapDots, tameAt, kkMountGate } from './kk_creatures.js'; // Kronenkrieg: creatures, eggs, mounts
 import { initCrown, updateCrown, closeCrownPanel, kkFocusLocked, kkFocusStyle } from './kk_crown.js'; // Kronenkrieg: the crowning trials
@@ -3083,7 +3083,7 @@ export class GameWorld {
 
   returnToHub(reason = 'menu') {
     this.kkExtraFoes = [];
-    closeBasePrompt(); closeKKPanel(); closeCrownPanel(); closePotionButtons();
+    closeBasePrompt(); closeKKPanel(); closeCrownPanel(); closePotionButtons(); closeCastleOpener();
     this.markMatchSession(false);
     try { const log = JSON.parse(globalThis.localStorage?.getItem?.('grimge-hub-log') ?? '[]'); log.push({ reason, mode: this.activeMode?.id, at: new Date().toISOString(), stack: String(new Error().stack).split(String.fromCharCode(10)).slice(2, 6).join(' < ').slice(0, 400) }); globalThis.localStorage?.setItem?.('grimge-hub-log', JSON.stringify(log.slice(-10))); } catch { /* optional */ }
     this.matchState = 'Menu';

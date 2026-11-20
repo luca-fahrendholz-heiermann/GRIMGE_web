@@ -216,6 +216,8 @@ export function lootActors(game) {
 // The round panel (screen space, under the minimap): level, gold, materials, stones, deck slots and the sealed runes.
 export function renderLootHud(ctx, game, viewW) {
   const kk = kkState(game); if (!kk) return; const x0 = viewW - 314; let y = 96;
+  // fallen: the way back (user asked whether the round should end — it does not while the main castle stands)
+  const P = game.player; if (!P.isAlive) { const hq = hqOf(kk); const back = !hq.fallen && kk.time < 1200; const tLeft = Math.max(0, Math.ceil(P.respawnTimer ?? 0)); ctx.save(); ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(viewW / 2 - 260, 210, 520, 64); ctx.font = 'bold 18px monospace'; ctx.fillStyle = back ? '#ffe9a8' : '#ff6b6b'; ctx.fillText(back ? `GEFALLEN — RÜCKKEHR IN ${tLeft} S` : 'GEFALLEN — KEINE RÜCKKEHR', viewW / 2, 238); ctx.font = '11px monospace'; ctx.fillStyle = '#e8e2d0'; ctx.fillText(back ? 'solange deine Hauptburg steht · deine Beute liegt am Todesort' : 'deine Hauptburg ist gefallen oder die Grimmflut lässt keine Rückkehr mehr zu', viewW / 2, 260); ctx.restore(); }
   ctx.save(); ctx.fillStyle = 'rgba(6,6,12,.78)'; ctx.fillRect(x0 - 4, y - 4, 308, 70 + kk.sealed.length * 12);
   ctx.font = 'bold 11px monospace'; ctx.textAlign = 'left'; ctx.fillStyle = '#ffe9a8'; ctx.fillText(`STUFE ${kk.level}`, x0, y + 9);
   ctx.fillStyle = '#2a2234'; ctx.fillRect(x0 + 70, y + 2, 120, 7); ctx.fillStyle = '#ffd24a'; ctx.fillRect(x0 + 70, y + 2, 120 * xpProgress(kk.xp), 7);

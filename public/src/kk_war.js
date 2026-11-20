@@ -50,8 +50,12 @@ const haveMat = (kk, m) => (kk.store[m] ?? 0) + (kk.inv[m] ?? 0);
 const spendMat = (kk, m, n) => { const fromStore = Math.min(n, kk.store[m]); kk.store[m] -= fromStore; kk.inv[m] -= n - fromStore; };
 export function upgradeHQ(game) {
   const kk = kkState(game); const hq = hqOfSeat(kk, 0); const next = HQ_TIERS[(hq.level ?? 0) + 1]; if (!next) return { ok: false, why: 'HÖCHSTE STUFE' };
-  if (haveMat(kk, next.mat) < next.cost) return { ok: false, why: `${next.cost} ${MAT_DE[next.mat]} NÖTIG` };
-  spendMat(kk, next.mat, next.cost); const frac = hq.hp / hqMaxHp(hq); hq.level++; hq.hp = Math.round(hqMaxHp(hq) * Math.max(frac, .5));
+  // what one has goes into the building at once (user: 2 / 30 should already count and free the bag)
+  hq.build = hq.build?.mat === next.mat ? hq.build : { mat: next.mat, have: 0 };
+  const give = Math.min(haveMat(kk, next.mat), next.cost - hq.build.have); if (give <= 0 && hq.build.have < next.cost) return { ok: false, why: `${MAT_DE[next.mat]} FEHLT (${hq.build.have}/${next.cost})` };
+  spendMat(kk, next.mat, give); hq.build.have += give;
+  if (hq.build.have < next.cost) { game.showAnnouncement?.(`HAUPTBURG: ${hq.build.have}/${next.cost} ${MAT_DE[next.mat]} VERBAUT`, 1.4); return { ok: true, partial: true }; }
+  hq.build = null; const frac = hq.hp / hqMaxHp(hq); hq.level++; hq.hp = Math.round(hqMaxHp(hq) * Math.max(frac, .5));
   combat.spawnShockwave?.(hq.x, groundYForDepth(hq.z) - 80, 160, '#ffe9a8'); audio.playRuneChime?.(900);
   game.showAnnouncement?.(`HAUPTBURG: ${next.name}`, 1.8); return { ok: true };
 }
@@ -295,5 +299,5 @@ export function warMinimapDots(game) {
 export function hqPanelExtras(game) {
   const kk = kkState(game); const hq = hqOfSeat(kk, 0); const next = HQ_TIERS[(hq.level ?? 0) + 1];
   const stones = [...new Set([...Object.keys(kk.store.stones), ...Object.keys(kk.inv.stones)])].filter((e) => (kk.store.stones[e] ?? 0) + (kk.inv.stones[e] ?? 0) > 0);
-  return { hq, next, matName: next ? MAT_DE[next.mat] : '', have: next ? haveMat(kk, next.mat) : 0, stones, resCost: (el) => RES_COST[resLevel(hq, el)] ?? null };
+  return { hq, next, matName: next ? MAT_DE[next.mat] : '', built: hq.build?.mat === next?.mat ? hq.build.have : 0, have: next ? haveMat(kk, next.mat) : 0, stones, resCost: (el) => RES_COST[resLevel(hq, el)] ?? null };
 }

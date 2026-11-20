@@ -2,6 +2,14 @@
 
 Neueste Einträge oben. Details stehen in den Commit-Nachrichten (`git log`).
 
+## 19. Nov 2026 – Kronenkrieg: Feedback-Liste, Teil 1 (Rückmeldung des Nutzers, PDF)
+
+- Blocken hält Zauber auf: wer zum Zauber hin blockt, schützt die Verbündeten hinter sich (gleiche Tiefe, weiter vom Zaubernden weg) — in allen Modi.
+- Hauptburg-Bau: Baustoffe lassen sich in Teilen einzahlen (z. B. 2/30 Holz verbaut), der Beutel wird sofort frei.
+- Das Burg-Menü öffnet nur noch auf Wunsch: Knopf am Rand oder Taste F.
+- Gefallen: Mitte des Bildes zeigt die Rückkehr-Zeit (solange die Hauptburg steht und bis Minute 20) bzw. dass keine Rückkehr mehr möglich ist. Die Runde endet absichtlich nicht beim Tod — die verlorene Beute ist die Strafe; erst ohne Hauptburg ist der Tod endgültig.
+- Häuser: die Rückwand wird nie mehr vor der Figur auf der Galerie gezeichnet; Häuser stehen nicht mehr am hinteren Rand, so ist die Treppe immer erreichbar.
+
 ## 19. Nov 2026 – Kronenkrieg: Banditen patrouillieren und greifen erst aus der Nähe an (Rückmeldung des Nutzers)
 
 - Wachen an Burgen, Lagern und Gefangenenlagern gehen langsam ihre Runde um den Posten, Patrouillen ziehen ihre Wege. Sie bemerken dich erst aus der Nähe (etwa 230–260 px) oder wenn du sie triffst, alarmieren dann ihre Kameraden am selben Posten, verfolgen dich nur bis gut 500 px vom Posten und kehren dann zurück. Das gilt auch für Kreaturen und die Besatzungen der Rivalen; dein eigener Trupp kämpft weiter in deiner Nähe.

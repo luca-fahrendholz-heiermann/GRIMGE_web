@@ -107,7 +107,7 @@ function attempt(rng) {
     for (let n = 0; n < 160; n++) {
       const row = pick?.row ?? pickRow(); const x = pick?.x0 != null ? pick.x0 + rng() * (pick.x1 - pick.x0) : pickX(row);
       if ((def.big || kind === 'prison') && nearHQ(row, x)) continue; /* guarded places keep away from a start too */
-      const z = def.big ? .42 + rng() * .16 : .2 + rng() * .62;
+      const z = def.big ? .42 + rng() * .16 : kind === 'building' ? .42 + rng() * .4 /* room for the inside behind the front */ : .2 + rng() * .62;
       if (!free(row, x, def.w, def.big, z)) continue;
       const site = { id: kind + sites.length, kind, row, x: Math.round(x), z: +z.toFixed(3), ...props };
       sites.push(site); occupied[row].push({ x0: x - def.w / 2, x1: x + def.w / 2, big: !!def.big, z }); return site;

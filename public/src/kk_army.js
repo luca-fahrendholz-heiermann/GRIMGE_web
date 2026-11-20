@@ -330,7 +330,7 @@ function refreshPanel(game, site) {
     const x = kk.hqHooks.extras();
     h += `<div style="margin:4px 0;color:#cbb8ff">${['UNBEFESTIGT', 'HOLZBURG', 'STEINBURG', 'STAHLBURG', 'OBSIDIANBURG'][x.hq.level ?? 0]} · Leben ${Math.max(0, Math.round(x.hq.hp))}</div>`;
     if (kk.reserve && kk.crownHooks) h += btn('swap', '', `RESERVE: ${kk.reserve.name} ⇄ DECK`);
-    if (x.next) h += btn('upgrade', '', `AUFRÜSTEN → ${x.next.name} (${x.next.cost} ${x.matName}, du hast ${x.have})`, x.have >= x.next.cost);
+    if (x.next) h += btn('upgrade', '', `BAUEN → ${x.next.name}: ${x.built}/${x.next.cost} ${x.matName} verbaut · du hast ${x.have} — EINZAHLEN`, x.have > 0);
     for (const e of x.stones) { const c = x.resCost(e); h += btn('resist', e, `RESISTENZ ${e.toUpperCase()} ${x.hq.res?.[e] ?? 0}${c ? ' (+' + c + ' Steine)' : ''}`, !!c && (x.hq.res?.[e] ?? 0) < (x.hq.level ?? 0)); }
   }
   h += `<div style="margin-top:6px;color:#ffe9a8">STATIONIERT (${garrison.reduce((s, g) => s + g.units.length, 0)}/${TRAIN.garrisonCap})</div>`;
@@ -342,10 +342,26 @@ function refreshPanel(game, site) {
   if (h !== p.html) { p.el.innerHTML = h; p.html = h; }
   p.el.style.display = 'block'; p.siteId = site.id;
 }
+// The castle menu only opens on demand (user: the UI was in the way while fighting): near an own castle a small button
+// (or key F) opens / closes it.
+let opener = null;
+export function closeCastleOpener() { if (opener?.el) opener.el.style.display = 'none'; }
+function ensureOpener(game) {
+  const doc = globalThis.document; if (typeof doc?.createElement !== 'function' || typeof doc.body?.appendChild !== 'function') return null;
+  if (opener) return opener;
+  const el = doc.createElement('button'); el.type = 'button'; el.id = 'kk-castle-open';
+  el.style.cssText = 'position:fixed;right:max(1vw,env(safe-area-inset-right));top:28vh;z-index:61;min-height:42px;font-family:Cinzel,serif;font-size:14px;color:#fff3c8;background:#3a2a4eee;border:2px solid #c9a95a;padding:.3em .8em;display:none';
+  const toggle = (e) => { e?.preventDefault?.(); e?.stopPropagation?.(); const kk = kkState(globalThis.window?.gameWorld); if (kk) kk.panelOpen = !kk.panelOpen; };
+  el.addEventListener('pointerdown', toggle); doc.addEventListener('keydown', (e) => { if (e.code === 'KeyF' && kkOn(globalThis.window?.gameWorld) && opener?.el.style.display !== 'none') toggle(e); });
+  doc.body.appendChild(el); opener = { el }; return opener;
+}
 function updatePanel(game) {
   const kk = kkState(game); const P = game.player;
   const own = [...kk.map.sites.filter((s) => s.kind === 'castle' && s.owner === 0), ...kk.map.hqs.filter((h) => h.seat === 0)].find((s) => s.row === kk.row && Math.abs(P.x - s.x) < 170 && Math.abs(P.z - s.z) < .35);
-  if (!own || !P.isAlive) { if (panel?.siteId) { closeKKPanel(); if (panel) panel.msg = ''; } return; }
+  const op = ensureOpener(game);
+  if (!own || !P.isAlive) { kk.panelOpen = false; if (op) op.el.style.display = 'none'; if (panel?.siteId) { closeKKPanel(); if (panel) panel.msg = ''; } return; }
+  if (op) { op.el.style.display = 'block'; op.el.textContent = kk.panelOpen ? '✕ SCHLIESSEN (F)' : `♜ ${own.kind === 'hq' ? 'HAUPTBURG' : own.label + 'BURG'} (F)`; }
+  if (!kk.panelOpen) { if (panel?.siteId) closeKKPanel(); return; }
   if (panel?.siteId !== own.id && panel) panel.msg = '';
   if (Math.floor(kk.time * 4) !== kk._panelTick || panel?.siteId !== own.id) { kk._panelTick = Math.floor(kk.time * 4); refreshPanel(game, own); }
 }
