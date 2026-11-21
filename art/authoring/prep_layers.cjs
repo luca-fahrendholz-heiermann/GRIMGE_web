@@ -5,7 +5,7 @@
 // Rows above `headRows` go to the hair layer, the rest to the outfit layer. The preview composites body + outfit + hair.
 const fs = require('fs'); const path = require('path'); const cp = require('child_process');
 const [src, outDir, name, headArg] = process.argv.slice(2); const HEAD = Number(headArg ?? 58);
-const ROOT = path.resolve(__dirname, '../..'); const BODY = path.join(ROOT, 'art_source/body/body_184.png');
+const ROOT = path.resolve(__dirname, '../..'); const BODY = process.env.BODY_REF || path.join(ROOT, 'art_source/body/body_184.png'); /* BODY_REF: compare against another base (e.g. the tunic body of the hair grids) */
 const N = 184; fs.mkdirSync(outDir, { recursive: true });
 const FACE = [49, 63]; /* rows of the body's face (brows to chin) at 184 px */
 const raw = (file, filter) => cp.execFileSync('magick', [file, ...(filter ? ['-filter', filter, '-resize', `${N}x${N}!`] : []), '-alpha', 'on', '-depth', '8', 'rgba:-'], { maxBuffer: 1 << 26 });

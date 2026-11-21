@@ -38,6 +38,26 @@ export class SpriteManager {
       // 'arm:<state>') — weapon-swing poses with an empty fist; hands = [front x, y, rear x, y] per picked frame (cell
       // pixels) is where the game's own weapon is held, so one set of poses serves every weapon. States without an armed
       // group fall back to the parts-rig clip, kept as 'rig:<state>'.
+      // The GRIMGE base character (user, 21 Nov 2026): the reference body every character is built on, 14 unarmed
+      // animations generated on it (Higgsfield) and brought to the body's own pixel density and palette
+      // (art/authoring/anim_body.cjs; training shorts — the bare body is flagged by the generator). Outfits, hair and
+      // transformations are layers on these frames later.
+      grimge_base: { name: 'GRIMGE', prepared: ['char_grimge_base.png'], weapon: 'Fists', role: 'Base character (reference body)', clips: [
+        { sheet: 'sheets/base_idle.png', frames: 8, w: 58, h: 117, anchorX: 28, anchorY: 115, use: [{ states: ['idle'], hold: 8, loop: true }] },
+        { sheet: 'sheets/base_walk.png', frames: 8, w: 65, h: 117, anchorX: 31, anchorY: 115, use: [{ states: ['walk', 'run'], hold: 6, loop: true }] },
+        { sheet: 'sheets/base_sprint.png', frames: 8, w: 97, h: 118, anchorX: 45, anchorY: 116, use: [{ states: ['sprint'], hold: 4, loop: true }] },
+        { sheet: 'sheets/base_jab.png', frames: 8, w: 77, h: 118, anchorX: 26, anchorY: 116, use: [{ states: ['attack1'], holds: [2, 2, 3, 4, 3, 3, 2, 2] }] },
+        { sheet: 'sheets/base_cross.png', frames: 8, w: 87, h: 117, anchorX: 35, anchorY: 115, use: [{ states: ['attack2'], holds: [2, 2, 3, 4, 3, 3, 3, 3] }] },
+        { sheet: 'sheets/base_heavy.png', frames: 8, w: 92, h: 128, anchorX: 50, anchorY: 125, use: [{ states: ['attack3', 'heavyStrike'], holds: [4, 4, 5, 6, 5, 4, 3, 3] }] },
+        { sheet: 'sheets/base_uppercut.png', frames: 8, w: 64, h: 126, anchorX: 36, anchorY: 124, use: [{ states: ['uppercut'], holds: [3, 3, 4, 5, 4, 3, 3, 2] }] },
+        { sheet: 'sheets/base_dive.png', frames: 8, w: 95, h: 117, anchorX: 43, anchorY: 115, use: [{ states: ['dive'], idx: [4, 5, 6, 7], hold: 4, loop: true }] },
+        { sheet: 'sheets/base_dash.png', frames: 8, w: 106, h: 118, anchorX: 54, anchorY: 115, use: [{ states: ['dash'], idx: [1, 2, 3, 4, 5], hold: 3, loop: true }] },
+        { sheet: 'sheets/base_jump.png', frames: 8, w: 69, h: 120, anchorX: 36, anchorY: 118, use: [{ states: ['jump'], idx: [2, 3, 4], hold: 5, loop: true }, { states: ['fall'], idx: [5, 6], hold: 6, loop: true }] },
+        { sheet: 'sheets/base_guard.png', frames: 8, w: 75, h: 118, anchorX: 40, anchorY: 116, use: [{ states: ['guard'], idx: [2, 3, 4, 5], hold: 6, loop: true }] },
+        { sheet: 'sheets/base_hurt.png', frames: 8, w: 76, h: 118, anchorX: 45, anchorY: 115, use: [{ states: ['hurt'], idx: [1, 2, 3, 4, 5], hold: 3 }] },
+        { sheet: 'sheets/base_draw.png', frames: 8, w: 72, h: 118, anchorX: 26, anchorY: 116, use: [{ states: ['draw', 'charge'], hold: 6, loop: true }] },
+        { sheet: 'sheets/base_dead.png', frames: 8, w: 120, h: 117, anchorX: 61, anchorY: 115, use: [{ states: ['dead'], holds: [4, 4, 4, 4, 4, 4, 8, 60] }] }
+      ] },
       thesen: { name: 'Thesen', prepared: ['char_thesen.png'], weapon: 'Bone Spear', role: 'Horned Warrior / Focus Transformation', clips: [
         { sheet: 'sheets/thesen_walk.png', frames: 6, w: 68, h: 119, anchorX: 34, anchorY: 117, use: [{ states: ['walk', 'run'], hold: 6, loop: true }, { states: ['sprint'], hold: 4, loop: true },
           { armed: true, states: ['walk', 'run'], hold: 6, loop: true, hands: [[59, 60, 15, 70], [57, 59, 14, 71], [36, 64, 20, 64], [57, 61, 10, 67], [55, 66, 15, 70], [60, 60, 16, 67]] },
