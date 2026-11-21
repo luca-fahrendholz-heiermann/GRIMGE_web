@@ -215,3 +215,11 @@ Der Nutzer hat selbst Guthaben gekauft (Plan `starter`, Stand vor dem Auftrag 27
 
 **Zusammen 33,75 Credits; Kontostand danach: 16,75.**
 - Prüfung: In allen 80 Frames ist der Griff mindestens 28 px vom Schildarm entfernt.
+
+## 21 Nov 2026 – 2k-Test (scharfe Pixel)
+
+| Job | Modell | Bilder | Credits |
+|---|---|---|---|
+| Arcanist-Hover als 2k-Raster (2048², Frames in Körper-Pixelgröße 1024/184) – Test, ob die KI echte Pixel zeichnet | `gpt_image_2_6` low, 2k | 1 | 1,25 |
+
+**Kontostand danach: 15,5.** Ergebnis: echte Pixelblöcke, scharf; 2k kostet dasselbe wie 1k.
