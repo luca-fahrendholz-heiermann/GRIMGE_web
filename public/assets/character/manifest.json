@@ -1353,6 +1353,32 @@
     "ranger": "hair/white_monk_ranger.png",
     "arcanist": "hair/white_monk_arcanist.png"
    }
+  },
+  "thesen": {
+   "file": "hair/thesen.png",
+   "transformations": {
+    "guardian": "hair/thesen_guardian.png",
+    "berserker": "hair/thesen_berserker.png",
+    "lancer": "hair/thesen_lancer.png",
+    "monk": "hair/thesen_monk.png",
+    "beastborn": "hair/thesen_beastborn.png",
+    "shadow": "hair/thesen_shadow.png",
+    "ranger": "hair/thesen_ranger.png",
+    "arcanist": "hair/thesen_arcanist.png"
+   }
+  },
+  "xame": {
+   "file": "hair/xame.png",
+   "transformations": {
+    "guardian": "hair/xame_guardian.png",
+    "berserker": "hair/xame_berserker.png",
+    "lancer": "hair/xame_lancer.png",
+    "monk": "hair/xame_monk.png",
+    "beastborn": "hair/xame_beastborn.png",
+    "shadow": "hair/xame_shadow.png",
+    "ranger": "hair/xame_ranger.png",
+    "arcanist": "hair/xame_arcanist.png"
+   }
   }
  },
  "beard": {
@@ -1361,7 +1387,8 @@
   "beard_goatee": "beard/beard_goatee.png",
   "beard_mustache": "beard/beard_mustache.png",
   "beard_sage": "beard/beard_sage.png",
-  "beard_stubble": "beard/beard_stubble.png"
+  "beard_stubble": "beard/beard_stubble.png",
+  "beard_xame": "beard/beard_xame.png"
  },
  "face": {
   "face_earrings": "face/face_earrings.png",

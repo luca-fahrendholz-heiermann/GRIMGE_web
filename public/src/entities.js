@@ -2202,7 +2202,8 @@ export class Player extends GroundEntity {
     // Wind breathing DOPPELTORNADO: the Wizard has become the tornado (drawn by the move).
     if (this.tornadoT > 0) return;
     // Levitation-state Arcane States let the Wizard hover above his shadow.
-    const renderY = this.y - (this.isMounted ? (this.mountedSummon.definition.riderOffsetY ?? 42) : 0) - levitationOffset(this) - signatureHover(this);
+    // In the saddle: a stable mount reports its seat per gait frame (mounts.js seatOffset), others a fixed back height.
+    const renderY = this.y - (this.isMounted ? (this.mountedSummon.seatOffset ?? this.mountedSummon.definition.riderOffsetY ?? 42) : 0) - levitationOffset(this) - signatureHover(this);
     // Prepared spell components trail behind the Wizard in world space. They
     // are a gameplay indicator, not a DOM overlay or a baked reference image.
     if (this.isAlive && this.slottedSpells.length) {
@@ -2335,7 +2336,12 @@ export class Player extends GroundEntity {
     if (rigged && this.isAlive) {
       const drawingNow = this === window.gameWorld?.player && window.gameWorld?.drawing?.active;
       const free = this.state === 'idle' || this.state === 'run' || this.state === 'jump' || this.state === 'fall';
-      if (this.summonPoseT > 0 && this.grounded && !this.isGuarding && this.state === 'idle' && Math.abs(this.vx ?? 0) < 25 && !drawingNow) animState = 'summon';
+      const clipFr = sprites.sprites[this.renderKey]?.frames;
+      // In the saddle (user, 21 Nov 2026): seated clips — at rest, galloping, or low over a flying mount's neck. Free flight:
+      // upright hover when still, horizontal flight when moving. Heroes without these clips keep the old fallbacks.
+      if (this.isMounted && (this.state === 'idle' || this.state === 'run') && clipFr?.ride) animState = this.mountedSummon.definition?.flying && clipFr.rideFly ? 'rideFly' : this.state === 'run' && clipFr.rideRun ? 'rideRun' : 'ride';
+      else if (this.kkFlying && free && clipFr?.fly) animState = Math.abs(this.vx ?? 0) + Math.abs((this.vz ?? 0) * 150) > 60 ? 'fly' : 'hover';
+      else if (this.summonPoseT > 0 && this.grounded && !this.isGuarding && this.state === 'idle' && Math.abs(this.vx ?? 0) < 25 && !drawingNow) animState = 'summon';
       else if (drawingNow && free) animState = 'draw';
       else if (this.isGuarding) animState = 'guard';
       else if (this.chargeTimer > 0) animState = 'charge';

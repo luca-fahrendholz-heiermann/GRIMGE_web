@@ -5,7 +5,7 @@
 // Also writes the glowing eyes of each transformation (the body's own eye pixels, recoloured) as a tiny overlay layer.
 //   node art/authoring/hair_transform.cjs <layersDir> [outDir=<layersDir>/hair_tf]
 const fs = require('fs'); const path = require('path'); const cp = require('child_process');
-const ROOT = path.resolve(__dirname, '../..'); const BODY = path.join(ROOT, 'art_source/body/body_184.png'); const N = 184;
+const ROOT = path.resolve(__dirname, '../..'); const BODY = process.env.BODY_184 ?? path.join(ROOT, 'art_source/body/body_184.png'); const N = 184; /* BODY_184: art_source is untracked — point at the main checkout's copy from a worktree */
 // transformation → [ramp dark … light], eye colour (the class transformations, art_source/body/tf_*.png)
 const TF = Object.freeze({
   guardian: { name: 'Crimson Bastion', ramp: ['#2a0a06', '#7a1408', '#d0390c', '#ff8a1c', '#ffe06a'], eye: '#ffd23c' },

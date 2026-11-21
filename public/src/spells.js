@@ -2320,6 +2320,16 @@ class SummonedCreature extends GroundEntity {
     }
     this.rider = null;
     if (!this.isFlying) this.integrateElevation(dt, 1350);
+    // A stable mount (mounts.js, role 'mount') does not hunt: riderless it trots after its owner and waits close by.
+    if (this.definition.role === 'mount') {
+      const o = this.owner; const dx = (o?.x ?? this.x) - this.x; const dz = (o?.z ?? this.z) - this.z; const far = Math.abs(dx) > 90 || Math.abs(dz) > .12;
+      const px = this.x; const pz = this.z;
+      this.vx = far && Math.abs(dx) > 60 ? Math.sign(dx) * this.speed : 0; this.vz = far ? Math.sign(dz) * Math.min(this.speed / 150, Math.abs(dz) / Math.max(dt, 1e-3)) : 0;
+      if (this.vx) this.facing = Math.sign(this.vx);
+      this.x += this.vx * dt; this.z += this.vz * dt; this.state = this.vx || this.vz ? 'run' : 'idle';
+      gameWorld.battlefield.resolveEntityCollision(this); gameWorld.resolveSpellObstacles?.(this, px, pz);
+      return;
+    }
     if (this.priorityTarget && this.target !== this.priorityTarget && !this.priorityTarget.isDead) this.target = this.priorityTarget;
     if (!this.target || this.target.isDead || this.target.isDestroyed || this.target.team === this.team) this.target = this.chooseTarget(gameWorld);
     if (!this.target) {

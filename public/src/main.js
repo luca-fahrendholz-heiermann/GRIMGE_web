@@ -28,6 +28,7 @@ import { initLoot, updateLoot, lootActors, renderLootHud, kkFuseAllowed, respawn
 import { initArmy, updateArmy, armyActors, closeKKPanel, recordGrade, kkFindTarget, closeCastleOpener, blessSquad } from './kk_army.js'; // Kronenkrieg: armies, castles, garrisons
 import { initWar, updateWar, warActors, renderFlood, renderMinimapFlood, warMinimapDots, kkEnemyHome, kkCanRespawn, kkClock } from './kk_war.js'; // Kronenkrieg: bots, main castles, Grimmflut, the end
 import { initCreatures, updateCreatures, creatureActors, creatureMinimapDots, tameAt, kkMountGate } from './kk_creatures.js'; // Kronenkrieg: creatures, eggs, mounts
+import { updateTestMount } from './mounts.js'; // stable mounts (?mount=<id> test hook)
 import { initCrown, updateCrown, closeCrownPanel, kkFocusLocked, kkFocusStyle } from './kk_crown.js'; // Kronenkrieg: the crowning trials
 import { updateInterior, interiorActors } from './kk_interior.js'; // Kronenkrieg: houses you walk into (cut-away)
 import { itemActors, renderReels, closeBag, kkUseHeld } from './kk_items.js'; // Kronenkrieg: items, the bag, the reel window
@@ -2446,6 +2447,7 @@ export class GameWorld {
     const state = this.modeState;
     if (!state || !this.isMatchRunning()) return;
     if (this.isRunChoicePending()) return;
+    updateTestMount(this); /* ?mount=<id>: a stable mount at the start of any mode (mounts.js) */
     if (this.activeMode.id === 'base') {
       // No clock in the base; the camera follows through the hall; stations and the prompt (base.js).
       this.matchTime = this.matchDuration;

@@ -8,8 +8,10 @@
 // frame size, frame count and the feet anchor (bottom centre of frame 0's figure).
 const fs = require('fs'); const path = require('path'); const cp = require('child_process');
 const { readRaw, snapAuto } = require('./pixel_snap.cjs');
-const [gif, outDir, name, hArg] = process.argv.slice(2); const H = Number(hArg ?? 116); fs.mkdirSync(outDir, { recursive: true });
-const ROOT = path.resolve(__dirname, '../..'); const BODY = path.join(ROOT, 'art_source/body/body_184.png');
+// 4th arg: the stance height in art pixels (default 116), or `cell=<px>` to give the AI pixel size directly — for clips whose
+// frame 0 is not a standing figure (flying horizontally, seated riding poses).
+const [gif, outDir, name, hArg] = process.argv.slice(2); const CELL = /^cell=([\d.]+)$/.exec(hArg ?? '')?.[1]; const H = CELL ? 0 : Number(hArg ?? 116); fs.mkdirSync(outDir, { recursive: true });
+const ROOT = path.resolve(__dirname, '../..'); const BODY = process.env.BODY_184 ?? path.join(ROOT, 'art_source/body/body_184.png'); /* art_source is untracked: from a worktree point BODY_184 at the main checkout's copy */
 const tmp = fs.mkdtempSync(path.join(require('os').tmpdir(), 'animbody-'));
 cp.execFileSync('magick', [gif, '-coalesce', path.join(tmp, 'f_%02d.png')], { stdio: 'ignore' });
 const files = fs.readdirSync(tmp).filter((f) => f.startsWith('f_')).sort();
@@ -19,7 +21,7 @@ const B = cp.execFileSync('magick', [BODY, '-depth', '8', 'rgba:-']); const pal 
 for (let i = 0; i < B.length; i += 4) { const g = B[i + 1] > 150 && B[i] < 110 && B[i + 2] < 110; if (!g) pal.set((B[i] << 16) | (B[i + 1] << 8) | B[i + 2], [B[i], B[i + 1], B[i + 2]]); }
 const PAL = [...pal.values(), [26, 26, 31], [44, 44, 51], [68, 68, 77]];
 const nearest = (r, g, b) => { let best = PAL[0], d0 = 1e9; for (const p of PAL) { const d = (p[0] - r) ** 2 * 3 + (p[1] - g) ** 2 * 4 + (p[2] - b) ** 2 * 2; if (d < d0) { d0 = d; best = p; } } return best; };
-const raw0 = readRaw(path.join(tmp, files[0])); const b0 = bbox(raw0); const cell = (b0.y1 - b0.y0 + 1) / H;
+const raw0 = readRaw(path.join(tmp, files[0])); const b0 = bbox(raw0); const cell = CELL ? Number(CELL) : (b0.y1 - b0.y0 + 1) / H;
 const frames = files.map((f) => { const r = snapAuto(readRaw(path.join(tmp, f)), { cell }); for (let i = 0; i < r.buf.length; i += 4) if (r.buf[i + 3]) { const p = nearest(r.buf[i], r.buf[i + 1], r.buf[i + 2]); r.buf[i] = p[0]; r.buf[i + 1] = p[1]; r.buf[i + 2] = p[2]; } return r; });
 // shared crop box over all frames
 let U = { x0: 1e9, y0: 1e9, x1: -1, y1: -1 }; for (const r of frames) { const b = bbox(r); U = { x0: Math.min(U.x0, b.x0), y0: Math.min(U.y0, b.y0), x1: Math.max(U.x1, b.x1), y1: Math.max(U.y1, b.y1) }; }

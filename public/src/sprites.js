@@ -59,7 +59,18 @@ export class SpriteManager {
         { sheet: 'sheets/base_dead.png', frames: 8, w: 120, h: 117, anchorX: 61, anchorY: 115, use: [{ states: ['dead'], holds: [4, 4, 4, 4, 4, 4, 8, 60] }] },
         /* spirit orb (shonen-style, the orb itself is drawn as VFX at the hands): charge in cupped hands, hold one-handed overhead, throw */
         { sheet: 'sheets/base_orb_charge.png', frames: 8, w: 84, h: 117, anchorX: 44, anchorY: 115, use: [{ states: ['charge'], idx: [3, 4, 5, 6, 7], hold: 5, loop: true }] },
-        { sheet: 'sheets/base_orb_hold.png', frames: 8, w: 78, h: 125, anchorX: 39, anchorY: 123, use: [{ states: ['summon'], idx: [4, 5, 6, 7], hold: 6, loop: true }] },
+        { sheet: 'sheets/base_orb_hold.png', frames: 8, w: 78, h: 125, anchorX: 39, anchorY: 123, use: [{ states: ['orbHold'], idx: [4, 5, 6, 7], hold: 6, loop: true }] },
+        /* summon (user, 21 Nov 2026: "summon mit der Hand auf dem Boden"): drop to one knee, the palm slams flat on the ground,
+           the other hand a two-finger seal at the chest; the last frame is held while the seal circle works */
+        { sheet: 'sheets/base_summon.png', frames: 8, w: 71, h: 118, anchorX: 37, anchorY: 115, use: [{ states: ['summon'], holds: [3, 3, 3, 4, 8, 8, 8, 8] }] },
+        /* flight: hover = upright vertical levitation (toes down, bobbing); fly = horizontal, fist leading */
+        { sheet: 'sheets/base_hover.png', frames: 8, w: 70, h: 124, anchorX: 34, anchorY: 121, use: [{ states: ['hover'], hold: 7, loop: true }] },
+        { sheet: 'sheets/base_fly.png', frames: 8, w: 123, h: 58, anchorX: 61, anchorY: 54, use: [{ states: ['fly'], hold: 5, loop: true }] },
+        /* riding (the mount is not drawn in these frames): the anchor is the SEAT, not the feet — the rider is placed with
+           the seat on the mount's back (riderOffsetY) and the legs hang over its flank */
+        { sheet: 'sheets/base_ride.png', frames: 8, w: 62, h: 122, anchorX: 30, anchorY: 80, use: [{ states: ['ride'], hold: 8, loop: true }] },
+        { sheet: 'sheets/base_ride_run.png', frames: 8, w: 86, h: 125, anchorX: 37, anchorY: 80, use: [{ states: ['rideRun'], hold: 4, loop: true }] },
+        { sheet: 'sheets/base_ride_fly.png', frames: 8, w: 105, h: 101, anchorX: 55, anchorY: 64, use: [{ states: ['rideFly'], hold: 6, loop: true }] },
         { sheet: 'sheets/base_orb_throw.png', frames: 8, w: 127, h: 135, anchorX: 69, anchorY: 133, use: [{ states: ['throw'], holds: [3, 3, 3, 3, 4, 4, 4, 3] }] },
         { sheet: 'sheets/base_palm_blast.png', frames: 8, w: 96, h: 118, anchorX: 48, anchorY: 115, use: [{ states: ['blast'], holds: [3, 3, 3, 4, 6, 6, 6, 6] }, { states: ['beam'], idx: [4, 5, 6, 7], hold: 4, loop: true }] } /* open palm forward: an energy ball or a beam leaves the hand (VFX) */
       ] },

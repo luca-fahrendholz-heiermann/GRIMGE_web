@@ -15,7 +15,7 @@ import { gainXp, dropPile } from './kk_loot.js';
 import { spawnItems } from './kk_items.js';
 import { KKUnit, addRecord, squadCap } from './kk_army.js';
 import { XP } from './kk_progress.js';
-import { drawHorse } from './kk_art.js';
+import { MOUNT_DEFS, MOUNT_ORDER, summonMount } from './mounts.js';
 import { FACTIONS } from './kk_factions.js';
 import { addDeed } from './kk_titles.js';
 const FACTIONS_NAME = new Proxy({}, { get: (_, el) => FACTIONS[el]?.dino?.[0] });
@@ -139,11 +139,22 @@ function updateEggs(game, dt) {
 const stageForLevel = (lvl) => (lvl >= 8 ? 3 : lvl >= 5 ? 2 : 1);
 function updateMounts(game, dt) {
   const kk = kkState(game); const P = game.player; const pr = game.primal;
-  // the stable: a horse from level 3 (a riding beast of the game's mount kind)
+  // the stable (user, 21 Nov 2026: "coole Reittiere für den Stall"): from level 3 a stable mount (mounts.js), summoned with
+  // the palm on the ground and the seal; every new visit brings the next unlocked one (flyers with the flight gate). A
+  // ridden mount stays.
   for (const s of kk.map.sites) {
-    if (s.kind !== 'stable' || s.row !== kk.row || Math.abs(s.x - P.x) > 80 || Math.abs(s.z - P.z) > .2) continue;
+    if (s.kind !== 'stable') continue;
+    const near = s.row === kk.row && Math.abs(s.x - P.x) <= 80 && Math.abs(s.z - P.z) <= .2;
+    if (!near) { s.inside = false; continue; }
     if ((kk.level ?? 1) < 3) { if (!s.hinted) { s.hinted = true; game.showAnnouncement?.('STALL — REITEN AB STUFE 3', 1.4); } continue; }
-    if (!kk.horse || kk.horse.isDead) { kk.horse = spells.summon(P, { ...SUMMON_DEFINITIONS.lesser_beast, id: 'kk_horse', name: 'PFERD', color: '#8d6e63', duration: 1e6, rise: .01, mountSpeed: 430, riderOffsetY: 30, customRender: drawHorse }, game, spells.qualityForRunes([]), { x: s.x + 60, z: s.z, noPose: true, noSeal: true }) ?? null; if (kk.horse) game.showAnnouncement?.('PFERD AUS DEM STALL — AUFSTEIGEN MIT DER REIT-TASTE', 1.8); }
+    if (s.inside) continue; s.inside = true;
+    const alive = kk.horse && !kk.horse.isDead; if (alive && kk.horse.rider) continue;
+    const fly = kkMountGate(game).fly; const unlocked = MOUNT_ORDER.filter((id) => MOUNT_DEFS[id].unlock <= (kk.level ?? 1) && (!MOUNT_DEFS[id].flying || fly));
+    const cur = alive ? kk.horse.definition.mountId : null; const next = unlocked[(unlocked.indexOf(cur) + 1) % unlocked.length];
+    if (!next || (alive && cur === next)) continue;
+    if (alive) kk.horse.dismiss();
+    kk.horse = summonMount(P, game, next, { x: s.x + 60, z: s.z });
+    if (kk.horse) game.showAnnouncement?.(`${MOUNT_DEFS[next].name} AUS DEM STALL — AUFSTEIGEN MIT DER REIT-TASTE${unlocked.length > 1 ? ' · WIEDERKOMMEN = NÄCHSTES TIER' : ''}`, 1.9);
   }
   // the Primal grows with the level; once down it waits for the main castle
   if (pr) {

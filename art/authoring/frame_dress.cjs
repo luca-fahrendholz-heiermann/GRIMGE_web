@@ -45,7 +45,7 @@ if (mode === 'grid') {
     for (let y = 0; y < Math.min(fh, r.h); y++) for (let x = 0; x < Math.min(fw, r.w); x++) {
       const ri = (y * r.w + x) * 4, bi = (y * fw + x) * 4; if (!r.buf[ri + 3]) continue; const g = r.buf[ri + 1] > 150 && r.buf[ri] < 110 && r.buf[ri + 2] < 110; if (g) continue;
       const d = Math.abs(r.buf[ri] - base[bi]) + Math.abs(r.buf[ri + 1] - base[bi + 1]) + Math.abs(r.buf[ri + 2] - base[bi + 2]);
-      const suited = base[bi] !== orig[bi] || base[bi + 1] !== orig[bi + 1]; /* skin the grid suit covered: the AI's pixel there is kept, so no bare skin shows through the armour */ if (base[bi + 3] && !suited && d < (y < top + 30 ? 150 : 80)) continue; /* the base shows through (the face more strictly) */
+      const suited = base[bi] !== orig[bi] || base[bi + 1] !== orig[bi + 1]; /* skin the grid suit covered: the AI's pixel there is kept, so no bare skin shows through the armour */ if (base[bi + 3] && !suited && d < (y < top + 22 ? 150 : 80)) continue; /* the base shows through (the face more strictly — only the head itself: bone pauldrons and horns at the shoulders lost pixels when this zone reached 30 rows, user 21 Nov 2026) */
       r.buf.copy(L, bi, ri, ri + 4); L[bi + 3] = 255;
     }
     mergePalette(L, 60);

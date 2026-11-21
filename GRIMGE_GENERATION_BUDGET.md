@@ -190,3 +190,17 @@ Der Nutzer hat selbst Guthaben gekauft (Plan `starter`, Stand vor dem Auftrag 27
 
 **Kontostand: 259,25.**
 - Markierte Aufträge wurden erstattet: Bilder mit nacktem Oberkörper und eine Stangenwaffen-Formulierung.
+
+## 21. Nov 2026: Reiten, Beschwörung, Flug, Stall-Reittiere, Klassen-Rüstungen neu, Haare Thesen/Xame
+
+| Auftrag | Modell | Anzahl | Credits |
+|---|---|---|---|
+| Base-Clips (GIF 768², 8 Bilder): Beschwörung mit Hand am Boden, Schweben, Fliegen, Reiten (stehend, Galopp, auf Flugtier) | `gpt_image_2_6` GIF high | 6 | 7,5 |
+| Die 6 neuen Clips für alle 8 Klassen anziehen (erster Durchlauf, Referenz = löchrige Outfit-Ebenen) | `gpt_image_2_6` high | 53 | 66,25 |
+| Neu mit den vollständigen Klassen-Quellbildern (keine Löcher → keine springenden Details): 6 neue Clips × Guardian/Monk/Beastborn/Ranger/Arcanist + die 18 Original-Clips × Guardian/Lancer/Monk | dto. | 84 | 105 |
+| Stall-Reittiere als Lauf-/Flug-Loops (Knochenross, Hauereber, Kirin, Wyvern), roter Sattel für die Sitz-Erkennung | `gpt_image_2_6` GIF high | 4 | 5 |
+| Haare Thesen und Xame (+ Xame-Bart) auf dem Referenzkörper im Anzug | `gpt_image_2_6` high | 2 | 2,5 |
+
+**Zusammen 186,25 Credits; Kontostand danach: 50,50** (das Konto wird auch von anderen Sitzungen genutzt).
+- Markiert und daher nicht genutzt: die Klassen-Quelle Berserker (nackter Oberkörper); die angezogenen Idle-Raster von Guardian, Monk und Beastborn als Referenz.
+- Lehre: Referenzen für das Anziehen müssen vollständig sein. Ausgeschnittene Outfit-Ebenen haben Löcher, die KI erfindet die Lücken in jedem Frame anders.
