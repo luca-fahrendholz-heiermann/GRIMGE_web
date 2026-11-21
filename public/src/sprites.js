@@ -55,7 +55,7 @@ export class SpriteManager {
         { sheet: 'sheets/base_jump.png', frames: 8, w: 96, h: 135, anchorX: 45, anchorY: 133, use: [{ states: ['jump'], idx: [2, 3, 4], hold: 5, loop: true }, { states: ['fall'], idx: [5, 6], hold: 6, loop: true }] },
         { sheet: 'sheets/base_guard.png', frames: 8, w: 75, h: 118, anchorX: 40, anchorY: 116, use: [{ states: ['guard'], idx: [2, 3, 4, 5], hold: 6, loop: true }] },
         { sheet: 'sheets/base_hurt.png', frames: 8, w: 76, h: 118, anchorX: 45, anchorY: 115, use: [{ states: ['hurt'], idx: [1, 2, 3, 4, 5], hold: 3 }] },
-        { sheet: 'sheets/base_draw.png', frames: 8, w: 72, h: 118, anchorX: 26, anchorY: 116, use: [{ states: ['draw'], hold: 6, loop: true }] },
+        { sheet: 'sheets/base_draw.png', frames: 8, w: 52, h: 117, anchorX: 26, anchorY: 115, use: [{ states: ['draw'], idx: [1, 2, 3, 4, 5, 6, 7], hold: 6, loop: true }] } /* rune sign: forearm vertical, two fingers up, the other hand a seal (never an outstretched raised arm) */,
         { sheet: 'sheets/base_dead.png', frames: 8, w: 120, h: 117, anchorX: 61, anchorY: 115, use: [{ states: ['dead'], holds: [4, 4, 4, 4, 4, 4, 8, 60] }] },
         /* spirit orb (shonen-style, the orb itself is drawn as VFX at the hands): charge in cupped hands, hold one-handed overhead, throw */
         { sheet: 'sheets/base_orb_charge.png', frames: 8, w: 84, h: 117, anchorX: 44, anchorY: 115, use: [{ states: ['charge'], idx: [3, 4, 5, 6, 7], hold: 5, loop: true }] },
