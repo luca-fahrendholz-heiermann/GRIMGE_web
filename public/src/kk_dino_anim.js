@@ -2,7 +2,8 @@
 // bestiary sprites (Higgsfield, 21 Nov 2026): 8 frames side by side, facing left like the stills, one shared crop box per
 // creature so walk and attack line up. DINO_ANIM holds per element the frame size and the walking body's box inside a
 // frame: the renderer scales the body to the unit's height and stands it on its feet at the unit's position.
-export const DINO_ANIM = Object.freeze(/*META*/{"ignis":{"frames":8,"fw":246,"fh":156,"bx":4,"by":0,"bw":242,"bh":156},"ventus":{"frames":8,"fw":236,"fh":130,"bx":0,"by":0,"bw":234,"bh":127},"fulgur":{"frames":8,"fw":240,"fh":162,"bx":6,"by":14,"bw":234,"bh":134},"terra":{"frames":8,"fw":245,"fh":154,"bx":4,"by":0,"bw":241,"bh":146},"aqua":{"frames":8,"fw":244,"fh":154,"bx":0,"by":0,"bw":243,"bh":154},"frost":{"frames":8,"fw":242,"fh":154,"bx":0,"by":0,"bw":242,"bh":154},"bestia":{"frames":8,"fw":244,"fh":168,"bx":0,"by":0,"bw":244,"bh":168},"construct":{"frames":8,"fw":249,"fh":159,"bx":0,"by":3,"bw":249,"bh":151},"void":{"frames":8,"fw":240,"fh":173,"bx":0,"by":6,"bw":240,"bh":162},"lux":{"frames":8,"fw":244,"fh":176,"bx":0,"by":13,"bw":242,"bh":163},"natura":{"frames":8,"fw":244,"fh":176,"bx":5,"by":4,"bw":239,"bh":172},"ward":{"frames":8,"fw":249,"fh":177,"bx":4,"by":0,"bw":245,"bh":177},"umbra":{"frames":8,"fw":241,"fh":157,"bx":0,"by":0,"bw":241,"bh":157}}/*END*/);
+import { ART_PX } from './world.js';
+export const DINO_ANIM = Object.freeze(/*META*/{"ignis":{"frames":8,"fw":246,"fh":156,"bx":6,"by":1,"bw":240,"bh":155},"ventus":{"frames":8,"fw":236,"fh":130,"bx":2,"by":0,"bw":231,"bh":125},"fulgur":{"frames":8,"fw":240,"fh":162,"bx":7,"by":15,"bw":233,"bh":131},"terra":{"frames":8,"fw":245,"fh":154,"bx":5,"by":0,"bw":238,"bh":145},"aqua":{"frames":8,"fw":244,"fh":154,"bx":1,"by":1,"bw":240,"bh":152},"frost":{"frames":8,"fw":242,"fh":154,"bx":0,"by":0,"bw":242,"bh":154},"bestia":{"frames":8,"fw":244,"fh":168,"bx":1,"by":0,"bw":243,"bh":168},"construct":{"frames":8,"fw":249,"fh":159,"bx":0,"by":5,"bw":249,"bh":147},"void":{"frames":8,"fw":240,"fh":173,"bx":0,"by":8,"bw":240,"bh":158},"lux":{"frames":8,"fw":244,"fh":176,"bx":1,"by":15,"bw":239,"bh":161},"natura":{"frames":8,"fw":244,"fh":176,"bx":7,"by":6,"bw":237,"bh":168},"ward":{"frames":8,"fw":249,"fh":177,"bx":5,"by":0,"bw":244,"bh":177},"umbra":{"frames":8,"fw":241,"fh":157,"bx":2,"by":0,"bw":239,"bh":157}}/*END*/);
 export const DINO_ATTACK_TIME = .6; /* seconds the strike sheet plays */
 const WALK_FPS = 10;
 const SHEETS = new Map();
@@ -26,10 +27,10 @@ export function drawDinoAnim(ctx, u, h, f) {
   const el = u.rec?.dino; const M = DINO_ANIM[el]; if (!M) return false;
   const pose = dinoPose(u); let im = sheet(el, pose.kind);
   if (!ready(im)) { im = sheet(el, 'walk'); pose.frame = 0; if (!ready(im)) return false; }
-  const k = h / M.bh; const bob = pose.kind === 'walk' && u.state !== 'run' ? Math.sin((u.animTime ?? 0) * 2.5) * 1.5 : 0;
+  const k = ART_PX * (h >= 150 ? 1.25 : 1); /* the one art-pixel size (world.js); wild / boss dino-dragons a quarter bigger */ const bob = pose.kind === 'walk' && u.state !== 'run' ? Math.sin((u.animTime ?? 0) * 2.5) * 1.5 : 0;
   ctx.save(); ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.beginPath(); ctx.ellipse(u.x, u.y + 2, M.bw * k * .4, 9, 0, 0, Math.PI * 2); ctx.fill();
   if (u.hitFlash > 0) ctx.globalAlpha = .7;
-  ctx.translate(u.x, u.y + bob); if (f > 0) ctx.scale(-1, 1); ctx.imageSmoothingEnabled = true;
+  ctx.translate(Math.round(u.x), Math.round(u.y + bob)); if (f > 0) ctx.scale(-1, 1); ctx.imageSmoothingEnabled = false; /* hard pixels (user: nothing soft) */
   ctx.drawImage(im, pose.frame * M.fw, 0, M.fw, M.fh, -(M.bx + M.bw / 2) * k, -(M.by + M.bh) * k, M.fw * k, M.fh * k);
   ctx.restore(); return true;
 }

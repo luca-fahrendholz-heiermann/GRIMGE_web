@@ -16,6 +16,11 @@ export const ENTITY_VISUALS = Object.freeze({
   minionColliderWidth: 20,
   minionColliderHeight: 36
 });
+// One art pixel on screen (user, 21 Nov 2026: "alle Kreaturen pixelperfekt, dass alles denselben Look hat"): the reference
+// body is 116 native pixels tall and shows at the hero height, so every native-resolution sprite sheet (creatures, Primals,
+// dino-dragons) is drawn with exactly this scale — the same pixel size everywhere instead of a height per creature.
+export const BODY_NATIVE_HEIGHT = 116;
+export const ART_PX = ENTITY_VISUALS.heroHeight / BODY_NATIVE_HEIGHT;
 
 export const ARENA_LAYOUT = Object.freeze({
   width: VIEWPORT.width,

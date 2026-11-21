@@ -30,6 +30,7 @@
 // damage are scaled ×3 to the prototype's health scale (Wizard 320 HP vs.
 // Unity 100).
 import { audio } from './audio.js';
+import { drawPrimalAnim } from './primal_anim.js'; // animated Primal stages
 import { combat } from './combat.js';
 import { GroundEntity, groundDistance } from './world.js';
 import { SIEGE_ZONES } from './siege_match.js';
@@ -412,6 +413,7 @@ export class PrimalCompanion extends GroundEntity {
       ctx.beginPath(); ctx.arc(x, y - 18, 24, 0, Math.PI * 2); ctx.stroke();
     }
     ctx.globalCompositeOperation = 'source-over';
+    if (drawPrimalAnim(ctx, this)) { ctx.restore(); this.renderHealth(ctx); return; } /* the animated stage sheets (primal_anim.js); the kit / placeholders below while they load */
     if (this.archetype === 'dragon' && this.renderDragon(ctx)) { ctx.restore(); this.renderHealth(ctx); return; }
     if (this.archetype !== 'dragon' && this.renderBody(ctx)) { ctx.restore(); this.renderHealth(ctx); return; }
     // Ridden, a ground Primal swells to riding size (the rider sits on its back).

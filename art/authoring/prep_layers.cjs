@@ -7,11 +7,12 @@ const fs = require('fs'); const path = require('path'); const cp = require('chil
 const [src, outDir, name, headArg] = process.argv.slice(2); const HEAD = Number(headArg ?? 58);
 const ROOT = path.resolve(__dirname, '../..'); const BODY = path.join(ROOT, 'art_source/body/body_184.png');
 const N = 184; fs.mkdirSync(outDir, { recursive: true });
+const FACE = [49, 63]; /* rows of the body's face (brows to chin) at 184 px */
 const raw = (file, filter) => cp.execFileSync('magick', [file, ...(filter ? ['-filter', filter, '-resize', `${N}x${N}!`] : []), '-alpha', 'on', '-depth', '8', 'rgba:-'], { maxBuffer: 1 << 26 });
 const { readRaw, snap, mergePalette } = require('./pixel_snap.cjs');
 const B = raw(BODY); const R = snap(readRaw(src), N); /* pixel-perfect: each cell's dominant colour (the user's Pixel Snapper step) */
 const dist = (a, i, b, j) => Math.abs(a[i] - b[j]) + Math.abs(a[i + 1] - b[j + 1]) + Math.abs(a[i + 2] - b[j + 2]);
-const isGreen = (a, i) => (a[i + 1] > 150 && a[i] < 110 && a[i + 2] < 110 && a[i + 1] - Math.max(a[i], a[i + 2]) > 70) || (a[i + 1] > 80 && a[i + 1] - Math.max(a[i], a[i + 2]) > 40); /* the key green and its blends with the outline */
+const isGreen = (a, i) => a[i + 3] < 128 || (a[i + 1] > 150 && a[i] < 110 && a[i + 2] < 110 && a[i + 1] - Math.max(a[i], a[i + 2]) > 70) || (a[i + 1] > 80 && a[i + 1] - Math.max(a[i], a[i + 2]) > 40); /* the key green and its blends with the outline */
 // best shift: the body's outline should sit where the dressed figure's is (the AI may nudge the figure a few pixels)
 let best = { dx: 0, dy: 0, s: Infinity };
 for (let dy = -4; dy <= 4; dy++) for (let dx = -4; dx <= 4; dx++) {
@@ -27,7 +28,8 @@ const L = Buffer.alloc(N * N * 4); let count = 0;
 for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
   const sx = x + best.dx, sy = y + best.dy; const o = (y * N + x) * 4; if (sx < 0 || sy < 0 || sx >= N || sy >= N) continue;
   const ri = (sy * N + sx) * 4; if (isGreen(R, ri)) continue;
-  const bodyHere = !isGreen(B, o); const skin = (a, i) => a[i] > a[i + 1] && a[i + 1] > a[i + 2] && a[i] - a[i + 2] > 50 && a[i] > 90; if (bodyHere && dist(B, o, R, ri) < (y < HEAD ? 150 : 90)) continue; /* the body shows through unchanged (the face more strictly) */ if (bodyHere && y < HEAD && skin(B, o) && skin(R, ri)) continue; /* the AI's retouched face: keep the body's own */
+  const bodyHere = !isGreen(B, o); const skin = (a, i) => a[i] > a[i + 1] && a[i + 1] > a[i + 2] && a[i] - a[i + 2] > 50 && a[i] > 90; const face = y >= FACE[0] && y <= FACE[1];
+  if (bodyHere && dist(B, o, R, ri) < (face ? 150 : 90)) continue; /* the body shows through unchanged (the face more strictly) */ if (bodyHere && face && skin(B, o) && skin(R, ri)) continue; /* the AI's retouched face: keep the body's own (only brows to chin — blond hair on the scalp is not skin) */
   L[o] = R[ri]; L[o + 1] = R[ri + 1]; L[o + 2] = R[ri + 2]; L[o + 3] = 255; count++;
 }
 // drop lone pixels (resampling noise along the outline)

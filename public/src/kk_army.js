@@ -57,7 +57,7 @@ function renderDino(ctx, u) {
     const im = dinoImage(u.rec.dino); if (!im || !(im.naturalWidth || im.width) || !im.complete) return false;
     const w = h * (im.naturalWidth || im.width) / (im.naturalHeight || im.height); const bob = Math.sin((u.animTime ?? 0) * (u.state === 'run' ? 9 : 2.5)) * (u.state === 'run' ? 3 : 1.5); const lunge = u.state === 'attack' ? 10 : 0;
     ctx.save(); ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.beginPath(); ctx.ellipse(u.x, u.y + 2, w * .36, 9, 0, 0, Math.PI * 2); ctx.fill();
-    if (u.hitFlash > 0) ctx.globalAlpha = .7; ctx.translate(u.x + f * lunge, u.y + bob); if (f > 0) ctx.scale(-1, 1); ctx.imageSmoothingEnabled = true; ctx.drawImage(im, -w / 2, -h, w, h); ctx.restore();
+    if (u.hitFlash > 0) ctx.globalAlpha = .7; ctx.translate(u.x + f * lunge, u.y + bob); if (f > 0) ctx.scale(-1, 1); ctx.imageSmoothingEnabled = false; /* hard pixels */ ctx.drawImage(im, -w / 2, -h, w, h); ctx.restore();
   }
   const by = u.y - h - 12; ctx.fillStyle = 'rgba(0,0,0,.7)'; ctx.fillRect(Math.round(u.x - 36), Math.round(by), 72, 6); ctx.fillStyle = u.team === 'blue' ? '#7bd66b' : '#ff5050'; ctx.fillRect(Math.round(u.x - 35), Math.round(by + 1), 70 * Math.max(0, u.hp / u.maxHp), 4);
   ctx.font = 'bold 10px monospace'; ctx.textAlign = 'center'; ctx.fillStyle = elementColor(u.rec.dino); ctx.fillText(u.rec.name ?? dinoName(u.rec.dino), u.x, by - 4); return true;
