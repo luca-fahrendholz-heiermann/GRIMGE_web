@@ -11,7 +11,7 @@ const { snapAuto, mergePalette } = require('./pixel_snap.cjs');
 const [mode, sheet, framesArg, a3, a4, a5] = process.argv.slice(2);
 const meta = (() => { const [W, H] = cp.execFileSync('magick', [sheet, '-format', '%w %h', 'info:']).toString().split(' ').map(Number); return { W, H }; })();
 const raw = cp.execFileSync('magick', [sheet, '-alpha', 'on', '-depth', '8', 'rgba:-'], { maxBuffer: 1 << 26 });
-const N = /^\d+$/.test(framesArg) ? Number(framesArg) : null; const count = N ?? framesArg.split(',').length;
+const N = /^\d+$/.test(framesArg) ? Number(framesArg) : null;
 const nFrames = Number(process.env.FRAMES ?? 8); const fw = meta.W / nFrames, fh = meta.H; const picks = N ? [...Array(N).keys()] : framesArg.split(',').map(Number);
 const CELL = 341; const S = Math.min((CELL - 8) / fw, (CELL - 8) / fh); /* one scale for all cells */
 function frame(k) { const b = Buffer.alloc(fw * fh * 4); for (let y = 0; y < fh; y++) raw.copy(b, y * fw * 4, (y * meta.W + k * fw) * 4, (y * meta.W + (k + 1) * fw) * 4); return b; }
