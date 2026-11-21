@@ -134,3 +134,6 @@ Der Nutzer hat selbst Guthaben gekauft (Plan `starter`, Stand vor dem Auftrag 27
 - Der Body liegt nativ in 184×184 vor. Die 1024er Fassung lässt sich mit dem Filter `point` verlustfrei zurückrechnen (0 abweichende Pixel).
 - `art/authoring/prep_layers.cjs` schneidet daraus die Ebenen Outfit und Haare. Die Figur wird aus dem unveränderten Body plus den Ebenen zusammengesetzt.
 - Body und Ergebnisse liegen in `art_source/body/` und werden nicht committet.
+| 8 eigene Klassen-Stile (Anime / altes Japan) auf dem Referenz-Body: Guardian (Samurai-Lamellenrüstung), Berserker (Oni-Brecher), Lancer (Weißer Kranich), Monk (Bergasket), Beastborn (Wolfsgeist-Jäger), Shadow (Nacht-Shinobi), Ranger (Reiterbogenschütze), Arcanist (Runen-Exorzist) | `gpt_image_2_6` | 8 | 10 |
+
+**Kontostand danach: 232,25 Credits.** Alle 8 sind mit `prep_layers.cjs` in Outfit- und Haar-Ebenen zerlegt (`art_source/body/layers/`).
