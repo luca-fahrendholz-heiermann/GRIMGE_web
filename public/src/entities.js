@@ -1142,7 +1142,7 @@ export class Player extends GroundEntity {
     }
     if (this.chargeDir === 'hold') { if (this.isAlive) this.state = 'idle'; return this.isAlive ? this.holdAttack(chargeRatio) : false; }
     // Ground charge-down = the weapon-specific buff / debuff (no generic move without a weapon).
-    if (this.chargeDir === 'down') { this.state = 'idle'; return this.isAlive && chargeRatio >= .05 ? castWeaponDown(this, window.gameWorld, spells) : false; }
+    if (this.chargeDir === 'down') { this.state = 'idle'; if (this.isAlive && chargeRatio >= .05) this._plungeUntil = this.animTime + .7; /* shows the ground-plunge clip */ return this.isAlive && chargeRatio >= .05 ? castWeaponDown(this, window.gameWorld, spells) : false; }
     if (!this.isAlive || chargeRatio < 0.05) return false;
     // Masteries: the shield / stored reaction becomes the force of this charged hit.
     if (chargeRatio > .25) masteryChargedRelease(this);
@@ -2374,6 +2374,8 @@ export class Player extends GroundEntity {
       if (this.isMounted && (this.state === 'idle' || this.state === 'run') && clipFr?.ride) animState = this.mountedSummon.definition?.flying && clipFr.rideFly ? 'rideFly' : this.state === 'run' && clipFr.rideRun ? 'rideRun' : 'ride';
       else if (this.kkSwim && (this.state === 'idle' || this.state === 'run') && clipFr) animState = this.state === 'run' ? (clipFr.swim ? 'swim' : clipFr.fly ? 'fly' : animState) : (clipFr.swimIdle ? 'swimIdle' : clipFr.hover ? 'hover' : animState); /* underwater: swim clips (until they exist: the flight clips) */
       else if (this.kkFlying && free && clipFr?.fly) animState = Math.abs(this.vx ?? 0) + Math.abs((this.vz ?? 0) * 150) > 60 ? 'fly' : 'hover';
+      else if (this.state === 'heavyStrike' && this.sprintStrike && clipFr?.['arm:runAttack']) animState = 'runAttack'; /* the running attack (traced weapon clip) */
+      else if ((this._plungeUntil ?? -1) > this.animTime && clipFr?.['arm:plunge']) animState = 'plunge'; /* charge down: the weapon rammed into the ground */
       else if (this.summonPoseT > 0 && this.grounded && !this.isGuarding && this.state === 'idle' && Math.abs(this.vx ?? 0) < 25 && !drawingNow) animState = 'summon';
       else if (drawingNow && free) animState = 'draw';
       else if (this.isGuarding) animState = 'guard';
@@ -2435,7 +2437,7 @@ export class Player extends GroundEntity {
     if (rigged) {
       const f = this.facing || 1;
       const toHand = (pl, h) => { if (!h) return null; const lx = h.x - pl.frame.anchorX; const ly = h.y - pl.frame.anchorY; const c = Math.cos(pl.rot); const s = Math.sin(pl.rot); const wx = pl.x + pl.kx * (lx * c - ly * s); const wy = pl.y + pl.ky * (lx * s + ly * c); return { x: (wx - this.x) * f, y: wy - renderY }; };
-      sprites.renderEntity(ctx, this.renderKey, this.x, renderY, { ...renderOpts, onPlace: (pl) => { const front = toHand(pl, pl.frame.hand); const rear = toHand(pl, pl.frame.handBack); this._rigHands = front && rear ? { front, rear } : null; } });
+      sprites.renderEntity(ctx, this.renderKey, this.x, renderY, { ...renderOpts, onPlace: (pl) => { const front = toHand(pl, pl.frame.hand); const rear = toHand(pl, pl.frame.handBack); this._rigHands = front && rear ? { front, rear } : null; this._rigWeapon = pl.frame.wAngle != null ? { angle: pl.frame.wAngle, swordBack: !!pl.frame.swordBack, shieldBack: !!pl.frame.shieldBack } : null; /* traced weapon clips (weapon_track.cjs): blade angle + layering per frame */ } });
     } else { this._rigHands = null; sprites.renderEntity(ctx, this.renderKey, this.x, renderY, renderOpts); }
     // A stance may turn the body itself into its element (breathing: ice, flame skin, rock …) — over the own sprite.
     if (this.isAlive && !rolled && this.signature?.impl?.stance?.bodyOverlay) this.signature.impl.stance.bodyOverlay(ctx, this, this.signature, renderY, (c, x, y) => sprites.renderEntity(c, this.renderKey, x, y, renderOpts));

@@ -436,6 +436,13 @@ export function drawHeldWeapon(ctx, player, renderY, layer = 'front') {
   } else {
     items.push({ hand: 'front', piece: pieces.main, angle: pose ? pose.angle : cfg.idle, reach: pose?.reach ?? 0, active: !!pose });
   }
+  // Traced weapon clips (user, 21 Nov 2026 — weapon_track.cjs on the base character's sword clips): the frame says the
+  // blade's angle and whether sword / shield are in front of the body or hidden behind it; guarding keeps its own pose.
+  const rw = player._rigWeapon;
+  if (rw && !guarding) for (const item of items) {
+    if (item.piece === 'shield') { if (!pose?.shieldReach) item.layerOverride = rw.shieldBack ? 'back' : 'front'; continue; }
+    if (item.hand === 'front') { item.angle = rw.angle; item.active = true; item.layerOverride = rw.swordBack ? 'back' : 'front'; }
+  }
   for (const item of items) {
     const itemLayer = item.layerOverride ?? (item.hand === 'rear' ? 'back' : 'front');
     if (itemLayer !== layer) continue;

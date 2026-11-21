@@ -5,6 +5,18 @@ import { RIGS, bakeClips } from './rig.js';
 import { BASE_CLIPS, CLIP_ALIASES } from './rig_clips.js';
 import { applyLook, isDefaultLook, lookId } from './character_look.js';
 import { HEAD_ANCHORS } from './head_anchors.js'; // where hair / beard / face / eyes sit in every base-clip frame
+import { WEAPON_FRAMES } from './weapon_frames.js'; // traced weapon clips: grip, blade angle, shield anchor, front/back per frame
+// The base character's weapon clips (user, 21 Nov 2026: attack 1–3, finisher, charge forward / up / down, charge, running
+// and air attack — generated with placeholder markers, traced by art/authoring/weapon_track.cjs). Armed states
+// ('arm:<state>'): the class weapon is drawn at the traced grip with the traced angle, in front of / behind the body.
+const WEAPON_CLIP_STATES = Object.freeze({
+  w_attack1: { states: ['attack1'], holds: [2, 2, 3, 3, 3, 3, 2, 2] }, w_attack2: { states: ['attack2'], holds: [2, 2, 3, 3, 3, 3, 3, 3] },
+  w_finisher: { states: ['attack3'], holds: [3, 3, 3, 3, 4, 4, 4, 5] }, w_attack3: { states: ['attack'], holds: [3, 3, 4, 3, 3, 3, 3, 3] },
+  w_charge_fwd: { states: ['heavyStrike'], holds: [3, 3, 3, 3, 4, 4, 4, 4] }, w_charge_up: { states: ['uppercut'], holds: [3, 3, 3, 4, 4, 3, 3, 3] },
+  w_charge_down: { states: ['plunge'], holds: [3, 3, 3, 3, 4, 6, 6, 6] }, w_charge: { states: ['charge'], hold: 6, loop: true },
+  w_run_attack: { states: ['runAttack'], holds: [3, 3, 3, 3, 3, 4, 4, 4] }, w_air_attack: { states: ['dive'], holds: [2, 2, 3, 3, 3, 3, 3, 3] }
+});
+const weaponClips = () => Object.entries(WEAPON_CLIP_STATES).filter(([id]) => WEAPON_FRAMES[id]).map(([id, u]) => { const m = WEAPON_FRAMES[id]; return { sheet: `sheets/base_${id}.png`, frames: m.frames.length, w: m.fw, h: m.fh, anchorX: m.anchorX, anchorY: m.anchorY, use: [{ ...u, armed: true, wmeta: id }] }; });
 
 // The white hit-flash and red hurt copies of a frame are made on first use (user report, 14 Nov 2026: an iPhone kept
 // reloading the game into the hub — Safari drops a page whose canvases take too much memory). Every frame used to
@@ -72,6 +84,7 @@ export class SpriteManager {
         { sheet: 'sheets/base_ride.png', frames: 8, w: 62, h: 122, anchorX: 30, anchorY: 80, use: [{ states: ['ride'], hold: 8, loop: true }] },
         { sheet: 'sheets/base_ride_run.png', frames: 8, w: 86, h: 125, anchorX: 37, anchorY: 80, use: [{ states: ['rideRun'], hold: 4, loop: true }] },
         { sheet: 'sheets/base_ride_fly.png', frames: 8, w: 105, h: 101, anchorX: 55, anchorY: 64, use: [{ states: ['rideFly'], hold: 6, loop: true }] },
+        ...weaponClips(),
         { sheet: 'sheets/base_orb_throw.png', frames: 8, w: 127, h: 135, anchorX: 69, anchorY: 133, use: [{ states: ['throw'], holds: [3, 3, 3, 3, 4, 4, 4, 3] }] },
         { sheet: 'sheets/base_palm_blast.png', frames: 8, w: 96, h: 118, anchorX: 48, anchorY: 115, use: [{ states: ['blast'], holds: [3, 3, 3, 4, 6, 6, 6, 6] }, { states: ['beam'], idx: [4, 5, 6, 7], hold: 4, loop: true }] } /* open palm forward: an energy ball or a beam leaves the hand (VFX) */
       ] },
@@ -238,6 +251,7 @@ export class SpriteManager {
         for (const u of c.use ?? [c]) {
           let list = u.idx ? u.idx.map((k) => frames[k]) : frames;
           if (u.hands) list = list.map((f, k) => { const h = u.hands[k]; return h ? { ...f, hand: { x: h[0], y: h[1] }, handBack: { x: h[2], y: h[3] } } : f; });
+          if (u.wmeta && WEAPON_FRAMES[u.wmeta]) list = list.map((f, j) => { const w = WEAPON_FRAMES[u.wmeta].frames[u.idx ? u.idx[j] : j]; return w ? { ...f, hand: { x: w[0], y: w[1] }, handBack: { x: w[4], y: w[5] }, wAngle: w[2], swordBack: !!w[3], shieldBack: !!w[6] } : f; }); /* traced grip / shield anchor / blade angle / layering */
           for (const name of u.states) {
             const st = u.armed ? `arm:${name}` : name;
             if (spr.frames[st] && spr.rigBaked) { spr.frames[`rig:${st}`] = spr.frames[st]; spr.loop[`rig:${st}`] = spr.loop[st]; spr.hold[`rig:${st}`] = spr.hold[st]; if (spr.holdSeq[st]) spr.holdSeq[`rig:${st}`] = spr.holdSeq[st]; }
@@ -758,7 +772,8 @@ export class SpriteManager {
     return {
       canvas: (hitFlash > 0) ? (f.flashCanvas ?? f.canvas) : f.canvas,
       width: f.width, height: f.height,
-      anchorX: f.anchorX, anchorY: f.anchorY, baseHeight: f.baseHeight, hand: f.hand, handBack: f.handBack, sheet: f.sheet, k: f.k
+      anchorX: f.anchorX, anchorY: f.anchorY, baseHeight: f.baseHeight, hand: f.hand, handBack: f.handBack, sheet: f.sheet, k: f.k,
+      wAngle: f.wAngle, swordBack: f.swordBack, shieldBack: f.shieldBack
     };
   }
 
@@ -786,7 +801,7 @@ export class SpriteManager {
     } = opt;
 
     const frame = this.resolveFrame(spr, state, animTime, hitFlash, { cadence, reverse });
-    if (opt.outfit && frame.sheet && !hitFlash) { const o = this.outfitCanvas(frame, opt.outfit); if (o) { frame.canvas = o.canvas; frame.width += 2 * o.pad; frame.height += 2 * o.pad; frame.anchorX += o.pad; frame.anchorY += o.pad; } } /* the modular character: base frame + the class outfit's layer for this exact frame (+ its dye) + the head layers (margin for hair) */
+    if (opt.outfit && frame.sheet && !hitFlash) { const o = this.outfitCanvas(frame, opt.outfit); if (o) { frame.canvas = o.canvas; frame.width += 2 * o.pad; frame.height += 2 * o.pad; frame.anchorX += o.pad; frame.anchorY += o.pad; if (o.pad) { if (frame.hand) frame.hand = { x: frame.hand.x + o.pad, y: frame.hand.y + o.pad }; if (frame.handBack) frame.handBack = { x: frame.handBack.x + o.pad, y: frame.handBack.y + o.pad }; } } } /* hand points move with the margin */ /* the modular character: base frame + the class outfit's layer for this exact frame (+ its dye) + the head layers (margin for hair) */
     if (tint && !hitFlash) frame.canvas = this.tintedCanvas(frame.canvas, tint);
     // Armour transformations recolour the frame's own pixels (cached per frame), then contour detail on top.
     if (maskPaint?.recolor && !hitFlash && !tint) frame.canvas = this.recoloredCanvas(frame.canvas, maskPaint.recolor);

@@ -19,7 +19,8 @@ const bbox = (img) => { let x0 = 1e9, y0 = 1e9, x1 = -1, y1 = -1; for (let y = 0
 // the body's palette (+ the shorts' dark ramp)
 const B = cp.execFileSync('magick', [BODY, '-depth', '8', 'rgba:-']); const pal = new Map();
 for (let i = 0; i < B.length; i += 4) { const g = B[i + 1] > 150 && B[i] < 110 && B[i + 2] < 110; if (!g) pal.set((B[i] << 16) | (B[i + 1] << 8) | B[i + 2], [B[i], B[i + 1], B[i + 2]]); }
-const PAL = [...pal.values(), [26, 26, 31], [44, 44, 51], [68, 68, 77]];
+// MARKERS=1: weapon clips — keep the placeholder colours (magenta sword rod, cyan shield patch; art/authoring/weapon_track.cjs)
+const PAL = [...pal.values(), [26, 26, 31], [44, 44, 51], [68, 68, 77], ...(process.env.MARKERS ? [[255, 0, 255], [0, 255, 255]] : [])];
 const nearest = (r, g, b) => { let best = PAL[0], d0 = 1e9; for (const p of PAL) { const d = (p[0] - r) ** 2 * 3 + (p[1] - g) ** 2 * 4 + (p[2] - b) ** 2 * 2; if (d < d0) { d0 = d; best = p; } } return best; };
 const raw0 = readRaw(path.join(tmp, files[0])); const b0 = bbox(raw0); const cell = CELL ? Number(CELL) : (b0.y1 - b0.y0 + 1) / H;
 const frames = files.map((f) => { const r = snapAuto(readRaw(path.join(tmp, f)), { cell }); for (let i = 0; i < r.buf.length; i += 4) if (r.buf[i + 3]) { const p = nearest(r.buf[i], r.buf[i + 1], r.buf[i + 2]); r.buf[i] = p[0]; r.buf[i + 1] = p[1]; r.buf[i + 2] = p[2]; } return r; });
