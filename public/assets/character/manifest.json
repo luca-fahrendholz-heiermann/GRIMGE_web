@@ -1,0 +1,647 @@
+{
+ "grid": {
+  "size": 184,
+  "bodyHeight": 116,
+  "note": "every layer is 184×184 on the reference body grid; compose in order body, outfit, beard, face, hair, eyes"
+ },
+ "body": "body/body.png",
+ "classes": {
+  "guardian": {
+   "skins": [
+    {
+     "id": "gritty_tinted",
+     "label": "Klassenfarben",
+     "file": "outfit/guardian_gritty_tinted.png"
+    },
+    {
+     "id": "gritty",
+     "label": "Knochen & Fell",
+     "file": "outfit/guardian_gritty.png"
+    },
+    {
+     "id": "anime",
+     "label": "Altes Japan",
+     "file": "outfit/guardian_anime.png"
+    },
+    {
+     "id": "retro",
+     "label": "Retro",
+     "file": "outfit/guardian_retro.png"
+    },
+    {
+     "id": "rune_knight",
+     "label": "Runenritter",
+     "file": "outfit/guardian_rune_knight.png"
+    },
+    {
+     "id": "dark_samurai",
+     "label": "Dunkler Samurai",
+     "file": "outfit/guardian_dark_samurai.png"
+    }
+   ],
+   "defaultSkin": "gritty_tinted",
+   "defaultHair": "guardian"
+  },
+  "berserker": {
+   "skins": [
+    {
+     "id": "gritty_tinted",
+     "label": "Klassenfarben",
+     "file": "outfit/berserker_gritty_tinted.png"
+    },
+    {
+     "id": "gritty",
+     "label": "Knochen & Fell",
+     "file": "outfit/berserker_gritty.png"
+    },
+    {
+     "id": "anime",
+     "label": "Altes Japan",
+     "file": "outfit/berserker_anime.png"
+    },
+    {
+     "id": "retro",
+     "label": "Retro",
+     "file": "outfit/berserker_retro.png"
+    },
+    {
+     "id": "stormarm",
+     "label": "Sturmarm",
+     "file": "outfit/berserker_stormarm.png"
+    },
+    {
+     "id": "oni_monk",
+     "label": "Oni-Kämpfer",
+     "file": "outfit/berserker_oni_monk.png"
+    }
+   ],
+   "defaultSkin": "gritty_tinted",
+   "defaultHair": "berserker"
+  },
+  "lancer": {
+   "skins": [
+    {
+     "id": "gritty_tinted",
+     "label": "Klassenfarben",
+     "file": "outfit/lancer_gritty_tinted.png"
+    },
+    {
+     "id": "gritty",
+     "label": "Knochen & Fell",
+     "file": "outfit/lancer_gritty.png"
+    },
+    {
+     "id": "anime",
+     "label": "Altes Japan",
+     "file": "outfit/lancer_anime.png"
+    },
+    {
+     "id": "retro",
+     "label": "Retro",
+     "file": "outfit/lancer_retro.png"
+    },
+    {
+     "id": "ronin",
+     "label": "Ronin",
+     "file": "outfit/lancer_ronin.png"
+    }
+   ],
+   "defaultSkin": "gritty_tinted",
+   "defaultHair": "lancer"
+  },
+  "monk": {
+   "skins": [
+    {
+     "id": "gritty_tinted",
+     "label": "Klassenfarben",
+     "file": "outfit/monk_gritty_tinted.png"
+    },
+    {
+     "id": "gritty",
+     "label": "Knochen & Fell",
+     "file": "outfit/monk_gritty.png"
+    },
+    {
+     "id": "anime",
+     "label": "Altes Japan",
+     "file": "outfit/monk_anime.png"
+    },
+    {
+     "id": "retro",
+     "label": "Retro",
+     "file": "outfit/monk_retro.png"
+    },
+    {
+     "id": "white_monk",
+     "label": "Weißer Mönch",
+     "file": "outfit/monk_white_monk.png"
+    }
+   ],
+   "defaultSkin": "gritty_tinted",
+   "defaultHair": "monk"
+  },
+  "beastborn": {
+   "skins": [
+    {
+     "id": "signature",
+     "label": "Klassen-Design",
+     "file": "outfit/beastborn_signature.png"
+    },
+    {
+     "id": "gritty_tinted",
+     "label": "Klassenfarben",
+     "file": "outfit/beastborn_gritty_tinted.png"
+    },
+    {
+     "id": "gritty",
+     "label": "Knochen & Fell",
+     "file": "outfit/beastborn_gritty.png"
+    },
+    {
+     "id": "anime",
+     "label": "Altes Japan",
+     "file": "outfit/beastborn_anime.png"
+    },
+    {
+     "id": "retro",
+     "label": "Retro",
+     "file": "outfit/beastborn_retro.png"
+    },
+    {
+     "id": "retro_signature",
+     "label": "Retro Klassen-Design",
+     "file": "outfit/beastborn_retro_signature.png"
+    },
+    {
+     "id": "leather",
+     "label": "Lederjäger",
+     "file": "outfit/beastborn_leather.png"
+    }
+   ],
+   "defaultSkin": "signature",
+   "defaultHair": "beastborn"
+  },
+  "shadow": {
+   "skins": [
+    {
+     "id": "gritty",
+     "label": "Knochen & Fell",
+     "file": "outfit/shadow_gritty.png"
+    },
+    {
+     "id": "anime",
+     "label": "Altes Japan",
+     "file": "outfit/shadow_anime.png"
+    },
+    {
+     "id": "retro",
+     "label": "Retro",
+     "file": "outfit/shadow_retro.png"
+    },
+    {
+     "id": "astral_hood",
+     "label": "Astral (Kapuze)",
+     "file": "outfit/shadow_astral_hood.png"
+    },
+    {
+     "id": "astral",
+     "label": "Astral",
+     "file": "outfit/shadow_astral.png"
+    }
+   ],
+   "defaultSkin": "gritty",
+   "defaultHair": "shadow"
+  },
+  "ranger": {
+   "skins": [
+    {
+     "id": "signature",
+     "label": "Klassen-Design",
+     "file": "outfit/ranger_signature.png"
+    },
+    {
+     "id": "gritty_tinted",
+     "label": "Klassenfarben",
+     "file": "outfit/ranger_gritty_tinted.png"
+    },
+    {
+     "id": "gritty",
+     "label": "Knochen & Fell",
+     "file": "outfit/ranger_gritty.png"
+    },
+    {
+     "id": "anime",
+     "label": "Altes Japan",
+     "file": "outfit/ranger_anime.png"
+    },
+    {
+     "id": "retro",
+     "label": "Retro",
+     "file": "outfit/ranger_retro.png"
+    },
+    {
+     "id": "retro_signature",
+     "label": "Retro Klassen-Design",
+     "file": "outfit/ranger_retro_signature.png"
+    },
+    {
+     "id": "wanderer",
+     "label": "Wanderer",
+     "file": "outfit/ranger_wanderer.png"
+    }
+   ],
+   "defaultSkin": "signature",
+   "defaultHair": "ranger"
+  },
+  "arcanist": {
+   "skins": [
+    {
+     "id": "gritty",
+     "label": "Knochen & Fell",
+     "file": "outfit/arcanist_gritty.png"
+    },
+    {
+     "id": "anime",
+     "label": "Altes Japan",
+     "file": "outfit/arcanist_anime.png"
+    },
+    {
+     "id": "retro",
+     "label": "Retro",
+     "file": "outfit/arcanist_retro.png"
+    },
+    {
+     "id": "runescribe",
+     "label": "Runenschreiber",
+     "file": "outfit/arcanist_runescribe.png"
+    },
+    {
+     "id": "crimson_robe",
+     "label": "Karmesin-Robe",
+     "file": "outfit/arcanist_crimson_robe.png"
+    }
+   ],
+   "defaultSkin": "gritty",
+   "defaultHair": "arcanist"
+  }
+ },
+ "hair": {
+  "arcanist": {
+   "file": "hair/arcanist.png",
+   "transformations": {
+    "guardian": "hair/arcanist_guardian.png",
+    "berserker": "hair/arcanist_berserker.png",
+    "lancer": "hair/arcanist_lancer.png",
+    "monk": "hair/arcanist_monk.png",
+    "beastborn": "hair/arcanist_beastborn.png",
+    "shadow": "hair/arcanist_shadow.png",
+    "ranger": "hair/arcanist_ranger.png",
+    "arcanist": "hair/arcanist_arcanist.png"
+   }
+  },
+  "astral": {
+   "file": "hair/astral.png",
+   "transformations": {
+    "guardian": "hair/astral_guardian.png",
+    "berserker": "hair/astral_berserker.png",
+    "lancer": "hair/astral_lancer.png",
+    "monk": "hair/astral_monk.png",
+    "beastborn": "hair/astral_beastborn.png",
+    "shadow": "hair/astral_shadow.png",
+    "ranger": "hair/astral_ranger.png",
+    "arcanist": "hair/astral_arcanist.png"
+   }
+  },
+  "astral_hood": {
+   "file": "hair/astral_hood.png",
+   "transformations": {
+    "guardian": "hair/astral_hood_guardian.png",
+    "berserker": "hair/astral_hood_berserker.png",
+    "lancer": "hair/astral_hood_lancer.png",
+    "monk": "hair/astral_hood_monk.png",
+    "beastborn": "hair/astral_hood_beastborn.png",
+    "shadow": "hair/astral_hood_shadow.png",
+    "ranger": "hair/astral_hood_ranger.png",
+    "arcanist": "hair/astral_hood_arcanist.png"
+   }
+  },
+  "beastborn": {
+   "file": "hair/beastborn.png",
+   "transformations": {
+    "guardian": "hair/beastborn_guardian.png",
+    "berserker": "hair/beastborn_berserker.png",
+    "lancer": "hair/beastborn_lancer.png",
+    "monk": "hair/beastborn_monk.png",
+    "beastborn": "hair/beastborn_beastborn.png",
+    "shadow": "hair/beastborn_shadow.png",
+    "ranger": "hair/beastborn_ranger.png",
+    "arcanist": "hair/beastborn_arcanist.png"
+   }
+  },
+  "berserker": {
+   "file": "hair/berserker.png",
+   "transformations": {
+    "guardian": "hair/berserker_guardian.png",
+    "berserker": "hair/berserker_berserker.png",
+    "lancer": "hair/berserker_lancer.png",
+    "monk": "hair/berserker_monk.png",
+    "beastborn": "hair/berserker_beastborn.png",
+    "shadow": "hair/berserker_shadow.png",
+    "ranger": "hair/berserker_ranger.png",
+    "arcanist": "hair/berserker_arcanist.png"
+   }
+  },
+  "crimson_robe": {
+   "file": "hair/crimson_robe.png",
+   "transformations": {
+    "guardian": "hair/crimson_robe_guardian.png",
+    "berserker": "hair/crimson_robe_berserker.png",
+    "lancer": "hair/crimson_robe_lancer.png",
+    "monk": "hair/crimson_robe_monk.png",
+    "beastborn": "hair/crimson_robe_beastborn.png",
+    "shadow": "hair/crimson_robe_shadow.png",
+    "ranger": "hair/crimson_robe_ranger.png",
+    "arcanist": "hair/crimson_robe_arcanist.png"
+   }
+  },
+  "dark_samurai": {
+   "file": "hair/dark_samurai.png",
+   "transformations": {
+    "guardian": "hair/dark_samurai_guardian.png",
+    "berserker": "hair/dark_samurai_berserker.png",
+    "lancer": "hair/dark_samurai_lancer.png",
+    "monk": "hair/dark_samurai_monk.png",
+    "beastborn": "hair/dark_samurai_beastborn.png",
+    "shadow": "hair/dark_samurai_shadow.png",
+    "ranger": "hair/dark_samurai_ranger.png",
+    "arcanist": "hair/dark_samurai_arcanist.png"
+   }
+  },
+  "guardian": {
+   "file": "hair/guardian.png",
+   "transformations": {
+    "guardian": "hair/guardian_guardian.png",
+    "berserker": "hair/guardian_berserker.png",
+    "lancer": "hair/guardian_lancer.png",
+    "monk": "hair/guardian_monk.png",
+    "beastborn": "hair/guardian_beastborn.png",
+    "shadow": "hair/guardian_shadow.png",
+    "ranger": "hair/guardian_ranger.png",
+    "arcanist": "hair/guardian_arcanist.png"
+   }
+  },
+  "lancer": {
+   "file": "hair/lancer.png",
+   "transformations": {
+    "guardian": "hair/lancer_guardian.png",
+    "berserker": "hair/lancer_berserker.png",
+    "lancer": "hair/lancer_lancer.png",
+    "monk": "hair/lancer_monk.png",
+    "beastborn": "hair/lancer_beastborn.png",
+    "shadow": "hair/lancer_shadow.png",
+    "ranger": "hair/lancer_ranger.png",
+    "arcanist": "hair/lancer_arcanist.png"
+   }
+  },
+  "leather": {
+   "file": "hair/leather.png",
+   "transformations": {
+    "guardian": "hair/leather_guardian.png",
+    "berserker": "hair/leather_berserker.png",
+    "lancer": "hair/leather_lancer.png",
+    "monk": "hair/leather_monk.png",
+    "beastborn": "hair/leather_beastborn.png",
+    "shadow": "hair/leather_shadow.png",
+    "ranger": "hair/leather_ranger.png",
+    "arcanist": "hair/leather_arcanist.png"
+   }
+  },
+  "monk": {
+   "file": "hair/monk.png",
+   "transformations": {
+    "guardian": "hair/monk_guardian.png",
+    "berserker": "hair/monk_berserker.png",
+    "lancer": "hair/monk_lancer.png",
+    "monk": "hair/monk_monk.png",
+    "beastborn": "hair/monk_beastborn.png",
+    "shadow": "hair/monk_shadow.png",
+    "ranger": "hair/monk_ranger.png",
+    "arcanist": "hair/monk_arcanist.png"
+   }
+  },
+  "oni_monk": {
+   "file": "hair/oni_monk.png",
+   "transformations": {
+    "guardian": "hair/oni_monk_guardian.png",
+    "berserker": "hair/oni_monk_berserker.png",
+    "lancer": "hair/oni_monk_lancer.png",
+    "monk": "hair/oni_monk_monk.png",
+    "beastborn": "hair/oni_monk_beastborn.png",
+    "shadow": "hair/oni_monk_shadow.png",
+    "ranger": "hair/oni_monk_ranger.png",
+    "arcanist": "hair/oni_monk_arcanist.png"
+   }
+  },
+  "ranger": {
+   "file": "hair/ranger.png",
+   "transformations": {
+    "guardian": "hair/ranger_guardian.png",
+    "berserker": "hair/ranger_berserker.png",
+    "lancer": "hair/ranger_lancer.png",
+    "monk": "hair/ranger_monk.png",
+    "beastborn": "hair/ranger_beastborn.png",
+    "shadow": "hair/ranger_shadow.png",
+    "ranger": "hair/ranger_ranger.png",
+    "arcanist": "hair/ranger_arcanist.png"
+   }
+  },
+  "ronin": {
+   "file": "hair/ronin.png",
+   "transformations": {
+    "guardian": "hair/ronin_guardian.png",
+    "berserker": "hair/ronin_berserker.png",
+    "lancer": "hair/ronin_lancer.png",
+    "monk": "hair/ronin_monk.png",
+    "beastborn": "hair/ronin_beastborn.png",
+    "shadow": "hair/ronin_shadow.png",
+    "ranger": "hair/ronin_ranger.png",
+    "arcanist": "hair/ronin_arcanist.png"
+   }
+  },
+  "runescribe": {
+   "file": "hair/runescribe.png",
+   "transformations": {
+    "guardian": "hair/runescribe_guardian.png",
+    "berserker": "hair/runescribe_berserker.png",
+    "lancer": "hair/runescribe_lancer.png",
+    "monk": "hair/runescribe_monk.png",
+    "beastborn": "hair/runescribe_beastborn.png",
+    "shadow": "hair/runescribe_shadow.png",
+    "ranger": "hair/runescribe_ranger.png",
+    "arcanist": "hair/runescribe_arcanist.png"
+   }
+  },
+  "rune_knight": {
+   "file": "hair/rune_knight.png",
+   "transformations": {
+    "guardian": "hair/rune_knight_guardian.png",
+    "berserker": "hair/rune_knight_berserker.png",
+    "lancer": "hair/rune_knight_lancer.png",
+    "monk": "hair/rune_knight_monk.png",
+    "beastborn": "hair/rune_knight_beastborn.png",
+    "shadow": "hair/rune_knight_shadow.png",
+    "ranger": "hair/rune_knight_ranger.png",
+    "arcanist": "hair/rune_knight_arcanist.png"
+   }
+  },
+  "shadow": {
+   "file": "hair/shadow.png",
+   "transformations": {
+    "guardian": "hair/shadow_guardian.png",
+    "berserker": "hair/shadow_berserker.png",
+    "lancer": "hair/shadow_lancer.png",
+    "monk": "hair/shadow_monk.png",
+    "beastborn": "hair/shadow_beastborn.png",
+    "shadow": "hair/shadow_shadow.png",
+    "ranger": "hair/shadow_ranger.png",
+    "arcanist": "hair/shadow_arcanist.png"
+   }
+  },
+  "stormarm": {
+   "file": "hair/stormarm.png",
+   "transformations": {
+    "guardian": "hair/stormarm_guardian.png",
+    "berserker": "hair/stormarm_berserker.png",
+    "lancer": "hair/stormarm_lancer.png",
+    "monk": "hair/stormarm_monk.png",
+    "beastborn": "hair/stormarm_beastborn.png",
+    "shadow": "hair/stormarm_shadow.png",
+    "ranger": "hair/stormarm_ranger.png",
+    "arcanist": "hair/stormarm_arcanist.png"
+   }
+  },
+  "wanderer": {
+   "file": "hair/wanderer.png",
+   "transformations": {
+    "guardian": "hair/wanderer_guardian.png",
+    "berserker": "hair/wanderer_berserker.png",
+    "lancer": "hair/wanderer_lancer.png",
+    "monk": "hair/wanderer_monk.png",
+    "beastborn": "hair/wanderer_beastborn.png",
+    "shadow": "hair/wanderer_shadow.png",
+    "ranger": "hair/wanderer_ranger.png",
+    "arcanist": "hair/wanderer_arcanist.png"
+   }
+  },
+  "white_monk": {
+   "file": "hair/white_monk.png",
+   "transformations": {
+    "guardian": "hair/white_monk_guardian.png",
+    "berserker": "hair/white_monk_berserker.png",
+    "lancer": "hair/white_monk_lancer.png",
+    "monk": "hair/white_monk_monk.png",
+    "beastborn": "hair/white_monk_beastborn.png",
+    "shadow": "hair/white_monk_shadow.png",
+    "ranger": "hair/white_monk_ranger.png",
+    "arcanist": "hair/white_monk_arcanist.png"
+   }
+  }
+ },
+ "beard": {
+  "beard_braided": "beard/beard_braided.png",
+  "beard_full": "beard/beard_full.png",
+  "beard_goatee": "beard/beard_goatee.png",
+  "beard_mustache": "beard/beard_mustache.png",
+  "beard_sage": "beard/beard_sage.png",
+  "beard_stubble": "beard/beard_stubble.png"
+ },
+ "face": {
+  "face_earrings": "face/face_earrings.png",
+  "face_eyepatch": "face/face_eyepatch.png",
+  "face_mask": "face/face_mask.png",
+  "face_scar": "face/face_scar.png",
+  "face_tattoo": "face/face_tattoo.png"
+ },
+ "eyes": {},
+ "transformations": {
+  "guardian": {
+   "name": "Karmesin-Bastion",
+   "clothing": [
+    "transform/guardian_tf_gritty.png",
+    "transform/guardian_tf_anime.png"
+   ],
+   "eyes": "eyes/eyes_guardian.png"
+  },
+  "berserker": {
+   "name": "Oni-Erwachen",
+   "clothing": [
+    "transform/berserker_tf_anime.png"
+   ],
+   "eyes": "eyes/eyes_berserker.png"
+  },
+  "lancer": {
+   "name": "Himmelskranich",
+   "clothing": [
+    "transform/lancer_tf_gritty.png",
+    "transform/lancer_tf_anime.png"
+   ],
+   "eyes": "eyes/eyes_lancer.png"
+  },
+  "monk": {
+   "name": "Tausend Hände",
+   "clothing": [
+    "transform/monk_tf_gritty.png",
+    "transform/monk_tf_anime.png"
+   ],
+   "eyes": "eyes/eyes_monk.png"
+  },
+  "beastborn": {
+   "name": "Wolfsgeist",
+   "clothing": [
+    "transform/beastborn_tf_anime.png"
+   ],
+   "eyes": "eyes/eyes_beastborn.png"
+  },
+  "shadow": {
+   "name": "Nachtphantom",
+   "clothing": [
+    "transform/shadow_tf_gritty.png",
+    "transform/shadow_tf_anime.png"
+   ],
+   "eyes": "eyes/eyes_shadow.png"
+  },
+  "ranger": {
+   "name": "Sturmfalke",
+   "clothing": [
+    "transform/ranger_tf_gritty.png",
+    "transform/ranger_tf_anime.png"
+   ],
+   "eyes": "eyes/eyes_ranger.png"
+  },
+  "arcanist": {
+   "name": "Runenkaiser",
+   "clothing": [
+    "transform/arcanist_tf_anime.png"
+   ],
+   "eyes": "eyes/eyes_arcanist.png"
+  }
+ },
+ "primalForms": {
+  "wolf": {
+   "stage2": "primal/wolf_stage2.png",
+   "stage3": "primal/wolf_stage3.png"
+  },
+  "turtle": {
+   "stage2": "primal/turtle_stage2.png",
+   "stage3": "primal/turtle_stage3.png"
+  },
+  "ape": {
+   "stage2": "primal/ape_stage2.png",
+   "stage3": "primal/ape_stage3.png"
+  },
+  "dragon": {
+   "stage2": "primal/dragon_stage2.png",
+   "stage3": "primal/dragon_stage3.png"
+  }
+ }
+}

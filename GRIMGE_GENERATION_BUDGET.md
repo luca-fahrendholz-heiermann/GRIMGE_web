@@ -174,3 +174,19 @@ Der Nutzer hat selbst Guthaben gekauft (Plan `starter`, Stand vor dem Auftrag 27
 - Markierte oder fehlgeschlagene Aufträge wurden erstattet. Das betraf den nackten Body, die Raster mit nacktem Oberkörper und GIFs in 1024².
 - Die Raster bekommen deshalb ein schlichtes dunkles Oberteil.
 - Nachtrag: Rune-zeichnen-Pose neu als senkrechtes Zwei-Finger-Zeichen (die alte Pose mit vorgestrecktem Arm war ungeeignet), 1 GIF für 1,25 Credits. **Kontostand: 309,25.**
+
+## 21. Nov 2026: Waffen, Klassen-Stile, Bärte/Gesicht, animierte Outfits (Test)
+
+| Auftrag | Anzahl | Credits |
+|---|---|---|
+| Waffen-Bögen à 6 im Stil von Thesen/Xame (Monster-Hunter-artig, eigene Designs) → 44 Waffenteile im Spiel | 8 | 10 |
+| Klassen-Outfits im rauen Thesen-Stil (`cl2_*`) | 8 | 10 |
+| Bärte (6) und Gesichts-Assets (6) als Raster | 2 | 2,5 |
+| Transformations-Rüstungen im rauen Stil (`tf2_*`: Guardian, Lancer, Monk, Shadow, Ranger) | 5 | 6,25 |
+| Retro-Klassen-Outfits (`cl3_*`, alle 8) | 8 | 10 |
+| Umfärbungen in Klassenfarben bei gleicher Zeichnung (`rc_*`: Guardian, Lancer, Monk, Ranger); Berserker und Beastborn lokal umgefärbt | 4 | 5 |
+| Beastborn und Ranger neu und klar verschieden (`rc2_*` rau, `cl4_*` glatt) | 4 | 5 |
+| Test: Lauf-Animation im Guardian-Outfit (9 Frames in einem Raster) | 1 | 1,25 |
+
+**Kontostand: 259,25.**
+- Markierte Aufträge wurden erstattet: Bilder mit nacktem Oberkörper und eine Stangenwaffen-Formulierung.
