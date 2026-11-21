@@ -220,7 +220,7 @@ export class SpriteManager {
         const img = imgs[i]; if (!img) return;
         const frames = Array.from({ length: c.frames }, (_, k) => {
           const make = (fill) => { const cv = doc.createElement('canvas'); cv.width = c.w; cv.height = c.h; const g = cv.getContext('2d'); if (!g) return cv; g.imageSmoothingEnabled = false; g.drawImage(img, k * c.w, 0, c.w, c.h, 0, 0, c.w, c.h); if (fill) { g.globalCompositeOperation = 'source-in'; g.fillStyle = fill; g.fillRect(0, 0, c.w, c.h); } return cv; };
-          return { canvas: make(null), get flashCanvas() { return lazyTint(this.canvas, '#ffffff'); }, get hurtCanvas() { return lazyTint(this.canvas, '#ff2222'); }, width: c.w, height: c.h, anchorX: c.anchorX, anchorY: c.anchorY, baseHeight };
+          return { canvas: make(null), get flashCanvas() { return lazyTint(this.canvas, '#ffffff'); }, get hurtCanvas() { return lazyTint(this.canvas, '#ff2222'); }, width: c.w, height: c.h, anchorX: c.anchorX, anchorY: c.anchorY, baseHeight, sheet: c.sheet, k }; /* sheet + index: outfit layers (character/anim) line up per frame */
         });
         // use: several state groups on one sheet, each with its own frame picks (idx) and timing.
         for (const u of c.use ?? [c]) {
@@ -746,7 +746,7 @@ export class SpriteManager {
     return {
       canvas: (hitFlash > 0) ? (f.flashCanvas ?? f.canvas) : f.canvas,
       width: f.width, height: f.height,
-      anchorX: f.anchorX, anchorY: f.anchorY, baseHeight: f.baseHeight, hand: f.hand, handBack: f.handBack
+      anchorX: f.anchorX, anchorY: f.anchorY, baseHeight: f.baseHeight, hand: f.hand, handBack: f.handBack, sheet: f.sheet, k: f.k
     };
   }
 
@@ -774,6 +774,7 @@ export class SpriteManager {
     } = opt;
 
     const frame = this.resolveFrame(spr, state, animTime, hitFlash, { cadence, reverse });
+    if (opt.outfit && frame.sheet && !hitFlash) frame.canvas = this.outfitCanvas(frame, opt.outfit); /* the modular character: base frame + the class outfit's layer for this exact frame (+ its dye) */
     if (tint && !hitFlash) frame.canvas = this.tintedCanvas(frame.canvas, tint);
     // Armour transformations recolour the frame's own pixels (cached per frame), then contour detail on top.
     if (maskPaint?.recolor && !hitFlash && !tint) frame.canvas = this.recoloredCanvas(frame.canvas, maskPaint.recolor);
@@ -891,6 +892,22 @@ export class SpriteManager {
   }
 
   // A frame with its pixels rewritten by recolor.fn (form_recolors.js), cached per source frame and recolour key.
+  // Base frame + outfit layer of the same frame (public/assets/character/anim/<cls>/<clip>.png, made by
+  // art/authoring/frame_dress.cjs on the base animation), optionally dyed (armor_dye.js). Cached per frame, outfit and dye;
+  // the plain frame while the layer loads or when the clip has no layer.
+  outfitCanvas(frame, outfit) {
+    const doc = globalThis.document; const m = /base_(\w+)\.png$/.exec(frame.sheet ?? ''); if (!m || typeof doc?.createElement !== 'function' || !outfit?.cls) return frame.canvas;
+    const key = `${outfit.cls}/${m[1]}`; this._outfitImgs ??= new Map();
+    let img = this._outfitImgs.get(key); if (img === undefined) { img = new Image(); img.src = `assets/character/anim/${key}.png`; img.onerror = () => this._outfitImgs.set(key, null); this._outfitImgs.set(key, img); }
+    if (!img || !img.complete || !img.naturalWidth) return frame.canvas;
+    this._outfitCache ??= new WeakMap(); let byKey = this._outfitCache.get(frame.canvas); if (!byKey) { byKey = new Map(); this._outfitCache.set(frame.canvas, byKey); } /* keyed by the stable base frame canvas */
+    const ck = key + (outfit.dye?.key ?? ''); if (byKey.has(ck)) return byKey.get(ck);
+    const cv = doc.createElement('canvas'); cv.width = frame.width; cv.height = frame.height; const g = cv.getContext('2d', { willReadFrequently: !!outfit.dye }); if (!g) return frame.canvas;
+    g.imageSmoothingEnabled = false; g.drawImage(frame.canvas, 0, 0);
+    const lay = doc.createElement('canvas'); lay.width = frame.width; lay.height = frame.height; const lg = lay.getContext('2d', { willReadFrequently: true }); lg.imageSmoothingEnabled = false; lg.drawImage(img, frame.k * frame.width, 0, frame.width, frame.height, 0, 0, frame.width, frame.height);
+    if (outfit.dye?.fn && lg.getImageData) { const d = lg.getImageData(0, 0, lay.width, lay.height); outfit.dye.fn(d.data, lay.width, lay.height); lg.putImageData(d, 0, 0); }
+    g.drawImage(lay, 0, 0); byKey.set(ck, cv); return cv;
+  }
   recoloredCanvas(source, recolor) {
     const doc = globalThis.document;
     if (!source || typeof doc?.createElement !== 'function') return source;

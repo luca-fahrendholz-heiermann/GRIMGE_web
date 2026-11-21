@@ -2371,6 +2371,7 @@ export class Player extends GroundEntity {
       hitFlash: this.hitFlash > 0 ? 1 : 0,
       alpha: this.lifeState === 'Dead' || rolled ? 0 : (stPose?.alpha ?? 1),
       cadence, reverse, procOffsetX: pOX, procOffsetY: pOY,
+      outfit: this.outfit ?? null, /* the modular character's class outfit (sprites.outfitCanvas) */
     };
     if (useProc) { renderOpts.procRot = pRot; renderOpts.procScaleX = pSX; renderOpts.procScaleY = pSY; }
     const veins = this.isAlive ? buffVeinPainter(this) : null;
