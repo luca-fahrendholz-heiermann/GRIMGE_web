@@ -104,3 +104,21 @@ Alle Credits stammen aus dem Registrierungs-Guthaben; es ist kein zusätzliches 
 Figuren-Bögen werden mit `art/authoring/prep_frames.cjs` in Einzelbilder geschnitten und auf die Pixelgröße der Figur gebracht.
 Requisiten werden mit `art/authoring/prep_props.cjs` freigestellt (harter Alpha-Schnitt), getrennt und halbiert.
 Szenen-Aufbereitung: `art/authoring/prep_scene.cjs` (oben beschneiden, bis die Boden-Kante auf der Spiel-Bodenlinie liegt; Palette auf 56 Farben).
+
+## 21. Nov 2026: Dino-Drachen-Animationen (vom Nutzer gekauftes Guthaben)
+
+Der Nutzer hat selbst Guthaben gekauft (Plan `starter`, Stand vor dem Auftrag 271,75 Credits) und will es nutzen. Der Schwerpunkt liegt auf Mobile.
+
+| Auftrag | Modell | Anzahl | Credits |
+|---|---|---|---|
+| Lauf-Animation je Dino-Drache (GIF, 8 Bilder, 384×288, transparent) | `gpt_image_2_6` | 13 | 13 |
+| Angriffs-Animation je Dino-Drache (dto.) | `gpt_image_2_6` | 13 | 13 |
+| Magmarax-Angriff neu (der erste wich vom Lauf-Design ab) | `gpt_image_2_6` | 1 | 1 |
+| 4 Aufträge mit Job-IDs als Vorlage: **fehlgeschlagen**, nichts abgebucht | – | 4 | 0 |
+
+**Kontostand danach: 244,75 Credits (27 verbraucht).**
+
+- Die Vorlagen waren die freigestellten Bestiarium-Sprites, für die Angriffe zusätzlich das erste Lauf-Frame als PNG.
+- Higgsfield nimmt nur etwa 4 Aufträge gleichzeitig an.
+- Umwandlung: `%TEMP%\grimge_tools\hf\build_sheets.cjs`. Gemeinsame Schnittbox für Lauf und Angriff, gespiegelt, 2/3 Größe, PNG8.
+- Ergebnis: `public/assets/creatures/dinodragons/anim/<element>_{walk,attack}.png`, eingebunden über `public/src/kk_dino_anim.js`.
