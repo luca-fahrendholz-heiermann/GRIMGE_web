@@ -31,7 +31,7 @@ if (mode === 'grid') {
   picks.forEach((k, i) => { const f = path.join(tmp, `f${i}.png`); toPng(suit(frame(k)), fw, fh, f); const [cx, cy] = cellPos(i); const [ox, oy] = offset(); args.push('(', f, '-filter', 'point', '-resize', `${Math.round(fw * S)}x${Math.round(fh * S)}!`, ')', '-geometry', `+${cx + ox}+${cy + oy}`, '-composite'); });
   args.push('-background', 'rgb(22,210,5)', '-gravity', 'northwest', '-extent', '1024x1024', out); cp.execFileSync('magick', args);
   console.log(JSON.stringify({ grid: out, frames: picks, scale: +S.toFixed(3), frame: [fw, fh] }));
-} else if (mode === 'extract') {
+} else if (mode === 'extract' || mode === 'extractfull') { const FULL = mode === 'extractfull'; /* extractfull (user, 21 Nov 2026): the whole dressed figure — outfit AND the bare body it shows — instead of the difference to the base frame; the skin is then locked to the body palette and the reference head goes back on (dress_full.cjs) */
   const aiOut = a4, outSheet = a5;
   cp.execFileSync('magick', [aiOut, '-alpha', 'set', '-fuzz', '9%', '-fill', 'none', '-draw', 'color 0,0 floodfill', path.join(tmp, 'clean.png')]);
   const layers = Buffer.alloc(fw * picks.length * fh * 4);
@@ -45,7 +45,7 @@ if (mode === 'grid') {
     for (let y = 0; y < Math.min(fh, r.h); y++) for (let x = 0; x < Math.min(fw, r.w); x++) {
       const ri = (y * r.w + x) * 4, bi = (y * fw + x) * 4; if (!r.buf[ri + 3]) continue; const g = r.buf[ri + 1] > 150 && r.buf[ri] < 110 && r.buf[ri + 2] < 110; if (g) continue;
       const d = Math.abs(r.buf[ri] - base[bi]) + Math.abs(r.buf[ri + 1] - base[bi + 1]) + Math.abs(r.buf[ri + 2] - base[bi + 2]);
-      const suited = base[bi] !== orig[bi] || base[bi + 1] !== orig[bi + 1]; /* skin the grid suit covered: the AI's pixel there is kept, so no bare skin shows through the armour */ if (base[bi + 3] && !suited && d < (y < top + 22 ? 150 : 80)) continue; /* the base shows through (the face more strictly — only the head itself: bone pauldrons and horns at the shoulders lost pixels when this zone reached 30 rows, user 21 Nov 2026) */
+      const suited = base[bi] !== orig[bi] || base[bi + 1] !== orig[bi + 1]; /* skin the grid suit covered: the AI's pixel there is kept, so no bare skin shows through the armour */ if (!FULL && base[bi + 3] && !suited && d < (y < top + 22 ? 150 : 80)) continue; /* the base shows through (the face more strictly — only the head itself: bone pauldrons and horns at the shoulders lost pixels when this zone reached 30 rows, user 21 Nov 2026) */
       r.buf.copy(L, bi, ri, ri + 4); L[bi + 3] = 255;
     }
     mergePalette(L, 60);

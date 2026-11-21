@@ -927,21 +927,38 @@ export class SpriteManager {
   // beard → face → hair → eyes. Frames whose head match is poor (lying knocked down) leave them out. Hair reaches past the
   // frame, so the result has a margin: returns { canvas, pad } (the caller widens the frame and shifts its anchor), or
   // null while a layer loads / when there is nothing to add.
+  // The reference body's colours (a Set of 0xRRGGBB) — dyes leave them alone on full-figure sheets. null while loading.
+  bodyPalette() {
+    if (this._bodyPal) return this._bodyPal; const doc = globalThis.document; if (typeof doc?.createElement !== 'function') return null;
+    this._bodyImg ??= Object.assign(new Image(), { src: 'assets/character/body/body.png' }); const im = this._bodyImg; if (!im.complete || !im.naturalWidth) return null;
+    const c = doc.createElement('canvas'); c.width = im.naturalWidth; c.height = im.naturalHeight; const g = c.getContext('2d', { willReadFrequently: true }); if (!g?.getImageData) return null; g.drawImage(im, 0, 0);
+    const d = g.getImageData(0, 0, c.width, c.height).data; const s = new Set(); for (let i = 0; i < d.length; i += 4) if (d[i + 3] > 127) s.add((d[i] << 16) | (d[i + 1] << 8) | d[i + 2]); return (this._bodyPal = s);
+  }
   outfitCanvas(frame, outfit) {
     const doc = globalThis.document; const m = /base_(\w+)\.png$/.exec(frame.sheet ?? ''); if (!m || typeof doc?.createElement !== 'function' || !(outfit?.cls || outfit?.head?.length)) return null;
     this._outfitImgs ??= new Map();
     const load = (src) => { let im = this._outfitImgs.get(src); if (im === undefined) { im = new Image(); im.src = src; im.onerror = () => this._outfitImgs.set(src, null); this._outfitImgs.set(src, im); } return im === null ? null : (im.complete && im.naturalWidth ? im : false); }; /* false = loading, null = missing */
-    const img = outfit.cls ? load(`assets/character/anim/${outfit.cls}/${m[1]}.png`) : null; if (img === false) return null;
+    // a full-figure sheet (art/authoring/dress_full.cjs: outfit + bare body, body skin, reference head) replaces the base
+    // frame; without one the outfit layer goes over the base frame
+    const full = outfit.cls ? load(`assets/character/anim_full/${outfit.cls}/${m[1]}.png`) : null; if (full === false) return null;
+    const img = full ?? (outfit.cls ? load(`assets/character/anim/${outfit.cls}/${m[1]}.png`) : null); if (img === false) return null;
     const anchor = HEAD_ANCHORS[`base_${m[1]}`]?.[frame.k]; const heads = anchor && anchor[2] >= .3 ? (outfit.head ?? []).map((f) => load(`assets/character/${f}`)) : [];
     if (heads.includes(false) || (!img && !heads.some(Boolean))) return null;
     this._outfitCache ??= new WeakMap(); let byKey = this._outfitCache.get(frame.canvas); if (!byKey) { byKey = new Map(); this._outfitCache.set(frame.canvas, byKey); } /* keyed by the stable base frame canvas */
     const ck = `${outfit.cls ?? '-'}/${m[1]}${outfit.dye?.key ?? ''}|${(outfit.head ?? []).join(',')}`; if (byKey.has(ck)) return byKey.get(ck);
     const P = heads.some(Boolean) ? 16 : 0;
     const cv = doc.createElement('canvas'); cv.width = frame.width + 2 * P; cv.height = frame.height + 2 * P; const g = cv.getContext('2d'); if (!g) return null;
-    g.imageSmoothingEnabled = false; g.drawImage(frame.canvas, P, P);
+    g.imageSmoothingEnabled = false; if (!full) g.drawImage(frame.canvas, P, P);
     if (img) {
       const lay = doc.createElement('canvas'); lay.width = frame.width; lay.height = frame.height; const lg = lay.getContext('2d', { willReadFrequently: true }); lg.imageSmoothingEnabled = false; lg.drawImage(img, frame.k * frame.width, 0, frame.width, frame.height, 0, 0, frame.width, frame.height);
-      if (outfit.dye?.fn && lg.getImageData) { const d = lg.getImageData(0, 0, lay.width, lay.height); outfit.dye.fn(d.data, lay.width, lay.height); lg.putImageData(d, 0, 0); }
+      if (outfit.dye?.fn && lg.getImageData) {
+        const d = lg.getImageData(0, 0, lay.width, lay.height);
+        // the dye must not touch the skin of a full figure: exact body-palette colours are kept as they are
+        const skin = full ? this.bodyPalette() : null; const keep = []; if (skin) for (let i = 0; i < d.data.length; i += 4) if (d.data[i + 3] && skin.has((d.data[i] << 16) | (d.data[i + 1] << 8) | d.data[i + 2])) keep.push(i, d.data[i], d.data[i + 1], d.data[i + 2]);
+        outfit.dye.fn(d.data, lay.width, lay.height);
+        for (let j = 0; j < keep.length; j += 4) { d.data[keep[j]] = keep[j + 1]; d.data[keep[j] + 1] = keep[j + 2]; d.data[keep[j] + 2] = keep[j + 3]; }
+        lg.putImageData(d, 0, 0);
+      }
       g.drawImage(lay, P, P);
     }
     for (const h of heads) if (h) g.drawImage(h, P + anchor[0], P + anchor[1]);
