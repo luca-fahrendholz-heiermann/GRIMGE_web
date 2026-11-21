@@ -896,8 +896,9 @@ export class GameWorld {
         const dy = pt.y - attackStart.y;
         const facingDx = dx * this.player.facing;
         // Right half: a quick swipe away from the facing is the backdash (fires on the move, not on release).
-        if (facingDx < -40 && Math.abs(dx) > Math.abs(dy) * 1.2 && elapsed < 320 && !this.player.activeTelekinesis) {
-          this.player.triggerBackdash({ source: 'touch' });
+        // A slanted back swipe (down / up) dashes back toward the foreground / into the depth (user, 21 Nov 2026).
+        if (facingDx < -40 && Math.abs(dx) > Math.abs(dy) * .6 && elapsed < 320 && !this.player.activeTelekinesis) {
+          this.player.triggerBackdash({ source: 'touch', dz: Math.abs(dy) > Math.abs(dx) * .35 ? Math.sign(dy) : 0 });
           attackPointerId = null; attackStart = null;
           return;
         }
@@ -992,7 +993,7 @@ export class GameWorld {
       return this.player.executeAttack(this.input, 'dive');
     }
     // A swipe away from the facing is the backdash (a very fast swipe can end before a move event).
-    if (facingDx < -threshold && Math.abs(dx) >= Math.abs(dy)) return this.player.triggerBackdash({ source: 'touch' });
+    if (facingDx < -threshold && Math.abs(dx) >= Math.abs(dy) * .6) return this.player.triggerBackdash({ source: 'touch', dz: Math.abs(dy) > Math.abs(dx) * .35 ? Math.sign(dy) : 0 });
     if (!this.player.grounded && dy > threshold && Math.abs(dy) > Math.abs(dx)) attackKind = 'dive';
     else if (dy < -threshold && Math.abs(dy) > Math.abs(dx)) attackKind = 'uppercut';
     else if (facingDx > threshold && Math.abs(dx) >= Math.abs(dy)) attackKind = 'heavy';

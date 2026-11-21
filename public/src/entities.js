@@ -1278,6 +1278,9 @@ export class Player extends GroundEntity {
     this._lastFlickDir = 0; this._lastFlickTime = 0;
     this.cancelSprint();
     this.backdashDir = -this.facing;
+    // Diagonal backdash (user, 21 Nov 2026): a back swipe slanting down dashes back AND toward the foreground, slanting up
+    // back and into the depth (dz = +1 / −1; same total distance, split over both axes).
+    this.backdashDz = Math.sign(options.dz ?? 0);
     this.backdashTimer = BACKDASH_DURATION;
     this.backdashTotalTicks = Math.round(BACKDASH_DURATION * 60);
     this.backdashTicksLeft = this.backdashTotalTicks;
@@ -1320,7 +1323,9 @@ export class Player extends GroundEntity {
     const tickWeight = 2 * this.backdashTicksLeft / (total * (total + 1));
     const distThisTick = BACKDASH_DISTANCE * tickWeight;
     const speed = distThisTick * 60;
-    this.x += this.backdashDir * speed * dt;
+    const dz = this.backdashDz ?? 0;
+    this.x += this.backdashDir * speed * dt * (dz ? .72 : 1);
+    if (dz) this.z += dz * speed * dt * .9 / 150; /* depth px → z units like movement (÷150); the caller's resolveEntityCollision keeps it in the walkable band */
     this.backdashTicksLeft = Math.max(0, this.backdashTicksLeft - dt * 60);
     if (Math.random() < 0.5) {
       this.ghosts.push({ x: this.x, y: this.y, z: this.z, elevation: this.elevation, facing: this.facing, alpha: 0.45, state: 'dash', animTime: this.animTime });
