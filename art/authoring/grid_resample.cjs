@@ -28,7 +28,7 @@ function makeNearest(palette) {
 function resampleGrid({ ai, fw, fh, picks, palette, layout = null, phase = false, base = null, outline = null, merge = .11, chroma = .022, line = .38 }) {
   const tmp = path.join(os.tmpdir(), `gridres_${process.pid}.png`);
   cp.execFileSync('magick', [ai, '-alpha', 'set', '-fuzz', '9%', '-fill', 'none', '-draw', 'color 0,0 floodfill', `PNG32:${tmp}`]); /* the key-green background */
-  const L = layout ?? LEGACY(fw, fh); const W = L.W; const raw = cp.execFileSync('magick', [tmp, '-alpha', 'on', '-depth', '8', 'rgba:-'], { maxBuffer: 1 << 26 }); fs.rmSync(tmp, { force: true });
+  const L = layout ?? LEGACY(fw, fh); const W = L.W; const raw = cp.execFileSync('magick', [tmp, '-filter', 'point', '-resize', `${W}x${W}!`, '-alpha', 'on', '-depth', '8', 'rgba:-'], { maxBuffer: 1 << 26 }); fs.rmSync(tmp, { force: true });
   const S = L.S;
   const nearest = makeNearest(palette); const dark = palette.map((c) => oklab(...c)[0] < .25);
   const darkest = palette.reduce((a, c, i) => (oklab(...c)[0] < oklab(...palette[a])[0] ? i : a), 0);

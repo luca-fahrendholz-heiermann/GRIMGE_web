@@ -14,8 +14,7 @@ const oklab = (r, g, b) => { const R = lin(r), G = lin(g), B = lin(b); const l =
 const body = PNG.sync.read(fs.readFileSync(path.join(ROOT, 'public/assets/character/body/body.png')));
 const st = PNG.sync.read(fs.readFileSync(path.join(ROOT, 'public/assets/character/outfit', `${still}.png`)));
 const pal = new Map(); for (const im of [st, body]) for (let i = 0; i < im.data.length; i += 4) if (im.data[i + 3] > 127) { const k = (im.data[i] << 16) | (im.data[i + 1] << 8) | im.data[i + 2]; if (!pal.has(k)) pal.set(k, { rgb: [im.data[i], im.data[i + 1], im.data[i + 2]], lab: oklab(im.data[i], im.data[i + 1], im.data[i + 2]) }); }
-const P = [...pal.values()]; const memo = new Map();
-const nearest = (r, g, b) => { const k = (r << 16) | (g << 8) | b; let v = memo.get(k); if (v) return v; const L = oklab(r, g, b); let d0 = 1e9; for (const p of P) { const d = (p.lab[0] - L[0]) ** 2 * 1.4 + (p.lab[1] - L[1]) ** 2 + (p.lab[2] - L[2]) ** 2; if (d < d0) { d0 = d; v = p.rgb; } } memo.set(k, v); return v; };
+const P = [...pal.values()];
 const anchorsSrc = fs.readFileSync(path.join(ROOT, 'public/src/head_anchors.js'), 'utf8'); const A = JSON.parse(/\/\*META\*\/([\s\S]*?)\/\*END\*\//.exec(anchorsSrc)[1]);
 const HEAD = { x0: 80, y0: 30, x1: 108, y1: 55 }; const MINQ = .6;
 const outDir = path.join(ROOT, 'public/assets/character/anim_full', cls); fs.mkdirSync(outDir, { recursive: true });
