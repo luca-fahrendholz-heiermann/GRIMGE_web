@@ -173,3 +173,4 @@ Der Nutzer hat selbst Guthaben gekauft (Plan `starter`, Stand vor dem Auftrag 27
 **Zusammen 68,75 Credits; Kontostand danach: 310,50.**
 - Markierte oder fehlgeschlagene Aufträge wurden erstattet. Das betraf den nackten Body, die Raster mit nacktem Oberkörper und GIFs in 1024².
 - Die Raster bekommen deshalb ein schlichtes dunkles Oberteil.
+- Nachtrag: Rune-zeichnen-Pose neu als senkrechtes Zwei-Finger-Zeichen (die alte Pose mit vorgestrecktem Arm war ungeeignet), 1 GIF für 1,25 Credits. **Kontostand: 309,25.**
