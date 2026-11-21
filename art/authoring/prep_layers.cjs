@@ -1,17 +1,18 @@
 // GRIMGE — cut swappable layers (outfit, hair) from an AI-dressed version of the reference body.
 // node art/authoring/prep_layers.cjs <dressed.png (1024, green bg)> <outDir> <name> [headRows=58]
 // The reference body (art_source/body/body_184.png, native 184x184, green #16D205) is never altered: the dressed image is
-// brought down to 184, aligned to the body (best shift), and every pixel that differs from the body becomes a layer pixel.
+// snapped to the 184 grid (pixel_snap.cjs), aligned to the body (best shift), and every pixel that differs from the body becomes a layer pixel.
 // Rows above `headRows` go to the hair layer, the rest to the outfit layer. The preview composites body + outfit + hair.
 const fs = require('fs'); const path = require('path'); const cp = require('child_process');
 const [src, outDir, name, headArg] = process.argv.slice(2); const HEAD = Number(headArg ?? 58);
 const ROOT = path.resolve(__dirname, '../..'); const BODY = path.join(ROOT, 'art_source/body/body_184.png');
 const N = 184; fs.mkdirSync(outDir, { recursive: true });
 const raw = (file, filter) => cp.execFileSync('magick', [file, ...(filter ? ['-filter', filter, '-resize', `${N}x${N}!`] : []), '-alpha', 'on', '-depth', '8', 'rgba:-'], { maxBuffer: 1 << 26 });
-const B = raw(BODY); const R = raw(src, process.env.FILTER || 'point'); /* point: real colours only, no green blends along the outline */
+const { readRaw, snap, mergePalette } = require('./pixel_snap.cjs');
+const B = raw(BODY); const R = snap(readRaw(src), N); /* pixel-perfect: each cell's dominant colour (the user's Pixel Snapper step) */
 const GREEN = [22, 210, 5];
 const dist = (a, i, b, j) => Math.abs(a[i] - b[j]) + Math.abs(a[i + 1] - b[j + 1]) + Math.abs(a[i + 2] - b[j + 2]);
-const isGreen = (a, i) => (a[i + 1] > 150 && a[i] < 110 && a[i + 2] < 110 && a[i + 1] - Math.max(a[i], a[i + 2]) > 70) || (a[i + 1] > 90 && a[i + 1] - Math.max(a[i], a[i + 2]) > 55); /* the key green and its blends with the outline */
+const isGreen = (a, i) => (a[i + 1] > 150 && a[i] < 110 && a[i + 2] < 110 && a[i + 1] - Math.max(a[i], a[i + 2]) > 70) || (a[i + 1] > 80 && a[i + 1] - Math.max(a[i], a[i + 2]) > 40); /* the key green and its blends with the outline */
 // best shift: the body's outline should sit where the dressed figure's is (the AI may nudge the figure a few pixels)
 let best = { dx: 0, dy: 0, s: Infinity };
 for (let dy = -4; dy <= 4; dy++) for (let dx = -4; dx <= 4; dx++) {
@@ -37,11 +38,12 @@ for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
   for (const [ax, ay] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const X = x + ax, Y = y + ay; if (X >= 0 && Y >= 0 && X < N && Y < N && L[(Y * N + X) * 4 + 3]) n++; }
   if (n === 0) { keep[o + 3] = 0; count--; }
 }
+const colours = mergePalette(keep, Number(process.env.MERGE ?? 36)); /* fold the AI's near-duplicate shades — no dithering, every pixel stays one solid colour */
 const split = (top) => { const out = Buffer.alloc(N * N * 4); for (let y = 0; y < N; y++) if ((y < HEAD) === top) keep.copy(out, y * N * 4, y * N * 4, (y + 1) * N * 4); return out; };
-const write = (buf, file) => cp.execFileSync('magick', ['-size', `${N}x${N}`, '-depth', '8', 'rgba:-', '-colors', '48', `PNG32:${file}`], { input: buf });
+const write = (buf, file) => cp.execFileSync('magick', ['-size', `${N}x${N}`, '-depth', '8', 'rgba:-', `PNG32:${file}`], { input: buf });
 const fHair = path.join(outDir, `${name}_hair.png`), fOut = path.join(outDir, `${name}_outfit.png`), fBody = path.join(outDir, 'body.png');
 write(split(true), fHair); write(split(false), fOut);
-cp.execFileSync('magick', [BODY, '-fuzz', '12%', '-transparent', 'rgb(22,210,5)', `PNG32:${fBody}`]);
+cp.execFileSync('magick', [BODY, '-fuzz', '8%', '-transparent', 'rgb(22,210,5)', `PNG32:${fBody}`]); /* the key green (8 %: two off-key background pixels between arm and torso); skin, outline and eyes are far from it and stay untouched */
 cp.execFileSync('magick', [fBody, fOut, '-composite', fHair, '-composite', `PNG32:${path.join(outDir, `${name}_composite.png`)}`]);
 cp.execFileSync('magick', ['-size', `${N}x${N}`, 'xc:rgb(58,96,64)', path.join(outDir, `${name}_composite.png`), '-composite', '-filter', 'point', '-resize', '400%', path.join(outDir, `${name}_preview.png`)]);
-console.log(JSON.stringify({ shift: [best.dx, best.dy], layerPixels: count }));
+console.log(JSON.stringify({ shift: [best.dx, best.dy], layerPixels: count, colours }));
