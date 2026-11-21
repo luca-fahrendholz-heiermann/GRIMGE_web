@@ -122,3 +122,15 @@ Der Nutzer hat selbst Guthaben gekauft (Plan `starter`, Stand vor dem Auftrag 27
 - Higgsfield nimmt nur etwa 4 Aufträge gleichzeitig an.
 - Umwandlung: `%TEMP%\grimge_tools\hf\build_sheets.cjs`. Gemeinsame Schnittbox für Lauf und Angriff, gespiegelt, 2/3 Größe, PNG8.
 - Ergebnis: `public/assets/creatures/dinodragons/anim/<element>_{walk,attack}.png`, eingebunden über `public/src/kk_dino_anim.js`.
+
+## 21. Nov 2026: Pilot Referenz-Body → Klassen-Ebenen
+
+| Auftrag | Modell | Anzahl | Credits |
+|---|---|---|---|
+| Guardian auf dem Referenz-Body (1024×1024, high, Stilvorlage `heavy_knight_v1`) | `gpt_image_2_6` | 2 | 2,5 |
+
+**Kontostand danach: 242,25 Credits.**
+
+- Der Body liegt nativ in 184×184 vor. Die 1024er Fassung lässt sich mit dem Filter `point` verlustfrei zurückrechnen (0 abweichende Pixel).
+- `art/authoring/prep_layers.cjs` schneidet daraus die Ebenen Outfit und Haare. Die Figur wird aus dem unveränderten Body plus den Ebenen zusammengesetzt.
+- Body und Ergebnisse liegen in `art_source/body/` und werden nicht committet.
