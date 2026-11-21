@@ -10,7 +10,6 @@ const N = 184; fs.mkdirSync(outDir, { recursive: true });
 const raw = (file, filter) => cp.execFileSync('magick', [file, ...(filter ? ['-filter', filter, '-resize', `${N}x${N}!`] : []), '-alpha', 'on', '-depth', '8', 'rgba:-'], { maxBuffer: 1 << 26 });
 const { readRaw, snap, mergePalette } = require('./pixel_snap.cjs');
 const B = raw(BODY); const R = snap(readRaw(src), N); /* pixel-perfect: each cell's dominant colour (the user's Pixel Snapper step) */
-const GREEN = [22, 210, 5];
 const dist = (a, i, b, j) => Math.abs(a[i] - b[j]) + Math.abs(a[i + 1] - b[j + 1]) + Math.abs(a[i + 2] - b[j + 2]);
 const isGreen = (a, i) => (a[i + 1] > 150 && a[i] < 110 && a[i + 2] < 110 && a[i + 1] - Math.max(a[i], a[i + 2]) > 70) || (a[i + 1] > 80 && a[i + 1] - Math.max(a[i], a[i + 2]) > 40); /* the key green and its blends with the outline */
 // best shift: the body's outline should sit where the dressed figure's is (the AI may nudge the figure a few pixels)
