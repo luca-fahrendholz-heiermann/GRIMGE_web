@@ -40,12 +40,12 @@ for (const clip of clips) {
     // the marker's own dark outline (the AI drew the patch / rod with a border): dark pixels touching ≥ 2 marker pixels
     for (let y = 0; y < fh; y++) for (let x = 0; x < fw; x++) { const i = at(k, x, y); if (!im.data[i + 3] || mark.has(y * fw + x) || im.data[i] + im.data[i + 1] + im.data[i + 2] > 120) continue; let c = 0; for (const [ax, ay] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (mark.has((y + ay) * fw + x + ax)) c++; if (c >= 2) holes.push([x, y]); }
     for (const [x, y] of holes) im.data[at(k, x, y) + 3] = 0;
-    for (let pass = 0; pass < 3; pass++) for (const [x, y] of holes) {
+    for (let pass = 0; pass < 6; pass++) for (const [x, y] of holes) {
       const i = at(k, x, y); if (im.data[i + 3]) continue; const cnt = new Map(); let opp = 0;
       for (const [ax, ay] of [[1, 0], [0, 1], [1, 1], [1, -1]]) { const a = [x + ax, y + ay], b = [x - ax, y - ay]; const ok = (p) => p[0] >= 0 && p[1] >= 0 && p[0] < fw && p[1] < fh && im.data[at(k, p[0], p[1]) + 3]; if (ok(a) && ok(b)) opp++; }
       const onPatch = C.some(([cx, cy]) => Math.abs(cx - x) <= 2 && Math.abs(cy - y) <= 2); /* the shield patch lies ON the forearm: fill it even at the edge */
       let around = 0; for (let yy = y - 1; yy <= y + 1; yy++) for (let xx = x - 1; xx <= x + 1; xx++) if (xx >= 0 && yy >= 0 && xx < fw && yy < fh && im.data[at(k, xx, yy) + 3]) around++;
-      if (!opp && !(onPatch && around >= 3)) continue; /* the rod out in the air: leave it open */
+      if (!opp && around < 4 && !(onPatch && around >= 3)) continue; /* the rod out in the air: leave it open (a thick rod band across the body closes from its edges: ≥ 4 opaque neighbours) */
       let lit = 0; for (let yy = y - 1; yy <= y + 1; yy++) for (let xx = x - 1; xx <= x + 1; xx++) { if (xx < 0 || yy < 0 || xx >= fw || yy >= fh) continue; const j = at(k, xx, yy); if (im.data[j + 3] && im.data[j] + im.data[j + 1] + im.data[j + 2] > 150) lit++; }
       if (!onPatch && lit < 2) continue; /* only the rod's own dark edges around it (the rod in the air): no fill — it would turn into a dark stick */
       for (let yy = y - 1; yy <= y + 1; yy++) for (let xx = x - 1; xx <= x + 1; xx++) { if (xx < 0 || yy < 0 || xx >= fw || yy >= fh) continue; const j = at(k, xx, yy); if (!im.data[j + 3]) continue; const key = (im.data[j] << 16) | (im.data[j + 1] << 8) | im.data[j + 2]; cnt.set(key, (cnt.get(key) ?? 0) + 1); }
@@ -60,11 +60,14 @@ for (const clip of clips) {
       for (let yy = y - 1; yy <= y + 1; yy++) for (let xx = x - 1; xx <= x + 1; xx++) { if ((xx === x && yy === y) || xx < 0 || yy < 0 || xx >= fw || yy >= fh) continue; const j = at(k, xx, yy); if (!im.data[j + 3]) continue; const key = (im.data[j] << 16) | (im.data[j + 1] << 8) | im.data[j + 2]; cnt.set(key, (cnt.get(key) ?? 0) + 1); }
       const best = [...cnt].sort((a, b) => b[1] - a[1])[0]; if (best && best[1] >= 5 && best[0] !== own) { im.data[i] = best[0] >> 16; im.data[i + 1] = (best[0] >> 8) & 255; im.data[i + 2] = best[0] & 255; }
     }
-    // the rod's dark outline left standing in the air (no body pixel next to it): peel it away
-    for (let pass = 0; pass < 3; pass++) for (const p of near) {
-      const x = p % fw, y = (p / fw) | 0; const i = at(k, x, y); if (!im.data[i + 3] || im.data[i] + im.data[i + 1] + im.data[i + 2] > 150) continue; let lit = 0;
-      for (let yy = y - 1; yy <= y + 1; yy++) for (let xx = x - 1; xx <= x + 1; xx++) { if (xx < 0 || yy < 0 || xx >= fw || yy >= fh) continue; const j = at(k, xx, yy); if (im.data[j + 3] && im.data[j] + im.data[j + 1] + im.data[j + 2] > 150) lit++; }
-      if (!lit) im.data[i + 3] = 0;
+    // the rod's dark outline left standing in the air: peel it away — only right beside the rod (≤ 1 px), only pixels with
+    // no bright neighbour AND open to the air (≥ 3 transparent neighbours); the dark training shorts the rod crossed have
+    // no open side inside and stay (a looser rule tore a hole across the waist)
+    const rodNear = new Set(); for (const [x, y] of M) for (let yy = y - 1; yy <= y + 1; yy++) for (let xx = x - 1; xx <= x + 1; xx++) if (xx >= 0 && yy >= 0 && xx < fw && yy < fh) rodNear.add(yy * fw + xx);
+    for (let pass = 0; pass < 3; pass++) for (const p of rodNear) {
+      const x = p % fw, y = (p / fw) | 0; const i = at(k, x, y); if (!im.data[i + 3] || im.data[i] + im.data[i + 1] + im.data[i + 2] > 150) continue; let lit = 0, open = 0;
+      for (let yy = y - 1; yy <= y + 1; yy++) for (let xx = x - 1; xx <= x + 1; xx++) { if (xx === x && yy === y) continue; if (xx < 0 || yy < 0 || xx >= fw || yy >= fh) { open++; continue; } const j = at(k, xx, yy); if (!im.data[j + 3]) open++; else if (im.data[j] + im.data[j + 1] + im.data[j + 2] > 150) lit++; }
+      if (!lit && open >= 3) im.data[i + 3] = 0;
     }
   }
   // hidden pieces: position from the nearest visible frames, flagged as behind the body
