@@ -8,11 +8,11 @@
 //                so the body colour is exactly the base's;
 //   hair.png   — everything above the neck that is not skin: hair, hats, hoods, horns, ribbons; the generated face is dropped
 //                (only large non-skin pieces or ones above the brow survive inside the head — eyes and mouth do not);
-//   preview.png — source | reference head + outfit + hair, for checking.
+//   preview (only with PREVIEW_DIR set) — source | reference head + outfit + hair, for checking;
 //   node art/authoring/extract1024.cjs <out dir> <source.png> [<source.png> …]   (output: <out dir>/<name>/…)
 const fs = require('fs'); const path = require('path'); const cp = require('child_process'); const os = require('os'); const { PNG } = require('pngjs');
 const ROOT = path.resolve(__dirname, '../..');
-const REF = process.env.REF_1024 ?? path.resolve(ROOT, '../../../art_source/body/reference_body.png');
+const REF = process.env.REF_1024 ?? [path.join(ROOT, 'art_source/body/reference_body.png'), path.resolve(ROOT, '../../../art_source/body/reference_body.png')].find((f) => fs.existsSync(f)); /* main checkout or a worktree */
 const [outDir, ...sources] = process.argv.slice(2); const W = 1024;
 const lin = (c) => { c /= 255; return c <= .04045 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4; };
 const oklab = (r, g, b) => { const R = lin(r), G = lin(g), B = lin(b); const l = Math.cbrt(.4122 * R + .5363 * G + .0514 * B), m = Math.cbrt(.2119 * R + .6807 * G + .1074 * B), s = Math.cbrt(.0883 * R + .2817 * G + .6300 * B); return [.2105 * l + .7936 * m - .0041 * s, 1.978 * l - 2.4286 * m + .4506 * s, .0259 * l + .7828 * m - .8087 * s]; };
@@ -96,10 +96,10 @@ for (const src of sources) {
   fs.writeFileSync(path.join(dir, 'outfit.png'), PNG.sync.write(outfit)); fs.writeFileSync(path.join(dir, 'hair.png'), PNG.sync.write(hair));
   // 4. preview: source | reference head + outfit + hair on key green
   const pv = new PNG({ width: W * 2, height: W });
-  for (let y = 0; y < W; y++) for (let x = 0; x < W; x++) { const i = y * W + x, a = (y * W * 2 + x) * 4, b = (y * W * 2 + W + x) * 4; const s = PNG.sync.read; void s;
+  for (let y = 0; y < W; y++) for (let x = 0; x < W; x++) { const i = y * W + x, a = (y * W * 2 + x) * 4, b = (y * W * 2 + W + x) * 4;
     pv.data.set([D[i * 4], D[i * 4 + 1], D[i * 4 + 2], 255], a); if (!on[i]) pv.data.set([22, 210, 5, 255], a);
     let c = [22, 210, 5]; if (y < neck && refOn[i]) c = [R[i * 4], R[i * 4 + 1], R[i * 4 + 2]]; if (outfit.data[i * 4 + 3]) c = [outfit.data[i * 4], outfit.data[i * 4 + 1], outfit.data[i * 4 + 2]]; if (hair.data[i * 4 + 3]) c = [hair.data[i * 4], hair.data[i * 4 + 1], hair.data[i * 4 + 2]]; pv.data.set([...c, 255], b); }
-  fs.writeFileSync(path.join(dir, 'preview.png'), PNG.sync.write(pv));
+  if (process.env.PREVIEW_DIR) { fs.mkdirSync(process.env.PREVIEW_DIR, { recursive: true }); fs.writeFileSync(path.join(process.env.PREVIEW_DIR, `${name}.png`), PNG.sync.write(pv)); } /* previews stay out of the asset folder */
   let nh = 0, no = 0; for (let i = 0; i < W * W; i++) { if (hair.data[i * 4 + 3]) nh++; if (outfit.data[i * 4 + 3]) no++; }
   console.log(`${name}: outfit ${no} px, hair ${nh} px, skin samples ${samples.length}`);
 }
