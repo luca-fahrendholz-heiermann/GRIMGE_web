@@ -17,6 +17,7 @@ import { gainXp, foeDrop, bagSlots, bagUpgradeCost, BAG_MAX_LEVEL } from './kk_l
 import { spawnItems, showReels } from './kk_items.js';
 import { castleHp, castleMaxHp, inGateRing, outOfCastle, squadWallTarget } from './kk_castle.js';
 import { FACTIONS, TIERS, LAIRS, TRAIT_DE, dinoImage, dinoName, tierUnit, factionOf, initCastleRecruits, recruit, buildLair, creditKill, canAfford, squadMorale } from './kk_factions.js';
+import { drawDinoAnim } from './kk_dino_anim.js'; // animated dino-dragon sheets
 import { addDeed, titleBonus } from './kk_titles.js';
 
 // Per class: melee/ranged and multipliers on the minion base values.
@@ -51,16 +52,20 @@ let attackingElement = null; /* the element of the unit striking right now (main
 // A live unit: a minion that carries its class and element (its hits roll the element's statuses).
 // The dino-dragon: its sprite (facing left in the file), a breathing bob, a lunge when it strikes, its bar and name.
 function renderDino(ctx, u) {
-  const im = dinoImage(u.rec.dino); if (!im || !(im.naturalWidth || im.width) || !im.complete) return false;
-  const h = u.renderHeight; const w = h * (im.naturalWidth || im.width) / (im.naturalHeight || im.height); const bob = Math.sin((u.animTime ?? 0) * (u.state === 'run' ? 9 : 2.5)) * (u.state === 'run' ? 3 : 1.5); const lunge = u.state === 'attack' ? 10 : 0; const f = u.facing || 1;
-  ctx.save(); ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.beginPath(); ctx.ellipse(u.x, u.y + 2, w * .36, 9, 0, 0, Math.PI * 2); ctx.fill();
-  if (u.hitFlash > 0) ctx.globalAlpha = .7; ctx.translate(u.x + f * lunge, u.y + bob); if (f > 0) ctx.scale(-1, 1); ctx.imageSmoothingEnabled = true; ctx.drawImage(im, -w / 2, -h, w, h); ctx.restore();
+  const h = u.renderHeight; const f = u.facing || 1;
+  if (!drawDinoAnim(ctx, u, h, f)) { /* the animated sheets (kk_dino_anim.js); the still while they load */
+    const im = dinoImage(u.rec.dino); if (!im || !(im.naturalWidth || im.width) || !im.complete) return false;
+    const w = h * (im.naturalWidth || im.width) / (im.naturalHeight || im.height); const bob = Math.sin((u.animTime ?? 0) * (u.state === 'run' ? 9 : 2.5)) * (u.state === 'run' ? 3 : 1.5); const lunge = u.state === 'attack' ? 10 : 0;
+    ctx.save(); ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.beginPath(); ctx.ellipse(u.x, u.y + 2, w * .36, 9, 0, 0, Math.PI * 2); ctx.fill();
+    if (u.hitFlash > 0) ctx.globalAlpha = .7; ctx.translate(u.x + f * lunge, u.y + bob); if (f > 0) ctx.scale(-1, 1); ctx.imageSmoothingEnabled = true; ctx.drawImage(im, -w / 2, -h, w, h); ctx.restore();
+  }
   const by = u.y - h - 12; ctx.fillStyle = 'rgba(0,0,0,.7)'; ctx.fillRect(Math.round(u.x - 36), Math.round(by), 72, 6); ctx.fillStyle = u.team === 'blue' ? '#7bd66b' : '#ff5050'; ctx.fillRect(Math.round(u.x - 35), Math.round(by + 1), 70 * Math.max(0, u.hp / u.maxHp), 4);
   ctx.font = 'bold 10px monospace'; ctx.textAlign = 'center'; ctx.fillStyle = elementColor(u.rec.dino); ctx.fillText(u.rec.name ?? dinoName(u.rec.dino), u.x, by - 4); return true;
 }
 // Its signature blow (named after the bestiary): a wave of its element around it that hurts foes and carries the element.
 function dinoSignature(game, u) {
   if (!game) return; const foes = game.getHostileTargets(u.team).filter((t) => t && !t.isDead && t.isAlive !== false && !t.isProp && Math.hypot(t.x - u.x, ((t.z ?? 0) - u.z) * 150) < 150); if (!foes.length) return;
+  u.atkStart = u.animTime; /* the strike sheet plays */
   const prev = setStatusSource({ team: u.team, statusElements: [u.rec.dino], castBy: u }); try { for (const t of foes) t.takeDamage?.(Math.round(u.damage * 1.6), Math.sign(t.x - u.x) * 160, 40, .3, false, 'spell'); } finally { setStatusSource(prev); }
   combat.spawnShockwave?.(u.x, u.y - 30, 150, elementColor(u.rec.dino)); combat.spawnDamageText?.(u.x, u.y - u.renderHeight - 26, FACTIONS[u.rec.dino]?.dino?.[3] ?? 'URGEWALT', { color: elementColor(u.rec.dino) });
 }
@@ -98,6 +103,7 @@ export class KKUnit extends Minion {
     this.speed = pace; return super.update(dt, gameWorld, battlefield);
   }
   performAttack(target, gameWorld) {
+    if (this.rec?.dino) this.atkStart = this.animTime; /* the dino-dragon's strike sheet (kk_dino_anim.js) */
     const kkm = this.team === gameWorld?.player?.team && this.rec?.role === 'squad' ? kkState(gameWorld) : null; const mor = kkm ? (kkm.morale ?? 1) * (kkm.unpaid ? .9 : 1) : 1;
     if (mor !== 1) { const d0 = this.damage; this.damage = Math.round(d0 * mor); try { return this.performAttackInner(target, gameWorld); } finally { this.damage = d0; } } /* squad morale (kk_factions.js) */
     return this.performAttackInner(target, gameWorld);

@@ -5852,6 +5852,14 @@ game.running = false;
     assert(sprites && ofLand && t1ok && lockedT3 && t3ok && t4ok && unitBig && weekly && veteran && wildOk && !!egg, 'Factions: 13 element factions each with its dino-dragon sprite, a castle belongs to the faction of its land, tier 1 is recruited from the pool for gold, tier 3 needs the beast lair, tier 4 (the dino-dragon, a big strong unit) the dragon lair, a week refills the pools, kills make a named veteran, a wild dino-dragon leaves a dino egg (' + [sprites, ofLand, t1ok, lockedT3, t3ok, t4ok, unitBig, weekly, veteran, wildOk, !!egg].join('/') + ')');
   }
   {
+    // animated dino-dragons: every faction has walk + attack sheets; the pose follows the unit (strike after an attack, walk while moving)
+    const DA = await import('./public/src/kk_dino_anim.js'); const KFa = await import('./public/src/kk_factions.js'); const fsA = await import('node:fs');
+    const all = Object.keys(KFa.FACTIONS).every((el) => DA.DINO_ANIM[el] && ['walk', 'attack'].every((k) => fsA.existsSync(`./public/assets/creatures/dinodragons/anim/${el}_${k}.png`)));
+    const u = { rec: { dino: 'ignis' }, animTime: 5, state: 'run' }; const walking = DA.dinoPose(u).kind === 'walk';
+    u.atkStart = 4.8; const striking = DA.dinoPose(u).kind === 'attack' && DA.dinoPose(u).frame === 2; u.atkStart = 4; u.state = 'idle'; const standing = DA.dinoPose(u).kind === 'walk' && DA.dinoPose(u).frame === 0;
+    assert(all && walking && striking && standing, 'Dino-dragon animation: walk and attack sheets for all 13 factions, the strike plays after an attack, the walk while moving, the first frame while standing (' + [all, walking, striking, standing].join('/') + ')');
+  }
+  {
     // morale, upkeep and the roster (HoMM, against runaway snowballing)
     game.setMatchMode('kronenkrieg'); game.startMatch(); const kMo = game.modeState.kk; const KFm = await import('./public/src/kk_factions.js'); const KAm2 = await import('./public/src/kk_army.js');
     kMo.units = kMo.units.filter((u) => !(u.team === 'blue' && u.seat === 0)); const add = (fac, n, extra = {}) => { for (let i = 0; i < n; i++) KAm2.addRecord(kMo, { team: 'blue', cls: 'Guardian', element: fac, faction: fac, tier: 1, row: kMo.row, x: 100, z: 5, role: 'squad', ...extra }); };
