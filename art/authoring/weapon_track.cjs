@@ -46,6 +46,8 @@ for (const clip of clips) {
       const onPatch = C.some(([cx, cy]) => Math.abs(cx - x) <= 2 && Math.abs(cy - y) <= 2); /* the shield patch lies ON the forearm: fill it even at the edge */
       let around = 0; for (let yy = y - 1; yy <= y + 1; yy++) for (let xx = x - 1; xx <= x + 1; xx++) if (xx >= 0 && yy >= 0 && xx < fw && yy < fh && im.data[at(k, xx, yy) + 3]) around++;
       if (!opp && !(onPatch && around >= 3)) continue; /* the rod out in the air: leave it open */
+      let lit = 0; for (let yy = y - 1; yy <= y + 1; yy++) for (let xx = x - 1; xx <= x + 1; xx++) { if (xx < 0 || yy < 0 || xx >= fw || yy >= fh) continue; const j = at(k, xx, yy); if (im.data[j + 3] && im.data[j] + im.data[j + 1] + im.data[j + 2] > 150) lit++; }
+      if (!onPatch && lit < 2) continue; /* only the rod's own dark edges around it (the rod in the air): no fill — it would turn into a dark stick */
       for (let yy = y - 1; yy <= y + 1; yy++) for (let xx = x - 1; xx <= x + 1; xx++) { if (xx < 0 || yy < 0 || xx >= fw || yy >= fh) continue; const j = at(k, xx, yy); if (!im.data[j + 3]) continue; const key = (im.data[j] << 16) | (im.data[j + 1] << 8) | im.data[j + 2]; cnt.set(key, (cnt.get(key) ?? 0) + 1); }
       const best = [...cnt].sort((p, q) => q[1] - p[1])[0]; if (!best) continue; im.data[i] = best[0] >> 16; im.data[i + 1] = (best[0] >> 8) & 255; im.data[i + 2] = best[0] & 255; im.data[i + 3] = 255;
     }
@@ -57,6 +59,12 @@ for (const clip of clips) {
       const x = p % fw, y = (p / fw) | 0; const i = at(k, x, y); if (!im.data[i + 3]) continue; const own = (im.data[i] << 16) | (im.data[i + 1] << 8) | im.data[i + 2]; const cnt = new Map();
       for (let yy = y - 1; yy <= y + 1; yy++) for (let xx = x - 1; xx <= x + 1; xx++) { if ((xx === x && yy === y) || xx < 0 || yy < 0 || xx >= fw || yy >= fh) continue; const j = at(k, xx, yy); if (!im.data[j + 3]) continue; const key = (im.data[j] << 16) | (im.data[j + 1] << 8) | im.data[j + 2]; cnt.set(key, (cnt.get(key) ?? 0) + 1); }
       const best = [...cnt].sort((a, b) => b[1] - a[1])[0]; if (best && best[1] >= 5 && best[0] !== own) { im.data[i] = best[0] >> 16; im.data[i + 1] = (best[0] >> 8) & 255; im.data[i + 2] = best[0] & 255; }
+    }
+    // the rod's dark outline left standing in the air (no body pixel next to it): peel it away
+    for (let pass = 0; pass < 3; pass++) for (const p of near) {
+      const x = p % fw, y = (p / fw) | 0; const i = at(k, x, y); if (!im.data[i + 3] || im.data[i] + im.data[i + 1] + im.data[i + 2] > 150) continue; let lit = 0;
+      for (let yy = y - 1; yy <= y + 1; yy++) for (let xx = x - 1; xx <= x + 1; xx++) { if (xx < 0 || yy < 0 || xx >= fw || yy >= fh) continue; const j = at(k, xx, yy); if (im.data[j + 3] && im.data[j] + im.data[j + 1] + im.data[j + 2] > 150) lit++; }
+      if (!lit) im.data[i + 3] = 0;
     }
   }
   // hidden pieces: position from the nearest visible frames, flagged as behind the body

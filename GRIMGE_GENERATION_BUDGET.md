@@ -204,3 +204,14 @@ Der Nutzer hat selbst Guthaben gekauft (Plan `starter`, Stand vor dem Auftrag 27
 **Zusammen 186,25 Credits; Kontostand danach: 50,50** (das Konto wird auch von anderen Sitzungen genutzt).
 - Markiert und daher nicht genutzt: die Klassen-Quelle Berserker (nackter Oberkörper); die angezogenen Idle-Raster von Guardian, Monk und Beastborn als Referenz.
 - Lehre: Referenzen für das Anziehen müssen vollständig sein. Ausgeschnittene Outfit-Ebenen haben Löcher, die KI erfindet die Lücken in jedem Frame anders.
+
+## 21. Nov 2026: Waffen-Angriffe des Base-Charakters
+
+| Auftrag | Modell | Anzahl | Credits |
+|---|---|---|---|
+| 10 Schwert-Clips mit Platzhaltern (magenta Stab = Schwert, cyan Fleck = Schild): Angriff 1–3, Finisher, Aufladen vorwärts/hoch/runter, Aufladen, Laufangriff, Luftangriff | `gpt_image_2_6` GIF high | 10 | 12,5 |
+| Neu, weil das Schwert in einzelnen Frames die Hand wechselte (strengere Regel, dann geänderte Bewegungen) | dto. | 7 | 8,75 |
+| Guardian-Rüstung für die 10 Waffen-Clips (vollständige Klassen-Quelle als Referenz) | `gpt_image_2_6` high | 10 | 12,5 |
+
+**Zusammen 33,75 Credits; Kontostand danach: 16,75.**
+- Prüfung: In allen 80 Frames ist der Griff mindestens 28 px vom Schildarm entfernt.
