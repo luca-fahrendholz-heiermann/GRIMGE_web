@@ -38,6 +38,12 @@ for (const f of fs.readdirSync(SRC).filter((f) => /_hair\.png$/.test(f) && !/^(t
 for (const f of fs.existsSync(path.join(SRC, 'beard')) ? fs.readdirSync(path.join(SRC, 'beard')) : []) manifest.beard[f.replace('.png', '')] = copy(`beard/${f}`, 'beard', f);
 for (const f of fs.existsSync(path.join(SRC, 'face')) ? fs.readdirSync(path.join(SRC, 'face')) : []) manifest.face[f.replace('.png', '')] = copy(`face/${f}`, 'face', f);
 for (const p of ['wolf', 'turtle', 'ape', 'dragon']) manifest.primalForms[p] = { stage2: copy(`pf2_${p}_outfit.png`, 'primal', `${p}_stage2.png`), stage3: copy(`pf3/pf3_${p}.png`, 'primal', `${p}_stage3.png`) };
-fs.writeFileSync(path.join(OUT, 'manifest.json'), JSON.stringify(manifest, null, 1));
-const count = (o) => JSON.stringify(o).match(/\.png/g)?.length ?? 0;
-console.log(JSON.stringify({ files: count(manifest), classes: Object.fromEntries(Object.entries(manifest.classes).map(([k, v]) => [k, v.skins.length])), hair: Object.keys(manifest.hair).length, beard: Object.keys(manifest.beard).length, face: Object.keys(manifest.face).length }));
+// dye channels per outfit / transformation clothing (public/src/armor_dye.js — the same code the game dyes with)
+(async () => {
+  const { findChannels } = await import('../../public/src/armor_dye.js'); const cp = require('child_process');
+  const chOf = (rel) => findChannels(cp.execFileSync('magick', [path.join(OUT, rel), '-alpha', 'on', '-depth', '8', 'rgba:-']));
+  for (const c of CLASSES) { for (const sk of manifest.classes[c].skins) sk.dye = chOf(sk.file); manifest.transformations[c].dye = manifest.transformations[c].clothing.map(chOf); }
+  fs.writeFileSync(path.join(OUT, 'manifest.json'), JSON.stringify(manifest, null, 1));
+  console.log(JSON.stringify({ files: count(manifest), classes: Object.fromEntries(Object.entries(manifest.classes).map(([k, v]) => [k, v.skins.length])), hair: Object.keys(manifest.hair).length, beard: Object.keys(manifest.beard).length, face: Object.keys(manifest.face).length }));
+})();
+function count(o) { return JSON.stringify(o).match(/.png/g)?.length ?? 0; }

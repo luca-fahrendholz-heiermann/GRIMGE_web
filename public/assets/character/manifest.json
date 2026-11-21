@@ -11,32 +11,168 @@
     {
      "id": "gritty_tinted",
      "label": "Klassenfarben",
-     "file": "outfit/guardian_gritty_tinted.png"
+     "file": "outfit/guardian_gritty_tinted.png",
+     "dye": [
+      {
+       "id": "primary",
+       "band": [
+        183,
+        227
+       ],
+       "hue": 205
+      },
+      {
+       "id": "secondary",
+       "band": [
+        213,
+        257
+       ],
+       "hue": 235
+      },
+      {
+       "id": "accent",
+       "band": [
+        3,
+        47
+       ],
+       "hue": 25
+      }
+     ]
     },
     {
      "id": "gritty",
      "label": "Knochen & Fell",
-     "file": "outfit/guardian_gritty.png"
+     "file": "outfit/guardian_gritty.png",
+     "dye": [
+      {
+       "id": "primary",
+       "band": [
+        353,
+        37
+       ],
+       "hue": 15
+      },
+      {
+       "id": "secondary",
+       "band": [
+        303,
+        347
+       ],
+       "hue": 325
+      },
+      {
+       "id": "metal",
+       "metal": true
+      }
+     ]
     },
     {
      "id": "anime",
      "label": "Altes Japan",
-     "file": "outfit/guardian_anime.png"
+     "file": "outfit/guardian_anime.png",
+     "dye": [
+      {
+       "id": "primary",
+       "band": [
+        333,
+        17
+       ],
+       "hue": 355
+      },
+      {
+       "id": "secondary",
+       "band": [
+        13,
+        57
+       ],
+       "hue": 35
+      },
+      {
+       "id": "metal",
+       "metal": true
+      }
+     ]
     },
     {
      "id": "retro",
      "label": "Retro",
-     "file": "outfit/guardian_retro.png"
+     "file": "outfit/guardian_retro.png",
+     "dye": [
+      {
+       "id": "primary",
+       "band": [
+        13,
+        57
+       ],
+       "hue": 35
+      },
+      {
+       "id": "secondary",
+       "band": [
+        203,
+        247
+       ],
+       "hue": 225
+      },
+      {
+       "id": "metal",
+       "metal": true
+      }
+     ]
     },
     {
      "id": "rune_knight",
      "label": "Runenritter",
-     "file": "outfit/guardian_rune_knight.png"
+     "file": "outfit/guardian_rune_knight.png",
+     "dye": [
+      {
+       "id": "primary",
+       "band": [
+        23,
+        67
+       ],
+       "hue": 45
+      },
+      {
+       "id": "metal",
+       "metal": true
+      }
+     ]
     },
     {
      "id": "dark_samurai",
      "label": "Dunkler Samurai",
-     "file": "outfit/guardian_dark_samurai.png"
+     "file": "outfit/guardian_dark_samurai.png",
+     "dye": [
+      {
+       "id": "primary",
+       "band": [
+        173,
+        217
+       ],
+       "hue": 195
+      },
+      {
+       "id": "secondary",
+       "band": [
+        343,
+        27
+       ],
+       "hue": 5
+      },
+      {
+       "id": "accent",
+       "band": [
+        23,
+        67
+       ],
+       "hue": 45
+      },
+      {
+       "id": "metal",
+       "metal": true
+      }
+     ]
     }
    ],
    "defaultSkin": "gritty_tinted",
@@ -47,32 +183,128 @@
     {
      "id": "gritty_tinted",
      "label": "Klassenfarben",
-     "file": "outfit/berserker_gritty_tinted.png"
+     "file": "outfit/berserker_gritty_tinted.png",
+     "dye": [
+      {
+       "id": "primary",
+       "band": [
+        333,
+        17
+       ],
+       "hue": 355
+      },
+      {
+       "id": "metal",
+       "metal": true
+      }
+     ]
     },
     {
      "id": "gritty",
      "label": "Knochen & Fell",
-     "file": "outfit/berserker_gritty.png"
+     "file": "outfit/berserker_gritty.png",
+     "dye": [
+      {
+       "id": "primary",
+       "band": [
+        3,
+        47
+       ],
+       "hue": 25
+      },
+      {
+       "id": "metal",
+       "metal": true
+      }
+     ]
     },
     {
      "id": "anime",
      "label": "Altes Japan",
-     "file": "outfit/berserker_anime.png"
+     "file": "outfit/berserker_anime.png",
+     "dye": [
+      {
+       "id": "primary",
+       "band": [
+        343,
+        27
+       ],
+       "hue": 5
+      }
+     ]
     },
     {
      "id": "retro",
      "label": "Retro",
-     "file": "outfit/berserker_retro.png"
+     "file": "outfit/berserker_retro.png",
+     "dye": [
+      {
+       "id": "primary",
+       "band": [
+        333,
+        17
+       ],
+       "hue": 355
+      },
+      {
+       "id": "metal",
+       "metal": true
+      }
+     ]
     },
     {
      "id": "stormarm",
      "label": "Sturmarm",
-     "file": "outfit/berserker_stormarm.png"
+     "file": "outfit/berserker_stormarm.png",
+     "dye": [
+      {
+       "id": "primary",
+       "band": [
+        223,
+        267
+       ],
+       "hue": 245
+      },
+      {
+       "id": "secondary",
+       "band": [
+        3,
+        47
+       ],
+       "hue": 25
+      },
+      {
+       "id": "metal",
+       "metal": true
+      }
+     ]
     },
     {
      "id": "oni_monk",
      "label": "Oni-Kämpfer",
-     "file": "outfit/berserker_oni_monk.png"
+     "file": "outfit/berserker_oni_monk.png",
+     "dye": [
+      {
+       "id": "primary",
+       "band": [
+        243,
+        287
+       ],
+       "hue": 265
+      },
+      {
+       "id": "secondary",
+       "band": [
+        343,
+        27
+       ],
+       "hue": 5
+      },
+      {
+       "id": "metal",
+       "metal": true
+      }
+     ]
     }
    ],
    "defaultSkin": "gritty_tinted",
@@ -83,27 +315,113 @@
     {
      "id": "gritty_tinted",
      "label": "Klassenfarben",
-     "file": "outfit/lancer_gritty_tinted.png"
+     "file": "outfit/lancer_gritty_tinted.png",
+     "dye": [
+      {
+       "id": "primary",
+       "band": [
+        193,
+        237
+       ],
+       "hue": 215
+      }
+     ]
     },
     {
      "id": "gritty",
      "label": "Knochen & Fell",
-     "file": "outfit/lancer_gritty.png"
+     "file": "outfit/lancer_gritty.png",
+     "dye": [
+      {
+       "id": "primary",
+       "band": [
+        353,
+        37
+       ],
+       "hue": 15
+      }
+     ]
     },
     {
      "id": "anime",
      "label": "Altes Japan",
-     "file": "outfit/lancer_anime.png"
+     "file": "outfit/lancer_anime.png",
+     "dye": [
+      {
+       "id": "primary",
+       "band": [
+        223,
+        267
+       ],
+       "hue": 245
+      },
+      {
+       "id": "secondary",
+       "band": [
+        343,
+        27
+       ],
+       "hue": 5
+      },
+      {
+       "id": "metal",
+       "metal": true
+      }
+     ]
     },
     {
      "id": "retro",
      "label": "Retro",
-     "file": "outfit/lancer_retro.png"
+     "file": "outfit/lancer_retro.png",
+     "dye": [
+      {
+       "id": "primary",
+       "band": [
+        183,
+        227
+       ],
+       "hue": 205
+      },
+      {
+       "id": "secondary",
+       "band": [
+        223,
+        267
+       ],
+       "hue": 245
+      },
+      {
+       "id": "metal",
+       "metal": true
+      }
+     ]
     },
     {
      "id": "ronin",
      "label": "Ronin",
-     "file": "outfit/lancer_ronin.png"
+     "file": "outfit/lancer_ronin.png",
+     "dye": [
+      {
+       "id": "primary",
+       "band": [
+        333,
+        17
+       ],
+       "hue": 355
+      },
+      {
+       "id": "secondary",
+       "band": [
+        3,
+        47
+       ],
+       "hue": 25
+      },
+      {
+       "id": "metal",
+       "metal": true
+      }
+     ]
     }
    ],
    "defaultSkin": "gritty_tinted",
@@ -114,27 +432,73 @@
     {
      "id": "gritty_tinted",
      "label": "Klassenfarben",
-     "file": "outfit/monk_gritty_tinted.png"
+     "file": "outfit/monk_gritty_tinted.png",
+     "dye": [
+      {
+       "id": "primary",
+       "band": [
+        353,
+        37
+       ],
+       "hue": 15
+      }
+     ]
     },
     {
      "id": "gritty",
      "label": "Knochen & Fell",
-     "file": "outfit/monk_gritty.png"
+     "file": "outfit/monk_gritty.png",
+     "dye": [
+      {
+       "id": "primary",
+       "band": [
+        353,
+        37
+       ],
+       "hue": 15
+      }
+     ]
     },
     {
      "id": "anime",
      "label": "Altes Japan",
-     "file": "outfit/monk_anime.png"
+     "file": "outfit/monk_anime.png",
+     "dye": [
+      {
+       "id": "primary",
+       "band": [
+        13,
+        57
+       ],
+       "hue": 35
+      }
+     ]
     },
     {
      "id": "retro",
      "label": "Retro",
-     "file": "outfit/monk_retro.png"
+     "file": "outfit/monk_retro.png",
+     "dye": [
+      {
+       "id": "primary",
+       "band": [
+        3,
+        47
+       ],
+       "hue": 25
+      }
+     ]
     },
     {
      "id": "white_monk",
      "label": "Weißer Mönch",
-     "file": "outfit/monk_white_monk.png"
+     "file": "outfit/monk_white_monk.png",
+     "dye": [
+      {
+       "id": "metal",
+       "metal": true
+      }
+     ]
     }
    ],
    "defaultSkin": "gritty_tinted",
@@ -145,37 +509,147 @@
     {
      "id": "signature",
      "label": "Klassen-Design",
-     "file": "outfit/beastborn_signature.png"
+     "file": "outfit/beastborn_signature.png",
+     "dye": [
+      {
+       "id": "primary",
+       "band": [
+        353,
+        37
+       ],
+       "hue": 15
+      },
+      {
+       "id": "metal",
+       "metal": true
+      }
+     ]
     },
     {
      "id": "gritty_tinted",
      "label": "Klassenfarben",
-     "file": "outfit/beastborn_gritty_tinted.png"
+     "file": "outfit/beastborn_gritty_tinted.png",
+     "dye": [
+      {
+       "id": "primary",
+       "band": [
+        333,
+        17
+       ],
+       "hue": 355
+      },
+      {
+       "id": "metal",
+       "metal": true
+      }
+     ]
     },
     {
      "id": "gritty",
      "label": "Knochen & Fell",
-     "file": "outfit/beastborn_gritty.png"
+     "file": "outfit/beastborn_gritty.png",
+     "dye": [
+      {
+       "id": "primary",
+       "band": [
+        3,
+        47
+       ],
+       "hue": 25
+      },
+      {
+       "id": "secondary",
+       "band": [
+        333,
+        17
+       ],
+       "hue": 355
+      }
+     ]
     },
     {
      "id": "anime",
      "label": "Altes Japan",
-     "file": "outfit/beastborn_anime.png"
+     "file": "outfit/beastborn_anime.png",
+     "dye": [
+      {
+       "id": "primary",
+       "band": [
+        343,
+        27
+       ],
+       "hue": 5
+      },
+      {
+       "id": "metal",
+       "metal": true
+      }
+     ]
     },
     {
      "id": "retro",
      "label": "Retro",
-     "file": "outfit/beastborn_retro.png"
+     "file": "outfit/beastborn_retro.png",
+     "dye": [
+      {
+       "id": "primary",
+       "band": [
+        3,
+        47
+       ],
+       "hue": 25
+      },
+      {
+       "id": "secondary",
+       "band": [
+        333,
+        17
+       ],
+       "hue": 355
+      },
+      {
+       "id": "metal",
+       "metal": true
+      }
+     ]
     },
     {
      "id": "retro_signature",
      "label": "Retro Klassen-Design",
-     "file": "outfit/beastborn_retro_signature.png"
+     "file": "outfit/beastborn_retro_signature.png",
+     "dye": [
+      {
+       "id": "primary",
+       "band": [
+        353,
+        37
+       ],
+       "hue": 15
+      },
+      {
+       "id": "metal",
+       "metal": true
+      }
+     ]
     },
     {
      "id": "leather",
      "label": "Lederjäger",
-     "file": "outfit/beastborn_leather.png"
+     "file": "outfit/beastborn_leather.png",
+     "dye": [
+      {
+       "id": "primary",
+       "band": [
+        353,
+        37
+       ],
+       "hue": 15
+      },
+      {
+       "id": "metal",
+       "metal": true
+      }
+     ]
     }
    ],
    "defaultSkin": "signature",
@@ -186,27 +660,125 @@
     {
      "id": "gritty",
      "label": "Knochen & Fell",
-     "file": "outfit/shadow_gritty.png"
+     "file": "outfit/shadow_gritty.png",
+     "dye": [
+      {
+       "id": "primary",
+       "band": [
+        343,
+        27
+       ],
+       "hue": 5
+      },
+      {
+       "id": "secondary",
+       "band": [
+        263,
+        307
+       ],
+       "hue": 285
+      },
+      {
+       "id": "accent",
+       "band": [
+        303,
+        347
+       ],
+       "hue": 325
+      }
+     ]
     },
     {
      "id": "anime",
      "label": "Altes Japan",
-     "file": "outfit/shadow_anime.png"
+     "file": "outfit/shadow_anime.png",
+     "dye": [
+      {
+       "id": "primary",
+       "band": [
+        233,
+        277
+       ],
+       "hue": 255
+      },
+      {
+       "id": "secondary",
+       "band": [
+        283,
+        327
+       ],
+       "hue": 305
+      },
+      {
+       "id": "metal",
+       "metal": true
+      }
+     ]
     },
     {
      "id": "retro",
      "label": "Retro",
-     "file": "outfit/shadow_retro.png"
+     "file": "outfit/shadow_retro.png",
+     "dye": [
+      {
+       "id": "primary",
+       "band": [
+        263,
+        307
+       ],
+       "hue": 285
+      },
+      {
+       "id": "metal",
+       "metal": true
+      }
+     ]
     },
     {
      "id": "astral_hood",
      "label": "Astral (Kapuze)",
-     "file": "outfit/shadow_astral_hood.png"
+     "file": "outfit/shadow_astral_hood.png",
+     "dye": [
+      {
+       "id": "primary",
+       "band": [
+        173,
+        217
+       ],
+       "hue": 195
+      },
+      {
+       "id": "secondary",
+       "band": [
+        313,
+        357
+       ],
+       "hue": 335
+      },
+      {
+       "id": "metal",
+       "metal": true
+      }
+     ]
     },
     {
      "id": "astral",
      "label": "Astral",
-     "file": "outfit/shadow_astral.png"
+     "file": "outfit/shadow_astral.png",
+     "dye": [
+      {
+       "id": "primary",
+       "band": [
+        163,
+        207
+       ],
+       "hue": 185
+      },
+      {
+       "id": "metal",
+       "metal": true
+      }
+     ]
     }
    ],
    "defaultSkin": "gritty",
@@ -217,37 +789,167 @@
     {
      "id": "signature",
      "label": "Klassen-Design",
-     "file": "outfit/ranger_signature.png"
+     "file": "outfit/ranger_signature.png",
+     "dye": [
+      {
+       "id": "primary",
+       "band": [
+        43,
+        87
+       ],
+       "hue": 65
+      }
+     ]
     },
     {
      "id": "gritty_tinted",
      "label": "Klassenfarben",
-     "file": "outfit/ranger_gritty_tinted.png"
+     "file": "outfit/ranger_gritty_tinted.png",
+     "dye": [
+      {
+       "id": "primary",
+       "band": [
+        353,
+        37
+       ],
+       "hue": 15
+      },
+      {
+       "id": "secondary",
+       "band": [
+        93,
+        137
+       ],
+       "hue": 115
+      },
+      {
+       "id": "accent",
+       "band": [
+        43,
+        87
+       ],
+       "hue": 65
+      }
+     ]
     },
     {
      "id": "gritty",
      "label": "Knochen & Fell",
-     "file": "outfit/ranger_gritty.png"
+     "file": "outfit/ranger_gritty.png",
+     "dye": [
+      {
+       "id": "primary",
+       "band": [
+        353,
+        37
+       ],
+       "hue": 15
+      }
+     ]
     },
     {
      "id": "anime",
      "label": "Altes Japan",
-     "file": "outfit/ranger_anime.png"
+     "file": "outfit/ranger_anime.png",
+     "dye": [
+      {
+       "id": "primary",
+       "band": [
+        33,
+        77
+       ],
+       "hue": 55
+      },
+      {
+       "id": "secondary",
+       "band": [
+        353,
+        37
+       ],
+       "hue": 15
+      },
+      {
+       "id": "accent",
+       "band": [
+        83,
+        127
+       ],
+       "hue": 105
+      }
+     ]
     },
     {
      "id": "retro",
      "label": "Retro",
-     "file": "outfit/ranger_retro.png"
+     "file": "outfit/ranger_retro.png",
+     "dye": [
+      {
+       "id": "primary",
+       "band": [
+        3,
+        47
+       ],
+       "hue": 25
+      },
+      {
+       "id": "secondary",
+       "band": [
+        73,
+        117
+       ],
+       "hue": 95
+      }
+     ]
     },
     {
      "id": "retro_signature",
      "label": "Retro Klassen-Design",
-     "file": "outfit/ranger_retro_signature.png"
+     "file": "outfit/ranger_retro_signature.png",
+     "dye": [
+      {
+       "id": "primary",
+       "band": [
+        353,
+        37
+       ],
+       "hue": 15
+      },
+      {
+       "id": "secondary",
+       "band": [
+        83,
+        127
+       ],
+       "hue": 105
+      },
+      {
+       "id": "accent",
+       "band": [
+        53,
+        97
+       ],
+       "hue": 75
+      }
+     ]
     },
     {
      "id": "wanderer",
      "label": "Wanderer",
-     "file": "outfit/ranger_wanderer.png"
+     "file": "outfit/ranger_wanderer.png",
+     "dye": [
+      {
+       "id": "primary",
+       "band": [
+        83,
+        127
+       ],
+       "hue": 105
+      },
+      {
+       "id": "metal",
+       "metal": true
+      }
+     ]
     }
    ],
    "defaultSkin": "signature",
@@ -258,27 +960,133 @@
     {
      "id": "gritty",
      "label": "Knochen & Fell",
-     "file": "outfit/arcanist_gritty.png"
+     "file": "outfit/arcanist_gritty.png",
+     "dye": [
+      {
+       "id": "primary",
+       "band": [
+        293,
+        337
+       ],
+       "hue": 315
+      },
+      {
+       "id": "secondary",
+       "band": [
+        353,
+        37
+       ],
+       "hue": 15
+      }
+     ]
     },
     {
      "id": "anime",
      "label": "Altes Japan",
-     "file": "outfit/arcanist_anime.png"
+     "file": "outfit/arcanist_anime.png",
+     "dye": [
+      {
+       "id": "primary",
+       "band": [
+        263,
+        307
+       ],
+       "hue": 285
+      },
+      {
+       "id": "metal",
+       "metal": true
+      }
+     ]
     },
     {
      "id": "retro",
      "label": "Retro",
-     "file": "outfit/arcanist_retro.png"
+     "file": "outfit/arcanist_retro.png",
+     "dye": [
+      {
+       "id": "primary",
+       "band": [
+        273,
+        317
+       ],
+       "hue": 295
+      },
+      {
+       "id": "secondary",
+       "band": [
+        23,
+        67
+       ],
+       "hue": 45
+      },
+      {
+       "id": "accent",
+       "band": [
+        313,
+        357
+       ],
+       "hue": 335
+      }
+     ]
     },
     {
      "id": "runescribe",
      "label": "Runenschreiber",
-     "file": "outfit/arcanist_runescribe.png"
+     "file": "outfit/arcanist_runescribe.png",
+     "dye": [
+      {
+       "id": "primary",
+       "band": [
+        263,
+        307
+       ],
+       "hue": 285
+      },
+      {
+       "id": "secondary",
+       "band": [
+        233,
+        277
+       ],
+       "hue": 255
+      },
+      {
+       "id": "accent",
+       "band": [
+        163,
+        207
+       ],
+       "hue": 185
+      }
+     ]
     },
     {
      "id": "crimson_robe",
      "label": "Karmesin-Robe",
-     "file": "outfit/arcanist_crimson_robe.png"
+     "file": "outfit/arcanist_crimson_robe.png",
+     "dye": [
+      {
+       "id": "primary",
+       "band": [
+        323,
+        7
+       ],
+       "hue": 345
+      },
+      {
+       "id": "secondary",
+       "band": [
+        13,
+        57
+       ],
+       "hue": 35
+      },
+      {
+       "id": "metal",
+       "metal": true
+      }
+     ]
     }
    ],
    "defaultSkin": "gritty",
@@ -570,14 +1378,72 @@
     "transform/guardian_tf_gritty.png",
     "transform/guardian_tf_anime.png"
    ],
-   "eyes": "eyes/eyes_guardian.png"
+   "eyes": "eyes/eyes_guardian.png",
+   "dye": [
+    [
+     {
+      "id": "primary",
+      "band": [
+       333,
+       17
+      ],
+      "hue": 355
+     },
+     {
+      "id": "secondary",
+      "band": [
+       3,
+       47
+      ],
+      "hue": 25
+     }
+    ],
+    [
+     {
+      "id": "primary",
+      "band": [
+       23,
+       67
+      ],
+      "hue": 45
+     },
+     {
+      "id": "secondary",
+      "band": [
+       343,
+       27
+      ],
+      "hue": 5
+     },
+     {
+      "id": "accent",
+      "band": [
+       303,
+       347
+      ],
+      "hue": 325
+     }
+    ]
+   ]
   },
   "berserker": {
    "name": "Oni-Erwachen",
    "clothing": [
     "transform/berserker_tf_anime.png"
    ],
-   "eyes": "eyes/eyes_berserker.png"
+   "eyes": "eyes/eyes_berserker.png",
+   "dye": [
+    [
+     {
+      "id": "primary",
+      "band": [
+       343,
+       27
+      ],
+      "hue": 5
+     }
+    ]
+   ]
   },
   "lancer": {
    "name": "Himmelskranich",
@@ -585,7 +1451,57 @@
     "transform/lancer_tf_gritty.png",
     "transform/lancer_tf_anime.png"
    ],
-   "eyes": "eyes/eyes_lancer.png"
+   "eyes": "eyes/eyes_lancer.png",
+   "dye": [
+    [
+     {
+      "id": "primary",
+      "band": [
+       253,
+       297
+      ],
+      "hue": 275
+     },
+     {
+      "id": "secondary",
+      "band": [
+       3,
+       47
+      ],
+      "hue": 25
+     },
+     {
+      "id": "accent",
+      "band": [
+       323,
+       7
+      ],
+      "hue": 345
+     },
+     {
+      "id": "metal",
+      "metal": true
+     }
+    ],
+    [
+     {
+      "id": "primary",
+      "band": [
+       223,
+       267
+      ],
+      "hue": 245
+     },
+     {
+      "id": "secondary",
+      "band": [
+       13,
+       57
+      ],
+      "hue": 35
+     }
+    ]
+   ]
   },
   "monk": {
    "name": "Tausend Hände",
@@ -593,14 +1509,68 @@
     "transform/monk_tf_gritty.png",
     "transform/monk_tf_anime.png"
    ],
-   "eyes": "eyes/eyes_monk.png"
+   "eyes": "eyes/eyes_monk.png",
+   "dye": [
+    [
+     {
+      "id": "primary",
+      "band": [
+       3,
+       47
+      ],
+      "hue": 25
+     },
+     {
+      "id": "secondary",
+      "band": [
+       33,
+       77
+      ],
+      "hue": 55
+     }
+    ],
+    [
+     {
+      "id": "primary",
+      "band": [
+       13,
+       57
+      ],
+      "hue": 35
+     }
+    ]
+   ]
   },
   "beastborn": {
    "name": "Wolfsgeist",
    "clothing": [
     "transform/beastborn_tf_anime.png"
    ],
-   "eyes": "eyes/eyes_beastborn.png"
+   "eyes": "eyes/eyes_beastborn.png",
+   "dye": [
+    [
+     {
+      "id": "primary",
+      "band": [
+       343,
+       27
+      ],
+      "hue": 5
+     },
+     {
+      "id": "secondary",
+      "band": [
+       13,
+       57
+      ],
+      "hue": 35
+     },
+     {
+      "id": "metal",
+      "metal": true
+     }
+    ]
+   ]
   },
   "shadow": {
    "name": "Nachtphantom",
@@ -608,7 +1578,45 @@
     "transform/shadow_tf_gritty.png",
     "transform/shadow_tf_anime.png"
    ],
-   "eyes": "eyes/eyes_shadow.png"
+   "eyes": "eyes/eyes_shadow.png",
+   "dye": [
+    [
+     {
+      "id": "primary",
+      "band": [
+       283,
+       327
+      ],
+      "hue": 305
+     },
+     {
+      "id": "secondary",
+      "band": [
+       323,
+       7
+      ],
+      "hue": 345
+     }
+    ],
+    [
+     {
+      "id": "primary",
+      "band": [
+       313,
+       357
+      ],
+      "hue": 335
+     },
+     {
+      "id": "secondary",
+      "band": [
+       283,
+       327
+      ],
+      "hue": 305
+     }
+    ]
+   ]
   },
   "ranger": {
    "name": "Sturmfalke",
@@ -616,14 +1624,72 @@
     "transform/ranger_tf_gritty.png",
     "transform/ranger_tf_anime.png"
    ],
-   "eyes": "eyes/eyes_ranger.png"
+   "eyes": "eyes/eyes_ranger.png",
+   "dye": [
+    [
+     {
+      "id": "primary",
+      "band": [
+       353,
+       37
+      ],
+      "hue": 15
+     },
+     {
+      "id": "secondary",
+      "band": [
+       43,
+       87
+      ],
+      "hue": 65
+     }
+    ],
+    [
+     {
+      "id": "primary",
+      "band": [
+       13,
+       57
+      ],
+      "hue": 35
+     }
+    ]
+   ]
   },
   "arcanist": {
    "name": "Runenkaiser",
    "clothing": [
     "transform/arcanist_tf_anime.png"
    ],
-   "eyes": "eyes/eyes_arcanist.png"
+   "eyes": "eyes/eyes_arcanist.png",
+   "dye": [
+    [
+     {
+      "id": "primary",
+      "band": [
+       223,
+       267
+      ],
+      "hue": 245
+     },
+     {
+      "id": "secondary",
+      "band": [
+       263,
+       307
+      ],
+      "hue": 285
+     },
+     {
+      "id": "accent",
+      "band": [
+       163,
+       207
+      ],
+      "hue": 185
+     }
+    ]
+   ]
   }
  },
  "primalForms": {
