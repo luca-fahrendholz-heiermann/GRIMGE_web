@@ -137,3 +137,25 @@ Der Nutzer hat selbst Guthaben gekauft (Plan `starter`, Stand vor dem Auftrag 27
 | 8 eigene Klassen-Stile (Anime / altes Japan) auf dem Referenz-Body: Guardian (Samurai-Lamellenrüstung), Berserker (Oni-Brecher), Lancer (Weißer Kranich), Monk (Bergasket), Beastborn (Wolfsgeist-Jäger), Shadow (Nacht-Shinobi), Ranger (Reiterbogenschütze), Arcanist (Runen-Exorzist) | `gpt_image_2_6` | 8 | 10 |
 
 **Kontostand danach: 232,25 Credits.** Alle 8 sind mit `prep_layers.cjs` in Outfit- und Haar-Ebenen zerlegt (`art_source/body/layers/`).
+
+## 21. Nov 2026: Charakter-Erstellung, Transformationen, Primals
+
+| Auftrag | Modell | Anzahl | Credits |
+|---|---|---|---|
+| 12 eigene Stile des Nutzers auf dem Referenz-Body: Astral mit und ohne Kapuze, Runescribe, Leder, Sturmarm, Wanderer, Oni-Mönch, dunkler Samurai, Runenritter, Ronin, Karmesin-Robe, weißer Mönch | `gpt_image_2_6` high | 12 | 15 |
+| 8 Klassen-Transformationen (Look- und VFX-Vorlage, mit Haar und Effekten) | dto. | 8 | 10 |
+| Primal-Sheets (3 Stufen), erste Fassung (zu weich, zu lieb) | dto. | 4 | 5 |
+| Primal-Sheets, zweite Fassung: harte Pixel, gefährlich (**vom Nutzer freigegeben**) | dto. | 4 | 5 |
+| Transformations-Kleidung ohne Haar und ohne VFX (passt zu jeder Frisur) | dto. | 8 | 10 |
+| Primal-Animationen: 4 Primals × 3 Stufen × Laufen/Fliegen und Angriff | `gpt_image_2_6` GIF | 24 | 24 |
+| Primal-Transformation Stufe 2: Fusions-Rüstung | `gpt_image_2_6` high | 4 | 5 |
+| Primal-Transformation Stufe 3: volle Bestienkrieger-Form | dto. | 4 | 5 |
+| Primal-Transformation Stufe 1: Geist-Auren als VFX | `gpt_image_2_6` GIF | 4 | 4 |
+
+**Zusammen 83 Credits.**
+- Am 21. Nov um 02:33 hat der Nutzer ein Credit-Paket mit +230 Credits gekauft.
+- **Kontostand danach: 379,25 Credits.**
+- Gewonnen: PNG-Ergebnisse lassen sich per Job-ID direkt als Vorlage nutzen. GIF-Job-IDs gehen nicht; die 4 Fehlschläge wurden erstattet.
+- Higgsfield nimmt nur etwa 4 Aufträge gleichzeitig an.
+- Die Ergebnisse liegen in `art_source/body/` (`sty_*`, `tf_*`, `tfc_*`, `pf2_*`, `layers/pf3`, `layers/pf1`, `primals/`); das wird nicht committet.
+- Im Spiel sind: `public/assets/creatures/primals/` (12 Standbilder und 24 Animations-Sheets).
