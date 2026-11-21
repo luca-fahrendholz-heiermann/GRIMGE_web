@@ -4,6 +4,7 @@ import { ART_ASSETS } from './art_assets.js';
 import { RIGS, bakeClips } from './rig.js';
 import { BASE_CLIPS, CLIP_ALIASES } from './rig_clips.js';
 import { applyLook, isDefaultLook, lookId } from './character_look.js';
+import { HEAD_ANCHORS } from './head_anchors.js'; // where hair / beard / face / eyes sit in every base-clip frame
 
 // The white hit-flash and red hurt copies of a frame are made on first use (user report, 14 Nov 2026: an iPhone kept
 // reloading the game into the hub — Safari drops a page whose canvases take too much memory). Every frame used to
@@ -785,7 +786,7 @@ export class SpriteManager {
     } = opt;
 
     const frame = this.resolveFrame(spr, state, animTime, hitFlash, { cadence, reverse });
-    if (opt.outfit && frame.sheet && !hitFlash) frame.canvas = this.outfitCanvas(frame, opt.outfit); /* the modular character: base frame + the class outfit's layer for this exact frame (+ its dye) */
+    if (opt.outfit && frame.sheet && !hitFlash) { const o = this.outfitCanvas(frame, opt.outfit); if (o) { frame.canvas = o.canvas; frame.width += 2 * o.pad; frame.height += 2 * o.pad; frame.anchorX += o.pad; frame.anchorY += o.pad; } } /* the modular character: base frame + the class outfit's layer for this exact frame (+ its dye) + the head layers (margin for hair) */
     if (tint && !hitFlash) frame.canvas = this.tintedCanvas(frame.canvas, tint);
     // Armour transformations recolour the frame's own pixels (cached per frame), then contour detail on top.
     if (maskPaint?.recolor && !hitFlash && !tint) frame.canvas = this.recoloredCanvas(frame.canvas, maskPaint.recolor);
@@ -906,18 +907,30 @@ export class SpriteManager {
   // Base frame + outfit layer of the same frame (public/assets/character/anim/<cls>/<clip>.png, made by
   // art/authoring/frame_dress.cjs on the base animation), optionally dyed (armor_dye.js). Cached per frame, outfit and dye;
   // the plain frame while the layer loads or when the clip has no layer.
+  // Head layers (user, 21 Nov 2026: character creation — hair, beard, face details, eyes): 184-grid stills on the reference
+  // body, drawn at the head anchor of this exact frame (head_anchors.js, art/authoring/head_track.cjs) in the manifest order
+  // beard → face → hair → eyes. Frames whose head match is poor (lying knocked down) leave them out. Hair reaches past the
+  // frame, so the result has a margin: returns { canvas, pad } (the caller widens the frame and shifts its anchor), or
+  // null while a layer loads / when there is nothing to add.
   outfitCanvas(frame, outfit) {
-    const doc = globalThis.document; const m = /base_(\w+)\.png$/.exec(frame.sheet ?? ''); if (!m || typeof doc?.createElement !== 'function' || !outfit?.cls) return frame.canvas;
-    const key = `${outfit.cls}/${m[1]}`; this._outfitImgs ??= new Map();
-    let img = this._outfitImgs.get(key); if (img === undefined) { img = new Image(); img.src = `assets/character/anim/${key}.png`; img.onerror = () => this._outfitImgs.set(key, null); this._outfitImgs.set(key, img); }
-    if (!img || !img.complete || !img.naturalWidth) return frame.canvas;
+    const doc = globalThis.document; const m = /base_(\w+)\.png$/.exec(frame.sheet ?? ''); if (!m || typeof doc?.createElement !== 'function' || !(outfit?.cls || outfit?.head?.length)) return null;
+    this._outfitImgs ??= new Map();
+    const load = (src) => { let im = this._outfitImgs.get(src); if (im === undefined) { im = new Image(); im.src = src; im.onerror = () => this._outfitImgs.set(src, null); this._outfitImgs.set(src, im); } return im === null ? null : (im.complete && im.naturalWidth ? im : false); }; /* false = loading, null = missing */
+    const img = outfit.cls ? load(`assets/character/anim/${outfit.cls}/${m[1]}.png`) : null; if (img === false) return null;
+    const anchor = HEAD_ANCHORS[`base_${m[1]}`]?.[frame.k]; const heads = anchor && anchor[2] >= .3 ? (outfit.head ?? []).map((f) => load(`assets/character/${f}`)) : [];
+    if (heads.includes(false) || (!img && !heads.some(Boolean))) return null;
     this._outfitCache ??= new WeakMap(); let byKey = this._outfitCache.get(frame.canvas); if (!byKey) { byKey = new Map(); this._outfitCache.set(frame.canvas, byKey); } /* keyed by the stable base frame canvas */
-    const ck = key + (outfit.dye?.key ?? ''); if (byKey.has(ck)) return byKey.get(ck);
-    const cv = doc.createElement('canvas'); cv.width = frame.width; cv.height = frame.height; const g = cv.getContext('2d', { willReadFrequently: !!outfit.dye }); if (!g) return frame.canvas;
-    g.imageSmoothingEnabled = false; g.drawImage(frame.canvas, 0, 0);
-    const lay = doc.createElement('canvas'); lay.width = frame.width; lay.height = frame.height; const lg = lay.getContext('2d', { willReadFrequently: true }); lg.imageSmoothingEnabled = false; lg.drawImage(img, frame.k * frame.width, 0, frame.width, frame.height, 0, 0, frame.width, frame.height);
-    if (outfit.dye?.fn && lg.getImageData) { const d = lg.getImageData(0, 0, lay.width, lay.height); outfit.dye.fn(d.data, lay.width, lay.height); lg.putImageData(d, 0, 0); }
-    g.drawImage(lay, 0, 0); byKey.set(ck, cv); return cv;
+    const ck = `${outfit.cls ?? '-'}/${m[1]}${outfit.dye?.key ?? ''}|${(outfit.head ?? []).join(',')}`; if (byKey.has(ck)) return byKey.get(ck);
+    const P = heads.some(Boolean) ? 16 : 0;
+    const cv = doc.createElement('canvas'); cv.width = frame.width + 2 * P; cv.height = frame.height + 2 * P; const g = cv.getContext('2d'); if (!g) return null;
+    g.imageSmoothingEnabled = false; g.drawImage(frame.canvas, P, P);
+    if (img) {
+      const lay = doc.createElement('canvas'); lay.width = frame.width; lay.height = frame.height; const lg = lay.getContext('2d', { willReadFrequently: true }); lg.imageSmoothingEnabled = false; lg.drawImage(img, frame.k * frame.width, 0, frame.width, frame.height, 0, 0, frame.width, frame.height);
+      if (outfit.dye?.fn && lg.getImageData) { const d = lg.getImageData(0, 0, lay.width, lay.height); outfit.dye.fn(d.data, lay.width, lay.height); lg.putImageData(d, 0, 0); }
+      g.drawImage(lay, P, P);
+    }
+    for (const h of heads) if (h) g.drawImage(h, P + anchor[0], P + anchor[1]);
+    const res = { canvas: cv, pad: P }; byKey.set(ck, res); return res;
   }
   recoloredCanvas(source, recolor) {
     const doc = globalThis.document;

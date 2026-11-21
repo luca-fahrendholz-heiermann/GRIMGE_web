@@ -2876,7 +2876,7 @@ export class GameWorld {
     // The created character's look (character_look.js) when it plays its own base figure.
     if (this.profile?.character?.created && this.profile.character.base === this.player.heroKey) this.player.look = this.profile.character.look;
     if (this.profile?.classWeapon) this.player.equipClassWeapon(this.profile.classWeapon);
-    this.player.outfit = outfitFor(this.player.heroKey, this.profile?.classWeapon); /* the modular base character wears its class armour (animated layers) */
+    this.player.outfit = outfitFor(this.player.heroKey, this.profile?.classWeapon, this.profile?.character?.modular); /* the modular base character wears its class armour (animated layers) and the created head look (hair, beard, face, eyes) */
     this.enemyChampion = new EnemyChampion(ARENA_LAYOUT.spawns.redCastle.x, ARENA_LAYOUT.spawns.redCastle.z, 'warlord');
     this.battlefield.placeOnSurface(this.player);
     this.applyProfile();

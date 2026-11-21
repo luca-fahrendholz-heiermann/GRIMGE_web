@@ -9,11 +9,22 @@ import { CLASSES, START_ELEMENTS, CLASS_UNLOCK_LEVEL, classById, classOfWeapon, 
 import { WEAPONS } from './weapons.js';
 import { recognizer } from './recognizer.js';
 import { STARTER_RUNES } from './progression.js';
+import { outfitFor } from './character_outfit.js';
 
+// The modular base character first (user, 21 Nov 2026: the game starts with character creation — one reference body,
+// hair / beard / face details as layers that follow the head in every animation, the class armour per frame, a dye);
+// Thesen and Xame stay as the old ready-made figures.
 const BASES = Object.freeze([
+  { id: 'grimge_base', name: 'EIGENER CHARAKTER', title: 'MODULAR', modular: true },
   { id: 'thesen', name: 'THESEN', title: 'HORNED WARRIOR' },
   { id: 'xame', name: 'XAME', title: 'SKULL WARLOCK' }
 ]);
+// armour dye swatches for the modular character (hue in degrees; null = the class's own colours)
+const DYES = Object.freeze([null, 0, 25, 45, 90, 140, 190, 215, 260, 300]);
+const label = (id) => id.replace(/^beard_|^face_/, '').replace(/_/g, ' ').toUpperCase();
+// The manifest's head layers for the pickers (loaded once).
+let manifestP = null;
+const loadManifest = () => (manifestP ??= (typeof fetch === 'function' ? fetch('assets/character/manifest.json').then((r) => r.json()).catch(() => null) : Promise.resolve(null)));
 const PREVIEW_LOOP = Object.freeze([['idle', 1.4], ['walk', 1.6], ['attack1', .5], ['attack3', .7], ['draw', 1.2], ['sprint', 1.2]]);
 
 const css = `
@@ -44,6 +55,9 @@ const css = `
 #cc-overlay .cc-detail .cc-wdesc{font-size:clamp(9px,1vw,12px);color:#9a8eaa;margin-top:.4em}
 #cc-overlay .cc-note{font-size:clamp(9px,1.05vw,12px);color:#9a8eaa;margin-top:.8vh;line-height:1.4}
 #cc-overlay button.locked{opacity:.5}
+#cc-overlay .cc-th{width:clamp(44px,5.2vw,60px);height:clamp(44px,5.2vw,60px);padding:2px;display:flex;align-items:center;justify-content:center}
+#cc-overlay .cc-th canvas{width:100%;height:100%;border:0;background:#1a1422;image-rendering:pixelated;aspect-ratio:1}
+#cc-overlay[data-mod="1"] .cc-old,#cc-overlay[data-mod="0"] .cc-mod{display:none}
 #cc-overlay .cc-foot{display:flex;justify-content:flex-end;gap:1vw;padding:1vh 1.2vw;border-top:2px solid #3a3048}
 #cc-overlay .cc-foot button{min-height:44px;font-size:clamp(13px,1.7vw,19px);padding:.5em 1.6em;letter-spacing:.08em}
 #cc-overlay .cc-done{border-color:#f0d890;background:#6a4e1e;color:#fff3c8;box-shadow:0 3px 0 #2a1e0a}
@@ -65,7 +79,8 @@ export function openCharacterCreation(game, { onDone = null, first = false, tabs
   const profile = game?.profile; const ch = profile?.character ?? {};
   // focusClass: the class page opens on this class (a tap on its armour stand in the base).
   const startCls = classById(focusClass) ?? classById(ch.classId) ?? classOfWeapon(profile?.classWeapon) ?? CLASSES[0];
-  const state = { name: ch.name || '', base: BASES.some((b) => b.id === ch.base) ? ch.base : 'thesen', look: normalizeLook(ch.look),
+  const state = { name: ch.name || '', base: BASES.some((b) => b.id === ch.base) && !(first && !ch.created) ? ch.base : 'grimge_base', look: normalizeLook(ch.look),
+    modular: { hair: ch.modular?.hair ?? 'thesen', beard: ch.modular?.beard ?? null, face: ch.modular?.face ?? null, dye: ch.modular?.dye ?? null },
     classId: startCls.id, weapon: WEAPONS[profile?.classWeapon]?.family === startCls.id ? profile.classWeapon : classWeapons(startCls.id)[0],
     element: null };
   // Earned rules: the start rune is one of the six base elements — the only card the deck holds at first.
@@ -88,8 +103,12 @@ export function openCharacterCreation(game, { onDone = null, first = false, tabs
       <div class="cc-tab" data-t="look">
         <div class="cc-sec"><h3>NAME</h3><input maxlength="16" placeholder="Dein Name"></div>
         <div class="cc-sec"><h3>FIGUR</h3><div class="cc-row cc-big" data-k="base"></div></div>
-        <div class="cc-sec"><h3>HAAR</h3><div class="cc-row" data-k="hair"></div></div>
-        <div class="cc-sec"><h3>RÜSTUNG</h3><div class="cc-row" data-k="armour"></div></div>
+        <div class="cc-sec cc-old"><h3>HAAR</h3><div class="cc-row" data-k="hair"></div></div>
+        <div class="cc-sec cc-old"><h3>RÜSTUNG</h3><div class="cc-row" data-k="armour"></div></div>
+        <div class="cc-sec cc-mod"><h3>FRISUR</h3><div class="cc-row" data-k="mhair"></div></div>
+        <div class="cc-sec cc-mod"><h3>BART</h3><div class="cc-row" data-k="mbeard"></div></div>
+        <div class="cc-sec cc-mod"><h3>GESICHT</h3><div class="cc-row" data-k="mface"></div></div>
+        <div class="cc-sec cc-mod"><h3>RÜSTUNGSFARBE</h3><div class="cc-row" data-k="mdye"></div><div class="cc-note">Die Rüstung kommt von deiner Klasse (Tab KLASSE) und trägt sich durch jede Animation.</div></div>
       </div>
       <div class="cc-tab" data-t="element">
         <div class="cc-sec"><h3>STARTELEMENT</h3><div class="cc-row cc-big" data-k="element"></div>
@@ -112,8 +131,23 @@ export function openCharacterCreation(game, { onDone = null, first = false, tabs
     const b = doc.createElement('button'); b.type = 'button'; if (swatch) { b.className = 'cc-sw'; b.style.background = swatch; b.title = label; } else b.textContent = label;
     b.classList.toggle('on', on); b.addEventListener('pointerdown', (e) => { e.preventDefault(); pick(); render(); }); parent.appendChild(b);
   };
+  // Head thumbnails (the reference body's head + the layer, hard pixels) for the modular pickers.
+  const IMG = new Map(); const img = (src) => { let im = IMG.get(src); if (!im) { im = new Image(); im.src = src; IMG.set(src, im); im.onload = () => render(); } return im.complete && im.naturalWidth ? im : null; };
+  const thumb = (layer) => { const cv = doc.createElement('canvas'); cv.width = 46; cv.height = 46; const g = cv.getContext('2d'); if (!g) return cv; g.imageSmoothingEnabled = false; const body = img('assets/character/body/body.png'); if (body) g.drawImage(body, 71, 24, 46, 46, 0, 0, 46, 46); const l = layer && img(`assets/character/${layer}`); if (l) g.drawImage(l, 71, 24, 46, 46, 0, 0, 46, 46); return cv; };
+  const thumbButton = (parent, title, layer, on, pick) => { const b = doc.createElement('button'); b.type = 'button'; b.className = 'cc-th'; b.title = title; b.appendChild(thumb(layer)); b.classList.toggle('on', on); b.addEventListener('pointerdown', (e) => { e.preventDefault(); pick(); render(); }); parent.appendChild(b); };
+  let manifest = null; loadManifest().then((m) => { manifest = m; render(); });
+  let previewOutfit = null;
   function render() {
+    const mod = !!BASES.find((b) => b.id === state.base)?.modular; root.dataset.mod = mod ? '1' : '0';
     row('base').innerHTML = ''; for (const b of BASES) button(row('base'), `${b.name} · ${b.title}`, state.base === b.id, () => { state.base = b.id; });
+    if (manifest) {
+      const sec = (k, list, dir, cur, set) => { const r = row(k); r.innerHTML = ''; thumbButton(r, 'KEINE', null, !cur, () => set(null)); for (const id of list) thumbButton(r, label(id), `${dir}/${id}.png`, cur === id, () => set(id)); };
+      sec('mhair', Object.keys(manifest.hair ?? {}), 'hair', state.modular.hair, (v) => { state.modular.hair = v; });
+      sec('mbeard', Object.keys(manifest.beard ?? {}), 'beard', state.modular.beard, (v) => { state.modular.beard = v; });
+      sec('mface', Object.keys(manifest.face ?? {}), 'face', state.modular.face, (v) => { state.modular.face = v; });
+    }
+    row('mdye').innerHTML = ''; for (const h of DYES) button(row('mdye'), h === null ? 'KLASSE' : `${h}°`, state.modular.dye === h, () => { state.modular.dye = h; }, h === null ? 'linear-gradient(135deg,#8a7a62,#3a3248)' : `hsl(${h},55%,42%)`);
+    previewOutfit = mod ? outfitFor('grimge_base', state.weapon, state.modular) : null;
     row('hair').innerHTML = ''; for (const [id, o] of Object.entries(LOOK_HAIR)) button(row('hair'), o.label, state.look.hair === id, () => { state.look.hair = id; }, o.swatch);
     row('armour').innerHTML = ''; for (const [id, o] of Object.entries(LOOK_ARMOUR)) button(row('armour'), o.label, state.look.armour === id, () => { state.look.armour = id; }, o.swatch);
     row('element').innerHTML = '';
@@ -138,8 +172,9 @@ export function openCharacterCreation(game, { onDone = null, first = false, tabs
     const t = (performance.now() - t0) / 1000; const total = PREVIEW_LOOP.reduce((a, [, d]) => a + d, 0); let u = t % total; let clip = 'idle';
     for (const [name, d] of PREVIEW_LOOP) { if (u < d) { clip = name; break; } u -= d; }
     ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.fillStyle = '#2c2436'; ctx.fillRect(0, 232, canvas.width, 48);
-    const key = sprites.lookKey(state.base, state.look);
-    sprites.renderEntity(ctx, key, 120, 238, { facing: 1, state: clip, animTime: u, visualHeight: 190 });
+    // the modular character: exactly the game's composition (class armour per frame + head layers at the head anchor)
+    const key = previewOutfit ? 'grimge_base' : sprites.lookKey(state.base, state.look);
+    sprites.renderEntity(ctx, key, 120, 238, { facing: 1, state: clip, animTime: u, visualHeight: 190, outfit: previewOutfit });
     open.raf = requestAnimationFrame(frame);
   };
   open = { root, raf: requestAnimationFrame(frame) };
@@ -150,7 +185,7 @@ export function openCharacterCreation(game, { onDone = null, first = false, tabs
     /* A locked class (opened by a tap on its stand) cannot be taken: the character keeps its own. */
     if (!classUnlocked(profile, state.classId)) { state.classId = ch.classId ?? CLASSES[0].id; state.weapon = ch.startWeapon ?? classWeapons(state.classId)[0]; }
     const classChanged = state.classId !== ch.classId;
-    profile?.setCharacter?.({ name: state.name, base: state.base, look: state.look, classId: state.classId, startWeapon: classChanged || !ch.startWeapon ? state.weapon : ch.startWeapon, startElement: state.element });
+    profile?.setCharacter?.({ name: state.name, base: state.base, look: state.look, classId: state.classId, startWeapon: classChanged || !ch.startWeapon ? state.weapon : ch.startWeapon, startElement: state.element, modular: state.modular });
     game?.setClassWeapon?.(state.weapon);
     closeCharacterCreation();
     onDone?.(profile?.character);

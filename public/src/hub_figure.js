@@ -5,6 +5,7 @@
 import { sprites } from './sprites.js';
 import { drawHeldWeapon } from './weapons.js';
 import { classById, classOfWeapon } from './classes.js';
+import { outfitFor } from './character_outfit.js';
 
 const W = 150; const H = 116; const FOOT_X = 75; const FOOT_Y = 112;
 let fig = null;
@@ -16,7 +17,9 @@ export function hubFigureOf(profile, selectedHero) {
   const base = selectedHero ?? ch?.base;
   const weapon = profile?.classWeapon ?? null;
   const cls = classById(ch?.classId) ?? classOfWeapon(weapon);
-  return { base, look: created && ch.base === base ? ch.look : null, weapon, name: created && ch.name ? ch.name.toUpperCase() : null, className: created && cls ? cls.name.toUpperCase() : null };
+  return { base, look: created && ch.base === base ? ch.look : null, weapon, name: created && ch.name ? ch.name.toUpperCase() : null, className: created && cls ? cls.name.toUpperCase() : null,
+    /* the modular character: class armour per frame + its head look (as in a match) */
+    outfit: outfitFor(base, weapon, created ? ch.modular : null) };
 }
 
 function draw() {
@@ -36,7 +39,7 @@ function draw() {
   const weapon = (layer) => { if (!who.weapon || fig.noWeapon) return; ctx.save(); try { drawHeldWeapon(ctx, body, FOOT_Y, layer); } catch { fig.noWeapon = true; } ctx.restore(); };
   weapon('back');
   const toHand = (pl, h) => { if (!h) return null; const lx = h.x - pl.frame.anchorX; const ly = h.y - pl.frame.anchorY; const c = Math.cos(pl.rot); const s = Math.sin(pl.rot); return { x: pl.x + pl.kx * (lx * c - ly * s) - FOOT_X, y: pl.y + pl.ky * (lx * s + ly * c) - FOOT_Y }; };
-  sprites.renderEntity(ctx, key, FOOT_X, FOOT_Y, { facing: 1, state, animTime: t, onPlace: (pl) => { const front = toHand(pl, pl.frame.hand); const rear = toHand(pl, pl.frame.handBack); body._rigHands = front && rear ? { front, rear } : null; } });
+  sprites.renderEntity(ctx, key, FOOT_X, FOOT_Y, { facing: 1, state, animTime: t, outfit: who.outfit, onPlace: (pl) => { const front = toHand(pl, pl.frame.hand); const rear = toHand(pl, pl.frame.handBack); body._rigHands = front && rear ? { front, rear } : null; } });
   weapon('front');
 }
 

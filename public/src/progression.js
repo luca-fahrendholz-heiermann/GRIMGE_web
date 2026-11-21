@@ -156,6 +156,9 @@ export function arenaRuneInfo(id) {
   return { id, category, cost: SIG_BY_ID.get(id)?.arenaCost ?? arenaPointsOf(category), rarity: arenaRarityOf(category, STARTER_RUNES.includes(id)) };
 }
 // Tests run under node without a stored profile: they keep the open rules unless a profile asks for 'earned'.
+// The modular character's head look: manifest ids (or null) and an armour dye hue (degrees) or null.
+const idOrNull = (v) => (typeof v === 'string' && /^[a-z0-9_]{1,40}$/.test(v) ? v : null);
+export function normalizeModular(m) { return { hair: idOrNull(m?.hair), beard: idOrNull(m?.beard), face: idOrNull(m?.face), dye: Number.isFinite(m?.dye) ? ((Math.round(m.dye) % 360) + 360) % 360 : null }; }
 const DEFAULT_RULES = typeof process !== 'undefined' && process.versions?.node ? 'open' : 'earned';
 export const PROFILE_VERSION = 4;
 
@@ -245,7 +248,9 @@ export class MageProfile {
     const ch = source?.character;
     this.character = { name: typeof ch?.name === 'string' ? ch.name.slice(0, 16) : '', base: typeof ch?.base === 'string' ? ch.base : 'thesen', look: { hair: ch?.look?.hair ?? 'natural', armour: ch?.look?.armour ?? 'natural' }, created: !!ch?.created,
       // Class (= weapon family, classes.js), its start weapon and the start element (an extra element rune owned at once).
-      classId: typeof ch?.classId === 'string' ? ch.classId : null, startWeapon: typeof ch?.startWeapon === 'string' ? ch.startWeapon : null, startElement: typeof ch?.startElement === 'string' ? ch.startElement : null };
+      classId: typeof ch?.classId === 'string' ? ch.classId : null, startWeapon: typeof ch?.startWeapon === 'string' ? ch.startWeapon : null, startElement: typeof ch?.startElement === 'string' ? ch.startElement : null,
+      // The modular base character's head look (user, 21 Nov 2026: the game starts with character creation): manifest ids.
+      modular: normalizeModular(ch?.modular) };
     this.bankaiClasses = new Set(Array.isArray(source?.bankaiClasses) ? source.bankaiClasses : []);
     // Classes opened early by a boss, secret or mission reward (the level thresholds live in class_unlocks.js). Migration:
     // the class an old save had chosen stays open — by its character, or by the weapon family it was playing.
@@ -289,7 +294,7 @@ export class MageProfile {
       if (saved && (saved.progressionVersion ?? 0) < PROFILE_VERSION) {
         try { globalThis.localStorage?.setItem?.('grimge-mage-profile-v1-backup-v3', raw); } catch { /* optional */ }
         const ch = saved.character ?? {};
-        return { rules: 'earned', progressionVersion: PROFILE_VERSION, classWeapon: saved.classWeapon ?? null, character: { name: ch.name, base: ch.base, look: ch.look, classId: ch.classId, startWeapon: ch.startWeapon, startElement: null, created: false } };
+        return { rules: 'earned', progressionVersion: PROFILE_VERSION, classWeapon: saved.classWeapon ?? null, character: { name: ch.name, base: ch.base, look: ch.look, classId: ch.classId, startWeapon: ch.startWeapon, startElement: null, created: false, modular: ch.modular } };
       }
       return saved;
     } catch { return null; }
@@ -375,12 +380,13 @@ export class MageProfile {
     if (!ALL_CLASS_IDS.includes(id) || this.unlockedClasses.has(id)) return false;
     this.unlockedClasses.add(id); this.save(); return true;
   }
-  setCharacter({ name, base, look, classId, startWeapon, startElement } = {}) {
+  setCharacter({ name, base, look, classId, startWeapon, startElement, modular } = {}) {
     const prev = this.character;
     // A locked class cannot be chosen: the character keeps its class (and start weapon).
     if (classId && classId !== prev.classId && !classUnlocked(this, classId)) { classId = undefined; startWeapon = undefined; }
     this.character = { name: String(name ?? prev.name ?? '').trim().slice(0, 16), base: base ?? prev.base, look: { hair: look?.hair ?? prev.look.hair, armour: look?.armour ?? prev.look.armour }, created: true,
-      classId: classId !== undefined ? classId : prev.classId ?? null, startWeapon: startWeapon !== undefined ? startWeapon : prev.startWeapon ?? null, startElement: startElement !== undefined ? startElement : prev.startElement ?? null };
+      classId: classId !== undefined ? classId : prev.classId ?? null, startWeapon: startWeapon !== undefined ? startWeapon : prev.startWeapon ?? null, startElement: startElement !== undefined ? startElement : prev.startElement ?? null,
+      modular: normalizeModular(modular ?? prev.modular) };
     // A newly chosen start element: owned at once and put into the deck twice (base runes make room if it is full).
     const el = this.character.startElement;
     // Earned rules: the start element is the one rune card the player owns at first.
