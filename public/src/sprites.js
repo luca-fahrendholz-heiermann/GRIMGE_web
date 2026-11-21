@@ -48,15 +48,20 @@ export class SpriteManager {
         { sheet: 'sheets/base_sprint.png', frames: 8, w: 97, h: 118, anchorX: 45, anchorY: 116, use: [{ states: ['sprint'], hold: 4, loop: true }] },
         { sheet: 'sheets/base_jab.png', frames: 8, w: 77, h: 118, anchorX: 26, anchorY: 116, use: [{ states: ['attack1'], holds: [2, 2, 3, 4, 3, 3, 2, 2] }] },
         { sheet: 'sheets/base_cross.png', frames: 8, w: 87, h: 117, anchorX: 35, anchorY: 115, use: [{ states: ['attack2'], holds: [2, 2, 3, 4, 3, 3, 3, 3] }] },
-        { sheet: 'sheets/base_heavy.png', frames: 8, w: 92, h: 128, anchorX: 50, anchorY: 125, use: [{ states: ['attack3', 'heavyStrike'], holds: [4, 4, 5, 6, 5, 4, 3, 3] }] },
-        { sheet: 'sheets/base_uppercut.png', frames: 8, w: 64, h: 126, anchorX: 36, anchorY: 124, use: [{ states: ['uppercut'], holds: [3, 3, 4, 5, 4, 3, 3, 2] }] },
-        { sheet: 'sheets/base_dive.png', frames: 8, w: 95, h: 117, anchorX: 43, anchorY: 115, use: [{ states: ['dive'], idx: [4, 5, 6, 7], hold: 4, loop: true }] },
+        { sheet: 'sheets/base_heavy.png', frames: 8, w: 121, h: 119, anchorX: 58, anchorY: 116, use: [{ states: ['attack3', 'heavyStrike'], holds: [4, 4, 5, 6, 5, 4, 3, 3] }] },
+        { sheet: 'sheets/base_uppercut.png', frames: 8, w: 59, h: 125, anchorX: 31, anchorY: 122, use: [{ states: ['uppercut'], holds: [3, 3, 4, 5, 4, 3, 3, 2] }] },
+        { sheet: 'sheets/base_dive.png', frames: 8, w: 122, h: 135, anchorX: 49, anchorY: 133, use: [{ states: ['dive'], idx: [4, 5, 6, 7], hold: 4, loop: true }] },
         { sheet: 'sheets/base_dash.png', frames: 8, w: 106, h: 118, anchorX: 54, anchorY: 115, use: [{ states: ['dash'], idx: [1, 2, 3, 4, 5], hold: 3, loop: true }] },
-        { sheet: 'sheets/base_jump.png', frames: 8, w: 69, h: 120, anchorX: 36, anchorY: 118, use: [{ states: ['jump'], idx: [2, 3, 4], hold: 5, loop: true }, { states: ['fall'], idx: [5, 6], hold: 6, loop: true }] },
+        { sheet: 'sheets/base_jump.png', frames: 8, w: 96, h: 135, anchorX: 45, anchorY: 133, use: [{ states: ['jump'], idx: [2, 3, 4], hold: 5, loop: true }, { states: ['fall'], idx: [5, 6], hold: 6, loop: true }] },
         { sheet: 'sheets/base_guard.png', frames: 8, w: 75, h: 118, anchorX: 40, anchorY: 116, use: [{ states: ['guard'], idx: [2, 3, 4, 5], hold: 6, loop: true }] },
         { sheet: 'sheets/base_hurt.png', frames: 8, w: 76, h: 118, anchorX: 45, anchorY: 115, use: [{ states: ['hurt'], idx: [1, 2, 3, 4, 5], hold: 3 }] },
-        { sheet: 'sheets/base_draw.png', frames: 8, w: 72, h: 118, anchorX: 26, anchorY: 116, use: [{ states: ['draw', 'charge'], hold: 6, loop: true }] },
-        { sheet: 'sheets/base_dead.png', frames: 8, w: 120, h: 117, anchorX: 61, anchorY: 115, use: [{ states: ['dead'], holds: [4, 4, 4, 4, 4, 4, 8, 60] }] }
+        { sheet: 'sheets/base_draw.png', frames: 8, w: 72, h: 118, anchorX: 26, anchorY: 116, use: [{ states: ['draw'], hold: 6, loop: true }] },
+        { sheet: 'sheets/base_dead.png', frames: 8, w: 120, h: 117, anchorX: 61, anchorY: 115, use: [{ states: ['dead'], holds: [4, 4, 4, 4, 4, 4, 8, 60] }] },
+        /* spirit orb (shonen-style, the orb itself is drawn as VFX at the hands): charge in cupped hands, hold one-handed overhead, throw */
+        { sheet: 'sheets/base_orb_charge.png', frames: 8, w: 84, h: 117, anchorX: 44, anchorY: 115, use: [{ states: ['charge'], idx: [3, 4, 5, 6, 7], hold: 5, loop: true }] },
+        { sheet: 'sheets/base_orb_hold.png', frames: 8, w: 78, h: 125, anchorX: 39, anchorY: 123, use: [{ states: ['summon'], idx: [4, 5, 6, 7], hold: 6, loop: true }] },
+        { sheet: 'sheets/base_orb_throw.png', frames: 8, w: 127, h: 135, anchorX: 69, anchorY: 133, use: [{ states: ['throw'], holds: [3, 3, 3, 3, 4, 4, 4, 3] }] },
+        { sheet: 'sheets/base_palm_blast.png', frames: 8, w: 96, h: 118, anchorX: 48, anchorY: 115, use: [{ states: ['blast'], holds: [3, 3, 3, 4, 6, 6, 6, 6] }, { states: ['beam'], idx: [4, 5, 6, 7], hold: 4, loop: true }] } /* open palm forward: an energy ball or a beam leaves the hand (VFX) */
       ] },
       thesen: { name: 'Thesen', prepared: ['char_thesen.png'], weapon: 'Bone Spear', role: 'Horned Warrior / Focus Transformation', clips: [
         { sheet: 'sheets/thesen_walk.png', frames: 6, w: 68, h: 119, anchorX: 34, anchorY: 117, use: [{ states: ['walk', 'run'], hold: 6, loop: true }, { states: ['sprint'], hold: 4, loop: true },

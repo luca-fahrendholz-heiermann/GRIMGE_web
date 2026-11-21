@@ -159,3 +159,17 @@ Der Nutzer hat selbst Guthaben gekauft (Plan `starter`, Stand vor dem Auftrag 27
 - Higgsfield nimmt nur etwa 4 Aufträge gleichzeitig an.
 - Die Ergebnisse liegen in `art_source/body/` (`sty_*`, `tf_*`, `tfc_*`, `pf2_*`, `layers/pf3`, `layers/pf1`, `primals/`); das wird nicht committet.
 - Im Spiel sind: `public/assets/creatures/primals/` (12 Standbilder und 24 Animations-Sheets).
+
+## 21. Nov 2026: Base-Animationen und Haar-Formwandlung
+
+| Auftrag | Modell | Anzahl | Credits |
+|---|---|---|---|
+| Base-Body mit Trainingshose als Vorlage (der nackte Body wird beim Animieren als NSFW markiert) | `gpt_image_2_6` high | 1 | 1,25 |
+| Base-Animationen 768², 8 Bilder. Erste Fassung: Laufen, Jab, Sprint, schwerer Schlag, Idle, Cross, Uppercut, Dive, Dash, Sprung, Block, Treffer, Rune zeichnen, K.o. | `gpt_image_2_6` GIF high | 14 | 17,5 |
+| Dynamisch neu (Anime/Shōnen): Sprung, Uppercut, schwerer Schlag, Dive | dto. | 4 | 5 |
+| Spirit-Kugel: Aufladen, über dem Kopf halten, Wurf; Handflächen-Stoß/Beam | dto. | 4 | 5 |
+| Haar-Formwandlung: 4 Raster à 6 Frisuren × 8 Transformationen | `gpt_image_2_6` high | 32 | 40 |
+
+**Zusammen 68,75 Credits; Kontostand danach: 310,50.**
+- Markierte oder fehlgeschlagene Aufträge wurden erstattet. Das betraf den nackten Body, die Raster mit nacktem Oberkörper und GIFs in 1024².
+- Die Raster bekommen deshalb ein schlichtes dunkles Oberteil.
