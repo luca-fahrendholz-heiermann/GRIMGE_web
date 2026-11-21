@@ -40,12 +40,12 @@ if (mode === 'grid') {
     cp.execFileSync('magick', [path.join(tmp, 'clean.png'), '-crop', `${Math.round(fw * S)}x${Math.round(fh * S)}+${cx + ox}+${cy + oy}`, '+repage', `PNG32:${c}`]);
     const [cw, ch] = cp.execFileSync('magick', [c, '-format', '%w %h', 'info:']).toString().split(' ').map(Number);
     const r = snapAuto({ w: cw, h: ch, buf: cp.execFileSync('magick', [c, '-alpha', 'on', '-depth', '8', 'rgba:-']) }, { cell: S });
-    const base = suit(frame(k)); const L = Buffer.alloc(fw * fh * 4); let top = fh;
+    const orig = frame(k); const base = suit(orig); const L = Buffer.alloc(fw * fh * 4); let top = fh;
     for (let y = 0; y < fh && top === fh; y++) for (let x = 0; x < fw; x++) if (base[(y * fw + x) * 4 + 3]) { top = y; break; }
     for (let y = 0; y < Math.min(fh, r.h); y++) for (let x = 0; x < Math.min(fw, r.w); x++) {
       const ri = (y * r.w + x) * 4, bi = (y * fw + x) * 4; if (!r.buf[ri + 3]) continue; const g = r.buf[ri + 1] > 150 && r.buf[ri] < 110 && r.buf[ri + 2] < 110; if (g) continue;
       const d = Math.abs(r.buf[ri] - base[bi]) + Math.abs(r.buf[ri + 1] - base[bi + 1]) + Math.abs(r.buf[ri + 2] - base[bi + 2]);
-      if (base[bi + 3] && d < (y < top + 30 ? 150 : 80)) continue; /* the base shows through (the face more strictly) */
+      const suited = base[bi] !== orig[bi] || base[bi + 1] !== orig[bi + 1]; /* skin the grid suit covered: the AI's pixel there is kept, so no bare skin shows through the armour */ if (base[bi + 3] && !suited && d < (y < top + 30 ? 150 : 80)) continue; /* the base shows through (the face more strictly) */
       r.buf.copy(L, bi, ri, ri + 4); L[bi + 3] = 255;
     }
     mergePalette(L, 60);
