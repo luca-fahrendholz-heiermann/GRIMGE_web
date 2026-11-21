@@ -23,7 +23,7 @@ import { renderInfusion } from './nature_spells.js';
 import { TransformationFx } from './transform_fx.js';
 import { weaponSprintVariant, weaponSprintStart, weaponSprintTick, weaponSprintHit } from './weapon_sprint.js';
 import { kitOf } from './weapon_kits.js';
-import { drawWeaponGuard } from './weapon_guard.js';
+import { drawGuardWithFx, noteGuardHit } from './guard_fx.js'; // guard: redder toward the break, blocked beams absorbed (wraps weapon_guard.js)
 import { weaponBodyPose } from './weapon_body.js';
 import { drawWardShell } from './ward_shell.js';
 import { hasWeaponDown, castWeaponDown, weaponUp, weaponHasUpSkill, weaponDive, updateWeaponKit, weaponMoveMult, weaponAttackSpeed, meleeBuffMods, targetDamageMult, onWeaponMeleeHit, afterWeaponSwing, weaponIncoming } from './weapon_kits.js';
@@ -634,6 +634,14 @@ export class Player extends GroundEntity {
       this.sp = Math.max(0, this.sp - dt * 8);
       this.state = 'guard';
       this.cancelSprint();
+      // Blocked too long (user, 21 Nov 2026): the stamina runs dry while guarding → guard break with a stun (the guard has
+      // been turning red toward this, guard_fx.js).
+      if (this.sp <= 0 && this.guardBreakTimer <= 0) {
+        this.isGuarding = false; this.guardHoldTime = 0; this.guardBreakTimer = 0.7;
+        this.state = 'hurt'; this.stateTimer = 0.7; this.canAttack = false;
+        combat.spawnShockwave(this.x, this.y - 28, 46, '#ff5a3a');
+        combat.spawnDamageText(this.x, this.y - 56, 'BREAK', { color: '#ff5a3a', isCrit: true });
+      }
     } else {
       this.guardHoldTime = 0;
       this.guardStability = Math.min(100, this.guardStability + dt * 28);
@@ -2040,6 +2048,7 @@ export class Player extends GroundEntity {
       bondOnBlock(this); // Turtle bond: Fortified
       combat.spawnHitSparks(this.x + this.facing * 24, this.y - 38, this.facing, '#7de8ff', 7);
       combat.spawnShockwave(this.x + this.facing * 22, this.y - 38, 18, '#4fc3f7');
+      noteGuardHit(this, hitKind, amount); // a blocked beam / projectile shows its absorption at the guard (guard_fx.js)
     }
     if (this.arcaneShield > 0) {
       const absorbed = Math.min(amount, this.arcaneShield);
@@ -2443,7 +2452,7 @@ export class Player extends GroundEntity {
     }
     // Forms show their own guard (tail cocoon, astral palm, light shield).
     // The guard is drawn the way the held weapon blocks (weapon_guard.js).
-    if (this.isGuarding && this.isAlive && !activeMoveset(this)) this.lastGuardKind = drawWeaponGuard(ctx, this, this.x, renderY, this.facing || 1, this.perfectBlockFlash > 0, this.animTime ?? 0);
+    if (this.isGuarding && this.isAlive && !activeMoveset(this)) this.lastGuardKind = drawGuardWithFx(ctx, this, this.x, renderY, this.facing || 1, this.perfectBlockFlash > 0, this.animTime ?? 0); /* guard_fx.js: redder toward the break, blocked beams visibly absorbed */
     // Finisher window: a ring grows toward the target ring (green band = GOOD, gold = PERFECT).
     if (this.finisherChance && this.isAlive && finisherGuideShown()) this.renderFinisherRing(ctx, renderY); // Training only
     if (this.finisherChance && this.isAlive) this.renderFinisherGlint(ctx, renderY);
