@@ -19,7 +19,7 @@ names.forEach((hair, k) => {
   cp.execFileSync('magick', [TUNIC, '(', path.join(tmp, 'top.png'), '-background', 'none', '-extent', '184x184', ')', '-compose', 'over', '-composite', '-filter', 'point', '-resize', '1024x1024', `PNG32:${full}`]);
   const base = hair.replace('_hair.png', '');
   cp.execFileSync('node', [path.join(__dirname, 'prep_layers.cjs'), full, tmp, `${base}_${tf}`, '200'], { env: { ...process.env, BODY_REF: TUNIC }, stdio: 'ignore' });
-  fs.copyFileSync(path.join(tmp, `${base}_${tf}_hair.png`), path.join(outDir, `${base}_hair_${tf}.png`));
+  fs.copyFileSync(path.join(tmp, `${base}_${tf}_hair.png`), path.join(outDir, tf === '-' ? `${base}.png` : `${base}_hair_${tf}.png`)); /* tf '-': a plain asset (beard, face detail) */
   console.log('ok', base, tf);
 });
 fs.rmSync(tmp, { recursive: true, force: true });

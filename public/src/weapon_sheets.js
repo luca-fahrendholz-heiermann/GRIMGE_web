@@ -8,47 +8,47 @@ import { SPELL_SPRITE_SHEETS } from './spell_sprite_sheets.js';
 // weapon id → piece → [sheet, gripX, gripY, width, height, preRotation?, scale?] — preRotation turns an upright sheet (bow) into
 // the astral piece frame (pieces point along +x and are rotated by the motion angle).
 export const WEAPON_SHEETS = Object.freeze({
-  glaive: { glaive: ['w_glaive', 22, 22, 128, 44] },
-  katana: { katana: ['w_katana', 11, 10, 84, 20] },
-  spear: { spear: ['w_spear', 34, 20, 138, 40] },
-  sword_shield: { sword: ['w_sword', 9, 18, 78, 32], shield: ['w_shield', 18, 27, 48, 54] },
-  spirit_sword: { spirit_sword: ['w_spirit_sword', 7, 18, 84, 34] },
-  scythe: { scythe: ['w_scythe', 24, 70, 150, 84] },
-  great_axe: { axe: ['w_axe', 16, 28, 112, 56] },
-  great_hammer: { hammer: ['w_hammer', 16, 26, 104, 52] },
-  dual_swords: { blade: ['w_sabre', 6, 11, 72, 22] },
-  daggers: { dagger: ['w_dagger', 5, 9, 48, 18] },
-  bow: { bow: ['w_bow', 26, 50, 40, 100] },
-  quarterstaff: { staff: ['w_staff', 72, 9, 152, 18] },
-  gauntlets: { fist: ['w_fist', 12, 15, 44, 30] },
-  ice_sword: { sword: ['w_ice_sword', 14, 13, 96, 26] },
-  mace_shield: { mace: ['w_mace', 12, 18, 96, 36], shield: ['w_shield_mace', 18, 27, 48, 54] },
-  twinblade: { twinblade: ['w_twinblade', 88, 14, 176, 28] },
-  odachi: { odachi: ['w_odachi', 28, 14, 164, 28] },
-  throwing_blades: { knife: ['w_knife', 8, 7, 48, 14] },
-  crossbow: { crossbow: ['w_crossbow', 16, 40, 84, 80] },
-  chain_scythe: { chain_scythe: ['w_chain_scythe', 12, 36, 76, 48] },
-  spellblade: { spellblade: ['w_spellblade', 14, 13, 96, 26], focus: ['w_focus', 14, 20, 28, 40] },
-  rune_greatsword: { greatsword: ['w_greatsword', 24, 22, 156, 44] },
-  arcane_staff: { arcane_staff: ['w_arcane_staff', 52, 20, 172, 40] },
-  orb_focus: { orb: ['w_orb', 4, 20, 36, 40], focus: ['w_focus', 14, 20, 28, 40] },
-  warlock_rod: { rod: ['w_rod_warlock', 12, 14, 88, 28], shield: ['w_shield_ward', 18, 27, 48, 54] },
-  rod_grimoire: { rod: ['w_rod_grimoire', 12, 14, 88, 28], grimoire: ['w_grimoire', 4, 22, 36, 44] },
-  scepter_shield: { scepter: ['w_scepter', 12, 18, 80, 36], shield: ['w_shield_sun', 18, 27, 48, 54] },
-  sacred_staff: { sacred_staff: ['w_sacred_staff', 52, 18, 176, 36] },
-  harp: { harp: ['w_harp', 16, 44, 72, 84, 0, .7] },
-  battle_zither: { zither: ['w_zither', 8, 18, 80, 36, 0, .8] },
-  spirit_glaive: { spirit_glaive: ['w_spirit_glaive', 24, 20, 212, 40] },
-  claws: { claw: ['w_claw', 10, 15, 54, 30] },
-  beast_staff: { beast_staff: ['w_beast_staff', 52, 20, 164, 40] },
-  chakrams: { chakram: ['w_chakram', 6, 20, 40, 40] },
-  magic_cards: { card: ['w_card', 2, 16, 28, 32] },
-  talisman: { talisman: ['w_talisman', 4, 22, 24, 44] },
-  ritual_fan: { fan: ['w_fan', 4, 47, 58, 94, 0, .7] }
+  glaive: { glaive: ['w_glaive', 11, 11, 64, 22] },
+  katana: { katana: ['w_katana', 6, 10, 42, 16] },
+  spear: { spear: ['w_spear', 17, 7, 68, 18] },
+  sword_shield: { sword: ['w_sword', 5, 9, 39, 17], shield: ['w_shield', 11, 14, 28, 27] },
+  spirit_sword: { spirit_sword: ['w_spirit_sword', 3, 8, 41, 15] },
+  scythe: { scythe: ['w_scythe', 12, 18, 75, 35] },
+  great_axe: { axe: ['w_axe', 8, 16, 56, 31] },
+  great_hammer: { hammer: ['w_hammer', 8, 15, 52, 29] },
+  dual_swords: { blade: ['w_sabre', 3, 9, 36, 16] },
+  daggers: { dagger: ['w_dagger', 3, 4, 24, 8] },
+  bow: { bow: ['w_bow', 17, 25, 26, 50] },
+  quarterstaff: { staff: ['w_staff', 36, 5, 76, 10] },
+  gauntlets: { fist: ['w_fist', 6, 5, 22, 11] },
+  ice_sword: { sword: ['w_ice_sword', 7, 10, 48, 18] },
+  mace_shield: { mace: ['w_mace', 6, 10, 48, 20], shield: ['w_shield_mace', 8, 13, 21, 26] },
+  twinblade: { twinblade: ['w_twinblade', 44, 10, 88, 17] },
+  odachi: { odachi: ['w_odachi', 14, 22, 82, 33] },
+  throwing_blades: { knife: ['w_knife', 4, 3, 24, 6] },
+  crossbow: { crossbow: ['w_crossbow', 8, 12, 42, 20] },
+  chain_scythe: { chain_scythe: ['w_chain_scythe', 6, 7, 38, 16] },
+  spellblade: { spellblade: ['w_spellblade', 7, 8, 48, 16], focus: ['w_focus', 4, 10, 8, 20] },
+  rune_greatsword: { greatsword: ['w_greatsword', 12, 15, 78, 33] },
+  arcane_staff: { arcane_staff: ['w_arcane_staff', 26, 20, 86, 31] },
+  orb_focus: { orb: ['w_orb', 2, 10, 15, 19], focus: ['w_focus', 4, 10, 8, 20] },
+  warlock_rod: { rod: ['w_rod_warlock', 6, 9, 44, 16], shield: ['w_shield_ward', 10, 14, 27, 27] },
+  rod_grimoire: { rod: ['w_rod_grimoire', 6, 6, 44, 15], grimoire: ['w_grimoire', 2, 11, 17, 22] },
+  scepter_shield: { scepter: ['w_scepter', 6, 10, 40, 19], shield: ['w_shield_sun', 10, 14, 27, 27] },
+  sacred_staff: { sacred_staff: ['w_sacred_staff', 26, 19, 88, 36] },
+  harp: { harp: ['w_harp', 8, 21, 34, 41, 0, .7] },
+  battle_zither: { zither: ['w_zither', 4, 8, 40, 14, 0, .8] },
+  spirit_glaive: { spirit_glaive: ['w_spirit_glaive', 12, 29, 105, 42] },
+  claws: { claw: ['w_claw', 5, 7, 27, 14] },
+  beast_staff: { beast_staff: ['w_beast_staff', 26, 25, 82, 39] },
+  chakrams: { chakram: ['w_chakram', 3, 10, 21, 20] },
+  magic_cards: { card: ['w_card', 1, 8, 11, 16] },
+  talisman: { talisman: ['w_talisman', 2, 11, 14, 22] },
+  ritual_fan: { fan: ['w_fan', 4, 24, 55, 47, 0, .7] }
 });
 // Form skins: while an Arcane State is active, some weapons take a form-specific sheet (Schattenlanzer: the spear
 // becomes a jagged shadow spear during A13 Totenmaske). setWeaponSkinForm is set per draw by drawHeldWeapon.
-const FORM_SKINS = Object.freeze({ A13: { spear: { spear: ['w_shadow_spear', 34, 20, 138, 40] }, glaive: { glaive: ['w_shadow_spear', 34, 20, 138, 40] } } });
+const FORM_SKINS = Object.freeze({ A13: { spear: { spear: ['w_shadow_spear', 17, 11, 69, 22] }, glaive: { glaive: ['w_shadow_spear', 17, 11, 69, 22] } } });
 let skinForm = null;
 export const setWeaponSkinForm = (id) => { skinForm = id ?? null; };
 // Drawn size (user, 27 Oct 2026: "viele Waffen sind viel zu überdimensioniert"): every weapon at 0.75 of its sheet,
@@ -61,7 +61,7 @@ export const hasWeaponSheet = (weaponId, piece) => { const e = entryOf(weaponId,
 // Draws the piece's sheet at the (already placed) grip; false when the weapon has no ready sheet.
 export function drawWeaponSheet(ctx, weaponId, piece, time = 0) {
   const e = entryOf(weaponId, piece); if (!e || !spellSheetReady(e[0])) return false;
-  const [name, gx, gy, w, h, pre = 0, sc0 = 1] = e; const meta = SPELL_SPRITE_SHEETS[name]; const n = meta?.frames ?? 1; const sc = sizeOf(w, sc0);
+  const [name, gx, gy, w, h, pre = 0, sc0 = 1] = e; const meta = SPELL_SPRITE_SHEETS[name]; const n = meta?.frames ?? 1; const sc = sizeOf(w * 2 / (meta?.res ?? 2), sc0); /* native-pixel sheets (res 1, user 21 Nov 2026) count like the old hd sheets for the length cap */
   // Grips are given in sheet pixels; the sheet is drawn at its logical size (hd sheets: half the pixels), × scale.
   const k = (meta?.w ?? w) / w * sc;
   if (pre) { ctx.save(); ctx.rotate(pre); }

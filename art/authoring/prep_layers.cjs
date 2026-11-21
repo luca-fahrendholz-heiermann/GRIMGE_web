@@ -28,8 +28,8 @@ const L = Buffer.alloc(N * N * 4); let count = 0;
 for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
   const sx = x + best.dx, sy = y + best.dy; const o = (y * N + x) * 4; if (sx < 0 || sy < 0 || sx >= N || sy >= N) continue;
   const ri = (sy * N + sx) * 4; if (isGreen(R, ri)) continue;
-  const bodyHere = !isGreen(B, o); const skin = (a, i) => a[i] > a[i + 1] && a[i + 1] > a[i + 2] && a[i] - a[i + 2] > 50 && a[i] > 90; const face = y >= FACE[0] && y <= FACE[1];
-  if (bodyHere && dist(B, o, R, ri) < (face ? 150 : 90)) continue; /* the body shows through unchanged (the face more strictly) */ if (bodyHere && face && skin(B, o) && skin(R, ri)) continue; /* the AI's retouched face: keep the body's own (only brows to chin — blond hair on the scalp is not skin) */
+  const bodyHere = !isGreen(B, o); const skin = (a, i) => a[i] > a[i + 1] && a[i + 1] > a[i + 2] && a[i] - a[i + 2] > 50 && a[i] > 90; const face = !process.env.NOFACE && y >= FACE[0] && y <= FACE[1]; /* NOFACE: face assets (scars, paint) are meant to change the face */
+  if (bodyHere && dist(B, o, R, ri) < (face ? 150 : process.env.NOFACE ? 45 : 90)) continue; /* the body shows through unchanged (the face more strictly) */ if (bodyHere && face && skin(B, o) && skin(R, ri)) continue; /* the AI's retouched face: keep the body's own (only brows to chin — blond hair on the scalp is not skin) */
   L[o] = R[ri]; L[o + 1] = R[ri + 1]; L[o + 2] = R[ri + 2]; L[o + 3] = 255; count++;
 }
 // drop lone pixels (resampling noise along the outline)
@@ -39,7 +39,7 @@ for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
   for (const [ax, ay] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const X = x + ax, Y = y + ay; if (X >= 0 && Y >= 0 && X < N && Y < N && L[(Y * N + X) * 4 + 3]) n++; }
   if (n === 0) { keep[o + 3] = 0; count--; }
 }
-const colours = mergePalette(keep, Number(process.env.MERGE ?? 36)); /* fold the AI's near-duplicate shades — no dithering, every pixel stays one solid colour */
+const colours = mergePalette(keep, Number(process.env.MERGE ?? 60)); /* fold the AI's near-duplicate shades — no dithering, every pixel stays one solid colour */
 const split = (top) => { const out = Buffer.alloc(N * N * 4); for (let y = 0; y < N; y++) if ((y < HEAD) === top) keep.copy(out, y * N * 4, y * N * 4, (y + 1) * N * 4); return out; };
 const write = (buf, file) => cp.execFileSync('magick', ['-size', `${N}x${N}`, '-depth', '8', 'rgba:-', `PNG32:${file}`], { input: buf });
 const fHair = path.join(outDir, `${name}_hair.png`), fOut = path.join(outDir, `${name}_outfit.png`), fBody = path.join(outDir, 'body.png');
