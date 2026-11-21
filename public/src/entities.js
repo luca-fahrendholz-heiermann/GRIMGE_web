@@ -23,6 +23,7 @@ import { renderInfusion } from './nature_spells.js';
 import { TransformationFx } from './transform_fx.js';
 import { weaponSprintVariant, weaponSprintStart, weaponSprintTick, weaponSprintHit } from './weapon_sprint.js';
 import { kitOf } from './weapon_kits.js';
+import { REGION_SWIM_TOP } from './kk_map.js'; // the underwater region's water column
 import { drawGuardWithFx, noteGuardHit } from './guard_fx.js'; // guard: redder toward the break, blocked beams absorbed (wraps weapon_guard.js)
 import { weaponBodyPose } from './weapon_body.js';
 import { drawWardShell } from './ward_shell.js';
@@ -155,6 +156,7 @@ export const UNITY_MOVEMENT = Object.freeze({
 });
 const DEPTH_SPEED = UNITY_MOVEMENT.depthSpeed;
 const FLIGHT_HEIGHT = 150; const FLIGHT_MANA = 5; /* above a castle roof; mana per second */
+const SWIM_TOP = REGION_SWIM_TOP; /* underwater: the water column above the sea floor (kk_map.js) */
 
 const WALK_ACCEL_TIME = 0.12;   // asset: accelerationTime
 const WALK_DECEL_TIME = 0.08;   // asset: decelerationTime
@@ -663,7 +665,9 @@ export class Player extends GroundEntity {
       gameWorld?.resolveSpellObstacles(this, previousX, previousZ);
     } else {
       if (!controlsBlocked && !isAction) {
-        if (this.grounded) {
+        if (this.kkSwim) {
+          this.updateSwim(dt, input); /* the underwater region (kk_regions.js): 2D swimming */
+        } else if (this.grounded) {
           this.handleMovementInput(dt, input);
         } else if (this.kkFlying) {
           this.updateFlight(dt, input); /* flying (a learned skill, Kronenkrieg) */
@@ -1367,11 +1371,25 @@ export class Player extends GroundEntity {
   // mana ends it.
   updateFlight(dt, input) {
     const move = normalizeMove(moveVector(input)); this.vx = move.x * this.moveSpeed * 1.35; this.vz = move.z * this.depthSpeed * 1.35; if (move.x) this.facing = Math.sign(move.x);
-    this.vElevation = (FLIGHT_HEIGHT - this.elevation) * 4; this.kkFlyT = (this.kkFlyT ?? 0) - dt; this.mp = Math.max(0, this.mp - FLIGHT_MANA * dt);
+    this.vElevation = (FLIGHT_HEIGHT - this.elevation) * 4;
+    if (this.kkSky) return; /* the sky region (kk_regions.js): flying is how one moves there — no mana, no timeout, no landing */
+    this.kkFlyT = (this.kkFlyT ?? 0) - dt; this.mp = Math.max(0, this.mp - FLIGHT_MANA * dt);
     if (input.justPressed('Space') || this.kkFlyT <= 0 || this.mp <= 0) this.kkFlying = false;
+  }
+  // Underwater (user, 21 Nov 2026: "nur 2D schwimmen"): left / right and up / down only — the depth stays fixed (the
+  // region locks it); up/down moves the swimmer through the water column (elevation 0 = the sea floor … SWIM_TOP = just
+  // under the surface). A slow drift back down when idle, no gravity jump.
+  updateSwim(dt, input) {
+    const move = normalizeMove(moveVector(input)); const sp = this.moveSpeed * .85;
+    this.vx = move.x * sp; if (move.x) this.facing = Math.sign(move.x);
+    this.x += this.vx * dt; this.vz = 0;
+    const up = -move.z; this.vElevation = up ? up * sp * .9 : -18; /* screen up = rise */
+    this.elevation = Math.max(0, Math.min(SWIM_TOP, this.elevation + this.vElevation * dt)); this.grounded = this.elevation <= 0;
+    this.state = Math.abs(move.x) + Math.abs(move.z) > .1 ? 'run' : 'idle';
   }
   getEffectiveGravity() {
     const g = UNITY_MOVEMENT.gravity;
+    if (this.kkSwim) return 0; /* underwater: updateSwim moves the elevation itself */
     if (this.kkFlying) { if (this.state === 'hurt' || this.grounded) this.kkFlying = false; else return 0; }
     if (this.guidedChain) return 0; // the chain places the Wizard itself
     if (this.airLatch && !this.grounded) return g * AIR_LATCH_GRAVITY;
@@ -2354,6 +2372,7 @@ export class Player extends GroundEntity {
       // In the saddle (user, 21 Nov 2026): seated clips — at rest, galloping, or low over a flying mount's neck. Free flight:
       // upright hover when still, horizontal flight when moving. Heroes without these clips keep the old fallbacks.
       if (this.isMounted && (this.state === 'idle' || this.state === 'run') && clipFr?.ride) animState = this.mountedSummon.definition?.flying && clipFr.rideFly ? 'rideFly' : this.state === 'run' && clipFr.rideRun ? 'rideRun' : 'ride';
+      else if (this.kkSwim && (this.state === 'idle' || this.state === 'run') && clipFr) animState = this.state === 'run' ? (clipFr.swim ? 'swim' : clipFr.fly ? 'fly' : animState) : (clipFr.swimIdle ? 'swimIdle' : clipFr.hover ? 'hover' : animState); /* underwater: swim clips (until they exist: the flight clips) */
       else if (this.kkFlying && free && clipFr?.fly) animState = Math.abs(this.vx ?? 0) + Math.abs((this.vz ?? 0) * 150) > 60 ? 'fly' : 'hover';
       else if (this.summonPoseT > 0 && this.grounded && !this.isGuarding && this.state === 'idle' && Math.abs(this.vx ?? 0) < 25 && !drawingNow) animState = 'summon';
       else if (drawingNow && free) animState = 'draw';

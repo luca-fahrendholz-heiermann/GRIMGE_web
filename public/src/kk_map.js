@@ -44,7 +44,9 @@ export const SITE_KINDS = Object.freeze({
   castle: { w: 600, value: 6, big: true }, /* the wall block with its double stair (kk_castle.js) */ lair: { w: 260, value: 5, big: true }, camp: { w: 200, value: 2, big: true },
   building: { w: 200, value: 1 }, goldvein: { w: 90, value: 3 }, prison: { w: 170, value: 3 }, source: { w: 120, value: 2 },
   stable: { w: 150, value: 1 }, shrine: { w: 60, value: 1 },
-  shaft: { w: 140, value: 0 }, lift: { w: 140, value: 0 }
+  shaft: { w: 140, value: 0 }, lift: { w: 140, value: 0 },
+  /* regions (user, 21 Nov 2026, kk_regions.js): a lake on the main plane leads down into the underwater region, a cloud gate up into the sky */
+  lake: { w: 380, value: 0 }, cloudgate: { w: 120, value: 0 }
 });
 // The roads: three across and three along the board (wavy), on every level (drawn by kk_world.js, walked by the patrols,
 // kept free of decor).
@@ -55,11 +57,15 @@ export const roadXi = (i, z, row) => KK.width * ROADS_V[i] + Math.sin(z * .45 + 
 export const roadZ = (x, row, zNear = KK.depth / 2) => { let best = roadZi(0, x, row); for (let i = 1; i < ROADS_H.length; i++) { const z = roadZi(i, x, row); if (Math.abs(z - zNear) < Math.abs(best - zNear)) best = z; } return best; };
 // How far a point is from the nearest road (in board px).
 export const roadGap = (x, z, row) => Math.min(...ROADS_H.map((_, i) => Math.abs(z - roadZi(i, x, row)) * KK.zPx), ...ROADS_V.map((_, i) => Math.abs(x - roadXi(i, z, row))));
-export const LEVEL_NAMES = Object.freeze(['HOCHEBENE', 'HAUPTEBENE', 'TIEFE']);
+export const LEVEL_NAMES = Object.freeze(['HOCHEBENE', 'HAUPTEBENE', 'TIEFE', 'UNTERWASSER', 'HIMMEL']);
+// The two regions beside the three levels (kk_regions.js): reached only through lakes / cloud gates of the main plane.
+export const REGION_ROWS = Object.freeze({ water: 3, sky: 4 });
+export const REGION_COUNTS = Object.freeze({ lake: 5, cloudgate: 3 });
+export const REGION_SWIM_TOP = 210; /* underwater: how high one swims above the sea floor (px) — the surface lies just above */
 // Placement order matters: big and rare places first, the many buildings last (they fill what is left).
 const COUNTS = Object.freeze({ castle: 14, camp: 12, lair: 4, prison: 10, stable: 6, goldvein: 24, shrine: 12, building: 60 });
 // How far a place reaches back (−) and forward (+) in depth (its castle block, its guards, the room behind a house front).
-const Z_EXT = Object.freeze({ castle: [-.62, .42], lair: [-.6, .6], camp: [-.55, .55], building: [-.36, .18], goldvein: [-.3, .3], prison: [-.4, .4], source: [-.35, .35], stable: [-.4, .3], shrine: [-.25, .25], shaft: [-.4, .4], lift: [-.4, .4] });
+const Z_EXT = Object.freeze({ castle: [-.62, .42], lair: [-.6, .6], camp: [-.55, .55], building: [-.36, .18], goldvein: [-.3, .3], prison: [-.4, .4], source: [-.35, .35], stable: [-.4, .3], shrine: [-.25, .25], shaft: [-.4, .4], lift: [-.4, .4], lake: [-1.1, 1.1], cloudgate: [-.3, .3] });
 
 export function mulberry32(seed) {
   let a = seed >>> 0;
@@ -141,6 +147,9 @@ function attempt(rng) {
   const pureEl = BASE_ELEMENTS[Math.floor(rng() * BASE_ELEMENTS.length)];
   const pureTries = [...shuffle(rng, spans[2]).map((sp) => ({ row: 2, x0: sp[0] + 600, x1: sp[1] - 600, z0: D * .35, z1: D * .65 })), ...spans[2].map((sp) => ({ row: 2, x0: sp[0] + 200, x1: sp[1] - 200 })), ...spans[0].map((sp) => ({ row: 0, x0: sp[0] + 200, x1: sp[1] - 200 })), { row: M, x0: W * .4, x1: W * .6 }];
   for (const pk of pureTries) if (place('source', { element: pureEl, pure: true }, pk)) break; /* deep down if there is room, else the next best place */
+  // 5b. the region gates on the main plane, spread over its width (each in its own stripe, clear of the main castles)
+  for (const [kind, n] of Object.entries(REGION_COUNTS)) for (let i = 0; i < n; i++) { const x0 = W * i / n + 500, x1 = W * (i + 1) / n - 500; place(kind, {}, { row: M, x0, x1, z0: 2, z1: D - 2 }) ?? place(kind, {}, { row: M, x0: 400, x1: W - 400 }); }
+  spans[REGION_ROWS.water] = [[0, W]]; spans[REGION_ROWS.sky] = [[0, W]];
   // 6. filling
   for (const [kind, n] of Object.entries(COUNTS)) { if (kind === 'castle' || kind === 'lair' || kind === 'camp') continue; for (let i = 0; i < n; i++) place(kind, kind === 'building' ? { floors: 1 + Math.floor(rng() * 3) } : kind === 'shrine' && i < 3 ? { sky: true } : {}); } /* three sky shrines teach flying */
   return { width: W, depth: D, rows, hqs, biomes, sites, spans };

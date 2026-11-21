@@ -29,6 +29,7 @@ import { initArmy, updateArmy, armyActors, closeKKPanel, recordGrade, kkFindTarg
 import { initWar, updateWar, warActors, renderFlood, renderMinimapFlood, warMinimapDots, kkEnemyHome, kkCanRespawn, kkClock } from './kk_war.js'; // Kronenkrieg: bots, main castles, Grimmflut, the end
 import { initCreatures, updateCreatures, creatureActors, creatureMinimapDots, tameAt, kkMountGate } from './kk_creatures.js'; // Kronenkrieg: creatures, eggs, mounts
 import { updateTestMount } from './mounts.js'; // stable mounts (?mount=<id> test hook)
+import { kkSpellsBlocked } from './kk_regions.js'; // no spells under water (Kronenkrieg regions)
 import { initCrown, updateCrown, closeCrownPanel, kkFocusLocked, kkFocusStyle } from './kk_crown.js'; // Kronenkrieg: the crowning trials
 import { updateInterior, interiorActors } from './kk_interior.js'; // Kronenkrieg: houses you walk into (cut-away)
 import { itemActors, renderReels, closeBag, kkUseHeld } from './kk_items.js'; // Kronenkrieg: items, the bag, the reel window
@@ -1024,6 +1025,7 @@ export class GameWorld {
 
   startRuneDrawing(expectedCardId = null) {
     if (!this.isMatchRunning() || this.drawing.active || !this.player.isAlive) return;
+    if (kkSpellsBlocked(this)) { this.showAnnouncement('UNTER WASSER WIRKEN KEINE ZAUBER', 1.2); audio.playRuneFail?.(); return; } /* kk_regions.js */
     // Siege: runes are drawn on the castle platform (casting works everywhere).
     if (this.siegeMatch && !this.siegeMatch.canPrepare('blue')) {
       this.showAnnouncement('DRAW RUNES ON YOUR CASTLE — CAST SLOTTED SPELLS HERE', 1.3); audio.playRuneFail(); return;
@@ -1237,6 +1239,7 @@ export class GameWorld {
 
   castPreparedSpell() {
     if (!this.isMatchRunning() || !this.player.isAlive) return false;
+    if (kkSpellsBlocked(this)) { this.showAnnouncement('UNTER WASSER WIRKEN KEINE ZAUBER', 1.2); return false; } /* kk_regions.js */
     // Inside a Beam Clash the cast input becomes the push / counter impulse.
     if (this.player.activeClash) return !!this.clashAction();
     if (this.targeting.isActive) return this.targeting.confirm();
@@ -1337,6 +1340,7 @@ export class GameWorld {
   castSpellSlot(slot, consumeSelected = false, target = null) {
     const resolved = slot?.definition;
     if (!resolved) return false;
+    if (kkSpellsBlocked(this)) { this.showAnnouncement('UNTER WASSER WIRKEN KEINE ZAUBER', 1.2); return false; } /* kk_regions.js */
     // Second press of a two-stage spell: stage 2, then the slot is freed (mana was paid at stage 1).
     if (slot.recast) {
       const label = slot.recast.label;

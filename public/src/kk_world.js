@@ -2,7 +2,8 @@
 // wide bands; the figure walks one band at a time (a normal 2.5D stage), the bands above and below are drawn as the
 // same endless ground, and walking off the back or front edge glides the camera into the neighbouring band. The map
 // reveals itself while exploring (fog on the minimap). No painted background: the ground itself is the world.
-import { generateKKMap, BIOME_OF, biomeAt, spanAt, KK, LEVEL_NAMES, roadZi, roadXi, ROADS_H, ROADS_V } from './kk_map.js';
+import { updateRegions, drawRegionGates, drawRegionGround } from './kk_regions.js'; // underwater + sky regions
+import { generateKKMap, BIOME_OF, biomeAt, spanAt, KK, LEVEL_NAMES, roadZi, roadXi, ROADS_H, ROADS_V, REGION_ROWS } from './kk_map.js';
 import { drawKKSite, buildDecor } from './kk_art.js';
 import { drawNode, updateResources } from './kk_resources.js';
 import { castleActors, updateCastles } from './kk_castle.js';
@@ -57,8 +58,8 @@ export function applyBounds(game, kk = kkState(game)) {
 }
 // Changes the level at x (the figure lands beside the connector, not on it); dir +1 = down, −1 = up.
 export function switchLevel(game, to, x, z = null) {
-  const kk = kkState(game); const P = game.player; if (to < 0 || to >= kk.map.rows || to === kk.row) return false;
-  const dir = to > kk.row ? 1 : -1; kk.row = to; P.x = x; if (z != null) P.z = z; P.vz = 0; P.vx = 0;
+  const kk = kkState(game); const P = game.player; const region = to === REGION_ROWS.water || to === REGION_ROWS.sky; if (to < 0 || (to >= kk.map.rows && !region) || to === kk.row || !kk.map.spans[to]) return false;
+  const dir = to === REGION_ROWS.sky ? -1 : kk.row === REGION_ROWS.sky ? 1 : to > kk.row ? 1 : -1; /* the sky lies above everything */ kk.row = to; P.x = x; if (z != null) P.z = z; P.vz = 0; P.vx = 0;
   applyBounds(game, kk); P.x = Math.max(game.battlefield.boundsOverride.left, Math.min(game.battlefield.boundsOverride.right, P.x));
   kk.pan = dir < 0 ? -bandH() : bandH(); /* the world drops or rises one level, the camera glides after it */
   game.modeState.dungeonCameraX = game.dungeonCameraTarget?.() ?? game.modeState.dungeonCameraX;
@@ -87,6 +88,7 @@ export function updateKronenkrieg(game, dt) {
     kk.liftT = lift ? kk.liftT + dt : 0; kk.liftAt = lift?.id ?? null;
     if (lift && kk.liftT >= LIFT_TIME) { kk.liftT = 0; P.dismount?.(); switchLevel(game, lift.to, lift.x + 110, .66); game.showAnnouncement?.(`HINAUF — ${LEVEL_NAMES[lift.to]}`, 1.2); }
   } else kk.liftT = 0;
+  updateRegions(game, dt); /* lakes → under water, cloud gates → the sky, and back out elsewhere (kk_regions.js) */
   kk.pan += (0 - kk.pan) * Math.min(1, dt * PAN_SPEED); if (Math.abs(kk.pan) < .5) kk.pan = 0;
   revealAround(kk, P);
 }
@@ -207,13 +209,14 @@ export function siteOpts(kk, site) {
 // floor each level has its own air: dusk sky over the plateaus, night over the main plane, a rock ceiling in the depths.
 const SITE_W = Object.freeze({ building: 200, goldvein: 90, prison: 170, source: 120, stable: 150, shrine: 60, shaft: 140, lift: 140, lair: 260, camp: 200, trial: 200 });
 export function renderKKGround(ctx, game, x0, x1, y0 = -Infinity, y1 = Infinity) {
-  const kk = kkState(game); if (!kk) return; const p = getGroundProjection(); const H = bandH(); const row = kk.row; const t = kk.time; const nearEdge = groundYForDepth(KK.depth); /* the near edge of the deep floor */
+  const kk = kkState(game); if (!kk) return; if (drawRegionGround(ctx, game, x0, x1, y0, y1)) return; /* under water / in the sky: the region's own look */ const p = getGroundProjection(); const H = bandH(); const row = kk.row; const t = kk.time; const nearEdge = groundYForDepth(KK.depth); /* the near edge of the deep floor */
   const above = row === 0 ? ['#2a3350', '#141a2c'] : row === KK.main ? ['#11141f', '#090b12'] : ['#140d0a', '#0a0605'];
   ctx.fillStyle = above[1]; ctx.fillRect(Math.floor(x0), p.farY - H * 3, Math.ceil(x1 - x0), H * 3);
   ctx.fillStyle = above[0]; ctx.fillRect(Math.floor(x0), p.farY - 70, Math.ceil(x1 - x0), 70);
   if (row === 2) { ctx.fillStyle = '#20150f'; for (let x = Math.floor(x0 / 46) * 46; x < x1; x += 46) { const hh = 26 + hash(x, 7) * 60; ctx.beginPath(); ctx.moveTo(x, p.farY - H); ctx.lineTo(x + 23, p.farY - H + hh + 60); ctx.lineTo(x + 46, p.farY - H); ctx.closePath(); ctx.fill(); } }
   if (row === 0) { ctx.fillStyle = 'rgba(255,255,255,.5)'; for (let i = 0; i < 40; i++) { const sx = Math.floor(x0 / 400) * 400 + hash(i, 3) * 4000; if (sx > x0 && sx < x1) ctx.fillRect(Math.floor(sx), Math.floor(p.farY - 40 - hash(3, i) * 200), 2, 2); } }
   drawBandGround(ctx, kk, row, 0, x0, x1, y0, y1);
+  drawRegionGates(ctx, game, x0, x1); /* lakes and cloud gates on the main plane */
   // outside the sections of this level: solid rock (the walls of the plateau / the cave)
   if (row !== KK.main) { ctx.fillStyle = '#17120f'; let cx = x0; const spans = [...(kk.map.spans[row] ?? [])].sort((a, b) => a[0] - b[0]); for (const [s0, s1] of spans) { if (s0 > cx) ctx.fillRect(Math.floor(cx), p.farY - 4, Math.ceil(Math.min(s0, x1) - cx), H + 8); cx = Math.max(cx, s1); } if (cx < x1) ctx.fillRect(Math.floor(cx), p.farY - 4, Math.ceil(x1 - cx), H + 8);
     ctx.fillStyle = '#2a201a'; for (const [s0, s1] of spans) for (const e of [s0, s1]) if (e > x0 - 20 && e < x1 + 20) for (let y = Math.max(p.farY, Math.floor(y0 / 12) * 12); y < Math.min(nearEdge, y1); y += 12) ctx.fillRect(Math.floor(e - 6 + hash(e, y) * 6), y, 8, 10); }
