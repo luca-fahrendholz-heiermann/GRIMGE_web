@@ -961,7 +961,10 @@ export class SpriteManager {
       }
       g.drawImage(lay, P, P);
     }
-    for (const h of heads) if (h) g.drawImage(h, P + anchor[0], P + anchor[1]);
+    // hair & co. follow the head's tilt and size (head_lock.cjs: [ox, oy, q, deg, scale]) — rotated about the head's middle
+    // (94, 48 on the 184 grid), nearest sampling so the pixels stay pixels
+    const deg = anchor?.[3] ?? 0, hsc = anchor?.[4] ?? 1; const hx = P + anchor?.[0] + 94, hy = P + anchor?.[1] + 48;
+    for (const h of heads) if (h) { if (deg || hsc !== 1) { g.save(); g.translate(hx, hy); g.rotate(deg * Math.PI / 180); g.scale(hsc, hsc); g.translate(-hx, -hy); g.drawImage(h, P + anchor[0], P + anchor[1]); g.restore(); } else g.drawImage(h, P + anchor[0], P + anchor[1]); }
     const res = { canvas: cv, pad: P }; byKey.set(ck, res); return res;
   }
   recoloredCanvas(source, recolor) {
