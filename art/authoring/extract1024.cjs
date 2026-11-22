@@ -58,6 +58,12 @@ for (const src of sources) {
   const im = PNG.sync.read(fs.readFileSync(tmp)); fs.rmSync(tmp, { force: true }); const D = im.data;
   const on = new Uint8Array(W * W); for (let i = 0; i < W * W; i++) on[i] = D[i * 4 + 3] > 127 && !isKey(D[i * 4], D[i * 4 + 1], D[i * 4 + 2]) ? 1 : 0;
   { const { lab, sizes } = components(on); const big = Math.max(...sizes, 0); for (let i = 0; i < W * W; i++) if (on[i] && sizes[lab[i]] < Math.max(400, big * .01)) on[i] = 0; }
+  // green spill: edge pixels (≤ 3 px from the background) tinted by the key green, where the figure just inside is NOT green
+  // itself — the generator blends its outline into the backdrop; green cloaks and leaves keep their edge
+  { const gx = (i) => D[i * 4 + 1] - Math.max(D[i * 4], D[i * 4 + 2]);
+    for (let pass = 0; pass < 3; pass++) { const kill = []; for (let y = 4; y < W - 4; y++) for (let x = 4; x < W - 4; x++) { const i = y * W + x; if (!on[i] || gx(i) < 25) continue;
+      let open = false, inner = 0, innerN = 0; for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { if (!on[i + dy * W + dx]) open = true; else { const j = i + 4 * dy * W + 4 * dx; if (on[j]) { inner += gx(j); innerN++; } } }
+      if (open && (!innerN || inner / innerN < 8)) kill.push(i); } for (const i of kill) on[i] = 0; } }
   // 2. skin: this source's own skin tone (sampled on the reference cheeks/forehead) + the reference skin colours
   const samples = []; for (let y = eyeY + 6; y < neck - 12; y++) for (let x = 0; x < W; x++) { const i = y * W + x; if (!refOn[i] || !on[i]) continue; const r = D[i * 4], g = D[i * 4 + 1], b = D[i * 4 + 2]; if (r > g && g > b && r - b > 40) samples.push(oklab(r, g, b)); }
   samples.sort((a, b) => a[0] - b[0]); const cent = samples.length ? [.1, .3, .5, .7, .9].map((q) => samples[Math.floor(q * (samples.length - 1))]) : [];
