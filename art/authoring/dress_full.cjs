@@ -2,7 +2,7 @@
 // noch der Kopf wieder drauf muss und die Körperfarbe gleich sein muss"). Instead of an outfit layer cut against the base
 // frame (gaps, stray pixels, skin through holes), the whole dressed figure the AI drew is taken per frame; then
 //   1. every colour is locked to the class still's palette + the reference body's palette (skin = the body's own skin),
-//   2. the reference head goes back on, pixel-exact, at the frame's head anchor (skull, eyes, nose; jaw kept),
+//   2. the finished base frame's head goes on (head_lock.cjs: the whole reference head incl. mouth, tilted / scaled, or the phase's direction head),
 //   3. stray islands are removed.
 //   node art/authoring/dress_full.cjs <class> <outfitStill> <clip> <aiGrid.png> [<clip> <aiGrid.png> …]
 // Output: public/assets/character/anim_full/<class>/<clip>.png (same frame geometry as public/assets/sprites/sheets/base_<clip>.png).
