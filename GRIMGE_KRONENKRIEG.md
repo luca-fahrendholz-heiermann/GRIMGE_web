@@ -301,6 +301,15 @@ Eine Einheit hat **Klasse (aus der Waffe)** und **Element (aus dem Stein)**. Bei
 - **Karte:** An jeder eigenen Burg steht ein Pfeil mit der **Gesamtzahl** der stationierten Kämpfer, ohne ihre Art.
   Sinkt die Zahl, blinkt der Pfeil: Die Burg wird angegriffen. Fremde Burgen zeigen ihre Zahl nur, solange man sie
   sieht.
+- **Formationen (Nutzer, 22. Nov 2026):** Der Trupp stellt sich radial in Ringen mit gleichem Abstand auf.
+  Fernkämpfer (Bogen, Stab) stehen innen, Nahkämpfer bilden den Ring darum, die Schildträger stehen ganz außen.
+  - *Anführer vorne:* Der Held geht voran, der Rundblock folgt hinter ihm.
+  - *Anführer Mitte:* Der Held steht geschützt im Zentrum. Das ist für Spieler, die selbst aus der Ferne kämpfen.
+  - Die Formation wählt man in jeder eigenen Burg in der **Vorkammer** (im Burgmenü an der Fahne).
+  - Nur Einheiten ohne Gegner gehen auf ihren Platz, der Kampf selbst bleibt frei.
+  - Die Blickrichtung der Formation folgt der Laufrichtung des Helden, nicht jedem Schlag nach hinten.
+  - Rivalen-Trupps führen von vorne.
+  - Umsetzung: `public/src/kk_formation.js`.
 
 ### 6.5 Die Hauptburg aufrüsten
 Die Hauptburg wächst mit dem Spieler. Ausgebaut wird sie in **vier Stufen**, jede mit ihrem eigenen Baustoff:

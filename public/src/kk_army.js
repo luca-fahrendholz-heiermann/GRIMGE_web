@@ -19,6 +19,7 @@ import { castleHp, castleMaxHp, inGateRing, outOfCastle, squadWallTarget } from 
 import { FACTIONS, TIERS, LAIRS, TRAIT_DE, dinoImage, dinoName, tierUnit, factionOf, initCastleRecruits, recruit, buildLair, creditKill, canAfford, squadMorale } from './kk_factions.js';
 import { drawDinoAnim } from './kk_dino_anim.js'; // animated dino-dragon sheets
 import { addDeed, titleBonus } from './kk_titles.js';
+import { FORMATIONS, formationOf, setFormation, updateFormations } from './kk_formation.js';
 
 // Per class: melee/ranged and multipliers on the minion base values.
 export const CLASS_STATS = Object.freeze({
@@ -403,6 +404,7 @@ function ensurePanel(game) {
 function onPanelAction(game, act, arg) {
   const kk = kkState(game); if (act === 'close') { kk.panelOpen = false; closeKKPanel(); return; }
   if (act === 'bag') { const c = bagUpgradeCost(kk); if (kk.gold >= c && (kk.bagLevel ?? 0) < BAG_MAX_LEVEL) { kk.gold -= c; kk.bagLevel = (kk.bagLevel ?? 0) + 1; panel.msg = `BEUTEL: ${bagSlots(kk)} PLÄTZE`; } return; } const site = siteById(kk, panel.siteId); if (!site) return;
+  if (act === 'formation') { if (setFormation(kk, arg)) { panel.msg = `FORMATION: ${FORMATIONS[arg].label}`; audio.playRuneChime?.(640); } panel.html = ''; refreshPanel(game, site); return; } /* the antechamber (kk_formation.js) */
   let res = true;
   if (act === 'recruit') { const [t, n] = String(arg).split(':'); const r = recruit(game, site, Number(t), n === 'all' ? 99 : 1, addRecord, TRAIN.garrisonCap - garrisonOf(kk, site.id).length); if (r.ok && t === '4') addDeed(game, 'dinos', r.n); panel.msg = r.ok ? `+${r.n} ANGEWORBEN` : r.why; kk._panelTick = -1; return; }
   if (act === 'lair') { const r = buildLair(game, site, arg); panel.msg = r.ok ? '' : r.why; kk._panelTick = -1; return; }
@@ -446,6 +448,10 @@ function refreshPanel(game, site) {
     if (x.next) h += btn('upgrade', '', `BAUEN ${x.next.name} ${x.built}/${x.next.cost} (+${x.have})`, x.have > 0);
     for (const e of x.stones) { const c = x.resCost(e); h += btn('resist', e, `🛡${e.slice(0, 4).toUpperCase()} ${x.hq.res?.[e] ?? 0}${c ? '+' + c : ''}`, !!c && (x.hq.res?.[e] ?? 0) < (x.hq.level ?? 0)); }
   }
+  { /* VORKAMMER (user, 22 Nov 2026): the squad's formation, changeable in every own castle */
+    const cur = formationOf(kk); h += `<div style="margin-top:6px;color:#ffe9a8">VORKAMMER · FORMATION</div>`;
+    for (const f of Object.values(FORMATIONS)) h += btn('formation', f.id, `${f.id === cur ? '✓ ' : ''}${f.label}`, f.id !== cur);
+    h += `<div style="color:#9a8fb0;font-size:.9em">${FORMATIONS[cur].hint} · Fernkampf innen, Nahkampf darum, Schilde außen</div>`; }
   h += `<div style="margin-top:4px;color:#ffe9a8">BURG ${garrison.reduce((s, g) => s + g.units.length, 0)}/${TRAIN.garrisonCap} · TRUPP ${squadRecords(kk).length}/${squadCap(kk)}</div>`;
   for (const g of garrison) h += `<div>${g.units.length}× ${unitName(g.sample)} ${btn('down', g.key, '▼')}${g.units.length >= TRAIN.mergeCount && g.sample.tier < TRAIN.maxTier ? btn('merge', g.key, '✦') : ''}</div>`;
   for (const g of squad) h += `<div style="color:#bfe">${g.units.length}× ${unitName(g.sample)} ${btn('up', g.key, '▲')}</div>`;
@@ -470,6 +476,7 @@ export function updateArmy(game, dt) {
   const kk = kkState(game); if (!kk.units) return;
   if (!kk._switchHooked) { (kk.switchHooks ??= []).push(() => onBandSwitch(game)); kk._switchHooked = true; }
   updatePatrols(game, dt); syncLive(game); kk.morale = squadMorale(kk);
+  updateFormations(game, dt, { isSquad: (rec) => rec?.role === 'squad', isOwnSquad: (rec) => mine(rec), kindFor: () => formationOf(kk) }); /* kk_formation.js */
   for (const rec of kk.units) if (rec.live && (rec.role === 'guard' || rec.role === 'garrison')) anchorFor(kk, rec); /* the round of the guards moves on */ updateSites(game, dt); updateQueues(game, dt); updatePanel(game);
 }
 export function armyActors(game) {

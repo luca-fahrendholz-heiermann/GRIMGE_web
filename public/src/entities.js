@@ -2766,8 +2766,13 @@ export class Minion extends GroundEntity {
     else if (!target && this.followLeader) {
       // Companions without a target stay close to their leader instead of
       // marching off through a long Dungeon room on their own.
-      const leader = this.followLeader;
-      if (!leader.isAlive || groundDistance(this, leader) < 90) { this.vx = this.vz = 0; this.state = 'idle'; }
+      const leader = this.followLeader; const slot = this.formationTarget; /* Kronenkrieg squads: their place in the formation (kk_formation.js) */
+      if (slot && leader.isAlive) {
+        const dx = slot.x - this.x, dz = (slot.z - this.z) * 150; const d = Math.hypot(dx, dz);
+        if (d < 6) { this.vx = this.vz = 0; this.state = 'idle'; this.facing = leader.facing || this.facing; }
+        else { const desired = normalizeMove({ x: dx, z: dz }); const k = d < 30 ? Math.max(.35, d / 30) : 1; this.facing = Math.abs(dx) > 4 ? Math.sign(dx) : leader.facing || this.facing; this.vx = desired.x * this.speed * this.slowFactor * k; this.vz = desired.z * (this.speed / 150) * this.slowFactor * k; this.state = 'run'; }
+      }
+      else if (!leader.isAlive || groundDistance(this, leader) < 90) { this.vx = this.vz = 0; this.state = 'idle'; }
       else {
         const desired = normalizeMove({ x: leader.x - this.x, z: (leader.z - this.z) * 150 });
         this.facing = desired.x ? Math.sign(desired.x) : this.facing; this.vx = desired.x * this.speed * this.slowFactor; this.vz = desired.z * (this.speed / 150) * this.slowFactor; this.state = 'run';
