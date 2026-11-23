@@ -231,4 +231,4 @@ Der Nutzer hat selbst Guthaben gekauft (Plan `starter`, Stand vor dem Auftrag 27
 | 4 Frisuren (Berserker, Lancer, Arcanist, Beastborn) auf 4 nackten Referenzkörpern, 2k | `gpt_image_2_6` low, 2k | 1 | 0 (als NSFW blockiert, erstattet) |
 | dasselbe im lila Anzug (Haut unterhalb des Halses als Stoff) | `gpt_image_2_6` low, 2k | 1 | 1,25 |
 
-**Kontostand danach: 8,0** (dazwischen 5 Credits für eigene Generierungen außerhalb dieser Sitzung, 22 Nov).
+**Kontostand danach: 5,5** (dazwischen 7,5 Credits für eigene Generierungen außerhalb dieser Sitzung, 22.–23. Nov).
