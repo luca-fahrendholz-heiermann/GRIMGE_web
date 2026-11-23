@@ -19,6 +19,7 @@ obj/
 
 # Node
 node_modules/
+.worktrees/
 
 # OS
 .DS_Store
