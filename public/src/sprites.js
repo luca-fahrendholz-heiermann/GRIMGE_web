@@ -942,7 +942,12 @@ export class SpriteManager {
     // frame; without one the outfit layer goes over the base frame
     const full = outfit.cls ? load(`assets/character/anim_full/${outfit.cls}/${m[1]}.png`) : null; if (full === false) return null;
     const img = full ?? (outfit.cls ? load(`assets/character/anim/${outfit.cls}/${m[1]}.png`) : null); if (img === false) return null;
-    const anchor = HEAD_ANCHORS[`base_${m[1]}`]?.[frame.k]; const heads = anchor && anchor[2] >= .3 ? (outfit.head ?? []).map((f) => load(`assets/character/${f}`)) : [];
+    const anchor = HEAD_ANCHORS[`base_${m[1]}`]?.[frame.k];
+    // a phase with its own direction head (head_lock.cjs: looking up, falling) wears the hair bent for it
+    // (art/authoring/hair_directions.cjs → hair_dir/<hair>__<dir>.png, already turned: drawn without the anchor's tilt)
+    const dir = typeof anchor?.[5] === 'string' ? anchor[5] : null;
+    const headOf = (f) => { if (dir && /^hair\/.+\.png$/.test(f)) { const v = load(`assets/character/hair_dir/${f.slice(5, -4)}__${dir}.png`); if (v !== null) return { img: v, baked: true }; } return { img: load(`assets/character/${f}`), baked: false }; };
+    const headList = anchor && anchor[2] >= .3 ? (outfit.head ?? []).map(headOf) : []; const heads = headList.map((h) => h.img);
     if (heads.includes(false) || (!img && !heads.some(Boolean))) return null;
     this._outfitCache ??= new WeakMap(); let byKey = this._outfitCache.get(frame.canvas); if (!byKey) { byKey = new Map(); this._outfitCache.set(frame.canvas, byKey); } /* keyed by the stable base frame canvas */
     const ck = `${outfit.cls ?? '-'}/${m[1]}${outfit.dye?.key ?? ''}|${(outfit.head ?? []).join(',')}`; if (byKey.has(ck)) return byKey.get(ck);
@@ -964,7 +969,7 @@ export class SpriteManager {
     // hair & co. follow the head's tilt and size (head_lock.cjs: [ox, oy, q, deg, scale]) — rotated about the head's middle
     // (94, 48 on the 184 grid), nearest sampling so the pixels stay pixels
     const deg = anchor?.[3] ?? 0, hsc = anchor?.[4] ?? 1; const hx = P + anchor?.[0] + 94, hy = P + anchor?.[1] + 48;
-    for (const h of heads) if (h) { if (deg || hsc !== 1) { g.save(); g.translate(hx, hy); g.rotate(deg * Math.PI / 180); g.scale(hsc, hsc); g.translate(-hx, -hy); g.drawImage(h, P + anchor[0], P + anchor[1]); g.restore(); } else g.drawImage(h, P + anchor[0], P + anchor[1]); }
+    for (const { img: h, baked } of headList) if (h) { if (!baked && (deg || hsc !== 1)) { g.save(); g.translate(hx, hy); g.rotate(deg * Math.PI / 180); g.scale(hsc, hsc); g.translate(-hx, -hy); g.drawImage(h, P + anchor[0], P + anchor[1]); g.restore(); } else g.drawImage(h, P + anchor[0], P + anchor[1]); }
     const res = { canvas: cv, pad: P }; byKey.set(ck, res); return res;
   }
   recoloredCanvas(source, recolor) {

@@ -86,9 +86,9 @@ for (const src of sources) {
   { const solid = morph(morph(hairCand, 3, 0), 4, 1); for (let i = 0; i < W * W; i++) if (hairCand[i] && headSil[i] && !solid[i]) hairCand[i] = 0; }
   const hc = components(hairCand); const nC = hc.sizes.length; const outside = new Uint8Array(nC), inHead = new Uint8Array(nC), atNeck = new Uint8Array(nC), minY = new Int32Array(nC).fill(W);
   for (let i = 0; i < W * W; i++) { if (!hairCand[i]) continue; const c = hc.lab[i], y = (i / W) | 0; if (!headSil[i]) outside[c] = 1; if (refOn[i]) inHead[c] = 1; if (y === neck - 1) atNeck[c] = 1; if (y < minY[c]) minY[c] = y; }
-  // pieces rising from the shoulders (pauldron horns, collars): hang at the neck line, never touch the head, stay below the
-  // crown → they belong to the outfit
-  const toOutfit = new Uint8Array(nC); for (let c = 0; c < nC; c++) toOutfit[c] = atNeck[c] && !inHead[c] && minY[c] > top + 40 ? 1 : 0;
+  // pieces rising from the shoulders (pauldron horns, collars, wings): hang at the neck line and never touch the skull
+  // → they belong to the outfit
+  const toOutfit = new Uint8Array(nC); for (let c = 0; c < nC; c++) toOutfit[c] = atNeck[c] && !inHead[c] ? 1 : 0; /* however high it rises (wings, banners — user 22 Nov 2026: the tf wings were cut at the neck) */
   const hair = new PNG({ width: W, height: W }); const outfit = new PNG({ width: W, height: W });
   for (let i = 0; i < W * W; i++) {
     if (!on[i]) continue; const y = (i / W) | 0;
@@ -99,13 +99,33 @@ for (const src of sources) {
     }
     D.copy(outfit.data, i * 4, i * 4, i * 4 + 4); outfit.data[i * 4 + 3] = 255;
   }
-  fs.writeFileSync(path.join(dir, 'outfit.png'), PNG.sync.write(outfit)); fs.writeFileSync(path.join(dir, 'hair.png'), PNG.sync.write(hair));
+  // 3b. long hair below the neck (user, 23 Nov 2026: "Haare einfach abgeschnitten, statt sie akkurat vom Original nach Form
+  //     auszuschneiden, und dann an die Rüstung anzupassen, was im Vordergrund und was im Hintergrund ist"): from the hair
+  //     at the neck line it grows on through connected pixels of the hair's own colours (strand outlines come along); hair
+  //     over the body is front hair (hair.png), hair beside it — behind shoulders and back — is back hair (hair_back.png,
+  //     drawn behind the armour); under the hair the outfit gets the reference body. OPT-IN (HAIR_GROW=1): colour growth
+  //     cannot tell a mane from a fur cape of the same colour — the clean way is hair generated alone on the bare reference
+  const hairBack = new PNG({ width: W, height: W }); let grownN = 0;
+  {
+    const cols = []; const seenC = new Set(); const q = (v) => Math.round(v / .015);
+    for (let i = 0; i < neck * W; i++) { if (!hair.data[i * 4 + 3]) continue; const L = oklab(hair.data[i * 4], hair.data[i * 4 + 1], hair.data[i * 4 + 2]); if (L[0] < .2) continue; const k = `${q(L[0])},${q(L[1])},${q(L[2])}`; if (seenC.has(k)) continue; seenC.add(k); cols.push(L); }
+    const memo = new Map(); const hairCol = (i) => { const k = (D[i * 4] << 16) | (D[i * 4 + 1] << 8) | D[i * 4 + 2]; let v = memo.get(k); if (v !== undefined) return v; const L = oklab(D[i * 4], D[i * 4 + 1], D[i * 4 + 2]); v = L[0] >= .2 && cols.some((c) => d2(L, c) < .0025); memo.set(k, v); return v; };
+    const dark = (i) => .3 * D[i * 4] + .59 * D[i * 4 + 1] + .11 * D[i * 4 + 2] < 55;
+    const grown = new Uint8Array(W * W); const st = [];
+    if (cols.length && process.env.HAIR_GROW) for (let y = neck - 3; y < neck; y++) for (let x = 0; x < W; x++) { const i = y * W + x; if (hair.data[i * 4 + 3] && !dark(i)) { grown[i] = 1; st.push(i); } }
+    const yMax = Math.min(W - 1, neck + 330);
+    while (st.length) { const c = st.pop(); const cx = c % W, cy = (c / W) | 0; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const nx = cx + dx, ny = cy + dy; if (nx < 0 || nx >= W || ny < neck || ny > yMax) continue; const n = ny * W + nx; if (grown[n] || !on[n] || isSkin(n) || !hairCol(n)) continue; grown[n] = 1; st.push(n); } }
+    for (let pass = 0; pass < 2; pass++) { const add = []; for (let y = neck; y <= yMax; y++) for (let x = 1; x < W - 1; x++) { const i = y * W + x; if (grown[i] || !on[i] || !dark(i)) continue; let g = 0, bg = 0; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { if (!dx && !dy) continue; const n = (y + dy) * W + x + dx; if (grown[n]) g++; else if (!on[n]) bg++; } if (g >= 2 && (bg > 0 || g >= 4)) add.push(i); } for (const i of add) grown[i] = 1; }
+    const bodyNear = morph(refOn, 2, 1);
+    for (let i = neck * W; i < W * W; i++) { if (!grown[i]) continue; grownN++; const dst = bodyNear[i] ? hair : hairBack; D.copy(dst.data, i * 4, i * 4, i * 4 + 4); dst.data[i * 4 + 3] = 255; if (refOn[i]) { R.copy(outfit.data, i * 4, i * 4, i * 4 + 4); outfit.data[i * 4 + 3] = 255; } else outfit.data[i * 4 + 3] = 0; }
+  }
+  fs.writeFileSync(path.join(dir, 'outfit.png'), PNG.sync.write(outfit)); fs.writeFileSync(path.join(dir, 'hair.png'), PNG.sync.write(hair)); if (hairBack.data.some((v, j) => j % 4 === 3 && v)) fs.writeFileSync(path.join(dir, 'hair_back.png'), PNG.sync.write(hairBack)); else fs.rmSync(path.join(dir, 'hair_back.png'), { force: true });
   // 4. preview: source | reference head + outfit + hair on key green
   const pv = new PNG({ width: W * 2, height: W });
   for (let y = 0; y < W; y++) for (let x = 0; x < W; x++) { const i = y * W + x, a = (y * W * 2 + x) * 4, b = (y * W * 2 + W + x) * 4;
     pv.data.set([D[i * 4], D[i * 4 + 1], D[i * 4 + 2], 255], a); if (!on[i]) pv.data.set([22, 210, 5, 255], a);
-    let c = [22, 210, 5]; if (y < neck && refOn[i]) c = [R[i * 4], R[i * 4 + 1], R[i * 4 + 2]]; if (outfit.data[i * 4 + 3]) c = [outfit.data[i * 4], outfit.data[i * 4 + 1], outfit.data[i * 4 + 2]]; if (hair.data[i * 4 + 3]) c = [hair.data[i * 4], hair.data[i * 4 + 1], hair.data[i * 4 + 2]]; pv.data.set([...c, 255], b); }
+    let c = [22, 210, 5]; if (hairBack.data[i * 4 + 3]) c = [hairBack.data[i * 4], hairBack.data[i * 4 + 1], hairBack.data[i * 4 + 2]]; if (y < neck && refOn[i]) c = [R[i * 4], R[i * 4 + 1], R[i * 4 + 2]]; if (outfit.data[i * 4 + 3]) c = [outfit.data[i * 4], outfit.data[i * 4 + 1], outfit.data[i * 4 + 2]]; if (hair.data[i * 4 + 3]) c = [hair.data[i * 4], hair.data[i * 4 + 1], hair.data[i * 4 + 2]]; pv.data.set([...c, 255], b); }
   if (process.env.PREVIEW_DIR) { fs.mkdirSync(process.env.PREVIEW_DIR, { recursive: true }); fs.writeFileSync(path.join(process.env.PREVIEW_DIR, `${name}.png`), PNG.sync.write(pv)); } /* previews stay out of the asset folder */
   let nh = 0, no = 0; for (let i = 0; i < W * W; i++) { if (hair.data[i * 4 + 3]) nh++; if (outfit.data[i * 4 + 3]) no++; }
-  console.log(`${name}: outfit ${no} px, hair ${nh} px, skin samples ${samples.length}`);
+  console.log(`${name}: outfit ${no} px, hair ${nh} px (long hair below the neck ${grownN}), skin samples ${samples.length}`);
 }

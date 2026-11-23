@@ -104,7 +104,7 @@ function closeMouth(vt) {
 // a clip whose head is the reference in at least half its frames keeps that head in its weaker frames too (same direction,
 // drawn a bit differently) — no face switching mid-clip; clips that mostly look elsewhere (lying, frontal) keep theirs
 const clipMinQ = (anchors) => { const good = anchors.filter((a) => a[2] >= .55).length / anchors.length; return good >= .75 ? .4 : good >= .5 ? .48 : .55; };
-module.exports = { pasteHead, track, template, clipMinQ };
+module.exports = { pasteHead, track, template, clipMinQ, quality };
 if (require.main === module) {
   const src = fs.readFileSync(path.join(ROOT, 'public/src/head_anchors.js'), 'utf8'); const A = JSON.parse(/\/\*META\*\/([\s\S]*?)\/\*END\*\//.exec(src)[1]); const out = {};
   for (const [key, anchors] of Object.entries(A)) {
