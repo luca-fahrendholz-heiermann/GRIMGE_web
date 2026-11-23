@@ -1,7 +1,7 @@
 // GRIMGE — a small character-creator page for checking the 1024 library (user, 22 Nov 2026: "mach mir einen kleinen HTML
 // für die Charaktererstellung, wo ich Haare, Rüstung etc. ändern kann — dann sehe ich die Qualität"). Left: the game's 184
 // layers (public/assets/character), right: the same choice from the 1024 library (art/layers1024/library), both composed
-// body → outfit → beard → face → hair → eyes. The manifest is written into the page, so it opens straight from disk.
+// back hair → body → outfit → beard → face → hair → eyes. The manifest is written into the page, so it opens straight from disk.
 //   node art/authoring/creator1024.cjs   → art/layers1024/library/creator.html
 const fs = require('fs'); const path = require('path');
 const ROOT = path.resolve(__dirname, '../..'); const OUT = path.join(ROOT, 'art/layers1024/library');
@@ -52,7 +52,7 @@ opt($('face'), Object.keys(M.face || {}).map((f) => [f, f.replace('face_', '')])
 function fillClass() { const c = $('cls').value; opt($('skin'), (M.classes[c].skins || []).map((s) => [s.file, s.label + ' (' + s.id + ')'])); const t = M.transformations[c] || {}; opt($('tfc'), (t.clothing || []).map((f) => [f, f.split('/').pop()])); }
 const cache = {}; const img = (src) => cache[src] || (cache[src] = new Promise((res) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; }));
 function layers() {
-  const c = $('cls').value, tf = $('tf').checked, L = [M.body];
+  const c = $('cls').value, tf = $('tf').checked, L = []; const hb = M.hair[$('hair').value]; if (hb && hb.back) L.push(tf && hb.backTransformations && hb.backTransformations[c] ? hb.backTransformations[c] : hb.back); /* back hair: behind body and armour */ L.push(M.body);
   L.push(tf && $('tfc').value ? $('tfc').value : $('skin').value);
   if ($('beard').value) L.push(fileOf(M.beard[$('beard').value]));
   if ($('face').value) L.push(fileOf(M.face[$('face').value]));

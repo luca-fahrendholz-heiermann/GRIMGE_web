@@ -223,3 +223,12 @@ Der Nutzer hat selbst Guthaben gekauft (Plan `starter`, Stand vor dem Auftrag 27
 | Arcanist-Hover als 2k-Raster (2048², Frames in Körper-Pixelgröße 1024/184) – Test, ob die KI echte Pixel zeichnet | `gpt_image_2_6` low, 2k | 1 | 1,25 |
 
 **Kontostand danach: 15,5.** Ergebnis: echte Pixelblöcke, scharf; 2k kostet dasselbe wie 1k.
+
+## 23 Nov 2026 – Frisuren allein auf dem Referenzkörper (exakt ausschneiden)
+
+| Job | Modell | Bilder | Credits |
+|---|---|---|---|
+| 4 Frisuren (Berserker, Lancer, Arcanist, Beastborn) auf 4 nackten Referenzkörpern, 2k | `gpt_image_2_6` low, 2k | 1 | 0 (als NSFW blockiert, erstattet) |
+| dasselbe im lila Anzug (Haut unterhalb des Halses als Stoff) | `gpt_image_2_6` low, 2k | 1 | 1,25 |
+
+**Kontostand danach: 8,0** (dazwischen 5 Credits für eigene Generierungen außerhalb dieser Sitzung, 22 Nov).
