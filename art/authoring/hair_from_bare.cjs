@@ -9,7 +9,9 @@
 //     shoulders and the back — is BACK hair (hair_back.png: drawn behind the armour); hair the body covers in the
 //     generated image is simply not there, as it should be;
 //   • stray specks go, the hair keeps the generated colours.
-//   node art/authoring/hair_from_bare.cjs <sheet2048.png> <name_tl> <name_tr> <name_bl> <name_br>   (use - to skip a quarter)
+//   REF_1024=<suited reference.png> node art/authoring/hair_from_bare.cjs <sheet2048.png> <name_tl> <name_tr> <name_bl> <name_br>
+//   (- skips a quarter; REF_1024 = the reference in the purple bodysuit the sheet was made from — bare torsos get flagged,
+//   so the sheet shows the body suited: skin below the neck as purple cloth, which is never taken as hair)
 // Output: art/layers1024/hair/<name>/{hair,hair_back}.png
 const fs = require('fs'); const path = require('path'); const cp = require('child_process'); const { PNG } = require('pngjs');
 const ROOT = path.resolve(__dirname, '../..'); const W = 1024;
